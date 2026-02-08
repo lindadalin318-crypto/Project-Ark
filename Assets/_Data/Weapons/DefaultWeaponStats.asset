@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 46d117bb5ae550e4aab1f2041aa399fd, type: 3}
+  m_Name: DefaultWeaponStats
+  m_EditorClassIdentifier: ProjectArk.Combat::ProjectArk.Combat.WeaponStatsSO
+  _fireRate: 5
+  _spread: 0
+  _baseDamage: 10
+  _projectileSpeed: 20
+  _lifetime: 2
+  _knockback: 1
+  _recoilForce: 0.5
+  _projectilePrefab: {fileID: 1694255626843276446, guid: 4a73150a9249ca345945fdde856bc618, type: 3}
+  _muzzleFlashPrefab: {fileID: 0}
+  _impactVFXPrefab: {fileID: 0}
+  _fireSound: {fileID: 0}
+  _hitSound: {fileID: 0}
+  _fireSoundPitchVariance: 0.1
+  _heatCostPerShot: 5

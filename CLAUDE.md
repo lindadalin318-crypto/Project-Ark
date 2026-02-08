@@ -1,7 +1,11 @@
-# Project Ark — 静默方舟 (Project Sheba)
+# Project Ark — 静默方舟
 
 这是一个 **Top-Down 2D (俯视角) 动作冒险游戏**，融合了 **银河恶魔城 (Metroidvania)** 的探索结构与 **类魂 (Soulslike)** 的叙事氛围。  
 核心体验是驾驶飞船“金丝雀号”在手工打造的异星关卡中探索，通过组合“星图”部件（类似 Roguelike 的随机池，但用于 RPG 式的永久构建）来定制武器。Unity 6 + URP 2D + New Input System。
+
+## 职责
+
+你现在是《静默方舟》(Project Ark) 的首席架构师，首席程序员。具备资深的2D游戏开发经验。你主要擅长开发的品类为银河恶魔城，类魂，和肉鸽
 
 ## 沟通方式
 
@@ -105,14 +109,14 @@ Assets/
 
 ### MS1: 飞船基础移动 + Twin-Stick 瞄准 [代码已完成，待 Unity 验证]
 
-- [x] 项目结构搭建（文件夹、Assembly Definitions: Core/Ship/UI）
-- [x] ShipStatsSO（ScriptableObject 飞船配置: 速度/加速/减速/旋转速）
-- [x] ShipActions.inputactions（Move/AimPosition/AimStick + 预留 Fire/Dash/Interact/Pause）
-- [x] InputHandler（读取 New Input System，鼠标/手柄热切换）
-- [x] ShipMotor（Rigidbody2D 直接 velocity 控制，加速>减速不对称）
-- [x] ShipAiming（MoveTowardsAngle 匀速旋转，LateUpdate）
-- [ ] 在 Unity 编辑器中组装 Ship Prefab 并验证手感
-- [ ] 创建 DefaultShipStats.asset（在 _Data/Ship/）
+- 项目结构搭建（文件夹、Assembly Definitions: Core/Ship/UI）
+- ShipStatsSO（ScriptableObject 飞船配置: 速度/加速/减速/旋转速）
+- ShipActions.inputactions（Move/AimPosition/AimStick + 预留 Fire/Dash/Interact/Pause）
+- InputHandler（读取 New Input System，鼠标/手柄热切换）
+- ShipMotor（Rigidbody2D 直接 velocity 控制，加速>减速不对称）
+- ShipAiming（MoveTowardsAngle 匀速旋转，LateUpdate）
+- 在 Unity 编辑器中组装 Ship Prefab 并验证手感
+- 创建 DefaultShipStats.asset（在 _Data/Ship/）
 
 ### MS2: 热量系统 + 战斗基础 [待定]
 
@@ -120,6 +124,18 @@ Assets/
 - WeaponSystem（基础射击）
 - 事件桥接（热量事件 → 武器/UI）
 - 调试 UI（显示热量条）
+
+## 实现日志 (Implementation Log)
+
+- 日志文件位于 `Docs/ImplementationLog/ImplementationLog.md`
+- **每次**创建新文件、修改现有文件、或做出重大架构变更后，必须同步追加记录到日志中
+- 每条记录格式：
+  - 标题包含**功能名称**和**确切时间**（用系统时间，格式 `YYYY-MM-DD HH:MM`）
+  - **新建/修改文件：** 列出涉及的文件路径
+  - **内容：** 简述做了什么
+  - **目的：** 为什么做
+  - **技术：** 用了什么技术/模式
+- 纯讨论、问答、不涉及文件变更的对话不需要记录
 
 ## 常见任务
 

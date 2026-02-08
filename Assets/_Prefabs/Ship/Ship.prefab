@@ -14,13 +14,15 @@ GameObject:
   - component: {fileID: 4065997719525602850}
   - component: {fileID: 7630795961046181586}
   - component: {fileID: 6989610294359511459}
-  m_Layer: 0
+  - component: {fileID: 7931010176204908089}
+  - component: {fileID: 3774987705364357339}
+  m_Layer: 6
   m_Name: Ship
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &229989502130654230
 Transform:
   m_ObjectHideFlags: 0
@@ -33,7 +35,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 9108786242326514414}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!50 &3439706829752887684
@@ -161,3 +164,83 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!114 &7931010176204908089
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 121544039580294565}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 595526688e69d524a9c56a7b4686fed2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ProjectArk.Heat::ProjectArk.Heat.HeatSystem
+  _stats: {fileID: 11400000, guid: 1c4343bb38fe36c479c18cbc8b11559a, type: 2}
+--- !u!114 &3774987705364357339
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 121544039580294565}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 95b15b3cc97410f43bd618cb1cddb68b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ProjectArk.Combat::ProjectArk.Combat.StarChartController
+  _firePoint: {fileID: 4762998267927791697}
+  _heatSystem: {fileID: 7931010176204908089}
+  _debugPrimaryCores:
+  - {fileID: 11400000, guid: 06dd9134854dbbc439d9fbee010be857, type: 2}
+  - {fileID: 11400000, guid: a1f588637210e9c4395cfac8dfbd9f34, type: 2}
+  _debugPrimaryPrisms: []
+  _debugSecondaryCores:
+  - {fileID: 11400000, guid: a1f588637210e9c4395cfac8dfbd9f34, type: 2}
+  _debugSecondaryPrisms: []
+  _debugLightSail: {fileID: 11400000, guid: c862ec4a6c35f4046bbe546b132ce3e3, type: 2}
+  _debugSatellites: []
+--- !u!1 &6581186594195589927
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 9108786242326514414}
+  - component: {fileID: 4762998267927791697}
+  m_Layer: 6
+  m_Name: FirePoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &9108786242326514414
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6581186594195589927}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.3, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 229989502130654230}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4762998267927791697
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6581186594195589927}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8239494915e37884bb9cde197340a9af, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ProjectArk.Combat::ProjectArk.Combat.FirePoint

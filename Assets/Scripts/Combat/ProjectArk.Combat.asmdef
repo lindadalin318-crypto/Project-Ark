@@ -1,0 +1,18 @@
+{
+    "name": "ProjectArk.Combat",
+    "rootNamespace": "ProjectArk.Combat",
+    "references": [
+        "ProjectArk.Core",
+        "ProjectArk.Ship",
+        "ProjectArk.Heat"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

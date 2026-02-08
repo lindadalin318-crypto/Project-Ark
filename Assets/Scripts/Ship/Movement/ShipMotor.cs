@@ -89,6 +89,15 @@ namespace ProjectArk.Ship
             }
         }
 
+        /// <summary>
+        /// Applies an instantaneous velocity impulse (e.g., weapon recoil).
+        /// The existing deceleration logic will naturally dampen it.
+        /// </summary>
+        public void ApplyImpulse(Vector2 impulse)
+        {
+            _rigidbody.linearVelocity += impulse;
+        }
+
         private void EmitSpeedEvent()
         {
             float normalized = NormalizedSpeed;

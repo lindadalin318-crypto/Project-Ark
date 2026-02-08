@@ -2,7 +2,11 @@
     "name": "ProjectArk.UI",
     "rootNamespace": "ProjectArk.UI",
     "references": [
-        "ProjectArk.Core"
+        "ProjectArk.Core",
+        "ProjectArk.Combat",
+        "ProjectArk.Heat",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

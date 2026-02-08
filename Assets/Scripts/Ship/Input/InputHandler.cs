@@ -25,12 +25,32 @@ namespace ProjectArk.Ship
         /// <summary> True if the player is actively providing aim input. </summary>
         public bool HasAimInput { get; private set; }
 
+        /// <summary> True while the primary fire button is held down. </summary>
+        public bool IsFireHeld { get; private set; }
+
+        /// <summary> True while the secondary fire button is held down. </summary>
+        public bool IsSecondaryFireHeld { get; private set; }
+
         // 当输入设备切换时触发 (true = gamepad, false = keyboard+mouse)
         public event Action<bool> OnDeviceSwitched;
+
+        /// <summary> Fired once when primary fire button is pressed. </summary>
+        public event Action OnFirePressed;
+
+        /// <summary> Fired once when primary fire button is released. </summary>
+        public event Action OnFireReleased;
+
+        /// <summary> Fired once when secondary fire button is pressed. </summary>
+        public event Action OnSecondaryFirePressed;
+
+        /// <summary> Fired once when secondary fire button is released. </summary>
+        public event Action OnSecondaryFireReleased;
 
         private InputAction _moveAction;
         private InputAction _aimPositionAction;
         private InputAction _aimStickAction;
+        private InputAction _fireAction;
+        private InputAction _fireSecondaryAction;
         private Camera _mainCamera;
         private bool _isUsingGamepad;
 
@@ -51,6 +71,8 @@ namespace ProjectArk.Ship
             _moveAction = shipMap.FindAction("Move");
             _aimPositionAction = shipMap.FindAction("AimPosition");
             _aimStickAction = shipMap.FindAction("AimStick");
+            _fireAction = shipMap.FindAction("Fire");
+            _fireSecondaryAction = shipMap.FindAction("FireSecondary");
         }
 
         private void OnEnable()
@@ -61,12 +83,26 @@ namespace ProjectArk.Ship
             // 监听 performed 事件来自动检测设备切换
             _aimPositionAction.performed += OnMouseAimPerformed;
             _aimStickAction.performed += OnGamepadAimPerformed;
+
+            _fireAction.performed += OnFirePerformed;
+            _fireAction.canceled += OnFireCanceled;
+
+            _fireSecondaryAction.performed += OnSecondaryFirePerformed;
+            _fireSecondaryAction.canceled += OnSecondaryFireCanceled;
         }
 
         private void OnDisable()
         {
             _aimPositionAction.performed -= OnMouseAimPerformed;
             _aimStickAction.performed -= OnGamepadAimPerformed;
+
+            _fireAction.performed -= OnFirePerformed;
+            _fireAction.canceled -= OnFireCanceled;
+            IsFireHeld = false;
+
+            _fireSecondaryAction.performed -= OnSecondaryFirePerformed;
+            _fireSecondaryAction.canceled -= OnSecondaryFireCanceled;
+            IsSecondaryFireHeld = false;
 
             var shipMap = _inputActions.FindActionMap("Ship");
             shipMap.Disable();
@@ -140,6 +176,30 @@ namespace ProjectArk.Ship
                 _isUsingGamepad = true;
                 OnDeviceSwitched?.Invoke(true);
             }
+        }
+
+        private void OnFirePerformed(InputAction.CallbackContext ctx)
+        {
+            IsFireHeld = true;
+            OnFirePressed?.Invoke();
+        }
+
+        private void OnFireCanceled(InputAction.CallbackContext ctx)
+        {
+            IsFireHeld = false;
+            OnFireReleased?.Invoke();
+        }
+
+        private void OnSecondaryFirePerformed(InputAction.CallbackContext ctx)
+        {
+            IsSecondaryFireHeld = true;
+            OnSecondaryFirePressed?.Invoke();
+        }
+
+        private void OnSecondaryFireCanceled(InputAction.CallbackContext ctx)
+        {
+            IsSecondaryFireHeld = false;
+            OnSecondaryFireReleased?.Invoke();
         }
     }
 }
