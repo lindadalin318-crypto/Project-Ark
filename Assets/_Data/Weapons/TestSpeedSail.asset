@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fb701c6681387474085a2d50563efeeb, type: 3}
   m_Name: TestSpeedSail
   m_EditorClassIdentifier: ProjectArk.Combat::ProjectArk.Combat.LightSailSO
-  _displayName: 
-  _description: 
+  _displayName: Speed Damage Sail
+  _description: "\u79FB\u52A8\u8D8A\u5FEB\uFF0C\u4F24\u5BB3\u8D8A\u9AD8"
   _icon: {fileID: 0}
   _slotSize: 1
   _heatCost: 0
   _conditionDescription: 
   _effectDescription: 
-  _behaviorPrefab: {fileID: 0}
+  _behaviorPrefab: {fileID: 3398918083065367437, guid: de0a1ce38e8edf848b028f7f76ed6e70, type: 3}

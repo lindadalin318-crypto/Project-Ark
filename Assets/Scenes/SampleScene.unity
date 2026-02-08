@@ -534,6 +534,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Ship
       objectReference: {fileID: 0}
+    - target: {fileID: 121544039580294565, guid: c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 229989502130654230, guid: c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0

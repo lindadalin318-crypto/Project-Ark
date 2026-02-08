@@ -12,16 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 04e05fd278fddc444afe130ceacc0f04, type: 3}
   m_Name: TestCore_FastBullet
   m_EditorClassIdentifier: ProjectArk.Combat::ProjectArk.Combat.StarCoreSO
-  _displayName: 
+  _displayName: Basic Bullet2
   _description: 
   _icon: {fileID: 0}
   _slotSize: 1
   _heatCost: 0
   _family: 0
-  _projectilePrefab: {fileID: 0}
-  _fireRate: 5
-  _baseDamage: 10
-  _projectileSpeed: 20
+  _projectilePrefab: {fileID: 1694255626843276446, guid: 4a73150a9249ca345945fdde856bc618, type: 3}
+  _fireRate: 15
+  _baseDamage: 4
+  _projectileSpeed: 50
   _lifetime: 2
   _spread: 0
   _knockback: 1
