@@ -17,7 +17,7 @@ MonoBehaviour:
     walls.
   _icon: {fileID: 0}
   _slotSize: 1
-  _heatCost: 0
+  _heatCost: 12
   _family: 2
   _projectilePrefab: {fileID: 728660272858488736, guid: 0e28c641f718246c99fb0dc2ee8079c7, type: 3}
   _fireRate: 2

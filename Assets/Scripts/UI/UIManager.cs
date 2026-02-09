@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
 using ProjectArk.Combat;
 using ProjectArk.Heat;
 
@@ -38,6 +39,41 @@ namespace ProjectArk.UI
             _pauseAction = shipMap.FindAction("Pause");
             _fireAction = shipMap.FindAction("Fire");
             _fireSecondaryAction = shipMap.FindAction("FireSecondary");
+
+            // Auto-configure InputSystemUIInputModule with UI action map references
+            ConfigureUIInputModule();
+        }
+
+        /// <summary>
+        /// Wires up the InputSystemUIInputModule with actions from the "UI" action map.
+        /// Without this, the module has no idea where the pointer is and buttons won't work.
+        /// </summary>
+        private void ConfigureUIInputModule()
+        {
+            var uiModule = FindAnyObjectByType<InputSystemUIInputModule>();
+            if (uiModule == null)
+            {
+                Debug.LogWarning("[UIManager] InputSystemUIInputModule not found in scene.");
+                return;
+            }
+
+            var uiMap = _inputActions.FindActionMap("UI");
+            if (uiMap == null)
+            {
+                Debug.LogError("[UIManager] 'UI' action map not found in InputActionAsset.");
+                return;
+            }
+
+            uiModule.actionsAsset = _inputActions;
+            uiModule.point = InputActionReference.Create(_inputActions.FindAction("UI/Point"));
+            uiModule.leftClick = InputActionReference.Create(_inputActions.FindAction("UI/Click"));
+            uiModule.scrollWheel = InputActionReference.Create(_inputActions.FindAction("UI/ScrollWheel"));
+            uiModule.move = InputActionReference.Create(_inputActions.FindAction("UI/Navigate"));
+            uiModule.submit = InputActionReference.Create(_inputActions.FindAction("UI/Submit"));
+            uiModule.cancel = InputActionReference.Create(_inputActions.FindAction("UI/Cancel"));
+
+            // Ensure the UI map is always enabled
+            uiMap.Enable();
         }
 
         private void Start()
@@ -75,9 +111,16 @@ namespace ProjectArk.UI
             if (_pauseAction != null)
                 _pauseAction.performed -= OnPausePerformed;
 
-            // 确保退出时恢复时间
+            // Restore game state without transition animations
+            // (coroutines can't run on an inactive GameObject).
             if (_isPanelOpen)
-                ClosePanel();
+            {
+                _isPanelOpen = false;
+                _starChartPanel?.Close();
+                Time.timeScale = 1f;
+                _fireAction?.Enable();
+                _fireSecondaryAction?.Enable();
+            }
         }
 
         private void OnPausePerformed(InputAction.CallbackContext ctx)

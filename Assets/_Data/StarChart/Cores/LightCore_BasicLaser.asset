@@ -16,7 +16,7 @@ MonoBehaviour:
   _description: Instant-hit light beam. Fast and precise, but no physical presence.
   _icon: {fileID: 0}
   _slotSize: 1
-  _heatCost: 0
+  _heatCost: 4
   _family: 1
   _projectilePrefab: {fileID: 1560740897334003585, guid: 2016ff32cc94f433183601f0d25cabaf, type: 3}
   _fireRate: 4

@@ -16,7 +16,7 @@ MonoBehaviour:
   _description: A reliable physical projectile. Solid damage, predictable trajectory.
   _icon: {fileID: 0}
   _slotSize: 1
-  _heatCost: 0
+  _heatCost: 5
   _family: 0
   _projectilePrefab: {fileID: 8117957797936672765, guid: 178be1a279c3747f2b519ac5a7db13cc, type: 3}
   _fireRate: 5

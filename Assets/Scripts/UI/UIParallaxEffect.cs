@@ -92,7 +92,8 @@ namespace ProjectArk.UI
             }
 
             // Fall back to mouse position relative to screen center.
-            Vector3 mousePos = Input.mousePosition;
+            if (Mouse.current == null) return Vector2.zero;
+            Vector2 mousePos = Mouse.current.position.ReadValue();
             float nx = (mousePos.x / Screen.width - 0.5f) * 2f;   // -1 .. +1
             float ny = (mousePos.y / Screen.height - 0.5f) * 2f;
             return Vector2.ClampMagnitude(new Vector2(nx, ny), 1f);
