@@ -38,6 +38,8 @@ namespace ProjectArk.Combat
         /// <summary>
         /// Construct from a legacy WeaponStatsSO for backward compatibility.
         /// </summary>
+#pragma warning disable CS0618 // Intentional: legacy compatibility bridge
+        [System.Obsolete("Use StarCoreSO pipeline instead. Will be removed in Batch 4.")]
         public static ProjectileParams FromWeaponStats(WeaponStatsSO stats)
         {
             return new ProjectileParams(
@@ -48,5 +50,6 @@ namespace ProjectArk.Combat
                 stats.ImpactVFXPrefab
             );
         }
+#pragma warning restore CS0618
     }
 }

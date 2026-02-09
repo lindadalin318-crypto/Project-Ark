@@ -29,6 +29,10 @@ namespace ProjectArk.Combat
         // 星图扩展钩子
         private readonly List<IProjectileModifier> _modifiers = new();
 
+        // Cached layer indices for collision filtering
+        private static int _playerLayer = -1;
+        private static int PlayerLayer => _playerLayer >= 0 ? _playerLayer : (_playerLayer = LayerMask.NameToLayer("Player"));
+
         // --- 供 IProjectileModifier 读写的公共属性 ---
 
         /// <summary> Current movement direction (normalized). </summary>
@@ -72,8 +76,6 @@ namespace ProjectArk.Combat
 
             _rigidbody.linearVelocity = Direction * Speed;
 
-            Debug.Log($"[Projectile] damage={_damage:F1} speed={Speed:F1}");
-
             _modifiers.Clear();
             if (modifiers != null)
                 _modifiers.AddRange(modifiers);
@@ -97,6 +99,7 @@ namespace ProjectArk.Combat
             if (!_isAlive) return;
 
             _lifetimeTimer -= Time.deltaTime;
+
             if (_lifetimeTimer <= 0f)
             {
                 ReturnToPool();
@@ -110,6 +113,11 @@ namespace ProjectArk.Combat
         private void OnTriggerEnter2D(Collider2D other)
         {
             if (!_isAlive) return;
+
+            // Ignore collisions with same layer (other projectiles) and Player layer
+            int otherLayer = other.gameObject.layer;
+            if (otherLayer == gameObject.layer || otherLayer == PlayerLayer)
+                return;
 
             for (int i = 0; i < _modifiers.Count; i++)
                 _modifiers[i].OnProjectileHit(this, other);
