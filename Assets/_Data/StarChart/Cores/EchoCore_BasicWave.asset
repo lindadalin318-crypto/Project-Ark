@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 04e05fd278fddc444afe130ceacc0f04, type: 3}
+  m_Name: EchoCore_BasicWave
+  m_EditorClassIdentifier: ProjectArk.Combat::ProjectArk.Combat.StarCoreSO
+  _displayName: Basic Shockwave
+  _description: Expanding ring of force. Hits all nearby enemies, passes through
+    walls.
+  _icon: {fileID: 0}
+  _slotSize: 1
+  _heatCost: 0
+  _family: 2
+  _projectilePrefab: {fileID: 728660272858488736, guid: 0e28c641f718246c99fb0dc2ee8079c7, type: 3}
+  _fireRate: 2
+  _baseDamage: 15
+  _projectileSpeed: 8
+  _lifetime: 1.5
+  _spread: 0
+  _knockback: 2
+  _recoilForce: 0
+  _anomalyModifierPrefab: {fileID: 0}
+  _muzzleFlashPrefab: {fileID: 0}
+  _impactVFXPrefab: {fileID: 0}
+  _fireSound: {fileID: 0}
+  _fireSoundPitchVariance: 0.1

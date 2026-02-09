@@ -727,3 +727,261 @@
 **目的：** 让 UI 能在运行时动态装备/卸载光帆和伴星。
 
 **技术：** Runner Dispose + 重建模式，事件通知 UI 刷新。
+
+---
+
+## Batch 5: 具体部件实现（各家族 Core / Prism）
+
+### 47. StarChartController 发射管线重构 — 家族分发 + 均匀扇形散布 — 2026-02-09 00:00
+
+**修改文件：**
+- `Assets/Scripts/Combat/StarChart/StarChartController.cs`
+
+**内容：**
+- 修改 `ExecuteFire()`：当 `ProjectileCount > 1` 时，散布逻辑从 `Random.Range(-Spread, Spread)` 改为 `[-Spread, +Spread]` 均匀等分
+- 重构 `SpawnProjectile()` 为 `switch(coreSnap.Family)` 家族分发模式，调用各家族私有方法：`SpawnMatterProjectile()` / `SpawnLightBeam()` / `SpawnEchoWave()` / `SpawnAnomalyEntity()`
+- default 分支打印 `Debug.LogWarning` 并 fallback 到 Matter
+- 投射物生成后应用 `ProjectileSize`：`bulletObj.transform.localScale = Vector3.one * coreSnap.ProjectileSize`
+
+**目的：** 让 4 种 CoreFamily 拥有各自独立的发射分支，支持均匀扇形散布（Fractal 棱镜需要）。
+
+**技术：** switch 分发模式，均匀角度等分算法，策略模式扩展点。
+
+---
+
+### 48. LaserBeam — Light 家族即时命中激光 — 2026-02-09 00:00
+
+**新建文件：**
+- `Assets/Scripts/Combat/Projectile/LaserBeam.cs`
+
+**内容：** MonoBehaviour + IPoolable。`Fire()` 方法执行 `Physics2D.Raycast` 从炮口沿方向检测命中（最大射程 = Speed × Lifetime）。使用 `LineRenderer` 渲染光束，持续约 0.1 秒后淡出并通过 PoolReference 回池。命中时调用 `IProjectileModifier.OnProjectileHit`。
+
+**目的：** Light 家族的瞬间命中射击风格，不创建 Rigidbody2D 物理投射物。
+
+**技术：** Physics2D.Raycast, LineRenderer 渐隐动画, IPoolable 对象池回收。
+
+---
+
+### 49. EchoWave — Echo 家族震荡波 AOE — 2026-02-09 00:00
+
+**新建文件：**
+- `Assets/Scripts/Combat/Projectile/EchoWave.cs`
+
+**内容：** MonoBehaviour + IPoolable。`Initialize()` 设置膨胀参数。Update 中 `CircleCollider2D.radius` 按 `ProjectileSpeed` 线性膨胀。OnTriggerEnter2D 使用 `HashSet<Collider2D>` 去重（同一波次每敌人仅命中一次）。Spread > 0 时缩减为扇形波（角度检测限制触发范围）。穿墙特性通过碰撞层设置实现。超过 Lifetime 自动回池。
+
+**目的：** Echo 家族的 AOE 扩散攻击风格，穿透墙壁，适合近距离群体控制。
+
+**技术：** CircleCollider2D 动态膨胀, HashSet 去重, 扇形角度检测, IPoolable。
+
+---
+
+### 50. BoomerangModifier — Anomaly 家族回旋镖行为 — 2026-02-09 00:00
+
+**新建文件：**
+- `Assets/Scripts/Combat/Projectile/BoomerangModifier.cs`
+
+**内容：** MonoBehaviour + IProjectileModifier。`OnProjectileSpawned` 记录发射者位置和初始方向。`OnProjectileUpdate` 实现去程减速 → 反转 → 回程加速的运动曲线，覆盖 `Projectile.Direction` 和 `Rigidbody2D.linearVelocity`。`OnProjectileHit` 使用两个 HashSet 分别跟踪去程和回程命中，每程每敌人各允许命中一次。设置 `ShouldDestroyOnHit = false` 实现穿透。返回发射者附近（< 1 单位）或 Lifetime 耗尽时回池。
+
+**目的：** Anomaly 家族的自定义运动轨迹，实现回旋镖战术。
+
+**技术：** IProjectileModifier 钩子, 运动曲线覆盖, 双 HashSet 去重。
+
+---
+
+### 51. Projectile 扩展 — 穿透与缩放重置 — 2026-02-09 00:00
+
+**修改文件：**
+- `Assets/Scripts/Combat/Projectile/Projectile.cs`
+
+**内容：**
+- 添加 `ShouldDestroyOnHit` 公共属性（默认 true），供 modifier 覆盖
+- 修改 `OnTriggerEnter2D`：当 `ShouldDestroyOnHit == false` 时只执行 modifier 回调 + VFX，不回池
+- 添加 `ForceReturnToPool()` 公共方法，供 BoomerangModifier 主动回池
+- 在 `OnReturnToPool()` 中添加 `transform.localScale = Vector3.one` 重置缩放
+- 在 `OnReturnToPool()` 中重置 `ShouldDestroyOnHit = true`
+
+**目的：** 支持 Anomaly 回旋镖（穿透不销毁）和 Rheology 棱镜（ProjectileSize 缩放后回池重置）。
+
+**技术：** 属性驱动行为开关, 回池状态重置。
+
+---
+
+### 52. SlowOnHitModifier — Tint 棱镜减速效果占位 — 2026-02-09 00:00
+
+**新建文件：**
+- `Assets/Scripts/Combat/Projectile/SlowOnHitModifier.cs`
+
+**内容：** MonoBehaviour + IProjectileModifier。`OnProjectileHit` 检测碰撞体，当前为占位实现（`Debug.Log` 标记命中和预期减速效果）。`[SerializeField]` 暴露 `SlowPercent`(30%) 和 `Duration`(2s) 参数。`OnProjectileSpawned` 和 `OnProjectileUpdate` 为空实现。
+
+**目的：** Tint 家族状态注入框架，待敌人系统完成后替换为实际 debuff 逻辑。
+
+**技术：** IProjectileModifier 接口, 占位实现模式。
+
+---
+
+### 53. BounceModifier — Rheology 棱镜反弹效果 — 2026-02-09 00:00
+
+**新建文件：**
+- `Assets/Scripts/Combat/Projectile/BounceModifier.cs`
+
+**内容：** MonoBehaviour + IProjectileModifier。`OnProjectileHit` 检测碰撞是否为墙壁层，若是则使用 `Vector2.Reflect` 计算反射方向，更新 `Projectile.Direction` 和 `Rigidbody2D.linearVelocity`，递减反弹计数。`[SerializeField]` 暴露 `MaxBounces`(3) 参数。反弹次数用尽时允许正常销毁。
+
+**目的：** Rheology 棱镜的弹性反弹效果，让子弹在墙壁间弹射。
+
+**技术：** Vector2.Reflect 反射算法, IProjectileModifier 接口, 计数器限制。
+
+---
+
+### 54. StarCoreSO 扩展 — Anomaly 家族 Modifier Prefab 链接 — 2026-02-09 00:00
+
+**修改文件：**
+- `Assets/Scripts/Combat/StarChart/StarCoreSO.cs` — 添加 `_anomalyModifierPrefab` 字段和 `AnomalyModifierPrefab` 属性
+- `Assets/Scripts/Combat/StarChart/SnapshotBuilder.cs` — 在 `BuildCoreSnapshot()` 中传递 `AnomalyModifierPrefab` 到 `CoreSnapshot`
+- `Assets/Scripts/Combat/StarChart/FiringSnapshot.cs` — `CoreSnapshot` 已包含 `AnomalyModifierPrefab` 字段
+
+**内容：** 在 StarCoreSO 中添加 Anomaly 家族专用的 Modifier Prefab 引用字段，通过 SnapshotBuilder 管线传递到 CoreSnapshot，最终在 `SpawnAnomalyEntity()` 中使用。
+
+**目的：** 完成 Anomaly 家族从 SO 配置到运行时行为注入的完整数据链路。
+
+**技术：** SerializeField + 管线传递, 家族专用可选字段。
+
+---
+
+### 55. WeaponTrack 多家族池预热 — 2026-02-09 00:10
+
+**修改文件：**
+- `Assets/Scripts/Combat/Weapon/WeaponTrack.cs`
+
+**内容：** 重构 `InitializePools()` 方法，根据 `CoreFamily` 分支预热不同容量的对象池：
+- Matter: 20/50（高频子弹）
+- Light: 5/20（短命 LineRenderer）
+- Echo: 5/15（少量并发震荡波）
+- Anomaly: 10/30（投射物池 + AnomalyModifierPrefab 池）
+- 炮口焰池统一 5/20
+
+**目的：** 避免运行时首次生成时的卡顿，按家族特性合理分配池容量。
+
+**技术：** switch(CoreFamily) 分支, PoolManager.GetPool 预热。
+
+---
+
+### 56. Batch5AssetCreator — Editor 一键资产创建工具 — 2026-02-09 00:15
+
+**新建文件：**
+- `Assets/Scripts/Combat/Editor/Batch5AssetCreator.cs` — Editor 工具脚本
+- `Assets/Scripts/Combat/Editor/ProjectArk.Combat.Editor.asmdef` — Editor-only 程序集
+
+**内容：** 通过 Unity 菜单 `ProjectArk > Create Batch 5 Test Assets` 一键自动创建：
+- 6 个 Prefab（Projectile_Matter, LaserBeam_Light, EchoWave_Echo, Modifier_Boomerang, Modifier_SlowOnHit, Modifier_Bounce）
+- 4 个 StarCoreSO 资产（MatterCore_StandardBullet, LightCore_BasicLaser, EchoCore_BasicWave, AnomalyCore_Boomerang）
+- 3 个 PrismSO 资产（FractalPrism_TwinSplit, RheologyPrism_Accelerate, TintPrism_FrostSlow）
+- 目录自动创建于 `Assets/_Data/StarChart/` 下
+
+**目的：** 解决 Prefab 和 SO 资产无法通过代码文本创建的问题，提供自动化资产生成工具。
+
+**技术：** SerializedObject/SerializedProperty 反射设置私有字段, PrefabUtility.SaveAsPrefabAsset, AssetDatabase, Editor-only 程序集。
+
+---
+
+## Batch 6: 星图编织态交互体验 (Star Chart Weaving State IxD)
+
+### 57. WeavingTransitionSettingsSO — 过渡配置 SO — 2026-02-09 12:45
+
+**新建文件：**
+- `Assets/Scripts/UI/WeavingTransitionSettingsSO.cs`
+
+**内容：** ScriptableObject 数据容器，集中管理编织态过渡的所有可配置参数：
+- Timing：进入时长 (0.35s)、退出时长 (0.25s)、AnimationCurve
+- Camera：战斗态/编织态正交尺寸 (5 / 3)
+- Vignette：战斗态/编织态强度 (0.1 / 0.5)
+- DoF：焦距、焦点距离
+- Audio：进入/退出音效 AudioClip
+
+**目的：** 数据驱动，设计师可在 Inspector 中独立调整过渡参数，支持多套预设切换。
+
+**技术：** ScriptableObject, `[CreateAssetMenu]`, 数据驱动模式。
+
+---
+
+### 58. WeavingStateTransition — 编织态过渡控制器 — 2026-02-09 12:45
+
+**新建文件：**
+- `Assets/Scripts/UI/WeavingStateTransition.cs`
+
+**内容：** 编织态过渡的唯一编排器 MonoBehaviour，负责：
+- 镜头推拉：协程驱动 `Camera.orthographicSize` 在战斗值/编织值之间平滑插值
+- 后处理氛围：URP Volume 的 DepthOfField (启用/禁用) 和 Vignette (intensity 渐变)
+- 镜头锁定：过渡期间将相机位置锁定在飞船中心（保持 Z 偏移）
+- 音效播放：进入/退出时 `PlayOneShot`，AudioSource 设 `ignoreListenerPause = true`
+- 全部使用 `Time.unscaledDeltaTime` 驱动，timeScale=0 下正常运行
+- 快速切换防冲突：新协程启动前先 `StopCoroutine` 取消进行中的过渡
+- 双数据源：优先读取 `WeavingTransitionSettingsSO`，为 null 时使用内联默认值
+
+**公共 API：**
+- `EnterWeavingState()` — 战斗态 → 编织态过渡
+- `ExitWeavingState()` — 编织态 → 战斗态过渡
+
+**目的：** 一个脚本统一编排镜头、后处理、音效三条过渡线，避免分散管理。
+
+**技术：** 协程 + AnimationCurve, URP Volume TryGet<T>, Time.unscaledDeltaTime, 可选 SO 依赖 (fallback 模式)。
+
+---
+
+### 59. UIParallaxEffect — UI 视差微动 — 2026-02-09 12:45
+
+**新建文件：**
+- `Assets/Scripts/UI/UIParallaxEffect.cs`
+
+**内容：** 挂在星图面板根节点的 MonoBehaviour，实现：
+- 鼠标位置相对屏幕中心归一化 (-1,1)，乘最大偏移 (±15px) 并取反（视差=反向位移）
+- `Vector2.Lerp` 平滑跟随，使用 `Time.unscaledDeltaTime`
+- 手柄支持：`Gamepad.current?.rightStick.ReadValue()` 优先使用
+- `OnDisable` 时自动 `ResetOffset()` 清零偏移
+- `OnEnable` 时快照当前 `anchoredPosition` 作为基准原点
+
+**目的：** 增加编织态 UI 的 3D 悬浮感和精致度。
+
+**技术：** RectTransform anchoredPosition 偏移, New Input System Gamepad API, unscaledDeltaTime。
+
+---
+
+### 60. UIManager 集成 WeavingStateTransition — 2026-02-09 12:45
+
+**修改文件：**
+- `Assets/Scripts/UI/UIManager.cs`
+
+**内容：**
+- 新增 `[SerializeField] private WeavingStateTransition _weavingTransition` 字段
+- `OpenPanel()` 中在 `Time.timeScale = 0` 之后调用 `_weavingTransition?.EnterWeavingState()`
+- `ClosePanel()` 中在 `Time.timeScale = 1` 之前调用 `_weavingTransition?.ExitWeavingState()`
+- 使用 null-conditional 确保为可选依赖，未配置时静默跳过
+
+**目的：** 将过渡效果接入现有面板开关流程，零侵入式集成。
+
+**技术：** 可选依赖模式 (null-conditional `?.`), SerializeField 编辑器连线。
+
+---
+
+### 25. UICanvasBuilder 编辑器脚本 — UI 自动搭建工具 — 2026-02-09 12:52
+
+**新建文件：**
+- `Assets/Scripts/UI/Editor/UICanvasBuilder.cs` — 编辑器工具，自动搭建完整 UI Canvas 层级
+
+**内容：**
+- 菜单 `ProjectArk > Build UI Canvas`：一键创建完整 UI 层级结构
+  - Canvas (Screen Space Overlay, 1920×1080 参考分辨率)
+  - EventSystem (如场景中缺失则自动创建)
+  - HeatBarHUD (FillImage + OverheatFlash + Label，自动连线)
+  - StarChartPanel (含 UIParallaxEffect，自动连线)
+    - PrimaryTrackView / SecondaryTrackView (各含 3 PrismCell + 3 CoreCell)
+    - InventoryView (过滤按钮栏 + ScrollRect 网格布局)
+    - ItemDetailView (Icon + Name + Description + Stats + ActionButton)
+  - UIManager (含 WeavingStateTransition 组件，自动连线)
+- 菜单 `ProjectArk > Create InventoryItemView Prefab`：创建库存卡片预制体
+- 自动查找并关联 InputActionAsset、StarChartInventorySO
+- 自动创建 PlayerInventory.asset 并填充已有的 StarCoreSO/PrismSO/LightSailSO/SatelliteSO
+- 所有 SerializeField 引用通过 SerializedObject API 自动连线
+
+**目的：** 消除最大的编辑器配置缺口——UI Canvas 层级手动搭建工作量（约 30-60 分钟），一键完成。
+
+**技术：** Unity Editor MenuItem, SerializedObject 反射连线, PrefabUtility, Undo 支持, 自动资产发现。

@@ -225,7 +225,27 @@ namespace ProjectArk.Combat
 
                 for (int p = 0; p < count; p++)
                 {
-                    SpawnProjectile(track, coreSnap, direction, spawnPos);
+                    // Uniform fan spread when multiple projectiles
+                    Vector2 fireDir;
+                    if (count > 1 && !Mathf.Approximately(coreSnap.Spread, 0f))
+                    {
+                        // Evenly distribute across [-Spread, +Spread]
+                        float t = (float)p / (count - 1); // 0..1
+                        float angle = Mathf.Lerp(-coreSnap.Spread, coreSnap.Spread, t);
+                        fireDir = RotateVector2(direction, angle);
+                    }
+                    else if (!Mathf.Approximately(coreSnap.Spread, 0f))
+                    {
+                        // Single projectile with spread: random offset
+                        float spreadAngle = UnityEngine.Random.Range(-coreSnap.Spread, coreSnap.Spread);
+                        fireDir = RotateVector2(direction, spreadAngle);
+                    }
+                    else
+                    {
+                        fireDir = direction;
+                    }
+
+                    SpawnProjectile(track, coreSnap, fireDir, spawnPos);
                 }
 
                 // 炮口焰（每核心一次）
@@ -246,20 +266,39 @@ namespace ProjectArk.Combat
             OnTrackFired?.Invoke(track.Id);
         }
 
+        /// <summary>
+        /// Dispatches projectile spawning based on CoreFamily.
+        /// Direction already includes spread calculation from ExecuteFire.
+        /// </summary>
         private void SpawnProjectile(WeaponTrack track, CoreSnapshot coreSnap,
-                                     Vector2 baseDirection, Vector3 spawnPos)
+                                     Vector2 direction, Vector3 spawnPos)
         {
-            Vector2 dir = baseDirection;
-
-            // 散布
-            if (!Mathf.Approximately(coreSnap.Spread, 0f))
+            switch (coreSnap.Family)
             {
-                float spreadAngle = UnityEngine.Random.Range(-coreSnap.Spread, coreSnap.Spread);
-                dir = RotateVector2(dir, spreadAngle);
+                case CoreFamily.Matter:
+                    SpawnMatterProjectile(track, coreSnap, direction, spawnPos);
+                    break;
+                case CoreFamily.Light:
+                    SpawnLightBeam(track, coreSnap, direction, spawnPos);
+                    break;
+                case CoreFamily.Echo:
+                    SpawnEchoWave(track, coreSnap, direction, spawnPos);
+                    break;
+                case CoreFamily.Anomaly:
+                    SpawnAnomalyEntity(track, coreSnap, direction, spawnPos);
+                    break;
+                default:
+                    Debug.LogWarning($"[StarChartController] Unknown CoreFamily '{coreSnap.Family}', falling back to Matter.");
+                    SpawnMatterProjectile(track, coreSnap, direction, spawnPos);
+                    break;
             }
+        }
 
-            // 子弹朝向角度（sprite 朝上 +Y，所以 -90°）
-            float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg - 90f;
+        /// <summary> Matter family: physical rigidbody projectile. </summary>
+        private void SpawnMatterProjectile(WeaponTrack track, CoreSnapshot coreSnap,
+                                            Vector2 direction, Vector3 spawnPos)
+        {
+            float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f;
 
             var pool = track.GetProjectilePool(coreSnap.ProjectilePrefab);
             if (pool == null) return;
@@ -268,12 +307,99 @@ namespace ProjectArk.Combat
             var projectile = bulletObj.GetComponent<Projectile>();
             if (projectile == null) return;
 
-            var parms = coreSnap.ToProjectileParams();
+            // Apply ProjectileSize scaling
+            if (!Mathf.Approximately(coreSnap.ProjectileSize, 1f))
+                bulletObj.transform.localScale = Vector3.one * coreSnap.ProjectileSize;
 
-            // 光帆 buff 修正（零分配，ref 传递 readonly struct）
+            var parms = coreSnap.ToProjectileParams();
+            _lightSailRunner?.ModifyProjectileParams(ref parms);
+            projectile.Initialize(direction, parms, coreSnap.Modifiers);
+        }
+
+        /// <summary> Light family: instant raycast laser beam. </summary>
+        private void SpawnLightBeam(WeaponTrack track, CoreSnapshot coreSnap,
+                                     Vector2 direction, Vector3 spawnPos)
+        {
+            // Get LaserBeam prefab pool (uses the same ProjectilePrefab field, but expects LaserBeam component)
+            var pool = track.GetProjectilePool(coreSnap.ProjectilePrefab);
+            if (pool == null) return;
+
+            float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f;
+            GameObject beamObj = pool.Get(spawnPos, Quaternion.Euler(0f, 0f, angle));
+            var laserBeam = beamObj.GetComponent<LaserBeam>();
+            if (laserBeam == null)
+            {
+                Debug.LogWarning("[StarChartController] Light core prefab missing LaserBeam component, falling back to Matter.");
+                // Return the beam object and fall back
+                var poolRef = beamObj.GetComponent<PoolReference>();
+                poolRef?.ReturnToPool();
+                SpawnMatterProjectile(track, coreSnap, direction, spawnPos);
+                return;
+            }
+
+            var parms = coreSnap.ToProjectileParams();
+            _lightSailRunner?.ModifyProjectileParams(ref parms);
+            laserBeam.Fire(spawnPos, direction, parms, coreSnap.Modifiers);
+        }
+
+        /// <summary> Echo family: expanding shockwave AOE. </summary>
+        private void SpawnEchoWave(WeaponTrack track, CoreSnapshot coreSnap,
+                                    Vector2 direction, Vector3 spawnPos)
+        {
+            var pool = track.GetProjectilePool(coreSnap.ProjectilePrefab);
+            if (pool == null) return;
+
+            float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f;
+            GameObject waveObj = pool.Get(spawnPos, Quaternion.Euler(0f, 0f, angle));
+            var echoWave = waveObj.GetComponent<EchoWave>();
+            if (echoWave == null)
+            {
+                Debug.LogWarning("[StarChartController] Echo core prefab missing EchoWave component, falling back to Matter.");
+                var poolRef = waveObj.GetComponent<PoolReference>();
+                poolRef?.ReturnToPool();
+                SpawnMatterProjectile(track, coreSnap, direction, spawnPos);
+                return;
+            }
+
+            // Apply ProjectileSize scaling
+            if (!Mathf.Approximately(coreSnap.ProjectileSize, 1f))
+                waveObj.transform.localScale = Vector3.one * coreSnap.ProjectileSize;
+
+            var parms = coreSnap.ToProjectileParams();
+            _lightSailRunner?.ModifyProjectileParams(ref parms);
+            echoWave.Fire(spawnPos, direction, parms, coreSnap.Modifiers, coreSnap.Spread);
+        }
+
+        /// <summary> Anomaly family: custom behavior entity (e.g., boomerang). </summary>
+        private void SpawnAnomalyEntity(WeaponTrack track, CoreSnapshot coreSnap,
+                                         Vector2 direction, Vector3 spawnPos)
+        {
+            float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f;
+
+            var pool = track.GetProjectilePool(coreSnap.ProjectilePrefab);
+            if (pool == null) return;
+
+            GameObject bulletObj = pool.Get(spawnPos, Quaternion.Euler(0f, 0f, angle));
+            var projectile = bulletObj.GetComponent<Projectile>();
+            if (projectile == null) return;
+
+            // Apply ProjectileSize scaling
+            if (!Mathf.Approximately(coreSnap.ProjectileSize, 1f))
+                bulletObj.transform.localScale = Vector3.one * coreSnap.ProjectileSize;
+
+            var parms = coreSnap.ToProjectileParams();
             _lightSailRunner?.ModifyProjectileParams(ref parms);
 
-            projectile.Initialize(dir, parms, coreSnap.Modifiers);
+            // Inject anomaly-specific modifier from CoreSO config
+            // The AnomalyModifierPrefab is set on the CoreSnapshot by SnapshotBuilder
+            if (coreSnap.AnomalyModifierPrefab != null)
+            {
+                var modifierInstance = coreSnap.AnomalyModifierPrefab.GetComponent<IProjectileModifier>();
+                if (modifierInstance != null && !coreSnap.Modifiers.Contains(modifierInstance))
+                    coreSnap.Modifiers.Add(modifierInstance);
+            }
+
+            projectile.Initialize(direction, parms, coreSnap.Modifiers);
         }
 
         private void SpawnMuzzleFlash(WeaponTrack track, CoreSnapshot coreSnap,

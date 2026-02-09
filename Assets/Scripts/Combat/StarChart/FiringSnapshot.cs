@@ -29,6 +29,9 @@ namespace ProjectArk.Combat
         public float FireSoundPitchVariance;
         public CoreFamily Family;
 
+        // Anomaly family modifier prefab (set by SnapshotBuilder from StarCoreSO)
+        public GameObject AnomalyModifierPrefab;
+
         // 行为修改器（Tint 家族棱镜注入）
         public List<IProjectileModifier> Modifiers;
 

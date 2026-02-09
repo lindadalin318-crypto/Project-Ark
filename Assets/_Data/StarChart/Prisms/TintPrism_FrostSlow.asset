@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2291e9cfe41037b498649ec909d12017, type: 3}
+  m_Name: TintPrism_FrostSlow
+  m_EditorClassIdentifier: ProjectArk.Combat::ProjectArk.Combat.PrismSO
+  _displayName: Frost Slow
+  _description: 'Tint prism: projectiles apply a slowing frost effect on hit.'
+  _icon: {fileID: 0}
+  _slotSize: 1
+  _heatCost: 0
+  _family: 2
+  _statModifiers: []
+  _projectileModifierPrefab: {fileID: 8117078627942785095, guid: aece6f6e3911d4b65b22c2f9f4cc9806, type: 3}

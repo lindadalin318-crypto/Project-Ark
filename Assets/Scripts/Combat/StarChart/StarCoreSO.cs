@@ -41,6 +41,10 @@ namespace ProjectArk.Combat
         [Tooltip("Impulse applied to ship on each shot (opposite to fire direction)")]
         [SerializeField] private float _recoilForce = 0.5f;
 
+        [Header("Anomaly")]
+        [Tooltip("Modifier prefab for Anomaly family cores (e.g. BoomerangModifier). Ignored for other families.")]
+        [SerializeField] private GameObject _anomalyModifierPrefab;
+
         [Header("VFX")]
         [SerializeField] private GameObject _muzzleFlashPrefab;
         [SerializeField] private GameObject _impactVFXPrefab;
@@ -63,6 +67,7 @@ namespace ProjectArk.Combat
         public float Spread => _spread;
         public float Knockback => _knockback;
         public float RecoilForce => _recoilForce;
+        public GameObject AnomalyModifierPrefab => _anomalyModifierPrefab;
         public GameObject MuzzleFlashPrefab => _muzzleFlashPrefab;
         public GameObject ImpactVFXPrefab => _impactVFXPrefab;
         public AudioClip FireSound => _fireSound;

@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02bdc0e80ad637a47a776bac64f88ad3, type: 3}
+  m_Name: PlayerInventory
+  m_EditorClassIdentifier: ProjectArk.UI::ProjectArk.UI.StarChartInventorySO
+  _ownedItems:
+  - {fileID: 11400000, guid: c7c61dacd3bfb45b6ae14b6152ee3a8b, type: 2}
+  - {fileID: 11400000, guid: e6b6d0f949472459e98ecccbcc0ea53a, type: 2}
+  - {fileID: 11400000, guid: f324bfb5bc456477bb700e503994f3ec, type: 2}
+  - {fileID: 11400000, guid: 8c64af7a7f4914bbc88726cf304ca7ef, type: 2}
+  - {fileID: 11400000, guid: 06dd9134854dbbc439d9fbee010be857, type: 2}
+  - {fileID: 11400000, guid: a1f588637210e9c4395cfac8dfbd9f34, type: 2}
+  - {fileID: 11400000, guid: f814efbf637ba4c2785129f9e3e95da3, type: 2}
+  - {fileID: 11400000, guid: 69e931aea30dd4d56b0918745582df3a, type: 2}
+  - {fileID: 11400000, guid: ac97e1b2088574045a4985b7acfac5bd, type: 2}
+  - {fileID: 11400000, guid: c862ec4a6c35f4046bbe546b132ce3e3, type: 2}

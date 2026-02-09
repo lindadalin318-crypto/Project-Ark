@@ -43,6 +43,12 @@ namespace ProjectArk.Combat
         /// <summary> Knockback force applied to hit target. </summary>
         public float Knockback => _knockback;
 
+        /// <summary>
+        /// When false, the projectile will not be recycled on hit (pierce / boomerang behavior).
+        /// Reset to true on pool return.
+        /// </summary>
+        public bool ShouldDestroyOnHit { get; set; } = true;
+
         private void Awake()
         {
             _rigidbody = GetComponent<Rigidbody2D>();
@@ -111,7 +117,10 @@ namespace ProjectArk.Combat
             // TODO: 检查 IDamageable 接口对敌人造成伤害 (待敌人系统实现)
 
             SpawnImpactVFX();
-            ReturnToPool();
+
+            // If a modifier set ShouldDestroyOnHit to false, skip pool return (pierce / boomerang)
+            if (ShouldDestroyOnHit)
+                ReturnToPool();
         }
 
         private void SpawnImpactVFX()
@@ -133,6 +142,14 @@ namespace ProjectArk.Combat
                 _poolRef.ReturnToPool();
         }
 
+        /// <summary>
+        /// Public entry point for modifiers (e.g. BoomerangModifier) to force-recycle this projectile.
+        /// </summary>
+        public void ForceReturnToPool()
+        {
+            ReturnToPool();
+        }
+
         // --- IPoolable ---
 
         public void OnGetFromPool()
@@ -147,6 +164,8 @@ namespace ProjectArk.Combat
             _isAlive = false;
             _rigidbody.linearVelocity = Vector2.zero;
             _modifiers.Clear();
+            ShouldDestroyOnHit = true;
+            transform.localScale = Vector3.one;
         }
     }
 }

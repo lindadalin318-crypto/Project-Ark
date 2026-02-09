@@ -1,0 +1,8 @@
+﻿<Solution>
+  <Project Path="ProjectArk.UI.csproj" />
+  <Project Path="ProjectArk.Combat.csproj" />
+  <Project Path="ProjectArk.Heat.csproj" />
+  <Project Path="ProjectArk.Core.csproj" />
+  <Project Path="ProjectArk.Ship.csproj" />
+  <Project Path="ProjectArk.Combat.Editor.csproj" />
+</Solution>

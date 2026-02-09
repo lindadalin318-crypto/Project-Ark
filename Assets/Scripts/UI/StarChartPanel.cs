@@ -206,12 +206,12 @@ namespace ProjectArk.UI
             switch (item)
             {
                 case StarCoreSO core:
-                    return _controller.PrimaryTrack.CoreLayer.Items.Contains(core)
-                        || _controller.SecondaryTrack.CoreLayer.Items.Contains(core);
+                    return ListContains(_controller.PrimaryTrack.CoreLayer.Items, core)
+                        || ListContains(_controller.SecondaryTrack.CoreLayer.Items, core);
 
                 case PrismSO prism:
-                    return _controller.PrimaryTrack.PrismLayer.Items.Contains(prism)
-                        || _controller.SecondaryTrack.PrismLayer.Items.Contains(prism);
+                    return ListContains(_controller.PrimaryTrack.PrismLayer.Items, prism)
+                        || ListContains(_controller.SecondaryTrack.PrismLayer.Items, prism);
 
                 case LightSailSO sail:
                     return _controller.GetEquippedLightSail() == sail;
@@ -230,6 +230,16 @@ namespace ProjectArk.UI
                 default:
                     return false;
             }
+        }
+
+        /// <summary> Helper: IReadOnlyList does not have Contains, so we iterate manually. </summary>
+        private static bool ListContains<T>(System.Collections.Generic.IReadOnlyList<T> list, T target)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (ReferenceEquals(list[i], target)) return true;
+            }
+            return false;
         }
 
         private void OnDestroy()

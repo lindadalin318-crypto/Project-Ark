@@ -19,6 +19,10 @@ namespace ProjectArk.UI
         [SerializeField] private StarChartPanel _starChartPanel;
         [SerializeField] private HeatBarHUD _heatBarHUD;
 
+        [Header("Transition")]
+        [Tooltip("Optional — drives camera zoom, post-processing and SFX when entering/exiting the Star Chart.")]
+        [SerializeField] private WeavingStateTransition _weavingTransition;
+
         [Header("Inventory Data")]
         [SerializeField] private StarChartInventorySO _playerInventory;
 
@@ -101,6 +105,9 @@ namespace ProjectArk.UI
             // 暂停游戏
             Time.timeScale = 0f;
 
+            // Trigger enter-weaving visual/audio transition (runs on unscaled time).
+            _weavingTransition?.EnterWeavingState();
+
             // 打开面板
             _starChartPanel?.Open();
         }
@@ -108,6 +115,9 @@ namespace ProjectArk.UI
         private void ClosePanel()
         {
             _isPanelOpen = false;
+
+            // Trigger exit-weaving visual/audio transition (runs on unscaled time).
+            _weavingTransition?.ExitWeavingState();
 
             // 关闭面板
             _starChartPanel?.Close();

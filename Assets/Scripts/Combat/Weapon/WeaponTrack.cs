@@ -116,6 +116,7 @@ namespace ProjectArk.Combat
         /// <summary>
         /// Pre-warms object pools for all equipped cores' prefabs.
         /// Call after loadout change or during initialization.
+        /// Pool sizes are tuned per-family for optimal memory usage.
         /// </summary>
         public void InitializePools()
         {
@@ -124,11 +125,47 @@ namespace ProjectArk.Combat
             var cores = _coreLayer.Items;
             for (int i = 0; i < cores.Count; i++)
             {
-                if (cores[i].ProjectilePrefab != null)
-                    PoolManager.Instance.GetPool(cores[i].ProjectilePrefab, 20, 50);
+                var core = cores[i];
 
-                if (cores[i].MuzzleFlashPrefab != null)
-                    PoolManager.Instance.GetPool(cores[i].MuzzleFlashPrefab, 5, 20);
+                // Pre-warm projectile / entity pool based on core family
+                if (core.ProjectilePrefab != null)
+                {
+                    switch (core.Family)
+                    {
+                        case CoreFamily.Matter:
+                            // Physical bullets — high volume
+                            PoolManager.Instance.GetPool(core.ProjectilePrefab, 20, 50);
+                            break;
+
+                        case CoreFamily.Light:
+                            // Laser beams — short-lived LineRenderer objects, lower volume
+                            PoolManager.Instance.GetPool(core.ProjectilePrefab, 5, 20);
+                            break;
+
+                        case CoreFamily.Echo:
+                            // Shockwaves — typically fewer concurrent instances
+                            PoolManager.Instance.GetPool(core.ProjectilePrefab, 5, 15);
+                            break;
+
+                        case CoreFamily.Anomaly:
+                            // Anomaly entities reuse Projectile prefab
+                            PoolManager.Instance.GetPool(core.ProjectilePrefab, 10, 30);
+
+                            // Also pre-warm the modifier prefab pool (e.g. BoomerangModifier)
+                            if (core.AnomalyModifierPrefab != null)
+                                PoolManager.Instance.GetPool(core.AnomalyModifierPrefab, 10, 30);
+                            break;
+
+                        default:
+                            // Fallback — treat as Matter
+                            PoolManager.Instance.GetPool(core.ProjectilePrefab, 20, 50);
+                            break;
+                    }
+                }
+
+                // Muzzle flash — shared across all families
+                if (core.MuzzleFlashPrefab != null)
+                    PoolManager.Instance.GetPool(core.MuzzleFlashPrefab, 5, 20);
             }
         }
 

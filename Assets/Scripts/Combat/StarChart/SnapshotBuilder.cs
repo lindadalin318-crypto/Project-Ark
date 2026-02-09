@@ -177,6 +177,9 @@ namespace ProjectArk.Combat
                 FireSoundPitchVariance = core.FireSoundPitchVariance,
                 Family = core.Family,
 
+                // Anomaly family modifier prefab (pass-through from StarCoreSO)
+                AnomalyModifierPrefab = core.AnomalyModifierPrefab,
+
                 // Tint 修改器（所有核心共享同一组）
                 Modifiers = tintModifiers
             };

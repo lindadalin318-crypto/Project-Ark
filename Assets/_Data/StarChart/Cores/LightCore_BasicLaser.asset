@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 04e05fd278fddc444afe130ceacc0f04, type: 3}
+  m_Name: LightCore_BasicLaser
+  m_EditorClassIdentifier: ProjectArk.Combat::ProjectArk.Combat.StarCoreSO
+  _displayName: Basic Laser
+  _description: Instant-hit light beam. Fast and precise, but no physical presence.
+  _icon: {fileID: 0}
+  _slotSize: 1
+  _heatCost: 0
+  _family: 1
+  _projectilePrefab: {fileID: 1560740897334003585, guid: 2016ff32cc94f433183601f0d25cabaf, type: 3}
+  _fireRate: 4
+  _baseDamage: 8
+  _projectileSpeed: 50
+  _lifetime: 0.5
+  _spread: 0
+  _knockback: 0.3
+  _recoilForce: 0.2
+  _anomalyModifierPrefab: {fileID: 0}
+  _muzzleFlashPrefab: {fileID: 0}
+  _impactVFXPrefab: {fileID: 0}
+  _fireSound: {fileID: 0}
+  _fireSoundPitchVariance: 0.1

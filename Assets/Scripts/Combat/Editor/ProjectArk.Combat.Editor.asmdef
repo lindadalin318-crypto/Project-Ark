@@ -1,0 +1,19 @@
+{
+    "name": "ProjectArk.Combat.Editor",
+    "rootNamespace": "ProjectArk.Combat.Editor",
+    "references": [
+        "ProjectArk.Combat",
+        "ProjectArk.Core"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
