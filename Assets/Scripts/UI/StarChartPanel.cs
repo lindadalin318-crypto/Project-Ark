@@ -93,6 +93,7 @@ namespace ProjectArk.UI
 
         private void RefreshAll()
         {
+            Debug.Log($"[StarChartPanel] RefreshAll called. inventoryView={(_inventoryView != null ? "OK" : "NULL")}, itemDetailView={(_itemDetailView != null ? "OK" : "NULL")}");
             _primaryTrackView?.Refresh();
             _secondaryTrackView?.Refresh();
             _inventoryView?.Refresh();
@@ -121,6 +122,7 @@ namespace ProjectArk.UI
 
         private void HandleInventoryItemSelected(StarChartItemSO item)
         {
+            Debug.Log($"[StarChartPanel] HandleInventoryItemSelected: {item?.DisplayName ?? "NULL"}, _itemDetailView={(_itemDetailView != null ? "OK" : "NULL")}");
             _selectedItem = item;
             bool equipped = IsItemEquipped(item);
             _itemDetailView?.ShowItem(item, equipped);
@@ -129,6 +131,7 @@ namespace ProjectArk.UI
         private void HandleCellClicked(StarChartItemSO item)
         {
             // 点击已装备的格子 → 在详情面板显示（已装备状态）
+            Debug.Log($"[StarChartPanel] HandleCellClicked: {item?.DisplayName ?? "NULL"}");
             _selectedItem = item;
             _itemDetailView?.ShowItem(item, true);
         }

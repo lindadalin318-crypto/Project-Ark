@@ -22,6 +22,13 @@ namespace ProjectArk.UI
         [SerializeField] private Color _selectedHighlight = new(0.3f, 0.8f, 0.4f, 1f);
         [SerializeField] private Color _invalidHighlight = new(0.8f, 0.2f, 0.2f, 1f);
 
+        [Header("Placeholder (when Icon is null)")]
+        [SerializeField] private Color _placeholderCoreColor = new(0.9f, 0.6f, 0.2f, 0.9f);
+        [SerializeField] private Color _placeholderPrismColor = new(0.4f, 0.7f, 0.9f, 0.9f);
+        [SerializeField] private Color _placeholderSailColor = new(0.5f, 0.9f, 0.5f, 0.9f);
+        [SerializeField] private Color _placeholderSatelliteColor = new(0.8f, 0.4f, 0.8f, 0.9f);
+        [SerializeField] private Color _placeholderDefaultColor = new(0.7f, 0.7f, 0.7f, 0.9f);
+
         /// <summary> Fired when this cell is clicked. </summary>
         public event Action OnClicked;
 
@@ -45,9 +52,39 @@ namespace ProjectArk.UI
             if (_iconImage != null)
             {
                 _iconImage.enabled = true;
-                _iconImage.sprite = item != null ? item.Icon : null;
-                _iconImage.color = item != null && item.Icon != null ? Color.white : Color.clear;
+
+                if (item != null && item.Icon != null)
+                {
+                    // Normal path: display the item's icon sprite
+                    _iconImage.sprite = item.Icon;
+                    _iconImage.color = Color.white;
+                }
+                else if (item != null)
+                {
+                    // Placeholder path: no icon assigned, show a coloured square
+                    _iconImage.sprite = null;
+                    _iconImage.color = GetPlaceholderColor(item);
+                    Debug.Log($"[SlotCellView] Item '{item.DisplayName}' has no icon — showing placeholder.");
+                }
+                else
+                {
+                    _iconImage.sprite = null;
+                    _iconImage.color = Color.clear;
+                }
             }
+        }
+
+        /// <summary> Returns a placeholder tint based on item type so cells are visually distinguishable. </summary>
+        private Color GetPlaceholderColor(StarChartItemSO item)
+        {
+            return item.ItemType switch
+            {
+                StarChartItemType.Core      => _placeholderCoreColor,
+                StarChartItemType.Prism     => _placeholderPrismColor,
+                StarChartItemType.LightSail => _placeholderSailColor,
+                StarChartItemType.Satellite => _placeholderSatelliteColor,
+                _                           => _placeholderDefaultColor,
+            };
         }
 
         /// <summary> Show empty state (no item, available for equip). </summary>

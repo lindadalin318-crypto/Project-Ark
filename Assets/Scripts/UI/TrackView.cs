@@ -97,23 +97,40 @@ namespace ProjectArk.UI
 
         private void RefreshLayer<T>(SlotCellView[] cells, SlotLayer<T> layer) where T : StarChartItemSO
         {
+            // Check for null/empty cell array
+            if (cells == null || cells.Length == 0)
+            {
+                Debug.LogWarning($"[TrackView] RefreshLayer: cells array is null or empty on '{gameObject.name}'");
+                return;
+            }
+
             // 先全部清空
             for (int i = 0; i < cells.Length; i++)
             {
                 if (cells[i] != null)
                     cells[i].SetEmpty();
+                else
+                    Debug.LogWarning($"[TrackView] Cell[{i}] is null on '{gameObject.name}' — check Inspector references");
             }
 
-            if (layer == null) return;
+            if (layer == null)
+            {
+                Debug.LogWarning($"[TrackView] RefreshLayer: layer is null on '{gameObject.name}'");
+                return;
+            }
 
             // 遍历装备，根据 SlotSize 映射到格子
             int cellIndex = 0;
             var items = layer.Items;
 
+            Debug.Log($"[TrackView] RefreshLayer on '{gameObject.name}': {items.Count} item(s) equipped");
+
             for (int i = 0; i < items.Count; i++)
             {
                 var item = items[i];
                 int size = item.SlotSize;
+
+                Debug.Log($"[TrackView]   → item[{i}]: '{item.DisplayName}' (size={size}, icon={item.Icon != null}), placing at cell {cellIndex}");
 
                 // 第一个格子显示图标
                 if (cellIndex < cells.Length && cells[cellIndex] != null)

@@ -53,6 +53,7 @@ namespace ProjectArk.UI
         {
             _inventory = inventory;
             _isEquippedCheck = isEquippedCheck;
+            Debug.Log($"[InventoryView] Bind called. inventory={inventory?.name ?? "NULL"}, ownedItems={inventory?.OwnedItems?.Count ?? -1}");
         }
 
         /// <summary> Set active filter. Null = show all. Triggers refresh. </summary>
@@ -68,11 +69,15 @@ namespace ProjectArk.UI
             ClearViews();
 
             if (_inventory == null || _itemPrefab == null || _contentParent == null)
+            {
+                Debug.LogWarning($"[InventoryView] Refresh aborted: inventory={(_inventory != null ? "OK" : "NULL")}, itemPrefab={(_itemPrefab != null ? "OK" : "NULL")}, contentParent={(_contentParent != null ? "OK" : "NULL")}");
                 return;
+            }
 
+            int count = 0;
             foreach (var item in _inventory.GetByType(_activeFilter))
             {
-                if (item == null) continue;
+                if (item == null) { Debug.LogWarning("[InventoryView] Skipping null item in inventory"); continue; }
 
                 var view = Instantiate(_itemPrefab, _contentParent);
                 bool equipped = _isEquippedCheck?.Invoke(item) ?? false;
@@ -80,7 +85,17 @@ namespace ProjectArk.UI
                 view.OnClicked += HandleItemClicked;
                 view.gameObject.SetActive(true);
                 _itemViews.Add(view);
+                count++;
             }
+            // Force layout rebuild immediately — GridLayoutGroup + ContentSizeFitter
+            // won't auto-update when timeScale == 0
+            if (_contentParent is RectTransform rt)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+                Canvas.ForceUpdateCanvases();
+            }
+
+            Debug.Log($"[InventoryView] Refresh done. Filter={_activeFilter?.ToString() ?? "ALL"}, instantiated {count} items. contentParent.childCount={_contentParent.childCount}");
         }
 
         private void HandleItemClicked(StarChartItemSO item)
@@ -90,15 +105,21 @@ namespace ProjectArk.UI
 
         private void ClearViews()
         {
+            // Unsubscribe events from tracked views
             for (int i = 0; i < _itemViews.Count; i++)
             {
                 if (_itemViews[i] != null)
-                {
                     _itemViews[i].OnClicked -= HandleItemClicked;
-                    Destroy(_itemViews[i].gameObject);
-                }
             }
             _itemViews.Clear();
+
+            // DestroyImmediate all children to avoid ghost objects
+            // (Destroy is deferred and unreliable when timeScale == 0)
+            if (_contentParent != null)
+            {
+                for (int i = _contentParent.childCount - 1; i >= 0; i--)
+                    DestroyImmediate(_contentParent.GetChild(i).gameObject);
+            }
         }
 
         private void OnDestroy()

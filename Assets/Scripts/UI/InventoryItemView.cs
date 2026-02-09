@@ -20,8 +20,15 @@ namespace ProjectArk.UI
         [SerializeField] private Image _selectionBorder;
 
         [Header("Colors")]
-        [SerializeField] private Color _normalColor = new(0.2f, 0.2f, 0.25f, 0.9f);
+        [SerializeField] private Color _normalColor = new(0.25f, 0.25f, 0.32f, 1f);
         [SerializeField] private Color _selectedColor = new(0.3f, 0.6f, 0.8f, 1f);
+
+        // Placeholder colors when item has no icon sprite
+        private static readonly Color CORE_COLOR = new(0.9f, 0.55f, 0.1f, 1f);     // orange
+        private static readonly Color PRISM_COLOR = new(0.4f, 0.6f, 0.9f, 1f);      // blue
+        private static readonly Color SAIL_COLOR = new(0.3f, 0.8f, 0.5f, 1f);       // green
+        private static readonly Color SATELLITE_COLOR = new(0.7f, 0.4f, 0.8f, 1f);  // purple
+        private static readonly Color DEFAULT_COLOR = new(0.5f, 0.5f, 0.5f, 1f);    // grey
 
         /// <summary> Fired when this item card is clicked. </summary>
         public event Action<StarChartItemSO> OnClicked;
@@ -35,6 +42,25 @@ namespace ProjectArk.UI
                 _button.onClick.AddListener(() => OnClicked?.Invoke(Item));
         }
 
+        // Cached 1x1 white sprite used as placeholder when item has no icon.
+        private static Sprite _whitePlaceholder;
+        private static Sprite WhitePlaceholder
+        {
+            get
+            {
+                if (_whitePlaceholder == null)
+                {
+                    var tex = new Texture2D(4, 4);
+                    var pixels = new Color[16];
+                    for (int i = 0; i < 16; i++) pixels[i] = Color.white;
+                    tex.SetPixels(pixels);
+                    tex.Apply();
+                    _whitePlaceholder = Sprite.Create(tex, new Rect(0, 0, 4, 4), Vector2.one * 0.5f);
+                }
+                return _whitePlaceholder;
+            }
+        }
+
         /// <summary> Configure this view with an item and its equipped status. </summary>
         public void Setup(StarChartItemSO item, bool isEquipped)
         {
@@ -42,8 +68,23 @@ namespace ProjectArk.UI
 
             if (_iconImage != null)
             {
-                _iconImage.sprite = item.Icon;
-                _iconImage.color = item.Icon != null ? Color.white : Color.clear;
+                if (item.Icon != null)
+                {
+                    _iconImage.sprite = item.Icon;
+                    _iconImage.color = Color.white;
+                }
+                else
+                {
+                    // Image component won't render color when sprite is null.
+                    // Use a white placeholder sprite and tint it with the type color.
+                    _iconImage.sprite = WhitePlaceholder;
+                    _iconImage.color = GetPlaceholderColor(item);
+                }
+                Debug.Log($"[InventoryItemView] Setup '{item.DisplayName}': iconSprite={_iconImage.sprite?.name ?? "NULL"}, iconColor={_iconImage.color}, iconEnabled={_iconImage.enabled}, iconGO.active={_iconImage.gameObject.activeSelf}");
+            }
+            else
+            {
+                Debug.LogWarning($"[InventoryItemView] Setup '{item.DisplayName}': _iconImage is NULL!");
             }
 
             if (_nameLabel != null)
@@ -54,6 +95,16 @@ namespace ProjectArk.UI
 
             if (_equippedBadge != null)
                 _equippedBadge.enabled = isEquipped;
+
+            // Force background to be fully opaque so cards are visible
+            var bgImage = GetComponent<Image>();
+            if (bgImage != null)
+            {
+                var c = bgImage.color;
+                c.a = 1f;
+                bgImage.color = c;
+                Debug.Log($"[InventoryItemView] '{item.DisplayName}' bg color={bgImage.color}, rectSize={((RectTransform)transform).sizeDelta}");
+            }
         }
 
         /// <summary> Visual selection state (highlighted border). </summary>
@@ -61,6 +112,19 @@ namespace ProjectArk.UI
         {
             if (_selectionBorder != null)
                 _selectionBorder.color = selected ? _selectedColor : _normalColor;
+        }
+
+        /// <summary> Returns a type-based placeholder color when an item has no icon. </summary>
+        private static Color GetPlaceholderColor(StarChartItemSO item)
+        {
+            return item.ItemType switch
+            {
+                StarChartItemType.Core      => CORE_COLOR,
+                StarChartItemType.Prism     => PRISM_COLOR,
+                StarChartItemType.LightSail => SAIL_COLOR,
+                StarChartItemType.Satellite => SATELLITE_COLOR,
+                _                           => DEFAULT_COLOR,
+            };
         }
     }
 }
