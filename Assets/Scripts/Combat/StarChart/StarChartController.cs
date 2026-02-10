@@ -52,6 +52,16 @@ namespace ProjectArk.Combat
         /// <summary> Fired after any track fires. Param: which track. </summary>
         public event Action<WeaponTrack.TrackId> OnTrackFired;
 
+        /// <summary>
+        /// Global static event broadcast when any weapon fires.
+        /// Enemies subscribe to this for auditory perception.
+        /// Params: (firePosition, noiseRadius).
+        /// </summary>
+        public static event Action<Vector2, float> OnWeaponFired;
+
+        /// <summary> Default noise radius for weapon fire (units). </summary>
+        private const float DEFAULT_NOISE_RADIUS = 15f;
+
         /// <summary> Fired when the equipped Light Sail changes. </summary>
         public event Action OnLightSailChanged;
 
@@ -264,6 +274,9 @@ namespace ProjectArk.Combat
 
             // 事件
             OnTrackFired?.Invoke(track.Id);
+
+            // Broadcast weapon fire for enemy auditory perception
+            OnWeaponFired?.Invoke(spawnPos, DEFAULT_NOISE_RADIUS);
         }
 
         /// <summary>
@@ -313,7 +326,10 @@ namespace ProjectArk.Combat
 
             var parms = coreSnap.ToProjectileParams();
             _lightSailRunner?.ModifyProjectileParams(ref parms);
-            projectile.Initialize(direction, parms, coreSnap.Modifiers);
+
+            // Runtime-instantiate independent modifier copies for this projectile
+            var modifiers = InstantiateModifiers(bulletObj, coreSnap.TintModifierPrefabs);
+            projectile.Initialize(direction, parms, modifiers);
         }
 
         /// <summary> Light family: instant raycast laser beam. </summary>
@@ -339,7 +355,10 @@ namespace ProjectArk.Combat
 
             var parms = coreSnap.ToProjectileParams();
             _lightSailRunner?.ModifyProjectileParams(ref parms);
-            laserBeam.Fire(spawnPos, direction, parms, coreSnap.Modifiers);
+
+            // Runtime-instantiate independent modifier copies for this beam
+            var modifiers = InstantiateModifiers(beamObj, coreSnap.TintModifierPrefabs);
+            laserBeam.Fire(spawnPos, direction, parms, modifiers);
         }
 
         /// <summary> Echo family: expanding shockwave AOE. </summary>
@@ -367,7 +386,10 @@ namespace ProjectArk.Combat
 
             var parms = coreSnap.ToProjectileParams();
             _lightSailRunner?.ModifyProjectileParams(ref parms);
-            echoWave.Fire(spawnPos, direction, parms, coreSnap.Modifiers, coreSnap.Spread);
+
+            // Runtime-instantiate independent modifier copies for this wave
+            var modifiers = InstantiateModifiers(waveObj, coreSnap.TintModifierPrefabs);
+            echoWave.Fire(spawnPos, direction, parms, modifiers, coreSnap.Spread);
         }
 
         /// <summary> Anomaly family: custom behavior entity (e.g., boomerang). </summary>
@@ -390,31 +412,15 @@ namespace ProjectArk.Combat
             var parms = coreSnap.ToProjectileParams();
             _lightSailRunner?.ModifyProjectileParams(ref parms);
 
-            // Inject anomaly-specific modifier: instantiate a runtime copy on the projectile
-            // so each projectile gets its own independent state (e.g. BoomerangModifier).
-            var modifiers = coreSnap.Modifiers != null
-                ? new List<IProjectileModifier>(coreSnap.Modifiers)
-                : new List<IProjectileModifier>();
+            // Runtime-instantiate Tint modifier copies
+            var modifiers = InstantiateModifiers(bulletObj, coreSnap.TintModifierPrefabs);
 
+            // Also instantiate Anomaly-specific modifier (e.g. BoomerangModifier)
             if (coreSnap.AnomalyModifierPrefab != null)
             {
-                // Copy all IProjectileModifier components from the modifier prefab onto the projectile
-                var prefabModifiers = coreSnap.AnomalyModifierPrefab.GetComponents<IProjectileModifier>();
-                for (int m = 0; m < prefabModifiers.Length; m++)
-                {
-                    var srcComponent = prefabModifiers[m] as MonoBehaviour;
-                    if (srcComponent == null) continue;
-
-                    // AddComponent of the same type, then copy serialized fields
-                    var newComponent = bulletObj.AddComponent(srcComponent.GetType()) as IProjectileModifier;
-                    if (newComponent != null)
-                    {
-                        // Copy serialized field values from the prefab's component
-                        var json = JsonUtility.ToJson(srcComponent);
-                        JsonUtility.FromJsonOverwrite(json, newComponent as MonoBehaviour);
-                        modifiers.Add(newComponent);
-                    }
-                }
+                var anomalyPrefabs = new List<GameObject>(1) { coreSnap.AnomalyModifierPrefab };
+                var anomalyModifiers = InstantiateModifiers(bulletObj, anomalyPrefabs);
+                modifiers.AddRange(anomalyModifiers);
             }
 
             projectile.Initialize(direction, parms, modifiers);
@@ -517,6 +523,43 @@ namespace ProjectArk.Combat
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Instantiates independent IProjectileModifier copies on the target GameObject
+        /// from a list of modifier prefabs. Uses AddComponent + JsonUtility.FromJsonOverwrite
+        /// to create a deep copy of each modifier's serialized fields.
+        /// </summary>
+        /// <param name="targetObj">The projectile/beam/wave GameObject to attach modifiers to.</param>
+        /// <param name="prefabs">List of modifier prefab GameObjects (each expected to have IProjectileModifier).</param>
+        /// <returns>List of newly instantiated modifier instances (may be empty, never null).</returns>
+        private static List<IProjectileModifier> InstantiateModifiers(GameObject targetObj, List<GameObject> prefabs)
+        {
+            var result = new List<IProjectileModifier>();
+            if (prefabs == null || prefabs.Count == 0) return result;
+
+            for (int i = 0; i < prefabs.Count; i++)
+            {
+                if (prefabs[i] == null) continue;
+
+                var srcModifiers = prefabs[i].GetComponents<IProjectileModifier>();
+                for (int m = 0; m < srcModifiers.Length; m++)
+                {
+                    var srcComponent = srcModifiers[m] as MonoBehaviour;
+                    if (srcComponent == null) continue;
+
+                    // AddComponent of the same type, then copy serialized field values
+                    var newComponent = targetObj.AddComponent(srcComponent.GetType()) as IProjectileModifier;
+                    if (newComponent != null)
+                    {
+                        var json = JsonUtility.ToJson(srcComponent);
+                        JsonUtility.FromJsonOverwrite(json, newComponent as MonoBehaviour);
+                        result.Add(newComponent);
+                    }
+                }
+            }
+
+            return result;
         }
 
         private static Vector2 RotateVector2(Vector2 v, float degrees)

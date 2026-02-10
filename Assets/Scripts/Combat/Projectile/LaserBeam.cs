@@ -83,9 +83,12 @@ namespace ProjectArk.Combat
                 for (int i = 0; i < _modifiers.Count; i++)
                     _modifiers[i].OnProjectileHit(null, hit.collider);
 
-                // Placeholder damage log
-                Debug.Log($"[LaserBeam] Hit {hit.collider.name} at {hit.point}, " +
-                          $"damage={_damage:F1}, knockback={_knockback:F1}");
+                // Deal damage via IDamageable interface
+                var damageable = hit.collider.GetComponent<IDamageable>();
+                if (damageable != null && damageable.IsAlive)
+                {
+                    damageable.TakeDamage(_damage, dir, _knockback);
+                }
 
                 // Spawn impact VFX
                 SpawnImpactVFX(hit.point, parms.ImpactVFXPrefab);
@@ -179,6 +182,15 @@ namespace ProjectArk.Combat
         public void OnReturnToPool()
         {
             _isAlive = false;
+
+            // Destroy dynamically-added modifier components to prevent
+            // component accumulation across pool reuses.
+            for (int i = 0; i < _modifiers.Count; i++)
+            {
+                if (_modifiers[i] is MonoBehaviour mb && mb != null && mb.gameObject == gameObject)
+                    Destroy(mb);
+            }
+
             _modifiers.Clear();
 
             if (_lineRenderer != null)

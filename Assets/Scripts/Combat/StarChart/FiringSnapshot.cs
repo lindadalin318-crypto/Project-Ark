@@ -32,8 +32,8 @@ namespace ProjectArk.Combat
         // Anomaly family modifier prefab (set by SnapshotBuilder from StarCoreSO)
         public GameObject AnomalyModifierPrefab;
 
-        // 行为修改器（Tint 家族棱镜注入）
-        public List<IProjectileModifier> Modifiers;
+        // Tint family prism modifier prefabs (instantiated at runtime per projectile)
+        public List<GameObject> TintModifierPrefabs;
 
         /// <summary>
         /// Convert to ProjectileParams for Projectile.Initialize().

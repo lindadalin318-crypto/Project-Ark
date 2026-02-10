@@ -192,11 +192,9 @@ MonoBehaviour:
   _firePoint: {fileID: 4762998267927791697}
   _heatSystem: {fileID: 7931010176204908089}
   _debugPrimaryCores:
-  - {fileID: 11400000, guid: 06dd9134854dbbc439d9fbee010be857, type: 2}
-  - {fileID: 11400000, guid: a1f588637210e9c4395cfac8dfbd9f34, type: 2}
+  - {fileID: 11400000, guid: 8c64af7a7f4914bbc88726cf304ca7ef, type: 2}
   _debugPrimaryPrisms: []
-  _debugSecondaryCores:
-  - {fileID: 11400000, guid: a1f588637210e9c4395cfac8dfbd9f34, type: 2}
+  _debugSecondaryCores: []
   _debugSecondaryPrisms: []
   _debugLightSail: {fileID: 11400000, guid: c862ec4a6c35f4046bbe546b132ce3e3, type: 2}
   _debugSatellites: []

@@ -42,12 +42,12 @@ namespace ProjectArk.Combat
             float slowestInterval = 0f;
             int totalProjectiles = 0;
 
-            // 收集 Tint 棱镜的行为修改器
-            List<IProjectileModifier> tintModifiers = CollectTintModifiers(prisms);
+            // Collect Tint prism modifier prefabs (instantiated at runtime per projectile)
+            List<GameObject> tintModifierPrefabs = CollectTintModifierPrefabs(prisms);
 
             for (int i = 0; i < coreCount; i++)
             {
-                var snapshot = BuildCoreSnapshot(cores[i], coreCount, tintModifiers);
+                var snapshot = BuildCoreSnapshot(cores[i], coreCount, tintModifierPrefabs);
                 snapshots.Add(snapshot);
 
                 totalHeat += snapshot.HeatCost;
@@ -125,16 +125,15 @@ namespace ProjectArk.Combat
         }
 
         /// <summary>
-        /// 收集所有 Tint 家族棱镜的 IProjectileModifier。
-        /// </summary>
-        /// <summary>
-        /// Collects all Tint family prism modifiers.
+        /// Collects all Tint family prism modifier prefab references.
+        /// Returns a list of GameObjects (prefabs) rather than component instances,
+        /// so that StarChartController can instantiate independent copies per projectile.
         /// Always returns a non-null list (empty if no tint prisms equipped)
         /// to prevent NullReferenceException downstream.
         /// </summary>
-        private static List<IProjectileModifier> CollectTintModifiers(IReadOnlyList<PrismSO> prisms)
+        private static List<GameObject> CollectTintModifierPrefabs(IReadOnlyList<PrismSO> prisms)
         {
-            var result = new List<IProjectileModifier>();
+            var result = new List<GameObject>();
 
             if (prisms == null || prisms.Count == 0) return result;
 
@@ -143,10 +142,11 @@ namespace ProjectArk.Combat
                 if (prisms[i].Family != PrismFamily.Tint) continue;
                 if (prisms[i].ProjectileModifierPrefab == null) continue;
 
-                var modifier = prisms[i].ProjectileModifierPrefab.GetComponent<IProjectileModifier>();
-                if (modifier == null) continue;
+                // Validate that the prefab actually has an IProjectileModifier component
+                if (prisms[i].ProjectileModifierPrefab.GetComponent<IProjectileModifier>() == null)
+                    continue;
 
-                result.Add(modifier);
+                result.Add(prisms[i].ProjectileModifierPrefab);
             }
 
             return result;
@@ -156,7 +156,7 @@ namespace ProjectArk.Combat
         /// 对单个核心应用棱镜修正，生成 CoreSnapshot。
         /// </summary>
         private static CoreSnapshot BuildCoreSnapshot(StarCoreSO core, int coreCount,
-                                                       List<IProjectileModifier> tintModifiers)
+                                                       List<GameObject> tintModifierPrefabs)
         {
             var snapshot = new CoreSnapshot
             {
@@ -184,8 +184,8 @@ namespace ProjectArk.Combat
                 // Anomaly family modifier prefab (pass-through from StarCoreSO)
                 AnomalyModifierPrefab = core.AnomalyModifierPrefab,
 
-                // Tint 修改器（所有核心共享同一组）
-                Modifiers = tintModifiers
+                // Tint modifier prefabs (runtime-instantiated per projectile by StarChartController)
+                TintModifierPrefabs = tintModifierPrefabs
             };
 
             // Clamp 到合法范围

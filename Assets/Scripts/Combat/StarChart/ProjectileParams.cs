@@ -4,7 +4,7 @@ namespace ProjectArk.Combat
 {
     /// <summary>
     /// Lightweight value type carrying all data a Projectile needs for initialization.
-    /// Decouples Projectile from both WeaponStatsSO and StarCoreSO,
+    /// Decouples Projectile from StarCoreSO,
     /// allowing the Star Chart pipeline to pass prism-modified values.
     /// </summary>
     public readonly struct ProjectileParams
@@ -35,21 +35,5 @@ namespace ProjectArk.Combat
                 Damage * multiplier, Speed, Lifetime, Knockback, ImpactVFXPrefab);
         }
 
-        /// <summary>
-        /// Construct from a legacy WeaponStatsSO for backward compatibility.
-        /// </summary>
-#pragma warning disable CS0618 // Intentional: legacy compatibility bridge
-        [System.Obsolete("Use StarCoreSO pipeline instead. Will be removed in Batch 4.")]
-        public static ProjectileParams FromWeaponStats(WeaponStatsSO stats)
-        {
-            return new ProjectileParams(
-                stats.BaseDamage,
-                stats.ProjectileSpeed,
-                stats.Lifetime,
-                stats.Knockback,
-                stats.ImpactVFXPrefab
-            );
-        }
-#pragma warning restore CS0618
     }
 }

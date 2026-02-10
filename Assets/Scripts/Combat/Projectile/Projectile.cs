@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using ProjectArk.Core;
@@ -23,7 +22,7 @@ namespace ProjectArk.Combat
         private float _lifetimeTimer;
         private bool _isAlive;
 
-        // 命中特效预制体（从 ProjectileParams 或 WeaponStatsSO 获取）
+        // Impact VFX prefab (from ProjectileParams)
         private GameObject _impactVFXPrefab;
 
         // 星图扩展钩子
@@ -58,6 +57,90 @@ namespace ProjectArk.Combat
             _rigidbody = GetComponent<Rigidbody2D>();
             _poolRef = GetComponent<PoolReference>();
             _trail = GetComponent<TrailRenderer>();
+
+            // Fallback: generate a procedural sprite if SpriteRenderer has none assigned.
+            // Prevents invisible projectiles when the prefab was created without a sprite.
+            var sr = GetComponent<SpriteRenderer>();
+            if (sr != null && sr.sprite == null)
+                sr.sprite = CreateFallbackSprite(8);
+
+            // Ensure TrailRenderer exists and is properly configured
+            // (replicates the classic BasicBullet trail effect).
+            if (_trail == null)
+            {
+                _trail = gameObject.AddComponent<TrailRenderer>();
+                ConfigureTrail(_trail, sr);
+            }
+        }
+
+        /// <summary>
+        /// Configures a TrailRenderer to match the classic BasicBullet trail:
+        /// short white-to-transparent fade that tapers from bullet width to zero.
+        /// </summary>
+        private static void ConfigureTrail(TrailRenderer trail, SpriteRenderer sr)
+        {
+            trail.time = 0.15f;
+            trail.minVertexDistance = 0.1f;
+            trail.autodestruct = false;
+            trail.emitting = true;
+            trail.numCornerVertices = 0;
+            trail.numCapVertices = 0;
+            trail.alignment = LineAlignment.TransformZ;
+            trail.textureMode = LineTextureMode.Stretch;
+            trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            trail.receiveShadows = false;
+            trail.generateLightingData = false;
+
+            // Width curve: taper from 0.085 at head to 0 at tail
+            trail.widthMultiplier = 1f;
+            trail.widthCurve = new AnimationCurve(
+                new Keyframe(0f, 0.085f),
+                new Keyframe(1f, 0f));
+
+            // Color gradient: solid white → transparent white (inherits sprite tint)
+            var grad = new Gradient();
+            grad.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0f, 1f) });
+            trail.colorGradient = grad;
+
+            // Use the same material as the SpriteRenderer so the trail
+            // renders correctly under URP 2D.
+            if (sr != null && sr.sharedMaterial != null)
+                trail.sharedMaterial = sr.sharedMaterial;
+        }
+
+        /// <summary>
+        /// Creates a small filled-circle sprite as a runtime fallback.
+        /// </summary>
+        private static Sprite _fallbackSprite;
+        private static Sprite CreateFallbackSprite(int resolution)
+        {
+            if (_fallbackSprite != null) return _fallbackSprite;
+
+            var tex = new Texture2D(resolution, resolution, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp
+            };
+
+            float center = resolution * 0.5f;
+            float radiusSq = center * center;
+            for (int y = 0; y < resolution; y++)
+            {
+                for (int x = 0; x < resolution; x++)
+                {
+                    float dx = x - center + 0.5f;
+                    float dy = y - center + 0.5f;
+                    float distSq = dx * dx + dy * dy;
+                    tex.SetPixel(x, y, distSq <= radiusSq ? Color.white : Color.clear);
+                }
+            }
+            tex.Apply();
+
+            _fallbackSprite = Sprite.Create(tex, new Rect(0, 0, resolution, resolution),
+                                            new Vector2(0.5f, 0.5f), resolution);
+            return _fallbackSprite;
         }
 
         /// <summary>
@@ -82,16 +165,6 @@ namespace ProjectArk.Combat
 
             for (int i = 0; i < _modifiers.Count; i++)
                 _modifiers[i].OnProjectileSpawned(this);
-        }
-
-        /// <summary>
-        /// Legacy initializer. Prefer the ProjectileParams overload.
-        /// </summary>
-        [Obsolete("Use Initialize(Vector2, ProjectileParams, List<IProjectileModifier>) instead.")]
-        public void Initialize(Vector2 direction, WeaponStatsSO stats,
-                               List<IProjectileModifier> modifiers = null)
-        {
-            Initialize(direction, ProjectileParams.FromWeaponStats(stats), modifiers);
         }
 
         private void Update()
@@ -122,7 +195,13 @@ namespace ProjectArk.Combat
             for (int i = 0; i < _modifiers.Count; i++)
                 _modifiers[i].OnProjectileHit(this, other);
 
-            // TODO: 检查 IDamageable 接口对敌人造成伤害 (待敌人系统实现)
+            // Deal damage via IDamageable interface
+            var damageable = other.GetComponent<IDamageable>();
+            if (damageable != null && damageable.IsAlive)
+            {
+                Vector2 knockbackDir = ((Vector2)other.transform.position - (Vector2)transform.position).normalized;
+                damageable.TakeDamage(_damage, knockbackDir, _knockback);
+            }
 
             SpawnImpactVFX();
 
