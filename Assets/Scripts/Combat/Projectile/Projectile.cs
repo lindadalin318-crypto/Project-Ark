@@ -171,6 +171,15 @@ namespace ProjectArk.Combat
         {
             _isAlive = false;
             _rigidbody.linearVelocity = Vector2.zero;
+
+            // Destroy dynamically-added modifier components (e.g. BoomerangModifier)
+            // to prevent component accumulation across pool reuses.
+            for (int i = 0; i < _modifiers.Count; i++)
+            {
+                if (_modifiers[i] is MonoBehaviour mb && mb != null && mb.gameObject == gameObject)
+                    Destroy(mb);
+            }
+
             _modifiers.Clear();
             ShouldDestroyOnHit = true;
             transform.localScale = Vector3.one;

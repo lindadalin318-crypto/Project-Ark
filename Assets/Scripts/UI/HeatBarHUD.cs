@@ -24,7 +24,6 @@ namespace ProjectArk.UI
         private bool _isOverheated;
         private float _flashTimer;
 
-        private const string LABEL_NORMAL = "HEAT";
         private const string LABEL_OVERHEATED = "OVERHEATED";
 
         /// <summary>
@@ -50,6 +49,7 @@ namespace ProjectArk.UI
 
             // 初始状态
             UpdateFill(_heatSystem.NormalizedHeat);
+            UpdateLabel();
             SetOverheatVisual(false);
         }
 
@@ -73,6 +73,8 @@ namespace ProjectArk.UI
         private void HandleHeatChanged(float normalizedHeat)
         {
             UpdateFill(normalizedHeat);
+            if (!_isOverheated)
+                UpdateLabel();
         }
 
         private void HandleOverheated()
@@ -101,7 +103,7 @@ namespace ProjectArk.UI
             _isOverheated = overheated;
 
             if (_label != null)
-                _label.text = overheated ? LABEL_OVERHEATED : LABEL_NORMAL;
+                _label.text = overheated ? LABEL_OVERHEATED : FormatHeatLabel();
 
             if (_overheatFlash != null)
             {
@@ -110,6 +112,18 @@ namespace ProjectArk.UI
                 color.a = 0f;
                 _overheatFlash.color = color;
             }
+        }
+
+        private string FormatHeatLabel()
+        {
+            if (_heatSystem == null) return "HEAT";
+            return $"HEAT({_heatSystem.CurrentHeat:F0}/{_heatSystem.MaxHeat:F0})";
+        }
+
+        private void UpdateLabel()
+        {
+            if (_label != null)
+                _label.text = FormatHeatLabel();
         }
 
         private void Unbind()

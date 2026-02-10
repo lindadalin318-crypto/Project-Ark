@@ -69,7 +69,7 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "Pause",
+                    "name": "ToggleStarChart",
                     "type": "Button",
                     "id": "a1b2c3d4-2000-4000-8000-000000000007",
                     "expectedControlType": "Button",
@@ -258,11 +258,11 @@
                 {
                     "name": "",
                     "id": "b7000000-0000-4000-8000-000000000001",
-                    "path": "<Keyboard>/escape",
+                    "path": "<Keyboard>/tab",
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard&Mouse",
-                    "action": "Pause",
+                    "action": "ToggleStarChart",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -273,7 +273,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "Gamepad",
-                    "action": "Pause",
+                    "action": "ToggleStarChart",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

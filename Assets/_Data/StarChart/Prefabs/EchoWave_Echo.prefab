@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 8393585833265766904}
   - component: {fileID: 3097027317928839851}
   - component: {fileID: 5526728906710260647}
-  m_Layer: 7
+  m_Layer: 10
   m_Name: EchoWave_Echo
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -158,7 +158,7 @@ MonoBehaviour:
   _visualScaleMultiplier: 2
   _enemyMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 256
   _wallMask:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 512

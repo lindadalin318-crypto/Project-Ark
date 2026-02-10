@@ -467,6 +467,11 @@ MonoBehaviour:
   _spannedColor: {r: 0.18, g: 0.22, b: 0.3, a: 0.7}
   _selectedHighlight: {r: 0.3, g: 0.8, b: 0.4, a: 1}
   _invalidHighlight: {r: 0.8, g: 0.2, b: 0.2, a: 1}
+  _placeholderCoreColor: {r: 0.9, g: 0.6, b: 0.2, a: 0.9}
+  _placeholderPrismColor: {r: 0.4, g: 0.7, b: 0.9, a: 0.9}
+  _placeholderSailColor: {r: 0.5, g: 0.9, b: 0.5, a: 0.9}
+  _placeholderSatelliteColor: {r: 0.8, g: 0.4, b: 0.8, a: 0.9}
+  _placeholderDefaultColor: {r: 0.7, g: 0.7, b: 0.7, a: 0.9}
 --- !u!114 &40158120
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -688,7 +693,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: ProjectArk.UI::ProjectArk.UI.WeavingStateTransition
   _mainCamera: {fileID: 519420031}
-  _postProcessVolume: {fileID: 300000001}
+  _postProcessVolume: {fileID: 300000003}
   _shipTransform: {fileID: 5801937892724603171}
   _sfxSource: {fileID: 300000004}
   _settings: {fileID: 11400000, guid: a3b4c5d6e7f80912a3b4c5d6e7f80912, type: 2}
@@ -1007,6 +1012,11 @@ MonoBehaviour:
   _spannedColor: {r: 0.18, g: 0.22, b: 0.3, a: 0.7}
   _selectedHighlight: {r: 0.3, g: 0.8, b: 0.4, a: 1}
   _invalidHighlight: {r: 0.8, g: 0.2, b: 0.2, a: 1}
+  _placeholderCoreColor: {r: 0.9, g: 0.6, b: 0.2, a: 0.9}
+  _placeholderPrismColor: {r: 0.4, g: 0.7, b: 0.9, a: 0.9}
+  _placeholderSailColor: {r: 0.5, g: 0.9, b: 0.5, a: 0.9}
+  _placeholderSatelliteColor: {r: 0.8, g: 0.4, b: 0.8, a: 0.9}
+  _placeholderDefaultColor: {r: 0.7, g: 0.7, b: 0.7, a: 0.9}
 --- !u!1 &168647481
 GameObject:
   m_ObjectHideFlags: 0
@@ -2417,6 +2427,11 @@ MonoBehaviour:
   _spannedColor: {r: 0.18, g: 0.22, b: 0.3, a: 0.7}
   _selectedHighlight: {r: 0.3, g: 0.8, b: 0.4, a: 1}
   _invalidHighlight: {r: 0.8, g: 0.2, b: 0.2, a: 1}
+  _placeholderCoreColor: {r: 0.9, g: 0.6, b: 0.2, a: 0.9}
+  _placeholderPrismColor: {r: 0.4, g: 0.7, b: 0.9, a: 0.9}
+  _placeholderSailColor: {r: 0.5, g: 0.9, b: 0.5, a: 0.9}
+  _placeholderSatelliteColor: {r: 0.8, g: 0.4, b: 0.8, a: 0.9}
+  _placeholderDefaultColor: {r: 0.7, g: 0.7, b: 0.7, a: 0.9}
 --- !u!114 &441174613
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2727,6 +2742,110 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!1 &489856149
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 489856154}
+  - component: {fileID: 489856153}
+  - component: {fileID: 489856151}
+  - component: {fileID: 489856152}
+  - component: {fileID: 489856150}
+  m_Layer: 0
+  m_Name: DragGhost
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &489856150
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 489856149}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4cab51d6ff26304788ea97a2ffd2a4e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ProjectArk.UI::ProjectArk.UI.DragGhostView
+  _iconImage: {fileID: 489856151}
+  _ghostAlpha: 0.7
+  _ghostSize: {x: 64, y: 64}
+--- !u!114 &489856151
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 489856149}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!225 &489856152
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 489856149}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 0
+  m_BlocksRaycasts: 0
+  m_IgnoreParentGroups: 0
+--- !u!222 &489856153
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 489856149}
+  m_CullTransparentMesh: 1
+--- !u!224 &489856154
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 489856149}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1315625635}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 64, y: 64}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -3520,6 +3639,11 @@ MonoBehaviour:
   _spannedColor: {r: 0.18, g: 0.22, b: 0.3, a: 0.7}
   _selectedHighlight: {r: 0.3, g: 0.8, b: 0.4, a: 1}
   _invalidHighlight: {r: 0.8, g: 0.2, b: 0.2, a: 1}
+  _placeholderCoreColor: {r: 0.9, g: 0.6, b: 0.2, a: 0.9}
+  _placeholderPrismColor: {r: 0.4, g: 0.7, b: 0.9, a: 0.9}
+  _placeholderSailColor: {r: 0.5, g: 0.9, b: 0.5, a: 0.9}
+  _placeholderSatelliteColor: {r: 0.8, g: 0.4, b: 0.8, a: 0.9}
+  _placeholderDefaultColor: {r: 0.7, g: 0.7, b: 0.7, a: 0.9}
 --- !u!1 &737644156
 GameObject:
   m_ObjectHideFlags: 0
@@ -4234,6 +4358,11 @@ MonoBehaviour:
   _spannedColor: {r: 0.18, g: 0.22, b: 0.3, a: 0.7}
   _selectedHighlight: {r: 0.3, g: 0.8, b: 0.4, a: 1}
   _invalidHighlight: {r: 0.8, g: 0.2, b: 0.2, a: 1}
+  _placeholderCoreColor: {r: 0.9, g: 0.6, b: 0.2, a: 0.9}
+  _placeholderPrismColor: {r: 0.4, g: 0.7, b: 0.9, a: 0.9}
+  _placeholderSailColor: {r: 0.5, g: 0.9, b: 0.5, a: 0.9}
+  _placeholderSatelliteColor: {r: 0.8, g: 0.4, b: 0.8, a: 0.9}
+  _placeholderDefaultColor: {r: 0.7, g: 0.7, b: 0.7, a: 0.9}
 --- !u!1 &821235533
 GameObject:
   m_ObjectHideFlags: 0
@@ -4452,6 +4581,11 @@ MonoBehaviour:
   _spannedColor: {r: 0.18, g: 0.22, b: 0.3, a: 0.7}
   _selectedHighlight: {r: 0.3, g: 0.8, b: 0.4, a: 1}
   _invalidHighlight: {r: 0.8, g: 0.2, b: 0.2, a: 1}
+  _placeholderCoreColor: {r: 0.9, g: 0.6, b: 0.2, a: 0.9}
+  _placeholderPrismColor: {r: 0.4, g: 0.7, b: 0.9, a: 0.9}
+  _placeholderSailColor: {r: 0.5, g: 0.9, b: 0.5, a: 0.9}
+  _placeholderSatelliteColor: {r: 0.8, g: 0.4, b: 0.8, a: 0.9}
+  _placeholderDefaultColor: {r: 0.7, g: 0.7, b: 0.7, a: 0.9}
 --- !u!1 &880195114
 GameObject:
   m_ObjectHideFlags: 0
@@ -4639,6 +4773,11 @@ MonoBehaviour:
   _spannedColor: {r: 0.18, g: 0.22, b: 0.3, a: 0.7}
   _selectedHighlight: {r: 0.3, g: 0.8, b: 0.4, a: 1}
   _invalidHighlight: {r: 0.8, g: 0.2, b: 0.2, a: 1}
+  _placeholderCoreColor: {r: 0.9, g: 0.6, b: 0.2, a: 0.9}
+  _placeholderPrismColor: {r: 0.4, g: 0.7, b: 0.9, a: 0.9}
+  _placeholderSailColor: {r: 0.5, g: 0.9, b: 0.5, a: 0.9}
+  _placeholderSatelliteColor: {r: 0.8, g: 0.4, b: 0.8, a: 0.9}
+  _placeholderDefaultColor: {r: 0.7, g: 0.7, b: 0.7, a: 0.9}
 --- !u!1 &933564274
 GameObject:
   m_ObjectHideFlags: 0
@@ -5537,6 +5676,11 @@ MonoBehaviour:
   _spannedColor: {r: 0.18, g: 0.22, b: 0.3, a: 0.7}
   _selectedHighlight: {r: 0.3, g: 0.8, b: 0.4, a: 1}
   _invalidHighlight: {r: 0.8, g: 0.2, b: 0.2, a: 1}
+  _placeholderCoreColor: {r: 0.9, g: 0.6, b: 0.2, a: 0.9}
+  _placeholderPrismColor: {r: 0.4, g: 0.7, b: 0.9, a: 0.9}
+  _placeholderSailColor: {r: 0.5, g: 0.9, b: 0.5, a: 0.9}
+  _placeholderSatelliteColor: {r: 0.8, g: 0.4, b: 0.8, a: 0.9}
+  _placeholderDefaultColor: {r: 0.7, g: 0.7, b: 0.7, a: 0.9}
 --- !u!1 &1173354482
 GameObject:
   m_ObjectHideFlags: 0
@@ -6096,6 +6240,7 @@ GameObject:
   - component: {fileID: 1315625635}
   - component: {fileID: 1315625633}
   - component: {fileID: 1315625634}
+  - component: {fileID: 1315625636}
   m_Layer: 0
   m_Name: StarChartPanel
   m_TagString: Untagged
@@ -6119,6 +6264,7 @@ MonoBehaviour:
   _secondaryTrackView: {fileID: 748934732}
   _inventoryView: {fileID: 412151382}
   _itemDetailView: {fileID: 1318760616}
+  _dragDropManager: {fileID: 1315625636}
 --- !u!114 &1315625634
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6150,6 +6296,7 @@ RectTransform:
   - {fileID: 748934733}
   - {fileID: 412151383}
   - {fileID: 1318760617}
+  - {fileID: 489856154}
   m_Father: {fileID: 1681310364}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -6157,6 +6304,19 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1315625636
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1315625632}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa624caceb46de946ac55af1a2db0903, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ProjectArk.UI::ProjectArk.UI.DragDropManager
+  _ghostView: {fileID: 489856150}
 --- !u!1 &1318760615
 GameObject:
   m_ObjectHideFlags: 0
@@ -6985,6 +7145,11 @@ MonoBehaviour:
   _spannedColor: {r: 0.18, g: 0.22, b: 0.3, a: 0.7}
   _selectedHighlight: {r: 0.3, g: 0.8, b: 0.4, a: 1}
   _invalidHighlight: {r: 0.8, g: 0.2, b: 0.2, a: 1}
+  _placeholderCoreColor: {r: 0.9, g: 0.6, b: 0.2, a: 0.9}
+  _placeholderPrismColor: {r: 0.4, g: 0.7, b: 0.9, a: 0.9}
+  _placeholderSailColor: {r: 0.5, g: 0.9, b: 0.5, a: 0.9}
+  _placeholderSatelliteColor: {r: 0.8, g: 0.4, b: 0.8, a: 0.9}
+  _placeholderDefaultColor: {r: 0.7, g: 0.7, b: 0.7, a: 0.9}
 --- !u!1 &1549862339
 GameObject:
   m_ObjectHideFlags: 0
@@ -7967,6 +8132,11 @@ MonoBehaviour:
   _spannedColor: {r: 0.18, g: 0.22, b: 0.3, a: 0.7}
   _selectedHighlight: {r: 0.3, g: 0.8, b: 0.4, a: 1}
   _invalidHighlight: {r: 0.8, g: 0.2, b: 0.2, a: 1}
+  _placeholderCoreColor: {r: 0.9, g: 0.6, b: 0.2, a: 0.9}
+  _placeholderPrismColor: {r: 0.4, g: 0.7, b: 0.9, a: 0.9}
+  _placeholderSailColor: {r: 0.5, g: 0.9, b: 0.5, a: 0.9}
+  _placeholderSatelliteColor: {r: 0.8, g: 0.4, b: 0.8, a: 0.9}
+  _placeholderDefaultColor: {r: 0.7, g: 0.7, b: 0.7, a: 0.9}
 --- !u!1 &1810255241
 GameObject:
   m_ObjectHideFlags: 0
@@ -8555,6 +8725,11 @@ MonoBehaviour:
   _spannedColor: {r: 0.18, g: 0.22, b: 0.3, a: 0.7}
   _selectedHighlight: {r: 0.3, g: 0.8, b: 0.4, a: 1}
   _invalidHighlight: {r: 0.8, g: 0.2, b: 0.2, a: 1}
+  _placeholderCoreColor: {r: 0.9, g: 0.6, b: 0.2, a: 0.9}
+  _placeholderPrismColor: {r: 0.4, g: 0.7, b: 0.9, a: 0.9}
+  _placeholderSailColor: {r: 0.5, g: 0.9, b: 0.5, a: 0.9}
+  _placeholderSatelliteColor: {r: 0.8, g: 0.4, b: 0.8, a: 0.9}
+  _placeholderDefaultColor: {r: 0.7, g: 0.7, b: 0.7, a: 0.9}
 --- !u!1 &1987941678
 GameObject:
   m_ObjectHideFlags: 0
@@ -9015,6 +9190,11 @@ MonoBehaviour:
   _spannedColor: {r: 0.18, g: 0.22, b: 0.3, a: 0.7}
   _selectedHighlight: {r: 0.3, g: 0.8, b: 0.4, a: 1}
   _invalidHighlight: {r: 0.8, g: 0.2, b: 0.2, a: 1}
+  _placeholderCoreColor: {r: 0.9, g: 0.6, b: 0.2, a: 0.9}
+  _placeholderPrismColor: {r: 0.4, g: 0.7, b: 0.9, a: 0.9}
+  _placeholderSailColor: {r: 0.5, g: 0.9, b: 0.5, a: 0.9}
+  _placeholderSatelliteColor: {r: 0.8, g: 0.4, b: 0.8, a: 0.9}
+  _placeholderDefaultColor: {r: 0.7, g: 0.7, b: 0.7, a: 0.9}
 --- !u!1 &2108091033
 GameObject:
   m_ObjectHideFlags: 0

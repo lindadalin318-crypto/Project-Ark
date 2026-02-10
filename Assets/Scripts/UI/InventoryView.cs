@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using ProjectArk.Combat;
 
@@ -10,8 +11,9 @@ namespace ProjectArk.UI
     /// Scrollable inventory grid with type filter tabs.
     /// Instantiates <see cref="InventoryItemView"/> cards from a
     /// <see cref="StarChartInventorySO"/> data source.
+    /// Also serves as a drop target for unequipping items dragged from slots.
     /// </summary>
-    public class InventoryView : MonoBehaviour
+    public class InventoryView : MonoBehaviour, IDropHandler
     {
         [Header("UI References")]
         [SerializeField] private Transform _contentParent;
@@ -125,6 +127,24 @@ namespace ProjectArk.UI
         private void OnDestroy()
         {
             ClearViews();
+        }
+
+        // ========== Drop Target for Unequip (Slot → Inventory) ==========
+
+        /// <summary>
+        /// When an equipped item is dragged from a slot onto the inventory area,
+        /// trigger the unequip operation via DragDropManager.
+        /// </summary>
+        public void OnDrop(PointerEventData eventData)
+        {
+            var mgr = DragDropManager.Instance;
+            if (mgr == null || !mgr.IsDragging) return;
+
+            if (mgr.CurrentPayload?.Source == DragSource.Slot)
+            {
+                mgr.ExecuteUnequipDrop();
+                mgr.EndDrag(false); // false because ExecuteUnequipDrop already handled it
+            }
         }
     }
 }

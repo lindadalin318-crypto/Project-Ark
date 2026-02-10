@@ -18,6 +18,9 @@ namespace ProjectArk.UI
         [SerializeField] private InventoryView _inventoryView;
         [SerializeField] private ItemDetailView _itemDetailView;
 
+        [Header("Drag & Drop")]
+        [SerializeField] private DragDropManager _dragDropManager;
+
         // TODO: 光帆/伴星专用槽位 (Batch 4 扩展)
 
         private StarChartController _controller;
@@ -70,6 +73,10 @@ namespace ProjectArk.UI
             // 默认选中主轨道
             _selectedTrack = controller.PrimaryTrack;
             UpdateTrackSelection();
+
+            // Initialize drag-and-drop manager
+            if (_dragDropManager != null)
+                _dragDropManager.Bind(this, controller);
         }
 
         /// <summary> Open the panel and refresh all views. </summary>
@@ -84,6 +91,12 @@ namespace ProjectArk.UI
         /// <summary> Close the panel. </summary>
         public void Close()
         {
+            // Cancel any in-progress drag operation
+            if (_dragDropManager != null)
+                _dragDropManager.CancelDrag();
+            else if (DragDropManager.Instance != null)
+                DragDropManager.Instance.CancelDrag();
+
             gameObject.SetActive(false);
             OnClosed?.Invoke();
         }
@@ -105,6 +118,25 @@ namespace ProjectArk.UI
                 else
                     _itemDetailView.Clear();
             }
+        }
+
+        /// <summary>
+        /// Public entry point for refreshing all views. Called by DragDropManager after equip/unequip.
+        /// </summary>
+        public void RefreshAllViews()
+        {
+            RefreshAll();
+        }
+
+        /// <summary>
+        /// Select an item and show it in the detail panel. Called by DragDropManager after successful drop.
+        /// </summary>
+        public void SelectAndShowItem(StarChartItemSO item)
+        {
+            if (item == null) return;
+            _selectedItem = item;
+            bool equipped = IsItemEquipped(item);
+            _itemDetailView?.ShowItem(item, equipped);
         }
 
         private void HandleTrackSelected(TrackView trackView)

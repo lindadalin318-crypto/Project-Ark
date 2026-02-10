@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
 using ProjectArk.Combat;
@@ -9,8 +10,10 @@ namespace ProjectArk.UI
     /// <summary>
     /// Single item card in the inventory grid.
     /// Shows icon, name, slot size, and an equipped badge.
+    /// Supports drag-and-drop to equip items onto weapon track slots.
     /// </summary>
-    public class InventoryItemView : MonoBehaviour
+    [RequireComponent(typeof(CanvasGroup))]
+    public class InventoryItemView : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         [SerializeField] private Image _iconImage;
         [SerializeField] private TMP_Text _nameLabel;
@@ -115,7 +118,7 @@ namespace ProjectArk.UI
         }
 
         /// <summary> Returns a type-based placeholder color when an item has no icon. </summary>
-        private static Color GetPlaceholderColor(StarChartItemSO item)
+        public static Color GetPlaceholderColor(StarChartItemSO item)
         {
             return item.ItemType switch
             {
@@ -125,6 +128,59 @@ namespace ProjectArk.UI
                 StarChartItemType.Satellite => SATELLITE_COLOR,
                 _                           => DEFAULT_COLOR,
             };
+        }
+
+        // ========== Drag Source Implementation ==========
+
+        private CanvasGroup _canvasGroup;
+        private bool _isDragging;
+
+        /// <summary> Lazy-get CanvasGroup for drag alpha control. </summary>
+        private CanvasGroup CachedCanvasGroup
+        {
+            get
+            {
+                if (_canvasGroup == null)
+                    _canvasGroup = GetComponent<CanvasGroup>();
+                return _canvasGroup;
+            }
+        }
+
+        public void OnBeginDrag(PointerEventData eventData)
+        {
+            // Only Core and Prism support drag-to-equip
+            if (Item == null) return;
+            if (Item.ItemType != StarChartItemType.Core && Item.ItemType != StarChartItemType.Prism)
+            {
+                _isDragging = false;
+                return;
+            }
+
+            if (DragDropManager.Instance == null || DragDropManager.Instance.IsDragging)
+            {
+                _isDragging = false;
+                return;
+            }
+
+            _isDragging = true;
+            var payload = new DragPayload(Item, DragSource.Inventory);
+            DragDropManager.Instance.BeginDrag(payload, CachedCanvasGroup);
+        }
+
+        public void OnDrag(PointerEventData eventData)
+        {
+            if (!_isDragging) return;
+            DragDropManager.Instance?.UpdateGhostPosition(eventData);
+        }
+
+        public void OnEndDrag(PointerEventData eventData)
+        {
+            if (!_isDragging) return;
+            _isDragging = false;
+
+            // If the drop wasn't consumed by a valid target, cancel
+            if (DragDropManager.Instance != null && DragDropManager.Instance.IsDragging)
+                DragDropManager.Instance.CancelDrag();
         }
     }
 }

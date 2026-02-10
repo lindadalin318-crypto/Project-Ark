@@ -127,11 +127,16 @@ namespace ProjectArk.Combat
         /// <summary>
         /// 收集所有 Tint 家族棱镜的 IProjectileModifier。
         /// </summary>
+        /// <summary>
+        /// Collects all Tint family prism modifiers.
+        /// Always returns a non-null list (empty if no tint prisms equipped)
+        /// to prevent NullReferenceException downstream.
+        /// </summary>
         private static List<IProjectileModifier> CollectTintModifiers(IReadOnlyList<PrismSO> prisms)
         {
-            if (prisms == null || prisms.Count == 0) return null;
+            var result = new List<IProjectileModifier>();
 
-            List<IProjectileModifier> result = null;
+            if (prisms == null || prisms.Count == 0) return result;
 
             for (int i = 0; i < prisms.Count; i++)
             {
@@ -141,7 +146,6 @@ namespace ProjectArk.Combat
                 var modifier = prisms[i].ProjectileModifierPrefab.GetComponent<IProjectileModifier>();
                 if (modifier == null) continue;
 
-                result ??= new List<IProjectileModifier>();
                 result.Add(modifier);
             }
 

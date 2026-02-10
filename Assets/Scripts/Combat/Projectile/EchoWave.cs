@@ -18,7 +18,7 @@ namespace ProjectArk.Combat
         [SerializeField] private float _visualScaleMultiplier = 2f;
 
         [Header("Collision")]
-        [SerializeField] private LayerMask _enemyMask = ~0;
+        [SerializeField] private LayerMask _enemyMask;
         [SerializeField] private LayerMask _wallMask;
 
         private CircleCollider2D _circleCollider;
@@ -44,11 +44,54 @@ namespace ProjectArk.Combat
         // Modifier support
         private readonly List<IProjectileModifier> _modifiers = new();
 
+        private SpriteRenderer _spriteRenderer;
+
         private void Awake()
         {
             _circleCollider = GetComponent<CircleCollider2D>();
             _circleCollider.isTrigger = true;
             _poolRef = GetComponent<PoolReference>();
+            _spriteRenderer = GetComponent<SpriteRenderer>();
+
+            // If masks were not configured in the Inspector, set sensible defaults
+            if (_enemyMask == 0)
+                _enemyMask = LayerMask.GetMask("Enemy");
+            if (_wallMask == 0)
+                _wallMask = LayerMask.GetMask("Wall");
+
+            // Generate a procedural circle sprite if none is assigned
+            if (_spriteRenderer != null && _spriteRenderer.sprite == null)
+                _spriteRenderer.sprite = CreateCircleSprite(64);
+        }
+
+        /// <summary>
+        /// Creates a procedural filled-circle sprite for visual fallback.
+        /// </summary>
+        private static Sprite CreateCircleSprite(int resolution)
+        {
+            var tex = new Texture2D(resolution, resolution, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp
+            };
+
+            float center = resolution * 0.5f;
+            float radiusSq = center * center;
+
+            for (int y = 0; y < resolution; y++)
+            {
+                for (int x = 0; x < resolution; x++)
+                {
+                    float dx = x - center + 0.5f;
+                    float dy = y - center + 0.5f;
+                    float distSq = dx * dx + dy * dy;
+                    tex.SetPixel(x, y, distSq <= radiusSq ? Color.white : Color.clear);
+                }
+            }
+
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, resolution, resolution),
+                                 new Vector2(0.5f, 0.5f), resolution);
         }
 
         /// <summary>

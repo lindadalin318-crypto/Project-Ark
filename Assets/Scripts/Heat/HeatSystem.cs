@@ -18,6 +18,9 @@ namespace ProjectArk.Heat
         /// <summary> Current absolute heat value. </summary>
         public float CurrentHeat => _currentHeat;
 
+        /// <summary> Maximum heat capacity from stats. </summary>
+        public float MaxHeat => _stats != null ? _stats.MaxHeat : 0f;
+
         /// <summary> Heat as a 0~1 ratio (current / max). </summary>
         public float NormalizedHeat => _stats != null && _stats.MaxHeat > 0f
             ? Mathf.Clamp01(_currentHeat / _stats.MaxHeat)

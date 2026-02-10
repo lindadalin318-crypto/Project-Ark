@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 2024369525217080790}
   - component: {fileID: 1850162394532034261}
   - component: {fileID: 8219342604341869853}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: LaserBeam_Light
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -181,4 +181,4 @@ MonoBehaviour:
   _beamEndWidth: 0.05
   _hitMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 768

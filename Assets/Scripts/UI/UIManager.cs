@@ -27,7 +27,7 @@ namespace ProjectArk.UI
         [Header("Inventory Data")]
         [SerializeField] private StarChartInventorySO _playerInventory;
 
-        private InputAction _pauseAction;
+        private InputAction _toggleStarChartAction;
         private InputAction _fireAction;
         private InputAction _fireSecondaryAction;
 
@@ -36,7 +36,7 @@ namespace ProjectArk.UI
         private void Awake()
         {
             var shipMap = _inputActions.FindActionMap("Ship");
-            _pauseAction = shipMap.FindAction("Pause");
+            _toggleStarChartAction = shipMap.FindAction("ToggleStarChart");
             _fireAction = shipMap.FindAction("Fire");
             _fireSecondaryAction = shipMap.FindAction("FireSecondary");
 
@@ -102,14 +102,14 @@ namespace ProjectArk.UI
 
         private void OnEnable()
         {
-            if (_pauseAction != null)
-                _pauseAction.performed += OnPausePerformed;
+            if (_toggleStarChartAction != null)
+                _toggleStarChartAction.performed += OnToggleStarChartPerformed;
         }
 
         private void OnDisable()
         {
-            if (_pauseAction != null)
-                _pauseAction.performed -= OnPausePerformed;
+            if (_toggleStarChartAction != null)
+                _toggleStarChartAction.performed -= OnToggleStarChartPerformed;
 
             // Restore game state without transition animations
             // (coroutines can't run on an inactive GameObject).
@@ -123,7 +123,7 @@ namespace ProjectArk.UI
             }
         }
 
-        private void OnPausePerformed(InputAction.CallbackContext ctx)
+        private void OnToggleStarChartPerformed(InputAction.CallbackContext ctx)
         {
             Toggle();
         }

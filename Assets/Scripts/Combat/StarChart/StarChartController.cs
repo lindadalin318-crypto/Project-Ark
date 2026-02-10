@@ -390,16 +390,34 @@ namespace ProjectArk.Combat
             var parms = coreSnap.ToProjectileParams();
             _lightSailRunner?.ModifyProjectileParams(ref parms);
 
-            // Inject anomaly-specific modifier from CoreSO config
-            // The AnomalyModifierPrefab is set on the CoreSnapshot by SnapshotBuilder
+            // Inject anomaly-specific modifier: instantiate a runtime copy on the projectile
+            // so each projectile gets its own independent state (e.g. BoomerangModifier).
+            var modifiers = coreSnap.Modifiers != null
+                ? new List<IProjectileModifier>(coreSnap.Modifiers)
+                : new List<IProjectileModifier>();
+
             if (coreSnap.AnomalyModifierPrefab != null)
             {
-                var modifierInstance = coreSnap.AnomalyModifierPrefab.GetComponent<IProjectileModifier>();
-                if (modifierInstance != null && !coreSnap.Modifiers.Contains(modifierInstance))
-                    coreSnap.Modifiers.Add(modifierInstance);
+                // Copy all IProjectileModifier components from the modifier prefab onto the projectile
+                var prefabModifiers = coreSnap.AnomalyModifierPrefab.GetComponents<IProjectileModifier>();
+                for (int m = 0; m < prefabModifiers.Length; m++)
+                {
+                    var srcComponent = prefabModifiers[m] as MonoBehaviour;
+                    if (srcComponent == null) continue;
+
+                    // AddComponent of the same type, then copy serialized fields
+                    var newComponent = bulletObj.AddComponent(srcComponent.GetType()) as IProjectileModifier;
+                    if (newComponent != null)
+                    {
+                        // Copy serialized field values from the prefab's component
+                        var json = JsonUtility.ToJson(srcComponent);
+                        JsonUtility.FromJsonOverwrite(json, newComponent as MonoBehaviour);
+                        modifiers.Add(newComponent);
+                    }
+                }
             }
 
-            projectile.Initialize(direction, parms, coreSnap.Modifiers);
+            projectile.Initialize(direction, parms, modifiers);
         }
 
         private void SpawnMuzzleFlash(WeaponTrack track, CoreSnapshot coreSnap,

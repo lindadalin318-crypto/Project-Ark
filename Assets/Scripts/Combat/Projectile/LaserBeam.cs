@@ -13,13 +13,13 @@ namespace ProjectArk.Combat
     public class LaserBeam : MonoBehaviour, IPoolable
     {
         [Header("Beam Settings")]
-        [SerializeField] private float _beamDuration = 0.1f;
-        [SerializeField] private float _fadeDuration = 0.05f;
-        [SerializeField] private float _beamStartWidth = 0.15f;
-        [SerializeField] private float _beamEndWidth = 0.05f;
+        [SerializeField] private float _beamDuration = 0.15f;
+        [SerializeField] private float _fadeDuration = 0.1f;
+        [SerializeField] private float _beamStartWidth = 0.2f;
+        [SerializeField] private float _beamEndWidth = 0.08f;
 
         [Header("Collision")]
-        [SerializeField] private LayerMask _hitMask = ~0;
+        [SerializeField] private LayerMask _hitMask;
 
         private LineRenderer _lineRenderer;
         private PoolReference _poolRef;
@@ -42,6 +42,10 @@ namespace ProjectArk.Combat
         {
             _lineRenderer = GetComponent<LineRenderer>();
             _poolRef = GetComponent<PoolReference>();
+
+            // If mask was not configured in the Inspector, default to Enemy + Wall
+            if (_hitMask == 0)
+                _hitMask = LayerMask.GetMask("Enemy", "Wall");
         }
 
         /// <summary>
@@ -182,9 +186,13 @@ namespace ProjectArk.Combat
                 _lineRenderer.enabled = false;
                 _lineRenderer.positionCount = 0;
 
-                // Reset width and color
+                // Reset width
                 _lineRenderer.startWidth = _beamStartWidth;
                 _lineRenderer.endWidth = _beamEndWidth;
+
+                // Reset color alpha to fully opaque so next Fire() reads correct initial values
+                _lineRenderer.startColor = Color.white;
+                _lineRenderer.endColor = Color.white;
             }
         }
     }

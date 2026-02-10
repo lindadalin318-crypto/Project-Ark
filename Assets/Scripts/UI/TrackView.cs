@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
 using ProjectArk.Combat;
@@ -10,8 +11,9 @@ namespace ProjectArk.UI
     /// Visual representation of one <see cref="WeaponTrack"/> (Primary or Secondary).
     /// Displays the sandwich layout: 3 prism cells (upper) + 3 core cells (lower).
     /// Subscribes to <see cref="WeaponTrack.OnLoadoutChanged"/> for reactive refresh.
+    /// Auto-selects this track when a dragged item enters its area.
     /// </summary>
-    public class TrackView : MonoBehaviour
+    public class TrackView : MonoBehaviour, IPointerEnterHandler
     {
         [Header("UI References")]
         [SerializeField] private TMP_Text _trackLabel;
@@ -39,19 +41,29 @@ namespace ProjectArk.UI
             if (_selectButton != null)
                 _selectButton.onClick.AddListener(() => OnTrackSelected?.Invoke(this));
 
-            // 给每个 cell 注册点击事件
+            // Initialize cell properties for drag-and-drop and register click events
             for (int i = 0; i < _prismCells.Length; i++)
             {
                 int index = i;
                 if (_prismCells[i] != null)
+                {
+                    _prismCells[i].IsCoreCell = false;
+                    _prismCells[i].CellIndex = i;
+                    _prismCells[i].OwnerTrack = this;
                     _prismCells[i].OnClicked += () => HandleCellClick(_prismCells[index]);
+                }
             }
 
             for (int i = 0; i < _coreCells.Length; i++)
             {
                 int index = i;
                 if (_coreCells[i] != null)
+                {
+                    _coreCells[i].IsCoreCell = true;
+                    _coreCells[i].CellIndex = i;
+                    _coreCells[i].OwnerTrack = this;
                     _coreCells[i].OnClicked += () => HandleCellClick(_coreCells[index]);
+                }
             }
         }
 
@@ -152,6 +164,65 @@ namespace ProjectArk.UI
         {
             if (cell.DisplayedItem != null)
                 OnCellClicked?.Invoke(cell.DisplayedItem);
+        }
+
+        // ========== Drag-and-Drop Support ==========
+
+        /// <summary>
+        /// Auto-select this track when a dragged item enters its area.
+        /// </summary>
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            var mgr = DragDropManager.Instance;
+            if (mgr != null && mgr.IsDragging)
+            {
+                OnTrackSelected?.Invoke(this);
+            }
+        }
+
+        /// <summary>
+        /// Check whether this track's layer has enough space for the given item.
+        /// </summary>
+        public bool HasSpaceForItem(StarChartItemSO item, bool isCoreLayer)
+        {
+            if (_track == null) return false;
+
+            if (isCoreLayer)
+                return _track.CoreLayer.FreeSpace >= item.SlotSize;
+            else
+                return _track.PrismLayer.FreeSpace >= item.SlotSize;
+        }
+
+        /// <summary>
+        /// Highlight multiple consecutive cells for a SlotSize > 1 item preview.
+        /// </summary>
+        public void SetMultiCellHighlight(int startIndex, int count, bool isCoreLayer, bool valid)
+        {
+            var cells = isCoreLayer ? _coreCells : _prismCells;
+
+            for (int i = startIndex; i < startIndex + count && i < cells.Length; i++)
+            {
+                if (cells[i] != null)
+                    cells[i].SetHighlight(valid);
+            }
+        }
+
+        /// <summary>
+        /// Clear all drag highlights on every cell in both layers.
+        /// </summary>
+        public void ClearAllHighlights()
+        {
+            for (int i = 0; i < _coreCells.Length; i++)
+            {
+                if (_coreCells[i] != null)
+                    _coreCells[i].ClearHighlight();
+            }
+
+            for (int i = 0; i < _prismCells.Length; i++)
+            {
+                if (_prismCells[i] != null)
+                    _prismCells[i].ClearHighlight();
+            }
         }
 
         private void OnDestroy()
