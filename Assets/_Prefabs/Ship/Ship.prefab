@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 6989610294359511459}
   - component: {fileID: 7931010176204908089}
   - component: {fileID: 3774987705364357339}
+  - component: {fileID: 2761402928340349956}
   m_Layer: 6
   m_Name: Ship
   m_TagString: Untagged
@@ -91,7 +92,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 043dc688533a8a94e8e4260fa2575fd2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: ProjectArk.Ship::ProjectArk.Ship.ShipMotor
-  _stats: {fileID: 11400000, guid: b4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9, type: 2}
+  _stats: {fileID: 11400000, guid: c7b34ced4ffa0eed0080816c6bfbc02a, type: 2}
 --- !u!114 &7630795961046181586
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -104,7 +105,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4be0616bbd12a3340a4d16cf8c69d61b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: ProjectArk.Ship::ProjectArk.Ship.ShipAiming
-  _stats: {fileID: 11400000, guid: b4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9, type: 2}
+  _stats: {fileID: 11400000, guid: c7b34ced4ffa0eed0080816c6bfbc02a, type: 2}
 --- !u!212 &6989610294359511459
 SpriteRenderer:
   serializedVersion: 2
@@ -198,6 +199,19 @@ MonoBehaviour:
   _debugSecondaryPrisms: []
   _debugLightSail: {fileID: 11400000, guid: c862ec4a6c35f4046bbe546b132ce3e3, type: 2}
   _debugSatellites: []
+--- !u!114 &2761402928340349956
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 121544039580294565}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a4a9f72e1aa16c4bae6c8be41af2085, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ProjectArk.Ship::ProjectArk.Ship.ShipHealth
+  _stats: {fileID: 11400000, guid: c7b34ced4ffa0eed0080816c6bfbc02a, type: 2}
 --- !u!1 &6581186594195589927
 GameObject:
   m_ObjectHideFlags: 0

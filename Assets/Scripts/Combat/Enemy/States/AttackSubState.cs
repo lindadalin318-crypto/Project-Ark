@@ -1,4 +1,5 @@
 using UnityEngine;
+using ProjectArk.Core;
 
 namespace ProjectArk.Combat.Enemy
 {

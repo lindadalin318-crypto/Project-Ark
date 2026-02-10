@@ -1,11 +1,12 @@
 using UnityEngine;
 
-namespace ProjectArk.Combat
+namespace ProjectArk.Core
 {
     /// <summary>
     /// Universal damage interface. Any entity that can receive damage
     /// (enemies, destructibles, potentially the player) implements this.
     /// Projectiles, laser beams, and echo waves call TakeDamage via this contract.
+    /// Lives in Core so both Ship and Combat assemblies can reference it.
     /// </summary>
     public interface IDamageable
     {

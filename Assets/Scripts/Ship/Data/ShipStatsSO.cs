@@ -23,9 +23,18 @@ namespace ProjectArk.Ship
         [Tooltip("Rotation speed in degrees/second. 0 = instant snap to target.")]
         [SerializeField] private float _rotationSpeed = 720f;
 
+        [Header("Survival")]
+        [Tooltip("Maximum hit points for the ship.")]
+        [SerializeField] private float _maxHP = 100f;
+
+        [Tooltip("Duration of the white flash when the ship takes damage (seconds).")]
+        [SerializeField] private float _hitFlashDuration = 0.1f;
+
         public float MoveSpeed => _moveSpeed;
         public float Acceleration => _acceleration;
         public float Deceleration => _deceleration;
         public float RotationSpeed => _rotationSpeed;
+        public float MaxHP => _maxHP;
+        public float HitFlashDuration => _hitFlashDuration;
     }
 }

@@ -1398,3 +1398,96 @@
 7. EnemyPerception：Player Mask=Player 层, Obstacle Mask=Wall 层
 8. Physics2D 碰撞矩阵：PlayerProjectile↔Enemy=ON, Player↔Enemy=ON
 9. 保存为 Prefab 到 `Assets/_Prefabs/Enemies/Enemy_Rusher.prefab`
+
+---
+
+## Enemy AI 系统集成 — 玩家受伤 + 敌人生成闭环 (2026-02-10 23:30)
+
+### 概要
+
+将已实现的 Enemy AI 代码框架正式接入游戏循环，完成三个关键缺失环节：
+1. 玩家飞船实现 `IDamageable` 接口，使敌人攻击能造成伤害
+2. 创建 `EnemySpawner` 组件，通过对象池管理敌人运行时生成
+3. 场景配置与完整战斗循环验证
+
+### 新建文件
+
+- `Assets/Scripts/Ship/Combat/ShipHealth.cs` — 玩家飞船生命值组件，实现 `IDamageable` 接口
+  - 命名空间 `ProjectArk.Ship`，使用 `[RequireComponent(typeof(Rigidbody2D))]`
+  - 从 `ShipStatsSO.MaxHP` 读取初始 HP（数据驱动，不硬编码）
+  - `TakeDamage(float, Vector2, float)` 流程：死亡判断 → 扣减 HP → Rigidbody2D.AddForce(Impulse) 击退 → 协程闪白 → 触发 OnDamageTaken 事件 → HP ≤ 0 调用 Die()
+  - `Die()` 流程：标记 `_isDead = true` → 禁用 InputHandler → 触发 OnDeath 事件（Game Over/重生逻辑暂未实现，预留事件订阅点）
+  - 暴露 `OnDamageTaken(float damage, float currentHP)` 和 `OnDeath` 两个 Action 事件供 UI/其他系统订阅
+  - 提供 `ResetHealth()` 公共方法用于未来重生/关卡重启
+
+- `Assets/Scripts/Combat/Enemy/EnemySpawner.cs` — 敌人生成管理器
+  - 命名空间 `ProjectArk.Combat.Enemy`
+  - Inspector 暴露字段：`_enemyPrefab`(GameObject)、`_spawnPoints`(Transform[])、`_maxAlive`(int, 默认3)、`_spawnInterval`(float, 默认5s)、`_initialSpawnCount`(int, 默认1)、`_poolPrewarmCount`(int, 默认5)、`_poolMaxSize`(int, 默认10)
+  - Start() 中创建 `GameObjectPool` 并执行初始生成（`_initialSpawnCount` 个，不超过 `_maxAlive`）
+  - `SpawnEnemy()` 流程：检查存活上限 → Round-robin 选取 SpawnPoint → Pool.Get() → EnemyBrain.ResetBrain() 重置 AI → 订阅 EnemyEntity.OnDeath → 更新 _aliveCount
+  - 敌人死亡回调：_aliveCount-- → 协程延迟 _spawnInterval 秒后补充生成
+  - 注意：EnemyEntity.OnReturnToPool() 会清空事件订阅者，因此每次从池中取出时重新订阅 OnDeath
+  - Editor Gizmos：选中时绘制绿色连线 + 圆圈标记刷怪点
+
+### 修改文件
+
+- `Assets/Scripts/Ship/Data/ShipStatsSO.cs` — 新增 `[Header("Survival")]` 区域
+  - 添加 `_maxHP`(float, 默认100) 和 `_hitFlashDuration`(float, 默认0.1s) 字段
+  - 添加对应公共属性 `MaxHP` 和 `HitFlashDuration`
+  - 不影响现有 Movement/Aiming 参数，向后兼容 `DefaultShipStats.asset`
+
+### 场景配置（手动在 Unity Editor 中完成）
+
+- 飞船 GameObject 挂载 `ShipHealth` 组件，绑定 `DefaultShipStats` SO
+- 创建 `EnemySpawner` GameObject 挂载 EnemySpawner 组件，含 `SpawnPoint_1`(-8,-5)、`SpawnPoint_2`(8,5) 两个子物体
+- EnemySpawner 配置：enemyPrefab=Enemy_Rusher.prefab, maxAlive=3, spawnInterval=5s, initialSpawnCount=1, poolPrewarm=5, poolMax=10
+
+### 问题修复
+
+- 修复 `.meta` 文件 GUID 格式错误：`IDamageable.cs.meta`、`ShipHealth.cs.meta`、`EnemySpawner.cs.meta` 三个文件的 GUID 包含非法破折号（手动编造导致），删除后由 Unity 重新生成正确格式的 meta 文件
+
+### Play Mode 验证结果（Editor Log 确认）
+
+- ✅ 零编译错误（`error CS` 搜索无结果）
+- ✅ 三个 meta GUID 问题已修复（`does not have a valid GUID` 搜索无结果）
+- ✅ EnemySpawner 正常生成敌人：`[EnemySpawner] Spawned enemy at (8.00, 5.00, 0.00). Alive: 1/3`
+- ✅ 完整伤害链路通畅：`Projectile.OnTriggerEnter2D` → `EnemyEntity.TakeDamage` → `EnemyEntity.Die` → `EnemySpawner.OnEnemyDied`
+- ✅ 重生机制运作：死亡后延迟重生 `[EnemySpawner] Spawned enemy at (-8.00, -5.00, 0.00). Alive: 1/3`
+- ✅ 无运行时 NullReferenceException
+- ✅ Asset Pipeline 正常：scripts=1544, non-scripts=3163
+
+### 架构说明
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    EnemySpawner                           │
+│  GameObjectPool → Get/Return → EnemyBrain.ResetBrain()   │
+│  OnDeath 订阅 → _aliveCount 管理 → 延迟重生协程          │
+└───────────────────────┬──────────────────────────────────┘
+                        │ 生成
+┌───────────────────────▼──────────────────────────────────┐
+│               Enemy (Rusher)                              │
+│  EnemyBrain(HFSM) → EngageState → AttackSubState         │
+│                                      │                    │
+│                          Physics2D.OverlapCircleAll       │
+│                          LayerMask("Player")              │
+│                                      │                    │
+│                          GetComponent<IDamageable>()      │
+│                                      │                    │
+│                          TakeDamage(dmg, dir, force)      │
+└──────────────────────────────────────┬───────────────────┘
+                                       │ 攻击
+┌──────────────────────────────────────▼───────────────────┐
+│               Player Ship                                 │
+│  ShipHealth : IDamageable                                 │
+│  HP 扣减 → 击退(Impulse) → 闪白 → OnDamageTaken          │
+│  HP ≤ 0 → Die() → 禁用 InputHandler → OnDeath            │
+│                                                           │
+│  ◄─── Projectile.OnTriggerEnter2D ───►                   │
+│  子弹命中敌人 → EnemyEntity.TakeDamage → 敌人死亡 → 回池   │
+└──────────────────────────────────────────────────────────┘
+```
+
+**双向伤害循环：** 敌人通过 `AttackSubState.TryHitPlayer()` + `Physics2D.OverlapCircleAll` 检测 Player Layer → `IDamageable.TakeDamage()` 伤害飞船；飞船通过 `Projectile.OnTriggerEnter2D` 检测 Enemy Layer → `IDamageable.TakeDamage()` 伤害敌人。两个方向统一使用 `IDamageable` 接口，完全解耦。
+
+**技术：** IDamageable 接口多态, GameObjectPool 对象池, C# event 事件通信, Rigidbody2D.AddForce(Impulse) 击退, 协程闪白反馈, ScriptableObject 数据驱动, Round-robin 刷怪点选择。
