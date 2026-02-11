@@ -108,6 +108,12 @@ namespace ProjectArk.Combat
         [Min(0.5f)]
         public float RetreatRange = 5f;
 
+        // ──────────────────── Poise & Stagger ────────────────────
+        [Header("Poise & Stagger")]
+        [Tooltip("Duration of the stagger (硬直) state in seconds when poise is broken.")]
+        [Min(0.1f)]
+        public float StaggerDuration = 1.0f;
+
         // ──────────────────── Perception ────────────────────
         [Header("Perception")]
         [Tooltip("Maximum distance for visual detection.")]

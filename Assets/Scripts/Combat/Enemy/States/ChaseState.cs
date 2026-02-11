@@ -13,6 +13,9 @@ namespace ProjectArk.Combat.Enemy
     {
         private readonly EnemyBrain _brain;
 
+        // Boids separation weight: 0.3 = subtle push, preserves pursuit intent
+        private const float SEPARATION_WEIGHT = 0.3f;
+
         public ChaseState(EnemyBrain brain)
         {
             _brain = brain;
@@ -52,10 +55,14 @@ namespace ProjectArk.Combat.Enemy
                 }
             }
 
-            // Move toward last known player position
+            // Move toward last known player position with Boids separation
             Vector2 myPos = entity.transform.position;
-            Vector2 dir = (perception.LastKnownPlayerPosition - myPos).normalized;
-            entity.MoveTo(dir);
+            Vector2 chaseDir = (perception.LastKnownPlayerPosition - myPos).normalized;
+
+            // Blend chase direction with separation force to avoid stacking
+            Vector2 separation = entity.GetSeparationForce();
+            Vector2 finalDir = (chaseDir + separation * SEPARATION_WEIGHT).normalized;
+            entity.MoveTo(finalDir);
         }
 
         public void OnExit()

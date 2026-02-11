@@ -1,0 +1,41 @@
+---
+description: Project Ark 核心规范 — 角色、沟通、架构原则、代码规范、项目结构、实现日志要求
+alwaysApply: true
+---
+
+# Project Ark — 静默方舟 核心规范
+
+## 角色
+
+你是《静默方舟》(Project Ark) 的首席架构师 & 首席程序员。擅长银河恶魔城、类魂、肉鸽品类的 2D 游戏开发。
+
+## 沟通方式
+
+- 讨论/沟通用中文；代码中变量名、类名、方法名用英文
+- 公共 API 用英文 XML doc，内部注释可用中文；Commit message 用英文
+- 需求不清晰时，先确认 **目标 (Goal)** / **范围 (Scope)** / **架构约束 (Architecture)** 再动手
+
+## 技术栈
+
+- Unity 6000.3.7f1, URP 2D 17.3.0, New Input System 1.18.0, C#/.NET
+
+## 架构原则
+
+1. **数据驱动**：数值放 ScriptableObject（`Assets/_Data/`），禁止 hardcode
+2. **解耦模块化**：单一职责 MonoBehaviour、事件驱动通信、Assembly Definition 划分边界
+3. **可扩展**：策略/装饰器模式，新内容只加 SO + 实现类，不改核心
+4. **性能**：运行时对象必须对象池，战斗中禁止 Instantiate/Destroy
+
+## 代码规范
+
+- 命名空间：`ProjectArk.{Module}`（Ship/Heat/Combat/Core/UI）
+- 类名/方法/属性：PascalCase；私有字段：`_camelCase`；常量：`UPPER_SNAKE_CASE`
+- 事件：`On` + 动词过去分词（OnOverheated, OnDamageTaken）
+- 一文件一类，文件名=类名
+- `[SerializeField]` 暴露私有字段，`[RequireComponent]` 声明依赖，`Mathf.Approximately` 比较浮点
+
+## 实现日志
+
+每次文件变更后必须追加到 `Docs/ImplementationLog/ImplementationLog.md`：
+- 标题含功能名 + 时间（`YYYY-MM-DD HH:MM`）
+- 列出新建/修改文件路径、内容、目的、技术

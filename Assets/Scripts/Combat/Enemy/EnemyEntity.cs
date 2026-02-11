@@ -29,6 +29,18 @@ namespace ProjectArk.Combat.Enemy
         private SpriteRenderer _spriteRenderer;
         private PoolReference _poolRef;
 
+        // ──────────────────── Boids Separation ────────────────────
+        private static int _enemyLayerMask = -1;
+        private static int EnemyLayerMask
+        {
+            get
+            {
+                if (_enemyLayerMask < 0)
+                    _enemyLayerMask = LayerMask.GetMask("Enemy");
+                return _enemyLayerMask;
+            }
+        }
+
         // ──────────────────── Events ────────────────────
         /// <summary> Fired when this enemy takes damage. (damage, currentHP) </summary>
         public event Action<float, float> OnDamageTaken;
@@ -36,12 +48,21 @@ namespace ProjectArk.Combat.Enemy
         /// <summary> Fired when this enemy dies. </summary>
         public event Action OnDeath;
 
+        /// <summary> Fired when poise is broken (reaches 0). Brain subscribes to force StaggerState. </summary>
+        public event Action OnPoiseBroken;
+
         // ──────────────────── Public Properties ────────────────────
         /// <summary> The SO driving this enemy's stats. </summary>
         public EnemyStatsSO Stats => _stats;
 
         /// <summary> Current hit points. </summary>
         public float CurrentHP => _currentHP;
+
+        /// <summary> Current poise value. When ≤ 0, enemy is staggered. </summary>
+        public float CurrentPoise => _currentPoise;
+
+        /// <summary> Whether poise is currently broken (stagger active). </summary>
+        public bool IsStaggered { get; private set; }
 
         /// <inheritdoc/>
         public bool IsAlive => !_isDead;
@@ -75,6 +96,7 @@ namespace ProjectArk.Combat.Enemy
             _currentHP = _stats.MaxHP;
             _currentPoise = _stats.MaxPoise;
             _isDead = false;
+            IsStaggered = false;
 
             if (_spriteRenderer != null)
                 _spriteRenderer.color = _stats.BaseColor;
@@ -94,9 +116,23 @@ namespace ProjectArk.Combat.Enemy
             if (knockbackForce > 0f && _rigidbody != null)
                 _rigidbody.AddForce(knockbackDirection.normalized * knockbackForce, ForceMode2D.Impulse);
 
-            // Hit flash feedback
-            if (_spriteRenderer != null && _stats != null)
+            // Hit flash feedback (skip during stagger — stagger has its own color)
+            if (!IsStaggered && _spriteRenderer != null && _stats != null)
                 StartCoroutine(HitFlashCoroutine());
+
+            // Poise reduction: damage also reduces poise
+            if (!IsStaggered && _stats != null && _stats.MaxPoise > 0f)
+            {
+                _currentPoise -= damage;
+                if (_currentPoise <= 0f)
+                {
+                    IsStaggered = true;
+                    _currentPoise = 0f;
+                    // 顿帧：韧性击破时触发较强的 HitStop
+                    Core.HitStopEffect.Trigger(0.08f);
+                    OnPoiseBroken?.Invoke();
+                }
+            }
 
             // Notify listeners
             OnDamageTaken?.Invoke(damage, _currentHP);
@@ -108,10 +144,23 @@ namespace ProjectArk.Combat.Enemy
 
         // ──────────────────── Death ────────────────────
 
+        /// <summary>
+        /// Reset poise to maximum. Called by StaggerState when stagger ends.
+        /// </summary>
+        public void ResetPoise()
+        {
+            if (_stats != null)
+                _currentPoise = _stats.MaxPoise;
+            IsStaggered = false;
+        }
+
         private void Die()
         {
             if (_isDead) return;
             _isDead = true;
+
+            // 顿帧：击杀时触发中等 HitStop
+            Core.HitStopEffect.Trigger(0.06f);
 
             // Disable collision so no further interactions occur
             if (_collider != null)
@@ -159,6 +208,40 @@ namespace ProjectArk.Combat.Enemy
         {
             if (_rigidbody != null)
                 _rigidbody.linearVelocity = Vector2.zero;
+        }
+
+        // ──────────────────── Boids Separation ────────────────────
+
+        /// <summary>
+        /// Calculate a separation force vector pushing this enemy away from nearby enemies.
+        /// Uses inverse-distance weighting so closer neighbors exert stronger push.
+        /// Call from ChaseState to blend with pursuit direction.
+        /// </summary>
+        /// <param name="radius">Detection radius for neighbors.</param>
+        /// <param name="strength">Maximum magnitude of the separation force.</param>
+        public Vector2 GetSeparationForce(float radius = 1.5f, float strength = 2f)
+        {
+            Vector2 separation = Vector2.zero;
+            int neighborCount = 0;
+
+            var neighbors = Physics2D.OverlapCircleAll(transform.position, radius, EnemyLayerMask);
+            for (int i = 0; i < neighbors.Length; i++)
+            {
+                if (neighbors[i].gameObject == gameObject) continue;
+
+                Vector2 away = (Vector2)transform.position - (Vector2)neighbors[i].transform.position;
+                float dist = away.magnitude;
+                if (dist < 0.001f) continue;
+
+                // Inverse distance: closer neighbors push harder
+                separation += away.normalized / dist;
+                neighborCount++;
+            }
+
+            if (neighborCount > 0)
+                separation = separation.normalized * strength;
+
+            return separation;
         }
 
         // ──────────────────── Visual Feedback ────────────────────
@@ -209,6 +292,8 @@ namespace ProjectArk.Combat.Enemy
             // Clear event subscribers to prevent leaks across pool reuses
             OnDamageTaken = null;
             OnDeath = null;
+            OnPoiseBroken = null;
+            IsStaggered = false;
 
             if (_rigidbody != null)
                 _rigidbody.linearVelocity = Vector2.zero;

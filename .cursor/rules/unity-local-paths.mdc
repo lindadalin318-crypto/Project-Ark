@@ -1,0 +1,24 @@
+---
+description: Unity Editor 本地路径 — Editor Log 和离线文档的访问路径
+alwaysApply: true
+---
+
+# Unity 本地路径
+
+## Editor Log（编辑器日志）
+
+```
+C:\Users\dada\AppData\Local\Unity\Editor.Log
+```
+
+- 用途：查看 Unity 编译错误、运行时异常、Play Mode 输出、Asset Pipeline 日志
+- 当需要调试 Unity 编辑器问题时，直接读取此文件
+
+## Unity Documentation（离线文档）
+
+```
+E:\Program Files (x86)\Unity\Editor\Documentation
+```
+
+- 用途：查阅 Unity API 文档、Manual、ScriptReference
+- 当需要确认 Unity API 用法时，可直接访问此目录下的文档文件

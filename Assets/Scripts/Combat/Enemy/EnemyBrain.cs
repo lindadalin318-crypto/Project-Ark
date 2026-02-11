@@ -25,6 +25,7 @@ namespace ProjectArk.Combat.Enemy
         private ChaseState _chaseState;
         private EngageState _engageState;
         private ReturnState _returnState;
+        private StaggerState _staggerState;
 
         // ──────────────────── Spawn Position ────────────────────
         protected Vector2 _spawnPosition;
@@ -51,6 +52,7 @@ namespace ProjectArk.Combat.Enemy
         public ChaseState ChaseState => _chaseState;
         public EngageState EngageState => _engageState;
         public ReturnState ReturnState => _returnState;
+        public StaggerState StaggerState => _staggerState;
 
         // ──────────────────── Lifecycle ────────────────────
 
@@ -91,10 +93,47 @@ namespace ProjectArk.Combat.Enemy
             _chaseState = new ChaseState(this);
             _engageState = new EngageState(this);
             _returnState = new ReturnState(this);
+            _staggerState = new StaggerState(this);
 
             // Initialize the outer state machine starting in Idle
             _stateMachine = new StateMachine { DebugName = "Outer" };
             _stateMachine.Initialize(_idleState);
+
+            // Subscribe to poise-break event for stagger transitions
+            SubscribePoiseBroken();
+        }
+
+        // ──────────────────── Poise / Stagger ────────────────────
+
+        private void SubscribePoiseBroken()
+        {
+            // Unsubscribe first to prevent double-subscribe on ResetBrain
+            _entity.OnPoiseBroken -= ForceStagger;
+            _entity.OnPoiseBroken += ForceStagger;
+        }
+
+        /// <summary>
+        /// Force the state machine into Stagger state. Called when poise breaks.
+        /// Enemies with "SuperArmor" behavior tag are immune.
+        /// </summary>
+        private void ForceStagger()
+        {
+            // SuperArmor（霸体）: immune to stagger
+            if (_stats != null && _stats.BehaviorTags.Contains("SuperArmor"))
+            {
+                // Poise is still broken, but reset it immediately — no stagger animation
+                _entity.ResetPoise();
+                return;
+            }
+
+            if (_stateMachine != null && _staggerState != null)
+                _stateMachine.TransitionTo(_staggerState);
+        }
+
+        protected virtual void OnDisable()
+        {
+            if (_entity != null)
+                _entity.OnPoiseBroken -= ForceStagger;
         }
 
         // ──────────────────── Pool Support ────────────────────

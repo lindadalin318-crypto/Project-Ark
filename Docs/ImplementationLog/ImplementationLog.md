@@ -1758,3 +1758,60 @@ Idle → [发现目标] → Chase → [进入 PreferredRange] → Shoot (Telegra
 - 抗性规则：Minion 无抗性、Elite 特色抗性、Boss 均匀中等抗性+主题弱点
 - EXP 阶梯：Minion 5–15 / Elite 20–50 / Mini-Boss 100–200 / Boss 500+
 - Boss/Mini-Boss：LeashRange=999（不脱战）、MemoryDuration=999（不遗忘）
+
+---
+
+## Phase 1 遗留项补完：韧性 (Poise) + 顿帧 (HitStop) + 群聚算法 (Boids) — 2026-02-11 19:30
+
+### 概述
+
+补完敌人 AI Phase 1 的三个遗留项，完善战斗手感与多敌人体验。
+
+### 新建文件
+
+- `Assets/Scripts/Core/HitStopEffect.cs` — 全局顿帧效果单例
+  - 通过 `[RuntimeInitializeOnLoadMethod]` 自动创建持久 `[HitStop]` 对象
+  - 静态 API `HitStopEffect.Trigger(float duration)` 供全局调用
+  - 暂停 `Time.timeScale` 指定真实时间秒后恢复，使用 `Time.unscaledDeltaTime` 计时
+  - 安全保护：星图面板已暂停时跳过、重叠调用取最长、销毁时恢复 timeScale
+
+- `Assets/Scripts/Combat/Enemy/States/StaggerState.cs` — 韧性击破硬直状态
+  - 敌人停止移动，sprite 变黄色（与前摇红色区分）
+  - 水平震动视觉反馈（`Sin(Time * 40) * 0.06` 强度）
+  - 持续 `EnemyStatsSO.StaggerDuration` 秒后重置韧性，转 Chase/Idle
+  - 退出时恢复位置和颜色
+
+### 修改文件
+
+| 文件 | 变更 |
+|------|------|
+| `Assets/Scripts/Combat/Enemy/EnemyStatsSO.cs` | 新增 `[Header("Poise & Stagger")]` 区域，添加 `StaggerDuration`(float, 默认1.0s) 字段 |
+| `Assets/Scripts/Combat/Enemy/EnemyEntity.cs` | **韧性系统**：`TakeDamage()` 中增加 poise 削减逻辑（伤害值=韧性伤害），poise ≤ 0 时标记 `IsStaggered` 并触发 `OnPoiseBroken` 事件 + 韧性击破时调用 `HitStopEffect.Trigger(0.08f)`；`Die()` 中调用 `HitStopEffect.Trigger(0.06f)`；新增 `ResetPoise()` 公开方法；新增 `OnPoiseBroken` 事件、`IsStaggered` 属性、`CurrentPoise` 属性；**群聚算法**：新增 `GetSeparationForce(float radius, float strength)` 方法，使用 `Physics2D.OverlapCircleAll` + Enemy Layer 检测邻近敌人，返回反距离加权推离向量；`OnReturnToPool()` 中新增 `OnPoiseBroken = null` 和 `IsStaggered = false` 清理 |
+| `Assets/Scripts/Combat/Enemy/EnemyBrain.cs` | 新增 `StaggerState` 公开属性；`BuildStateMachine()` 中创建 `_staggerState` 实例并调用 `SubscribePoiseBroken()`；新增 `SubscribePoiseBroken()` 订阅 Entity 事件；新增 `ForceStagger()` 方法（检查 `SuperArmor` BehaviorTag 豁免）；新增 `OnDisable()` 取消订阅 |
+| `Assets/Scripts/Combat/Enemy/States/ChaseState.cs` | 移动方向从纯追击改为追击方向 + `GetSeparationForce()` 混合（权重 0.3），防止多只近战敌人重叠堆积 |
+
+### 系统设计
+
+**韧性 (Poise) 系统：**
+```
+受击 → 伤害值同时削减 HP 和 Poise
+  └→ Poise ≤ 0 → IsStaggered=true → OnPoiseBroken 事件
+       └→ EnemyBrain.ForceStagger()
+            ├→ 有 SuperArmor 标签 → 直接 ResetPoise()，不进入硬直
+            └→ 无 SuperArmor → TransitionTo(StaggerState)
+                 └→ StaggerDuration 秒后 → ResetPoise() → Chase/Idle
+```
+
+**顿帧 (HitStop) 时机与强度：**
+| 触发事件 | 冻结时长 | 体感 |
+|---------|---------|------|
+| 韧性击破 | 0.08s | 明显顿挫，"打碎盔甲"的权重感 |
+| 击杀 | 0.06s | 中等顿挫，"致命一击"的终结感 |
+
+**群聚算法 (Boids Separation)：**
+- 检测半径 1.5 单位内同 Layer 邻居
+- 反距离加权：越近推力越大
+- 混合权重 0.3：追击意图为主，分散为辅
+- 结果：多只莽夫追击时呈扇形散开而非直线叠加
+
+**技术：** `[RuntimeInitializeOnLoadMethod]` 自动单例创建, `Time.unscaledDeltaTime` 顿帧计时, C# event 事件驱动韧性击破, Physics2D.OverlapCircleAll Boids 邻居检测, BehaviorTags 字符串查询 SuperArmor 豁免。
