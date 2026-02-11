@@ -6,15 +6,19 @@ namespace ProjectArk.Combat.Enemy
     /// <summary>
     /// Shoot state (Shooter type): enemy stands still and fires a burst of projectiles
     /// at the player. Uses the Signal-Window model:
-    ///   Telegraph (color flash) → Burst Fire → Recovery (punish window)
+    ///   Telegraph (color flash) -> Burst Fire -> Recovery (punish window)
+    /// Supports data-driven attacks via AttackDataSO (falls back to legacy EnemyStatsSO fields).
     /// Transitions:
-    ///   - Player too close (< RetreatRange) → RetreatState
-    ///   - Target lost or out of leash → ReturnState
-    ///   - Burst complete + recovery done → ChaseState (re-evaluate position)
+    ///   - Player too close (less than RetreatRange) -> RetreatState
+    ///   - Target lost or out of leash -> ReturnState
+    ///   - Burst complete + recovery done -> ChaseState (re-evaluate position)
     /// </summary>
     public class ShootState : IState
     {
         private readonly EnemyBrain _brain;
+
+        // Selected attack for this cycle (null = legacy path)
+        private AttackDataSO _selectedAttack;
 
         // Phase management
         private enum Phase { Telegraph, Firing, Recovery }
@@ -39,8 +43,13 @@ namespace ProjectArk.Combat.Enemy
 
         public void OnEnter()
         {
+            // Select a Projectile-type attack if available
+            _selectedAttack = SelectProjectileAttack();
+
             _phase = Phase.Telegraph;
-            _phaseTimer = _brain.Stats.TelegraphDuration;
+            _phaseTimer = _selectedAttack != null
+                ? _selectedAttack.TelegraphDuration
+                : _brain.Stats.TelegraphDuration;
             _shotsFired = 0;
             _burstTimer = 0f;
 
@@ -55,7 +64,9 @@ namespace ProjectArk.Combat.Enemy
             if (_spriteRenderer != null)
             {
                 _originalColor = _spriteRenderer.color;
-                _spriteRenderer.color = new Color(1f, 0.6f, 0f, 1f); // Orange flash for shooter
+                _spriteRenderer.color = _selectedAttack != null
+                    ? _selectedAttack.TelegraphColor
+                    : new Color(1f, 0.6f, 0f, 1f); // Orange flash for shooter
             }
 
             // Ensure projectile pool is ready
@@ -101,9 +112,48 @@ namespace ProjectArk.Combat.Enemy
 
         public void OnExit()
         {
+            // Return attack token to the Director
+            _brain.ReturnDirectorToken();
+
             // Restore sprite color
             if (_spriteRenderer != null)
                 _spriteRenderer.color = _originalColor;
+
+            _selectedAttack = null;
+        }
+
+        // ──────────────────── Attack Selection ────────────────────
+
+        /// <summary>
+        /// Find a Projectile-type AttackDataSO from the enemy's Attacks array.
+        /// Returns null if none found (legacy path).
+        /// </summary>
+        private AttackDataSO SelectProjectileAttack()
+        {
+            var stats = _brain.Stats;
+            if (!stats.HasAttackData) return null;
+
+            // Weighted random among Projectile-type attacks
+            float totalWeight = 0f;
+            for (int i = 0; i < stats.Attacks.Length; i++)
+            {
+                if (stats.Attacks[i] != null && stats.Attacks[i].Type == AttackType.Projectile)
+                    totalWeight += stats.Attacks[i].SelectionWeight;
+            }
+
+            if (totalWeight <= 0f) return null;
+
+            float roll = Random.Range(0f, totalWeight);
+            float cumulative = 0f;
+            for (int i = 0; i < stats.Attacks.Length; i++)
+            {
+                if (stats.Attacks[i] == null || stats.Attacks[i].Type != AttackType.Projectile)
+                    continue;
+                cumulative += stats.Attacks[i].SelectionWeight;
+                if (roll <= cumulative) return stats.Attacks[i];
+            }
+
+            return null;
         }
 
         // ──────────────────── Phase Updates ────────────────────
@@ -126,22 +176,29 @@ namespace ProjectArk.Combat.Enemy
 
         private void UpdateFiring(float deltaTime)
         {
-            var stats = _brain.Stats;
+            int shotsPerBurst = _selectedAttack != null
+                ? _selectedAttack.ShotsPerBurst
+                : _brain.Stats.ShotsPerBurst;
+            float burstInterval = _selectedAttack != null
+                ? _selectedAttack.BurstInterval
+                : _brain.Stats.BurstInterval;
 
             _burstTimer -= deltaTime;
 
-            if (_burstTimer <= 0f && _shotsFired < stats.ShotsPerBurst)
+            if (_burstTimer <= 0f && _shotsFired < shotsPerBurst)
             {
                 FireProjectile();
                 _shotsFired++;
-                _burstTimer = stats.BurstInterval;
+                _burstTimer = burstInterval;
             }
 
             // Burst complete → enter recovery
-            if (_shotsFired >= stats.ShotsPerBurst)
+            if (_shotsFired >= shotsPerBurst)
             {
                 _phase = Phase.Recovery;
-                _phaseTimer = stats.RecoveryDuration;
+                _phaseTimer = _selectedAttack != null
+                    ? _selectedAttack.RecoveryDuration
+                    : _brain.Stats.RecoveryDuration;
 
                 // Recovery visual: dim the sprite slightly
                 if (_spriteRenderer != null)
@@ -164,7 +221,6 @@ namespace ProjectArk.Combat.Enemy
 
         private void FireProjectile()
         {
-            var stats = _brain.Stats;
             var perception = _brain.Perception;
 
             if (_projectilePool == null)
@@ -173,9 +229,23 @@ namespace ProjectArk.Combat.Enemy
                 return;
             }
 
+            // Read values from AttackDataSO or legacy stats
+            float projSpeed = _selectedAttack != null
+                ? _selectedAttack.ProjectileSpeed
+                : _brain.Stats.ProjectileSpeed;
+            float projDamage = _selectedAttack != null
+                ? _selectedAttack.Damage
+                : _brain.Stats.ProjectileDamage;
+            float projKnockback = _selectedAttack != null
+                ? _selectedAttack.ProjectileKnockback
+                : _brain.Stats.ProjectileKnockback;
+            float projLifetime = _selectedAttack != null
+                ? _selectedAttack.ProjectileLifetime
+                : _brain.Stats.ProjectileLifetime;
+
             // Calculate direction toward player's current/last known position
             Vector2 myPos = _brain.Entity.transform.position;
-            Vector2 targetPos = perception.LastKnownPlayerPosition;
+            Vector2 targetPos = perception.LastKnownTargetPosition;
             Vector2 dir = (targetPos - myPos).normalized;
 
             // Spawn projectile from pool
@@ -188,8 +258,7 @@ namespace ProjectArk.Combat.Enemy
 
             if (proj != null)
             {
-                proj.Initialize(dir, stats.ProjectileSpeed, stats.ProjectileDamage,
-                                stats.ProjectileKnockback, stats.ProjectileLifetime);
+                proj.Initialize(dir, projSpeed, projDamage, projKnockback, projLifetime);
             }
 
             // Update facing direction
@@ -203,11 +272,10 @@ namespace ProjectArk.Combat.Enemy
             if (!perception.HasTarget) return;
 
             Vector2 myPos = _brain.Entity.transform.position;
-            Vector2 dir = (perception.LastKnownPlayerPosition - myPos).normalized;
+            Vector2 dir = (perception.LastKnownTargetPosition - myPos).normalized;
 
             if (dir.sqrMagnitude > 0.001f)
             {
-                // Use MoveTo + StopMovement to set FacingDirection without actual movement
                 _brain.Entity.MoveTo(dir);
                 _brain.Entity.StopMovement();
             }
@@ -215,17 +283,24 @@ namespace ProjectArk.Combat.Enemy
 
         private void EnsureProjectilePool()
         {
-            var stats = _brain.Stats;
+            // Prefer AttackDataSO prefab, fall back to legacy stats
+            GameObject prefab = _selectedAttack != null
+                ? _selectedAttack.ProjectilePrefab
+                : _brain.Stats.ProjectilePrefab;
 
-            if (stats.ProjectilePrefab == null)
+            // If AttackDataSO has no prefab, try legacy as well
+            if (prefab == null)
+                prefab = _brain.Stats.ProjectilePrefab;
+
+            if (prefab == null)
             {
-                Debug.LogError($"[ShootState] {_brain.Entity.gameObject.name} has no ProjectilePrefab assigned in EnemyStatsSO!");
+                Debug.LogError($"[ShootState] {_brain.Entity.gameObject.name} has no ProjectilePrefab assigned!");
                 return;
             }
 
             if (PoolManager.Instance != null)
             {
-                _projectilePool = PoolManager.Instance.GetPool(stats.ProjectilePrefab, 10, 50);
+                _projectilePool = PoolManager.Instance.GetPool(prefab, 10, 50);
             }
             else
             {

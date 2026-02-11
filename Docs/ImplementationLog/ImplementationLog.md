@@ -1815,3 +1815,219 @@ Idle → [发现目标] → Chase → [进入 PreferredRange] → Shoot (Telegra
 - 结果：多只莽夫追击时呈扇形散开而非直线叠加
 
 **技术：** `[RuntimeInitializeOnLoadMethod]` 自动单例创建, `Time.unscaledDeltaTime` 顿帧计时, C# event 事件驱动韧性击破, Physics2D.OverlapCircleAll Boids 邻居检测, BehaviorTags 字符串查询 SuperArmor 豁免。
+
+---
+
+## Bug Fix：敌人重叠堆叠修复 — 2026-02-11 20:15
+
+### 问题
+多只 Rusher 进入攻击状态（Engage/Telegraph）后停止移动，堆叠在同一坐标。原因：Boids 分离力仅在 `ChaseState` 中应用，一旦离开追击状态就完全失效；且距离 ≈ 0 时 `GetSeparationForce` 直接跳过（`if (dist < 0.001f) continue`），完美重叠时推力为零。
+
+### 修改文件
+
+| 文件路径 | 变更说明 |
+|---------|---------|
+| `Assets/Scripts/Combat/Enemy/EnemyEntity.cs` | 新增 `FixedUpdate()` + `ResolveOverlap()` 方法：使用 `Physics2D.OverlapCircleAll` 检测 `MIN_ENEMY_DISTANCE`(0.9) 范围内同 Layer 邻居，直接通过 `_rigidbody.position += push` 消解重叠（每人各承担一半重叠量）；完全重叠时生成随机方向避免死锁。修复 `GetSeparationForce` 中距离 ≈ 0 的处理：改为随机方向推开而非跳过。 |
+| `Assets/Scripts/Combat/Enemy/States/ChaseState.cs` | `SEPARATION_WEIGHT` 从 0.3 提升至 0.6，在追击阶段就更积极地分散。 |
+
+### 设计要点
+- **FixedUpdate 位置消解** vs 力/速度方案：因为 `MoveTo()` 每帧直接设置 `linearVelocity`，AddForce 会被覆盖；直接修改 `_rigidbody.position` 是唯一在所有状态下可靠生效的方式。
+- **双保险架构**：ChaseState 中的 Boids 方向混合（预防性扇形散开） + FixedUpdate 中的硬性重叠消解（兜底，任何状态生效）。
+
+---
+
+## Phase 2 完整实现：AttackDataSO + 导演系统 + 炮台原型 — 2026-02-11 21:00
+
+### 概览
+
+Phase 2 包含三大模块，按依赖顺序实现：
+- **Phase 2A**：AttackDataSO 数据驱动攻击系统 + HitboxResolver 碰撞检测
+- **Phase 2B**：EnemyDirector 导演系统（攻击令牌 + OrbitState 环绕等待）
+- **Phase 2C**：Turret 炮台原型（激光 + 蓄力弹双变体）
+
+### Phase 2A — AttackDataSO + Hitbox 系统
+
+#### 新建文件
+
+| 文件路径 | 说明 |
+|---------|------|
+| `Assets/Scripts/Combat/Enemy/AttackDataSO.cs` | ScriptableObject 定义单个攻击模式：`AttackType` 枚举 (Melee/Projectile/Laser) + `HitboxShape` 枚举 (Circle/Box/Cone) + 信号窗口三阶段时长 + 伤害/击退 + 碰撞形状参数 + 远程弹丸/激光参数 + 权重选择 + 视觉配置 |
+| `Assets/Scripts/Combat/Enemy/HitboxResolver.cs` | 静态工具类，NonAlloc 共享缓冲区。`Resolve()` 根据 `HitboxShape` 执行不同 Physics2D 查询：Circle (`OverlapCircleNonAlloc`)、Box (`OverlapBoxNonAlloc`)、Cone (Circle + 角度过滤)。附带 Editor Gizmo 绘制 |
+
+#### 修改文件
+
+| 文件路径 | 变更说明 |
+|---------|---------|
+| `Assets/Scripts/Combat/Enemy/EnemyStatsSO.cs` | 新增 `AttackDataSO[] Attacks` 数组 + `HasAttackData` 属性 + `SelectRandomAttack()` 加权随机选择方法 |
+| `Assets/Scripts/Combat/Enemy/States/EngageState.cs` | 新增 `SelectedAttack` 属性，`OnEnter()` 中执行 `SelectRandomAttack()`，子状态通过 `_engage.SelectedAttack` 读取；`OnExit()` 归还导演令牌 |
+| `Assets/Scripts/Combat/Enemy/States/TelegraphSubState.cs` | 时长和颜色从 `SelectedAttack` 读取（null 时回退 legacy 字段） |
+| `Assets/Scripts/Combat/Enemy/States/AttackSubState.cs` | 使用 `HitboxResolver.Resolve()` 替换原 `OverlapCircleAll`；伤害/击退从 `SelectedAttack` 读取；增加 legacy NonAlloc 缓冲区 |
+| `Assets/Scripts/Combat/Enemy/States/RecoverySubState.cs` | 后摇时长从 `SelectedAttack` 读取 |
+| `Assets/Scripts/Combat/Enemy/States/ShootState.cs` | 新增 `SelectProjectileAttack()` 筛选 Projectile 类型 AttackDataSO；所有阶段时长/弹丸参数优先从 AttackDataSO 读取；`OnExit()` 归还导演令牌 |
+
+**设计要点**：全部修改保持 **100% 向后兼容** —— 当 `Attacks[]` 为空时，所有状态自动回退到 `EnemyStatsSO` 的遗留平面字段。
+
+### Phase 2B — 导演系统 (EnemyDirector + OrbitState)
+
+#### 新建文件
+
+| 文件路径 | 说明 |
+|---------|------|
+| `Assets/Scripts/Combat/Enemy/EnemyDirector.cs` | 全局单例协调器。`_maxAttackTokens` (默认 2) 限制同时攻击敌人数；`HashSet<EnemyBrain>` 追踪令牌持有者；`RequestToken()` / `ReturnToken()` / `HasToken()` API；`LateUpdate()` 自动清理死亡/禁用的 Brain；无 Director 时全体自由攻击（向后兼容）；Editor 顶角显示 token 使用量 |
+| `Assets/Scripts/Combat/Enemy/States/OrbitState.cs` | 等待令牌时的行为：以 `AttackRange * OrbitRadiusMultiplier` 为半径绕玩家环行；随机 CW/CCW 方向；混合 Boids 分离力（权重 0.5）；每 0.4s 重新请求令牌（非逐帧）；获得令牌后转入 Engage/Shoot |
+
+#### 修改文件
+
+| 文件路径 | 变更说明 |
+|---------|---------|
+| `Assets/Scripts/Combat/Enemy/EnemyBrain.cs` | 新增 `OrbitState` 属性；`BuildStateMachine()` 实例化 `_orbitState`；新增 `ReturnDirectorToken()` 公共方法；`ForceStagger()` 和 `OnDisable()` 中自动归还令牌；`ResetBrain()` 归还令牌；Debug GUI 显示 `[T]` 标记 |
+| `Assets/Scripts/Combat/Enemy/ShooterBrain.cs` | Debug GUI 增加令牌状态显示 |
+| `Assets/Scripts/Combat/Enemy/States/ChaseState.cs` | 进入攻击范围时先 `RequestToken()` —— 通过则转 Engage/Shoot，拒绝则转 OrbitState；无 Director 时直接攻击（兼容） |
+
+**设计要点**：
+- **电影感轮流单挑**：最多 2 敌人同时攻击，其余环绕助威
+- **零分配**：`HashSet` O(1) 查找，`OrbitState` 令牌检查 0.4s 节流
+- **健壮性**：死亡/禁用/硬直/池回收均自动归还令牌，`LateUpdate` 兜底清理
+
+### Phase 2C — 炮台原型 (Turret)
+
+#### 新建文件
+
+| 文件路径 | 说明 |
+|---------|------|
+| `Assets/Scripts/Combat/Enemy/EnemyLaserBeam.cs` | 敌方激光束。`Fire()` 执行 Raycast + LineRenderer 渲染 + IDamageable 伤害；`ShowAimLine()` / `HideAimLine()` 显示瞄准线（Lock 阶段视觉预警）；支持持续光束模式（LaserDuration）；淡出效果；`IPoolable` 对象池支持 |
+| `Assets/Scripts/Combat/Enemy/TurretBrain.cs` | 继承 EnemyBrain，**不调用** `base.BuildStateMachine()`（无 Chase/Engage/Return/Orbit）；4 个专用状态：Scan → Lock → Attack → Cooldown；`SelectAttackForCycle()` 从 AttackDataSO[] 选择攻击；支持韧性击破/硬直 |
+| `Assets/Scripts/Combat/Enemy/States/TurretScanState.cs` | 扫描状态：缓慢旋转扫视（ScanRotationSpeed°/s），检测到目标 → Lock |
+| `Assets/Scripts/Combat/Enemy/States/TurretLockState.cs` | 锁定状态：快速追踪目标，显示瞄准线（EnemyLaserBeam.ShowAimLine），LockOnDuration 后 → Attack；丢失目标 → Scan |
+| `Assets/Scripts/Combat/Enemy/States/TurretAttackState.cs` | 攻击状态：根据 AttackDataSO.Type 分发——Laser 型调用 `EnemyLaserBeam.Fire()`，Projectile 型从对象池发射弹丸；完成 → Cooldown |
+| `Assets/Scripts/Combat/Enemy/States/TurretCooldownState.cs` | 冷却状态：AttackCooldown 倒计时，完成后根据目标可见性 → Lock 或 Scan |
+
+#### Editor 工具扩展
+
+| 文件路径 | 变更说明 |
+|---------|---------|
+| `Assets/Scripts/Combat/Editor/EnemyAssetCreator.cs` | 新增 `CreateAttackDataAssets()` 菜单项（创建 RusherMelee + ShooterBurst AttackDataSO）；新增 `CreateTurretLaserAssets()` + `CreateTurretCannonAssets()` 菜单项（创建 EnemyStatsSO + AttackDataSO + 完整 Prefab，含子物体 LineRenderer + EnemyLaserBeam）；新增 `CreateTurretGameObject()` 共享 Prefab 构建方法 |
+
+### 完整文件清单
+
+**新建文件 (11)**:
+1. `Assets/Scripts/Combat/Enemy/AttackDataSO.cs`
+2. `Assets/Scripts/Combat/Enemy/HitboxResolver.cs`
+3. `Assets/Scripts/Combat/Enemy/EnemyDirector.cs`
+4. `Assets/Scripts/Combat/Enemy/EnemyLaserBeam.cs`
+5. `Assets/Scripts/Combat/Enemy/TurretBrain.cs`
+6. `Assets/Scripts/Combat/Enemy/States/OrbitState.cs`
+7. `Assets/Scripts/Combat/Enemy/States/TurretScanState.cs`
+8. `Assets/Scripts/Combat/Enemy/States/TurretLockState.cs`
+9. `Assets/Scripts/Combat/Enemy/States/TurretAttackState.cs`
+10. `Assets/Scripts/Combat/Enemy/States/TurretCooldownState.cs`
+
+**修改文件 (9)**:
+1. `Assets/Scripts/Combat/Enemy/EnemyStatsSO.cs`
+2. `Assets/Scripts/Combat/Enemy/EnemyBrain.cs`
+3. `Assets/Scripts/Combat/Enemy/ShooterBrain.cs`
+4. `Assets/Scripts/Combat/Enemy/States/EngageState.cs`
+5. `Assets/Scripts/Combat/Enemy/States/TelegraphSubState.cs`
+6. `Assets/Scripts/Combat/Enemy/States/AttackSubState.cs`
+7. `Assets/Scripts/Combat/Enemy/States/RecoverySubState.cs`
+8. `Assets/Scripts/Combat/Enemy/States/ShootState.cs`
+9. `Assets/Scripts/Combat/Enemy/States/ChaseState.cs`
+10. `Assets/Scripts/Combat/Editor/EnemyAssetCreator.cs`
+
+**技术**：数据驱动 (AttackDataSO)、策略模式 (AttackType 分发)、NonAlloc 物理查询、HashSet O(1) 令牌管理、环形运动 (OrbitState)、Raycast + LineRenderer 激光、IPoolable 对象池。
+
+---
+
+## Phase 3 完整实现：刺客 + 恐惧 + 阵营 + 闪避格挡 + 精英词缀 + Boss — 2026-02-11 23:00
+
+### 概述
+Phase 3 实现了 6 个子系统，构建了完整的高级敌人 AI 层：
+- **3A** 刺客原型 (Stalker)
+- **3B** 恐惧系统 (Fear)
+- **3C** 阵营系统 (Faction)
+- **3D** 闪避/格挡 AI (Dodge/Block)
+- **3E** 精英词缀系统 (Elite Affix)
+- **3F** 多阶段 Boss 控制器
+
+### 新建文件
+
+#### 3A: 刺客原型
+1. `Assets/Scripts/Combat/Enemy/StalkerBrain.cs` — 刺客大脑，覆盖 BuildStateMachine()，4 个专属状态 + 透明度管理
+2. `Assets/Scripts/Combat/Enemy/States/StealthState.cs` — 隐身状态：低 alpha，无目标时缓慢飘回出生点
+3. `Assets/Scripts/Combat/Enemy/States/FlankState.cs` — 迂回状态：利用 Dot Product 判定玩家背后弧，移向背后位置
+4. `Assets/Scripts/Combat/Enemy/States/StalkerStrikeState.cs` — 突袭状态：快速显形 → 单次近战 → 短暂僵直 → 脱离
+5. `Assets/Scripts/Combat/Enemy/States/DisengageState.cs` — 脱离状态：加速远离 + 渐隐回隐身
+
+#### 3B: 恐惧系统
+6. `Assets/Scripts/Combat/Enemy/EnemyFear.cs` — 恐惧组件：累积恐惧值，订阅 OnAnyEnemyDeath，超阈值触发逃跑
+7. `Assets/Scripts/Combat/Enemy/States/FleeState.cs` — 逃跑状态：远离玩家，加速移动，计时/距离退出
+
+#### 3D: 闪避/格挡
+8. `Assets/Scripts/Combat/Enemy/ThreatSensor.cs` — 威胁感知：5Hz NonAlloc 扫描来袭投射物，Dot Product 判断朝向
+9. `Assets/Scripts/Combat/Enemy/States/DodgeState.cs` — 闪避状态：垂直于威胁方向侧闪
+10. `Assets/Scripts/Combat/Enemy/States/BlockState.cs` — 格挡状态：面向威胁举盾，减伤
+
+#### 3E: 精英词缀
+11. `Assets/Scripts/Combat/Enemy/EnemyAffixSO.cs` — 词缀 SO：统计乘数 + 行为标签 + 特殊效果枚举
+12. `Assets/Scripts/Combat/Enemy/EnemyAffixController.cs` — 词缀控制器：运行时应用词缀，处理特殊效果 (爆炸/反伤/狂暴等)
+
+#### 3F: 多阶段 Boss
+13. `Assets/Scripts/Combat/Enemy/BossPhaseDataSO.cs` — Boss 阶段 SO：HP 阈值、攻击模式、统计修正、过渡效果
+14. `Assets/Scripts/Combat/Enemy/BossController.cs` — Boss 控制器：监听伤害事件，按 HP 阈值触发阶段转换
+15. `Assets/Scripts/Combat/Enemy/States/BossTransitionState.cs` — Boss 过渡状态：无敌 + 视觉脉冲 + HitStop
+
+### 修改文件
+
+1. `Assets/Scripts/Combat/Enemy/EnemyEntity.cs`
+   - 新增 `OnAnyEnemyDeath` 全局静态事件，Die() 中广播
+   - 新增 `MoveAtSpeed(direction, speed)` 方法（变速移动）
+   - 新增 `IsBlocking`、`BlockDamageReduction` 属性，TakeDamage 中应用格挡减伤
+   - 新增 `IsInvulnerable` 属性，TakeDamage 中无敌检查
+   - 新增 `_runtimeMaxHP`、`_runtimeDamageMultiplier`、`_runtimeSpeedMultiplier` 运行时统计
+   - 新增 `ApplyAffixMultipliers()` 方法
+   - `MoveTo()` 应用 `_runtimeSpeedMultiplier`
+   - `OnReturnToPool()` 重置所有新状态
+
+2. `Assets/Scripts/Combat/Enemy/EnemyStatsSO.cs`
+   - 新增 `FactionID` 字段
+   - 新增恐惧系统字段：`FearThreshold`、`FearFromAllyDeath`、`FearFromPoiseBroken`、`FearDecayRate`、`FleeDuration`
+   - 新增闪避/格挡字段：`DodgeSpeed`、`DodgeDuration`、`BlockDamageReduction`、`BlockDuration`、`ThreatDetectionRadius`
+
+3. `Assets/Scripts/Combat/Enemy/EnemyBrain.cs`
+   - 新增 `FleeState`、`DodgeState`、`BlockState` 状态实例和属性
+   - 新增 `ForceFleeCheck()` 方法（恐惧系统调用）
+   - 新增 `ForceTransition(BossPhaseDataSO)` 方法（Boss 控制器调用）
+   - 新增 `CheckThreatResponse()` 在 Update 中检查威胁感知并触发闪避/格挡
+
+4. `Assets/Scripts/Combat/Enemy/EnemyPerception.cs`
+   - 完全重写：新增 `TargetType` 枚举、`CurrentTargetType`、`CurrentTargetEntity` 属性
+   - `LastKnownPlayerPosition` → `LastKnownTargetPosition`（旧名保留为别名）
+   - 新增 `PerformFactionScan()` 方法：NonAlloc 扫描敌方阵营实体
+   - 玩家始终优先（PerformVisionCheck > PerformFactionScan）
+   - 记忆衰减更新：支持阵营目标存活刷新
+
+5. `Assets/Scripts/Combat/Enemy/States/ChaseState.cs` — `LastKnownPlayerPosition` → `LastKnownTargetPosition`
+6. `Assets/Scripts/Combat/Enemy/States/OrbitState.cs` — 同上
+7. `Assets/Scripts/Combat/Enemy/States/ShootState.cs` — 同上
+8. `Assets/Scripts/Combat/Enemy/States/TurretLockState.cs` — 同上
+9. `Assets/Scripts/Combat/Enemy/States/RetreatState.cs` — 同上
+10. `Assets/Scripts/Combat/Enemy/States/FlankState.cs` — 同上
+11. `Assets/Scripts/Combat/Enemy/States/FleeState.cs` — 同上
+12. `Assets/Scripts/Combat/Enemy/States/DisengageState.cs` — 同上
+
+13. `Assets/Scripts/Combat/Enemy/EnemySpawner.cs`
+    - 新增精英词缀生成：`_possibleAffixes`、`_eliteChance`、`_maxAffixCount` 字段
+    - 新增 `TryApplyAffixes()` 方法
+
+14. `Assets/Scripts/Combat/Editor/EnemyAssetCreator.cs`
+    - 新增 `CreateStalkerAssets()` 菜单（SO + AttackData + Prefab）
+    - 新增 `CreateAffixAssets()` 菜单（5 个精英词缀）
+
+### 目的
+完成 Phase 3 全部高级敌人 AI 系统，使战斗系统具备：
+- 多样化敌人行为（隐身刺客、恐惧逃跑、阵营内斗）
+- 动态战斗反应（闪避来袭投射物、举盾格挡）
+- 可扩展的精英变体系统（词缀运行时堆叠）
+- Boss 多阶段战斗机制（HP 阈值触发、攻击模式切换、无敌过渡）
+
+**技术**：HFSM 子类化 (StalkerBrain)、事件驱动恐惧传播 (静态事件 + 距离判定)、NonAlloc 阵营/威胁扫描、运行时统计覆写 (AffixController)、Dot Product 几何判定 (后方弧/威胁朝向)、策略模式词缀效果、数据驱动 Boss 阶段 (BossPhaseDataSO)。

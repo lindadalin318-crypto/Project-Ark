@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 814b7e08c4625ff4faa3639c6eee45de, type: 3}
+  m_Name: EnemyStats_TurretLaser
+  m_EditorClassIdentifier: ProjectArk.Combat::ProjectArk.Combat.EnemyStatsSO
+  EnemyName: Turret (Laser)
+  EnemyID: enemy_turret_laser
+  MaxHP: 80
+  MaxPoise: 40
+  MoveSpeed: 0
+  RotationSpeed: 180
+  AttackDamage: 20
+  AttackRange: 15
+  AttackCooldown: 2.5
+  AttackKnockback: 4
+  TelegraphDuration: 0.8
+  AttackActiveDuration: 1
+  RecoveryDuration: 0.5
+  ProjectilePrefab: {fileID: 0}
+  ProjectileSpeed: 8
+  ProjectileDamage: 8
+  ProjectileKnockback: 3
+  ProjectileLifetime: 4
+  ShotsPerBurst: 3
+  BurstInterval: 0.25
+  PreferredRange: 10
+  RetreatRange: 5
+  StaggerDuration: 1
+  SightRange: 18
+  SightAngle: 90
+  HearingRange: 20
+  LeashRange: 999
+  MemoryDuration: 5
+  HitFlashDuration: 0.1
+  BaseColor: {r: 0.8, g: 0.8, b: 0.2, a: 1}
+  Resist_Physical: 0
+  Resist_Fire: 0
+  Resist_Ice: 0
+  Resist_Lightning: 0
+  Resist_Void: 0
+  DropTableID: 
+  PlanetID: 
+  SpawnWeight: 1
+  Attacks:
+  - {fileID: 11400000, guid: 451d400152481a8489c85b1d3dc32a5b, type: 2}
+  BehaviorTags: []

@@ -29,6 +29,17 @@ namespace ProjectArk.Combat.Enemy
         [Tooltip("Number of enemies to spawn immediately on Start.")]
         [SerializeField] private int _initialSpawnCount = 1;
 
+        [Header("Elite / Affix Settings")]
+        [Tooltip("Optional: affix pool for creating elite enemies. Leave empty to disable.")]
+        [SerializeField] private EnemyAffixSO[] _possibleAffixes;
+
+        [Tooltip("Chance (0-1) that a spawned enemy becomes elite (gets 1 random affix).")]
+        [Range(0f, 1f)]
+        [SerializeField] private float _eliteChance = 0f;
+
+        [Tooltip("Maximum number of affixes an elite can receive.")]
+        [SerializeField] [Min(1)] private int _maxAffixCount = 1;
+
         [Header("Pool Settings")]
         [Tooltip("Number of instances to pre-warm in the pool.")]
         [SerializeField] private int _poolPrewarmCount = 5;
@@ -95,6 +106,9 @@ namespace ProjectArk.Combat.Enemy
                 brain.ResetBrain(position);
             }
 
+            // Apply affixes (elite chance)
+            TryApplyAffixes(enemy);
+
             // Subscribe to death event for respawn management
             // NOTE: EnemyEntity.OnReturnToPool clears all event subscribers,
             // so we must re-subscribe every time we get from pool.
@@ -107,6 +121,47 @@ namespace ProjectArk.Combat.Enemy
             _aliveCount++;
 
             Debug.Log($"[EnemySpawner] Spawned enemy at {position}. Alive: {_aliveCount}/{_maxAlive}");
+        }
+
+        // ──────────────────── Affix Application ────────────────────
+
+        private void TryApplyAffixes(GameObject enemy)
+        {
+            if (_possibleAffixes == null || _possibleAffixes.Length == 0) return;
+            if (_eliteChance <= 0f) return;
+
+            // Roll for elite
+            if (Random.value > _eliteChance) return;
+
+            // Get or add AffixController
+            var controller = enemy.GetComponent<EnemyAffixController>();
+            if (controller == null)
+                controller = enemy.AddComponent<EnemyAffixController>();
+
+            // Clear any previous affixes from pool reuse
+            controller.ClearAffixes();
+
+            // Apply 1 to _maxAffixCount random affixes (no duplicates)
+            int numAffixes = Mathf.Min(_maxAffixCount, _possibleAffixes.Length);
+            var usedIndices = new System.Collections.Generic.HashSet<int>();
+
+            for (int i = 0; i < numAffixes; i++)
+            {
+                int idx;
+                int attempts = 0;
+                do
+                {
+                    idx = Random.Range(0, _possibleAffixes.Length);
+                    attempts++;
+                }
+                while (usedIndices.Contains(idx) && attempts < 20);
+
+                if (usedIndices.Contains(idx)) break;
+                usedIndices.Add(idx);
+
+                if (_possibleAffixes[idx] != null)
+                    controller.ApplyAffix(_possibleAffixes[idx]);
+            }
         }
 
         // ──────────────────── Death Handling ────────────────────

@@ -19,6 +19,11 @@ namespace ProjectArk.Combat
         [Tooltip("Unique identifier string for this enemy type.")]
         public string EnemyID = "enemy_default";
 
+        // ──────────────────── Faction ────────────────────
+        [Header("Faction")]
+        [Tooltip("Faction identifier. Enemies of different factions are hostile to each other. Player is hostile to all.")]
+        public string FactionID = "Neutral";
+
         // ──────────────────── Health ────────────────────
         [Header("Health")]
         [Tooltip("Maximum hit points.")]
@@ -182,6 +187,91 @@ namespace ProjectArk.Combat
         [Tooltip("Relative spawn weight for random encounters. Higher = more frequent.")]
         [Min(0f)]
         public float SpawnWeight = 1f;
+
+        // ──────────────────── Attacks (Data-Driven) ────────────────────
+        [Header("Attacks (Data-Driven)")]
+        [Tooltip("Array of attack patterns this enemy can execute. If empty, legacy flat fields above are used.")]
+        public AttackDataSO[] Attacks;
+
+        /// <summary>
+        /// Whether this enemy has data-driven attacks configured.
+        /// When false, states should fall back to legacy flat fields.
+        /// </summary>
+        public bool HasAttackData => Attacks != null && Attacks.Length > 0;
+
+        /// <summary>
+        /// Select a random attack from the Attacks array using weighted selection.
+        /// Returns null if no attacks are configured.
+        /// </summary>
+        public AttackDataSO SelectRandomAttack()
+        {
+            if (!HasAttackData) return null;
+            if (Attacks.Length == 1) return Attacks[0];
+
+            float totalWeight = 0f;
+            for (int i = 0; i < Attacks.Length; i++)
+            {
+                if (Attacks[i] != null)
+                    totalWeight += Attacks[i].SelectionWeight;
+            }
+
+            if (totalWeight <= 0f) return Attacks[0];
+
+            float roll = UnityEngine.Random.Range(0f, totalWeight);
+            float cumulative = 0f;
+            for (int i = 0; i < Attacks.Length; i++)
+            {
+                if (Attacks[i] == null) continue;
+                cumulative += Attacks[i].SelectionWeight;
+                if (roll <= cumulative) return Attacks[i];
+            }
+
+            return Attacks[Attacks.Length - 1];
+        }
+
+        // ──────────────────── Fear System ────────────────────
+        [Header("Fear System")]
+        [Tooltip("Fear value required to trigger fleeing. 0 = never flees.")]
+        [Min(0f)]
+        public float FearThreshold = 50f;
+
+        [Tooltip("Fear added when a nearby ally dies.")]
+        [Min(0f)]
+        public float FearFromAllyDeath = 10f;
+
+        [Tooltip("Fear added when this enemy's poise is broken.")]
+        [Min(0f)]
+        public float FearFromPoiseBroken = 20f;
+
+        [Tooltip("Fear decay rate per second (passive calming).")]
+        [Min(0f)]
+        public float FearDecayRate = 5f;
+
+        [Tooltip("Maximum duration of the flee state in seconds.")]
+        [Min(0.5f)]
+        public float FleeDuration = 4f;
+
+        // ──────────────────── Dodge & Block ────────────────────
+        [Header("Dodge & Block")]
+        [Tooltip("Movement speed during dodge dash.")]
+        [Min(1f)]
+        public float DodgeSpeed = 8f;
+
+        [Tooltip("Duration of the dodge dash in seconds.")]
+        [Min(0.05f)]
+        public float DodgeDuration = 0.3f;
+
+        [Tooltip("Damage reduction multiplier when blocking (0.7 = take 30% damage).")]
+        [Range(0f, 1f)]
+        public float BlockDamageReduction = 0.7f;
+
+        [Tooltip("Maximum duration of the block stance in seconds.")]
+        [Min(0.1f)]
+        public float BlockDuration = 1.5f;
+
+        [Tooltip("Detection radius for incoming projectile threats.")]
+        [Min(1f)]
+        public float ThreatDetectionRadius = 5f;
 
         // ──────────────────── Behavior Tags ────────────────────
         [Header("Behavior Tags")]

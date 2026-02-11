@@ -2,9 +2,10 @@ namespace ProjectArk.Combat.Enemy
 {
     /// <summary>
     /// Engage state: contains an inner sub-state machine for the attack sequence
-    /// (Telegraph → Attack → Recovery). This is the "commitment" phase.
+    /// (Telegraph -> Attack -> Recovery). This is the "commitment" phase.
     /// On completion of the sub-state machine cycle, exits back to the outer FSM
     /// which decides Chase or Idle based on distance.
+    /// Supports data-driven attacks via AttackDataSO (falls back to legacy EnemyStatsSO fields).
     /// </summary>
     public class EngageState : IState
     {
@@ -15,6 +16,13 @@ namespace ProjectArk.Combat.Enemy
         private TelegraphSubState _telegraphState;
         private AttackSubState _attackState;
         private RecoverySubState _recoveryState;
+
+        /// <summary>
+        /// The attack selected for this engagement cycle.
+        /// Null when using legacy EnemyStatsSO flat fields.
+        /// Sub-states read from this to get timings, damage, hitbox shape, etc.
+        /// </summary>
+        public AttackDataSO SelectedAttack { get; private set; }
 
         /// <summary>
         /// Set to true by RecoverySubState when the attack cycle is complete.
@@ -30,6 +38,9 @@ namespace ProjectArk.Combat.Enemy
         public void OnEnter()
         {
             IsAttackCycleComplete = false;
+
+            // Select attack pattern (data-driven or null for legacy)
+            SelectedAttack = _brain.Stats.SelectRandomAttack();
 
             // Stop movement — we are committing to attack
             _brain.Entity.StopMovement();
@@ -65,11 +76,15 @@ namespace ProjectArk.Combat.Enemy
 
         public void OnExit()
         {
+            // Return attack token to the Director
+            _brain.ReturnDirectorToken();
+
             // Cleanup sub-state machine
             _subStateMachine = null;
             _telegraphState = null;
             _attackState = null;
             _recoveryState = null;
+            SelectedAttack = null;
         }
 
         // --- Accessors for sub-states ---

@@ -62,8 +62,14 @@ namespace ProjectArk.Combat.Enemy
             {
                 string stateName = _stateMachine.CurrentState.GetType().Name;
 
+                // Show token status
+                bool hasToken = EnemyDirector.Instance != null &&
+                                EnemyDirector.Instance.HasToken(this);
+                if (hasToken)
+                    stateName += " [T]";
+
                 GUI.color = Color.cyan;
-                GUI.Label(new Rect(screenPos.x - 60, Screen.height - screenPos.y - 30, 200, 25),
+                GUI.Label(new Rect(screenPos.x - 60, Screen.height - screenPos.y - 30, 250, 25),
                           $"[{stateName}]");
             }
         }

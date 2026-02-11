@@ -4,6 +4,7 @@ namespace ProjectArk.Combat.Enemy
     /// Recovery sub-state: post-attack cooldown (硬直).
     /// Enemy cannot move or attack during this phase — this is the player's punish window.
     /// After RecoveryDuration expires, signals the parent EngageState that the cycle is complete.
+    /// Reads duration from AttackDataSO if available, otherwise legacy EnemyStatsSO.
     /// </summary>
     public class RecoverySubState : IState
     {
@@ -19,7 +20,10 @@ namespace ProjectArk.Combat.Enemy
 
         public void OnEnter()
         {
-            _timer = _brain.Stats.RecoveryDuration;
+            var attack = _engage.SelectedAttack;
+
+            // Duration: AttackDataSO > legacy EnemyStatsSO
+            _timer = attack != null ? attack.RecoveryDuration : _brain.Stats.RecoveryDuration;
 
             // Ensure enemy is stationary during recovery
             _brain.Entity.StopMovement();

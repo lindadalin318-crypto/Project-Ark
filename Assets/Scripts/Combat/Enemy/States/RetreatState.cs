@@ -53,7 +53,7 @@ namespace ProjectArk.Combat.Enemy
 
             // Move away from the player
             Vector2 myPos = entity.transform.position;
-            Vector2 awayDir = (myPos - perception.LastKnownPlayerPosition).normalized;
+            Vector2 awayDir = (myPos - perception.LastKnownTargetPosition).normalized;
             entity.MoveTo(awayDir);
         }
 

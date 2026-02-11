@@ -521,10 +521,18 @@ UI 不是淡入 (Fade In)，而是生长 (Grow)。
 | Phase 1+ 原型：射手 | Shooter (ShooterBrain + ShootState/RetreatState + EnemyProjectile) | ✅ 已完成 |
 | Phase 1 生成器 | EnemySpawner (对象池 + Round-robin + 死亡重生) | ✅ 已完成 |
 | Phase 1 Editor 工具 | EnemyAssetCreator + BestiaryImporter (CSV→SO) | ✅ 已完成 |
-| Phase 2 导演系统 | EnemyDirector (攻击令牌 + 群体协调) | 🟡 未开始 |
-| Phase 2 炮台型原型 | Turret (固定哨塔) | 🟡 未开始 |
-| Phase 3 刺客型原型 | Stalker (隐身 + 背刺) | 🟡 未开始 |
-| Phase 2+ 进阶系统 | 阵营/恐惧值/高级感知 | 🟡 未开始 |
+| Phase 2 攻击数据系统 | AttackDataSO + HitboxResolver (数据驱动攻击 + 多形状碰撞) | ✅ 已完成 |
+| Phase 2 攻击重构 | EngageState/AttackSubState/TelegraphSubState/RecoverySubState/ShootState 全部支持 AttackDataSO | ✅ 已完成 |
+| Phase 2 导演系统 | EnemyDirector (攻击令牌 + OrbitState 环绕等待) | ✅ 已完成 |
+| Phase 2 炮台型原型 | TurretBrain + Scan/Lock/Attack/Cooldown 状态 + 激光/蓄力弹双变体 | ✅ 已完成 |
+| Phase 2 敌方激光 | EnemyLaserBeam (Raycast + LineRenderer + 瞄准线 + 对象池) | ✅ 已完成 |
+| Phase 2 Editor 工具 | AttackData 资产创建 + Turret(Laser/Cannon) 一键资产创建 | ✅ 已完成 |
+| Phase 3 刺客型原型 | StalkerBrain + Stealth/Flank/Strike/Disengage 状态 + 背刺 AttackDataSO | ✅ 已完成 |
+| Phase 3 恐惧系统 | EnemyFear + FleeState + OnAnyEnemyDeath 全局事件 | ✅ 已完成 |
+| Phase 3 阵营系统 | FactionID + EnemyPerception 阵营扫描 + TargetType + LastKnownTargetPosition 重命名 | ✅ 已完成 |
+| Phase 3 闪避/格挡 AI | ThreatSensor + DodgeState + BlockState + BehaviorTag 驱动 | ✅ 已完成 |
+| Phase 3 精英词缀系统 | EnemyAffixSO + EnemyAffixController + 5 词缀资产 + EnemySpawner 集成 | ✅ 已完成 |
+| Phase 3 多阶段 Boss | BossPhaseDataSO + BossController + BossTransitionState + 无敌过渡 | ✅ 已完成 |
 
 > ⚠️ **本文档替代 GDD.md 中旧版"模块化行为机"章节**。旧版为早期构想，本版为正式技术定稿。
 
@@ -586,7 +594,7 @@ UI 不是淡入 (Fade In)，而是生长 (Grow)。
 
 ```
 ┌─────────────────────────────────────────────────┐
-│              EnemyDirector (导演层)                │  ← 🟡 Phase 2 未开始
+│              EnemyDirector (导演层)                │  ← ✅ Phase 2 已完成
 │     攻击令牌池 · 全局协调 · 声波传播 · 群体调度         │
 └──────────────────────┬──────────────────────────┘
                        │ 协调
@@ -648,11 +656,11 @@ UI 不是淡入 (Fade In)，而是生长 (Grow)。
                                 [Retreat] ──恢复安全距离──→ [Shoot]
 ```
 
-### 2.3 🎬 第三层：导演 (The Director) —— `EnemyDirector` (Phase 2) `🟡 未开始`
+### 2.3 🎬 第三层：导演 (The Director) —— `EnemyDirector` (Phase 2) `✅ 已完成`
 
 全局协调层。解决"多敌人同时在场"的体验问题。
 
-- **攻击令牌 (Aggression Tokens)**：全局令牌池限制同时攻击的敌人数量（如最多 2 个），其余敌人处于 Orbit 环绕状态吼叫助威，营造"电影感的轮流单挑" 🟡 待实现
+- **攻击令牌 (Aggression Tokens)**：全局令牌池限制同时攻击的敌人数量（如最多 2 个），其余敌人处于 Orbit 环绕状态吼叫助威，营造"电影感的轮流单挑" ✅ 已完成
 - **听觉传播 (Sound Propagation)**：玩家开火产生"隐形声波"，传播范围内的敌人被激活 ✅ 已部分实现
   > *注：`StarChartController.OnWeaponFired` 静态事件已广播开火位置 + 15f 噪音半径，`EnemyPerception` 已订阅并按距离激活。但尚无跨房间传播/墙壁衰减逻辑。*
 
@@ -780,13 +788,16 @@ UI 不是淡入 (Fade In)，而是生长 (Grow)。
 - **实现**：`ShooterBrain` 继承 `EnemyBrain`，扩展 ShootState + RetreatState；`EnemyProjectile` 独立于玩家弹头
 - **资产创建**：`EnemyAssetCreator` 菜单 `Create Shooter Enemy Assets` 一键创建
 
-### 6.3 刺客型 (The Stalker) — Phase 3 `🟡 未开始`
+### 6.3 刺客型 (The Stalker) — Phase 3 `✅ 已完成`
 - **对应**：暗影潜伏者
 - **逻辑**：平时半透明（Alpha=0.1） → 绕到玩家背后 → 显形 → 极快前摇 → 攻击 → 瞬间远离
 - **表现**：神出鬼没，强迫玩家警惕背后
-- **特征参数**：极短 TelegraphDuration、高 MoveSpeed、长 AttackCooldown
+- **特征参数**：极短 TelegraphDuration(0.1s)、高 MoveSpeed(6.5)、长 AttackCooldown(3s)
+- **实现**：`StalkerBrain` 继承 `EnemyBrain`，4 个专属状态 (Stealth/Flank/StalkerStrike/Disengage)
+- **背后判定**：`Vector2.Dot(playerFacing, dirToEnemy) < -0.3` 确定后方弧
+- **资产创建**：`EnemyAssetCreator` 菜单 `Create Stalker Enemy Assets` 一键创建
 
-### 6.4 炮台型 (The Turret) — Phase 2 `🟡 未开始`
+### 6.4 炮台型 (The Turret) — Phase 2 `✅ 已完成`
 - **对应**：固定哨塔
 - **逻辑**：不移动，只旋转朝向 → 锁定 → 蓄力（激光变粗） → 射击
 - **表现**：区域封锁者，限制玩家走位空间
@@ -794,26 +805,50 @@ UI 不是淡入 (Fade In)，而是生长 (Grow)。
 
 ---
 
-## 7. 进阶系统 (Phase 2+) — 🟡 未开始
+## 7. 进阶系统 (Phase 3) — ✅ 全部完成
 
-以下系统在 Phase 1 验证核心战斗循环后逐步引入：
+以下系统在 Phase 1/2 验证核心战斗循环后实现：
 
-### 7.1 导演系统 (Enemy Director) `🟡 未开始`
+### 7.1 导演系统 (Enemy Director) `✅ 已完成`
 - **攻击令牌 (Aggression Tokens)**：全局令牌池限制同时攻击的敌人数，其余 Orbit 环绕助威
 - **听觉传播 (Sound Propagation)**：开火产生声波，跨房间激活敌人
   - *注：基础听觉已在 Phase 1 实现（EnemyPerception 订阅 OnWeaponFired 事件），但缺少跨房间/墙壁衰减*
 
-### 7.2 阵营系统 (Faction System) `🟡 未开始`
-- `EnemyStatsSO.FactionID` 字段 — ✅ CSV 列已定义，SO 待添加运行时逻辑
+### 7.2 阵营系统 (Faction System) `✅ 已完成`
+- `EnemyStatsSO.FactionID` 字段 — ✅ 已添加运行时逻辑
+- `EnemyPerception.PerformFactionScan()` — 5Hz NonAlloc 扫描敌方阵营
+- `TargetType` 枚举 (None/Player/FactionEnemy) — 状态机可区分目标类型
+- `LastKnownTargetPosition` — 通用目标位置，替代旧版 `LastKnownPlayerPosition`
 - 不同阵营的敌人互相攻击（"驱虎吞狼"策略）
-- 实现"玩家不是宇宙中心"的生态感
+- 玩家始终优先（可见玩家 > 阵营敌人）
 
-### 7.3 动态情绪 (Fear System) `🟡 未开始`
-- 隐藏变量 `FearValue`：同伴死亡 +10、受暴击 +20
-- 超过阈值 → 强制切换到 Flee 逃跑状态
-- 表现：重炮一发轰碎精英，小怪四散逃跑
+### 7.3 动态情绪 (Fear System) `✅ 已完成`
+- `EnemyFear` 组件：`_fearValue` 累积，被动衰减 (`FearDecayRate`)
+- 恐惧源：同伴死亡 (`FearFromAllyDeath`)、韧性击破 (`FearFromPoiseBroken`)
+- 超过 `FearThreshold` → 强制切换到 `FleeState` 逃跑状态
+- `EnemyEntity.OnAnyEnemyDeath` 全局静态事件广播死亡位置
+- 表现：重炮一发轰碎精英，附近小怪四散逃跑
 
-### 7.4 高级感知 `🟡 未开始`
+### 7.4 闪避/格挡 AI `✅ 已完成`
+- `ThreatSensor` 组件：5Hz NonAlloc 扫描来袭投射物，判断朝向 (dot product)
+- `DodgeState`：垂直于威胁方向快速侧闪，BehaviorTag "CanDodge" 控制
+- `BlockState`：面向威胁举盾，减少伤害 (`BlockDamageReduction`)，BehaviorTag "CanBlock" 控制
+- `EnemyBrain.CheckThreatResponse()` 在 Update 中检查并中断当前状态
+
+### 7.5 精英词缀系统 (Elite Affix) `✅ 已完成`
+- `EnemyAffixSO`：定义统计乘数、行为标签、特殊效果 (Berserk/Shielded/Explosive/Vampiric/Reflective)
+- `EnemyAffixController`：运行时应用词缀，修改 EnemyEntity 运行时统计
+- 5 个预制词缀资产：Berserk(+50%伤害)、Shielded(+100%HP)、Explosive(死亡AoE)、Vampiric(吸血)、Reflective(反伤)
+- `EnemySpawner` 支持精英概率生成 (`_eliteChance`, `_possibleAffixes`)
+
+### 7.6 多阶段 Boss 控制器 `✅ 已完成`
+- `BossPhaseDataSO`：定义阶段 HP 阈值、攻击模式、统计修正、过渡效果
+- `BossController`：监听 OnDamageTaken，按 HP 比例触发阶段转换
+- `BossTransitionState`：过渡期间无敌、视觉脉冲、HitStop，结束后回归战斗
+- `EnemyEntity.IsInvulnerable`：过渡期间免伤
+- `EnemyBrain.ForceTransition()`：Boss 控制器调用强制状态转换
+
+### 7.7 高级感知 `🟡 未开始`
 - 噪音诱饵道具
 - 视觉掩体/隐身光帆交互
 - 声音穿墙衰减
@@ -842,18 +877,22 @@ Phase 1 遗留项（已补完）:
   ├─ 顿帧 (HitStop) 反馈                                  ✅ HitStopEffect 全局单例 (韧性击破 0.08s / 击杀 0.06s)
   └─ 群聚算法 (Boids Separation)                          ✅ GetSeparationForce() + ChaseState 混合
 
-Phase 2: 攻击系统 & 多原型                                🟡 未开始
-  ├─ 多攻击模式选择（AttackDataSO）
-  ├─ Hitbox 系统完善
-  ├─ 炮台型原型
-  └─ 导演系统（攻击令牌 + 群体协调）
+Phase 2: 攻击系统 & 多原型                                ✅ 全部完成
+  ├─ 多攻击模式选择（AttackDataSO）                          ✅ AttackDataSO + AttackType/HitboxShape 枚举
+  ├─ Hitbox 系统完善                                        ✅ HitboxResolver (Circle/Box/Cone, NonAlloc)
+  ├─ 攻击状态重构                                           ✅ EngageState/AttackSubState/ShootState 全面支持 AttackDataSO
+  ├─ 导演系统（攻击令牌 + 群体协调）                          ✅ EnemyDirector + OrbitState (环绕等待)
+  ├─ 炮台型原型（激光变体）                                   ✅ TurretBrain + EnemyLaserBeam + Scan/Lock/Attack/Cooldown
+  ├─ 炮台型原型（蓄力弹变体）                                 ✅ TurretCannon (共享 TurretBrain + AttackDataSO 配置)
+  └─ Editor 工具扩展                                        ✅ AttackData + Turret 一键资产创建
 
-Phase 3: 高级行为                                         🟡 未开始
-  ├─ 刺客型原型
-  ├─ 闪避/格挡 AI
-  ├─ 恐惧值系统
-  ├─ 阵营系统
-  └─ 精英/BOSS 特殊逻辑
+Phase 3: 高级行为                                         ✅ 全部完成
+  ├─ 刺客型原型                                             ✅ StalkerBrain + Stealth/Flank/Strike/Disengage
+  ├─ 恐惧系统                                               ✅ EnemyFear + FleeState + OnAnyEnemyDeath
+  ├─ 阵营系统                                               ✅ FactionID + PerformFactionScan + TargetType
+  ├─ 闪避/格挡 AI                                           ✅ ThreatSensor + DodgeState + BlockState
+  ├─ 精英词缀系统                                            ✅ EnemyAffixSO + Controller + 5 预制词缀
+  └─ 多阶段 Boss 控制器                                      ✅ BossPhaseDataSO + BossController + BossTransitionState
 ```
 
 ---

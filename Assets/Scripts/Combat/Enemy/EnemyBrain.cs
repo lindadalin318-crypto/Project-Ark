@@ -26,6 +26,10 @@ namespace ProjectArk.Combat.Enemy
         private EngageState _engageState;
         private ReturnState _returnState;
         private StaggerState _staggerState;
+        private OrbitState _orbitState;
+        private FleeState _fleeState;
+        private DodgeState _dodgeState;
+        private BlockState _blockState;
 
         // ──────────────────── Spawn Position ────────────────────
         protected Vector2 _spawnPosition;
@@ -53,6 +57,10 @@ namespace ProjectArk.Combat.Enemy
         public EngageState EngageState => _engageState;
         public ReturnState ReturnState => _returnState;
         public StaggerState StaggerState => _staggerState;
+        public OrbitState OrbitState => _orbitState;
+        public FleeState FleeState => _fleeState;
+        public DodgeState DodgeState => _dodgeState;
+        public BlockState BlockState => _blockState;
 
         // ──────────────────── Lifecycle ────────────────────
 
@@ -76,13 +84,53 @@ namespace ProjectArk.Combat.Enemy
             // Don't tick the FSM if dead
             if (!_entity.IsAlive) return;
 
+            // Check for incoming threats (dodge/block interrupts)
+            CheckThreatResponse();
+
             _stateMachine.Tick(Time.deltaTime);
+        }
+
+        // ──────────────────── Threat Response (Dodge/Block) ────────────────────
+
+        /// <summary>
+        /// Check if ThreatSensor detects an incoming projectile and trigger
+        /// dodge or block based on BehaviorTags. Only interrupts if not already
+        /// in a dodge/block/stagger/flee state.
+        /// </summary>
+        private void CheckThreatResponse()
+        {
+            if (_stateMachine == null) return;
+
+            // Don't interrupt these states
+            var current = _stateMachine.CurrentState;
+            if (current is DodgeState || current is BlockState ||
+                current is StaggerState || current is FleeState)
+                return;
+
+            // Check if we have a ThreatSensor
+            var sensor = GetComponent<ThreatSensor>();
+            if (sensor == null || !sensor.IsThreatDetected) return;
+
+            // Check behavior tags
+            bool canDodge = _stats != null && _stats.BehaviorTags.Contains("CanDodge");
+            bool canBlock = _stats != null && _stats.BehaviorTags.Contains("CanBlock");
+
+            if (canDodge && _dodgeState != null)
+            {
+                ReturnDirectorToken();
+                _stateMachine.TransitionTo(_dodgeState);
+            }
+            else if (canBlock && _blockState != null)
+            {
+                ReturnDirectorToken();
+                _stateMachine.TransitionTo(_blockState);
+            }
         }
 
         // ──────────────────── HFSM Construction ────────────────────
 
         /// <summary>
-        /// Build the outer state machine with all four tactical states.
+        /// Build the outer state machine with all tactical states.
         /// Called once on Start(). States are plain C# objects — zero allocation per frame.
         /// Override in subclass (e.g. ShooterBrain) to wire different state graphs.
         /// </summary>
@@ -94,6 +142,10 @@ namespace ProjectArk.Combat.Enemy
             _engageState = new EngageState(this);
             _returnState = new ReturnState(this);
             _staggerState = new StaggerState(this);
+            _orbitState = new OrbitState(this);
+            _fleeState = new FleeState(this);
+            _dodgeState = new DodgeState(this);
+            _blockState = new BlockState(this);
 
             // Initialize the outer state machine starting in Idle
             _stateMachine = new StateMachine { DebugName = "Outer" };
@@ -126,6 +178,9 @@ namespace ProjectArk.Combat.Enemy
                 return;
             }
 
+            // Return attack token when entering stagger (enemy is vulnerable, not attacking)
+            ReturnDirectorToken();
+
             if (_stateMachine != null && _staggerState != null)
                 _stateMachine.TransitionTo(_staggerState);
         }
@@ -134,6 +189,58 @@ namespace ProjectArk.Combat.Enemy
         {
             if (_entity != null)
                 _entity.OnPoiseBroken -= ForceStagger;
+
+            // Always return token when disabled (death, pool return, etc.)
+            ReturnDirectorToken();
+        }
+
+        // ──────────────────── Fear / Flee ────────────────────
+
+        /// <summary>
+        /// Called by EnemyFear when fear threshold is crossed.
+        /// Forces the state machine into FleeState (unless already fleeing or staggered).
+        /// </summary>
+        public virtual void ForceFleeCheck()
+        {
+            if (_stateMachine == null || _fleeState == null) return;
+
+            // Don't interrupt stagger
+            if (_stateMachine.CurrentState is StaggerState) return;
+            // Already fleeing
+            if (_stateMachine.CurrentState is FleeState) return;
+
+            // Return any attack token before fleeing
+            ReturnDirectorToken();
+
+            _stateMachine.TransitionTo(_fleeState);
+        }
+
+        // ──────────────────── Boss Phase Transition ────────────────────
+
+        /// <summary>
+        /// Force the state machine into BossTransitionState.
+        /// Called by BossController during phase transitions.
+        /// </summary>
+        public virtual void ForceTransition(BossPhaseDataSO phaseData)
+        {
+            if (_stateMachine == null) return;
+
+            ReturnDirectorToken();
+
+            var transitionState = new BossTransitionState(this, phaseData);
+            _stateMachine.TransitionTo(transitionState);
+        }
+
+        // ──────────────────── Director Token ────────────────────
+
+        /// <summary>
+        /// Safely return the attack token to the Director.
+        /// Called on death, disable, stagger, or any forced state exit.
+        /// </summary>
+        public void ReturnDirectorToken()
+        {
+            if (EnemyDirector.Instance != null)
+                EnemyDirector.Instance.ReturnToken(this);
         }
 
         // ──────────────────── Pool Support ────────────────────
@@ -146,6 +253,7 @@ namespace ProjectArk.Combat.Enemy
         {
             _spawnPosition = newSpawnPosition;
             _stats = _entity.Stats;
+            ReturnDirectorToken();
             BuildStateMachine();
         }
 
@@ -172,8 +280,14 @@ namespace ProjectArk.Combat.Enemy
                     stateName += $" > {engage.SubStateMachine.CurrentState.GetType().Name}";
                 }
 
+                // Show token status
+                bool hasToken = EnemyDirector.Instance != null &&
+                                EnemyDirector.Instance.HasToken(this);
+                if (hasToken)
+                    stateName += " [T]";
+
                 GUI.color = Color.white;
-                GUI.Label(new Rect(screenPos.x - 60, Screen.height - screenPos.y - 30, 200, 25),
+                GUI.Label(new Rect(screenPos.x - 60, Screen.height - screenPos.y - 30, 250, 25),
                           $"[{stateName}]");
             }
         }

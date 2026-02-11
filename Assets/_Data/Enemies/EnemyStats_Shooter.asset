@@ -15,7 +15,7 @@ MonoBehaviour:
   EnemyName: Shooter
   EnemyID: enemy_shooter
   MaxHP: 40
-  MaxPoise: 20
+  MaxPoise: 30
   MoveSpeed: 3.5
   RotationSpeed: 360
   AttackDamage: 8
@@ -34,6 +34,7 @@ MonoBehaviour:
   BurstInterval: 0.2
   PreferredRange: 10
   RetreatRange: 5
+  StaggerDuration: 1
   SightRange: 16
   SightAngle: 90
   HearingRange: 20
@@ -41,3 +42,13 @@ MonoBehaviour:
   MemoryDuration: 5
   HitFlashDuration: 0.1
   BaseColor: {r: 0.2, g: 0.4, b: 0.9, a: 1}
+  Resist_Physical: 0
+  Resist_Fire: 0
+  Resist_Ice: 0
+  Resist_Lightning: 0
+  Resist_Void: 0
+  DropTableID: 
+  PlanetID: 
+  SpawnWeight: 1
+  Attacks: []
+  BehaviorTags: []

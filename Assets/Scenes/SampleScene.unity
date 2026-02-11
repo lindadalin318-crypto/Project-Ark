@@ -1196,6 +1196,53 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!1 &252940933
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 252940935}
+  - component: {fileID: 252940934}
+  m_Layer: 0
+  m_Name: EnemyDirector
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &252940934
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 252940933}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 708a287f17802bd4f84a312dd37ccdc8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ProjectArk.Combat::ProjectArk.Combat.Enemy.EnemyDirector
+  _maxAttackTokens: 2
+  _orbitRadiusMultiplier: 1.5
+  _orbitSpeed: 90
+--- !u!4 &252940935
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 252940933}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &260826562
 GameObject:
   m_ObjectHideFlags: 0
@@ -2178,13 +2225,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6918f372899197d4aa01bb8cdb8fe8c6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: ProjectArk.Combat::ProjectArk.Combat.Enemy.EnemySpawner
-  _enemyPrefab: {fileID: 1618535252503358691, guid: 84e6f586e28b3aa4eb9b22758a22f445, type: 3}
+  _enemyPrefab: {fileID: 1324961231054381342, guid: fd116c2c6074bac4c8cd5ccfd5f7eec1, type: 3}
   _spawnPoints:
   - {fileID: 400000012}
   - {fileID: 400000022}
-  _maxAlive: 3
-  _spawnInterval: 5
-  _initialSpawnCount: 1
+  _maxAlive: 5
+  _spawnInterval: 1
+  _initialSpawnCount: 5
+  _possibleAffixes: []
+  _eliteChance: 0
+  _maxAffixCount: 1
   _poolPrewarmCount: 5
   _poolMaxSize: 10
 --- !u!1 &400000011
@@ -9767,3 +9817,4 @@ SceneRoots:
   - {fileID: 300000002}
   - {fileID: 400000002}
   - {fileID: 406859521}
+  - {fileID: 252940935}

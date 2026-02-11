@@ -4,9 +4,24 @@ using UnityEngine;
 namespace ProjectArk.Combat.Enemy
 {
     /// <summary>
-    /// Perception system for enemy AI. Provides vision (cone + LoS raycast)
-    /// and hearing (subscribes to weapon fire events) with memory decay.
+    /// Target type detected by the perception system.
+    /// </summary>
+    public enum TargetType
+    {
+        /// <summary> No target detected. </summary>
+        None,
+        /// <summary> Player ship is the target. </summary>
+        Player,
+        /// <summary> An enemy from a hostile faction is the target. </summary>
+        FactionEnemy
+    }
+
+    /// <summary>
+    /// Perception system for enemy AI. Provides vision (cone + LoS raycast),
+    /// hearing (subscribes to weapon fire events), faction scanning, and memory decay.
     /// Results are exposed as public properties for HFSM state transition queries.
+    /// Faction system: enemies can detect and target hostile faction entities.
+    /// Player always takes priority over faction enemies.
     /// </summary>
     public class EnemyPerception : MonoBehaviour
     {
@@ -26,8 +41,11 @@ namespace ProjectArk.Combat.Enemy
         /// <summary> Whether there is a valid target (seen or remembered). </summary>
         public bool HasTarget { get; private set; }
 
-        /// <summary> Last known player position (world space). </summary>
-        public Vector2 LastKnownPlayerPosition { get; private set; }
+        /// <summary> Last known target position (world space). Generalized for player or faction enemy. </summary>
+        public Vector2 LastKnownTargetPosition { get; private set; }
+
+        /// <summary> Backward-compatible alias for LastKnownTargetPosition. </summary>
+        public Vector2 LastKnownPlayerPosition => LastKnownTargetPosition;
 
         /// <summary> Whether the player is currently visible this detection tick. </summary>
         public bool CanSeePlayer { get; private set; }
@@ -35,19 +53,39 @@ namespace ProjectArk.Combat.Enemy
         /// <summary> Whether the enemy recently heard the player fire. </summary>
         public bool HasHeardPlayer { get; private set; }
 
-        /// <summary> Distance from this enemy to the last known player position. </summary>
+        /// <summary> Distance from this enemy to the last known target position. </summary>
         public float DistanceToTarget { get; private set; }
 
-        /// <summary> Direct reference to the detected player transform (null if none). </summary>
+        /// <summary> Direct reference to the detected player transform (null if targeting faction enemy). </summary>
         public Transform PlayerTransform { get; private set; }
+
+        /// <summary> Type of the current target. </summary>
+        public TargetType CurrentTargetType { get; private set; }
+
+        /// <summary> Reference to the targeted EnemyEntity (non-null only when targeting a faction enemy). </summary>
+        public EnemyEntity CurrentTargetEntity { get; private set; }
 
         // ──────────────────── Internal State ────────────────────
         private float _visionCheckTimer;
         private float _memoryTimer;
-        private bool _hadTargetLastFrame;
 
         private const float VISION_CHECK_INTERVAL = 0.2f; // 5 Hz
         private const float ARRIVAL_THRESHOLD = 0.5f;
+
+        // NonAlloc buffers for faction scanning
+        private static readonly Collider2D[] _factionBuffer = new Collider2D[16];
+
+        // Cached enemy layer mask
+        private static int _enemyLayerMask = -1;
+        private static int EnemyLayerMask
+        {
+            get
+            {
+                if (_enemyLayerMask < 0)
+                    _enemyLayerMask = LayerMask.GetMask("Enemy");
+                return _enemyLayerMask;
+            }
+        }
 
         // ──────────────────── Lifecycle ────────────────────
 
@@ -68,26 +106,44 @@ namespace ProjectArk.Combat.Enemy
 
             float dt = Time.deltaTime;
 
-            // --- Vision (throttled) ---
+            // --- Vision + Faction scan (throttled) ---
             _visionCheckTimer -= dt;
             if (_visionCheckTimer <= 0f)
             {
                 _visionCheckTimer = VISION_CHECK_INTERVAL;
                 PerformVisionCheck();
+
+                // Faction scan only if no player target (player takes priority)
+                if (!CanSeePlayer)
+                    PerformFactionScan();
             }
 
             // --- Memory decay ---
             UpdateMemoryDecay(dt);
 
-            // --- Update derived properties ---
+            // --- Update distance ---
             if (HasTarget)
             {
+                // If targeting a faction enemy, update position from live transform
+                if (CurrentTargetType == TargetType.FactionEnemy && CurrentTargetEntity != null)
+                {
+                    if (CurrentTargetEntity.IsAlive)
+                    {
+                        LastKnownTargetPosition = CurrentTargetEntity.transform.position;
+                    }
+                    else
+                    {
+                        // Target died — clear it
+                        ClearFactionTarget();
+                    }
+                }
+
                 DistanceToTarget = Vector2.Distance(
-                    (Vector2)transform.position, LastKnownPlayerPosition);
+                    (Vector2)transform.position, LastKnownTargetPosition);
             }
         }
 
-        // ──────────────────── Vision ────────────────────
+        // ──────────────────── Vision (Player) ────────────────────
 
         /// <summary>
         /// Perform a cone + line-of-sight vision check at the configured frequency.
@@ -144,10 +200,84 @@ namespace ProjectArk.Combat.Enemy
             // All checks passed — we can see the player
             CanSeePlayer = true;
             HasTarget = true;
-            LastKnownPlayerPosition = targetPos;
+            LastKnownTargetPosition = targetPos;
             PlayerTransform = closest.transform;
+            CurrentTargetType = TargetType.Player;
+            CurrentTargetEntity = null; // Player, not a faction enemy
             _memoryTimer = _stats.MemoryDuration;
             HasHeardPlayer = false; // Visual confirmation supersedes hearing
+        }
+
+        // ──────────────────── Faction Scan ────────────────────
+
+        /// <summary>
+        /// Scan for hostile faction enemies within sight range.
+        /// Only runs when no player target is visible (player always takes priority).
+        /// Uses NonAlloc for zero GC allocation.
+        /// </summary>
+        private void PerformFactionScan()
+        {
+            if (string.IsNullOrEmpty(_stats.FactionID)) return;
+
+            Vector2 myPos = transform.position;
+            int count = Physics2D.OverlapCircleNonAlloc(myPos, _stats.SightRange, _factionBuffer, EnemyLayerMask);
+
+            if (count == 0) return;
+
+            EnemyEntity bestTarget = null;
+            float bestDist = float.MaxValue;
+
+            var myEntity = GetComponent<EnemyEntity>();
+
+            for (int i = 0; i < count; i++)
+            {
+                if (_factionBuffer[i].gameObject == gameObject) continue; // Skip self
+
+                var otherEntity = _factionBuffer[i].GetComponent<EnemyEntity>();
+                if (otherEntity == null || !otherEntity.IsAlive) continue;
+
+                // Check faction — hostile if different faction
+                if (otherEntity.Stats == null) continue;
+                if (otherEntity.Stats.FactionID == _stats.FactionID) continue; // Same faction = ally
+
+                // Distance check
+                float dist = Vector2.Distance(myPos, _factionBuffer[i].transform.position);
+
+                // LoS check (optional for faction — can see through minor obstacles)
+                Vector2 dirToTarget = ((Vector2)_factionBuffer[i].transform.position - myPos).normalized;
+                RaycastHit2D losHit = Physics2D.Raycast(myPos, dirToTarget, dist, _obstacleMask);
+                if (losHit.collider != null) continue; // Can't see through walls
+
+                if (dist < bestDist)
+                {
+                    bestDist = dist;
+                    bestTarget = otherEntity;
+                }
+            }
+
+            if (bestTarget != null)
+            {
+                HasTarget = true;
+                LastKnownTargetPosition = bestTarget.transform.position;
+                CurrentTargetType = TargetType.FactionEnemy;
+                CurrentTargetEntity = bestTarget;
+                PlayerTransform = null;
+                _memoryTimer = _stats.MemoryDuration;
+            }
+        }
+
+        /// <summary>
+        /// Clear faction target when the enemy dies or is invalid.
+        /// Falls back to no-target state unless player or memory still active.
+        /// </summary>
+        private void ClearFactionTarget()
+        {
+            if (CurrentTargetType == TargetType.FactionEnemy)
+            {
+                CurrentTargetEntity = null;
+                CurrentTargetType = TargetType.None;
+                // Don't clear HasTarget immediately — let memory decay handle it
+            }
         }
 
         // ──────────────────── Hearing ────────────────────
@@ -168,7 +298,9 @@ namespace ProjectArk.Combat.Enemy
             {
                 HasHeardPlayer = true;
                 HasTarget = true;
-                LastKnownPlayerPosition = sourcePosition;
+                LastKnownTargetPosition = sourcePosition;
+                CurrentTargetType = TargetType.Player;
+                CurrentTargetEntity = null;
                 _memoryTimer = _stats.MemoryDuration;
             }
         }
@@ -177,7 +309,7 @@ namespace ProjectArk.Combat.Enemy
 
         /// <summary>
         /// When the enemy can no longer see the player, count down the memory timer.
-        /// When it expires, forget the player entirely.
+        /// When it expires, forget the target entirely.
         /// </summary>
         private void UpdateMemoryDecay(float deltaTime)
         {
@@ -190,16 +322,26 @@ namespace ProjectArk.Combat.Enemy
                 return;
             }
 
+            // If tracking a live faction enemy, keep refreshing
+            if (CurrentTargetType == TargetType.FactionEnemy &&
+                CurrentTargetEntity != null && CurrentTargetEntity.IsAlive)
+            {
+                _memoryTimer = _stats.MemoryDuration;
+                return;
+            }
+
             // Decay memory
             _memoryTimer -= deltaTime;
 
             if (_memoryTimer <= 0f)
             {
-                // Memory expired — forget the player
+                // Memory expired — forget everything
                 HasTarget = false;
                 HasHeardPlayer = false;
                 CanSeePlayer = false;
                 PlayerTransform = null;
+                CurrentTargetType = TargetType.None;
+                CurrentTargetEntity = null;
                 DistanceToTarget = float.MaxValue;
             }
         }
@@ -214,9 +356,11 @@ namespace ProjectArk.Combat.Enemy
             HasTarget = false;
             CanSeePlayer = false;
             HasHeardPlayer = false;
-            LastKnownPlayerPosition = Vector2.zero;
+            LastKnownTargetPosition = Vector2.zero;
             DistanceToTarget = float.MaxValue;
             PlayerTransform = null;
+            CurrentTargetType = TargetType.None;
+            CurrentTargetEntity = null;
             _memoryTimer = 0f;
             _visionCheckTimer = 0f;
         }
@@ -250,11 +394,13 @@ namespace ProjectArk.Combat.Enemy
             Gizmos.color = new Color(0f, 1f, 0f, 0.15f);
             Gizmos.DrawWireSphere(pos, _stats.HearingRange);
 
-            // Draw last known position
+            // Draw last known target position
             if (HasTarget)
             {
-                Gizmos.color = Color.red;
-                Gizmos.DrawSphere((Vector3)LastKnownPlayerPosition, 0.2f);
+                Gizmos.color = CurrentTargetType == TargetType.FactionEnemy
+                    ? Color.magenta
+                    : Color.red;
+                Gizmos.DrawSphere((Vector3)LastKnownTargetPosition, 0.2f);
             }
         }
 

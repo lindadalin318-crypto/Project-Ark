@@ -5,9 +5,10 @@ namespace ProjectArk.Combat.Enemy
 {
     /// <summary>
     /// Attack sub-state: active hitbox phase.
-    /// Enemy generates a damage area (OverlapCircle), cannot turn (commitment),
-    /// and transitions to RecoverySubState after AttackActiveDuration expires.
-    /// Uses Physics2D.OverlapCircle + LayerMask to detect the player.
+    /// Enemy generates a damage area using <see cref="HitboxResolver"/>, cannot turn (commitment),
+    /// and transitions to RecoverySubState after ActiveDuration expires.
+    /// Reads shape, damage, duration from AttackDataSO if available, otherwise legacy EnemyStatsSO.
+    /// Uses NonAlloc physics queries — zero GC allocation.
     /// </summary>
     public class AttackSubState : IState
     {
@@ -16,7 +17,7 @@ namespace ProjectArk.Combat.Enemy
         private float _timer;
         private bool _hasDealtDamage;
 
-        // Cached player layer mask for OverlapCircle detection
+        // Cached player layer mask
         private static int _playerLayerMask = -1;
         private static int PlayerLayerMask
         {
@@ -28,6 +29,9 @@ namespace ProjectArk.Combat.Enemy
             }
         }
 
+        // Fallback buffer for legacy path (NonAlloc)
+        private static readonly Collider2D[] _legacyBuffer = new Collider2D[8];
+
         public AttackSubState(EnemyBrain brain, EngageState engage)
         {
             _brain = brain;
@@ -36,7 +40,10 @@ namespace ProjectArk.Combat.Enemy
 
         public void OnEnter()
         {
-            _timer = _brain.Stats.AttackActiveDuration;
+            var attack = _engage.SelectedAttack;
+
+            // Duration: AttackDataSO > legacy EnemyStatsSO
+            _timer = attack != null ? attack.ActiveDuration : _brain.Stats.AttackActiveDuration;
             _hasDealtDamage = false;
 
             // Stop movement — full commitment, no turning
@@ -62,33 +69,52 @@ namespace ProjectArk.Combat.Enemy
         public void OnExit() { }
 
         /// <summary>
-        /// Perform an OverlapCircle at the enemy's position to detect
-        /// player targets within AttackRange, and deal damage via IDamageable.
+        /// Detect players within the hitbox and deal damage via IDamageable.
+        /// Uses HitboxResolver when AttackDataSO is available, otherwise legacy OverlapCircle.
         /// </summary>
         private void TryHitPlayer()
         {
-            var stats = _brain.Stats;
-            Vector2 attackOrigin = (Vector2)_brain.Entity.transform.position +
-                                   _brain.Entity.FacingDirection * (stats.AttackRange * 0.5f);
+            var attack = _engage.SelectedAttack;
+            Vector2 origin = _brain.Entity.transform.position;
+            Vector2 facing = _brain.Entity.FacingDirection;
 
-            Collider2D[] hits = Physics2D.OverlapCircleAll(
-                attackOrigin, stats.AttackRange, PlayerLayerMask);
+            int hitCount;
+            Collider2D[] hits;
 
-            for (int i = 0; i < hits.Length; i++)
+            if (attack != null)
+            {
+                // Data-driven path: use HitboxResolver with configured shape
+                hitCount = HitboxResolver.Resolve(attack, origin, facing, PlayerLayerMask, out hits);
+            }
+            else
+            {
+                // Legacy path: circle overlap using EnemyStatsSO flat fields
+                var stats = _brain.Stats;
+                Vector2 attackOrigin = origin + facing * (stats.AttackRange * 0.5f);
+                hitCount = Physics2D.OverlapCircleNonAlloc(
+                    attackOrigin, stats.AttackRange, _legacyBuffer, PlayerLayerMask);
+                hits = _legacyBuffer;
+            }
+
+            // Read damage/knockback from AttackDataSO or legacy stats
+            float damage = attack != null ? attack.Damage : _brain.Stats.AttackDamage;
+            float knockback = attack != null ? attack.Knockback : _brain.Stats.AttackKnockback;
+
+            for (int i = 0; i < hitCount; i++)
             {
                 var damageable = hits[i].GetComponent<IDamageable>();
                 if (damageable != null && damageable.IsAlive)
                 {
-                    Vector2 knockbackDir = ((Vector2)hits[i].transform.position - (Vector2)_brain.Entity.transform.position).normalized;
-                    damageable.TakeDamage(stats.AttackDamage, knockbackDir, stats.AttackKnockback);
+                    Vector2 knockbackDir = ((Vector2)hits[i].transform.position - origin).normalized;
+                    damageable.TakeDamage(damage, knockbackDir, knockback);
                     _hasDealtDamage = true;
                 }
             }
 
-            // Even if no IDamageable found, log for debugging during early development
-            if (!_hasDealtDamage && hits.Length > 0)
+            // Debug log for early development
+            if (!_hasDealtDamage && hitCount > 0)
             {
-                Debug.Log($"[AttackSubState] Hit {hits.Length} collider(s) on Player layer but no IDamageable found.");
+                Debug.Log($"[AttackSubState] Hit {hitCount} collider(s) on Player layer but no IDamageable found.");
                 _hasDealtDamage = true; // Prevent repeated logs
             }
         }

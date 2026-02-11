@@ -11,8 +11,10 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e2b5ac2c789250b438979e67441297a3, type: 3}
   m_Name: DefaultShipStats
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   _moveSpeed: 12
   _acceleration: 45
   _deceleration: 25
   _rotationSpeed: 720
+  _maxHP: 10000
+  _hitFlashDuration: 0.1
