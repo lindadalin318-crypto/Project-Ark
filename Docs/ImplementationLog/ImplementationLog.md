@@ -1491,3 +1491,270 @@
 **双向伤害循环：** 敌人通过 `AttackSubState.TryHitPlayer()` + `Physics2D.OverlapCircleAll` 检测 Player Layer → `IDamageable.TakeDamage()` 伤害飞船；飞船通过 `Projectile.OnTriggerEnter2D` 检测 Enemy Layer → `IDamageable.TakeDamage()` 伤害敌人。两个方向统一使用 `IDamageable` 接口，完全解耦。
 
 **技术：** IDamageable 接口多态, GameObjectPool 对象池, C# event 事件通信, Rigidbody2D.AddForce(Impulse) 击退, 协程闪白反馈, ScriptableObject 数据驱动, Round-robin 刷怪点选择。
+
+---
+
+## 飞船血条 HUD (Ship Health Bar UI) — 2026-02-11 13:30
+
+### 新建文件
+
+- `Assets/Scripts/UI/HealthBarHUD.cs` — 飞船血条 HUD 组件
+
+**内容：** 遵循与 HeatBarHUD 相同的 `Bind()` 事件驱动模式。通过 `Bind(ShipHealth)` 注入引用，订阅 `OnDamageTaken` 和 `OnDeath` 事件。功能包括：
+- 填充条（`Image.Filled`）+ `Gradient` 渐变色（绿→黄→红）
+- 受击闪烁动画（红色闪光叠加层，淡出）
+- 数值标签（`HP {current}/{max}`）
+- 低血量脉冲警告（HP ≤ 30% 时填充条 alpha 脉冲）
+- 死亡状态显示 `"DESTROYED"` 文字
+
+### 修改文件
+
+- `Assets/Scripts/UI/UIManager.cs` — 新增 `_healthBarHUD` 字段，`Start()` 中自动查找 `ShipHealth` 并调用 `_healthBarHUD.Bind(shipHealth)`
+- `Assets/Scripts/UI/Editor/UICanvasBuilder.cs` — `BuildUICanvas()` 中新增 Step 2b，自动创建 HealthBarHUD 层级（Background + FillImage + DamageFlash + Label），自动连线所有 SerializeField 引用
+
+### UI 布局
+
+| 元素 | 锚点位置 | 说明 |
+|------|---------|------|
+| HealthBarHUD | 左上 (0.02, 0.92) ~ (0.28, 0.97) | 始终可见 |
+| HeatBarHUD | 底部居中 (0.3, 0) ~ (0.7, 0.05) | 始终可见 |
+
+**目的：** 战斗中显示飞船生命值状态，与热量条共同构成核心战斗 HUD。
+
+**技术：** 事件驱动 UI 更新（C# event 订阅），Gradient 渐变色映射，`Time.unscaledDeltaTime` 动画（兼容 timeScale=0），Bind/Unbind 生命周期管理。
+
+---
+
+## HUD Gradient 修复 & UICanvasBuilder 完善 — 2026-02-11 14:09
+
+### 修改文件
+
+- `Assets/Scripts/UI/Editor/UICanvasBuilder.cs`
+
+**问题：** HeatBarHUD 的 `_heatGradient` 和 HealthBarHUD 的 `_healthGradient` 字段类型为 `Gradient`（值类型），无法用 `WireField`（基于 `objectReferenceValue`）注入，导致 Builder 创建的 HUD 渐变效果缺失——填充条始终保持初始颜色不变。
+
+**修复内容：**
+1. 新增 `WireGradient()` helper 方法，使用 `SerializedProperty.gradientValue` 正确注入 `Gradient` 值
+2. 新增 `CreateHeatGradient()`：绿(0%) → 黄(50%) → 红(100%)，用于热量条
+3. 新增 `CreateHealthGradient()`：红(0%) → 黄(40%) → 绿(100%)，用于血条
+4. 在 HeatBarHUD 和 HealthBarHUD 的 Wire 阶段分别调用注入
+
+**补充说明：** StarChartPanel 在 Builder 的 Step 6 中被 `SetActive(false)` 是刻意设计，星图面板默认隐藏，由 `UIManager.Toggle()` 控制开关。
+
+**技术：** `SerializedProperty.gradientValue` API（Unity Editor only），`GradientColorKey`/`GradientAlphaKey` 程序化创建渐变。
+
+---
+
+## 莽夫近战修复 + 射手型敌人实现 (2026-02-11 14:16)
+
+### 问题修复：莽夫型敌人近战攻击不造成伤害
+
+**根因分析：** Ship Prefab 根 GameObject 缺少 `Collider2D`，导致 `AttackSubState.TryHitPlayer()` 中的 `Physics2D.OverlapCircleAll` 无法检测到玩家。`ShipHealth` 虽已实现 `IDamageable`，但物理系统需要 Collider 才能被 OverlapCircle 捕获。
+
+**修复文件：**
+- `Assets/Scripts/Ship/Combat/ShipHealth.cs` — 添加 `[RequireComponent(typeof(Collider2D))]`，确保 Ship 必有碰撞体
+
+### 新增：射手型敌人 (Shooter)
+
+射手型是远程攻击型敌人，与莽夫型形成战术互补：莽夫冲锋近战施压，射手保持距离输出弹幕。
+
+**行为状态图：**
+```
+Idle → [发现目标] → Chase → [进入 PreferredRange] → Shoot (Telegraph→Burst Fire→Recovery)
+                                                        ↓ 玩家过近 (< RetreatRange)
+                                                    Retreat (边退边保持朝向)
+                                                        ↓ 恢复安全距离
+                                                      Shoot (继续射击)
+                                                        ↓ 超出 LeashRange / 丢失目标
+                                                      Return → Idle
+```
+
+**新建文件：**
+| 文件 | 用途 |
+|------|------|
+| `Assets/Scripts/Combat/Enemy/EnemyProjectile.cs` | 敌人子弹组件（检测 Player 层，忽略 Enemy 层，对象池回收） |
+| `Assets/Scripts/Combat/Enemy/ShooterBrain.cs` | 射手型大脑层（继承 EnemyBrain，override BuildStateMachine 组装远程 HFSM） |
+| `Assets/Scripts/Combat/Enemy/States/ShootState.cs` | 远程攻击状态（Telegraph 红闪→Burst 连射→Recovery 硬直，内嵌子状态机） |
+| `Assets/Scripts/Combat/Enemy/States/RetreatState.cs` | 后撤状态（远离玩家至 PreferredRange，超出 LeashRange 转 Return） |
+
+**修改文件：**
+| 文件 | 变更 |
+|------|------|
+| `Assets/Scripts/Combat/Enemy/EnemyStatsSO.cs` | 新增 Ranged Attack 字段组：ProjectilePrefab, ProjectileSpeed, ProjectileDamage, ProjectileKnockback, ProjectileLifetime, ShotsPerBurst, BurstInterval, PreferredRange, RetreatRange |
+| `Assets/Scripts/Combat/Enemy/EnemyBrain.cs` | 字段改 protected、方法改 virtual，支持 ShooterBrain 继承 |
+| `Assets/Scripts/Combat/Enemy/States/ChaseState.cs` | 添加 ShooterBrain 多态分支：射手型进入 ShootState 而非 EngageState |
+| `Assets/Scripts/Combat/Editor/EnemyAssetCreator.cs` | 新增 `Create Shooter Enemy Assets` 菜单项 + `CreateEnemyProjectilePrefab()` 辅助方法 |
+
+**射手型 SO 预设数值（EnemyStats_Shooter）：**
+| 分类 | 字段 | 值 | 设计意图 |
+|------|------|----|----------|
+| Health | MaxHP | 40 | 脆皮，鼓励玩家优先击杀 |
+| Movement | MoveSpeed | 3.5 | 比莽夫慢，无法轻易逃脱 |
+| Ranged | ProjectileSpeed | 10 | 中速弹，可闪避 |
+| | ShotsPerBurst | 3 | 三连发，间隔 0.2s |
+| | PreferredRange | 10 | 理想射击距离 |
+| | RetreatRange | 5 | 玩家逼近此距离时后撤 |
+| Perception | SightRange | 16 | 远视距补偿远程定位 |
+| | SightAngle | 90° | 宽视锥，更容易发现玩家 |
+| Visual | BaseColor | (0.2, 0.4, 0.9) | 冷蓝色，与莽夫红色区分 |
+
+**架构决策：**
+- `ShooterBrain` 继承 `EnemyBrain` 而非独立实现，复用 Idle/Chase/Return 共享状态
+- `EnemyProjectile` 独立于玩家 `Projectile`，避免星图修改器系统的不必要耦合
+- `ShootState` 内嵌 Telegraph→Burst→Recovery 子状态机，复用信号-窗口设计模式
+- `ChaseState` 通过 `brain is ShooterBrain` 多态判断决定转入 Shoot 还是 Engage
+
+**技术：** 继承 + 虚方法 override（EnemyBrain→ShooterBrain），PoolManager 对象池（EnemyProjectile），Physics2D.OverlapCircleAll + LayerMask（碰撞检测）。
+
+---
+
+### StarChart Component Data — 示巴星 & 机械坟场部件设计写入 (2026-02-11 15:19)
+
+根据 `StarChartPlanning.csv` 对示巴星（新手期）和机械坟场（拓展期）的规划，完成了4个星图部件数据表的批量写入。
+
+**修改文件：**
+| 文件 | 变更 |
+|------|------|
+| `Docs/DataTables/StarChart_StarCores.csv` | 新增7个星核 (ID 1006–1012)：散弹、棱光射线、脉冲新星、转管炮、布雷器、裂变光束、余震 |
+| `Docs/DataTables/StarChart_Prisms.csv` | 新增12个棱镜 (ID 2006–2017)：连射、重弹、远射、三连发、冲击、轻载、灼烧、反弹、齐射、减速弹、微缩、腐蚀 |
+| `Docs/DataTables/StarChart_LightSails.csv` | 新增4个光帆 (ID 3005–3008)：标准航行帆、斥候帆、重装帆、脉冲帆 |
+| `Docs/DataTables/StarChart_Satellites.csv` | 新增2个伴星 (ID 4005–4006)：自动机炮、拾取磁铁 |
+
+**示巴星新增（10件）：**
+- StarCores ×1：实相·风暴散射 (近距离扇形散射×5)
+- Prisms ×6：连射/重弹/远射/三连发/冲击/轻载（基础数值类，教会玩家棱镜 trade-off）
+- LightSails ×2：标准航行帆(无效果基准线) / 斥候帆(高速加伤)
+- Satellites ×1：自动机炮(OnInterval 自动开火)
+
+**机械坟场新增（15件）：**
+- StarCores ×6：棱光射线/脉冲新星/转管炮(2格)/布雷器/裂变光束(2格三叉)/余震（元素类，流派分化）
+- Prisms ×6：灼烧(DoT)/反弹(碰墙3次)/齐射(重叠双弹)/减速弹/微缩/腐蚀(降防)（手感类，空间控制维度）
+- LightSails ×2：重装帆(站桩减伤,禁冲刺) / 脉冲帆(冲刺造伤)
+- Satellites ×1：拾取磁铁(OnAlways 吸引掉落物)
+
+**设计哲学：**
+- 示巴星部件全部为简单数值修正，降低新手认知负荷
+- 机械坟场引入攻防流派分化：重装帆(阵地战) vs 脉冲帆(游击战)
+- 数值以撕裂者 DPS(120) 为基准锚定，2格武器提供约110%效率但占用更多槽位
+- 棱镜 AddHeat 可为负值（轻载/微缩），作为低复杂度选项的奖励机制
+
+**部件总数：** StarCores 12 / Prisms 17 / LightSails 8 / Satellites 6 = 共43件
+
+---
+
+## Enemy_Bestiary.CSV 配置表重设计 — 2026-02-11 16:55
+
+将 `Enemy_Bestiary.csv` 从 15 列扩展为 **50 列**的完整配置表，使其成为敌人数据的唯一权威数据源 (Single Source of Truth)，支持 CSV → SO 自动化导入管线。
+
+### 新建文件
+
+| 文件 | 说明 |
+|------|------|
+| `Assets/Scripts/Combat/Editor/BestiaryImporter.cs` | Editor 工具脚本，提供 `ProjectArk > Import Enemy Bestiary` 菜单项，一键从 CSV 批量生成/更新 `EnemyStatsSO` 资产 |
+
+### 修改文件
+
+| 文件 | 变更 |
+|------|------|
+| `Assets/Scripts/Combat/Enemy/EnemyStatsSO.cs` | 新增 10 个字段：5 个抗性 (`Resist_Physical/Fire/Ice/Lightning/Void`, Range 0~1)、`DropTableID` (string)、`PlanetID` (string)、`SpawnWeight` (float)、`BehaviorTags` (List\<string\>)；新增 `using System.Collections.Generic` |
+| `Docs/DataTables/Enemy_Bestiary.csv` | 从 15 列重建为 50 列（12 个分组 A~L），已有 6 行敌人数据完整迁移并补填缺失数值 |
+
+### 配置表结构（50 列 × 12 分组）
+
+- **A. 身份与元数据** (7列)：ID, InternalName, DisplayName, Rank, AI_Archetype, FactionID, PlanetID
+- **B. 生命与韧性** (2列)：MaxHP, MaxPoise
+- **C. 移动** (2列)：MoveSpeed, RotationSpeed
+- **D. 近战攻击** (4列)：AttackDamage, AttackRange, AttackCooldown, AttackKnockback
+- **E. 攻击阶段** (3列)：TelegraphDuration, AttackActiveDuration, RecoveryDuration
+- **F. 远程攻击** (9列)：ProjectilePrefab ~ RetreatRange
+- **G. 感知** (3列)：SightRange, SightAngle, HearingRange
+- **H. 栓绳与记忆** (2列)：LeashRange, MemoryDuration
+- **I. 抗性** (5列)：Resist_Physical/Fire/Ice/Lightning/Void
+- **J. 奖励与掉落** (2列)：ExpReward, DropTableID
+- **K. 视觉反馈** (5列)：HitFlashDuration, BaseColor_R/G/B/A, PrefabPath
+- **L. 行为标签与设计备注** (5列)：BehaviorTags, SpawnWeight, DesignIntent, PlayerCounter, Description_Note
+
+### BestiaryImporter 功能
+
+- **菜单入口**：`ProjectArk > Import Enemy Bestiary`
+- **CSV 解析**：支持逗号分隔、引号转义（双引号 `""` 语法）
+- **字段映射**：显式映射 30+ 个 SO 字段，自动跳过纯策划列 (Rank, AI_Archetype, FactionID, ExpReward, DesignIntent, PlayerCounter, *_Note)
+- **特殊处理**：BaseColor_RGBA 四列合并为 Color、ProjectilePrefab 路径转 GameObject 引用、BehaviorTags 分号分隔拆分为 List\<string\>
+- **空字段策略**：CSV 为空时保留 SO 默认值不覆盖
+- **报告**：导入完成后弹窗汇总 Created / Updated / Skipped 数量及耗时
+
+### 数据迁移
+
+- 6 行已有敌人 (ID 5001–5006) 完整迁移
+- 旧列名映射：`MaxHealth` → `MaxHP`、`Poise` → `MaxPoise`、`AggroRange` → `SightRange`、`Description` → `Description_Note`
+- 缺失数值参考 `EnemyAssetCreator.cs` 中 Rusher/Shooter 预设补填
+
+---
+
+## Enemy_Bestiary 怪物数据填充 — P1 示巴星 & P2 机械坟场 (2026-02-11 17:15)
+
+### 概述
+
+完成 `Enemy_Bestiary.csv` 的完整怪物数据填充，覆盖 P1 示巴星（废弃矿坑）和 P2 机械坟场（剧毒沼泽）两个星球的全部怪物。从 6 行原型数据扩展至 26 行完整配置。
+
+### 修改文件
+
+| 文件 | 变更内容 |
+|------|----------|
+| `Docs/DataTables/Enemy_Bestiary.csv` | 完善 5001–5006 共 6 行已有数据（更新 DisplayName、补齐 DesignIntent/PlayerCounter/Description_Note 等策划列）；新增 5007–5026 共 20 行怪物数据 |
+
+### P1 示巴星怪物（ID 5001–5014，共 14 种）
+
+**已有数据完善（5001–5006）：**
+- 5001 深渊爬行者：确认为最基础 Minion，EXP=5，无抗性
+- 5002 装甲爬行者：Elite 定位，物理抗性 0.3，EXP=20
+- 5003 更名为"工蜂无人机"：匹配 EnemyPlanning 规划，Ranged_Kiter 远程基础单位
+- 5004 更名为"天花板钻头"：Stationary_Turret 固定型，MoveSpeed=0，垂直攻击
+- 5005 暗影潜伏者：Ambusher 刺客型，添加 Invisible 标签，虚空抗性 0.3
+- 5006 更名为"锈蚀女王"：Boss 定位，多阶段 AI，SuperArmor 霸体
+
+**新增怪物（5007–5014）：**
+- 5007 酸蚀爬行者 (Minion)：死亡留酸液，战场分割者
+- 5008 自爆蜱虫 (Minion)：HP=15 极脆 + Speed=7 极快 + 自爆伤害 30
+- 5009 重型装载机 (Defense)：正面无敌 FrontShield，HP=100，绕背教学怪
+- 5010 晶体甲虫 (Specialist)：反射激光 ReflectLaser，武器克制教学
+- 5011 修理博比特 (Support)：零攻击纯治疗 Healer，击杀优先级教学
+- 5012 暴走工头 (Elite)：HP=180 霸体冲撞 + 召唤爬行者，P1 综合考题
+- 5013 盗矿地精 (Gimmick)：Speed=8 逃跑型，零攻击高 EXP=50，贪婪测试
+- 5014 挖掘者 9000 (Mini-Boss)：HP=1500 游荡型，冲撞+落石+激光扫射
+
+### P2 机械坟场怪物（ID 5015–5026，共 12 种）
+
+**数值升级原则：** 同级别比 P1 提升 30%–50%
+
+- 5015 机械猎犬 (Minion)：Melee_Flanker 侧翼包抄 + 死亡自爆
+- 5016 狙击炮塔 (Ranged)：Stationary_Turret 不可移动，射程=20 极远，伤害=40
+- 5017 迫击炮手 (Ranged)：Ranged_Lobber 抛物线榴弹 + 燃烧区域 AreaDenial
+- 5018 方阵兵 (Defense)：Shield_Wall 结对激光墙 LaserWall;Paired
+- 5019 磁力钩锁 (Specialist)：Ranged_Utility 强制拉近 ForcedPull + 晕眩 Stun
+- 5020 干扰水晶 (Specialist)：Stationary_Aura 不可移动，封印技能 SkillJam
+- 5021 隐形猎手 (Specialist)：Ambusher 光学迷彩 + 背刺暴击 CritStrike
+- 5022 感应地雷 (Hazard)：Stationary_Trap HP=10 极脆，爆炸伤害=35，可引诱怪物踩踏
+- 5023 反应装甲兵 (Specialist)：Counter_Attacker 受击反弹导弹 DamageReflect，射速惩罚
+- 5024 电磁处刑者 (Elite)：Melee_Teleporter 瞬移连击 + 沉默 Silence，HP=150
+- 5025 焚化炉 (Boss)：HP=3000 全屏高温 DOT + 召唤废料雨，DPS 检测
+- 5026 游荡者 (Mini-Boss)：HP=1200 狙击风筝 + 逃跑回血 Regen，反向风筝体验
+
+### 设计哲学
+
+**P1 示巴星 — 教学生态：**
+- 炮灰层（爬行者/蜱虫）→ 远程层（无人机/钻头）→ 防御层（装载机）→ 特化层（甲虫/博比特）→ 精英层（工头）→ Boss 层（锈蚀女王/挖掘者）
+- 每种怪物承担一个明确的教学职责，循序渐进引导玩家掌握战斗语法
+
+**P2 机械坟场 — 组合升级：**
+- 引入"组合威胁"设计（磁力钩锁+自爆怪、方阵兵+迫击炮后排）
+- 引入"流派检测"设计（反应装甲兵惩罚高射速、干扰水晶封印技能流）
+- Boss 哲学差异化（焚化炉=DPS 检测 vs 游荡者=机动性检测）
+
+### 数值规范遵循
+
+- 信号-窗口模型：前摇 ≥ 判定窗口 ≥ 后摇
+- 感知规则：HearingRange > SightRange，Boss SightAngle=360
+- 抗性规则：Minion 无抗性、Elite 特色抗性、Boss 均匀中等抗性+主题弱点
+- EXP 阶梯：Minion 5–15 / Elite 20–50 / Mini-Boss 100–200 / Boss 500+
+- Boss/Mini-Boss：LeashRange=999（不脱战）、MemoryDuration=999（不遗忘）

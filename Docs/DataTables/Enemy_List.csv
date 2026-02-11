@@ -1,0 +1,68 @@
+﻿ID,Category,Name,Behavior_Description,Player_Experience,Dev_Difficulty
+CF-01,Cannon Fodder,Swarm Crawler,成群结队出现；血量极低；无脑直线冲锋；主要利用群体碰撞体积卡住玩家位置。,割草爽感来源；但在狭窄地形会感到被“淹没”的恐惧。,Low
+CF-02,Cannon Fodder,Suicide Boomer,接近玩家后身体膨胀发红；3秒后自爆造成范围伤害；死后会留下持续伤害区域。,优先击杀目标；不仅要杀还要注意躲避尸体爆炸。,Low
+CF-03,Cannon Fodder,Slime Splitter,死亡时分裂成2-4个更小的个体；小个体移动速度更快但血量更少。,以为打完了结果越打越多；如果不使用AOE武器会非常烦躁。,Medium
+CF-04,Cannon Fodder,Sticky Leech,跳跃并吸附在玩家身上；不造成伤害但大幅降低移动速度；需要连续冲刺才能甩掉。,极度恶心；严重破坏移动节奏；必须立刻处理。,Medium
+CF-05,Cannon Fodder,Meat Shield,体型巨大但攻击欲望低；总是主动走到其他远程怪物身前帮它们挡子弹。,让人想骂街；原本能秒掉的脆皮现在打不到了。,Medium
+CF-06,Cannon Fodder,Infector,自身没有伤害；但接触其他小怪会使其狂暴（体型变大攻速变快）。,像病毒一样扩散；必须先杀感染源。,Medium
+RZ-01,Ranged,Basic Shooter,发射慢速直线子弹；通常站桩不动；或者只有简单的左右侧移。,最基础的躲避练习；毫无威胁。,Low
+RZ-02,Ranged,Sniper Unit,攻击前有红外线瞄准锁定玩家2秒；随后发射极高伤害的瞬时弹道（Hitscan）。,看到红线必须立刻寻找掩体或准备闪避；压迫感极强。,Medium
+RZ-03,Ranged,Shotgunner,发射扇形散弹；距离越近伤害越高；且很难通过走位躲避（必须穿过缝隙或向后退）。,迫使玩家拉开距离；严厉惩罚无脑贴脸行为。,Low
+RZ-04,Ranged,Mortar Lobber,发射抛物线榴弹；无视墙壁掩体；落地有红圈预警和延时爆炸。,躲在掩体后也不安全；必须时刻保持移动。,Medium
+RZ-05,Ranged,Prediction Gunner,计算玩家当前的移动向量；向玩家“未来0.5秒”的位置射击。,越是乱跳越容易接子弹；需要学会“急停”这种反直觉操作。,High
+RZ-06,Ranged,Ricochet Master,发射的子弹会在墙壁上反弹1-2次；在狭窄房间内制造弹幕地狱。,以为躲在墙角没事；结果被反弹的子弹打中背部。,Medium
+RZ-07,Ranged,Wave Generator,猛击地面；产生扩散的环形震荡波；玩家必须使用“冲刺”穿过波纹或跳跃。,不仅要关注XY轴；还要关注时机；打断射击节奏。,Medium
+RZ-08,Ranged,Laser Sentinel,发射持续的激光束并缓慢扫射；激光无法被常规手段阻挡。,区域封锁；迫使玩家按照特定轨迹移动。,Medium
+RZ-09,Ranged,Homing Missiler,发射具有强追踪性能的导弹；导弹可以被玩家击毁；或者引导导弹撞墙。,被迫转火攻击导弹；或者进行极限诱导。,Medium
+RZ-10,Ranged,Crossfire Drone,两只一组出现；会拉开角度形成交叉火力网。,强迫玩家不能只关注一个方向。,Medium
+DF-01,Defense,Shield Bearer,手持物理大盾；正面100%无敌；盾牌有受击硬直；但不会破碎。,强迫玩家绕背；或者使用穿透；爆炸武器。,Medium
+DF-02,Defense,Energy Dome,张开一个半球形能量罩；罩子内的所有怪物不受远程伤害；玩家必须走进罩子肉搏。,远程流派的噩梦；必须肉身犯险。,High
+DF-03,Defense,Reflector Prism,正面长有镜面；反射所有光束；激光类武器；如果是实弹则只减伤。,用激光枪的玩家会瞬间自杀；极具针对性。,High
+DF-04,Defense,Black Hole Tank,受到伤害时会开启“吸收模式”；将子弹转化为自己的血量或护盾；必须停止攻击。,考验玩家的“收手”能力；不能无脑按住左键。,High
+DF-05,Defense,Reactive Armor,每次受到攻击；自动向攻击来源发射一枚反击弹；攻速越快；反击越猛。,高射速武器（如加特林）的克星；必须单点爆发。,High
+DF-06,Defense,Phalanx Linker,当两个同类单位靠近时；它们之间会生成一道不可通过的激光墙。,不仅怪硬；连路都被封死了。,High
+MB-01,Mobility,Teleporter,受到伤害或攻击后瞬间传送；通常会传送到玩家视线死角（背后）。,丢失目标；极度紧张；需要听声辨位。,High
+MB-02,Mobility,Ghost Stalker,平时处于隐身状态（半透明或完全不可见）；只有攻击的一瞬间显形。,不知所措的恐惧感；必须时刻提防背后。,Medium
+MB-03,Mobility,Dasher,蓄力后进行超长距离的冲刺攻击；速度极快；路径上造成伤害。,像斗牛一样；需要在最后时刻侧闪。,Low
+MB-04,Mobility,Burrower,潜入地下或地板下移动；此时无敌；只有钻出地面攻击时可被选中。,打不到它的无力感；必须把握它露头的瞬间爆发。,Medium
+MB-05,Mobility,Wall Clinger,只在墙壁；天花板或深渊边缘移动；地面近战武器无法攻击到它。,迫使玩家使用远程武器或对空手段。,Medium
+MB-06,Mobility,Phase Shifter,周期性在“实体”和“虚空”之间切换；虚空状态免疫伤害但也不能攻击。,把握输出窗口；节奏感很强。,Medium
+SP-01,Support,Combat Medic,不攻击；专门给受伤的怪物回血；AI倾向于躲在掩体后。,团战第一击杀目标；否则永远打不完。,Medium
+SP-02,Support,Buffer Totem,不会移动的图腾；给范围内怪物提供Buff（狂暴；护盾；无敌）。,强制改变战术目标；必须先拆塔。,Low
+SP-03,Support,Necromancer,吟唱5秒后复活尸体；复活的怪物属性减半。,让玩家产生“守尸”的压力；不能杀完就走。,High
+SP-04,Support,Summoner,周期性召唤炮灰（CF-01）；如果不杀它；怪物永远清不完。,DPS检测器；必须爆发秒掉。,Medium
+SP-05,Support,Shield Linker,发射光束连接其他怪物；让被连接者无敌；本体非常脆弱。,通过光线找到躲在后面的本体；战术解谜。,Medium
+SP-06,Support,Ammo Thief,发射特殊的干扰波；被击中会让玩家弹夹瞬间清空或过热。,打断玩家输出节奏；非常恶心。,Medium
+CC-01,Control,Trapper,投掷捕网或粘液；被击中后无法移动或无法冲刺；只能开枪。,变成活靶子；极其致命的软控制。,Medium
+CC-02,Control,Hookshot,发射钩爪将玩家强行拉到身前；通常衔接近战重击。,强制位移破坏玩家节奏；极度惊吓。,Medium
+CC-03,Control,Pusher,发出冲击波或风场；将玩家推开；用于将玩家推入陷阱或深渊。,地形杀的帮凶；本身无害但很烦人。,Medium
+CC-04,Control,Silencer,发出尖叫或脉冲；范围内玩家无法使用“主动技能”或“光帆过载”。,依赖技能流派玩家的克星。,High
+CC-05,Control,Flashbang Unit,蓄力后释放强光；面朝它的玩家会白屏（致盲）3秒；背对可规避。,强制要求玩家转头或背身的操作。,Medium
+CC-06,Control,Gravity Well,投掷一个重力奇点；持续吸附玩家；越靠近中心移动越慢。,限制走位；配合弹幕怪形成必杀局。,High
+CC-07,Control,Heat Saboteur,攻击会让玩家的武器“热量”激增；几次攻击就能让武器过热卡壳。,让玩家无法开火；比扣血还难受。,Medium
+CC-08,Control,Input Inverter,给玩家施加Debuff：上下左右操作反向；持续数秒。,大脑短路；想后退结果冲进怪堆。,High
+HZ-01,Hazard,Mimic Chest,伪装成宝箱；玩家交互时突然咬人；血厚攻高。,经典的惊吓；让玩家以后开箱子都有心理阴影。,Low
+HZ-02,Hazard,Ceiling Turret,固定在天花板上的炮台；通常在狭窄走廊。,限制走位空间；需要抬头打（或特定角度）。,Low
+HZ-03,Hazard,Floor Spike,平时隐藏在地板下；感应到玩家踩踏时刺出。,惩罚不看路的玩家；限制移动区域。,Low
+HZ-04,Hazard,Proximity Mine,感应到玩家靠近后倒计时爆炸；可以被推开或引爆伤怪。,既是陷阱也是武器；利用得当有奇效。,Low
+HZ-05,Hazard,Wall Grabber,平时看起来像墙壁纹理；路过时伸出触手抓住玩家。,让玩家不敢贴墙走。,Medium
+GM-01,Gimmick,Color Coded Red,只有红色（火；热能）武器能造成伤害；其他属性免疫。,强迫玩家扩展武器池深度。,Medium
+GM-02,Gimmick,Simon Says,怪物身上有红绿灯；绿灯时受伤；红灯时反伤。,考验反应和停手能力；不能贪刀。,Medium
+GM-03,Gimmick,Damage Cap,每次受击最多只掉1%的血；无论你伤害多高。,克制狙击；核弹流；强迫使用高频武器（机枪）。,Medium
+GM-04,Gimmick,Linked Twins,双子怪物；必须在10秒内同时击杀；否则活着的会狂暴并复活另一个。,考验控血能力和双目标输出。,High
+GM-05,Gimmick,Growth Parasite,这种怪物会吃地上的尸体；每吃一个体型变大；数值翻倍。,时间压力；如果不优先处理会变成Boss。,Medium
+GM-06,Gimmick,Weakpoint Only,全身无敌（弹刀）；只有背后的核心受伤害。,强迫绕背；或者使用具有“回旋；穿透”特性的武器。,Medium
+GM-07,Gimmick,Doll (Matryoshka),打死大怪出来中怪；打死中怪出来小怪；打死小怪自爆。,没完没了的战斗；消耗玩家耐心和弹药。,Low
+GM-08,Gimmick,Element Absorber,受到火攻回血；受到冰攻减速；对特定元素有极高抗性。,检验元素池深度；不能只用一种属性。,Medium
+MT-01,Meta,Loot Goblin,背着麻袋；受到攻击会掉金币；不会攻击；只会逃跑；一段时间后消失。,贪婪测试；为了追它可能会冲进陷阱。,Medium
+MT-02,Meta,Curse Giver,攻击不扣血；但扣除“生命上限”；这种伤害通常不可治愈。,极度危险；宁可死也不能被打中。,High
+MT-03,Meta,Resource Thief,攻击会偷取玩家的金币；晶体；击杀后可拿回。,让玩家感到愤怒；仇恨值极高。,Medium
+MT-04,Meta,Merchant (Secret),平时是NPC；如果你攻击他；他会变成无敌的超强Boss；并在所有后续关卡追杀你。,Very High,
+MT-05,Meta,Time Reaper,如果玩家在本层停留时间过长；会出现的无敌怪物；一击必杀。,软狂暴机制；迫使玩家推进。,Medium
+MT-06,Meta,Copycat,它会捡起玩家丢弃的武器；并使用该武器攻击玩家。,让玩家后悔乱扔强力武器。,High
+EL-01,Elite,Juggernaut,体型巨大；无法被击退；破坏沿途的所有掩体和障碍物。,掩体失效；必须正面对抗的压迫感。,Medium
+EL-02,Elite,Nemesis (Ghost),加载玩家上一局死亡时的装备和属性；攻击方式完全相同。,打败过去的自己；极具叙事感的战斗。,Very High
+EL-03,Elite,Assassin Squad,总是3个一组出现；一个近战；一个狙击；一个干扰。,完美的战术配合；像是在打PVP。,High
+EL-04,Elite,Evolutionary,玩家用什么武器杀它最多；下一层它就生成对该武器的抗性。,动态难度调整；迫使玩家多修。,Very High
+EL-05,Elite,The Coward,见面就跑的稀有怪；如果没杀掉；下一局它会带着全身神装回来复仇。,长线的因果报应。,High
+EL-06,Elite,Void Walker,可以在不同房间之间穿梭追杀玩家；不会因为玩家出门就脱战。,持续的压力源；直到死为止。,High

@@ -94,6 +94,54 @@ namespace ProjectArk.UI.Editor
             WireField(heatBarHud, "_overheatFlash", flashImg);
             WireField(heatBarHud, "_label", heatTmp);
 
+            // Create and inject heat gradient: green(0) -> yellow(0.5) -> red(1)
+            WireGradient(heatBarHud, "_heatGradient", CreateHeatGradient());
+
+            // ── Step 2b: HealthBarHUD ──────────────────────────────
+            var healthBarGo = CreateUIObject("HealthBarHUD", canvasGo.transform);
+            SetAnchors(healthBarGo, new Vector2(0.02f, 0.92f), new Vector2(0.28f, 0.97f));
+            var healthBarHud = healthBarGo.AddComponent<HealthBarHUD>();
+
+            // HealthBar background
+            var healthBg = CreateUIObject("Background", healthBarGo.transform);
+            SetStretch(healthBg);
+            var healthBgImg = healthBg.AddComponent<Image>();
+            healthBgImg.color = new Color(0.1f, 0.1f, 0.15f, 0.8f);
+
+            // HealthBar fill
+            var healthFill = CreateUIObject("FillImage", healthBarGo.transform);
+            SetStretch(healthFill);
+            var healthFillImg = healthFill.AddComponent<Image>();
+            healthFillImg.color = new Color(0.2f, 0.8f, 0.3f, 1f);
+            healthFillImg.type = Image.Type.Filled;
+            healthFillImg.fillMethod = Image.FillMethod.Horizontal;
+            healthFillImg.fillAmount = 1f;
+
+            // Damage flash overlay
+            var healthFlash = CreateUIObject("DamageFlash", healthBarGo.transform);
+            SetStretch(healthFlash);
+            var healthFlashImg = healthFlash.AddComponent<Image>();
+            healthFlashImg.color = new Color(1f, 0.2f, 0.1f, 0f);
+            healthFlashImg.raycastTarget = false;
+
+            // Health label
+            var healthLabel = CreateUIObject("Label", healthBarGo.transform);
+            SetStretch(healthLabel);
+            var healthTmp = healthLabel.AddComponent<TextMeshProUGUI>();
+            healthTmp.text = "HP";
+            healthTmp.alignment = TextAlignmentOptions.Center;
+            healthTmp.fontSize = 14;
+            healthTmp.color = Color.white;
+            healthTmp.raycastTarget = false;
+
+            // Wire HealthBarHUD fields
+            WireField(healthBarHud, "_fillImage", healthFillImg);
+            WireField(healthBarHud, "_damageFlash", healthFlashImg);
+            WireField(healthBarHud, "_label", healthTmp);
+
+            // Create and inject health gradient: red(0) -> yellow(0.4) -> green(1)
+            WireGradient(healthBarHud, "_healthGradient", CreateHealthGradient());
+
             // ── Step 3: StarChartPanel ─────────────────────────────
             var panelGo = CreateUIObject("StarChartPanel", canvasGo.transform);
             SetStretch(panelGo);
@@ -277,6 +325,7 @@ namespace ProjectArk.UI.Editor
 
             WireField(uiManager, "_starChartPanel", starChartPanel);
             WireField(uiManager, "_heatBarHUD", heatBarHud);
+            WireField(uiManager, "_healthBarHUD", healthBarHud);
             WireField(uiManager, "_weavingTransition", weavingTransition);
 
             // Auto-find InputActionAsset if available
@@ -309,6 +358,7 @@ namespace ProjectArk.UI.Editor
             Debug.Log("[UICanvasBuilder] ✅ UI Canvas hierarchy built successfully!");
             Debug.Log("  ├─ Canvas (Screen Space Overlay, 1920x1080 ref)");
             Debug.Log("  ├─ HeatBarHUD (fill + flash + label wired)");
+            Debug.Log("  ├─ HealthBarHUD (fill + damage flash + label wired)");
             Debug.Log("  ├─ StarChartPanel (+ UIParallaxEffect)");
             Debug.Log("  │  ├─ PrimaryTrackView (3 prism + 3 core cells)");
             Debug.Log("  │  ├─ SecondaryTrackView (3 prism + 3 core cells)");
@@ -616,6 +666,21 @@ namespace ProjectArk.UI.Editor
             }
         }
 
+        private static void WireGradient(Component target, string fieldName, Gradient gradient)
+        {
+            var so = new SerializedObject(target);
+            var prop = so.FindProperty(fieldName);
+            if (prop != null)
+            {
+                prop.gradientValue = gradient;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+            else
+            {
+                Debug.LogWarning($"[UICanvasBuilder] Gradient field '{fieldName}' not found on {target.GetType().Name}");
+            }
+        }
+
         private static void WireArrayField<T>(Component target, string fieldName, T[] items)
             where T : Component
         {
@@ -632,6 +697,56 @@ namespace ProjectArk.UI.Editor
             {
                 Debug.LogWarning($"[UICanvasBuilder] Array field '{fieldName}' not found on {target.GetType().Name}");
             }
+        }
+
+        // =====================================================================
+        // Helpers — Gradient Presets
+        // =====================================================================
+
+        /// <summary>
+        /// Heat gradient: green(cool) -> yellow(warm) -> red(hot).
+        /// Used by HeatBarHUD to visualize current heat level.
+        /// </summary>
+        private static Gradient CreateHeatGradient()
+        {
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new GradientColorKey[]
+                {
+                    new GradientColorKey(new Color(0.2f, 0.8f, 0.3f), 0f),    // Green at 0%
+                    new GradientColorKey(new Color(1f, 0.85f, 0.1f), 0.5f),    // Yellow at 50%
+                    new GradientColorKey(new Color(1f, 0.2f, 0.1f), 1f)        // Red at 100%
+                },
+                new GradientAlphaKey[]
+                {
+                    new GradientAlphaKey(1f, 0f),
+                    new GradientAlphaKey(1f, 1f)
+                }
+            );
+            return gradient;
+        }
+
+        /// <summary>
+        /// Health gradient: red(critical) -> yellow(wounded) -> green(healthy).
+        /// Used by HealthBarHUD to visualize remaining HP.
+        /// </summary>
+        private static Gradient CreateHealthGradient()
+        {
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new GradientColorKey[]
+                {
+                    new GradientColorKey(new Color(0.9f, 0.1f, 0.1f), 0f),    // Red at 0%
+                    new GradientColorKey(new Color(1f, 0.85f, 0.1f), 0.4f),    // Yellow at 40%
+                    new GradientColorKey(new Color(0.2f, 0.85f, 0.3f), 1f)     // Green at 100%
+                },
+                new GradientAlphaKey[]
+                {
+                    new GradientAlphaKey(1f, 0f),
+                    new GradientAlphaKey(1f, 1f)
+                }
+            );
+            return gradient;
         }
 
         // =====================================================================

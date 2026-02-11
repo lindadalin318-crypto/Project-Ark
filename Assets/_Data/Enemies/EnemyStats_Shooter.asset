@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 814b7e08c4625ff4faa3639c6eee45de, type: 3}
+  m_Name: EnemyStats_Shooter
+  m_EditorClassIdentifier: ProjectArk.Combat::ProjectArk.Combat.EnemyStatsSO
+  EnemyName: Shooter
+  EnemyID: enemy_shooter
+  MaxHP: 40
+  MaxPoise: 20
+  MoveSpeed: 3.5
+  RotationSpeed: 360
+  AttackDamage: 8
+  AttackRange: 1.5
+  AttackCooldown: 1.2
+  AttackKnockback: 3
+  TelegraphDuration: 0.3
+  AttackActiveDuration: 0.15
+  RecoveryDuration: 0.6
+  ProjectilePrefab: {fileID: 4255635206972869295, guid: d39bba9ed33abad40b895a5fd7d54a51, type: 3}
+  ProjectileSpeed: 10
+  ProjectileDamage: 8
+  ProjectileKnockback: 2
+  ProjectileLifetime: 5
+  ShotsPerBurst: 3
+  BurstInterval: 0.2
+  PreferredRange: 10
+  RetreatRange: 5
+  SightRange: 16
+  SightAngle: 90
+  HearingRange: 20
+  LeashRange: 30
+  MemoryDuration: 5
+  HitFlashDuration: 0.1
+  BaseColor: {r: 0.2, g: 0.4, b: 0.9, a: 1}

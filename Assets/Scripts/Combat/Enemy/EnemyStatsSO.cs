@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ProjectArk.Combat
@@ -70,6 +71,43 @@ namespace ProjectArk.Combat
         [Min(0.05f)]
         public float RecoveryDuration = 0.6f;
 
+        // ──────────────────── Ranged Attack (Shooter Type) ────────────────────
+        [Header("Ranged Attack (Shooter Only)")]
+        [Tooltip("Prefab for the enemy projectile. Leave null for melee-only enemies.")]
+        public GameObject ProjectilePrefab;
+
+        [Tooltip("Projectile travel speed in units/second.")]
+        [Min(1f)]
+        public float ProjectileSpeed = 8f;
+
+        [Tooltip("Damage dealt per projectile hit.")]
+        [Min(0f)]
+        public float ProjectileDamage = 8f;
+
+        [Tooltip("Knockback force applied by each projectile.")]
+        [Min(0f)]
+        public float ProjectileKnockback = 3f;
+
+        [Tooltip("Projectile lifetime in seconds before auto-despawn.")]
+        [Min(0.5f)]
+        public float ProjectileLifetime = 4f;
+
+        [Tooltip("Number of shots fired in a single burst.")]
+        [Min(1)]
+        public int ShotsPerBurst = 3;
+
+        [Tooltip("Time interval between each shot in a burst (seconds).")]
+        [Min(0.05f)]
+        public float BurstInterval = 0.25f;
+
+        [Tooltip("Ideal distance the shooter tries to maintain from the player.")]
+        [Min(1f)]
+        public float PreferredRange = 10f;
+
+        [Tooltip("If player gets closer than this, shooter retreats.")]
+        [Min(0.5f)]
+        public float RetreatRange = 5f;
+
         // ──────────────────── Perception ────────────────────
         [Header("Perception")]
         [Tooltip("Maximum distance for visual detection.")]
@@ -102,5 +140,46 @@ namespace ProjectArk.Combat
 
         [Tooltip("Default sprite color (restored after hit flash).")]
         public Color BaseColor = Color.white;
+
+        // ──────────────────── Resistances ────────────────────
+        [Header("Resistances")]
+        [Tooltip("Physical damage resistance. 0 = no resistance, 1 = full immunity.")]
+        [Range(0f, 1f)]
+        public float Resist_Physical = 0f;
+
+        [Tooltip("Fire damage resistance. 0 = no resistance, 1 = full immunity.")]
+        [Range(0f, 1f)]
+        public float Resist_Fire = 0f;
+
+        [Tooltip("Ice damage resistance. 0 = no resistance, 1 = full immunity.")]
+        [Range(0f, 1f)]
+        public float Resist_Ice = 0f;
+
+        [Tooltip("Lightning damage resistance. 0 = no resistance, 1 = full immunity.")]
+        [Range(0f, 1f)]
+        public float Resist_Lightning = 0f;
+
+        [Tooltip("Void damage resistance. 0 = no resistance, 1 = full immunity.")]
+        [Range(0f, 1f)]
+        public float Resist_Void = 0f;
+
+        // ──────────────────── Rewards & Drops ────────────────────
+        [Header("Rewards & Drops")]
+        [Tooltip("Reference ID for the drop table associated with this enemy.")]
+        public string DropTableID = "";
+
+        // ──────────────────── Spawn & Metadata ────────────────────
+        [Header("Spawn & Metadata")]
+        [Tooltip("Planet where this enemy first appears (P1/P2/P3…/Global). Used for filtering and debug.")]
+        public string PlanetID = "";
+
+        [Tooltip("Relative spawn weight for random encounters. Higher = more frequent.")]
+        [Min(0f)]
+        public float SpawnWeight = 1f;
+
+        // ──────────────────── Behavior Tags ────────────────────
+        [Header("Behavior Tags")]
+        [Tooltip("Special behavior flags (e.g. SuperArmor, SelfDestruct, Invisible, Reflective). Queried by state machine at runtime.")]
+        public List<string> BehaviorTags = new List<string>();
     }
 }

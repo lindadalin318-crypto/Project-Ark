@@ -3,6 +3,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 using ProjectArk.Combat;
 using ProjectArk.Heat;
+using ProjectArk.Ship;
 
 namespace ProjectArk.UI
 {
@@ -19,6 +20,7 @@ namespace ProjectArk.UI
         [Header("UI Components")]
         [SerializeField] private StarChartPanel _starChartPanel;
         [SerializeField] private HeatBarHUD _heatBarHUD;
+        [SerializeField] private HealthBarHUD _healthBarHUD;
 
         [Header("Transition")]
         [Tooltip("Optional — drives camera zoom, post-processing and SFX when entering/exiting the Star Chart.")]
@@ -85,6 +87,11 @@ namespace ProjectArk.UI
             // 绑定热量条
             if (_heatBarHUD != null)
                 _heatBarHUD.Bind(heatSystem);
+
+            // 绑定血条
+            var shipHealth = FindAnyObjectByType<ShipHealth>();
+            if (_healthBarHUD != null)
+                _healthBarHUD.Bind(shipHealth);
 
             // 绑定星图面板
             if (_starChartPanel != null && controller != null && _playerInventory != null)

@@ -6,18 +6,19 @@ namespace ProjectArk.Combat.Enemy
     /// Enemy brain layer (大脑层). Owns the outer HFSM and wires up all states.
     /// References EnemyEntity (body) and EnemyPerception (senses).
     /// States access shared data through the public properties exposed here.
+    /// Subclass (e.g. ShooterBrain) can override BuildStateMachine() to wire different states.
     /// </summary>
     [RequireComponent(typeof(EnemyEntity))]
     [RequireComponent(typeof(EnemyPerception))]
     public class EnemyBrain : MonoBehaviour
     {
         // ──────────────────── Cached References ────────────────────
-        private EnemyEntity _entity;
-        private EnemyPerception _perception;
-        private EnemyStatsSO _stats;
+        protected EnemyEntity _entity;
+        protected EnemyPerception _perception;
+        protected EnemyStatsSO _stats;
 
         // ──────────────────── HFSM ────────────────────
-        private StateMachine _stateMachine;
+        protected StateMachine _stateMachine;
 
         // Pre-built state instances (reused across the enemy's lifetime)
         private IdleState _idleState;
@@ -26,7 +27,7 @@ namespace ProjectArk.Combat.Enemy
         private ReturnState _returnState;
 
         // ──────────────────── Spawn Position ────────────────────
-        private Vector2 _spawnPosition;
+        protected Vector2 _spawnPosition;
 
         // ──────────────────── Public Properties (read by states) ────────────────────
 
@@ -53,7 +54,7 @@ namespace ProjectArk.Combat.Enemy
 
         // ──────────────────── Lifecycle ────────────────────
 
-        private void Awake()
+        protected virtual void Awake()
         {
             _entity = GetComponent<EnemyEntity>();
             _perception = GetComponent<EnemyPerception>();
@@ -63,12 +64,12 @@ namespace ProjectArk.Combat.Enemy
             _spawnPosition = transform.position;
         }
 
-        private void Start()
+        protected virtual void Start()
         {
             BuildStateMachine();
         }
 
-        private void Update()
+        protected virtual void Update()
         {
             // Don't tick the FSM if dead
             if (!_entity.IsAlive) return;
@@ -81,8 +82,9 @@ namespace ProjectArk.Combat.Enemy
         /// <summary>
         /// Build the outer state machine with all four tactical states.
         /// Called once on Start(). States are plain C# objects — zero allocation per frame.
+        /// Override in subclass (e.g. ShooterBrain) to wire different state graphs.
         /// </summary>
-        private void BuildStateMachine()
+        protected virtual void BuildStateMachine()
         {
             // Create state instances (they hold a reference back to this brain)
             _idleState = new IdleState(this);
@@ -101,7 +103,7 @@ namespace ProjectArk.Combat.Enemy
         /// Called by EnemyEntity.OnGetFromPool() flow or manually to reset brain state.
         /// Re-records spawn position and rebuilds the FSM from Idle.
         /// </summary>
-        public void ResetBrain(Vector2 newSpawnPosition)
+        public virtual void ResetBrain(Vector2 newSpawnPosition)
         {
             _spawnPosition = newSpawnPosition;
             _stats = _entity.Stats;
@@ -111,7 +113,7 @@ namespace ProjectArk.Combat.Enemy
         // ──────────────────── Debug ────────────────────
 
 #if UNITY_EDITOR
-        private void OnGUI()
+        protected virtual void OnGUI()
         {
             if (_stateMachine == null || _stateMachine.CurrentState == null) return;
 

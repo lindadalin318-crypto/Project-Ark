@@ -1,0 +1,9 @@
+﻿ID,InternalName,DisplayName,ListenTarget,BuffTarget,Threshold,Coefficient,VFX_Path,Description,
+3001,Sail_Doppler,多普勒光帆,Speed,DamageMult,0,0.05,VFX/Engine_Blue,飞得越快,伤害越高。每1单位速度+5%伤害。
+3002,Sail_Stealth,虚空引擎,NotFiringTime,CritChance,3,100,VFX/Engine_Purple,停止开火3秒后,下一次攻击必定暴击。
+3003,Sail_Graze,擦弹引擎,GrazeCount,FireRate,0,0.1,VFX/Engine_Red,每次极限闪避增加10%射速,持续数秒。
+3004,Sail_Stabilizer,稳态力场,RotationSpeed,HeatDissipation,10,2,VFX/Engine_Green,快速旋转时,热量散发速度翻倍。
+3005,Sail_Standard,标准航行帆,None,None,0,0,VFX/Engine_White,无被动效果的初始光帆,作为其他光帆的基准线。
+3006,Sail_Scout,斥候帆,Speed,DamageMult,5,0.08,VFX/Engine_Cyan,高速移动时伤害提升,速度>5时每单位+8%伤害。
+3007,Sail_Fortress,重装帆,StationaryTime,DamageReduction,1.0,0.15,VFX/Engine_Orange,站桩>1秒后减伤15%/秒叠加,无法冲刺。
+3008,Sail_Pulse,脉冲帆,DashCount,DashDamage,0,25,VFX/Engine_Yellow,每次冲刺对路径上敌人造成25点伤害。

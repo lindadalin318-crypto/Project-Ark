@@ -1,0 +1,192 @@
+﻿部件类型,数量估算,作用与理由,制作成本 (美术/程序),,,
+I. 星核 (Cores),24 个,发射源。平均每个星球解锁 4 把新“枪”。这是构建的基础。,⭐⭐⭐⭐⭐ (高),,,
+II. 棱镜 (Prisms),40 个,修正器。数量必须最多，因为它们是产生“化学反应”的关键。,⭐⭐ (低),,,
+III. 光帆 (Sails),12 个,驾驶风格。相当于 12 种职业流派（高速流、擦弹流、站桩流等）。,⭐⭐⭐ (中),,,
+IV. 伴星 (Satellites),14 个,自动化技能。作为战斗的补充和点缀。,⭐⭐⭐ (中),,,
+总计,90 个,这是一个 2A 级独立游戏（如《哈迪斯》或《死亡细胞》初版）的标准体量。,,,,
+,,,,,,
+为了让玩家在前 24-30 小时内不感到厌倦，我们必须严格控制**“新鲜感释放速度”**。 原则：前期给核心（改变攻击方式），中期给棱镜（改变构建逻辑），后期给高阶光帆（改变操作流派）。,,,,,,
+阶段,星球,估算时长,投放总数,光帆 (驾驶流派),其他部件详情,玩家流派体验 (Gameplay Archetype)
+新手期,1. 示巴星,4h,"13 
+
+<font color=""green"">(+1)</font>","2 个
+
+1. [初始] 标准帆 (平衡)
+
+2. [解锁] 斥候帆 (高移速/低血量)","4 星核: 实弹/激光/散弹/波纹
+
+6 棱镜: 基础数值与机制
+
+1 伴星: 自动机炮","【机动性抉择】
+
+玩家立刻面临选择：是求稳（用标准帆），还是追求高风险高回报的走位（用斥候帆+散弹枪贴脸）。"
+拓展期,2. 机械坟场,4h,"15 
+
+<font color=""green"">(+1)</font>","2 个
+
+1. 重装帆 (站桩减伤/无法冲刺)
+
+2. 脉冲帆 (冲刺造成伤害)","6 星核: 元素类
+
+6 棱镜: 手感类
+
+1 伴星: 拾取助手","【攻防流派分化】
+
+开启**“坦克流”（重装帆+重机枪）与“冲撞流”**（脉冲帆+近战波纹）的玩法分歧。"
+爆发期 I,3. 丛林星,5h,"16 
+
+<font color=""red"">(-1)</font>","2 个
+
+1. 悬浮帆 (无视地形减速)
+
+2. 过载帆 (射击时热量减半/移速减半)","3 星核: 进阶变种
+
+10 棱镜: 机制类
+
+1 伴星: 辅助类","【输出环境博弈】
+
+引入地形交互。悬浮帆让玩家在丛林沼泽如履平地；过载帆则提供了极致的“炮台模式”体验。"
+爆发期 II,4. 深海星,5h,"16 
+
+<font color=""red"">(-1)</font>","2 个
+
+1. 幽灵帆 (冲刺无敌帧延长)
+
+2. 猎手帆 (背击必暴击)","3 星核: 异象系
+
+10 棱镜: 诅咒类
+
+1 伴星: 攻击类","【操作乘区】
+
+为高玩准备阶段。幽灵帆鼓励**“擦弹流”，猎手帆鼓励“绕后刺客流”**。"
+高阶期,5. 核心都市,6h,16,"2 个
+
+1. 相位帆 (瞬移/穿墙)
+
+2. 反应堆帆 (热量转护盾)","4 星核: 重型武器 (3格)
+
+6 棱镜: 终极修正
+
+4 伴星: 逻辑类","【打破物理规则】
+
+相位帆允许玩家穿墙，彻底改变关卡攻略路线；反应堆帆允许玩家利用过热来回血。"
+终局,6. 遗落圣地,6h,14,"2 个
+
+1. 时空帆 (时间停止)
+
+2. 概念帆 (??? 开发者彩蛋)","4 星核: 传说级
+
+2 棱镜: 规则篡改
+
+6 伴星: 强力跟随者","【神化】
+
+提供极其夸张的能力，作为通关奖励或隐藏挑战奖励。"
+总计,6 Planets,30h,90,12 光帆,24 核 / 40 棱 / 14 伴,全程都有新职业
+,,,,,,
+Total Builds=左武器×右武器×光帆×伴星,,,,,,
+"2,700×2,700×12×14 =1,224,720,000 (12亿种组合)",,,,,,
+,,,,,,
+"棱镜组合数公式：H(n,k)=C(n+k−1,k)",,,,,,
+"计算：n=40 (棱镜种类), k=2 (槽位)",,,,,,
+,,,,,,
+,,,,,,
+单把武器总变化,,,,,,
+"24 (星核)×820 (棱镜组合)=19,680 种配置",,,,,,
+,,,,,,
+假设：,,,,,,
+1 次标准游玩 (Run) = 30 分钟。,,,,,,
+30 小时目标 = 需要 60 次 充满新鲜感的 Run。,,,,,,
+,,,,,,
+我们要验证：能否凑出 60 个完全不同的流派？,,,,,,
+,,,,,,
+1. 核心流派 (Archetypes),,,,,,
+以 24 个星核为基础，每个星核通常有 3 种极端的棱镜搭配法：,,,,,,
+极致数值流：全堆伤害/射速（如：加特林）。,,,,,,
+极致机制流：全堆分裂/反弹（如：全屏弹幕）。,,,,,,
+异化流：利用特殊棱镜改变形态（如：子弹变大及缓慢）。,,,,,,
+武器体验数 = 24*3=72种截然不同的射击体验}$。,,,,,,
+,,,,,,
+2. 驾驶乘区 (Pilot Multiplier),,,,,,
+光帆（12个）决定了你的移动方式。,,,,,,
+“冲刺流光帆” + “散弹枪” = 贴脸刺客玩法。,,,,,,
+“不动如山光帆” + “散弹枪” = 炮台阵地玩法。,,,,,,
+即使是同一把枪，换个引擎，玩法逻辑完全改变。我们保守估计，每个光帆能为武器提供 0.5 个新维度的体验。,,,,,,
+总流派数 = 72 (武器)×(1+0.5×12 (光帆修正))=72×7=504 种流派。,,,,,,
+,,,,,,
+3. 最终验算,,,,,,
+你需要：60 次新鲜体验。,,,,,,
+你拥有：504 种显著不同的流派。,,,,,,
+冗余系数：504/60=8.4,,,,,,
+这意味着，玩家即使剔除了 80% 他不喜欢的流派（比如他讨厌近战），剩下的内容依然足够支撑他玩完 30 小时。,,,,,,
+,,,,,,
+,,,,,,
+========== ULTIMATE INTEGRATED STAR CORE LIBRARY (100+ DESIGNS) ==========,,,,,,
+ID,Category,Name,Archetype_Ref,Mechanic_Description,Visual_Feedback,Synergy_Tags,Heat_Cost,Dev_Complexity
+1001,Kinetic,动能连发枪 (Kinetic Repeater),Assault Rifle,基础实弹武器;按住左键连发;弹道有飞行时间;随着持续射击准星轻微扩散;松开后快速回正,标准的黄色枪口焰;弹壳抛出;击中产生火花,High_Freq;Direct_Dmg,Low,Low
+1002,Kinetic,广域散弹 (Spread Shot),Shotgun,一次发射7枚扇形分布的破片;距离越近伤害越高;具有很强的击退效果;极高的单发热量,扇形冲击波;屏幕震动;巨大的枪口烟雾,Burst;Close_Range;Knockback,High,Low
+1003,Kinetic,轨道钉刺 (Rail Spike),Sniper,极高速度的实弹(伪Hitscan);穿透沿途所有敌人;每穿透一个敌人伤害增加15%;开火前有0.5秒的前摇,空气中留下一条笔直的白烟轨迹;击穿音效清脆,Sniper;Piercing,High,Low
+1004,Kinetic,回旋利刃 (Returning Blade),Boomerang,发射一个巨大的旋转锯片;飞行一段距离后滞留1秒;然后飞回玩家位置;去程和回程都有伤害;接住时重置热量,旋转的金属光泽;接住时有“咔嚓”声,Melee;Tech;Skill_Based,Low,Med
+1005,Kinetic,集束榴弹 (Cluster Grenade),Launcher,发射一枚抛物线母弹;落地后爆炸并分裂出3枚小炸弹二次爆炸;无视直视线遮挡(可隔墙打),沉闷的爆炸声;地面留下焦痕,AOE;Explosive,Med,Med
+1006,Kinetic,重型加农 (Heavy Cannon),Rocket,发射一枚巨大的炮弹;飞行速度慢但判定范围极大;击中即死(针对小怪);对Boss造成巨额硬直伤害,巨大的尾焰;爆炸产生蘑菇云,Crowd_Control;Stun,High,Low
+1007,Kinetic,跳弹发射器 (Ricochet Round),Trick Shot,子弹在接触墙壁或敌人时必定反弹;每次反弹伤害增加20%;最多反弹3次;适合狭窄地形,子弹轨迹发亮;撞击处有明亮闪光,Trick_Shot;Indoor,Med,Med
+1008,Kinetic,刺钉地雷 (Spike Mine),Trap,向后方投放一枚地雷;敌人踩中后爆射出360度的钢针;适合风筝流派,地雷红灯闪烁;钢针飞射特效,Trap;Kiting,Low,Med
+1009,Kinetic,螺旋钻 (The Drill),Gurren Lagann,缓慢飞行的钻头;持续对接触的敌人造成多段伤害;能钻开特定场景障碍,机械火花迸发;低沉的切削声,Continuous;Drill;Utility,Med,Med
+1010,Kinetic,捕鲸叉 (Harpoon),Harpoon Gun,射出一根带有锁链的长矛;击退并钉住敌人;如果敌人撞墙则造成长时间眩晕,金属锁链哗啦声;撞击墙壁的震动,Stun;Crowd_Control;Wall_Splat,High,Med
+1011,Kinetic,高射炮 (Flak Cannon),Unreal Tournament,发射一枚母弹;飞行一段距离后爆裂成8枚随机飞散的破片;适合中距离压制,母弹带有红光;爆裂时有刺耳破裂声,AOE;Random;Mid_Range,Med,Med
+1012,Kinetic,刺针 (The Needler),Halo Needler,射速极快;子弹滞留敌人体内;集齐5枚后产生连锁爆炸,粉色的晶体弹道;爆炸时有晶体破碎声,Delay;Burst;Stacking,Low,High
+1013,Kinetic,重锤抛射 (Lobber),Castlevania Axe,高抛弧线的重型球体;落地后产生大范围冲击波;无视前方低矮障碍,沉重的抛射轨迹;落地的闷响,AOE;High_Arc;Gravity,Med,Low
+1014,Kinetic,跳雷 (Bouncing Betty),Ratchet & Clank,发射在地面弹跳的球体;每次弹跳释放一圈冲击波;共弹跳3次,弹跳时有清脆的金属撞击声,AOE;Physics;Bouncy,Med,Med
+1015,Kinetic,金钱炮 (Coin Gun),Terraria,消耗玩家持有的金币作为弹药;伤害随金币价值提升(铜-银-金),射击时满屏金币特效;清脆的硬币碰撞声,High_Cost;High_Risk;Rich,None,Low
+1016,Energy,聚焦激光 (Focus Beam),Beam_Continuous,持续照射的激光束;伤害随照射时间递增(预热机制);无法穿透敌人但可穿透玻璃,高亮的持续光束;击中点有熔化特效;光束随热量变红,High_Freq;Beam,High,Med
+1017,Energy,死星主炮 (Death Star),Charge_Beam,蓄力2秒后发射毁灭性光柱;造成巨额单发伤害;蓄力期间无法移动且受到伤害加倍,蓄力时周围光线被吸入;发射时全屏泛白;瞬间静音,Burst;Sniper;Glass_Cannon,Very_High,Med
+1018,Energy,脉冲波纹 (Sonic Wave),Penetrating_Wave,发射宽体波纹;穿透所有敌人和墙壁;伤害随距离衰减;带有击退效果,半透明的空气扭曲波纹;像雷达波一样扩散,AOE;Piercing;Wall_Hack,Med,Med
+1019,Energy,电弧发生器 (Arc Chain),Chain_Lightning,锁定最近敌人发射闪电;闪电会在3个敌人之间弹射;对机械类敌人伤害加倍,蓝白色的折线闪电;噼啪作响,AOE;Chain;Crowd_Control,Med,High
+1020,Energy,光子切割 (Photon Blade),Melee_Swipe,前方180度扇形挥砍;消除敌人的子弹(拼刀);极短射程;高频连击,霓虹色的刀光轨迹;挥砍时有破风声,Melee;Defensive;Bullet_Cancel,Low,Low
+1021,Energy,追踪光球 (Homing Orb),Homing_Missile,发射3枚缓慢的光球;自动追踪最近的敌人;可以绕过掩体,柔和的光球;拖着长尾巴,Homing;Tech,High,High
+1022,Energy,棱镜阵列 (Prism Array),Option_Formation,在飞船周围生成4个浮游炮同时向内射击;焦点在飞船前方5米处,4条细激光汇聚一点;几何美感,Focused;Tech;Geometry,Med,High
+1023,Energy,干扰射线 (Jammer Ray),Debuff_Beam,无伤害;持续照射敌人使其攻速降低50%;并使其受到的其他伤害增加30%,紫色的低对比度光束;敌人身上有故障特效,Support;Debuff,Low,Low
+1024,Energy,天罚 (Orbital Laser),Hammer of Dawn,标记地点;延时后降下垂直打击;无视地形高度,红色的激光指示线;巨大的光柱从天而降,Burst;Cinematic;Delay,Very_High,Low
+1025,Energy,霓虹鞭 (Neon Whip),Castlevania Whip,中距离柔软的光鞭;造成多段判定;可钩住特定锚点进行位移,流光溢彩的长鞭;清脆的抽打声,Mid_Range;Multi_Hit;Utility,Med,Med
+1026,Energy,伽马射线 (Gamma Ray),Radiation,极细的穿墙射线;伤害极低但被击中者永久获得“辐射”状态,翠绿色的极细线条;敌人散发荧光,DoT;Radiation;Wall_Hack,Low,Med
+1027,Energy,太阳耀斑 (Solar Flare),Charge_AOE,按住蓄力吸收光线(变暗);松开释放全屏闪光;清除全屏敌方子弹,全屏明暗变化;极度耀眼的白光,AOE;Defense;Full_Screen,High,Med
+1028,Energy,光桥 (Hard Light Wall),Symmetra Wall,构建一面暂时存在的光墙;阻挡敌人子弹并允许友方穿过,半透明的蜂窝状光幕,Defense;Static;Barrier,High,High
+1029,Energy,波粒二象 (Quantum Beam),Physics,子弹具有物理实体(击退)和射线特性(即时)的混合态,闪烁不定的粒子流,Hybrid;Physics;Tech,Med,High
+1030,Eldritch,虚空触须 (Void Lash),Whip,从虚空中伸出触手抽打前方;无视护盾;造成真实伤害;偷取生命值,黑紫色的触手模型;粘稠的音效,True_Dmg;Lifesteal;Void,Med,Med
+1031,Eldritch,精神控制 (Mind Rot),Charm,发射无伤害的孢子;击中敌人后使其混乱攻击友军;对Boss减防,粉色的迷雾弹道;敌人头顶出现混乱图标,Control;Chaos,High,High
+1032,Eldritch,因果倒置 (Causality Shot),Hitscan_Instant,按下开火瞬间造成伤害;松开开火时播放飞行轨迹;绝对命中,目标身上先出现弹孔;然后才有枪声,Sniper;Weird;Causality,High,High
+1033,Eldritch,熵增力场 (Entropy Field),Aura,在飞船周围展开一个持续伤害光环;距离越近伤害越高;引爆敌人护盾,飞船周围空间扭曲;色彩失真,Melee;Aura;Entropy,Med,Med
+1034,Eldritch,血肉献祭 (Blood Rite),Self_Harm,消耗玩家1%当前生命值发射一枚血弹;伤害极高;带有追踪和吸血效果,鲜红色的血液弹道;击中时有心跳声,High_Risk;Lifesteal,None,Med
+1035,Eldritch,尖叫者 (Screamer),Sonic_Stun,蓄力释放全屏尖叫;不造成伤害;但清除全屏所有敌方子弹;眩晕1秒,屏幕剧烈震动;波纹扩散,Defense;Utility;Full_Screen,High,Med
+1036,Eldritch,量子观测者 (Quantum Observer),RNG,射击时没有弹道;直接在敌人身上判定;50%几率3倍伤;50%几率治疗,目标身上直接出现特效;无弹道,RNG;Gambler,Low,Med
+1037,Eldritch,时空锚 (Time Anchor),Tracer Recall,射击留下信标;再次开火子弹从信标射向敌人,金色的钟表刻度线;时间流动的音效,Tech;Time;Rewind,High,High
+1038,Eldritch,巫毒娃娃 (Voodoo Doll),Isaac,连接自身与敌人;自伤时敌人受双倍伤害;玩家无敌帧消失,破旧的布偶特效;血色连线,High_Risk;Magic,Med,High
+1039,Eldritch,灵魂罐 (Soul Jar),Hollow Knight,杀敌收集灵魂;释放追踪怨灵;上限受热量限制,蓝色的灵魂火花;凄厉的哀鸣声,Summon;Snowball;Soul,Med,Med
+1040,Eldritch,量子隧道 (Quantum Tunnel),Portal,在两点间建立传送门;子弹和玩家均可穿过,蓝橘双色的传送门,Utility;Portal;Creative,High,Very_High
+1041,Eldritch,时缓泡 (Time Bubble),Quantum Break,生成球形区域;内部物体和子弹速度降至1%,蓝色的空间涟漪;声音低沉化,Control;Time;Bubble,High,High
+1042,Construct,自动机炮 (Auto Turret),Deployable,投掷一个固定炮台;自动攻击范围内敌人;持续10秒;最多存在3个,炮台展开动画;独立的射击声,Summon;AFK,Med,High
+1043,Construct,蜂群发射器 (Swarm Launcher),Summon_Minion,发射微型无人机;无人机环绕敌人攻击;一段时间后自爆,像是放出了一群蜜蜂,Summon;DoT,High,High
+1044,Construct,黑洞发生器 (Singularity),Gravity,发射缓慢飞行的黑洞;吸附周围敌人并聚怪;最后爆炸;不分敌我,紫色的空间扭曲球体;周围物体被拉扯,Control;Setup;Gravity,Very_High,High
+1045,Construct,护盾投射器 (Shield Wall),Barrier,向前发射能量墙;抵挡子弹;玩家子弹穿过墙壁会获得伤害加成,长方形的光墙;被击中泛起涟漪,Support;Defense,Med,Med
+1046,Construct,粘性炸弹 (Sticky Bomb),Delay_Explosion,发射附着在敌人身上的炸弹;最多叠加5层;主动或过热时引爆,敌人身上有闪烁的红点;连锁爆炸,Burst;Setup;Tactical,Low,Med
+1047,Tactical,标记手枪 (Marker Pistol),Debuff,低伤害;击中敌人后标记弱点;重攻击击中弱点造成300%伤害,敌人身上出现红圈靶心,Combo;Setup,Low,Low
+1048,Tactical,冷冻喷雾 (Cryo Spray),Flamethrower,持续喷射冷气;无直接伤害;快速冻结敌人;冻结受物理伤害加倍,白色的雾气;地面结冰,Control;Combo;Ice,Med,Med
+1049,Tactical,引力钩锁 (Grapple Hook),Movement,发射钩爪;拉向敌人;位移;抓取道具,锁链特效;急速的运动模糊,Movement;Melee;Utility,Low,High
+1050,Tactical,扫描仪 (Scanner),Analysis,无伤害锥形波;持续扫描敌人;解锁图鉴/弱点;掉落图谱,绿色的网格扫描线;电子分析音效,Meta;Farming;Knowledge,None,Med
+1051,Tactical,击退气锤 (Air Hammer),Knockback,近距离巨大的空气炮;无伤害;将敌人击飞;反弹敌人的子弹,空气爆炸波;明显的冲击感,Environment;Defense;Air,Med,Low
+1052,Original,共鸣音叉 (Resonance Fork),Rhythm,必须跟随BGM节拍射击;节拍点伤害x3;乱按伤害x0.1,枪口随BGM律动闪烁;完美判定有重音,Rhythm;Skill;Meta,Low,High
+1053,Original,画笔 (The Brush),Trail,按住移动鼠标在空中画线;松开变实体激光造成伤害;或变成墙,光绘效果;笔触感,Creative;Trap;Drawing,High,High
+1054,Original,矢量加农 (Vector Cannon),Physics,子弹伤害取决于玩家移动速度;飞得越快伤害越高,子弹带有速度线;撞击极重,Speed;Burst;Momentum,Med,Low
+1055,Original,俄罗斯方块 (Tetris Block),Geometry,发射随机形状方块(L/T/长);有物理碰撞;挤死敌人;搭梯子,像素风格的方块;复古音效,Fun;Physics;Geometry,Med,High
+1056,Original,倒带光束 (Rewind Beam),Time,击中敌人让其位置回溯到3秒前;送回突脸怪;重复刚才动作,画面出现倒带特效,Control;Time;Rewind,High,High
+1057,Original,二象性 (Duality),Mode_Switch,左红(伤血)右蓝(伤盾);颜色错误则给敌人加血(斑鸠机制),明显的红蓝光效切换,Puzzle;Skill;Polarity,Med,Med
+1058,Original,轨道轰炸信标 (Orbital Strike),Summon_Huge,不直接攻击;标记地面;3秒后天基武器打击;露天场景使用,指示线;巨大的光柱从天而降,Burst;Cinematic,Very_High,Low
+1059,Original,吸星大法 (Vampire Core),Drain,持续吸取前方扇形区域生命;敌人越多回血越快但伤害分散,多条红色血管连线;心跳声,Sustain;AOE,Med,Med
+1060,Original,弹球台 (Pinball),Physics_Bouncy,发射巨大的钢球;受重力影响;飞船去“撞”球改变轨迹,巨大的金属球;碰撞物理真实,MiniGame;Fun;Physics,Low,High
+1061,Original,逻辑炸弹 (Logic Bomb),Code,发射一串代码字符;随机触发爆炸/冻结/魅惑/即死;取决于敌人ID,字符雨特效;黑客帝国风格,RNG;Meta;Code,Med,Low
+1062,Original,过热排气 (Vent Blast),Heat_Weapon,平时无法射击;热量条>80%才能发射;喷气流;伤害极高清空热量,白色的高温蒸汽;喷气音效,Burst;Heat_Mgmt,None,Low
+1063,Original,太阳帆 (Solar Flare),Charge_AOE,按住蓄力吸收光线(变暗);松开释放全屏闪光;取决于蓄力时间,全屏明暗变化;致盲效果,AOE;Environment,High,Med
+1064,Original,相位转移器 (Phase Shift),Telefrag,射击位置就是传送位置;通过不断传送撞击敌人造成伤害,残影连成线;快速的闪烁,Speed;Melee;Blink,High,Med
+1065,Original,诅咒之触 (Midas Touch),Transmute,极短射程;击杀敌人后将其变成金像(障碍);可打碎掉钱,金色的石化效果;清脆的破碎声,Economy;Obstacle;Gold,Med,Med
+1066,Original,借力打力 (Counter Black Hole),Absorb,蓄力发射微型黑洞吸附敌方子弹;吸满反向喷射,紫色的漩涡;光点汇聚,Defense;Counter;Absorb,High,High
+1067,Original,链式反应堆 (Chain Reactor),Combo,发射正负电荷粘性弹;相遇产生连接闪电切割一切,红蓝粘性球;高亮电流连接,Setup;Trap;Chain,Med,High
+1068,Original,言灵 (The Word),Audio,利用麦克风输入(或按键节奏);声音越大波纹越大,声波纹路;随着音量震动,Gimmick;Fun;Audio,Low,High

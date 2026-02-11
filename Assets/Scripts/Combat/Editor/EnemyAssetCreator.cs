@@ -169,6 +169,237 @@ namespace ProjectArk.Combat.Enemy.Editor
             );
         }
 
+        // ════════════════════════════════════════════════════════════════
+        //  SHOOTER ENEMY
+        // ════════════════════════════════════════════════════════════════
+
+        [MenuItem("ProjectArk/Create Shooter Enemy Assets")]
+        public static void CreateShooterAssets()
+        {
+            // ─────────── Step 1: Ensure directories exist ───────────
+            EnsureFolder("Assets/_Data", "Enemies");
+            EnsureFolder("Assets/_Prefabs", "Enemies");
+
+            // ─────────── Step 2: Create EnemyProjectile Prefab (needed by SO) ───────────
+            string projPrefabPath = $"{PREFAB_DIR}/EnemyProjectile.prefab";
+            var projPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(projPrefabPath);
+
+            if (projPrefab == null)
+            {
+                projPrefab = CreateEnemyProjectilePrefab(projPrefabPath);
+            }
+            else
+            {
+                Debug.Log($"[EnemyAssetCreator] Projectile prefab already exists: {projPrefabPath}");
+            }
+
+            // ─────────── Step 3: Create or load EnemyStatsSO ───────────
+            string statsPath = $"{ASSET_DIR}/EnemyStats_Shooter.asset";
+            var stats = AssetDatabase.LoadAssetAtPath<EnemyStatsSO>(statsPath);
+
+            if (stats == null)
+            {
+                stats = ScriptableObject.CreateInstance<EnemyStatsSO>();
+
+                // Identity
+                stats.EnemyName = "Shooter";
+                stats.EnemyID = "enemy_shooter";
+
+                // Health — fragile, compensated by range
+                stats.MaxHP = 40f;
+                stats.MaxPoise = 20f;
+
+                // Movement — slower than Rusher
+                stats.MoveSpeed = 3.5f;
+                stats.RotationSpeed = 360f;
+
+                // Melee Attack (fallback, rarely used)
+                stats.AttackDamage = 8f;
+                stats.AttackRange = 1.5f;
+                stats.AttackCooldown = 1.2f;
+                stats.AttackKnockback = 3f;
+
+                // Attack Phases (melee fallback)
+                stats.TelegraphDuration = 0.3f;
+                stats.AttackActiveDuration = 0.15f;
+                stats.RecoveryDuration = 0.6f;
+
+                // Ranged Attack — primary combat mode
+                stats.ProjectilePrefab = projPrefab;
+                stats.ProjectileSpeed = 10f;
+                stats.ProjectileDamage = 8f;
+                stats.ProjectileKnockback = 2f;
+                stats.ProjectileLifetime = 5f;
+                stats.ShotsPerBurst = 3;
+                stats.BurstInterval = 0.2f;
+                stats.PreferredRange = 10f;
+                stats.RetreatRange = 5f;
+
+                // Perception — wider cone, further sight to compensate for range
+                stats.SightRange = 16f;
+                stats.SightAngle = 90f;
+                stats.HearingRange = 20f;
+
+                // Leash & Memory
+                stats.LeashRange = 30f;
+                stats.MemoryDuration = 5f;
+
+                // Visuals — cold blue tint (vs Rusher's aggressive red)
+                stats.HitFlashDuration = 0.1f;
+                stats.BaseColor = new Color(0.2f, 0.4f, 0.9f, 1f);
+
+                AssetDatabase.CreateAsset(stats, statsPath);
+                Debug.Log($"[EnemyAssetCreator] Created SO: {statsPath}");
+            }
+            else
+            {
+                Debug.Log($"[EnemyAssetCreator] SO already exists: {statsPath}");
+            }
+
+            // ─────────── Step 4: Create Prefab ───────────
+            string prefabPath = $"{PREFAB_DIR}/Enemy_Shooter.prefab";
+            var existingPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+
+            if (existingPrefab != null)
+            {
+                Debug.Log($"[EnemyAssetCreator] Prefab already exists: {prefabPath}");
+            }
+            else
+            {
+                var go = new GameObject("Enemy_Shooter");
+
+                // Set Layer to Enemy (Layer 8)
+                int enemyLayer = LayerMask.NameToLayer("Enemy");
+                if (enemyLayer >= 0)
+                    go.layer = enemyLayer;
+                else
+                    Debug.LogWarning("[EnemyAssetCreator] 'Enemy' layer not found!");
+
+                // --- SpriteRenderer ---
+                var sr = go.AddComponent<SpriteRenderer>();
+                sr.color = stats.BaseColor;
+                sr.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
+
+                // --- Rigidbody2D ---
+                var rb = go.AddComponent<Rigidbody2D>();
+                rb.bodyType = RigidbodyType2D.Dynamic;
+                rb.gravityScale = 0f;
+                rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+                rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+
+                // --- CircleCollider2D ---
+                var col = go.AddComponent<CircleCollider2D>();
+                col.radius = 0.35f;
+                col.isTrigger = false;
+
+                // --- EnemyEntity ---
+                var entity = go.AddComponent<EnemyEntity>();
+
+                // --- EnemyPerception ---
+                var perception = go.AddComponent<EnemyPerception>();
+
+                // --- ShooterBrain (inherits from EnemyBrain, satisfies RequireComponent) ---
+                go.AddComponent<ShooterBrain>();
+
+                // ─────── Wire up SerializeField references ───────
+
+                // EnemyEntity._stats
+                var entitySO = new SerializedObject(entity);
+                entitySO.FindProperty("_stats").objectReferenceValue = stats;
+                entitySO.ApplyModifiedPropertiesWithoutUndo();
+
+                // EnemyPerception._stats, _playerMask, _obstacleMask
+                var perceptionSO = new SerializedObject(perception);
+                perceptionSO.FindProperty("_stats").objectReferenceValue = stats;
+
+                int playerLayer = LayerMask.NameToLayer("Player");
+                if (playerLayer >= 0)
+                    perceptionSO.FindProperty("_playerMask").intValue = 1 << playerLayer;
+
+                int wallLayer = LayerMask.NameToLayer("Wall");
+                if (wallLayer >= 0)
+                    perceptionSO.FindProperty("_obstacleMask").intValue = 1 << wallLayer;
+
+                perceptionSO.ApplyModifiedPropertiesWithoutUndo();
+
+                // ─────── Save as Prefab ───────
+                PrefabUtility.SaveAsPrefabAsset(go, prefabPath);
+                Object.DestroyImmediate(go);
+
+                Debug.Log($"<b>[EnemyAssetCreator] Created Prefab: {prefabPath}</b>");
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            // ─────────── Step 5: Summary ───────────
+            EditorUtility.DisplayDialog(
+                "Shooter Enemy Assets Created",
+                $"SO: {statsPath}\nPrefab: {prefabPath}\nProjectile: {projPrefabPath}\n\n" +
+                "The Prefab is fully configured with:\n" +
+                "• SpriteRenderer (blue tint placeholder)\n" +
+                "• Rigidbody2D (Dynamic, gravity=0, freeze rotation Z)\n" +
+                "• CircleCollider2D (radius=0.35)\n" +
+                "• EnemyEntity (stats wired)\n" +
+                "• EnemyPerception (stats + masks wired)\n" +
+                "• ShooterBrain (ranged HFSM)\n\n" +
+                "Behavior: Idle → Chase → Shoot (3-round burst) → Retreat → Return\n" +
+                "Layer: Enemy\n\n" +
+                "Ready to drag into scene for testing!",
+                "OK"
+            );
+        }
+
+        // ──────────────────── EnemyProjectile Prefab ────────────────────
+
+        /// <summary>
+        /// Creates the shared EnemyProjectile prefab used by all shooter-type enemies.
+        /// Layer: PlayerProjectile (so it collides with Player).
+        /// Has: SpriteRenderer, Rigidbody2D (kinematic-like dynamic), CircleCollider2D (trigger),
+        ///      EnemyProjectile component.
+        /// </summary>
+        private static GameObject CreateEnemyProjectilePrefab(string path)
+        {
+            var go = new GameObject("EnemyProjectile");
+
+            // Layer: use a dedicated enemy projectile layer, or fall back to Default
+            // For now, set to Default — Physics2D matrix handles collision filtering
+            // EnemyProjectile.OnTriggerEnter2D already ignores Enemy layer
+            go.layer = LayerMask.NameToLayer("Default");
+
+            // --- SpriteRenderer ---
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.color = new Color(1f, 0.3f, 0.1f, 1f); // Orange-red enemy bullet
+            sr.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
+            sr.sortingOrder = 5;
+
+            // --- Rigidbody2D ---
+            var rb = go.AddComponent<Rigidbody2D>();
+            rb.bodyType = RigidbodyType2D.Dynamic;
+            rb.gravityScale = 0f;
+            rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+            rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+
+            // --- CircleCollider2D (Trigger for OnTriggerEnter2D) ---
+            var col = go.AddComponent<CircleCollider2D>();
+            col.radius = 0.15f;
+            col.isTrigger = true;
+
+            // --- EnemyProjectile ---
+            go.AddComponent<EnemyProjectile>();
+
+            // Scale down to bullet size
+            go.transform.localScale = new Vector3(0.3f, 0.3f, 1f);
+
+            // Save as prefab
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+
+            Debug.Log($"[EnemyAssetCreator] Created EnemyProjectile prefab: {path}");
+            return prefab;
+        }
+
         // ──────────────────── Helpers ────────────────────
 
         private static void EnsureFolder(string parent, string folderName)

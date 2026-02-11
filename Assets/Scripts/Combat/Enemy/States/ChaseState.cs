@@ -5,7 +5,8 @@ namespace ProjectArk.Combat.Enemy
     /// <summary>
     /// Chase state: enemy moves directly toward the last known player position.
     /// Transitions:
-    ///   - Distance &lt; AttackRange → EngageState
+    ///   - Rusher: Distance &lt; AttackRange → EngageState
+    ///   - Shooter: Distance &lt; PreferredRange → ShootState
     ///   - Distance &gt; LeashRange OR HasTarget=false → ReturnState
     /// </summary>
     public class ChaseState : IState
@@ -32,11 +33,23 @@ namespace ProjectArk.Combat.Enemy
                 return;
             }
 
-            // If close enough to attack → engage
-            if (perception.DistanceToTarget < stats.AttackRange)
+            // Shooter-type: transition to ShootState when within PreferredRange
+            if (_brain is ShooterBrain shooterBrain)
             {
-                _brain.StateMachine.TransitionTo(_brain.EngageState);
-                return;
+                if (perception.DistanceToTarget < stats.PreferredRange)
+                {
+                    _brain.StateMachine.TransitionTo(shooterBrain.ShootState);
+                    return;
+                }
+            }
+            else
+            {
+                // Rusher-type: close enough to melee attack → engage
+                if (perception.DistanceToTarget < stats.AttackRange)
+                {
+                    _brain.StateMachine.TransitionTo(_brain.EngageState);
+                    return;
+                }
             }
 
             // Move toward last known player position

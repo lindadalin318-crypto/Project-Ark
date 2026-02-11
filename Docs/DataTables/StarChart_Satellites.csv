@@ -1,0 +1,7 @@
+﻿ID,InternalName,DisplayName,TriggerCond,ActionType,ActionParam,Cooldown,OrbitRadius,Description,
+4001,Sat_Revenge,复仇之月,OnShieldBreak,SpawnProjectile,Projectiles/Shockwave,10,100,护盾破碎时,以自身为圆心释放冲击波。
+4002,Sat_Scavenger,清道夫,OnLootPickup,RestoreHeat,50,0.1,120,拾取掉落物时,立即冷却50点热量。
+4003,Sat_Gemini,双子座,OnSecondaryFire,FireBackwards,None,0.5,140,按下右键开火时,自动向飞船后方发射一次左键武器。
+4004,Sat_Emergency,紧急制动,OnLowHealth,GrantInvincible,2,60,80,生命值低于20%时,获得2秒无敌时间。
+4005,Sat_AutoTurret,自动机炮,OnInterval,FireAtNearest,Projectiles/Turret_Bullet,1.5,100,每1.5秒自动向最近敌人开火,稳定但低伤害的辅助输出。
+4006,Sat_Magnet,拾取磁铁,OnAlways,AttractPickups,200,0,150,持续吸引200范围内掉落物,改善探索节奏的便利伴星。

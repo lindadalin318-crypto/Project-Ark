@@ -8,8 +8,10 @@ namespace ProjectArk.Ship
     /// <summary>
     /// Player ship health component. Implements IDamageable so enemy attacks
     /// (and any other damage sources) can interact with the ship.
+    /// Requires a Collider2D so Physics2D.OverlapCircle can detect the ship.
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
+    [RequireComponent(typeof(Collider2D))]
     public class ShipHealth : MonoBehaviour, IDamageable
     {
         // ──────────────────── Inspector ────────────────────
