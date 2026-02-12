@@ -4,6 +4,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using ProjectArk.Level;
 
 namespace ProjectArk.UI.Editor
 {
@@ -11,16 +12,19 @@ namespace ProjectArk.UI.Editor
     /// Editor utility to auto-build the entire UI Canvas hierarchy.
     /// Menu: ProjectArk > Build UI Canvas
     ///
-    /// Creates:
+    /// Creates (idempotent — skips already-existing sections):
     /// - Canvas (Screen Space - Overlay) with CanvasScaler + GraphicRaycaster
     /// - EventSystem (if missing)
     /// - HeatBarHUD with fill image, overheat flash, and label
+    /// - HealthBarHUD with fill image, damage flash, and label
     /// - StarChartPanel with TrackViews, InventoryView, ItemDetailView
     /// - UIManager with all references wired
     /// - WeavingStateTransition on UIManager
     /// - UIParallaxEffect on StarChartPanel
+    /// - DoorTransitionController with full-screen FadeOverlay
     ///
     /// All SerializeField references are auto-wired via SerializedObject.
+    /// Running this tool multiple times will NOT create duplicate objects.
     /// </summary>
     public static class UICanvasBuilder
     {
@@ -37,7 +41,104 @@ namespace ProjectArk.UI.Editor
                 Debug.Log("[UICanvasBuilder] Created EventSystem");
             }
 
-            // ── Step 1: Canvas root ────────────────────────────────
+            // ── Step 1: Find or create Canvas ──────────────────────
+            var canvasGo = FindOrCreateCanvas();
+
+            // ── Step 2: HeatBarHUD ─────────────────────────────────
+            var heatBarHud = canvasGo.GetComponentInChildren<HeatBarHUD>(true);
+            if (heatBarHud == null)
+                heatBarHud = BuildHeatBarSection(canvasGo);
+            else
+                Debug.Log("[UICanvasBuilder] HeatBarHUD already exists, skipping");
+
+            // ── Step 2b: HealthBarHUD ──────────────────────────────
+            var healthBarHud = canvasGo.GetComponentInChildren<HealthBarHUD>(true);
+            if (healthBarHud == null)
+                healthBarHud = BuildHealthBarSection(canvasGo);
+            else
+                Debug.Log("[UICanvasBuilder] HealthBarHUD already exists, skipping");
+
+            // ── Step 3: StarChartPanel ─────────────────────────────
+            var starChartPanel = canvasGo.GetComponentInChildren<StarChartPanel>(true);
+            if (starChartPanel == null)
+                starChartPanel = BuildStarChartSection(canvasGo);
+            else
+                Debug.Log("[UICanvasBuilder] StarChartPanel already exists, skipping");
+
+            // ── Step 4: UIManager ──────────────────────────────────
+            var uiManager = canvasGo.GetComponentInChildren<UIManager>(true);
+            if (uiManager == null)
+                uiManager = BuildUIManagerSection(canvasGo, heatBarHud, healthBarHud, starChartPanel);
+            else
+                Debug.Log("[UICanvasBuilder] UIManager already exists, skipping");
+
+            // ── Step 5: Deactivate StarChartPanel (starts hidden) ──
+            if (starChartPanel != null)
+                starChartPanel.gameObject.SetActive(false);
+
+            // ── Step 6: DoorTransitionController + FadeOverlay ─────
+            var doorTransition = canvasGo.GetComponentInChildren<DoorTransitionController>(true);
+            if (doorTransition == null)
+                doorTransition = BuildDoorTransitionSection(canvasGo);
+            else
+                Debug.Log("[UICanvasBuilder] DoorTransitionController already exists, skipping");
+
+            // ── Done ───────────────────────────────────────────────
+            Selection.activeGameObject = canvasGo;
+            Debug.Log("[UICanvasBuilder] ✅ UI Canvas hierarchy built/verified successfully!");
+            Debug.Log("  ├─ Canvas (Screen Space Overlay, 1920x1080 ref)");
+            Debug.Log("  ├─ HeatBarHUD (fill + flash + label wired)");
+            Debug.Log("  ├─ HealthBarHUD (fill + damage flash + label wired)");
+            Debug.Log("  ├─ StarChartPanel (+ UIParallaxEffect)");
+            Debug.Log("  │  ├─ PrimaryTrackView (3 prism + 3 core cells)");
+            Debug.Log("  │  ├─ SecondaryTrackView (3 prism + 3 core cells)");
+            Debug.Log("  │  ├─ InventoryView (filters + scroll grid)");
+            Debug.Log("  │  └─ ItemDetailView (icon + name + desc + stats + button)");
+            Debug.Log("  ├─ UIManager (+ WeavingStateTransition)");
+            Debug.Log("  └─ DoorTransitionController (FadeOverlay)");
+            Debug.Log("");
+            Debug.Log("[UICanvasBuilder] ⚠️ Manual steps remaining:");
+            Debug.Log("  1. Assign _inputActions on UIManager if not auto-found");
+            Debug.Log("  2. Assign _playerInventory on UIManager if not auto-found");
+            Debug.Log("  3. Create InventoryItemView prefab and assign to InventoryView._itemPrefab");
+            Debug.Log("  4. Assign PostProcess Volume to WeavingStateTransition._postProcessVolume");
+            Debug.Log("  5. Assign AudioSource to WeavingStateTransition._sfxSource");
+        }
+
+        // =====================================================================
+        // Section Builders (idempotent — only called when component is missing)
+        // =====================================================================
+
+        /// <summary>
+        /// Find existing UI Canvas or create a new one.
+        /// Looks for an existing Canvas via UIManager, or by matching sortingOrder=10.
+        /// </summary>
+        private static GameObject FindOrCreateCanvas()
+        {
+            // Strategy 1: Find via existing UIManager (most reliable indicator of "our" Canvas)
+            var existingUIManager = Object.FindAnyObjectByType<UIManager>(FindObjectsInactive.Include);
+            if (existingUIManager != null)
+            {
+                var parentCanvas = existingUIManager.GetComponentInParent<Canvas>();
+                if (parentCanvas != null)
+                {
+                    Debug.Log("[UICanvasBuilder] Found existing Canvas (via UIManager)");
+                    return parentCanvas.gameObject;
+                }
+            }
+
+            // Strategy 2: Find a ScreenSpaceOverlay Canvas with sortingOrder=10
+            var canvases = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var c in canvases)
+            {
+                if (c.renderMode == RenderMode.ScreenSpaceOverlay && c.sortingOrder == 10)
+                {
+                    Debug.Log("[UICanvasBuilder] Found existing Canvas (sortingOrder=10)");
+                    return c.gameObject;
+                }
+            }
+
+            // Strategy 3: Create new Canvas
             var canvasGo = new GameObject("Canvas");
             Undo.RegisterCreatedObjectUndo(canvasGo, "Build UI Canvas");
 
@@ -52,7 +153,12 @@ namespace ProjectArk.UI.Editor
 
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            // ── Step 2: HeatBarHUD ─────────────────────────────────
+            Debug.Log("[UICanvasBuilder] Created new Canvas");
+            return canvasGo;
+        }
+
+        private static HeatBarHUD BuildHeatBarSection(GameObject canvasGo)
+        {
             var heatBarGo = CreateUIObject("HeatBarHUD", canvasGo.transform);
             SetAnchors(heatBarGo, new Vector2(0.3f, 0f), new Vector2(0.7f, 0.05f));
             var heatBarHud = heatBarGo.AddComponent<HeatBarHUD>();
@@ -93,11 +199,14 @@ namespace ProjectArk.UI.Editor
             WireField(heatBarHud, "_fillImage", fillImg);
             WireField(heatBarHud, "_overheatFlash", flashImg);
             WireField(heatBarHud, "_label", heatTmp);
-
-            // Create and inject heat gradient: green(0) -> yellow(0.5) -> red(1)
             WireGradient(heatBarHud, "_heatGradient", CreateHeatGradient());
 
-            // ── Step 2b: HealthBarHUD ──────────────────────────────
+            Debug.Log("[UICanvasBuilder] Created HeatBarHUD");
+            return heatBarHud;
+        }
+
+        private static HealthBarHUD BuildHealthBarSection(GameObject canvasGo)
+        {
             var healthBarGo = CreateUIObject("HealthBarHUD", canvasGo.transform);
             SetAnchors(healthBarGo, new Vector2(0.02f, 0.92f), new Vector2(0.28f, 0.97f));
             var healthBarHud = healthBarGo.AddComponent<HealthBarHUD>();
@@ -138,11 +247,14 @@ namespace ProjectArk.UI.Editor
             WireField(healthBarHud, "_fillImage", healthFillImg);
             WireField(healthBarHud, "_damageFlash", healthFlashImg);
             WireField(healthBarHud, "_label", healthTmp);
-
-            // Create and inject health gradient: red(0) -> yellow(0.4) -> green(1)
             WireGradient(healthBarHud, "_healthGradient", CreateHealthGradient());
 
-            // ── Step 3: StarChartPanel ─────────────────────────────
+            Debug.Log("[UICanvasBuilder] Created HealthBarHUD");
+            return healthBarHud;
+        }
+
+        private static StarChartPanel BuildStarChartSection(GameObject canvasGo)
+        {
             var panelGo = CreateUIObject("StarChartPanel", canvasGo.transform);
             SetStretch(panelGo);
             var starChartPanel = panelGo.AddComponent<StarChartPanel>();
@@ -155,17 +267,17 @@ namespace ProjectArk.UI.Editor
             panelBgImg.color = new Color(0.05f, 0.05f, 0.1f, 0.92f);
             panelBgImg.raycastTarget = true;
 
-            // ── Step 3a: PrimaryTrackView ──────────────────────────
+            // ── PrimaryTrackView ──
             var primaryTrackGo = CreateUIObject("PrimaryTrackView", panelGo.transform);
             SetAnchors(primaryTrackGo, new Vector2(0.02f, 0.5f), new Vector2(0.48f, 0.95f));
             var primaryTrack = BuildTrackView(primaryTrackGo, "PRIMARY");
 
-            // ── Step 3b: SecondaryTrackView ────────────────────────
+            // ── SecondaryTrackView ──
             var secondaryTrackGo = CreateUIObject("SecondaryTrackView", panelGo.transform);
             SetAnchors(secondaryTrackGo, new Vector2(0.52f, 0.5f), new Vector2(0.98f, 0.95f));
             var secondaryTrack = BuildTrackView(secondaryTrackGo, "SECONDARY");
 
-            // ── Step 3c: InventoryView ─────────────────────────────
+            // ── InventoryView ──
             var inventoryGo = CreateUIObject("InventoryView", panelGo.transform);
             SetAnchors(inventoryGo, new Vector2(0.02f, 0.05f), new Vector2(0.58f, 0.48f));
             var inventoryView = inventoryGo.AddComponent<InventoryView>();
@@ -222,7 +334,7 @@ namespace ProjectArk.UI.Editor
             WireField(inventoryView, "_filterSails", filterSails);
             WireField(inventoryView, "_filterSatellites", filterSats);
 
-            // ── Step 3d: ItemDetailView ────────────────────────────
+            // ── ItemDetailView ──
             var detailGo = CreateUIObject("ItemDetailView", panelGo.transform);
             SetAnchors(detailGo, new Vector2(0.60f, 0.05f), new Vector2(0.98f, 0.48f));
             var itemDetailView = detailGo.AddComponent<ItemDetailView>();
@@ -310,13 +422,19 @@ namespace ProjectArk.UI.Editor
             WireField(itemDetailView, "_actionButton", actionBtn);
             WireField(itemDetailView, "_actionButtonLabel", actionLabelTmp);
 
-            // ── Step 4: Wire StarChartPanel fields ─────────────────
+            // Wire StarChartPanel fields
             WireField(starChartPanel, "_primaryTrackView", primaryTrack);
             WireField(starChartPanel, "_secondaryTrackView", secondaryTrack);
             WireField(starChartPanel, "_inventoryView", inventoryView);
             WireField(starChartPanel, "_itemDetailView", itemDetailView);
 
-            // ── Step 5: UIManager ──────────────────────────────────
+            Debug.Log("[UICanvasBuilder] Created StarChartPanel (with tracks, inventory, detail)");
+            return starChartPanel;
+        }
+
+        private static UIManager BuildUIManagerSection(
+            GameObject canvasGo, HeatBarHUD heatBarHud, HealthBarHUD healthBarHud, StarChartPanel starChartPanel)
+        {
             var uiManagerGo = CreateUIObject("UIManager", canvasGo.transform);
             SetStretch(uiManagerGo);
             uiManagerGo.GetComponent<RectTransform>().sizeDelta = Vector2.zero;
@@ -350,28 +468,29 @@ namespace ProjectArk.UI.Editor
                     WireField(weavingTransition, "_shipTransform", shipMotor.transform);
             }
 
-            // ── Step 6: Deactivate StarChartPanel (starts hidden) ──
-            panelGo.SetActive(false);
+            Debug.Log("[UICanvasBuilder] Created UIManager (+ WeavingStateTransition)");
+            return uiManager;
+        }
 
-            // ── Done ───────────────────────────────────────────────
-            Selection.activeGameObject = canvasGo;
-            Debug.Log("[UICanvasBuilder] ✅ UI Canvas hierarchy built successfully!");
-            Debug.Log("  ├─ Canvas (Screen Space Overlay, 1920x1080 ref)");
-            Debug.Log("  ├─ HeatBarHUD (fill + flash + label wired)");
-            Debug.Log("  ├─ HealthBarHUD (fill + damage flash + label wired)");
-            Debug.Log("  ├─ StarChartPanel (+ UIParallaxEffect)");
-            Debug.Log("  │  ├─ PrimaryTrackView (3 prism + 3 core cells)");
-            Debug.Log("  │  ├─ SecondaryTrackView (3 prism + 3 core cells)");
-            Debug.Log("  │  ├─ InventoryView (filters + scroll grid)");
-            Debug.Log("  │  └─ ItemDetailView (icon + name + desc + stats + button)");
-            Debug.Log("  └─ UIManager (+ WeavingStateTransition)");
-            Debug.Log("");
-            Debug.Log("[UICanvasBuilder] ⚠️ Manual steps remaining:");
-            Debug.Log("  1. Assign _inputActions on UIManager if not auto-found");
-            Debug.Log("  2. Assign _playerInventory on UIManager if not auto-found");
-            Debug.Log("  3. Create InventoryItemView prefab and assign to InventoryView._itemPrefab");
-            Debug.Log("  4. Assign PostProcess Volume to WeavingStateTransition._postProcessVolume");
-            Debug.Log("  5. Assign AudioSource to WeavingStateTransition._sfxSource");
+        /// <summary>
+        /// Creates a full-screen FadeOverlay Image + DoorTransitionController.
+        /// The FadeOverlay is placed as the last sibling so it renders on top of all UI.
+        /// </summary>
+        private static DoorTransitionController BuildDoorTransitionSection(GameObject canvasGo)
+        {
+            var fadeGo = CreateUIObject("FadeOverlay", canvasGo.transform);
+            SetStretch(fadeGo);
+            fadeGo.transform.SetAsLastSibling(); // 确保渲染在最顶层
+
+            var fadeImg = fadeGo.AddComponent<Image>();
+            fadeImg.color = new Color(0f, 0f, 0f, 0f); // 完全透明
+            fadeImg.raycastTarget = false; // 默认不阻挡点击
+
+            var doorTransition = fadeGo.AddComponent<DoorTransitionController>();
+            WireField(doorTransition, "_fadeImage", fadeImg);
+
+            Debug.Log("[UICanvasBuilder] Created FadeOverlay + DoorTransitionController");
+            return doorTransition;
         }
 
         // =====================================================================
@@ -404,8 +523,6 @@ namespace ProjectArk.UI.Editor
             borderImg.color = new Color(0.3f, 0.3f, 0.4f, 0.5f);
             borderImg.type = Image.Type.Sliced;
             borderImg.raycastTarget = false;
-            // Mark as outline-only: set fill center to false if sprite supports it
-            // For now, just use a thin border color overlay
 
             // Select button (covers entire track for easy click)
             var selectBtnGo = CreateUIObject("SelectButton", root.transform);

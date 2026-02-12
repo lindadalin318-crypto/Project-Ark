@@ -1,19 +1,16 @@
 {
-    "name": "ProjectArk.UI",
-    "rootNamespace": "ProjectArk.UI",
+    "name": "ProjectArk.Level",
+    "rootNamespace": "ProjectArk.Level",
     "references": [
         "ProjectArk.Core",
         "ProjectArk.Combat",
-        "ProjectArk.Heat",
         "ProjectArk.Ship",
-        "Unity.InputSystem",
-        "Unity.TextMeshPro",
-        "Unity.RenderPipelines.Core.Runtime",
-        "Unity.RenderPipelines.Universal.Runtime",
+        "ProjectArk.Enemy",
+        "ProjectArk.Heat",
+        "ProjectArk.Core.Audio",
         "UniTask",
         "PrimeTween.Runtime",
-        "ProjectArk.Core.Audio",
-        "ProjectArk.Level"
+        "Unity.Cinemachine"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

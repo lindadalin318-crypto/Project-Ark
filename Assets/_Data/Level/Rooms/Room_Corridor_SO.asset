@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20b9e9a1f25dcd04697f8268d0e76a1e, type: 3}
+  m_Name: Room_Corridor_SO
+  m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.RoomSO
+  _roomID: corridor
+  _displayName: "\u8D70\u5ECA"
+  _floorLevel: 0
+  _type: 0
+  _mapIcon: {fileID: 0}
+  _encounter: {fileID: 0}

@@ -2333,3 +2333,89 @@ Phase 3 实现了 6 个子系统，构建了完整的高级敌人 AI 层：
 CLAUDE.md 是 AI 对话的"ground truth"。架构大修后未同步更新会导致后续对话使用过时模式（如 Coroutine 而非 UniTask、FindAnyObjectByType 而非 ServiceLocator）。同时强化日志写入规则防止再次遗漏。
 
 **技术**：文档维护。
+
+---
+
+## Level Module Phase 1 — 基础房间系统 (L1-L5) — 2026-02-12 23:30
+
+### 新建文件
+
+| 文件 | 说明 |
+|------|------|
+| `Assets/Scripts/Core/LevelEvents.cs` | Core 层静态关卡事件总线（与 CombatEvents 平行）。事件：OnRoomEntered/OnRoomExited/OnRoomCleared/OnBossDefeated/OnCheckpointActivated/OnWorldStageChanged，每个事件配对 RaiseXxx() 方法 |
+| `Assets/Scripts/Level/ProjectArk.Level.asmdef` | 新程序集定义。引用：Core, Combat, Ship, Enemy, Heat, Core.Audio, UniTask, PrimeTween, Unity.Cinemachine |
+| `Assets/Scripts/Level/Data/RoomType.cs` | 房间类型枚举：Normal / Arena / Boss / Safe |
+| `Assets/Scripts/Level/Data/RoomSO.cs` | 轻量房间元数据 SO（只存非空间信息：RoomID / DisplayName / FloorLevel / MapIcon / RoomType / EncounterSO 引用）。空间数据由场景 Room MonoBehaviour 管理 |
+| `Assets/Scripts/Level/Data/EncounterSO.cs` | 战斗遭遇波次数据 SO：EnemyWave[]（每波含 EnemySpawnEntry[] + DelayBeforeWave），EnemySpawnEntry 含 EnemyPrefab + Count |
+| `Assets/Scripts/Level/Room/RoomState.cs` | 房间运行时状态枚举：Undiscovered / Entered / Cleared / Locked |
+| `Assets/Scripts/Level/Room/Room.cs` | 房间运行时 MonoBehaviour。引用 RoomSO 元数据；持有 BoxCollider2D Trigger（玩家检测）、Collider2D confinerBounds（摄像机约束）、Transform[] spawnPoints、Door[] doors。OnTriggerEnter2D/Exit2D 检测玩家进出并触发事件。提供 ActivateEnemies/DeactivateEnemies、LockAllDoors/UnlockCombatDoors 辅助方法 |
+| `Assets/Scripts/Level/Room/DoorState.cs` | 门状态枚举：Open / Locked_Combat / Locked_Key / Locked_Ability / Locked_Schedule |
+| `Assets/Scripts/Level/Room/Door.cs` | 门组件。持有 TargetRoom + TargetSpawnPoint 双向引用，DoorState 状态机。OnTriggerEnter2D 检测玩家并在 Open 状态下通过 DoorTransitionController 触发过渡 |
+| `Assets/Scripts/Level/Room/DoorTransitionController.cs` | 门过渡控制器（ServiceLocator 注册）。使用 async UniTaskVoid + PrimeTween 实现淡黑→传送→淡入过渡。支持普通门（0.3s）和层间过渡（0.5s）两种时长。过渡期间禁用玩家输入，绑定 CancellationTokenSource + destroyCancellationToken |
+| `Assets/Scripts/Level/Camera/RoomCameraConfiner.cs` | 摄像机房间约束桥接。订阅 RoomManager.OnCurrentRoomChanged，更新 CinemachineConfiner2D.BoundingShape2D 并调用 InvalidateBoundingShapeCache() |
+| `Assets/_Data/Level/Rooms/` | RoomSO 资产存放目录（空） |
+| `Assets/_Data/Level/Encounters/` | EncounterSO 资产存放目录（空） |
+
+### 修改文件
+
+| 文件 | 变更 |
+|------|------|
+| `Assets/Scripts/Combat/Enemy/EnemyDirector.cs` | 新增 `ReturnAllTokens()` 公共方法，清空所有攻击令牌。供 RoomManager 在房间切换时调用，防止跨房间令牌泄漏 |
+| `Assets/Scripts/Ship/Input/InputHandler.cs` | 新增 `OnInteractPerformed` 事件 + `_interactAction` 字段。在 Awake 中查找 Ship/Interact action，在 OnEnable/OnDisable 中订阅/取消订阅 performed 回调。为门交互和未来检查点/NPC 交互提供输入支持 |
+
+### 目的
+
+搭建关卡模块 Phase 1 基础结构（L1-L5），从零建立房间系统骨架：
+- **L1**：LevelEvents 事件总线 + ProjectArk.Level 程序集 + RoomSO/EncounterSO 数据层
+- **L2**：Room 运行时组件（Trigger 检测 + 状态管理 + 敌人激活/休眠）
+- **L3**：RoomManager 管理器（ServiceLocator 注册、房间追踪、事件广播、Director 令牌清理、Arena/Boss 自动锁门）
+- **L4**：Door 组件 + DoorTransitionController（UniTask + PrimeTween 异步淡黑过渡）+ InputHandler Interact 暴露
+- **L5**：RoomCameraConfiner（Cinemachine 3.x CinemachineConfiner2D 集成，房间切换时自动更新摄像机约束边界）
+
+### 技术
+
+- 命名空间：`ProjectArk.Level`（新程序集）、`ProjectArk.Core`（LevelEvents）
+- 模式：静态事件总线（LevelEvents）、ServiceLocator 注册（RoomManager/DoorTransitionController）、UniTask + PrimeTween 异步过渡、CancellationTokenSource 生命周期管理
+- 数据驱动：RoomSO（轻量元数据）+ EncounterSO（波次配置），场景即空间数据
+- Cinemachine 3.x：CinemachineConfiner2D.BoundingShape2D + InvalidateBoundingShapeCache()
+
+### 用户手动步骤
+
+完成代码后需要在 Unity 编辑器中执行：
+1. Physics2D 碰撞矩阵：为 Room Trigger 配置新 Layer（仅与 Player 碰撞）
+2. 场景搭建：创建 CinemachineCamera + CinemachineConfiner2D、RoomManager GameObject、DoorTransitionController + Canvas/FadeImage、3 个测试 Room（Tilemap + BoxCollider2D + PolygonCollider2D + Door）
+3. 创建测试 RoomSO 资产并拖入 Room 组件
+
+---
+
+## UICanvasBuilder 幂等重构 + DoorTransitionController 集成 — 2026-02-12 20:30
+
+### 修改文件
+
+| 文件 | 变更 | 目的 |
+|------|------|------|
+| `Assets/Scripts/UI/ProjectArk.UI.asmdef` | 添加 `ProjectArk.Level` 引用 | 使 UI Editor 脚本能引用 Level 模块类型 (DoorTransitionController) |
+| `Assets/Scripts/UI/Editor/UICanvasBuilder.cs` | 重构为幂等 + 新增 DoorTransitionController 段 | 见下方详细说明 |
+
+### UICanvasBuilder 改动详情
+
+**1. 幂等创建（防重复）**
+- `FindOrCreateCanvas()`: 先通过 UIManager 查找已有 Canvas，再通过 sortingOrder=10 匹配，均未找到才创建新 Canvas
+- 每个 Section (HeatBarHUD / HealthBarHUD / StarChartPanel / UIManager / DoorTransitionController) 均先用 `GetComponentInChildren<T>(true)` 检查是否已存在
+- 已存在的 Section 打印 skip 日志并跳过，不会重复创建
+
+**2. 代码结构重构**
+- 将每个 Section 的创建逻辑提取为独立私有方法（`BuildHeatBarSection` / `BuildHealthBarSection` / `BuildStarChartSection` / `BuildUIManagerSection` / `BuildDoorTransitionSection`）
+- 主 `BuildUICanvas()` 方法简化为约 50 行的编排器，可读性大幅提升
+
+**3. 新增 DoorTransitionController 段 (Step 6)**
+- 创建 "FadeOverlay" 作为 Canvas 最后一个子物体（`SetAsLastSibling` 确保渲染在最顶层）
+- 添加全屏 Image（黑色 alpha=0，默认不阻挡 raycast）
+- 添加 DoorTransitionController 组件并自动连线 `_fadeImage`
+- 用户不再需要手动创建 FadeOverlay 和 DoorTransitionController
+
+### 技术
+
+- 利用 `GetComponentInChildren<T>(true)` 的 includeInactive 参数确保即使 StarChartPanel 被隐藏也能被找到
+- `FindObjectsByType<Canvas>(FindObjectsInactive.Include, ...)` 搜索包含未激活的 Canvas
+- Section Builder 方法返回创建的组件引用，供后续 Section 连线使用（如 UIManager 需要 HeatBarHUD 等引用）

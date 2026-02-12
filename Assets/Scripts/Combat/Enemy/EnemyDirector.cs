@@ -126,6 +126,15 @@ namespace ProjectArk.Combat.Enemy
             return requester != null && _tokenHolders.Contains(requester);
         }
 
+        /// <summary>
+        /// Return all held tokens. Called by RoomManager on room transitions
+        /// to prevent stale token references from the previous room.
+        /// </summary>
+        public void ReturnAllTokens()
+        {
+            _tokenHolders.Clear();
+        }
+
         // ──────────────────── Cleanup ────────────────────
 
         // Reusable list to avoid allocation during cleanup

@@ -1,11 +1,12 @@
 # 🏗️ 关卡模块搭建方案 — Level Module Architecture Plan
 
-**文档版本**：v2.0  
+**文档版本**：v3.0  
 **创建日期**：2026-02-12  
 **最后更新**：2026-02-12  
 **作者**：首席架构师 (AI)  
 **项目**：静默方舟 (Project Ark)  
 
+> **v3.0 更新**：对齐架构基建大修（UniTask + PrimeTween + ServiceLocator + 统一伤害管线 + SaveManager + AudioManager + CombatEvents 事件总线）后的技术栈，更新程序集规划、集成点、异步模式和存档集成。  
 > **v2.0 更新**：加入多层结构（方案C：混合方案）和世界时钟与动态关卡（方案C：事件阶段+轻量循环周期）的完整设计。
 
 ---
@@ -17,12 +18,18 @@
 | 3C (移动/瞄准/输入) | ✅ 完成 |
 | 星图编织系统 (武器/棱镜/光帆/伴星) | ✅ 代码完成，待编辑器资产 |
 | 热量系统 | ✅ 完成 |
-| 敌人 AI Phase 1 (HFSM + 莽夫/射手/生成器) | ✅ 完成 |
-| 敌人 AI Phase 2 (AttackDataSO + 导演系统 + 炮台) | ✅ 完成 |
-| 敌人 AI Phase 3 (刺客/恐惧/阵营/闪避格挡/精英词缀/Boss) | ✅ 完成 |
-| UI (星图面板 + HUD + 拖拽) | ✅ 完成 |
+| 敌人 AI Phase 1-3 (HFSM + 4原型 + 恐惧/阵营/词缀/Boss) | ✅ 完成 |
+| UI (星图面板 + HUD + 拖拽装备) | ✅ 完成 |
 | 怪物图鉴 (P1+P2 共 26 种) | ✅ 完成 |
 | 星图部件数据 (43 件) | ✅ 完成 |
+| **架构基建大修** | ✅ 完成 |
+| 　├ UniTask + PrimeTween（异步 + 补间） | ✅ 已集成，替代 Coroutine |
+| 　├ ServiceLocator（依赖解析） | ✅ PoolManager/HeatSystem/EnemyDirector/AudioManager 已注册 |
+| 　├ 统一伤害管线 (DamagePayload + DamageCalculator) | ✅ 元素抗性/格挡减伤 |
+| 　├ SaveManager + PlayerSaveData | ✅ JSON 序列化，含 ProgressSaveData（VisitedRoomIDs/DefeatedBossIDs/Flags） |
+| 　├ AudioManager（SFX 池化 + 音乐淡入淡出 + Mixer） | ✅ ServiceLocator 注册 |
+| 　├ CombatEvents 跨程序集事件总线 | ✅ OnWeaponFired |
+| 　└ 单元测试基础设施 | ✅ NUnit + Unity Test Framework |
 | **关卡系统** | ❌ **完全空白** |
 
 ---
@@ -108,9 +115,9 @@
 
 | 批次 | 内容 | 说明 |
 |------|------|------|
-| **L1** | **Room 数据定义** | `RoomSO` — 房间配置 SO（ID/名称/边界/敌人波次/门列表/拾取物/环境类型）|
-| **L2** | **Room 运行时** | `Room` MonoBehaviour — Trigger 边界检测进入/离开，持有敌人 Spawner 配置、门引用；`RoomState`（未发现/已进入/已清理/已锁定） |
-| **L3** | **RoomManager** | 单例管理器 — 追踪 `CurrentRoom`，触发 `OnRoomEntered`/`OnRoomCleared` 事件，管理房间敌人激活/休眠（性能） |
+| **L1** | **Room 数据定义** | `RoomSO`（轻量元数据）— 只存非空间信息：RoomID / DisplayName / FloorLevel / MapIcon / RoomType(Normal/Arena/Boss/Safe) / EncounterSO引用。**不存**边界/门列表/Tilemap/生成点位置（这些由场景实体管理）|
+| **L2** | **Room 运行时** | `Room` MonoBehaviour — 引用 `RoomSO` 获取元数据；自身持有 BoxCollider2D Trigger（边界）、Transform[] SpawnPoints、Door[] Doors；`RoomState`（未发现/已进入/已清理/已锁定）。场景即数据：空间布局全在场景中所见即所得 |
+| **L3** | **RoomManager** | ServiceLocator 注册的管理器 — 追踪 `CurrentRoom`，广播 `LevelEvents.OnRoomEntered`/`OnRoomCleared`（Core 层静态事件总线，供 UI/Save/任何层消费），管理房间敌人激活/休眠（性能），房间切换时通知 `EnemyDirector` 清空令牌 |
 | **L4** | **Door / Passage** | `Door` 组件 — 两端 `Room` 引用、开/关状态、锁定条件；支持"清怪开门"和"钥匙开门"两种模式 |
 | **L5** | **Camera Confiner** | 利用 Cinemachine 2D Confiner 将相机限制在当前房间边界内，房间切换时平滑过渡 |
 
@@ -118,25 +125,26 @@
 
 | 批次 | 内容 | 说明 |
 |------|------|------|
-| **L6** | **CheckpointSystem** | `Checkpoint` 组件 — 交互激活、恢复 HP/热量、设置重生点；`CheckpointManager` 管理当前活跃检查点 |
+| **L6** | **CheckpointSystem** | `Checkpoint` 组件 — 交互激活、通过 `ServiceLocator.Get<ShipHealth>()` 恢复 HP + `ServiceLocator.Get<HeatSystem>().ResetHeat()` 恢复热量、设置重生点；`CheckpointManager`（ServiceLocator 注册）管理活跃检查点 + 触发 `SaveManager.Save()` |
 | **L7** | **LockKeySystem** | `KeyItem` SO + `Lock` 组件 — 数据驱动的锁钥矩阵；支持彩色钥匙卡、Boss掉落钥匙、能力门（需要特定光帆） |
 | **L8** | **ItemPickup** | `PickupBase` 抽象类 + 子类（StarChartPickup/HealthPickup/KeyPickup）— 掉落物系统 |
-| **L9** | **Death & Respawn** | `GameFlowManager` — 监听 `ShipHealth.OnDeath`，执行死亡演出→淡入黑屏→重置房间敌人→在检查点重生 |
+| **L9** | **Death & Respawn** | `GameFlowManager` — 通过 `ServiceLocator.Get<ShipHealth>()` 订阅 `OnDeath`；使用 `async UniTaskVoid` 编排死亡演出（PrimeTween 淡黑 + AudioManager 音效）→ 重置房间敌人 → 在 `CheckpointManager` 活跃点重生 → `SaveManager.Save()` |
+| **L9.5** | **WorldProgressManager**（从 Phase 6 提前） | 监听 `LevelEvents.OnBossDefeated` / `OnKeyItemObtained` 等里程碑事件，管理不可逆大阶段（如"Boss存活期"→"Boss击杀后"）。P0 必需：驱动"击杀 Boss → 永久开门"这一核心银河恶魔城进度机制。使用已有 `ProgressSaveData.Flags` + `DefeatedBossIDs` 持久化 |
 
 ### Phase 3: 战斗房间逻辑 (P1)
 
 | 批次 | 内容 | 说明 |
 |------|------|------|
-| **L10** | **EncounterSystem** | `Encounter` 组件 — 定义战斗遭遇波次（Wave 1: 3×Crawler, Wave 2: 2×Drone+1×Loader），全清后触发奖励/开门 |
+| **L10** | **EncounterSystem** | `EnemySpawner` + `WaveSpawnStrategy` — 房间的 `EnemySpawner` 注入 `WaveSpawnStrategy`，由 `EncounterSO` 配置波次（Wave 1: 3×Crawler, Wave 2: 2×Drone+1×Loader）；追踪存活数；全清后回调 `Room` 触发奖励/开门 |
 | **L11** | **Arena Room** | 进入时锁门→播放警报→逐波刷怪→全清后开门+掉落奖励；支持 Boss 房间变体 |
-| **L12** | **Hazard System** | `EnvironmentHazard` 基类 + 具体实现（酸液池/激光栅栏/钻头陷阱/地雷），对 `IDamageable` 造伤，独立于敌人 AI |
+| **L12** | **Hazard System** | `EnvironmentHazard` 基类 + 具体实现（酸液池/激光栅栏/钻头陷阱/地雷）。使用 `DamagePayload(DamageType.Fire/Ice/...)` 通过统一伤害管线对 `IDamageable` 造伤（享受元素抗性/格挡减伤），独立于敌人 AI |
 
 ### Phase 4: 地图与探索 (P2)
 
 | 批次 | 内容 | 说明 |
 |------|------|------|
 | **L13** | **Minimap / Map** | 房间拓扑小地图，已探索房间可见，未探索为迷雾；支持多楼层切换显示 |
-| **L14** | **SaveSystem** | 序列化玩家进度（已解锁房间/已获部件/检查点/Boss击杀状态/当前世界阶段/时钟时间）到 JSON |
+| **L14** | **SaveSystem 集成** | 已有 `SaveManager` + `PlayerSaveData`（含 `ProgressSaveData`）。Level 模块需扩展：补充 `WorldClockTime`/`WorldStage` 字段、在检查点/Boss击杀/房间首次进入时调用 `SaveManager.Save()`、`GameFlowManager` 启动时调用 `SaveManager.Load()` 恢复进度 |
 | **L15** | **示巴星关卡布局** | 用 Tilemap 实际搭建示巴星的房间网络，填充怪物配置，完成首个可玩关卡 |
 
 ### Phase 5: 多层结构 (P2)
@@ -144,7 +152,7 @@
 | 批次 | 内容 | 说明 |
 |------|------|------|
 | **L16** | **FloorLevel 数据扩展** | `RoomSO` 添加 `int FloorLevel` 字段；`Door` 添加 `bool IsLayerTransition` 标记，区分普通门和层间通道 |
-| **L17** | **层间过渡演出** | 层间通道使用区别于普通门的过渡效果（更长的淡黑 + 下坠/上升粒子特效 + 环境音效切换）|
+| **L17** | **层间过渡演出** | 层间通道使用区别于普通门的过渡效果（PrimeTween 更长淡黑 + 下坠/上升粒子 + `AudioManager.PlaySFX()` 环境音效切换 + BGM crossfade）；参考 `WeavingStateTransition.cs` 的 UniTask + PrimeTween 过渡模式 |
 | **L18** | **小地图楼层切换** | 小地图 UI 增加楼层切换按钮/标签，显示当前楼层高亮，支持查看已探索的其他楼层 |
 | **L19** | **叙事级无缝掉落（可选）** | 用于极少数关键叙事时刻（如首次发现裂隙），通过 Timeline/关卡脚本实现真正的无缝垂直过渡演出 |
 
@@ -154,12 +162,12 @@
 |------|------|------|
 | **L20** | **WorldClock** | 游戏内时钟核心 — 可配置周期长度（如20分钟现实时间=一个星球自转周期）、时间流速、暂停/恢复；广播 `OnTimeChanged` 事件 |
 | **L21** | **WorldPhaseManager + WorldPhaseSO** | 定义时间阶段列表（如辐射潮/平静期/风暴期/寂静时）；监听 WorldClock 判断当前阶段；阶段切换时广播 `OnPhaseChanged` 事件 |
-| **L22** | **WorldProgressManager** | 监听进度事件（Boss 击杀/关键道具获取/累计击杀数），管理世界的「大阶段」（如「Boss存活期」→「Boss击杀后」），大阶段切换时永久改变世界状态 |
+| ~~L22~~ | ~~WorldProgressManager~~ | ⬆️ **已提前至 Phase 2 (L9.5)**，因为它是"Boss击杀→永久开门"的 P0 依赖 |
 | **L23** | **ScheduledBehaviour** | 通用时间驱动组件 — 挂在任何 GameObject 上，配置"在 Phase X 时启用/禁用"；用于 NPC 交易时间、大门定时开关、敌人夜间增强、隐藏通道显现等 |
 | **L24** | **WorldEventTrigger** | 进度事件驱动的永久变化组件 — 监听 WorldProgressManager 的大阶段切换，触发不可逆的世界改变（新区域开放、NPC 迁移、地形变化）|
 | **L25** | **Room 多变体支持** | `Room` 支持持有多套 SpawnConfig/环境配置（按时间阶段或世界阶段切换）；`RoomVariantSO` 数据定义 |
 | **L26** | **Tilemap 变体切换** | 预制多版本 Tilemap（如塌陷前/塌陷后），事件触发时禁用旧版本启用新版本，实现关卡结构性改变 |
-| **L27** | **全局氛围系统** | 阶段切换时驱动后处理 Volume 渐变、环境粒子启停、BGM crossfade，营造时间流逝的视觉/听觉反馈 |
+| **L27** | **全局氛围系统** | 阶段切换时驱动后处理 Volume 渐变（PrimeTween）、环境粒子启停、BGM crossfade（`AudioManager.PlayMusic()` 已支持淡入淡出）、低通滤波（`AudioManager.ApplyLowPassFilter()`），营造时间流逝的视觉/听觉反馈 |
 
 ---
 
@@ -173,39 +181,131 @@
   激活本房间敌人 → 休眠远处房间敌人 → 更新相机 Confiner
 ```
 
-### 2. 敌人生成改造 — 从全局 Spawner 到房间级 Spawner
+### 2. 敌人生成改造 — 策略模式重构
 
-当前的 `EnemySpawner` 是全局循环刷怪器。关卡模块需要**房间级** `RoomEnemyConfig`：
-- 每个房间持有自己的 `EnemyWave[]` 数据
-- 进入房间时由 `EncounterSystem` 按波次生成
-- 全清后触发房间事件（开门/掉落/NPC 对话）
-- 可以**复用**现有 `PoolManager` 和 `EnemyBrain/Entity` 代码，只需要替换生成调度逻辑
+> **决策**：改造现有 `EnemySpawner` 为策略模式，而非新建独立类。代码复用最大化，单一入口。
+
+将 `EnemySpawner` 拆为 `EnemySpawner`（上下文）+ `ISpawnStrategy`（策略接口）：
+
+```
+ISpawnStrategy
+├── LoopSpawnStrategy     // 原有行为：死亡后延迟重生、循环刷怪（沙盒/调试场景用）
+└── WaveSpawnStrategy     // 新增：EncounterSO 驱动、多波次、多 Prefab 类型、波次间延迟
+```
+
+**改造要点**：
+- `EnemySpawner` 保留对象池管理（`GameObjectPool`）、精英词缀、生成点轮询等通用逻辑
+- 把"何时生成、生成什么、生成多少"的决策抽到 `ISpawnStrategy` 中
+- `WaveSpawnStrategy` 接受 `EncounterSO` 配置，波次间延迟使用 `async UniTaskVoid` + `UniTask.Delay()`
+- 订阅 `EnemyEntity.OnDeath` 追踪波次存活数，全清后通知 `Room` 触发事件（开门/掉落）
+- `EnemyDirector` 令牌系统**无需改动**——Room 切换时由 `RoomManager` 通知 Director 清空令牌即可
+- `LoopSpawnStrategy` 封装原有逻辑，保持向后兼容
 
 ### 3. 门/通道设计 — 双向引用 + 状态机
 
 ```
 enum DoorState { Open, Locked_Combat, Locked_Key, Locked_Ability, Locked_Schedule }
 // Locked_Schedule: 由世界时钟阶段控制开关（如"平静期"开、"风暴期"关）
-// Door transition: 玩家走到门口 → 淡黑 → 移动到目标房间的入口点 → 淡入
-// Layer transition: 玩家进入裂隙/升降梯 → 更长淡黑+下坠/上升特效 → 传送到目标层房间
+```
+
+**过渡演出方式**（参考 `WeavingStateTransition.cs` 的 UniTask + PrimeTween 模式）：
+```
+Door transition: 玩家走到门口 → async UniTaskVoid:
+  PrimeTween 淡黑(0.2s) → 传送玩家到目标入口点 → 
+  RoomManager.SetCurrentRoom() → 更新 Cinemachine Confiner →
+  PrimeTween 淡入(0.2s) → AudioManager.PlaySFX(门开音效)
+
+Layer transition: 玩家进入裂隙/升降梯 → async UniTaskVoid:
+  PrimeTween 更长淡黑(0.5s) → 下坠/上升粒子特效 → 
+  AudioManager 环境音效切换 + BGM crossfade →
+  传送到目标层房间 → PrimeTween 淡入(0.5s)
 ```
 
 ### 4. 程序集规划
 
 ```
 Assets/Scripts/Level/ProjectArk.Level.asmdef
-  引用: Core, Combat, Ship
+  引用: ProjectArk.Core, ProjectArk.Combat, ProjectArk.Ship, 
+        ProjectArk.Enemy, ProjectArk.Heat, ProjectArk.Core.Audio,
+        UniTask, PrimeTween.Runtime
   包含: Room, RoomManager, Door, Checkpoint, LockKey, Encounter, Hazard, GameFlow,
         WorldClock, WorldPhase, WorldProgress, ScheduledBehaviour, WorldEventTrigger
 ```
 
+> **注意**：Level 需要引用 Enemy 程序集以访问 `EnemyEntity.OnAnyEnemyDeath` 和 `EnemyDirector` API。
+> 引用 Heat 以在 Checkpoint 中恢复热量。引用 Core.Audio 以使用 `AudioManager` 播放转场/氛围音效。
+> 引用 UniTask + PrimeTween 遵循项目异步纪律（禁止新增 Coroutine）。
+
 ### 5. 数据驱动
 
-- `RoomSO` — 房间配置（ID/名称/边界/楼层/敌人波次/门列表/拾取物/环境类型/变体列表）
-- `EncounterSO` — 战斗遭遇波次数据
+- `RoomSO`（轻量）— 房间元数据（ID/名称/楼层/地图图标/房间类型/EncounterSO引用）。**不含**边界/门列表/Tilemap 等空间数据（由场景 Room MonoBehaviour 管理）
+- `EncounterSO` — 战斗遭遇波次数据（引用 `EnemyStatsSO` + Prefab + 波次间延迟）
 - `LevelLayoutSO` — 星球级别的房间拓扑关系（可选，地图系统用）
 - `WorldPhaseSO` — 世界时间阶段定义（阶段名/起止时间/环境参数/氛围配置）
 - `RoomVariantSO` — 房间变体数据（不同阶段下的敌人配置/Tilemap 引用/环境参数）
+- `KeyItemSO` — 钥匙/解锁物品定义（ID/显示名/图标/描述）
+- `CheckpointSO` — 检查点配置（是否恢复 HP/Heat/可选对话触发）
+
+> 所有 SO 资产存放于 `Assets/_Data/Level/` 下对应子目录，遵循项目数据驱动原则。
+
+### 6. 异步模式规范
+
+Level 模块中所有异步操作（房间过渡淡黑、死亡演出、波次延迟等）必须遵循项目异步纪律：
+
+```csharp
+// ✅ 正确：UniTask + CancellationTokenSource
+private CancellationTokenSource _transitionCts;
+
+private async UniTaskVoid TransitionToRoom(Room targetRoom, Door door)
+{
+    _transitionCts?.Cancel();
+    _transitionCts?.Dispose();
+    _transitionCts = new CancellationTokenSource();
+    var token = _transitionCts.Token;
+    
+    // 淡黑：PrimeTween
+    _ = Tween.Custom(0f, 1f, 0.3f, useUnscaledTime: true,
+        onValueChange: v => _fadeImage.color = new Color(0, 0, 0, v));
+    await UniTask.Delay(300, cancellationToken: token);
+    
+    // 传送玩家
+    _ship.transform.position = door.TargetSpawnPoint.position;
+    RoomManager.SetCurrentRoom(targetRoom);
+    
+    // 淡入
+    _ = Tween.Custom(1f, 0f, 0.3f, useUnscaledTime: true,
+        onValueChange: v => _fadeImage.color = new Color(0, 0, 0, v));
+}
+
+// ❌ 禁止：新增 Coroutine
+// private IEnumerator TransitionCoroutine() { ... }
+```
+
+### 7. ServiceLocator 集成规范
+
+Level 模块的管理器级组件在 Awake 注册、OnDestroy 注销：
+
+```csharp
+// RoomManager, CheckpointManager, GameFlowManager, WorldClock 等
+private void Awake()
+{
+    ServiceLocator.Register(this);
+}
+
+private void OnDestroy()
+{
+    ServiceLocator.Unregister(this);
+}
+```
+
+消费已有服务（禁止 FindAnyObjectByType）：
+
+```csharp
+var poolManager = ServiceLocator.Get<PoolManager>();
+var heatSystem = ServiceLocator.Get<HeatSystem>();
+var audioManager = ServiceLocator.Get<AudioManager>();
+var enemyDirector = ServiceLocator.Get<EnemyDirector>();
+```
 
 ---
 
@@ -388,7 +488,11 @@ Assets/Scripts/Level/ProjectArk.Level.asmdef
 #### 层级 4：全局氛围变化（视觉/音频）
 ```
 风暴期：屏幕加后处理滤镜（色调偏暗/加噪点）、环境粒子（飞沙走石）、BGM 切换
-→ WorldPhaseManager 触发 → 后处理 Volume 渐变 → 粒子系统启停 → Audio crossfade
+→ WorldPhaseManager.OnPhaseChanged 触发 →
+  PrimeTween: 后处理 Volume 参数渐变 (Tween.Custom) →
+  粒子系统启停 →
+  AudioManager.PlayMusic(stormBGM, fadeDuration: 2f) →
+  AudioManager.ApplyLowPassFilter(800f, fadeDuration: 1f)  // 可选：风暴期闷声效果
 ```
 
 ### 对架构的影响
@@ -410,17 +514,41 @@ Assets/Scripts/Level/ProjectArk.Level.asmdef
 
 ## 八、与现有系统的集成点
 
-| 现有系统 | 集成方式 |
-|---------|----------|
-| `EnemySpawner` | 改造为接受 `EncounterSO` 驱动，支持波次模式 |
-| `EnemyDirector` | 继续工作，令牌池作用域可改为"当前房间" |
-| `ShipHealth.OnDeath` | `GameFlowManager` 订阅此事件触发重生流程 |
-| `CheckpointSystem` | 保存重生位置 + 已清理房间状态 + 当前世界阶段 + 时钟时间 |
-| `StarChartController` | 无需改动，拾取星图部件通过 `ItemPickup` → 添加到库存 |
-| `HeatSystem` | 检查点可选恢复热量 |
-| `WorldClock` | **新增** — 驱动 WorldPhaseManager，被 SaveSystem 序列化/反序列化 |
-| `WorldPhaseManager` | **新增** — 广播阶段切换事件，驱动 ScheduledBehaviour 和全局氛围变化 |
-| `WorldProgressManager` | **新增** — 监听游戏里程碑事件，驱动 WorldEventTrigger 和不可逆世界变化 |
+### 已有基础设施（直接复用）
+
+| 现有系统 | 集成方式 | 获取方式 |
+|---------|----------|----------|
+| `ServiceLocator` | Level 管理器注册自己；消费其他服务 | 静态调用 `ServiceLocator.Get<T>()` |
+| `PoolManager` | Encounter 波次从池中获取敌人实例 | `ServiceLocator.Get<PoolManager>()` |
+| `EnemyDirector` | 继续工作，令牌池作用域可改为"当前房间"；Room 切换时清空令牌 | `ServiceLocator.Get<EnemyDirector>()` |
+| `EnemyEntity` | 监听 `OnDeath` 追踪波次存活数；`OnAnyEnemyDeath` 追踪全局击杀 | 实例事件 + 静态事件 |
+| `ShipHealth.OnDeath` | `GameFlowManager` 订阅此事件触发重生流程 | `ServiceLocator.Get<ShipHealth>()` |
+| `HeatSystem` | 检查点可选恢复热量 (`ResetHeat()`) | `ServiceLocator.Get<HeatSystem>()` |
+| `AudioManager` | 房间过渡音效、氛围 BGM 切换、低通滤波 | `ServiceLocator.Get<AudioManager>()` |
+| `SaveManager` | 存读关卡进度（已有 `PlayerSaveData.Progress` 含 VisitedRoomIDs / DefeatedBossIDs / Flags） | 静态调用 `SaveManager.Save/Load()` |
+| `DamagePayload` | Hazard 系统构造 `DamagePayload(DamageType.Fire/Ice/...)` 对 `IDamageable` 造伤 | 直接构造 struct |
+| `CombatEvents` | 保持现有战斗事件不变（`OnWeaponFired` 等） | 静态事件总线 |
+| `LevelEvents`（**新增于 Core 层**） | 与 `CombatEvents` 平行的关卡事件总线：`OnRoomEntered(string)`、`OnRoomCleared(string)`、`OnBossDefeated(string)`、`OnCheckpointActivated(string)`、`OnWorldStageChanged(int)` — Level 发布，UI/Save/任何层消费 | 静态事件总线 |
+| `StarChartController` | 无需改动，拾取星图部件通过 `ItemPickup` → `StarChartInventorySO` | 不直接引用 |
+
+### 需要改造的现有系统
+
+| 系统 | 改造内容 |
+|------|----------|
+| `EnemySpawner` | 重构为策略模式：抽取 `ISpawnStrategy` 接口，原有循环刷怪逻辑封装为 `LoopSpawnStrategy`，新增 `WaveSpawnStrategy`（EncounterSO 驱动、多波次）。Spawner 本体保留池管理/精英词缀/生成点等通用逻辑 |
+| `SaveManager / PlayerSaveData` | `ProgressSaveData` 已预留 `VisitedRoomIDs`/`DefeatedBossIDs`/`Flags`，但需扩展：新增 `LastCheckpointID`（已有于 `PlayerStateSaveData`）、`WorldClockTime`、`WorldStage` 字段 |
+| `Core` 程序集 | 新增 `LevelEvents.cs` 静态事件总线（与 `CombatEvents.cs` 平行），定义关卡事件。`CombatEvents` 保持不变，职责不混淆 |
+
+### 新增系统
+
+| 系统 | 说明 |
+|------|------|
+| `RoomManager` | 追踪当前房间，广播事件，ServiceLocator 注册 |
+| `GameFlowManager` | 死亡/重生编排，订阅 `ShipHealth.OnDeath`，UniTask 异步演出 |
+| `CheckpointManager` | 管理活跃检查点，ServiceLocator 注册 |
+| `WorldClock` | 游戏内时钟，ServiceLocator 注册，被 SaveManager 序列化 |
+| `WorldPhaseManager` | 周期阶段管理，监听 WorldClock，广播 `OnPhaseChanged` |
+| `WorldProgressManager` | 大阶段管理，监听里程碑事件（CombatEvents），广播 `OnWorldStageChanged` |
 
 ---
 

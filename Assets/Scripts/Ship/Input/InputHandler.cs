@@ -46,11 +46,15 @@ namespace ProjectArk.Ship
         /// <summary> Fired once when secondary fire button is released. </summary>
         public event Action OnSecondaryFireReleased;
 
+        /// <summary> Fired once when the interact action is performed (e.g. door interaction). </summary>
+        public event Action OnInteractPerformed;
+
         private InputAction _moveAction;
         private InputAction _aimPositionAction;
         private InputAction _aimStickAction;
         private InputAction _fireAction;
         private InputAction _fireSecondaryAction;
+        private InputAction _interactAction;
         private Camera _mainCamera;
         private bool _isUsingGamepad;
 
@@ -73,6 +77,7 @@ namespace ProjectArk.Ship
             _aimStickAction = shipMap.FindAction("AimStick");
             _fireAction = shipMap.FindAction("Fire");
             _fireSecondaryAction = shipMap.FindAction("FireSecondary");
+            _interactAction = shipMap.FindAction("Interact");
         }
 
         private void OnEnable()
@@ -89,6 +94,9 @@ namespace ProjectArk.Ship
 
             _fireSecondaryAction.performed += OnSecondaryFirePerformed;
             _fireSecondaryAction.canceled += OnSecondaryFireCanceled;
+
+            if (_interactAction != null)
+                _interactAction.performed += OnInteractActionPerformed;
         }
 
         private void OnDisable()
@@ -103,6 +111,9 @@ namespace ProjectArk.Ship
             _fireSecondaryAction.performed -= OnSecondaryFirePerformed;
             _fireSecondaryAction.canceled -= OnSecondaryFireCanceled;
             IsSecondaryFireHeld = false;
+
+            if (_interactAction != null)
+                _interactAction.performed -= OnInteractActionPerformed;
 
             var shipMap = _inputActions.FindActionMap("Ship");
             shipMap.Disable();
@@ -200,6 +211,11 @@ namespace ProjectArk.Ship
         {
             IsSecondaryFireHeld = false;
             OnSecondaryFireReleased?.Invoke();
+        }
+
+        private void OnInteractActionPerformed(InputAction.CallbackContext ctx)
+        {
+            OnInteractPerformed?.Invoke();
         }
     }
 }

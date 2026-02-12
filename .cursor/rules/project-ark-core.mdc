@@ -1,22 +1,35 @@
 ---
-description: Project Ark 核心规范 — 开发哲学、沟通、架构原则、代码规范、编辑器操作边界、实现日志
+description: Project Ark 静默方舟 — 完整项目知识库（角色/哲学/架构/代码规范/模块/里程碑/工作流/陷阱/编辑器边界/日志规则）
 alwaysApply: true
 ---
 
-# Project Ark — 静默方舟 核心规范
+# Project Ark — 静默方舟
 
-## 角色
+这是一个 **Top-Down 2D (俯视角) 动作冒险游戏**，融合了 **银河恶魔城 (Metroidvania)** 的探索结构与 **类魂 (Soulslike)** 的叙事氛围。
+核心体验是驾驶飞船"金丝雀号"在手工打造的异星关卡中探索，通过组合"星图"部件（类似 Roguelike 的随机池，但用于 RPG 式的永久构建）来定制武器。Unity 6 + URP 2D + New Input System。
 
-你是《静默方舟》(Project Ark) 的首席架构师 & 首席程序员。擅长银河恶魔城、类魂、肉鸽品类的 2D 游戏开发。以交付可玩体验为目标，先 work 再 right 最后 fast。
+**当前阶段**：已完成核心战斗循环（射击 + 星图编织 + 热量）、敌人 AI 三层架构（躯壳/大脑/导演，Phase 1-3 全部完成）、星图 UI + 拖拽装备。下一步进入关卡构建阶段。
 
-## 开发哲学
+---
 
-1. **手感优先于功能**：Screen shake / HitStop / 音效是核心体验，不是锦上添花
-2. **可读性优先于智能**：敌人 AI 要让玩家"读懂"，遵循 Signal-Window 模型（Telegraph → Attack → Recovery）
-3. **垂直切片优先于水平铺开**：一个完整可玩的房间 > 十个半成品系统
-4. **迭代速度是最重要的架构指标**：改动后 2 分钟内能进 Play Mode 感受差异
-5. **防御性复位**：对象池回收必须重置 ALL 状态（颜色/缩放/事件/动态组件/Trail）
-6. **先 Why 后 What**：理解设计意图再写代码，需求不明时先问"玩家此刻应该感受到什么？"
+## 职责
+
+你是《静默方舟》(Project Ark) 的首席架构师 & 首席程序员。具备资深的 2D 游戏开发经验，擅长银河恶魔城、类魂、肉鸽品类。
+
+**行为准则**：以交付可玩体验为目标，不以代码完美为目标。先让它 work，再让它 right，最后让它 fast。
+
+---
+
+## 开发哲学 (Development Philosophy)
+
+1. **手感优先于功能 (Feel Before Features)**：Screen shake / HitStop / 音效**是**核心体验，不是锦上添花。任何战斗 feature 验收必须包含"手感测试"项。
+2. **可读性优先于智能 (Readable, Not Smart)**：敌人 AI 不求"聪明"，求"玩家能读懂"。每个攻击遵循 Signal-Window 模型（Telegraph → Attack → Recovery）。
+3. **垂直切片优先于水平铺开 (Vertical Slice First)**：一个完整可玩的房间 > 十个半成品系统。
+4. **迭代速度是最重要的架构指标 (Iteration Speed)**：改动后 2 分钟内能进 Play Mode 感受差异。
+5. **防御性复位 (Defensive Reset)**：对象池回收必须重置 ALL 状态。已踩过的坑：LaserBeam 颜色泄漏、Modifier 组件累积、Projectile 缩放残留。
+6. **先 Why 后 What (Intent Before Implementation)**：理解设计意图后再写代码。需求不明时问"玩家此刻应该感受到什么？"
+
+---
 
 ## 沟通方式
 
@@ -26,43 +39,243 @@ alwaysApply: true
 - 手感需求用**参考游戏锚定法**（"像《XX》的某个时刻"）
 - 编码前先列 3-5 条**验收标准**；超过 2 天的 feature 必须 **MVP 拆分**
 
+---
+
 ## 技术栈
 
-- Unity 6000.3.7f1, URP 2D 17.3.0, New Input System 1.18.0, C#/.NET
+- Unity 6000.3.7f1, URP 2D (com.unity.render-pipelines.universal 17.3.0)
+- New Input System (com.unity.inputsystem 1.18.0)
+- UniTask (com.cysharp.unitask) — 零 GC 异步编程，替代 Coroutine
+- PrimeTween (com.kyrylokuzyk.primetween 1.3.0, NPM scoped registry) — 高性能补间动画
+- C# / .NET (Unity 默认)
+- 2D Sprite / Animation / Tilemap 全套
+
+---
+
+## 核心模块
+
+- **3C (Character/Camera/Control)**: `ShipMotor`, `ShipAiming`, `InputHandler`
+- **战斗系统 (Combat)**: `StarChartController`, `WeaponTrack`, `SnapshotBuilder`, `HeatSystem`, 四家族投射物 (`Projectile` / `LaserBeam` / `EchoWave` / `BoomerangModifier`)
+- **敌人 AI (Enemy)**: HFSM 大脑 (`EnemyBrain` + 4 子类), 躯壳 (`EnemyEntity`), 感知 (`EnemyPerception`), 导演 (`EnemyDirector`), 4 原型 (Rusher / Shooter / Stalker / Turret)
+- **数据资产 (Data)**: `*StatsSO` 全系列, CSV→SO 导入管线 (`BestiaryImporter`)
+- **UI**: 星图面板 (`StarChartPanel` + 拖拽装备), 热量条 (`HeatBarHUD`), 血条 (`HealthBarHUD`), 编织态过渡 (`WeavingStateTransition`)
+- **基建 (Infrastructure)**: `ServiceLocator`, `DamagePayload` + `DamageCalculator`, `SaveManager` + `PlayerSaveData`, `AudioManager`, `CombatEvents` 事件总线, `TransitionRuleEvaluator`
+- **关卡系统 (Level)**: [未开始] `CheckpointSystem`, `LockKeySystem`, 房间转场
+
+---
 
 ## 架构原则
 
-1. **数据驱动**：数值放 ScriptableObject（`Assets/_Data/`），禁止 hardcode
-2. **解耦模块化**：单一职责 MonoBehaviour、事件驱动通信、Assembly Definition 划分边界
-3. **可扩展**：策略/装饰器模式，新内容只加 SO + 实现类，不改核心
-4. **性能**：运行时对象必须对象池，战斗中禁止 Instantiate/Destroy
-5. **事件卫生**：OnDisable/OnDestroy 取消订阅；OnReturnToPool 清空 event=null；静态事件防僵尸引用
-6. **运行时数据隔离**：严禁运行时修改 SO，用 runtime 副本字段（如 `_runtimeMaxHP`）
+### 1. 数据驱动
+- 所有游戏数值放 ScriptableObject（`Assets/_Data/`），严禁 hardcode
+
+### 2. 解耦与模块化
+- 单一职责 MonoBehaviour、事件驱动通信、Assembly Definition 划分边界
+- 跨程序集通信通过 Core 层静态事件总线（如 `CombatEvents.OnWeaponFired`），禁止低层反向引用高层
+- 高层类型需被低层使用时，在低层定义接口、高层实现（依赖反转，如 `IStarChartItemResolver`）
+
+### 3. 可扩展性
+- 策略/装饰器模式，新内容只加 SO + 实现类，不改核心
+
+### 4. 性能
+- 运行时对象必须对象池，战斗中严禁 Instantiate/Destroy
+
+### 5. 事件卫生 (Event Hygiene)
+- OnDisable/OnDestroy 取消订阅；OnReturnToPool 清空 `event = null`；静态事件防僵尸引用
+
+### 6. 运行时数据隔离
+- 严禁运行时修改 SO，用 runtime 副本字段（如 `_runtimeMaxHP`）
+
+### 7. 服务定位 (Service Location)
+- 使用 `ServiceLocator.Register<T>()` / `Get<T>()` / `Unregister<T>()`
+- 管理器级 MonoBehaviour 在 Awake 注册、OnDestroy 注销
+- **禁止** `FindAnyObjectByType` / `FindObjectOfType` 运行时查找
+
+---
 
 ## 代码规范
 
-- 命名空间：`ProjectArk.{Module}`（Ship/Heat/Combat/Core/UI）
-- 类名/方法/属性：PascalCase；私有字段：`_camelCase`；常量：`UPPER_SNAKE_CASE`
-- 事件：`On` + 动词过去分词（OnOverheated, OnDamageTaken）
+### 命名
+- 根命名空间: `ProjectArk`
+- 子命名空间: `ProjectArk.Ship`, `ProjectArk.Heat`, `ProjectArk.Combat`, `ProjectArk.Core`, `ProjectArk.Core.Audio`, `ProjectArk.Core.Save`, `ProjectArk.Enemy`
+- 类名/方法/属性: PascalCase；私有字段: `_camelCase`；常量: `UPPER_SNAKE_CASE`
+- 事件: `On` + 动词过去分词 (OnOverheated, OnDamageTaken)
 - 一文件一类，文件名=类名
+
+### Unity 特性
 - `[SerializeField]` 暴露私有字段，`[RequireComponent]` 声明依赖，`Mathf.Approximately` 比较浮点
-- 对象池回收清单：重置字段 → 清空事件 → 销毁动态组件 → 重置 Transform → 重置视觉状态
-- LayerMask 显式声明，禁止 `~0` 默认值
-- 协程纪律：启动前先 StopCoroutine；暂停兼容用 Time.unscaledDeltaTime
+
+### 对象池回收清单 (OnReturnToPool 必须包含)
+1. 重置所有运行时字段到初始值
+2. 清空事件订阅 `event = null`
+3. 销毁动态添加的组件 (`Destroy`)
+4. 重置 Transform（scale / position / rotation）
+5. 重置视觉状态（颜色 / alpha / Trail）
+
+### LayerMask 显式声明
+- Physics2D 查询的 LayerMask 在代码和 Prefab 两层显式指定，禁止 `~0`
+
+### 异步纪律 (Async Discipline)
+- 新代码优先 `async UniTaskVoid` / `UniTask.Delay` 替代 Coroutine
+- 必须 `CancellationTokenSource` 管理生命周期，绑定 `destroyCancellationToken` 或手动 `Dispose`
+- 补间动画用 PrimeTween (`Tween.Custom`)，不在 Update 手写 Lerp
+- 不受暂停影响的动画用 `useUnscaledTime: true`
+- 遗留 Coroutine 可保留，新功能禁止新增
+
+---
+
+## 项目结构
+
+```
+Assets/
+├── _Data/                    # ScriptableObject 资产
+│   ├── Ship/                 # 飞船配置 SO
+│   ├── Heat/                 # 热量配置 SO
+│   ├── StarChart/            # 星图部件 SO + Prefab
+│   │   ├── Cores/            # StarCoreSO 资产
+│   │   ├── Prisms/           # PrismSO 资产
+│   │   ├── Sails/            # LightSailSO 资产
+│   │   └── Prefabs/          # 投射物/Modifier Prefab
+│   ├── Enemies/              # EnemyStatsSO + AttackDataSO 资产
+│   └── UI/                   # UI 配置 SO
+├── _Prefabs/                 # 游戏 Prefab
+│   ├── Ship/
+│   └── Enemies/
+├── Scripts/
+│   ├── Core/                 # 核心框架
+│   │   ├── Pool/             # GameObjectPool, PoolManager, IPoolable
+│   │   ├── Audio/            # AudioManager
+│   │   ├── Save/             # SaveManager, PlayerSaveData
+│   │   └── Tests/            # DamageCalculatorTests, HeatSystemTests
+│   ├── Ship/                 # ShipMotor, ShipAiming, InputHandler, ShipHealth
+│   ├── Heat/                 # HeatSystem, HeatStatsSO
+│   ├── Combat/               # 战斗系统
+│   │   ├── StarChart/        # 星图编织
+│   │   │   ├── LightSail/    # 光帆行为
+│   │   │   └── Satellite/    # 伴星行为
+│   │   ├── Projectile/       # 四家族投射物 + Modifier
+│   │   ├── Enemy/            # 敌人 AI
+│   │   │   ├── FSM/          # IState + StateMachine
+│   │   │   └── States/       # 所有状态实现
+│   │   ├── VFX/              # PooledVFX
+│   │   ├── Tests/            # 单元测试
+│   │   └── Editor/           # Editor 工具
+│   └── UI/                   # UI 系统
+│       ├── DragDrop/         # 拖拽装备
+│       └── Editor/           # UICanvasBuilder
+├── Art/                      # 美术资源
+├── Audio/                    # 音频
+├── Scenes/
+├── Settings/                 # URP 等设置
+└── Input/                    # Input Action Assets
+```
+
+---
+
+## 当前里程碑
+
+### 已完成
+
+| 阶段 | 内容 | 状态 |
+|------|------|------|
+| MS1 | 飞船基础移动 + Twin-Stick 瞄准 | ✅ |
+| 射击核心 | 射击系统核心框架 (对象池 + 后坐力 + VFX) | ✅ |
+| 星图 Batch 1-6 | 热量系统 + 星图数据层 + 槽位 + 光帆/伴星 + UI + 部件实现 + 编织态 | ✅ |
+| AI Phase 1-3 | HFSM + 躯壳/大脑/感知/导演 + 4 原型 + 恐惧/阵营/闪避/词缀/Boss | ✅ |
+| 补完 | 韧性/顿帧/群聚/血条 HUD/拖拽装备 | ✅ |
+| 架构基建大修 | UniTask + PrimeTween + ServiceLocator + 伤害管线 + 存档 + 音频 + 事件总线 + 数据驱动AI + 单元测试 | ✅ |
+
+### 下一步方向（关卡构建阶段）
+
+- 示巴星 (P1) 关卡构建：Tilemap 房间系统、锁钥逻辑、关卡流程
+- 关卡系统基建：CheckpointSystem、LockKeySystem、房间转场
+- 摄像机系统：Cinemachine 跟随 + 房间边界
+- 世界时钟 + 动态关卡（多层结构、事件阶段、轻量循环周期）
+
+---
+
+## 关卡模块方案摘要（详见 Docs/LevelModulePlan.md）
+
+- **单场景 + Tilemap 房间**架构，Cinemachine Confiner 镜头约束
+- **分层管理器**: LevelManager → WorldClock/WorldPhaseManager → RoomManager → Room
+- **Phase 1 (P0)**: Room 数据定义 + 运行时 + RoomManager + Door/Passage + Camera Confiner
+- **Phase 2 (P0)**: CheckpointSystem + LockKeySystem + ItemPickup + Death & Respawn
+- **Phase 3-6**: EncounterSystem + Arena + Hazard + Minimap + Save + 多层结构 + 世界时钟
+- **多层**: 方案 C 混合（99% 淡黑传送 + 极少数叙事无缝掉落）
+- **世界时钟**: 事件驱动大阶段 + 轻量循环小周期（辐射潮/平静期/风暴期/寂静时）
+- **程序集**: `Assets/Scripts/Level/ProjectArk.Level.asmdef` 引用 Core, Combat, Ship
+
+---
+
+## 常见任务
+
+### A. 新增飞船/武器参数
+1. 修改 `*StatsSO.cs` → 引用该数据 → 不直接改 MonoBehaviour 默认值
+
+### B. 创建新的星图部件
+1. 确定类型 (Core/Prism/LightSail/Satellite)
+2. 新建 SO 继承对应子类 → 创建行为类 → 在 `_Data/StarChart/` 创建资产
+3. 批量创建用 Editor 自动化脚本
+
+### C. 新增敌人类型
+1. `Enemy_Bestiary.csv` 添加数据 → 运行 `ProjectArk > Import Enemy Bestiary`
+2. 如需新攻击模式创建 `AttackDataSO`，新行为模式继承 `EnemyBrain`
+3. 使用 `EnemyAssetCreator` 一键创建 Prefab + SO
+
+### D. 武器系统扩展
+- 新家族: `SpawnProjectile()` 的 `switch(CoreFamily)` 添加分支
+- 新棱镜: 实现 `IProjectileModifier` 接口
+
+---
+
+## 常见陷阱 (Known Pitfalls)
+
+| 陷阱 | 根因 | 防御措施 |
+|------|------|----------|
+| 对象池状态泄漏 | OnReturnToPool 遗漏字段重置 | 遵循回收清单（5 项全检） |
+| Physics2D 碰撞矩阵遗漏 | 新 Layer 未配置碰撞关系 | 新增 Layer 后立即提示用户检查 |
+| SpriteRenderer 不可见 | Prefab 未分配 Sprite | Awake fallback 检测，缺 Sprite 时程序化占位 |
+| uGUI Mask 裁剪失效 | Mask Image alpha=0 | alpha 至少 1/255，CullTransparentMesh=false |
+| SO Prefab 字段共享实例 | GetComponent 从 Prefab 取组件 | 运行时 AddComponent + JsonUtility 深拷贝 |
+| InputSystemUIInputModule 失效 | Action 字段未连线 | UIManager.Awake 用代码自动配置 |
+| 子弹自碰撞 | 同 Layer 互相触发 | 碰撞矩阵关闭自碰撞 + 代码层 Layer 过滤 |
+
+---
 
 ## Unity 编辑器操作边界
 
 - **严禁**凭空创建 `.meta` 文件（GUID 必须由 Unity 自动生成）
-- **允许**直接编辑已存在的 `.unity`/`.asset`/`.prefab`/`.meta`，但搜索大文件定位前先问用户要信息
+- **允许**直接编辑已存在的 `.unity`/`.asset`/`.prefab`/`.meta`，但搜索大文件前先问用户要定位信息
 - **Physics2D 碰撞矩阵**始终交给用户在 Editor GUI 中配置
 - 操作 <=3 步 → 写分步指南；4+ 步且定位明确 → 直接编辑；>10 步或批量 → 写 Editor 自动化脚本
+- 需要新建 `.meta` 文件 → 禁止，交给 Unity 自动生成
+
+---
 
 ## Feature 开发工作流
 
-理解 Why → 确认 Scope → 定义 Done → MVP 拆分 → 编码 → 自测验收 → 记录日志
+```
+1. 理解 Why    → 阅读 GDD 对应章节，理解设计意图
+2. 确认 Scope  → Goal / Scope / Architecture 三点确认
+3. 定义 Done   → 列出 3-5 条验收标准
+4. MVP 拆分    → 最小可玩版本 + 未来增强
+5. 编码实现    → 遵循架构原则和代码规范
+6. 自测验收    → Play Mode 逐条验证验收标准
+7. 记录日志    → 追加 ImplementationLog.md（⚠️ 严格执行）
+```
 
-## 实现日志
+---
 
-每次文件变更后必须追加到 `Docs/ImplementationLog/ImplementationLog.md`：
-- 标题含功能名 + 时间（`YYYY-MM-DD HH:MM`）
-- 列出新建/修改文件路径、内容、目的、技术
+## 实现日志 (Implementation Log) — ⚠️ 严格执行
+
+- 日志文件：`Docs/ImplementationLog/ImplementationLog.md`
+- **每次**创建/修改/删除文件后，**必须在当前回合结束前**追加日志
+- 纯讨论不涉及文件变更的对话不需要记录
+- **单阶段任务**：完成编码 → 立即写日志 → 再回复用户
+- **多阶段任务**：每个阶段完成后立即追加，不要等全部完成再补
+- **Bug 修复**：即使只改了一行也要记录
+
+### 记录格式
+- 标题含**功能名称** + **确切时间**（`YYYY-MM-DD HH:MM`）
+- 列出新建/修改文件路径
+- 简述内容、目的、技术
