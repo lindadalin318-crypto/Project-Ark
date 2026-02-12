@@ -184,56 +184,56 @@ ID,Category,Name,Archetype_Ref,Mechanic_Description,Visual_Feedback,Synergy_Tags
 1116,Original,迪斯科激光 (Disco Laser),Random,向四周发射旋转的随机颜色激光;每种颜色对应不同效果;自带BGM,五彩斑斓的激光;舞曲,AOE;Random;Party,High,Low,,,,
 1117,Original,麦克风 (Microphone),AOE,近距离声波吼叫;击退敌人;蓄力可发出高频尖叫震碎护盾,声波纹路;刺耳啸叫,Control;ShieldBreak;Audio,Med,Low,,,,
 1118,Original,只有一发 (The One),Gimmick,发射一枚极高伤害的子弹;子弹落地后必须捡回才能再次发射;否则无法攻击,巨大的金色子弹,High_Risk;Burst;Reload,None,Med,,,,
-1119,Abstract,爱 (Love),Heal,发射心形波纹;治疗友军;对敌人造成"魅惑"效果(停止攻击3秒);无法造成伤害。,粉色爱心,Support;Pacifist;Love,Med,Low
-1120,Abstract,恨 (Hate),Debuff,自动锁定攻击你的敌人;伤害随敌人对你造成的伤害累计而增加;复仇之火。,黑色火焰,Revenge;Auto;Hate,High,Med
-1121,Abstract,恐惧 (Fear),Control,发射尖叫骷髅;击中敌人后使其向反方向逃跑;对机械敌人无效。,骷髅头,Control;Fear,Low,Low
-1122,Abstract,贪婪 (Greed),Economy,攻击不造成伤害但偷取金币;对Boss偷取材料;如果敌人没钱则造成巨额真实伤害。,金色手掌,Farming;Economy,Low,Low
-1123,Physics,时间回溯弹 (Time Reversal),Time,子弹击中位置会回溯到3秒前的状态(敌人位置/血量);用于撤销误操作。,时钟倒转,Utility;Time,High,High
-1124,Physics,非欧几何 (Non-Euclidean),Space,子弹沿克莱因瓶路径飞行(从左屏出从右屏入);最终击中自己(如果有友伤)或背后的敌人。,扭曲空间,Trick;Space,High,High
-1125,Physics,波函数 (Wave Function),Quantum,子弹呈现云雾状;在被观测(准星对准)前伤害不确定;观测后塌缩为极高或极低伤害。,量子云,RNG;Quantum,Med,High
-1126,Physics,反物质 (Antimatter),Annihilation,与任何物质接触瞬间湮灭;造成极小范围但极大伤害的爆炸;无视护盾/无敌。,黑白闪烁,Burst;Sniper,Very_High,Med
-1127,Physics,快子 (Tachyon),Time,子弹在发射前就已经命中(击中反馈先于开火动画);真正的瞬时伤害。,逆行光束,Hitscan;Time,High,High
-1128,Meta,鼠标指针 (Cursor),Meta,发射一个巨大的鼠标指针;点击敌人;造成"物理点击"伤害;可拖拽敌人。,白色箭头,Meme;Control,Low,Low
-1129,Meta,错误弹窗 (Error Msg),Meta,发射Windows错误弹窗;具有物理体积;可推开敌人或挡子弹;弹窗会越来越多。,弹窗层叠,Defense;Meme,Med,Med
-1130,Meta,加载圈 (Buffering),Meta,发射旋转的加载圈;击中敌人使其动作卡顿(模拟网络延迟);持续5秒。,转圈圈,Control;Slow,Low,Low
-1131,Meta,源代码 (Source Code),Meta,发射绿色的0和1矩阵流;击中敌人有几率将其重置为初始状态(满血/无仇恨)。,黑客帝国代码,Utility;Reset,High,High
-1132,Meta,删除键 (Backspace),Meta,近距离扇形消除;将敌人的弹幕字符逐个删除;对敌人造成"字符丢失"伤害。,键盘按键,Defense;Melee,Med,Low
-1133,Bio,活体枪 (Living Gun),Bio,枪是一个生物;它会尖叫;子弹是它的牙齿;随时间自动回弹(牙齿再生)。,肉块枪,Sustain;Bio,None,Med
-1134,Bio,病毒注射 (Virus Inject),Bio,击中敌人注入病毒;病毒会潜伏3秒;然后爆发造成伤害并传染给周围敌人。,绿色针管,DoT;Spread,Med,Med
-1135,Bio,寄生虫 (Parasite),Bio,发射寄生虫控制小型敌人;使其为你而战;寄生虫会持续扣除宿主血量。,蠕虫,Summon;Control,High,High
-1136,Bio,孢子云 (Spore Cloud),Bio,喷射大范围孢子迷雾;遮挡视线;在迷雾中敌人持续掉血;玩家持续回血。,黄色烟雾,Field;Support,Med,Med
-1137,Bio,进化弹 (Evolution),Bio,子弹在飞行过程中会"长大";从小蝌蚪变成巨兽;距离越远伤害越高体积越大。,生物形态变化,Sniper;Grow,High,Med
-1138,Cosmic,微型恒星 (Mini Star),Cosmic,发射一颗缓慢飞行的恒星;持续灼烧周围敌人;最后超新星爆发。,发光球体,AOE;DoT,Very_High,High
-1139,Cosmic,黑洞吞噬 (Black Hole),Cosmic,发射黑洞;吸入敌人的子弹并转化为能量;再次开火释放吸收的能量束。,引力透镜,Defense;Counter,High,High
-1140,Cosmic,流星雨 (Meteor Shower),Cosmic,召唤天基陨石打击;无视天花板;对全屏随机位置造成伤害。,陨石坠落,AOE;Random,High,Low
-1141,Cosmic,暗物质 (Dark Matter),Cosmic,发射看不见的子弹(只有扭曲效果);无视物理护盾;直接攻击本体。,空间扭曲,Piercing;Stealth,Med,High
-1142,Cosmic,星云锁链 (Nebula Chain),Cosmic,发射星云锁链连接多个敌人;伤害在连接的敌人间共享;并限制移动距离。,星光锁链,Control;AOE,Med,Med
-1143,Element,液氮喷射 (Liquid Nitrogen),Ice,持续喷射液氮;冻结敌人和地面;在冰面上敌人会滑倒(丧失控制)。,白色寒气,Control;Ice,Med,Low
-1144,Element,等离子电浆 (Plasma),Energy,发射高温电浆团;击中后残留一滩电浆;持续造成伤害并融化护甲。,紫色粘液,DoT;ArmorBreak,High,Med
-1145,Element,风暴之锤 (Storm Hammer),Lightning,近战重击;召唤一道落雷打击面前区域;造成麻痹效果。,雷神之锤,Melee;Stun,Med,Low
-1146,Element,岩浆波 (Magma Wave),Fire,地面震击;产生向前方扩散的岩浆裂缝;喷发火柱。,地裂火光,AOE;Ground,High,Med
-1147,Element,水龙卷 (Water Spout),Water,发射一道水龙卷;卷起路径上的敌人(强制位移)并造成窒息伤害。,水流特效,Control;Displace,Med,Med
-1148,Weapon,手里剑 (Shuriken),Ninja,发射三枚手里剑;呈扇形;击中墙壁会反弹;极其锋利(高流血伤害)。,旋转飞镖,Bleed;Ricochet,Low,Low
-1149,Weapon,加特林 (Minigun),Heavy,极高射速;需要预热;开火时移动速度降低80%;弹幕如雨。,枪口风暴,DPS;Suppress,High,Low
-1150,Weapon,狙击弩 (Crossbow),Sniper,蓄力发射一支强力弩箭;无声(不惊动远处敌人);可回收弩箭重置冷却。,箭矢飞行,Stealth;Sniper,Med,Med
-1151,Weapon,电锯 (Chainsaw),Melee,持续近战切割;极高频伤害;但这把枪真的很吵(吸引仇恨)。,火花飞溅,Melee;High_DPS,Med,Low
-1152,Weapon,大炮 (Cannon),Siege,发射巨大的实心铁球;击穿一排敌人;动能极大(击退Boss)。,黑色铁球,Knockback;Pierce,High,Low
-1153,Toy,水枪 (Water Gun),Toy,发射毫无伤害的水柱;但能推开敌人;并使其湿润(导电/易冻)。,水流,Control;Combo,None,Low
-1154,Toy,弹弓 (Slingshot),Toy,发射石子;伤害极低;但有几率发射"爆裂弹丸"(高伤)。,石子,RNG;Starter,None,Low
-1155,Toy,泡泡机 (Bubble Blower),Toy,发射大量泡泡;阻挡敌人视线;敌人碰到泡泡会被包裹浮空。,彩虹泡泡,Control;Float,Low,Low
-1156,Toy,指尖陀螺 (Fidget Spinner),Toy,发射旋转的陀螺;在敌人间弹射;造成多段物理打击。,旋转残影,Ricochet;Multi,Low,Low
-1157,Toy,乐高积木 (Lego Brick),Toy,在地上撒乐高;敌人踩上去会受到9999点痛觉伤害(减速+眩晕)。,彩色积木,Trap;Meme,Med,Low
-1158,Music,音波炮 (Bass Cannon),Music,随BGM节奏发射低音炮;震退敌人;音量越大伤害越高。,声波纹路,Knockback;Rhythm,Med,Med
-1159,Music,吉他斧 (Guitar Axe),Music,近战挥砍;发出电吉他失真音效;蓄力可发出"强力和弦"冲击波。,音符特效,Melee;AOE,Med,Med
-1160,Music,麦克风 (Mic Whip),Music,甩动麦克风连线进行中距离攻击;有几率缠绕敌人。,黑色线缆,Mid_Range;Control,Low,Med
-1161,Food,汉堡发射器 (Burger Shot),Food,发射层层叠叠的汉堡;每一层造成一次伤害(面包/肉/菜);击中回血?,汉堡模型,Multi_Hit;Heal,Med,Low
-1162,Food,可乐喷泉 (Soda Stream),Food,摇晃后喷射高压可乐柱;极强击退力;留下粘稠地面(减速)。,褐色水柱,Control;Knockback,Low,Low
-1163,Food,披萨飞盘 (Pizza Disc),Food,发射旋转披萨;边缘锋利;可切割敌人;由于是食物会被怪物优先攻击。,披萨,Melee;Taunt,Med,Low
-1164,Office,订书机 (Stapler),Office,双发速射;有几率将敌人"订"在墙上或地上(定身);弹药无限。,订书针,Control;Pin,Low,Low
-1165,Office,回形针 (Paperclip),Office,发射弯曲的回形针;会像钩子一样钩住敌人装备(降低攻击力)。,银色金属,Debuff;Disarm,Low,Low
-1166,Office,修正带 (White Out),Office,涂抹地面;制造白色"虚无"区域;敌人踏入会掉下去(即死);玩家踏入安全。,白色条带,Trap;Environment,High,High
-1167,Office,打印机 (Printer),Office,发射A4纸;纸张锋利如刀;射速极快但纸张会乱飞(散布大)。,纸张纷飞,High_Freq;Spread,Med,Low
-1168,Office,印章 (Stamp),Office,近战盖章;在敌人脑门盖上"REJECTED"(驳回);造成巨额精神伤害(真实伤害)。,红色印记,Melee;True_Dmg,Med,Low
+1119,Abstract,爱 (Love),Heal,"发射心形波纹;治疗友军;对敌人造成""魅惑""效果(停止攻击3秒);无法造成伤害。",粉色爱心,Support;Pacifist;Love,Med,Low,,,,
+1120,Abstract,恨 (Hate),Debuff,自动锁定攻击你的敌人;伤害随敌人对你造成的伤害累计而增加;复仇之火。,黑色火焰,Revenge;Auto;Hate,High,Med,,,,
+1121,Abstract,恐惧 (Fear),Control,发射尖叫骷髅;击中敌人后使其向反方向逃跑;对机械敌人无效。,骷髅头,Control;Fear,Low,Low,,,,
+1122,Abstract,贪婪 (Greed),Economy,攻击不造成伤害但偷取金币;对Boss偷取材料;如果敌人没钱则造成巨额真实伤害。,金色手掌,Farming;Economy,Low,Low,,,,
+1123,Physics,时间回溯弹 (Time Reversal),Time,子弹击中位置会回溯到3秒前的状态(敌人位置/血量);用于撤销误操作。,时钟倒转,Utility;Time,High,High,,,,
+1124,Physics,非欧几何 (Non-Euclidean),Space,子弹沿克莱因瓶路径飞行(从左屏出从右屏入);最终击中自己(如果有友伤)或背后的敌人。,扭曲空间,Trick;Space,High,High,,,,
+1125,Physics,波函数 (Wave Function),Quantum,子弹呈现云雾状;在被观测(准星对准)前伤害不确定;观测后塌缩为极高或极低伤害。,量子云,RNG;Quantum,Med,High,,,,
+1126,Physics,反物质 (Antimatter),Annihilation,与任何物质接触瞬间湮灭;造成极小范围但极大伤害的爆炸;无视护盾/无敌。,黑白闪烁,Burst;Sniper,Very_High,Med,,,,
+1127,Physics,快子 (Tachyon),Time,子弹在发射前就已经命中(击中反馈先于开火动画);真正的瞬时伤害。,逆行光束,Hitscan;Time,High,High,,,,
+1128,Meta,鼠标指针 (Cursor),Meta,"发射一个巨大的鼠标指针;点击敌人;造成""物理点击""伤害;可拖拽敌人。",白色箭头,Meme;Control,Low,Low,,,,
+1129,Meta,错误弹窗 (Error Msg),Meta,发射Windows错误弹窗;具有物理体积;可推开敌人或挡子弹;弹窗会越来越多。,弹窗层叠,Defense;Meme,Med,Med,,,,
+1130,Meta,加载圈 (Buffering),Meta,发射旋转的加载圈;击中敌人使其动作卡顿(模拟网络延迟);持续5秒。,转圈圈,Control;Slow,Low,Low,,,,
+1131,Meta,源代码 (Source Code),Meta,发射绿色的0和1矩阵流;击中敌人有几率将其重置为初始状态(满血/无仇恨)。,黑客帝国代码,Utility;Reset,High,High,,,,
+1132,Meta,删除键 (Backspace),Meta,"近距离扇形消除;将敌人的弹幕字符逐个删除;对敌人造成""字符丢失""伤害。",键盘按键,Defense;Melee,Med,Low,,,,
+1133,Bio,活体枪 (Living Gun),Bio,枪是一个生物;它会尖叫;子弹是它的牙齿;随时间自动回弹(牙齿再生)。,肉块枪,Sustain;Bio,None,Med,,,,
+1134,Bio,病毒注射 (Virus Inject),Bio,击中敌人注入病毒;病毒会潜伏3秒;然后爆发造成伤害并传染给周围敌人。,绿色针管,DoT;Spread,Med,Med,,,,
+1135,Bio,寄生虫 (Parasite),Bio,发射寄生虫控制小型敌人;使其为你而战;寄生虫会持续扣除宿主血量。,蠕虫,Summon;Control,High,High,,,,
+1136,Bio,孢子云 (Spore Cloud),Bio,喷射大范围孢子迷雾;遮挡视线;在迷雾中敌人持续掉血;玩家持续回血。,黄色烟雾,Field;Support,Med,Med,,,,
+1137,Bio,进化弹 (Evolution),Bio,"子弹在飞行过程中会""长大"";从小蝌蚪变成巨兽;距离越远伤害越高体积越大。",生物形态变化,Sniper;Grow,High,Med,,,,
+1138,Cosmic,微型恒星 (Mini Star),Cosmic,发射一颗缓慢飞行的恒星;持续灼烧周围敌人;最后超新星爆发。,发光球体,AOE;DoT,Very_High,High,,,,
+1139,Cosmic,黑洞吞噬 (Black Hole),Cosmic,发射黑洞;吸入敌人的子弹并转化为能量;再次开火释放吸收的能量束。,引力透镜,Defense;Counter,High,High,,,,
+1140,Cosmic,流星雨 (Meteor Shower),Cosmic,召唤天基陨石打击;无视天花板;对全屏随机位置造成伤害。,陨石坠落,AOE;Random,High,Low,,,,
+1141,Cosmic,暗物质 (Dark Matter),Cosmic,发射看不见的子弹(只有扭曲效果);无视物理护盾;直接攻击本体。,空间扭曲,Piercing;Stealth,Med,High,,,,
+1142,Cosmic,星云锁链 (Nebula Chain),Cosmic,发射星云锁链连接多个敌人;伤害在连接的敌人间共享;并限制移动距离。,星光锁链,Control;AOE,Med,Med,,,,
+1143,Element,液氮喷射 (Liquid Nitrogen),Ice,持续喷射液氮;冻结敌人和地面;在冰面上敌人会滑倒(丧失控制)。,白色寒气,Control;Ice,Med,Low,,,,
+1144,Element,等离子电浆 (Plasma),Energy,发射高温电浆团;击中后残留一滩电浆;持续造成伤害并融化护甲。,紫色粘液,DoT;ArmorBreak,High,Med,,,,
+1145,Element,风暴之锤 (Storm Hammer),Lightning,近战重击;召唤一道落雷打击面前区域;造成麻痹效果。,雷神之锤,Melee;Stun,Med,Low,,,,
+1146,Element,岩浆波 (Magma Wave),Fire,地面震击;产生向前方扩散的岩浆裂缝;喷发火柱。,地裂火光,AOE;Ground,High,Med,,,,
+1147,Element,水龙卷 (Water Spout),Water,发射一道水龙卷;卷起路径上的敌人(强制位移)并造成窒息伤害。,水流特效,Control;Displace,Med,Med,,,,
+1148,Weapon,手里剑 (Shuriken),Ninja,发射三枚手里剑;呈扇形;击中墙壁会反弹;极其锋利(高流血伤害)。,旋转飞镖,Bleed;Ricochet,Low,Low,,,,
+1149,Weapon,加特林 (Minigun),Heavy,极高射速;需要预热;开火时移动速度降低80%;弹幕如雨。,枪口风暴,DPS;Suppress,High,Low,,,,
+1150,Weapon,狙击弩 (Crossbow),Sniper,蓄力发射一支强力弩箭;无声(不惊动远处敌人);可回收弩箭重置冷却。,箭矢飞行,Stealth;Sniper,Med,Med,,,,
+1151,Weapon,电锯 (Chainsaw),Melee,持续近战切割;极高频伤害;但这把枪真的很吵(吸引仇恨)。,火花飞溅,Melee;High_DPS,Med,Low,,,,
+1152,Weapon,大炮 (Cannon),Siege,发射巨大的实心铁球;击穿一排敌人;动能极大(击退Boss)。,黑色铁球,Knockback;Pierce,High,Low,,,,
+1153,Toy,水枪 (Water Gun),Toy,发射毫无伤害的水柱;但能推开敌人;并使其湿润(导电/易冻)。,水流,Control;Combo,None,Low,,,,
+1154,Toy,弹弓 (Slingshot),Toy,"发射石子;伤害极低;但有几率发射""爆裂弹丸""(高伤)。",石子,RNG;Starter,None,Low,,,,
+1155,Toy,泡泡机 (Bubble Blower),Toy,发射大量泡泡;阻挡敌人视线;敌人碰到泡泡会被包裹浮空。,彩虹泡泡,Control;Float,Low,Low,,,,
+1156,Toy,指尖陀螺 (Fidget Spinner),Toy,发射旋转的陀螺;在敌人间弹射;造成多段物理打击。,旋转残影,Ricochet;Multi,Low,Low,,,,
+1157,Toy,乐高积木 (Lego Brick),Toy,在地上撒乐高;敌人踩上去会受到9999点痛觉伤害(减速+眩晕)。,彩色积木,Trap;Meme,Med,Low,,,,
+1158,Music,音波炮 (Bass Cannon),Music,随BGM节奏发射低音炮;震退敌人;音量越大伤害越高。,声波纹路,Knockback;Rhythm,Med,Med,,,,
+1159,Music,吉他斧 (Guitar Axe),Music,"近战挥砍;发出电吉他失真音效;蓄力可发出""强力和弦""冲击波。",音符特效,Melee;AOE,Med,Med,,,,
+1160,Music,麦克风 (Mic Whip),Music,甩动麦克风连线进行中距离攻击;有几率缠绕敌人。,黑色线缆,Mid_Range;Control,Low,Med,,,,
+1161,Food,汉堡发射器 (Burger Shot),Food,发射层层叠叠的汉堡;每一层造成一次伤害(面包/肉/菜);击中回血?,汉堡模型,Multi_Hit;Heal,Med,Low,,,,
+1162,Food,可乐喷泉 (Soda Stream),Food,摇晃后喷射高压可乐柱;极强击退力;留下粘稠地面(减速)。,褐色水柱,Control;Knockback,Low,Low,,,,
+1163,Food,披萨飞盘 (Pizza Disc),Food,发射旋转披萨;边缘锋利;可切割敌人;由于是食物会被怪物优先攻击。,披萨,Melee;Taunt,Med,Low,,,,
+1164,Office,订书机 (Stapler),Office,"双发速射;有几率将敌人""订""在墙上或地上(定身);弹药无限。",订书针,Control;Pin,Low,Low,,,,
+1165,Office,回形针 (Paperclip),Office,发射弯曲的回形针;会像钩子一样钩住敌人装备(降低攻击力)。,银色金属,Debuff;Disarm,Low,Low,,,,
+1166,Office,修正带 (White Out),Office,"涂抹地面;制造白色""虚无""区域;敌人踏入会掉下去(即死);玩家踏入安全。",白色条带,Trap;Environment,High,High,,,,
+1167,Office,打印机 (Printer),Office,发射A4纸;纸张锋利如刀;射速极快但纸张会乱飞(散布大)。,纸张纷飞,High_Freq;Spread,Med,Low,,,,
+1168,Office,印章 (Stamp),Office,"近战盖章;在敌人脑门盖上""REJECTED""(驳回);造成巨额精神伤害(真实伤害)。",红色印记,Melee;True_Dmg,Med,Low,,,,
 ,,,,,,,,,,,,
 ,,,,,,,,,,,,
 ========== ULTIMATE INTEGRATED PRISM LIBRARY (100+ DESIGNS) ==========,,,,,,,,,,,,
@@ -657,103 +657,103 @@ ID,Category,Name,Archetype_Ref,Behavior_Type,Effect_Description,Visual_Feedback,
 4098,Bio,孢子云 (Spore Cloud),Bio,Aura,周围环绕毒气孢子;敌人进入中毒;友军进入回血。,绿色烟雾,Support,德鲁伊,,,,
 4099,Bio,触手怪 (Tentacle),Bio,Melee,从飞船伸出触手;自动抽打靠近的敌人。,触手,Melee,克苏鲁,,,,
 4100,Bio,孵化器 (Hatchery),Bio,Spawner,每隔5秒孵化一只自爆小虫子。,虫卵,Summon,虫族女王,,,,
-4101,Physics,牛顿的苹果 (Newton's Apple),Gravity,Orbit,在飞船正下方始终悬挂一个重物;利用摆锤效应砸碎下方的敌人。,红苹果,Physics,物理摆锤
-4102,Physics,引力弹弓 (Slingshot),Gravity,Passive,飞船周围形成引力场;进入范围的子弹会被加速甩出去;像彗星一样。,轨道线,Speed+,借力打力
-4103,Physics,量子纠缠 (Entanglement),Quantum,Link,连接两个随机敌人;一个受伤另一个也受伤;距离越远伤害越高。,量子连线,AOE,隔山打牛
-4104,Physics,热力学第二定律 (Entropy),Thermodynamics,Aura,周围的敌人会随着时间逐渐瓦解(持续掉血);直到变成灰烬。,灰烬特效,DoT,时间就是武器
-4105,Physics,惯性阻尼器 (Inertial Damper),Physics,Passive,飞船刹车瞬间产生反作用力;向前方释放冲击波。,蓝色波纹,Control,急停攻击
-4106,Meta,回收站 (Recycle Bin),System,DragDrop,你可以用鼠标拖拽小怪扔进回收站;直接删除。,垃圾桶图标,Execute,桌面整理
-4107,Meta,进度条 (Progress Bar),System,Charge,头顶出现一个读条;读满(10秒)后全屏秒杀;受伤打断读条。,Loading...,Burst,憋大招
-4108,Meta,弹窗拦截 (AdBlock),System,Defense,自动拦截所有敌人的“投射物”(被视为广告);并弹出“拦截成功”提示。,盾牌图标,Defense,还以此处清净
-4109,Meta,小费罐 (Tip Jar),Economy,Passive,每当你做出精彩操作(如无伤清图);会收到额外金币打赏。,硬币声,Economy,技术变现
-4110,Meta,盗版软件 (Cracked Ware),Glitch,Passive,所有武器伤害+100%;但每分钟有10%几率游戏崩溃(假崩溃;黑屏3秒)。,乱码,HighRisk,富贵险中求
-4111,MiniGame,贪吃蛇 (Snake),Game,Follow,身后跟着一串尾巴;吃掉敌人掉落的能量球变长;尾巴越长伤害越高。,像素蛇,Scaling,战斗中玩游戏
-4112,MiniGame,打砖块 (Breakout),Game,Bouncer,生成一个在屏幕边缘反弹的小球;你必须用飞船去接它;接住反弹伤害翻倍。,弹球,Skill,接球游戏
-4113,MiniGame,俄罗斯方块 (Tetris),Game,Drop,每隔几秒从天而降一个巨大方块;压扁敌人;这也算一种掩体。,四色方块,AOE,压路机
-4114,MiniGame,老虎机 (Slot Machine),Game,RNG,每杀10个怪拉一次杆;777全屏金币;骷髅全屏扣血。,滚动数字,RNG,赌博
-4115,MiniGame,电子宠物 (Tamagotchi),Game,Pet,你必须不断喂它(杀怪掉落食物);不喂它会饿死并扣你血;喂饱了进化。,像素蛋,Quest,养宠模拟器
-4116,Weird,烤面包机 (Toaster),Appliance,Launch,每隔5秒弹射两片焦黑的面包;对敌人造成火焰伤害。,面包机,DoT,早餐时间
-4117,Weird,电风扇 (Electric Fan),Appliance,Wind,向后吹风;增加飞船推力;同时吹走背后的敌人。,旋转扇叶,Speed,物理加速
-4118,Weird,迪斯科球 (Disco Ball),Party,Aura,将战斗BGM强制切换为迪斯科;所有敌人被迫跟随节奏抖动(减速)。,七彩光效,Control,强行尬舞
-4119,Weird,复读机 (Repeater),Meme,Echo,你每开一枪;它就学你开一枪(伤害50%);还会重复你的语音。,鹦鹉,DPS,回声
-4120,Weird,键盘侠 (Keyboard Warrior),Meme,Typing,自动向敌人发射"垃圾话"弹幕(NMSL/Noob);造成精神伤害(真实伤害)。,文字块,TrueDmg,精神攻击
-4121,Bio,寄生脑 (Parasite Brain),Bio,Control,发射寄生虫控制一个敌人;让它为你而战;直到它死亡。,粉色大脑,Summon,借刀杀人
-4122,Bio,心脏起搏器 (Pacemaker),Bio,Revive,死亡时自动电击复活一次;但最大生命值减半。,电击特效,Revive,续命
-4123,Bio,肾上腺素泵 (Adrenaline),Bio,Buff,生命值越低;时间流速越慢(子弹时间);让你极限反杀。,红屏特效,Time,濒死体验
-4124,Bio,消化液 (Acid Spit),Bio,Debuff,向周围喷洒酸液;降低敌人护甲;并留下腐蚀地面。,绿色液体,Debuff,破甲
-4125,Bio,眼球守卫 (Watcher),Bio,Turret,扔下一个眼球;它会盯着最近的敌人;被盯住的敌人无法移动。,大眼球,Control,木头人
-4126,Tech,3D打印机 (3D Printer),Construct,Spawn,每隔15秒;打印一个随机的补给箱(弹药/血包/护盾)。,打印喷头,Support,后勤补给
-4127,Tech,无人机母舰 (Drone Carrier),Construct,Summon,释放6架微型自杀无人机;撞击敌人后爆炸;随后返航装填。,蜂群,Burst,星际航母
-4128,Tech,特斯拉线圈 (Tesla Coil),Construct,Chain,在飞船周围形成电网;连锁电击进入范围的所有敌人。,蓝色闪电,AOE,雷电法王
-4129,Tech,引力波雷达 (Gravity Radar),Tech,Vision,显示隐藏在墙壁后的敌人轮廓;并预警Boss的大招范围。,波纹UI,Info,透视挂
-4130,Tech,相位转换器 (Phase Shifter),Tech,Defense,受到伤害瞬间自动瞬移到安全位置;冷却10秒。,残影,Survival,自动闪避
-4131,Cursed,背后灵 (Ghost),Cursed,Debuff,一个幽灵趴在你背上;降低你20%移速;但帮你抵挡来自后方的伤害。,恐怖鬼影,Defense,鬼压床
-4132,Cursed,达摩克利斯之剑 (Damocles),Cursed,Hover,一把巨剑悬在你头顶;对你正下方的敌人造成巨额伤害;但偶尔会掉下来扎你。,巨剑,HighRisk,时刻警惕
-4133,Cursed,贪婪指环 (Ring of Greed),Cursed,Magnet,吸取全图金币;但每吸一个金币扣1点血;血量低时停止。,金光,Economy,要钱不要命
-4134,Cursed,狂战士面具 (Berserk Mask),Cursed,Buff,无法停止射击(自动开火);无法后退;伤害+50%。,红色面具,Aggressive,只能冲锋
-4135,Cursed,薛定谔的护盾 (Quantum Shield),Cursed,RNG,受到伤害时;50%几率免疫;50%几率双倍伤害。,闪烁护盾,RNG,看脸生存
-4136,Original,天气控制器 (Weather Control),Environment,Global,随机改变全场天气;雨天(导电)/晴天(回热)/雾天(潜行)。,云层变化,Meta,场地卡
-4137,Original,地形改造器 (Terraformer),Environment,Edit,制造临时的掩体墙壁;或者在墙上开洞。,建筑光束,Utility,我的世界
-4138,Original,黑洞炸弹 (Black Hole Bomb),Physics,Gravity,投掷一枚炸弹;爆炸后产生持续5秒的黑洞;吸入一切。,黑色球体,Control,聚怪神器
-4139,Original,镜像反射 (Mirror Coat),Defense,Reflect,开启后3秒内;反射所有照射到飞船的光束类武器。,镜面特效,Counter,激光克星
-4140,Original,时间胶囊 (Time Capsule),Time,Save,记录当前状态(血/弹/位);5秒后强制回溯到该状态。,时钟倒转,Survival,S/L大法
-4141,Social,弹幕护盾 (Chat Shield),Stream,Defense,观众发送的弹幕会在飞船周围生成文字护盾;抵挡伤害。,滚动弹幕,Social,肉身挡枪
-4142,Social,投票处决 (Vote Kill),Stream,Attack,当Boss血量低于10%时;观众投票决定处决方式(雷劈/火烧/压扁)。,投票UI,Cinematic,节目效果
-4143,Social,礼物轰炸 (Gift Bomb),Stream,Attack,收到特定礼物时;在鼠标位置投下一枚核弹。,蘑菇云,PayToWin,感谢火箭
-4144,Social,节奏大师 (Rhythm Master),Stream,Buff,根据直播间BGM的BPM;自动调整武器射速以卡点。,音浪,Music,自带BGM
-4145,Social,众筹血瓶 (Crowd Heal),Stream,Heal,每有一个新观众进入直播间;回复1点生命值。,爱心飘起,Sustain,欢迎新人
-4146,Endgame,创世神笔 (Pen of Creation),God,Edit,鼠标画什么出什么;画墙挡子弹;画火烧敌人;画心回血。,水墨轨迹,Creative,神笔马良
-4147,Endgame,无限手套 (Infinity Gauntlet),God,Snap,集齐6颗宝石(隐藏道具)后;打个响指;随机消灭全图50%敌人。,响指动画,MapClear,灭霸体验
-4148,Endgame,二向箔 (Dual Vector Foil),God,Dimension,投掷一张纸片;将3D/2D的敌人及其子弹压扁成一张画;使其失效。,空间坍缩,Control,降维打击
-4149,Endgame,源代码 (Source Code),God,Hack,可以直接修改敌人的属性(将敌人血量改为1);仅限非Boss。,代码窗口,Cheat,修改器
-4150,Endgame,开发者控制台 (Dev Console),God,Debug,允许输入指令: /kill all, /god mode, /noclip。,命令行,Meta,最终奖励
-4151,Meta,旁白 (The Narrator),Story,Passive,一个喋喋不休的声音解说你的战斗；当你失误时嘲讽你；当你精彩操作时对敌人造成全屏精神伤害。,声波字幕,Psychic,史丹利的寓言
-4152,Meta,主角光环 (Plot Armor),Story,Passive,当生命值低于5%时触发；获得5秒无敌和10倍伤害；每局限一次；伴随着激昂的BGM。,金色光柱,Clutch,王道热血漫
-4153,Meta,延迟补偿 (Lag Comp),Net,Passive,攻击未命中时，如果偏离角度小于10度，系统判定为命中（模拟网络延迟补偿）。,残影修正,Accuracy,高Ping战士
-4154,Meta,穿模 (Noclip),Glitch,Passive,有1%的几率受到伤害无效（子弹穿过身体）；有1%几率冲刺穿墙。,模型闪烁,Defense,育碧特性
-4155,Meta,废案武器 (Cut Content),Dev,Attack,伴星是一把建模粗糙、未上色的枪；发射开发者测试用的超强子弹；但偶尔会报错。,白色方块,DPS,开发者遗留
-4156,Meta,手柄漂移 (Joycon Drift),Input,Debuff,飞船会随机向某个方向缓慢漂移；作为补偿，所有武器伤害+30%。,摇杆图标,Damage,硬核操作
-4157,Meta,显卡杀手 (GPU Melter),Visual,AOE,释放极其华丽、粒子数量过多的特效；导致游戏掉帧；利用卡顿带来的“子弹时间”躲避攻击。,满屏粒子,Time,物理外挂
-4158,Meta,垂直同步 (V-Sync),Visual,Control,强制锁定周围敌人的移动帧率；使快速移动的敌人变慢。,撕裂线,Slow,画面设置
-4159,Meta,动态模糊 (Motion Blur),Visual,Stealth,移动速度越快，模糊越严重；高速移动时获得90%闪避率。,模糊滤镜,Evasion,晕3D慎用
-4160,Meta,光线追踪 (Ray Tracing),Visual,Passive,利用地面/墙壁的反射计算；让激光武器可以无限反射。,反射光线,Ricochet,RTX On
-4161,Hard,泰坦核心 (Titan GPU),Hardware,Burn,伴星是一个巨大的显卡风扇；射击会积攒过热；过热时向周围喷射高温气浪。,RGB风扇,Fire,核弹显卡
-4162,Tech,蓝屏 (BSOD),System,Stun,每隔60秒，强制全屏定格3秒（模拟死机）；期间玩家可以调整位置但不能攻击。,蓝色背景,Control,致命错误
-4163,Web,404 (Not Found),Web,Banish,发射“链接失效”光束；被击中的小怪有几率直接消失（被移除出场景）。,破碎图片,Execute,查无此人
-4164,Web,网络饼干 (Cookies),Web,Tracker,被击中的敌人会被标记；你可以隔墙看到它的位置和血量；并且掉落物增加。,追踪图标,Loot,隐私泄露
-4165,Web,梯子 (VPN),Web,Teleport,你的子弹有几率从屏幕另一端飞出来击中敌人（绕过防火墙）。,隧道特效,Trick,加密通道
-4166,Security,防火墙 (Firewall),Security,Barrier,在身前生成一道燃烧的墙；阻挡病毒（敌人）和恶意软件（子弹）。,红色网格,Defense,安全防护
-4167,Security,杀毒软件 (Antivirus),Security,Execute,对“生物/感染”类敌人造成三倍伤害；扫描并清除场上的毒雾。,扫描光束,Purge,全面体检
-4168,File,压缩包 (Zip Bomb),File,AOE,投掷一个微小的方块；落地后解压成巨大的爆炸范围；造成海量物理伤害。,解压进度条,Burst,解压密码
-4169,File,快捷方式 (Shortcut),File,Utility,在地图上生成传送门；可以直接跳过当前房间到达出口（有冷却）。,箭头图标,Speedrun,路径依赖
-4170,File,清空回收站 (Empty Trash),File,Execute,一键清除场上所有生命值低于10%的敌人。,碎纸声,Finish,强迫症
-4171,Physics,薛定谔 (Schrodinger),Quantum,State,敌人处于“既死又活”的状态；直到你再次攻击它，才结算死亡。,量子箱,RNG,波函数坍缩
-4172,Physics,麦克斯韦妖 (Maxwell),Physics,Gate,在身前制造一个门；速度快的子弹（友军）通过加速；速度慢的子弹（敌军）被阻挡。,分子运动,Shield,热力学叛徒
-4173,Physics,永动机 (Perpetual),Physics,Energy,你的热量不会自动冷却；必须通过移动产生动能来散热；伤害随热量提升。,齿轮转动,Heat,民科神器
-4174,Physics,蝴蝶效应 (Butterfly),Chaos,Chain,打碎场景物品（如罐子）会引发连锁反应；导致全屏随机敌人受到天罚。,龙卷风,Luck,混沌理论
-4175,Physics,熵增 (Entropy),Physics,Decay,周围敌人的护甲和攻击力随时间持续衰减；直到变成0。,生锈特效,Debuff,宇宙终局
-4176,Vehicle,黑匣子 (Black Box),Flight,Save,如果你死亡，黑匣子会记录当前数据；下一局游戏捡到它可获得大量经验/金币。,橙色盒子,Meta,飞行记录
-4177,Gym,跑步机 (Treadmill),Sport,Resource,你必须保持移动不能停；移动产生护盾；停止移动护盾快速衰减。,汗水特效,Shield,有氧运动
-4178,Gym,哑铃 (Dumbbell),Sport,Knockback,伴星是一个极重的哑铃；环绕飞行；击飞一切靠近的敌人。,金属撞击,Melee,力量训练
-4179,Gym,蛋白粉 (Protein),Sport,Buff,飞船体型变大50%；但近战伤害增加100%；生命值增加50%。,肌肉图标,Tank,增肌
-4180,Gym,瑜伽球 (Yoga Ball),Sport,Bouncy,伴星是一个巨大的弹性球；在敌人之间弹来弹去；永不落地。,橡胶质感,Physics,柔韧性
-4181,Food,披萨 (Pizza),Food,Orbit,四个披萨切片环绕飞船；接触造成伤害；致敬《神龟》。,披萨,Melee,卡瓦邦嘎
-4182,Food,咖啡 (Coffee),Drink,Buff,射速+50%；移速+20%；但准星会不受控制地抖动。,咖啡热气,DPS,咖啡因中毒
-4183,Food,热茶 (Hot Tea),Drink,Time,喝一口茶（按键）；全屏动作变慢（子弹时间）；享受片刻宁静。,茶杯,Control,英国绅士
-4184,Food,快乐水 (Soda),Drink,Sonic,喝完打一个巨大的嗝；造成锥形声波伤害并击退敌人。,气泡特效,AOE,肥宅快乐
-4185,Food,火锅 (Hot Pot),Drink,Aura,周围形成沸腾的红汤光环；对敌人造成持续火焰伤害。,辣椒漂浮,DoT,重庆辣度
-4186,Game,麻将 (Mahjong),Tabletop,Projectile,发射麻将牌；如果凑成“碰”或“杠”（连续命中3次）；造成暴击。,发财,Combo,国粹
-4187,Game,扑克 (Poker),Tabletop,RNG,发射扑克牌；随机花色；黑桃伤害高；红桃回血。,纸牌飞舞,Gambler,卡牌大师
-4188,Game,二十面骰 (D20),Tabletop,RNG,每次攻击掷骰子；1是哑火；20是10倍暴击。,骰子滚动,Crit,跑团
-4189,Game,乐高地雷 (Lego),Toy,Trap,撒下一地积木；敌人踩上去会受到巨额伤害并眩晕（脚底板之痛）。,彩色积木,Trap,绝对防御
-4190,Game,指尖陀螺 (Fidget Spinner),Toy,Orbit,三个叶片高速旋转；抵挡子弹；且极其解压。,旋转残影,Defense,多动症
-4191,Toy,套娃 (Matryoshka),Toy,Summon,伴星死亡/销毁时，会分裂出一个小一号的伴星；共分裂5次。,娃娃脸,Summon,无限禁止
-4192,Toy,不倒翁 (Tumbler),Toy,Stats,免疫所有击退效果；受到撞击时会反弹回去。,摇晃动画,Tank,屹立不倒
-4193,Decor,招财猫 (Lucky Cat),Decor,Economy,每隔几秒挥手一次；挥手时吸引全屏金币；并有几率掉落金币。,喵喵叫,Farming,开店必备
-4194,Decor,风铃 (Wind Chime),Decor,Sonar,当有敌人靠近或进入伏击范围时；发出清脆的铃声预警。,铃声,Info,听声辩位
-4195,Decor,捕梦网 (Dream Catcher),Decor,Control,使周围的飞行单位（非Boss）陷入睡眠；停止攻击。,网状光环,Control,美梦
-4196,Magic,水晶球 (Crystal Ball),Occult,Guide,显示一条线，预判Boss下一次攻击的轨迹或落点。,迷雾光线,Dodge,占卜
-4197,Magic,巫毒针 (Voodoo Pin),Occult,Counter,每当受到伤害，向全屏敌人反弹50%的真实伤害。,尖刺特效,Thorns,诅咒
-4198,Magic,塔罗牌 (Tarot),Occult,Buff,每进入一个新房间，抽一张牌获得随机Buff（愚者、力量、死神等）。,卡牌UI,RNG,命运
-4199,Magic,香炉 (Incense),Occult,Stealth,释放烟雾缭绕；在烟雾中敌人无法锁定你；且缓慢回血。,紫烟,Support,修仙
-4200,End,全家桶 (Bucket Meal),Food,Heal,召唤一个巨大的炸鸡桶；打破它掉落大量回血食物；庆祝胜利。,炸鸡块,Heal,最后的晚餐
+4101,Physics,牛顿的苹果 (Newton's Apple),Gravity,Orbit,在飞船正下方始终悬挂一个重物;利用摆锤效应砸碎下方的敌人。,红苹果,Physics,物理摆锤,,,,
+4102,Physics,引力弹弓 (Slingshot),Gravity,Passive,飞船周围形成引力场;进入范围的子弹会被加速甩出去;像彗星一样。,轨道线,Speed+,借力打力,,,,
+4103,Physics,量子纠缠 (Entanglement),Quantum,Link,连接两个随机敌人;一个受伤另一个也受伤;距离越远伤害越高。,量子连线,AOE,隔山打牛,,,,
+4104,Physics,热力学第二定律 (Entropy),Thermodynamics,Aura,周围的敌人会随着时间逐渐瓦解(持续掉血);直到变成灰烬。,灰烬特效,DoT,时间就是武器,,,,
+4105,Physics,惯性阻尼器 (Inertial Damper),Physics,Passive,飞船刹车瞬间产生反作用力;向前方释放冲击波。,蓝色波纹,Control,急停攻击,,,,
+4106,Meta,回收站 (Recycle Bin),System,DragDrop,你可以用鼠标拖拽小怪扔进回收站;直接删除。,垃圾桶图标,Execute,桌面整理,,,,
+4107,Meta,进度条 (Progress Bar),System,Charge,头顶出现一个读条;读满(10秒)后全屏秒杀;受伤打断读条。,Loading...,Burst,憋大招,,,,
+4108,Meta,弹窗拦截 (AdBlock),System,Defense,自动拦截所有敌人的“投射物”(被视为广告);并弹出“拦截成功”提示。,盾牌图标,Defense,还以此处清净,,,,
+4109,Meta,小费罐 (Tip Jar),Economy,Passive,每当你做出精彩操作(如无伤清图);会收到额外金币打赏。,硬币声,Economy,技术变现,,,,
+4110,Meta,盗版软件 (Cracked Ware),Glitch,Passive,所有武器伤害+100%;但每分钟有10%几率游戏崩溃(假崩溃;黑屏3秒)。,乱码,HighRisk,富贵险中求,,,,
+4111,MiniGame,贪吃蛇 (Snake),Game,Follow,身后跟着一串尾巴;吃掉敌人掉落的能量球变长;尾巴越长伤害越高。,像素蛇,Scaling,战斗中玩游戏,,,,
+4112,MiniGame,打砖块 (Breakout),Game,Bouncer,生成一个在屏幕边缘反弹的小球;你必须用飞船去接它;接住反弹伤害翻倍。,弹球,Skill,接球游戏,,,,
+4113,MiniGame,俄罗斯方块 (Tetris),Game,Drop,每隔几秒从天而降一个巨大方块;压扁敌人;这也算一种掩体。,四色方块,AOE,压路机,,,,
+4114,MiniGame,老虎机 (Slot Machine),Game,RNG,每杀10个怪拉一次杆;777全屏金币;骷髅全屏扣血。,滚动数字,RNG,赌博,,,,
+4115,MiniGame,电子宠物 (Tamagotchi),Game,Pet,你必须不断喂它(杀怪掉落食物);不喂它会饿死并扣你血;喂饱了进化。,像素蛋,Quest,养宠模拟器,,,,
+4116,Weird,烤面包机 (Toaster),Appliance,Launch,每隔5秒弹射两片焦黑的面包;对敌人造成火焰伤害。,面包机,DoT,早餐时间,,,,
+4117,Weird,电风扇 (Electric Fan),Appliance,Wind,向后吹风;增加飞船推力;同时吹走背后的敌人。,旋转扇叶,Speed,物理加速,,,,
+4118,Weird,迪斯科球 (Disco Ball),Party,Aura,将战斗BGM强制切换为迪斯科;所有敌人被迫跟随节奏抖动(减速)。,七彩光效,Control,强行尬舞,,,,
+4119,Weird,复读机 (Repeater),Meme,Echo,你每开一枪;它就学你开一枪(伤害50%);还会重复你的语音。,鹦鹉,DPS,回声,,,,
+4120,Weird,键盘侠 (Keyboard Warrior),Meme,Typing,"自动向敌人发射""垃圾话""弹幕(NMSL/Noob);造成精神伤害(真实伤害)。",文字块,TrueDmg,精神攻击,,,,
+4121,Bio,寄生脑 (Parasite Brain),Bio,Control,发射寄生虫控制一个敌人;让它为你而战;直到它死亡。,粉色大脑,Summon,借刀杀人,,,,
+4122,Bio,心脏起搏器 (Pacemaker),Bio,Revive,死亡时自动电击复活一次;但最大生命值减半。,电击特效,Revive,续命,,,,
+4123,Bio,肾上腺素泵 (Adrenaline),Bio,Buff,生命值越低;时间流速越慢(子弹时间);让你极限反杀。,红屏特效,Time,濒死体验,,,,
+4124,Bio,消化液 (Acid Spit),Bio,Debuff,向周围喷洒酸液;降低敌人护甲;并留下腐蚀地面。,绿色液体,Debuff,破甲,,,,
+4125,Bio,眼球守卫 (Watcher),Bio,Turret,扔下一个眼球;它会盯着最近的敌人;被盯住的敌人无法移动。,大眼球,Control,木头人,,,,
+4126,Tech,3D打印机 (3D Printer),Construct,Spawn,每隔15秒;打印一个随机的补给箱(弹药/血包/护盾)。,打印喷头,Support,后勤补给,,,,
+4127,Tech,无人机母舰 (Drone Carrier),Construct,Summon,释放6架微型自杀无人机;撞击敌人后爆炸;随后返航装填。,蜂群,Burst,星际航母,,,,
+4128,Tech,特斯拉线圈 (Tesla Coil),Construct,Chain,在飞船周围形成电网;连锁电击进入范围的所有敌人。,蓝色闪电,AOE,雷电法王,,,,
+4129,Tech,引力波雷达 (Gravity Radar),Tech,Vision,显示隐藏在墙壁后的敌人轮廓;并预警Boss的大招范围。,波纹UI,Info,透视挂,,,,
+4130,Tech,相位转换器 (Phase Shifter),Tech,Defense,受到伤害瞬间自动瞬移到安全位置;冷却10秒。,残影,Survival,自动闪避,,,,
+4131,Cursed,背后灵 (Ghost),Cursed,Debuff,一个幽灵趴在你背上;降低你20%移速;但帮你抵挡来自后方的伤害。,恐怖鬼影,Defense,鬼压床,,,,
+4132,Cursed,达摩克利斯之剑 (Damocles),Cursed,Hover,一把巨剑悬在你头顶;对你正下方的敌人造成巨额伤害;但偶尔会掉下来扎你。,巨剑,HighRisk,时刻警惕,,,,
+4133,Cursed,贪婪指环 (Ring of Greed),Cursed,Magnet,吸取全图金币;但每吸一个金币扣1点血;血量低时停止。,金光,Economy,要钱不要命,,,,
+4134,Cursed,狂战士面具 (Berserk Mask),Cursed,Buff,无法停止射击(自动开火);无法后退;伤害+50%。,红色面具,Aggressive,只能冲锋,,,,
+4135,Cursed,薛定谔的护盾 (Quantum Shield),Cursed,RNG,受到伤害时;50%几率免疫;50%几率双倍伤害。,闪烁护盾,RNG,看脸生存,,,,
+4136,Original,天气控制器 (Weather Control),Environment,Global,随机改变全场天气;雨天(导电)/晴天(回热)/雾天(潜行)。,云层变化,Meta,场地卡,,,,
+4137,Original,地形改造器 (Terraformer),Environment,Edit,制造临时的掩体墙壁;或者在墙上开洞。,建筑光束,Utility,我的世界,,,,
+4138,Original,黑洞炸弹 (Black Hole Bomb),Physics,Gravity,投掷一枚炸弹;爆炸后产生持续5秒的黑洞;吸入一切。,黑色球体,Control,聚怪神器,,,,
+4139,Original,镜像反射 (Mirror Coat),Defense,Reflect,开启后3秒内;反射所有照射到飞船的光束类武器。,镜面特效,Counter,激光克星,,,,
+4140,Original,时间胶囊 (Time Capsule),Time,Save,记录当前状态(血/弹/位);5秒后强制回溯到该状态。,时钟倒转,Survival,S/L大法,,,,
+4141,Social,弹幕护盾 (Chat Shield),Stream,Defense,观众发送的弹幕会在飞船周围生成文字护盾;抵挡伤害。,滚动弹幕,Social,肉身挡枪,,,,
+4142,Social,投票处决 (Vote Kill),Stream,Attack,当Boss血量低于10%时;观众投票决定处决方式(雷劈/火烧/压扁)。,投票UI,Cinematic,节目效果,,,,
+4143,Social,礼物轰炸 (Gift Bomb),Stream,Attack,收到特定礼物时;在鼠标位置投下一枚核弹。,蘑菇云,PayToWin,感谢火箭,,,,
+4144,Social,节奏大师 (Rhythm Master),Stream,Buff,根据直播间BGM的BPM;自动调整武器射速以卡点。,音浪,Music,自带BGM,,,,
+4145,Social,众筹血瓶 (Crowd Heal),Stream,Heal,每有一个新观众进入直播间;回复1点生命值。,爱心飘起,Sustain,欢迎新人,,,,
+4146,Endgame,创世神笔 (Pen of Creation),God,Edit,鼠标画什么出什么;画墙挡子弹;画火烧敌人;画心回血。,水墨轨迹,Creative,神笔马良,,,,
+4147,Endgame,无限手套 (Infinity Gauntlet),God,Snap,集齐6颗宝石(隐藏道具)后;打个响指;随机消灭全图50%敌人。,响指动画,MapClear,灭霸体验,,,,
+4148,Endgame,二向箔 (Dual Vector Foil),God,Dimension,投掷一张纸片;将3D/2D的敌人及其子弹压扁成一张画;使其失效。,空间坍缩,Control,降维打击,,,,
+4149,Endgame,源代码 (Source Code),God,Hack,可以直接修改敌人的属性(将敌人血量改为1);仅限非Boss。,代码窗口,Cheat,修改器,,,,
+4150,Endgame,开发者控制台 (Dev Console),God,Debug,允许输入指令: /kill all, /god mode, /noclip。,命令行,Meta,最终奖励,,
+4151,Meta,旁白 (The Narrator),Story,Passive,一个喋喋不休的声音解说你的战斗；当你失误时嘲讽你；当你精彩操作时对敌人造成全屏精神伤害。,声波字幕,Psychic,史丹利的寓言,,,,
+4152,Meta,主角光环 (Plot Armor),Story,Passive,当生命值低于5%时触发；获得5秒无敌和10倍伤害；每局限一次；伴随着激昂的BGM。,金色光柱,Clutch,王道热血漫,,,,
+4153,Meta,延迟补偿 (Lag Comp),Net,Passive,攻击未命中时，如果偏离角度小于10度，系统判定为命中（模拟网络延迟补偿）。,残影修正,Accuracy,高Ping战士,,,,
+4154,Meta,穿模 (Noclip),Glitch,Passive,有1%的几率受到伤害无效（子弹穿过身体）；有1%几率冲刺穿墙。,模型闪烁,Defense,育碧特性,,,,
+4155,Meta,废案武器 (Cut Content),Dev,Attack,伴星是一把建模粗糙、未上色的枪；发射开发者测试用的超强子弹；但偶尔会报错。,白色方块,DPS,开发者遗留,,,,
+4156,Meta,手柄漂移 (Joycon Drift),Input,Debuff,飞船会随机向某个方向缓慢漂移；作为补偿，所有武器伤害+30%。,摇杆图标,Damage,硬核操作,,,,
+4157,Meta,显卡杀手 (GPU Melter),Visual,AOE,释放极其华丽、粒子数量过多的特效；导致游戏掉帧；利用卡顿带来的“子弹时间”躲避攻击。,满屏粒子,Time,物理外挂,,,,
+4158,Meta,垂直同步 (V-Sync),Visual,Control,强制锁定周围敌人的移动帧率；使快速移动的敌人变慢。,撕裂线,Slow,画面设置,,,,
+4159,Meta,动态模糊 (Motion Blur),Visual,Stealth,移动速度越快，模糊越严重；高速移动时获得90%闪避率。,模糊滤镜,Evasion,晕3D慎用,,,,
+4160,Meta,光线追踪 (Ray Tracing),Visual,Passive,利用地面/墙壁的反射计算；让激光武器可以无限反射。,反射光线,Ricochet,RTX On,,,,
+4161,Hard,泰坦核心 (Titan GPU),Hardware,Burn,伴星是一个巨大的显卡风扇；射击会积攒过热；过热时向周围喷射高温气浪。,RGB风扇,Fire,核弹显卡,,,,
+4162,Tech,蓝屏 (BSOD),System,Stun,每隔60秒，强制全屏定格3秒（模拟死机）；期间玩家可以调整位置但不能攻击。,蓝色背景,Control,致命错误,,,,
+4163,Web,404 (Not Found),Web,Banish,发射“链接失效”光束；被击中的小怪有几率直接消失（被移除出场景）。,破碎图片,Execute,查无此人,,,,
+4164,Web,网络饼干 (Cookies),Web,Tracker,被击中的敌人会被标记；你可以隔墙看到它的位置和血量；并且掉落物增加。,追踪图标,Loot,隐私泄露,,,,
+4165,Web,梯子 (VPN),Web,Teleport,你的子弹有几率从屏幕另一端飞出来击中敌人（绕过防火墙）。,隧道特效,Trick,加密通道,,,,
+4166,Security,防火墙 (Firewall),Security,Barrier,在身前生成一道燃烧的墙；阻挡病毒（敌人）和恶意软件（子弹）。,红色网格,Defense,安全防护,,,,
+4167,Security,杀毒软件 (Antivirus),Security,Execute,对“生物/感染”类敌人造成三倍伤害；扫描并清除场上的毒雾。,扫描光束,Purge,全面体检,,,,
+4168,File,压缩包 (Zip Bomb),File,AOE,投掷一个微小的方块；落地后解压成巨大的爆炸范围；造成海量物理伤害。,解压进度条,Burst,解压密码,,,,
+4169,File,快捷方式 (Shortcut),File,Utility,在地图上生成传送门；可以直接跳过当前房间到达出口（有冷却）。,箭头图标,Speedrun,路径依赖,,,,
+4170,File,清空回收站 (Empty Trash),File,Execute,一键清除场上所有生命值低于10%的敌人。,碎纸声,Finish,强迫症,,,,
+4171,Physics,薛定谔 (Schrodinger),Quantum,State,敌人处于“既死又活”的状态；直到你再次攻击它，才结算死亡。,量子箱,RNG,波函数坍缩,,,,
+4172,Physics,麦克斯韦妖 (Maxwell),Physics,Gate,在身前制造一个门；速度快的子弹（友军）通过加速；速度慢的子弹（敌军）被阻挡。,分子运动,Shield,热力学叛徒,,,,
+4173,Physics,永动机 (Perpetual),Physics,Energy,你的热量不会自动冷却；必须通过移动产生动能来散热；伤害随热量提升。,齿轮转动,Heat,民科神器,,,,
+4174,Physics,蝴蝶效应 (Butterfly),Chaos,Chain,打碎场景物品（如罐子）会引发连锁反应；导致全屏随机敌人受到天罚。,龙卷风,Luck,混沌理论,,,,
+4175,Physics,熵增 (Entropy),Physics,Decay,周围敌人的护甲和攻击力随时间持续衰减；直到变成0。,生锈特效,Debuff,宇宙终局,,,,
+4176,Vehicle,黑匣子 (Black Box),Flight,Save,如果你死亡，黑匣子会记录当前数据；下一局游戏捡到它可获得大量经验/金币。,橙色盒子,Meta,飞行记录,,,,
+4177,Gym,跑步机 (Treadmill),Sport,Resource,你必须保持移动不能停；移动产生护盾；停止移动护盾快速衰减。,汗水特效,Shield,有氧运动,,,,
+4178,Gym,哑铃 (Dumbbell),Sport,Knockback,伴星是一个极重的哑铃；环绕飞行；击飞一切靠近的敌人。,金属撞击,Melee,力量训练,,,,
+4179,Gym,蛋白粉 (Protein),Sport,Buff,飞船体型变大50%；但近战伤害增加100%；生命值增加50%。,肌肉图标,Tank,增肌,,,,
+4180,Gym,瑜伽球 (Yoga Ball),Sport,Bouncy,伴星是一个巨大的弹性球；在敌人之间弹来弹去；永不落地。,橡胶质感,Physics,柔韧性,,,,
+4181,Food,披萨 (Pizza),Food,Orbit,四个披萨切片环绕飞船；接触造成伤害；致敬《神龟》。,披萨,Melee,卡瓦邦嘎,,,,
+4182,Food,咖啡 (Coffee),Drink,Buff,射速+50%；移速+20%；但准星会不受控制地抖动。,咖啡热气,DPS,咖啡因中毒,,,,
+4183,Food,热茶 (Hot Tea),Drink,Time,喝一口茶（按键）；全屏动作变慢（子弹时间）；享受片刻宁静。,茶杯,Control,英国绅士,,,,
+4184,Food,快乐水 (Soda),Drink,Sonic,喝完打一个巨大的嗝；造成锥形声波伤害并击退敌人。,气泡特效,AOE,肥宅快乐,,,,
+4185,Food,火锅 (Hot Pot),Drink,Aura,周围形成沸腾的红汤光环；对敌人造成持续火焰伤害。,辣椒漂浮,DoT,重庆辣度,,,,
+4186,Game,麻将 (Mahjong),Tabletop,Projectile,发射麻将牌；如果凑成“碰”或“杠”（连续命中3次）；造成暴击。,发财,Combo,国粹,,,,
+4187,Game,扑克 (Poker),Tabletop,RNG,发射扑克牌；随机花色；黑桃伤害高；红桃回血。,纸牌飞舞,Gambler,卡牌大师,,,,
+4188,Game,二十面骰 (D20),Tabletop,RNG,每次攻击掷骰子；1是哑火；20是10倍暴击。,骰子滚动,Crit,跑团,,,,
+4189,Game,乐高地雷 (Lego),Toy,Trap,撒下一地积木；敌人踩上去会受到巨额伤害并眩晕（脚底板之痛）。,彩色积木,Trap,绝对防御,,,,
+4190,Game,指尖陀螺 (Fidget Spinner),Toy,Orbit,三个叶片高速旋转；抵挡子弹；且极其解压。,旋转残影,Defense,多动症,,,,
+4191,Toy,套娃 (Matryoshka),Toy,Summon,伴星死亡/销毁时，会分裂出一个小一号的伴星；共分裂5次。,娃娃脸,Summon,无限禁止,,,,
+4192,Toy,不倒翁 (Tumbler),Toy,Stats,免疫所有击退效果；受到撞击时会反弹回去。,摇晃动画,Tank,屹立不倒,,,,
+4193,Decor,招财猫 (Lucky Cat),Decor,Economy,每隔几秒挥手一次；挥手时吸引全屏金币；并有几率掉落金币。,喵喵叫,Farming,开店必备,,,,
+4194,Decor,风铃 (Wind Chime),Decor,Sonar,当有敌人靠近或进入伏击范围时；发出清脆的铃声预警。,铃声,Info,听声辩位,,,,
+4195,Decor,捕梦网 (Dream Catcher),Decor,Control,使周围的飞行单位（非Boss）陷入睡眠；停止攻击。,网状光环,Control,美梦,,,,
+4196,Magic,水晶球 (Crystal Ball),Occult,Guide,显示一条线，预判Boss下一次攻击的轨迹或落点。,迷雾光线,Dodge,占卜,,,,
+4197,Magic,巫毒针 (Voodoo Pin),Occult,Counter,每当受到伤害，向全屏敌人反弹50%的真实伤害。,尖刺特效,Thorns,诅咒,,,,
+4198,Magic,塔罗牌 (Tarot),Occult,Buff,每进入一个新房间，抽一张牌获得随机Buff（愚者、力量、死神等）。,卡牌UI,RNG,命运,,,,
+4199,Magic,香炉 (Incense),Occult,Stealth,释放烟雾缭绕；在烟雾中敌人无法锁定你；且缓慢回血。,紫烟,Support,修仙,,,,
+4200,End,全家桶 (Bucket Meal),Food,Heal,召唤一个巨大的炸鸡桶；打破它掉落大量回血食物；庆祝胜利。,炸鸡块,Heal,最后的晚餐,,,,
