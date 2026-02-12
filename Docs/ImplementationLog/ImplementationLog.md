@@ -2419,3 +2419,43 @@ CLAUDE.md 是 AI 对话的"ground truth"。架构大修后未同步更新会导�
 - 利用 `GetComponentInChildren<T>(true)` 的 includeInactive 参数确保即使 StarChartPanel 被隐藏也能被找到
 - `FindObjectsByType<Canvas>(FindObjectsInactive.Include, ...)` 搜索包含未激活的 Canvas
 - Section Builder 方法返回创建的组件引用，供后续 Section 连线使用（如 UIManager 需要 HeatBarHUD 等引用）
+
+---
+
+## InputHandler ServiceLocator 注册 + Door 调试日志 — 2026-02-12 21:30
+
+### 问题
+
+门过渡系统无法触发，排查发现 `InputHandler` 未注册到 `ServiceLocator`，导致 `DoorTransitionController.ExecuteTransition()` 中 `ServiceLocator.Get<InputHandler>()` 返回 null，飞船无法被传送。
+
+### 修改文件
+
+| 文件 | 变更 | 目的 |
+|------|------|------|
+| `Assets/Scripts/Ship/Input/InputHandler.cs` | 添加 `using ProjectArk.Core;`，Awake 中调用 `ServiceLocator.Register(this)`，新增 `OnDestroy` 调用 `ServiceLocator.Unregister(this)` | 使 DoorTransitionController 和其他系统能通过 ServiceLocator 获取 InputHandler 引用 |
+| `Assets/Scripts/Level/Room/Door.cs` | 在 `OnTriggerEnter2D` 和 `TryTransition` 中添加详细调试日志 | 定位门过渡失败的具体断点（Layer 检查/State 检查/ServiceLocator 检查） |
+
+### 技术
+
+- ServiceLocator 模式：Awake 注册 / OnDestroy 注销
+- 调试日志在生产阶段可移除（或替换为 `#if UNITY_EDITOR` 条件编译）
+
+---
+
+## Door 添加独立 Rigidbody2D 修复 Trigger 不触发 — 2026-02-12 22:30
+
+### 问题
+
+Door 作为 Room 的子物体，两者都有 Trigger Collider 但都没有 Rigidbody2D。Unity 2D 物理将没有 Rigidbody2D 的子物体 Collider 合并到父级的静态碰撞体中，导致 OnTriggerEnter2D 只回调给父级（Room）而不回调给子物体（Door）。
+
+### 修改文件
+
+| 文件 | 变更 | 目的 |
+|------|------|------|
+| `Assets/Scripts/Level/Room/Door.cs` | 添加 `[RequireComponent(typeof(Rigidbody2D))]`，Awake 中设置 `bodyType = Static` | 使 Door 拥有独立的物理实体，能独立接收 OnTriggerEnter2D 回调 |
+
+### 技术
+
+- Unity 2D 复合碰撞体规则：子物体 Collider 若无自身 Rigidbody2D，会附属到最近的父级 Rigidbody2D（或全局静态体）
+- Static Rigidbody2D 不参与物理模拟但让 Collider 成为独立实体
+- `[RequireComponent]` 确保 Unity 自动添加 Rigidbody2D 组件
