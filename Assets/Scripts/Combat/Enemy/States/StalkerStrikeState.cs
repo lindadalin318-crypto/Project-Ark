@@ -122,7 +122,10 @@ namespace ProjectArk.Combat.Enemy
                     if (damageable != null)
                     {
                         Vector2 knockDir = ((Vector2)results[i].transform.position - origin).normalized;
-                        damageable.TakeDamage(_selectedAttack.Damage, knockDir, _selectedAttack.Knockback);
+                        var payload = new DamagePayload(_selectedAttack.Damage, DamageType.Physical,
+                                                        knockDir, _selectedAttack.Knockback,
+                                                        _brain.Entity.gameObject);
+                        damageable.TakeDamage(payload);
                     }
                 }
             }
@@ -141,7 +144,10 @@ namespace ProjectArk.Combat.Enemy
                     if (damageable != null)
                     {
                         Vector2 knockDir = ((Vector2)_legacyBuffer[i].transform.position - origin).normalized;
-                        damageable.TakeDamage(damage, knockDir, knockback);
+                        var payload = new DamagePayload(damage, DamageType.Physical,
+                                                        knockDir, knockback,
+                                                        _brain.Entity.gameObject);
+                        damageable.TakeDamage(payload);
                     }
                 }
             }

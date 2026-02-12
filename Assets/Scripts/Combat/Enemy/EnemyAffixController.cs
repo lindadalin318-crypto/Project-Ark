@@ -214,7 +214,8 @@ namespace ProjectArk.Combat.Enemy
                 if (damageable != null)
                 {
                     Vector2 knockDir = ((Vector2)_aoeBuffer[i].transform.position - pos).normalized;
-                    damageable.TakeDamage(_explosiveDamage, knockDir, 8f);
+                    var payload = new DamagePayload(_explosiveDamage, DamageType.Physical, knockDir, 8f, gameObject);
+                    damageable.TakeDamage(payload);
                 }
             }
 
@@ -240,7 +241,8 @@ namespace ProjectArk.Combat.Enemy
                 if (damageable != null)
                 {
                     Vector2 knockDir = ((Vector2)_aoeBuffer[i].transform.position - pos).normalized;
-                    damageable.TakeDamage(reflectDamage, knockDir, 2f);
+                    var payload = new DamagePayload(reflectDamage, DamageType.Physical, knockDir, 2f, gameObject);
+                    damageable.TakeDamage(payload);
                     break; // Only reflect to one target
                 }
             }

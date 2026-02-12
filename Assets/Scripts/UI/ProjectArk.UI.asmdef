@@ -9,7 +9,10 @@
         "Unity.InputSystem",
         "Unity.TextMeshPro",
         "Unity.RenderPipelines.Core.Runtime",
-        "Unity.RenderPipelines.Universal.Runtime"
+        "Unity.RenderPipelines.Universal.Runtime",
+        "UniTask",
+        "PrimeTween.Runtime",
+        "ProjectArk.Core.Audio"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -31,6 +31,7 @@ namespace ProjectArk.Combat
         private float _expandSpeed;
         private float _damage;
         private float _knockback;
+        private DamageType _damageType;
         private GameObject _impactVFXPrefab;
 
         // Direction and sector support
@@ -112,6 +113,7 @@ namespace ProjectArk.Combat
             _expandSpeed = parms.Speed;
             _damage = parms.Damage;
             _knockback = parms.Knockback;
+            _damageType = parms.DamageType;
             _impactVFXPrefab = parms.ImpactVFXPrefab;
 
             _direction = direction.normalized;
@@ -191,7 +193,8 @@ namespace ProjectArk.Combat
             if (damageable != null && damageable.IsAlive)
             {
                 Vector2 knockbackDir = ((Vector2)other.transform.position - (Vector2)transform.position).normalized;
-                damageable.TakeDamage(_damage, knockbackDir, _knockback);
+                var payload = new DamagePayload(_damage, _damageType, knockbackDir, _knockback, gameObject);
+                damageable.TakeDamage(payload);
             }
 
             // Spawn impact VFX at enemy position

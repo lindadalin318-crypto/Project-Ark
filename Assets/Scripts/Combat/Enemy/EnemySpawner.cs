@@ -1,6 +1,6 @@
-using System.Collections;
 using UnityEngine;
 using ProjectArk.Core;
+using Cysharp.Threading.Tasks;
 
 namespace ProjectArk.Combat.Enemy
 {
@@ -175,13 +175,15 @@ namespace ProjectArk.Combat.Enemy
             // Schedule respawn if below max
             if (_aliveCount < _maxAlive)
             {
-                StartCoroutine(RespawnAfterDelay());
+                RespawnAfterDelay().Forget();
             }
         }
 
-        private IEnumerator RespawnAfterDelay()
+        private async UniTaskVoid RespawnAfterDelay()
         {
-            yield return new WaitForSeconds(_spawnInterval);
+            await UniTask.Delay(
+                System.TimeSpan.FromSeconds(_spawnInterval),
+                cancellationToken: destroyCancellationToken);
 
             // Double check we still need to spawn
             if (_aliveCount < _maxAlive)

@@ -4,7 +4,9 @@
     "references": [
         "ProjectArk.Core",
         "ProjectArk.Ship",
-        "ProjectArk.Heat"
+        "ProjectArk.Heat",
+        "UniTask",
+        "ProjectArk.Core.Audio"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

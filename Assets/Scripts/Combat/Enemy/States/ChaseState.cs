@@ -16,6 +16,7 @@ namespace ProjectArk.Combat.Enemy
     public class ChaseState : IState
     {
         private readonly EnemyBrain _brain;
+        private float _timeInState;
 
         // Boids separation weight: higher value = stronger spreading during chase
         private const float SEPARATION_WEIGHT = 0.6f;
@@ -25,13 +26,32 @@ namespace ProjectArk.Combat.Enemy
             _brain = brain;
         }
 
-        public void OnEnter() { }
+        public void OnEnter()
+        {
+            _timeInState = 0f;
+        }
 
         public void OnUpdate(float deltaTime)
         {
+            _timeInState += deltaTime;
+
             var perception = _brain.Perception;
             var entity = _brain.Entity;
             var stats = _brain.Stats;
+
+            // ── Data-driven transition check (highest priority) ──
+            var rule = TransitionRuleEvaluator.Evaluate(_brain, _timeInState);
+            if (rule != null)
+            {
+                var targetState = TransitionRuleEvaluator.ResolveState(_brain, rule.TargetState);
+                if (targetState != null)
+                {
+                    _brain.StateMachine.TransitionTo(targetState);
+                    return;
+                }
+            }
+
+            // ── Hardcoded fallback transitions (backward compatible) ──
 
             // If target is lost (memory decayed) or out of leash range → return
             if (!perception.HasTarget || perception.DistanceToTarget > stats.LeashRange)

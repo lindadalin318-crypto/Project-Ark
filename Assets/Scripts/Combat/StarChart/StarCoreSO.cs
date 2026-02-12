@@ -1,4 +1,5 @@
 using UnityEngine;
+using ProjectArk.Core;
 
 namespace ProjectArk.Combat
 {
@@ -15,6 +16,9 @@ namespace ProjectArk.Combat
 
         [Header("Core Identity")]
         [SerializeField] private CoreFamily _family;
+
+        [Tooltip("Elemental damage type for this core's projectiles.")]
+        [SerializeField] private DamageType _damageType = DamageType.Physical;
 
         [Header("Projectile")]
         [SerializeField] private GameObject _projectilePrefab;
@@ -58,6 +62,7 @@ namespace ProjectArk.Combat
         // --- Public read-only properties ---
 
         public CoreFamily Family => _family;
+        public DamageType DamageType => _damageType;
         public GameObject ProjectilePrefab => _projectilePrefab;
         public float FireRate => _fireRate;
         public float FireInterval => _fireRate > 0f ? 1f / _fireRate : float.MaxValue;

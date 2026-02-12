@@ -1,21 +1,25 @@
+using System;
 using UnityEngine;
 
 namespace ProjectArk.Core
 {
     /// <summary>
     /// Universal damage interface. Any entity that can receive damage
-    /// (enemies, destructibles, potentially the player) implements this.
-    /// Projectiles, laser beams, and echo waves call TakeDamage via this contract.
+    /// (enemies, destructibles, the player) implements this.
     /// Lives in Core so both Ship and Combat assemblies can reference it.
     /// </summary>
     public interface IDamageable
     {
         /// <summary>
-        /// Apply damage to this entity.
+        /// Apply damage using the structured payload (preferred path).
+        /// DamageCalculator runs resistance/block checks internally.
         /// </summary>
-        /// <param name="damage">Amount of damage to deal.</param>
-        /// <param name="knockbackDirection">Normalized direction of knockback force.</param>
-        /// <param name="knockbackForce">Magnitude of knockback impulse.</param>
+        void TakeDamage(DamagePayload payload);
+
+        /// <summary>
+        /// Legacy overload — forwards to TakeDamage(DamagePayload) with Physical type.
+        /// </summary>
+        [Obsolete("Use TakeDamage(DamagePayload) instead")]
         void TakeDamage(float damage, Vector2 knockbackDirection, float knockbackForce);
 
         /// <summary>

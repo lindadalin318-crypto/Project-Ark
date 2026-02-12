@@ -214,7 +214,9 @@ namespace ProjectArk.Combat.Enemy
                     var damageable = hit.collider.GetComponent<IDamageable>();
                     if (damageable != null && damageable.IsAlive)
                     {
-                        damageable.TakeDamage(_damage, _direction, _knockback);
+                        var payload = new DamagePayload(_damage, DamageType.Physical,
+                                                        _direction, _knockback, gameObject);
+                        damageable.TakeDamage(payload);
                         _hasDamaged = true;
                     }
                 }

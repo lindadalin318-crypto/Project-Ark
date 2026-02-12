@@ -2031,3 +2031,305 @@ Phase 3 实现了 6 个子系统，构建了完整的高级敌人 AI 层：
 - Boss 多阶段战斗机制（HP 阈值触发、攻击模式切换、无敌过渡）
 
 **技术**：HFSM 子类化 (StalkerBrain)、事件驱动恐惧传播 (静态事件 + 距离判定)、NonAlloc 阵营/威胁扫描、运行时统计覆写 (AffixController)、Dot Product 几何判定 (后方弧/威胁朝向)、策略模式词缀效果、数据驱动 Boss 阶段 (BossPhaseDataSO)。
+
+---
+
+## 架构基建大修 — Architecture Infrastructure Overhaul
+
+> 以下 Phase 1–6C 为一次性架构改进，解决进入关卡构建阶段前识别出的 9 项架构短板。
+
+---
+
+### Phase 1: UniTask + PrimeTween 集成 — 2025-06-XX
+
+#### 新建/修改文件
+
+1. `Packages/manifest.json`
+   - 新增 `com.cysharp.unitask` (GitHub git URL)
+   - 新增 `com.kyrylokuzyk.primetween` (初始为 git URL，后改为 NPM scoped registry)
+
+2. `Assets/Scripts/UI/ProjectArk.UI.asmdef` — 新增 `UniTask`、`PrimeTween.Runtime` 引用
+
+3. `Assets/Scripts/Combat/ProjectArk.Combat.asmdef` — 新增 `UniTask` 引用
+
+4. `Assets/Scripts/Ship/ProjectArk.Ship.asmdef` — 新增 `UniTask` 引用
+
+5. `Assets/Scripts/UI/WeavingStateTransition.cs`
+   - 将协程过渡重构为 `async UniTaskVoid` + `PrimeTween.Tween.Custom`
+   - 新增 `CancellationTokenSource` 管理，`CancelTransition()` 方法
+
+6. `Assets/Scripts/Combat/Enemy/EnemySpawner.cs`
+   - `RespawnAfterDelay` 从协程迁移为 `async UniTaskVoid` + `UniTask.Delay`
+
+7. `Assets/Scripts/Combat/Enemy/EnemyEntity.cs`
+   - `HitFlashCoroutine` 迁移为 `HitFlashAsync`，使用 `UniTask.Delay` + `CancellationTokenSource`
+
+8. `Assets/Scripts/Ship/Combat/ShipHealth.cs`
+   - `HitFlashCoroutine` 迁移为 `HitFlashAsync`，同上
+
+#### 目的
+用 UniTask 替代 Coroutine 实现零 GC 异步编程；用 PrimeTween 替代手写 Lerp 实现高性能补间动画。
+
+**技术**：UniTask (`async UniTaskVoid`, `UniTask.Delay`, `UniTask.Yield`)、PrimeTween (`Tween.Custom`)、`CancellationTokenSource` 生命周期管理。
+
+---
+
+### Phase 2: ServiceLocator 轻量依赖注入 — 2025-06-XX
+
+#### 新建/修改文件
+
+1. `Assets/Scripts/Core/ServiceLocator.cs` *(新建)*
+   - 静态泛型 Service Locator：`Register<T>`, `Get<T>`, `Unregister<T>`, `Clear()`
+
+2. `Assets/Scripts/Core/Pool/PoolManager.cs` — Awake 注册 / OnDestroy 注销 ServiceLocator
+
+3. `Assets/Scripts/Combat/Enemy/EnemyDirector.cs` — 同上
+
+4. `Assets/Scripts/Heat/HeatSystem.cs` — 同上
+
+5. `Assets/Scripts/Combat/StarChart/StarChartController.cs` — 同上；`InitializeAllPools` 从 ServiceLocator 获取 PoolManager
+
+6. `Assets/Scripts/UI/UIManager.cs` — 替换所有 `FindAnyObjectByType` 为 `ServiceLocator.Get<T>()`
+
+#### 目的
+消除 `FindAnyObjectByType` 的 O(n) 运行时查找和直接单例引用，建立统一的服务解析入口。
+
+**技术**：静态泛型字典 (`Dictionary<Type, object>`)、Register/Unregister 生命周期与 MonoBehaviour.Awake/OnDestroy 绑定。
+
+---
+
+### Phase 3: 统一伤害管线 — 2025-06-XX
+
+#### 新建/修改文件
+
+1. `Assets/Scripts/Core/DamageType.cs` *(新建)* — `enum DamageType { Physical, Fire, Ice, Lightning, Void }`
+
+2. `Assets/Scripts/Core/DamagePayload.cs` *(新建)* — 不可变结构体封装伤害事件全部数据
+
+3. `Assets/Scripts/Core/IResistant.cs` *(新建)* — 元素抗性接口
+
+4. `Assets/Scripts/Core/IBlockable.cs` *(新建)* — 格挡接口
+
+5. `Assets/Scripts/Core/DamageCalculator.cs` *(新建)* — 集中式伤害计算：抗性 → 格挡 → 最终伤害
+
+6. `Assets/Scripts/Core/IDamageable.cs` — 新增 `TakeDamage(DamagePayload)` 重载，旧签名标记 `[Obsolete]`
+
+7. `Assets/Scripts/Combat/StarChart/StarCoreSO.cs` — 新增 `_damageType` 字段
+
+8. `Assets/Scripts/Combat/StarChart/FiringSnapshot.cs` — `CoreSnapshot` 新增 `DamageType`
+
+9. `Assets/Scripts/Combat/StarChart/ProjectileParams.cs` — 新增 `DamageType` 字段
+
+10. `Assets/Scripts/Combat/StarChart/SnapshotBuilder.cs` — `BuildCoreSnapshot` 填充 `DamageType`
+
+11. `Assets/Scripts/Combat/Projectile/Projectile.cs` — 存储 `DamageType`，碰撞时构造 `DamagePayload`
+
+12. `Assets/Scripts/Combat/Projectile/LaserBeam.cs` — 同上
+
+13. `Assets/Scripts/Combat/Projectile/EchoWave.cs` — 同上
+
+14. `Assets/Scripts/Combat/Enemy/States/AttackSubState.cs` — 使用 `DamagePayload(DamageType.Physical)`
+
+15. `Assets/Scripts/Combat/Enemy/States/StalkerStrikeState.cs` — 同上
+
+16. `Assets/Scripts/Combat/Enemy/EnemyProjectile.cs` — 同上
+
+17. `Assets/Scripts/Combat/Enemy/EnemyLaserBeam.cs` — 同上
+
+18. `Assets/Scripts/Combat/Enemy/EnemyAffixController.cs` — 爆炸 / 反弹词缀使用 `DamagePayload`
+
+19. `Assets/Scripts/Combat/Enemy/EnemyEntity.cs` — 实现 `IResistant` + `IBlockable`，`TakeDamage` 调用 `DamageCalculator.Calculate`
+
+20. `Assets/Scripts/Ship/Combat/ShipHealth.cs` — 新增 `TakeDamage(DamagePayload)` 重载
+
+#### 目的
+建立从发射到落点的完整伤害管线，支持元素抗性、格挡减伤、伤害来源追踪。
+
+**技术**：`readonly struct DamagePayload`、策略式接口 (`IResistant`, `IBlockable`)、集中计算器模式 (`DamageCalculator`)、渐进式迁移 (`[Obsolete]` 旧 API)。
+
+---
+
+### Phase 4A: 存档系统数据模型 — 2025-06-XX
+
+#### 新建/修改文件
+
+1. `Assets/Scripts/Core/Save/SaveData.cs` *(新建)*
+   - `PlayerSaveData`, `StarChartSaveData`, `TrackSaveData`, `InventorySaveData`, `ProgressSaveData`, `SaveFlag`, `PlayerStateSaveData`
+
+2. `Assets/Scripts/Core/Save/SaveManager.cs` *(新建)*
+   - 静态工具类：`Save`, `Load`, `Delete`, `HasSave`，支持自动备份
+
+3. `Assets/Scripts/Combat/StarChart/StarChartController.cs`
+   - 新增 `ExportToSaveData()` / `ImportFromSaveData()` 方法
+
+4. `Assets/Scripts/UI/StarChartInventorySO.cs`
+   - 新增 `FindCore`, `FindPrism`, `FindLightSail`, `FindSatellite` 查找方法
+
+#### 目的
+建立序列化安全的存档数据模型和 I/O 管理器，为后续关卡进度存储奠定基础。
+
+**技术**：`JsonUtility` 序列化、`Application.persistentDataPath`、自动 `.bak` 备份、按槽位存档。
+
+---
+
+### Phase 4B: 音频架构 — 2025-06-XX
+
+#### 新建/修改文件
+
+1. `Assets/Scripts/Core/Audio/` *(新建目录)*
+
+2. `Assets/Scripts/Core/Audio/ProjectArk.Core.Audio.asmdef` *(新建)* — 音频程序集定义
+
+3. `Assets/Scripts/Core/Audio/AudioManager.cs` *(新建)*
+   - SFX 池化播放、音乐淡入淡出、Mixer 音量/低通滤波控制
+   - ServiceLocator 注册/注销
+
+4. `Assets/Scripts/UI/ProjectArk.UI.asmdef` — 新增 `ProjectArk.Core.Audio` 引用
+
+5. `Assets/Scripts/Combat/ProjectArk.Combat.asmdef` — 新增 `ProjectArk.Core.Audio` 引用
+
+#### 目的
+建立集中式音频管理，支持 SFX 池化（避免运行时 AudioSource 创建/销毁）和 Mixer 控制。
+
+**技术**：AudioSource 对象池、`AudioMixer.SetFloat` 对数音量映射、`Mathf.Log10` dB 转换。
+
+---
+
+### Phase 5: Combat 程序集拆分 + 事件总线 — 2025-06-XX
+
+#### 新建/修改文件
+
+1. `Assets/Scripts/Combat/Enemy/ProjectArk.Enemy.asmdef` *(新建)*
+   - 将 Enemy 子目录独立为 `ProjectArk.Enemy` 程序集
+
+2. `Assets/Scripts/Core/CombatEvents.cs` *(新建)*
+   - 静态事件总线：`OnWeaponFired` 事件，解耦 `EnemyPerception` 与 `StarChartController`
+
+3. `Assets/Scripts/Combat/Enemy/EnemyPerception.cs`
+   - 订阅 `CombatEvents.OnWeaponFired` 替代 `StarChartController.OnWeaponFired`
+
+4. `Assets/Scripts/Combat/StarChart/StarChartController.cs`
+   - 使用 `CombatEvents.RaiseWeaponFired()` 替代直接事件
+
+5. `Assets/Scripts/Combat/Editor/ProjectArk.Combat.Editor.asmdef`
+   - 新增 `ProjectArk.Enemy` 引用
+
+#### 目的
+打破 Combat ↔ Enemy 循环依赖，通过 Core 层事件总线实现跨程序集通信。
+
+**技术**：Assembly Definition 拆分、静态事件总线模式 (`CombatEvents`)。
+
+---
+
+### Phase 6A: 数据驱动状态转换 — 2025-06-XX
+
+#### 新建/修改文件
+
+1. `Assets/Scripts/Combat/StateTransitionRule.cs` *(新建)*
+   - `TransitionCondition` 枚举、`EnemyStateType` 枚举、`StateTransitionRule` 可序列化类
+
+2. `Assets/Scripts/Combat/Enemy/TransitionRuleEvaluator.cs` *(新建)*
+   - 静态工具类：评估转换规则、将 `EnemyStateType` 解析为 `IState` 实例
+
+3. `Assets/Scripts/Combat/Enemy/EnemyStatsSO.cs`
+   - 新增 `_transitionOverrides` 数组
+
+4. `Assets/Scripts/Combat/Enemy/States/ChaseState.cs`
+   - 优先检查数据驱动规则，无匹配时 fallback 到硬编码逻辑
+
+#### 目的
+允许策划在 SO Inspector 中配置 AI 状态转换规则，无需修改代码即可调整行为。
+
+**技术**：数据驱动规则评估、策略模式状态解析、`StateTransitionRule` SO 可序列化数组。
+
+---
+
+### Phase 6B: 单元测试基础设施 — 2025-06-XX
+
+#### 新建/修改文件
+
+1. `Assets/Scripts/Core/Tests/ProjectArk.Core.Tests.asmdef` *(新建)*
+
+2. `Assets/Scripts/Combat/Tests/ProjectArk.Combat.Tests.asmdef` *(新建)*
+
+3. `Assets/Scripts/Core/Tests/DamageCalculatorTests.cs` *(新建)*
+   - 抗性、格挡、边界情况测试
+
+4. `Assets/Scripts/Combat/Tests/StateMachineTests.cs` *(新建)*
+   - OnEnter/OnExit 顺序、Tick、状态切换验证
+
+5. `Assets/Scripts/Combat/Tests/SnapshotBuilderTests.cs` *(新建)*
+   - 棱镜修正聚合 (Add/Multiply)、弹丸计数上限
+
+6. `Assets/Scripts/Combat/Tests/SlotLayerTests.cs` *(新建)*
+   - 装备/卸下逻辑、槽位尺寸、占用验证
+
+7. `Assets/Scripts/Core/Tests/HeatSystemTests.cs` *(新建)*
+   - ServiceLocator 功能测试
+
+#### 目的
+建立单元测试基础设施，为核心系统提供回归保护。
+
+**技术**：NUnit、Unity Test Framework、运行时创建 ScriptableObject 实例、反射设置私有字段。
+
+---
+
+## Bug 修复：PrimeTween 包解析 + CS0246 + CS0117 + CS4014 + CanvasGroup — 2025-06-XX
+
+### 修改文件
+
+1. `Packages/manifest.json`
+   - PrimeTween 从失效的 git URL (`nicktmv/PrimeTween.git`) 改为 NPM scoped registry (`registry.npmjs.org`, 版本 `1.3.0`)
+   - 新增 `scopedRegistries` 配置块
+
+2. `Assets/Scripts/Combat/StarChart/IStarChartItemResolver.cs` *(新建)*
+   - 接口定义 `FindCore`, `FindPrism`, `FindLightSail`, `FindSatellite`
+   - 解决 Combat 程序集无法引用 UI 程序集中 `StarChartInventorySO` 的循环依赖
+
+3. `Assets/Scripts/Combat/StarChart/StarChartController.cs`
+   - `ImportFromSaveData` 和 `ImportTrack` 参数从 `StarChartInventorySO` 改为 `IStarChartItemResolver`
+
+4. `Assets/Scripts/UI/StarChartInventorySO.cs`
+   - 实现 `IStarChartItemResolver` 接口
+
+5. `Assets/Scripts/Combat/Tests/SnapshotBuilderTests.cs`
+   - `PrismFamily.Stat`（不存在）→ `PrismFamily.Rheology`（正确枚举值）
+
+6. `Assets/Scripts/UI/WeavingStateTransition.cs`
+   - PrimeTween `Tween.Custom` 返回值添加 `_ =` 显式丢弃，消除 CS4014 警告
+
+7. `Assets/Scripts/UI/Editor/UICanvasBuilder.cs`
+   - `CreateInventoryItemViewPrefab()` 在 `AddComponent<InventoryItemView>()` 前显式添加 `CanvasGroup`
+
+### 目的
+修复架构大修后的编译错误和运行时警告：包解析失败、跨程序集循环依赖、枚举值不存在、异步返回值未处理、Prefab 缺少必需组件。
+
+**技术**：NPM scoped registry、依赖反转原则 (DIP)、显式 discard (`_ =`)、`[RequireComponent]` 预防。
+
+---
+
+## CLAUDE.md 架构大修同步更新 — 2026-02-12 17:33
+
+### 修改文件
+
+1. `CLAUDE.md`
+
+### 内容
+
+将架构基建大修引入的所有新系统、新模式、新依赖同步更新到 CLAUDE.md，确保后续 AI 对话使用正确的技术栈和架构模式。同时强化 ImplementationLog 写入规则。
+
+具体变更：
+- **技术栈**：新增 UniTask、PrimeTween
+- **核心模块**：新增基建 (Infrastructure) 条目（ServiceLocator、DamagePayload、SaveManager、AudioManager、CombatEvents、TransitionRuleEvaluator）
+- **架构原则 §2 解耦与模块化**：新增跨程序集事件总线规则、依赖反转 (IStarChartItemResolver) 示例
+- **架构原则 §7 服务定位**：新增 ServiceLocator 使用规范，禁止 FindAnyObjectByType
+- **代码规范 > 异步纪律**：替换旧"协程纪律"为 UniTask/PrimeTween/CTS 规范
+- **代码规范 > 命名**：新增 `ProjectArk.Core.Audio`、`ProjectArk.Core.Save`、`ProjectArk.Enemy` 命名空间
+- **项目结构**：新增 `Core/Audio/`、`Core/Save/`、`Core/Tests/`、`Combat/Tests/` 目录
+- **当前里程碑**：新增"架构基建大修"已完成行
+- **实现日志**：升级为"严格执行"规则，新增执行时机说明（单阶段/多阶段/Bug 修复），在 Feature 开发工作流第 7 步添加强调标注
+
+### 目的
+CLAUDE.md 是 AI 对话的"ground truth"。架构大修后未同步更新会导致后续对话使用过时模式（如 Coroutine 而非 UniTask、FindAnyObjectByType 而非 ServiceLocator）。同时强化日志写入规则防止再次遗漏。
+
+**技术**：文档维护。

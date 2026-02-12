@@ -106,7 +106,9 @@ namespace ProjectArk.Combat.Enemy
                 if (damageable != null && damageable.IsAlive)
                 {
                     Vector2 knockbackDir = ((Vector2)hits[i].transform.position - origin).normalized;
-                    damageable.TakeDamage(damage, knockbackDir, knockback);
+                    var payload = new DamagePayload(damage, DamageType.Physical, knockbackDir, knockback,
+                                                    _brain.Entity.gameObject);
+                    damageable.TakeDamage(payload);
                     _hasDealtDamage = true;
                 }
             }

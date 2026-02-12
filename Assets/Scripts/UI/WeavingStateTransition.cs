@@ -1,15 +1,16 @@
-using System.Collections;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using Cysharp.Threading.Tasks;
+using PrimeTween;
 
 namespace ProjectArk.UI
 {
     /// <summary>
     /// Sole orchestrator for the weaving-state visual / audio transition.
     /// Drives camera zoom, URP post-processing (DoF + Vignette), and SFX
-    /// in a single coroutine driven by <c>Time.unscaledDeltaTime</c> so it
-    /// works correctly at <c>timeScale = 0</c>.
+    /// using PrimeTween + UniTask so it works correctly at <c>timeScale = 0</c>.
     /// </summary>
     public class WeavingStateTransition : MonoBehaviour
     {
@@ -55,7 +56,7 @@ namespace ProjectArk.UI
         private Vignette _vignette;
 
         // ── Runtime state ────────────────────────────────────────────
-        private Coroutine _activeCoroutine;
+        private CancellationTokenSource _transitionCts;
         private float _cameraZOffset;
 
         // ══════════════════════════════════════════════════════════════
@@ -90,6 +91,11 @@ namespace ProjectArk.UI
                 _sfxSource.ignoreListenerPause = true;
         }
 
+        private void OnDestroy()
+        {
+            CancelTransition();
+        }
+
         // ══════════════════════════════════════════════════════════════
         // Public API
         // ══════════════════════════════════════════════════════════════
@@ -107,7 +113,7 @@ namespace ProjectArk.UI
                 fromVignette: CombatVignette,
                 toVignette: WeavingVignette,
                 enableDoF: DoFEnabled,
-                duration: EnterDuration);
+                duration: EnterDuration).Forget();
         }
 
         /// <summary>
@@ -123,30 +129,22 @@ namespace ProjectArk.UI
                 fromVignette: WeavingVignette,
                 toVignette: CombatVignette,
                 enableDoF: false,
-                duration: ExitDuration);
+                duration: ExitDuration).Forget();
         }
 
         // ══════════════════════════════════════════════════════════════
-        // Transition coroutine
+        // Transition (UniTask + PrimeTween)
         // ══════════════════════════════════════════════════════════════
-        private void StartTransition(
+        private async UniTaskVoid StartTransition(
             float fromSize, float toSize,
             float fromVignette, float toVignette,
             bool enableDoF, float duration)
         {
             // Cancel any in-flight transition to avoid conflicts.
-            if (_activeCoroutine != null)
-                StopCoroutine(_activeCoroutine);
+            CancelTransition();
+            _transitionCts = new CancellationTokenSource();
+            var token = _transitionCts.Token;
 
-            _activeCoroutine = StartCoroutine(
-                TransitionCoroutine(fromSize, toSize, fromVignette, toVignette, enableDoF, duration));
-        }
-
-        private IEnumerator TransitionCoroutine(
-            float fromSize, float toSize,
-            float fromVignette, float toVignette,
-            bool enableDoF, float duration)
-        {
             // Snap DoF state at the beginning.
             if (_dof != null)
             {
@@ -158,45 +156,51 @@ namespace ProjectArk.UI
                 }
             }
 
-            float elapsed = 0f;
-
-            while (elapsed < duration)
+            // Use PrimeTween's Tween.Custom for smooth interpolation with unscaled time.
+            // Camera size tween
+            if (_mainCamera != null)
             {
-                elapsed += Time.unscaledDeltaTime;
-                float t = Mathf.Clamp01(elapsed / duration);
-                float curved = Curve.Evaluate(t);
-
-                // — Camera orthographic size —
-                if (_mainCamera != null)
-                    _mainCamera.orthographicSize = Mathf.Lerp(fromSize, toSize, curved);
-
-                // — Lock camera on ship position (preserve Z) —
-                LockCameraOnShip();
-
-                // — Vignette intensity —
-                if (_vignette != null)
-                {
-                    _vignette.intensity.value = Mathf.Lerp(fromVignette, toVignette, curved);
-                    _vignette.intensity.overrideState = true;
-                }
-
-                yield return null; // wait one unscaled frame
+                _ = Tween.Custom(fromSize, toSize, duration, useUnscaledTime: true,
+                    onValueChange: v => { if (_mainCamera != null) _mainCamera.orthographicSize = v; },
+                    ease: Ease.InOutSine);
             }
 
-            // Final snap to exact target values.
-            if (_mainCamera != null)
-                _mainCamera.orthographicSize = toSize;
-
-            LockCameraOnShip();
-
+            // Vignette tween
             if (_vignette != null)
-                _vignette.intensity.value = toVignette;
+            {
+                _vignette.intensity.overrideState = true;
+                _ = Tween.Custom(fromVignette, toVignette, duration, useUnscaledTime: true,
+                    onValueChange: v => { if (_vignette != null) _vignette.intensity.value = v; },
+                    ease: Ease.InOutSine);
+            }
+
+            // Lock camera on ship each frame during transition
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                if (token.IsCancellationRequested) return;
+
+                LockCameraOnShip();
+                elapsed += Time.unscaledDeltaTime;
+                await UniTask.Yield(PlayerLoopTiming.Update, token);
+            }
+
+            // Final snap
+            LockCameraOnShip();
 
             // Disable DoF cleanly at end of exit transition.
             if (_dof != null && !enableDoF)
                 _dof.active = false;
+        }
 
-            _activeCoroutine = null;
+        private void CancelTransition()
+        {
+            if (_transitionCts != null)
+            {
+                _transitionCts.Cancel();
+                _transitionCts.Dispose();
+                _transitionCts = null;
+            }
         }
 
         // ══════════════════════════════════════════════════════════════

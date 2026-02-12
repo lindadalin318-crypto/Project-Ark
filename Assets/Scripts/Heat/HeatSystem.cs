@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using ProjectArk.Core;
 
 namespace ProjectArk.Heat
 {
@@ -100,6 +101,16 @@ namespace ProjectArk.Heat
         }
 
         // --- Lifecycle ---
+
+        private void Awake()
+        {
+            ServiceLocator.Register<HeatSystem>(this);
+        }
+
+        private void OnDestroy()
+        {
+            ServiceLocator.Unregister<HeatSystem>(this);
+        }
 
         private void Update()
         {

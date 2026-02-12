@@ -1,7 +1,8 @@
 using System;
-using System.Collections;
+using System.Threading;
 using UnityEngine;
 using ProjectArk.Core;
+using Cysharp.Threading.Tasks;
 
 namespace ProjectArk.Combat.Enemy
 {
@@ -12,7 +13,7 @@ namespace ProjectArk.Combat.Enemy
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
     [RequireComponent(typeof(Collider2D))]
-    public class EnemyEntity : MonoBehaviour, IDamageable, IPoolable
+    public class EnemyEntity : MonoBehaviour, IDamageable, IResistant, IBlockable, IPoolable
     {
         // ──────────────────── Global Events ────────────────────
 
@@ -148,23 +149,41 @@ namespace ProjectArk.Combat.Enemy
             _currentHP = _runtimeMaxHP;
         }
 
+        // ──────────────────── IResistant ────────────────────
+
+        /// <inheritdoc/>
+        public float GetResistance(DamageType type) => type switch
+        {
+            DamageType.Physical  => _stats != null ? _stats.Resist_Physical : 0f,
+            DamageType.Fire      => _stats != null ? _stats.Resist_Fire : 0f,
+            DamageType.Ice       => _stats != null ? _stats.Resist_Ice : 0f,
+            DamageType.Lightning => _stats != null ? _stats.Resist_Lightning : 0f,
+            DamageType.Void      => _stats != null ? _stats.Resist_Void : 0f,
+            _ => 0f
+        };
+
         // ──────────────────── IDamageable ────────────────────
 
         /// <inheritdoc/>
+        public void TakeDamage(DamagePayload payload)
+        {
+            if (_isDead || IsInvulnerable) return;
+
+            // Centralized damage calculation (resistance + block)
+            float finalDamage = DamageCalculator.Calculate(payload, this);
+
+            ApplyDamageInternal(finalDamage, payload.KnockbackDirection, payload.KnockbackForce);
+        }
+
+        /// <inheritdoc/>
+        [System.Obsolete("Use TakeDamage(DamagePayload) instead")]
         public void TakeDamage(float damage, Vector2 knockbackDirection, float knockbackForce)
         {
-            if (_isDead) return;
+            TakeDamage(new DamagePayload(damage, knockbackDirection, knockbackForce));
+        }
 
-            // Invulnerability check (boss phase transition)
-            if (IsInvulnerable) return;
-
-            // Apply block damage reduction
-            float finalDamage = damage;
-            if (IsBlocking && BlockDamageReduction > 0f)
-            {
-                finalDamage *= (1f - BlockDamageReduction);
-            }
-
+        private void ApplyDamageInternal(float finalDamage, Vector2 knockbackDirection, float knockbackForce)
+        {
             // Apply damage
             _currentHP -= finalDamage;
 
@@ -174,9 +193,9 @@ namespace ProjectArk.Combat.Enemy
 
             // Hit flash feedback (skip during stagger — stagger has its own color)
             if (!IsStaggered && _spriteRenderer != null && _stats != null)
-                StartCoroutine(HitFlashCoroutine());
+                HitFlashAsync().Forget();
 
-            // Poise reduction: damage also reduces poise (uses reduced damage if blocking)
+            // Poise reduction: damage also reduces poise
             if (!IsStaggered && _stats != null && _stats.MaxPoise > 0f)
             {
                 _currentPoise -= finalDamage;
@@ -190,7 +209,7 @@ namespace ProjectArk.Combat.Enemy
                 }
             }
 
-            // Notify listeners (pass actual damage dealt, accounting for block)
+            // Notify listeners (pass actual damage dealt)
             OnDamageTaken?.Invoke(finalDamage, _currentHP);
 
             // Death check
@@ -378,15 +397,23 @@ namespace ProjectArk.Combat.Enemy
 
         // ──────────────────── Visual Feedback ────────────────────
 
-        private Coroutine _flashCoroutine;
+        private CancellationTokenSource _flashCts;
 
-        private IEnumerator HitFlashCoroutine()
+        private async UniTaskVoid HitFlashAsync()
         {
+            // Cancel any in-flight flash
+            _flashCts?.Cancel();
+            _flashCts?.Dispose();
+            _flashCts = new CancellationTokenSource();
+            var token = CancellationTokenSource.CreateLinkedTokenSource(
+                _flashCts.Token, destroyCancellationToken).Token;
+
             // Flash to white
             _spriteRenderer.color = Color.white;
 
             float duration = _stats != null ? _stats.HitFlashDuration : 0.1f;
-            yield return new WaitForSeconds(duration);
+            int delayMs = Mathf.RoundToInt(duration * 1000f);
+            await UniTask.Delay(delayMs, cancellationToken: token);
 
             // Restore base color (if still alive)
             if (!_isDead && _spriteRenderer != null && _stats != null)
@@ -419,7 +446,9 @@ namespace ProjectArk.Combat.Enemy
         public void OnReturnToPool()
         {
             _isDead = true;
-            StopAllCoroutines();
+            _flashCts?.Cancel();
+            _flashCts?.Dispose();
+            _flashCts = null;
 
             // Clear event subscribers to prevent leaks across pool reuses
             OnDamageTaken = null;

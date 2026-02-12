@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
+using ProjectArk.Core;
 using ProjectArk.Combat;
 using ProjectArk.Heat;
 using ProjectArk.Ship;
@@ -80,16 +81,16 @@ namespace ProjectArk.UI
 
         private void Start()
         {
-            // 查找游戏系统
-            var controller = FindAnyObjectByType<StarChartController>();
-            var heatSystem = FindAnyObjectByType<HeatSystem>();
+            // 查找游戏系统（通过 ServiceLocator）
+            var controller = ServiceLocator.Get<StarChartController>();
+            var heatSystem = ServiceLocator.Get<HeatSystem>();
 
             // 绑定热量条
             if (_heatBarHUD != null)
                 _heatBarHUD.Bind(heatSystem);
 
             // 绑定血条
-            var shipHealth = FindAnyObjectByType<ShipHealth>();
+            var shipHealth = ServiceLocator.Get<ShipHealth>();
             if (_healthBarHUD != null)
                 _healthBarHUD.Bind(shipHealth);
 

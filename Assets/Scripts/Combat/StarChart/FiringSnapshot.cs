@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using ProjectArk.Core;
 
 namespace ProjectArk.Combat
 {
@@ -28,6 +29,7 @@ namespace ProjectArk.Combat
         public AudioClip FireSound;
         public float FireSoundPitchVariance;
         public CoreFamily Family;
+        public DamageType DamageType;
 
         // Anomaly family modifier prefab (set by SnapshotBuilder from StarCoreSO)
         public GameObject AnomalyModifierPrefab;
@@ -40,7 +42,7 @@ namespace ProjectArk.Combat
         /// </summary>
         public ProjectileParams ToProjectileParams()
         {
-            return new ProjectileParams(Damage, ProjectileSpeed, Lifetime, Knockback, ImpactVFXPrefab);
+            return new ProjectileParams(Damage, ProjectileSpeed, Lifetime, Knockback, ImpactVFXPrefab, DamageType);
         }
     }
 

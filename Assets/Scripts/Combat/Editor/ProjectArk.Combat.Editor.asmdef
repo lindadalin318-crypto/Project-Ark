@@ -3,7 +3,8 @@
     "rootNamespace": "ProjectArk.Combat.Editor",
     "references": [
         "ProjectArk.Combat",
-        "ProjectArk.Core"
+        "ProjectArk.Core",
+        "ProjectArk.Enemy"
     ],
     "includePlatforms": [
         "Editor"

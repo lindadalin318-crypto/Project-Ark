@@ -11,7 +11,7 @@ namespace ProjectArk.UI
     /// Star Chart UI's inventory panel.
     /// </summary>
     [CreateAssetMenu(fileName = "PlayerInventory", menuName = "ProjectArk/UI/Star Chart Inventory")]
-    public class StarChartInventorySO : ScriptableObject
+    public class StarChartInventorySO : ScriptableObject, IStarChartItemResolver
     {
         [SerializeField] private List<StarChartItemSO> _ownedItems = new();
 
@@ -40,5 +40,23 @@ namespace ProjectArk.UI
             if (type == null) return _ownedItems;
             return _ownedItems.Where(item => item != null && item.ItemType == type.Value);
         }
+
+        // ──────────────────── Save/Load Lookup ────────────────────
+
+        /// <summary> Find a Star Core by DisplayName. </summary>
+        public StarCoreSO FindCore(string displayName) =>
+            Cores.FirstOrDefault(c => c.DisplayName == displayName);
+
+        /// <summary> Find a Prism by DisplayName. </summary>
+        public PrismSO FindPrism(string displayName) =>
+            Prisms.FirstOrDefault(p => p.DisplayName == displayName);
+
+        /// <summary> Find a Light Sail by DisplayName. </summary>
+        public LightSailSO FindLightSail(string displayName) =>
+            LightSails.FirstOrDefault(s => s.DisplayName == displayName);
+
+        /// <summary> Find a Satellite by DisplayName. </summary>
+        public SatelliteSO FindSatellite(string displayName) =>
+            Satellites.FirstOrDefault(s => s.DisplayName == displayName);
     }
 }

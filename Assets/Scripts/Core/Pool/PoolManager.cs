@@ -25,6 +25,16 @@ namespace ProjectArk.Core
 
             Instance = this;
             DontDestroyOnLoad(gameObject);
+            ServiceLocator.Register<PoolManager>(this);
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+            {
+                Instance = null;
+                ServiceLocator.Unregister<PoolManager>(this);
+            }
         }
 
         /// <summary>

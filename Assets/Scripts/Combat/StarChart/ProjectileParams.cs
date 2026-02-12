@@ -1,4 +1,5 @@
 using UnityEngine;
+using ProjectArk.Core;
 
 namespace ProjectArk.Combat
 {
@@ -14,15 +15,18 @@ namespace ProjectArk.Combat
         public readonly float Lifetime;
         public readonly float Knockback;
         public readonly GameObject ImpactVFXPrefab;
+        public readonly DamageType DamageType;
 
         public ProjectileParams(float damage, float speed, float lifetime,
-                                float knockback, GameObject impactVFXPrefab)
+                                float knockback, GameObject impactVFXPrefab,
+                                DamageType damageType = DamageType.Physical)
         {
             Damage = damage;
             Speed = speed;
             Lifetime = lifetime;
             Knockback = knockback;
             ImpactVFXPrefab = impactVFXPrefab;
+            DamageType = damageType;
         }
 
         /// <summary>
@@ -32,8 +36,7 @@ namespace ProjectArk.Combat
         public ProjectileParams WithDamageMultiplied(float multiplier)
         {
             return new ProjectileParams(
-                Damage * multiplier, Speed, Lifetime, Knockback, ImpactVFXPrefab);
+                Damage * multiplier, Speed, Lifetime, Knockback, ImpactVFXPrefab, DamageType);
         }
-
     }
 }

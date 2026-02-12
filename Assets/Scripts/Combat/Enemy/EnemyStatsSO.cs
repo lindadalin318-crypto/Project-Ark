@@ -273,6 +273,14 @@ namespace ProjectArk.Combat
         [Min(1f)]
         public float ThreatDetectionRadius = 5f;
 
+        // ──────────────────── State Transitions (Data-Driven Override) ────────────────────
+        [Header("State Transitions (Optional Override)")]
+        [Tooltip("Data-driven transition rules. When non-empty, states check these FIRST before falling back to hardcoded logic. Enables per-enemy-type behavior without new state classes.")]
+        [SerializeField] private StateTransitionRule[] _transitionOverrides;
+
+        /// <summary> Data-driven transition overrides. Empty array = use hardcoded defaults. </summary>
+        public StateTransitionRule[] TransitionOverrides => _transitionOverrides ?? System.Array.Empty<StateTransitionRule>();
+
         // ──────────────────── Behavior Tags ────────────────────
         [Header("Behavior Tags")]
         [Tooltip("Special behavior flags (e.g. SuperArmor, SelfDestruct, Invisible, Reflective). Queried by state machine at runtime.")]

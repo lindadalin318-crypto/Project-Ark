@@ -26,6 +26,7 @@ namespace ProjectArk.Combat
 
         private float _damage;
         private float _knockback;
+        private DamageType _damageType;
         private float _timer;
         private float _totalDuration;
         private bool _isAlive;
@@ -57,6 +58,7 @@ namespace ProjectArk.Combat
         {
             _damage = parms.Damage;
             _knockback = parms.Knockback;
+            _damageType = parms.DamageType;
             _isAlive = true;
             _totalDuration = _beamDuration + _fadeDuration;
             _timer = _totalDuration;
@@ -87,7 +89,8 @@ namespace ProjectArk.Combat
                 var damageable = hit.collider.GetComponent<IDamageable>();
                 if (damageable != null && damageable.IsAlive)
                 {
-                    damageable.TakeDamage(_damage, dir, _knockback);
+                    var payload = new DamagePayload(_damage, _damageType, dir, _knockback, gameObject);
+                    damageable.TakeDamage(payload);
                 }
 
                 // Spawn impact VFX

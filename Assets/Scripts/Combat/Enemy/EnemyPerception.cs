@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using ProjectArk.Core;
 
 namespace ProjectArk.Combat.Enemy
 {
@@ -91,13 +92,13 @@ namespace ProjectArk.Combat.Enemy
 
         private void OnEnable()
         {
-            // Subscribe to weapon fire events for hearing perception
-            StarChartController.OnWeaponFired += HandleWeaponFired;
+            // Subscribe to weapon fire events for hearing perception (via Core event bus)
+            CombatEvents.OnWeaponFired += HandleWeaponFired;
         }
 
         private void OnDisable()
         {
-            StarChartController.OnWeaponFired -= HandleWeaponFired;
+            CombatEvents.OnWeaponFired -= HandleWeaponFired;
         }
 
         private void Update()

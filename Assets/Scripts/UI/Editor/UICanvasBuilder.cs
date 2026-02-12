@@ -509,6 +509,7 @@ namespace ProjectArk.UI.Editor
             var root = new GameObject("InventoryItemView");
             var rootRect = root.AddComponent<RectTransform>();
             rootRect.sizeDelta = new Vector2(100, 120);
+            root.AddComponent<CanvasGroup>(); // Required by InventoryItemView for drag alpha control
             var itemView = root.AddComponent<InventoryItemView>();
 
             // Selection border (background)

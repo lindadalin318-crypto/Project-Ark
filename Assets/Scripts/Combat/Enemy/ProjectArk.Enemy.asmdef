@@ -1,0 +1,19 @@
+{
+    "name": "ProjectArk.Enemy",
+    "rootNamespace": "ProjectArk.Combat.Enemy",
+    "references": [
+        "ProjectArk.Core",
+        "ProjectArk.Combat",
+        "ProjectArk.Ship",
+        "UniTask"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

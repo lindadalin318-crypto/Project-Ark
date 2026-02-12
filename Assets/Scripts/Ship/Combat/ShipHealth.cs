@@ -1,7 +1,8 @@
 using System;
-using System.Collections;
+using System.Threading;
 using UnityEngine;
 using ProjectArk.Core;
+using Cysharp.Threading.Tasks;
 
 namespace ProjectArk.Ship
 {
@@ -52,7 +53,13 @@ namespace ProjectArk.Ship
             _spriteRenderer = GetComponent<SpriteRenderer>();
             _inputHandler = GetComponent<InputHandler>();
 
+            ServiceLocator.Register<ShipHealth>(this);
             InitializeHP();
+        }
+
+        private void OnDestroy()
+        {
+            ServiceLocator.Unregister<ShipHealth>(this);
         }
 
         private void InitializeHP()
@@ -71,29 +78,39 @@ namespace ProjectArk.Ship
         // ──────────────────── IDamageable ────────────────────
 
         /// <inheritdoc/>
-        public void TakeDamage(float damage, Vector2 knockbackDirection, float knockbackForce)
+        public void TakeDamage(DamagePayload payload)
         {
             if (_isDead) return;
+
+            // Player has no elemental resistance for now — use base damage directly
+            float damage = payload.BaseDamage;
 
             // Apply damage
             _currentHP -= damage;
 
             // Apply knockback impulse
-            if (knockbackForce > 0f && _rigidbody != null)
-                _rigidbody.AddForce(knockbackDirection.normalized * knockbackForce, ForceMode2D.Impulse);
+            if (payload.KnockbackForce > 0f && _rigidbody != null)
+                _rigidbody.AddForce(payload.KnockbackDirection.normalized * payload.KnockbackForce, ForceMode2D.Impulse);
 
             // Hit flash feedback
             if (_spriteRenderer != null)
-                StartCoroutine(HitFlashCoroutine());
+                HitFlashAsync().Forget();
 
             // Notify listeners
             OnDamageTaken?.Invoke(damage, _currentHP);
 
-            Debug.Log($"[ShipHealth] Took {damage} damage. HP: {_currentHP}/{MaxHP}");
+            Debug.Log($"[ShipHealth] Took {damage} damage (type: {payload.Type}). HP: {_currentHP}/{MaxHP}");
 
             // Death check
             if (_currentHP <= 0f)
                 Die();
+        }
+
+        /// <inheritdoc/>
+        [System.Obsolete("Use TakeDamage(DamagePayload) instead")]
+        public void TakeDamage(float damage, Vector2 knockbackDirection, float knockbackForce)
+        {
+            TakeDamage(new DamagePayload(damage, knockbackDirection, knockbackForce));
         }
 
         // ──────────────────── Death ────────────────────
@@ -120,15 +137,25 @@ namespace ProjectArk.Ship
 
         // ──────────────────── Visual Feedback ────────────────────
 
-        private IEnumerator HitFlashCoroutine()
+        private CancellationTokenSource _flashCts;
+
+        private async UniTaskVoid HitFlashAsync()
         {
+            // Cancel any in-flight flash
+            _flashCts?.Cancel();
+            _flashCts?.Dispose();
+            _flashCts = new CancellationTokenSource();
+            var token = CancellationTokenSource.CreateLinkedTokenSource(
+                _flashCts.Token, destroyCancellationToken).Token;
+
             Color originalColor = _spriteRenderer.color;
 
             // Flash to white
             _spriteRenderer.color = Color.white;
 
             float duration = _stats != null ? _stats.HitFlashDuration : 0.1f;
-            yield return new WaitForSeconds(duration);
+            int delayMs = Mathf.RoundToInt(duration * 1000f);
+            await UniTask.Delay(delayMs, cancellationToken: token);
 
             // Restore original color (if still alive)
             if (!_isDead && _spriteRenderer != null)

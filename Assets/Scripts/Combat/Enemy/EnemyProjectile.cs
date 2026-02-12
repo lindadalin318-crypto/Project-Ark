@@ -92,7 +92,8 @@ namespace ProjectArk.Combat.Enemy
             if (damageable != null && damageable.IsAlive)
             {
                 Vector2 knockbackDir = ((Vector2)other.transform.position - (Vector2)transform.position).normalized;
-                damageable.TakeDamage(_damage, knockbackDir, _knockback);
+                var payload = new DamagePayload(_damage, DamageType.Physical, knockbackDir, _knockback, gameObject);
+                damageable.TakeDamage(payload);
             }
 
             ReturnToPool();

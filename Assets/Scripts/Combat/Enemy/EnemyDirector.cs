@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using ProjectArk.Core;
 
 namespace ProjectArk.Combat.Enemy
 {
@@ -67,12 +68,16 @@ namespace ProjectArk.Combat.Enemy
                 return;
             }
             _instance = this;
+            ServiceLocator.Register<EnemyDirector>(this);
         }
 
         private void OnDestroy()
         {
             if (_instance == this)
+            {
                 _instance = null;
+                ServiceLocator.Unregister<EnemyDirector>(this);
+            }
         }
 
         private void LateUpdate()

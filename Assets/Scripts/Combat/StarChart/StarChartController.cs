@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using ProjectArk.Core;
+using ProjectArk.Core.Save;
 using ProjectArk.Heat;
 using ProjectArk.Ship;
 
@@ -162,6 +163,8 @@ namespace ProjectArk.Combat
 
         private void Awake()
         {
+            ServiceLocator.Register<StarChartController>(this);
+
             _inputHandler = GetComponent<InputHandler>();
             _shipAiming = GetComponent<ShipAiming>();
             _shipMotor = GetComponent<ShipMotor>();
@@ -208,6 +211,7 @@ namespace ProjectArk.Combat
 
         private void OnDestroy()
         {
+            ServiceLocator.Unregister<StarChartController>(this);
             _lightSailRunner?.Dispose();
             for (int i = 0; i < _satelliteRunners.Count; i++)
                 _satelliteRunners[i].Dispose();
@@ -277,6 +281,7 @@ namespace ProjectArk.Combat
 
             // Broadcast weapon fire for enemy auditory perception
             OnWeaponFired?.Invoke(spawnPos, DEFAULT_NOISE_RADIUS);
+            CombatEvents.RaiseWeaponFired(spawnPos, DEFAULT_NOISE_RADIUS);
         }
 
         /// <summary>
@@ -490,7 +495,7 @@ namespace ProjectArk.Combat
 
         private void InitializeAllPools()
         {
-            if (PoolManager.Instance == null)
+            if (ServiceLocator.Get<PoolManager>() == null && PoolManager.Instance == null)
             {
                 Debug.LogError("[StarChartController] PoolManager not found. Weapons disabled.");
                 enabled = false;
@@ -560,6 +565,123 @@ namespace ProjectArk.Combat
             }
 
             return result;
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // Save / Load Serialization
+        // ══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Export the current Star Chart loadout to a serializable data object.
+        /// </summary>
+        public StarChartSaveData ExportToSaveData()
+        {
+            var data = new StarChartSaveData();
+
+            // Primary track
+            data.PrimaryTrack = ExportTrack(_primaryTrack);
+            data.SecondaryTrack = ExportTrack(_secondaryTrack);
+
+            // Light Sail
+            data.LightSailID = _equippedLightSailSO != null ? _equippedLightSailSO.DisplayName : "";
+
+            // Satellites
+            data.SatelliteIDs = new List<string>();
+            for (int i = 0; i < _equippedSatelliteSOs.Count; i++)
+            {
+                if (_equippedSatelliteSOs[i] != null)
+                    data.SatelliteIDs.Add(_equippedSatelliteSOs[i].DisplayName);
+            }
+
+            return data;
+        }
+
+        /// <summary>
+        /// Import a Star Chart loadout from saved data, using a resolver to look up items by name.
+        /// </summary>
+        public void ImportFromSaveData(StarChartSaveData data, IStarChartItemResolver resolver)
+        {
+            if (data == null || resolver == null) return;
+
+            // Clear current loadout
+            _primaryTrack.ClearAll();
+            _secondaryTrack.ClearAll();
+            UnequipLightSail();
+            for (int i = _satelliteRunners.Count - 1; i >= 0; i--)
+            {
+                _satelliteRunners[i].Dispose();
+                _satelliteRunners.RemoveAt(i);
+            }
+            _equippedSatelliteSOs.Clear();
+
+            // Import tracks
+            ImportTrack(_primaryTrack, data.PrimaryTrack, resolver);
+            ImportTrack(_secondaryTrack, data.SecondaryTrack, resolver);
+
+            // Import Light Sail
+            if (!string.IsNullOrEmpty(data.LightSailID))
+            {
+                var sail = resolver.FindLightSail(data.LightSailID);
+                if (sail != null) EquipLightSail(sail);
+            }
+
+            // Import Satellites
+            if (data.SatelliteIDs != null)
+            {
+                for (int i = 0; i < data.SatelliteIDs.Count; i++)
+                {
+                    var sat = resolver.FindSatellite(data.SatelliteIDs[i]);
+                    if (sat != null) EquipSatellite(sat);
+                }
+            }
+
+            // Re-initialize pools for new loadout
+            InitializeAllPools();
+        }
+
+        private static TrackSaveData ExportTrack(WeaponTrack track)
+        {
+            var data = new TrackSaveData();
+
+            var cores = track.CoreLayer.Items;
+            for (int i = 0; i < cores.Count; i++)
+            {
+                if (cores[i] != null)
+                    data.CoreIDs.Add(cores[i].DisplayName);
+            }
+
+            var prisms = track.PrismLayer.Items;
+            for (int i = 0; i < prisms.Count; i++)
+            {
+                if (prisms[i] != null)
+                    data.PrismIDs.Add(prisms[i].DisplayName);
+            }
+
+            return data;
+        }
+
+        private static void ImportTrack(WeaponTrack track, TrackSaveData data,
+                                         IStarChartItemResolver resolver)
+        {
+            if (data == null) return;
+
+            if (data.CoreIDs != null)
+            {
+                for (int i = 0; i < data.CoreIDs.Count; i++)
+                {
+                    var core = resolver.FindCore(data.CoreIDs[i]);
+                    if (core != null) track.EquipCore(core);
+                }
+            }
+
+            if (data.PrismIDs != null)
+            {
+                for (int i = 0; i < data.PrismIDs.Count; i++)
+                {
+                    var prism = resolver.FindPrism(data.PrismIDs[i]);
+                    if (prism != null) track.EquipPrism(prism);
+                }
+            }
         }
 
         private static Vector2 RotateVector2(Vector2 v, float degrees)

@@ -180,6 +180,7 @@ namespace ProjectArk.Combat
                 FireSound = core.FireSound,
                 FireSoundPitchVariance = core.FireSoundPitchVariance,
                 Family = core.Family,
+                DamageType = core.DamageType,
 
                 // Anomaly family modifier prefab (pass-through from StarCoreSO)
                 AnomalyModifierPrefab = core.AnomalyModifierPrefab,
