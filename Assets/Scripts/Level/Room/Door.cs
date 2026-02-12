@@ -11,7 +11,6 @@ namespace ProjectArk.Level
     /// each Door knows its target room and spawn point.
     /// </summary>
     [RequireComponent(typeof(Collider2D))]
-    [RequireComponent(typeof(Rigidbody2D))]
     public class Door : MonoBehaviour
     {
         // ──────────────────── Configuration ────────────────────
@@ -74,28 +73,14 @@ namespace ProjectArk.Level
                 col.isTrigger = true;
                 Debug.LogWarning($"[Door] {gameObject.name}: Collider was not set as trigger. Auto-fixed.");
             }
-
-            // Door needs its own Rigidbody2D to receive OnTriggerEnter2D independently
-            // from its parent Room. Without it, the child Collider merges into the parent's
-            // static body and only the parent gets trigger callbacks.
-            var rb = GetComponent<Rigidbody2D>();
-            rb.bodyType = RigidbodyType2D.Static;
         }
 
         // ──────────────────── Player Detection ────────────────────
 
         private void OnTriggerEnter2D(Collider2D other)
         {
-            Debug.Log($"[Door] {gameObject.name}: OnTriggerEnter2D fired by '{other.gameObject.name}' (Layer: {LayerMask.LayerToName(other.gameObject.layer)})");
-
-            if (!IsPlayerLayer(other.gameObject))
-            {
-                Debug.Log($"[Door] {gameObject.name}: Layer check failed. Expected mask={_playerLayer.value}, got layer={other.gameObject.layer}");
-                return;
-            }
-
+            if (!IsPlayerLayer(other.gameObject)) return;
             _playerInRange = true;
-            Debug.Log($"[Door] {gameObject.name}: Player detected. State={_currentState}, IsTransitioning={_isTransitioning}");
 
             // Auto-transition for Open doors when player enters trigger
             if (_currentState == DoorState.Open && !_isTransitioning)
@@ -119,18 +104,8 @@ namespace ProjectArk.Level
 
         private void TryTransition()
         {
-            Debug.Log($"[Door] {gameObject.name}: TryTransition called. State={_currentState}");
-
-            if (_currentState != DoorState.Open)
-            {
-                Debug.Log($"[Door] {gameObject.name}: Aborted — door not Open (state={_currentState})");
-                return;
-            }
-            if (_targetRoom == null || _targetSpawnPoint == null)
-            {
-                Debug.LogError($"[Door] {gameObject.name}: Aborted — TargetRoom={_targetRoom}, TargetSpawnPoint={_targetSpawnPoint}");
-                return;
-            }
+            if (_currentState != DoorState.Open) return;
+            if (_targetRoom == null || _targetSpawnPoint == null) return;
 
             var controller = ServiceLocator.Get<DoorTransitionController>();
             if (controller == null)
@@ -139,7 +114,6 @@ namespace ProjectArk.Level
                 return;
             }
 
-            Debug.Log($"[Door] {gameObject.name}: Starting transition to {_targetRoom.RoomID}");
             _isTransitioning = true;
             controller.TransitionThroughDoor(this, () => _isTransitioning = false);
         }
