@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
 using PrimeTween;
 using ProjectArk.Core;
+using ProjectArk.Core.Audio;
 using ProjectArk.Ship;
 
 namespace ProjectArk.Level
@@ -30,6 +31,22 @@ namespace ProjectArk.Level
 
         [Tooltip("Fade duration for layer transitions (seconds). Longer for dramatic effect.")]
         [SerializeField] private float _layerFadeDuration = 0.5f;
+
+        [Header("Layer Transition Effects")]
+        [Tooltip("Optional particle system for layer transitions (e.g., descending/ascending particles).")]
+        [SerializeField] private ParticleSystem _layerTransitionParticles;
+
+        [Tooltip("Sound effect played during layer transitions (rumble/whoosh).")]
+        [SerializeField] private AudioClip _layerTransitionSFX;
+
+        [Tooltip("BGM crossfade duration when changing floors with different ambient music.")]
+        [SerializeField] private float _bgmCrossfadeDuration = 1.5f;
+
+        [Tooltip("Camera zoom-out amount during layer transition (added to base ortho size).")]
+        [SerializeField] private float _layerZoomOutAmount = 2f;
+
+        [Tooltip("Camera zoom transition duration.")]
+        [SerializeField] private float _layerZoomDuration = 0.3f;
 
         // ──────────────────── Runtime State ────────────────────
 
@@ -122,22 +139,31 @@ namespace ProjectArk.Level
                 int fadeMs = Mathf.RoundToInt(fadeDuration * 1000f);
                 await UniTask.Delay(fadeMs, cancellationToken: token);
 
-                // ── 3. Teleport player ──
+                // ── 3. Layer transition effects (during black screen) ──
+                if (door.IsLayerTransition)
+                {
+                    await PlayLayerTransitionEffects(door, token);
+                }
+
+                // ── 4. Teleport player ──
                 var ship = inputHandler != null ? inputHandler.transform : null;
                 if (ship != null && door.TargetSpawnPoint != null)
                 {
                     ship.position = door.TargetSpawnPoint.position;
                 }
 
-                // ── 4. Switch room ──
+                // ── 5. Switch room ──
                 var roomManager = ServiceLocator.Get<RoomManager>();
                 if (roomManager != null && door.TargetRoom != null)
                 {
                     roomManager.EnterRoom(door.TargetRoom);
+
+                    // BGM crossfade if target room has different ambient music
+                    HandleBGMCrossfade(door.TargetRoom);
                 }
 
                 // Brief pause at full black for clean transition
-                await UniTask.Delay(50, cancellationToken: token);
+                await UniTask.Delay(door.IsLayerTransition ? 200 : 50, cancellationToken: token);
 
                 // ── 5. Fade from black ──
                 _ = Tween.Custom(1f, 0f, fadeDuration, useUnscaledTime: true,
@@ -175,6 +201,86 @@ namespace ProjectArk.Level
                 _isTransitioning = false;
                 linkedCts.Dispose();
                 onComplete?.Invoke();
+            }
+        }
+
+        // ──────────────────── Layer Transition Effects ────────────────────
+
+        private async UniTask PlayLayerTransitionEffects(Door door, CancellationToken token)
+        {
+            // Determine direction (descending if target floor < current floor)
+            var roomManager = ServiceLocator.Get<RoomManager>();
+            int currentFloor = roomManager?.CurrentFloor ?? 0;
+            int targetFloor = door.TargetRoom?.Data?.FloorLevel ?? 0;
+            bool descending = targetFloor < currentFloor;
+
+            // ── Particle effect ──
+            if (_layerTransitionParticles != null)
+            {
+                // Flip particle direction based on ascending/descending
+                var mainModule = _layerTransitionParticles.main;
+                float speed = Mathf.Abs(mainModule.startSpeed.constant);
+                mainModule.startSpeed = descending ? -speed : speed;
+
+                _layerTransitionParticles.Play();
+            }
+
+            // ── SFX ──
+            var audio = ServiceLocator.Get<AudioManager>();
+            if (audio != null && _layerTransitionSFX != null)
+            {
+                audio.PlaySFX2D(_layerTransitionSFX);
+            }
+
+            // ── Camera zoom-out ──
+            var cam = Camera.main;
+            if (cam != null && cam.orthographic)
+            {
+                float baseSize = cam.orthographicSize;
+                float targetSize = baseSize + _layerZoomOutAmount;
+
+                _ = Tween.Custom(baseSize, targetSize, _layerZoomDuration, useUnscaledTime: true,
+                    onValueChange: v =>
+                    {
+                        if (cam != null)
+                            cam.orthographicSize = v;
+                    },
+                    ease: Ease.InOutSine);
+            }
+
+            // Hold for particles/effect duration
+            await UniTask.Delay(300, cancellationToken: token);
+
+            // ── Stop particles ──
+            if (_layerTransitionParticles != null)
+            {
+                _layerTransitionParticles.Stop();
+            }
+
+            // ── Camera snap back (will happen during fade-in) ──
+            if (cam != null && cam.orthographic)
+            {
+                float currentSize = cam.orthographicSize;
+                float baseSize = currentSize - _layerZoomOutAmount;
+
+                _ = Tween.Custom(currentSize, baseSize, _layerZoomDuration, useUnscaledTime: true,
+                    onValueChange: v =>
+                    {
+                        if (cam != null)
+                            cam.orthographicSize = v;
+                    },
+                    ease: Ease.InOutSine);
+            }
+        }
+
+        private void HandleBGMCrossfade(Room targetRoom)
+        {
+            if (targetRoom?.Data?.AmbientMusic == null) return;
+
+            var audio = ServiceLocator.Get<AudioManager>();
+            if (audio != null)
+            {
+                audio.PlayMusic(targetRoom.Data.AmbientMusic, _bgmCrossfadeDuration);
             }
         }
 

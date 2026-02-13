@@ -143,19 +143,24 @@ namespace ProjectArk.Level
 
         private void SaveProgress()
         {
-            var data = SaveManager.Load(_saveSlot) ?? new PlayerSaveData();
-
-            // Write defeated bosses
-            data.Progress.DefeatedBossIDs.Clear();
-            foreach (var bossID in _defeatedBossIDs)
+            // Delegate to SaveBridge for centralized save (collects all subsystems)
+            var saveBridge = ServiceLocator.Get<SaveBridge>();
+            if (saveBridge != null)
             {
-                data.Progress.DefeatedBossIDs.Add(bossID);
+                saveBridge.SaveAll();
             }
-
-            // Write world stage to flags
-            data.Progress.WorldStage = _currentStage;
-
-            SaveManager.Save(data, _saveSlot);
+            else
+            {
+                // Fallback: direct partial save if SaveBridge not available
+                var data = SaveManager.Load(_saveSlot) ?? new PlayerSaveData();
+                data.Progress.DefeatedBossIDs.Clear();
+                foreach (var bossID in _defeatedBossIDs)
+                {
+                    data.Progress.DefeatedBossIDs.Add(bossID);
+                }
+                data.Progress.WorldStage = _currentStage;
+                SaveManager.Save(data, _saveSlot);
+            }
         }
 
         private void LoadProgress()

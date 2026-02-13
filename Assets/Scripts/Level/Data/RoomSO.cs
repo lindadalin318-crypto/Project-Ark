@@ -28,6 +28,10 @@ namespace ProjectArk.Level
         [Tooltip("Icon displayed on the minimap. Leave null for default.")]
         [SerializeField] private Sprite _mapIcon;
 
+        [Header("Audio")]
+        [Tooltip("Optional ambient/BGM music override for this room. Used for per-room/per-floor music crossfade.")]
+        [SerializeField] private AudioClip _ambientMusic;
+
         [Header("Combat")]
         [Tooltip("Enemy wave configuration for this room. Null for non-combat rooms.")]
         [SerializeField] private EncounterSO _encounter;
@@ -48,6 +52,9 @@ namespace ProjectArk.Level
 
         /// <summary> Minimap icon (nullable). </summary>
         public Sprite MapIcon => _mapIcon;
+
+        /// <summary> Optional ambient music override (nullable). </summary>
+        public AudioClip AmbientMusic => _ambientMusic;
 
         /// <summary> Enemy encounter configuration (nullable for non-combat rooms). </summary>
         public EncounterSO Encounter => _encounter;

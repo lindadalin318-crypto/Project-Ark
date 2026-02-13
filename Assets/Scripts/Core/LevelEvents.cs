@@ -75,6 +75,32 @@ namespace ProjectArk.Core
             OnCheckpointActivated?.Invoke(checkpointID);
         }
 
+        // ──────────────────── Map Events ────────────────────
+
+        /// <summary>
+        /// Broadcast when a room is visited for the first time (distinct from OnRoomEntered which fires every entry).
+        /// Params: roomID.
+        /// Published by MinimapManager, consumed by UI/Save.
+        /// </summary>
+        public static event Action<string> OnRoomFirstVisit;
+
+        public static void RaiseRoomFirstVisit(string roomID)
+        {
+            OnRoomFirstVisit?.Invoke(roomID);
+        }
+
+        /// <summary>
+        /// Broadcast when the player changes floor level.
+        /// Params: newFloorLevel.
+        /// Published by RoomManager, consumed by MinimapManager/MapPanel.
+        /// </summary>
+        public static event Action<int> OnFloorChanged;
+
+        public static void RaiseFloorChanged(int newFloor)
+        {
+            OnFloorChanged?.Invoke(newFloor);
+        }
+
         // ──────────────────── World Progress Events ────────────────────
 
         /// <summary>

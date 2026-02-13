@@ -93,16 +93,21 @@ namespace ProjectArk.Level
 
         private void SaveProgress(Checkpoint checkpoint)
         {
-            // Load existing data or create new
-            var data = SaveManager.Load(_saveSlot) ?? new PlayerSaveData();
-
-            // Update checkpoint info
-            data.PlayerState.LastCheckpointID = checkpoint.Data.CheckpointID;
-            data.PlayerState.PositionX = checkpoint.SpawnPosition.x;
-            data.PlayerState.PositionY = checkpoint.SpawnPosition.y;
-
-            // Save
-            SaveManager.Save(data, _saveSlot);
+            // Delegate to SaveBridge for centralized save (collects all subsystems)
+            var saveBridge = ServiceLocator.Get<SaveBridge>();
+            if (saveBridge != null)
+            {
+                saveBridge.SaveAll();
+            }
+            else
+            {
+                // Fallback: direct partial save if SaveBridge not available
+                var data = SaveManager.Load(_saveSlot) ?? new PlayerSaveData();
+                data.PlayerState.LastCheckpointID = checkpoint.Data.CheckpointID;
+                data.PlayerState.PositionX = checkpoint.SpawnPosition.x;
+                data.PlayerState.PositionY = checkpoint.SpawnPosition.y;
+                SaveManager.Save(data, _saveSlot);
+            }
         }
     }
 }

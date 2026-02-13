@@ -67,6 +67,13 @@ namespace ProjectArk.Level
 
         private void Start()
         {
+            // Load saved progress on scene start (distributes to all subsystems)
+            var saveBridge = ServiceLocator.Get<SaveBridge>();
+            if (saveBridge != null)
+            {
+                saveBridge.LoadAll();
+            }
+
             // Subscribe to player death
             var health = ServiceLocator.Get<ShipHealth>();
             if (health != null)
@@ -218,8 +225,16 @@ namespace ProjectArk.Level
                     _fadeImage.raycastTarget = false;
 
                 // ── 13. Save ──
-                var saveData = SaveManager.Load(_saveSlot) ?? new PlayerSaveData();
-                SaveManager.Save(saveData, _saveSlot);
+                var saveBridgeRef = ServiceLocator.Get<SaveBridge>();
+                if (saveBridgeRef != null)
+                {
+                    saveBridgeRef.SaveAll();
+                }
+                else
+                {
+                    var saveData = SaveManager.Load(_saveSlot) ?? new PlayerSaveData();
+                    SaveManager.Save(saveData, _saveSlot);
+                }
 
                 Debug.Log("[GameFlowManager] Respawn complete.");
             }

@@ -10,7 +10,9 @@
         "ProjectArk.Core.Audio",
         "UniTask",
         "PrimeTween.Runtime",
-        "Unity.Cinemachine"
+        "Unity.Cinemachine",
+        "Unity.TextMeshPro",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

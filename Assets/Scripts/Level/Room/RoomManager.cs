@@ -32,6 +32,11 @@ namespace ProjectArk.Level
         /// <summary> The room the player was in before the current one. </summary>
         public Room PreviousRoom => _previousRoom;
 
+        /// <summary> Current floor level (convenience property derived from current room). </summary>
+        public int CurrentFloor => _currentRoom != null && _currentRoom.Data != null
+            ? _currentRoom.Data.FloorLevel
+            : 0;
+
         // ──────────────────── Events ────────────────────
 
         /// <summary>
@@ -132,9 +137,17 @@ namespace ProjectArk.Level
             _currentRoom = room;
 
             // ── State transition ──
-            if (room.State == RoomState.Undiscovered)
+            bool isFirstVisit = room.State == RoomState.Undiscovered;
+            if (isFirstVisit)
             {
                 room.SetState(RoomState.Entered);
+            }
+
+            // ── Map tracking (first visit) ──
+            if (isFirstVisit)
+            {
+                var minimap = ServiceLocator.Get<MinimapManager>();
+                minimap?.MarkVisited(room.RoomID);
             }
 
             // ── Enemy management ──

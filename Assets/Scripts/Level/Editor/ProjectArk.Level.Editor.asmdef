@@ -3,7 +3,10 @@
     "rootNamespace": "ProjectArk.Level.Editor",
     "references": [
         "ProjectArk.Level",
-        "ProjectArk.Core"
+        "ProjectArk.Core",
+        "ProjectArk.Combat",
+        "ProjectArk.Ship",
+        "ProjectArk.Enemy"
     ],
     "includePlatforms": [
         "Editor"

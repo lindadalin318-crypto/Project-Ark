@@ -2736,3 +2736,147 @@ Assets/Scripts/Level/
 - `DamagePayload` 结构体走统一伤害管线
 - `LayerMask _targetLayer` 显式声明目标层（遵循项目规范，禁止 `~0`）
 - `TimedHazard` 的 `Update()` 使用模运算实现周期循环，避免额外计时器
+
+---
+
+## Level Phase 4-5: Map / Save / Multi-Floor / Enhanced Transitions
+
+**实施时间：** 当前会话
+**阶段：** Level Phase 4 (Map & Exploration) + Phase 5 (Multi-Floor Structure)
+**前置依赖：** Phase 1-3 (L1-L12) 全部完成，架构基建大修完成
+
+---
+
+### L13A: MinimapManager + MapRoomData + LevelEvents Extensions
+
+**文件：**
+
+| 路径 | 操作 | 用途 |
+|------|------|------|
+| `Assets/Scripts/Core/LevelEvents.cs` | 修改 | 新增 `OnRoomFirstVisit(string)` 和 `OnFloorChanged(int)` 事件 |
+| `Assets/Scripts/Level/Map/MapRoomData.cs` | 新建 | 轻量房间地图数据结构体（RoomID、世界坐标、楼层、类型、访问状态） |
+| `Assets/Scripts/Level/Map/MapConnection.cs` | 新建 | 房间连接结构体（FromRoomID、ToRoomID、中点、是否层间） |
+| `Assets/Scripts/Level/Map/MinimapManager.cs` | 新建 | ServiceLocator 注册的地图数据管理器。场景初始化时收集所有 Room，通过 Door 引用构建邻接图，跟踪已访问房间集合。提供 API：GetRoomNodes/GetConnections/IsVisited/MarkVisited/CurrentFloor/GetFloorsDiscovered |
+| `Assets/Scripts/Level/ProjectArk.Level.asmdef` | 修改 | 添加 `Unity.TextMeshPro` 和 `Unity.InputSystem` 引用 |
+
+**技术要点：**
+- MinimapManager 在 `Start()` 中通过 `FindObjectsByType<Room>` 收集场景数据
+- 邻接图通过 Door.TargetRoom 引用构建，使用 HashSet 去重双向连接
+- 楼层变化检测由 MinimapManager.HandleRoomChanged 驱动，触发 LevelEvents.OnFloorChanged
+- 已访问房间从 SaveManager 加载/保存
+
+---
+
+### L13B: MapPanel + MapRoomWidget + MapConnectionLine + Input Action
+
+**文件：**
+
+| 路径 | 操作 | 用途 |
+|------|------|------|
+| `Assets/Scripts/Level/Map/MapRoomWidget.cs` | 新建 | 单个房间节点 UI 组件。根据 RoomType 着色（Normal/Arena/Boss/Safe），显示图标覆盖、当前高亮环、未访问迷雾 |
+| `Assets/Scripts/Level/Map/MapConnectionLine.cs` | 新建 | 房间连接线 UI。使用拉伸 Image 绘制线段，支持层间连接差异化样式 |
+| `Assets/Scripts/Level/Map/MapPanel.cs` | 新建 | 全屏地图面板。M 键（ToggleMap action）切换，ScrollRect 支持平移，滚轮缩放，楼层 Tab 切换，玩家图标定位 |
+| `Assets/Input/ShipActions.inputactions` | 修改 | Ship map 新增 ToggleMap Button action，绑定 Keyboard/M 和 Gamepad/select |
+
+**技术要点：**
+- MapPanel 独立处理输入（不通过 UIManager），因为地图不需要暂停游戏
+- 世界坐标到地图坐标使用可配置 _worldToMapScale 缩放因子
+- 连接线通过 `transform.SetAsFirstSibling()` 渲染在房间节点下方
+- 楼层 Tab 使用闭包捕获 floor index 绑定 onClick
+
+---
+
+### L13C: MinimapHUD Corner Overlay
+
+**文件：**
+
+| 路径 | 操作 | 用途 |
+|------|------|------|
+| `Assets/Scripts/Level/Map/MinimapHUD.cs` | 新建 | 屏幕角落小地图叠加层。以当前房间为中心显示可见半径内的房间，自动跟随房间切换刷新，显示楼层标签 |
+
+**技术要点：**
+- 使用可配置 `_visibleRadius`（世界单位）过滤远距离房间
+- 每次进入新房间时完全重建（Rebuild），因为小地图元素数量少，性能开销可接受
+- 订阅 `LevelEvents.OnRoomEntered` 和 `LevelEvents.OnFloorChanged` 触发刷新
+
+---
+
+### L14: SaveBridge + Save System Integration
+
+**文件：**
+
+| 路径 | 操作 | 用途 |
+|------|------|------|
+| `Assets/Scripts/Level/SaveBridge.cs` | 新建 | 集中式存档收集器。从 MinimapManager/KeyInventory/WorldProgressManager/ShipHealth/CheckpointManager 收集数据调用 SaveManager.Save；加载时反向分发到各子系统 |
+| `Assets/Scripts/Level/Checkpoint/CheckpointManager.cs` | 修改 | `SaveProgress` 方法委托给 SaveBridge.SaveAll()，保留 fallback 直接存档 |
+| `Assets/Scripts/Level/GameFlow/GameFlowManager.cs` | 修改 | `Start()` 中调用 SaveBridge.LoadAll() 加载存档；死亡重生存档委托给 SaveBridge |
+| `Assets/Scripts/Level/Progression/WorldProgressManager.cs` | 修改 | `SaveProgress` 方法委托给 SaveBridge.SaveAll()，保留 fallback |
+| `Assets/Scripts/Level/Room/RoomManager.cs` | 修改 | `EnterRoom()` 中首次访问时调用 MinimapManager.MarkVisited()；新增 `CurrentFloor` 便利属性 |
+
+**技术要点：**
+- SaveBridge 注册到 ServiceLocator，各子系统通过 `ServiceLocator.Get<SaveBridge>()` 调用
+- 所有修改保留 fallback 逻辑（SaveBridge 不存在时回退到直接存档），确保向后兼容
+- SaveBridge.LoadAll() 在 GameFlowManager.Start() 中最先执行，确保子系统在激活前获得存档数据
+
+---
+
+### L15: ShebaLevelScaffolder Editor Tool
+
+**文件：**
+
+| 路径 | 操作 | 用途 |
+|------|------|------|
+| `Assets/Scripts/Level/Editor/ProjectArk.Level.Editor.asmdef` | 新建 | Editor-only 程序集定义，includePlatforms = ["Editor"] |
+| `Assets/Scripts/Level/Editor/ShebaLevelScaffolder.cs` | 新建 | 菜单 `ProjectArk > Scaffold Sheba Level`。创建 12 个 Room GameObject（含 BoxCollider2D、PolygonCollider2D confiner、Room 组件、SpawnPoints），匹配的 RoomSO 和 EncounterSO 资产，双向 Door 连接 |
+
+**技术要点：**
+- 12 间房间布局：Entrance → Hub → 双分支走廊 → Arena×2 → Key Chamber → Rest Station → Boss Antechamber → Boss + Underground 层
+- 使用 SerializedObject 设置私有字段（遵循不直接修改 YAML 的原则）
+- EncounterSO 自动分配不同的波次配置（Patrol_Light/Mixed_Medium/Arena_Heavy/Boss）
+- 双向门连接：每个 DoorDef 同时在源和目标房间创建对应的 Door + SpawnPoint
+- 执行完毕后在 Console 输出 10 步验收清单
+
+---
+
+### L16+L18: Floor Awareness + Minimap Floor Switching
+
+**文件：** 已在 L13A-C 中前置实现
+
+- `MinimapManager.CurrentFloor` / `GetFloorsDiscovered()` / `GetRoomNodes(int floor)` — L13A
+- `RoomManager.CurrentFloor` 便利属性 — L14
+- `LevelEvents.OnFloorChanged(int)` — L13A（由 MinimapManager 触发）
+- `MapPanel` 楼层 Tab 栏 — L13B
+- `MinimapHUD` 楼层标签 + 自动切换 — L13C
+
+---
+
+### L17: Enhanced Layer Transition
+
+**文件：**
+
+| 路径 | 操作 | 用途 |
+|------|------|------|
+| `Assets/Scripts/Level/Data/RoomSO.cs` | 修改 | 新增 `_ambientMusic` AudioClip 字段（per-room BGM 覆盖） |
+| `Assets/Scripts/Level/Room/DoorTransitionController.cs` | 修改 | 新增层间转场增强效果：粒子特效、SFX、BGM crossfade、相机 zoom-out/snap-back |
+
+**技术要点：**
+- 粒子方向基于 currentFloor vs targetFloor 判断上升/下降
+- 相机 zoom 使用 PrimeTween.Custom 动画 orthographicSize
+- BGM crossfade 通过 AudioManager.PlayMusic(clip, fadeDuration) 实现
+- 所有新增字段标记为 Optional（[SerializeField] 可空），不影响现有非层间转场
+
+---
+
+### L19: NarrativeFallTrigger Placeholder
+
+**文件：**
+
+| 路径 | 操作 | 用途 |
+|------|------|------|
+| `Assets/Scripts/Level/Narrative/NarrativeFallTrigger.cs` | 新建 | 叙事坠落触发器占位符。含 SerializeField（TargetRoom、LandingPoint、ParticlePrefab、Timeline、SFX、相机参数），TriggerFall() 方法含 9 步 TODO 注释描述完整实现。当前仅执行最小功能：传送 + 换房间 |
+
+**技术要点：**
+- 严格遵循计划：仅占位，不实现完整功能
+- TriggerFall() 的 TODO 注释列出完整 9 步实现方案（供未来叙事过场开发参考）
+- 支持 PlayableAsset（Timeline）引用，为未来 Timeline 集成预留接口
+- ResetTrigger() 方法用于死亡/重生后重置触发器状态
