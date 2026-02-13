@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using ProjectArk.Core;
+using ProjectArk.Combat.Enemy;
 
 namespace ProjectArk.Level
 {
@@ -37,6 +38,8 @@ namespace ProjectArk.Level
 
         private RoomState _state = RoomState.Undiscovered;
         private Door[] _doors;
+        private EnemySpawner _spawner;
+        private WaveSpawnStrategy _waveStrategy;
 
         // ──────────────────── Events ────────────────────
 
@@ -75,6 +78,9 @@ namespace ProjectArk.Level
         {
             // Auto-collect Door components from children
             _doors = GetComponentsInChildren<Door>(true);
+
+            // Auto-find EnemySpawner on this room (if any)
+            _spawner = GetComponentInChildren<EnemySpawner>(true);
 
             // Validate trigger collider
             var boxCollider = GetComponent<BoxCollider2D>();
@@ -128,22 +134,69 @@ namespace ProjectArk.Level
         // ──────────────────── Enemy Activation ────────────────────
 
         /// <summary>
-        /// Activate all enemies in this room (enable their GameObjects).
+        /// Activate enemies in this room. If EncounterSO is configured and room is not cleared,
+        /// creates a WaveSpawnStrategy and starts it via EnemySpawner.
+        /// Otherwise falls back to activating pre-placed child enemies.
         /// Called by RoomManager when player enters the room.
         /// </summary>
         public void ActivateEnemies()
         {
-            // Phase 3 将接入 EnemySpawner WaveSpawnStrategy
-            // 当前阶段：激活房间内已有的敌人 GameObject
+            // 波次刷怪模式：有 EncounterSO 且房间未清除且有 Spawner
+            if (_data != null && _data.HasEncounter && _state != RoomState.Cleared && _spawner != null)
+            {
+                StartWaveEncounter();
+                return;
+            }
+
+            // 回退模式：激活预放置的敌人 GameObject
+            ActivatePreplacedEnemies();
+        }
+
+        /// <summary>
+        /// Start a wave-based encounter using the RoomSO's EncounterSO data.
+        /// </summary>
+        private void StartWaveEncounter()
+        {
+            _waveStrategy = new WaveSpawnStrategy(_data.Encounter);
+            _waveStrategy.OnEncounterComplete += HandleEncounterComplete;
+
+            _spawner.SetStrategy(_waveStrategy);
+            _spawner.StartStrategy();
+
+            Debug.Log($"[Room] {RoomID}: Wave encounter started ({_data.Encounter.WaveCount} waves)");
+        }
+
+        /// <summary>
+        /// Fallback: activate pre-placed enemy GameObjects under spawn point transforms.
+        /// </summary>
+        private void ActivatePreplacedEnemies()
+        {
             foreach (var sp in _spawnPoints)
             {
                 if (sp == null) continue;
-                // 激活 spawn point 下的所有子对象（预放置的敌人）
                 for (int i = 0; i < sp.childCount; i++)
                 {
                     sp.GetChild(i).gameObject.SetActive(true);
                 }
             }
+        }
+
+        private void HandleEncounterComplete()
+        {
+            // 清理事件订阅
+            if (_waveStrategy != null)
+            {
+                _waveStrategy.OnEncounterComplete -= HandleEncounterComplete;
+            }
+
+            // 通知 RoomManager 房间已清除
+            var roomManager = ServiceLocator.Get<RoomManager>();
+            if (roomManager != null)
+            {
+                roomManager.NotifyRoomCleared(this);
+            }
+
+            Debug.Log($"[Room] {RoomID}: Encounter complete → Room cleared!");
         }
 
         /// <summary>
@@ -165,12 +218,25 @@ namespace ProjectArk.Level
         /// <summary>
         /// Reset all enemies in this room to their initial state.
         /// Used by death/respawn system to repopulate the room.
-        /// Deactivates all enemies, resets room state to Entered, then reactivates.
+        /// Deactivates all enemies, resets spawner strategy, resets room state, then reactivates.
         /// </summary>
         public void ResetEnemies()
         {
             // 先全部关闭
             DeactivateEnemies();
+
+            // 重置 spawner 策略状态
+            if (_spawner != null)
+            {
+                _spawner.ResetSpawner();
+            }
+
+            // 清理旧的 WaveSpawnStrategy 事件
+            if (_waveStrategy != null)
+            {
+                _waveStrategy.OnEncounterComplete -= HandleEncounterComplete;
+                _waveStrategy = null;
+            }
 
             // 重置房间战斗状态（如果已清除，恢复到 Entered 以允许再次战斗）
             if (_state == RoomState.Cleared)

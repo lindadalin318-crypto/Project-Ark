@@ -155,12 +155,22 @@ namespace ProjectArk.Level
                 director.ReturnAllTokens();
             }
 
-            // ── Arena/Boss auto-lock ──
+            // ── Arena/Boss encounter ──
             if (room.Type == RoomType.Arena || room.Type == RoomType.Boss)
             {
                 if (room.State != RoomState.Cleared)
                 {
-                    room.LockAllDoors(DoorState.Locked_Combat);
+                    // ArenaController 负责锁门 + 波次生成 + 解锁
+                    var arena = room.GetComponent<ArenaController>();
+                    if (arena != null)
+                    {
+                        arena.BeginEncounter();
+                    }
+                    else
+                    {
+                        // 没有 ArenaController 则仅锁门（向后兼容）
+                        room.LockAllDoors(DoorState.Locked_Combat);
+                    }
                 }
             }
 

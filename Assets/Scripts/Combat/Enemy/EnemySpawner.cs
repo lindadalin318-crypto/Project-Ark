@@ -1,39 +1,42 @@
+using System;
 using UnityEngine;
 using ProjectArk.Core;
-using Cysharp.Threading.Tasks;
 
 namespace ProjectArk.Combat.Enemy
 {
     /// <summary>
-    /// Manages enemy spawning through object pooling.
-    /// Controls spawn timing, alive count, and spawn point selection.
+    /// Context class for enemy spawning. Delegates actual spawn logic to an ISpawnStrategy.
+    /// Provides shared infrastructure: spawn point selection, pool access, affix application.
+    /// 
+    /// Default behavior: if no strategy is injected, uses LoopSpawnStrategy (legacy mode).
+    /// Arena/Boss rooms inject WaveSpawnStrategy at runtime via SetStrategy().
     /// </summary>
     public class EnemySpawner : MonoBehaviour
     {
-        // ──────────────────── Inspector ────────────────────
-        [Header("Enemy Configuration")]
-        [Tooltip("The enemy prefab to spawn.")]
+        // ──────────────────── Inspector (Legacy / Fallback) ────────────────────
+        [Header("Legacy Spawn Config (used if no strategy is injected)")]
+        [Tooltip("The enemy prefab to spawn in legacy loop mode.")]
         [SerializeField] private GameObject _enemyPrefab;
 
         [Header("Spawn Points")]
         [Tooltip("Transform positions where enemies can spawn.")]
         [SerializeField] private Transform[] _spawnPoints;
 
-        [Header("Spawn Settings")]
-        [Tooltip("Maximum number of enemies alive at once.")]
+        [Header("Legacy Loop Settings")]
+        [Tooltip("Maximum number of enemies alive at once (legacy loop mode).")]
         [SerializeField] private int _maxAlive = 3;
 
-        [Tooltip("Time between respawns after an enemy dies (seconds).")]
+        [Tooltip("Time between respawns after an enemy dies (legacy loop mode).")]
         [SerializeField] private float _spawnInterval = 5f;
 
-        [Tooltip("Number of enemies to spawn immediately on Start.")]
+        [Tooltip("Number of enemies to spawn immediately on Start (legacy loop mode).")]
         [SerializeField] private int _initialSpawnCount = 1;
 
         [Header("Elite / Affix Settings")]
         [Tooltip("Optional: affix pool for creating elite enemies. Leave empty to disable.")]
         [SerializeField] private EnemyAffixSO[] _possibleAffixes;
 
-        [Tooltip("Chance (0-1) that a spawned enemy becomes elite (gets 1 random affix).")]
+        [Tooltip("Chance (0-1) that a spawned enemy becomes elite.")]
         [Range(0f, 1f)]
         [SerializeField] private float _eliteChance = 0f;
 
@@ -41,86 +44,150 @@ namespace ProjectArk.Combat.Enemy
         [SerializeField] [Min(1)] private int _maxAffixCount = 1;
 
         [Header("Pool Settings")]
-        [Tooltip("Number of instances to pre-warm in the pool.")]
+        [Tooltip("Pre-warm count for the default enemy pool (legacy mode).")]
         [SerializeField] private int _poolPrewarmCount = 5;
 
-        [Tooltip("Maximum pool capacity.")]
+        [Tooltip("Maximum pool capacity for the default enemy pool (legacy mode).")]
         [SerializeField] private int _poolMaxSize = 10;
 
         // ──────────────────── Runtime State ────────────────────
-        private GameObjectPool _pool;
-        private int _aliveCount;
+        private ISpawnStrategy _strategy;
         private int _nextSpawnIndex;
+        private GameObjectPool _legacyPool; // 仅 legacy 模式使用
+
+        // ──────────────────── Events ────────────────────
+
+        /// <summary>
+        /// Fired when the current strategy reports the encounter is complete.
+        /// Used by Room/ArenaController to trigger room clear.
+        /// </summary>
+        public event Action OnEncounterComplete;
+
+        // ──────────────────── Public Properties ────────────────────
+
+        /// <summary> Available spawn point transforms. </summary>
+        public Transform[] SpawnPoints => _spawnPoints;
+
+        /// <summary> Whether the active strategy has completed its encounter. </summary>
+        public bool IsComplete => _strategy != null && _strategy.IsEncounterComplete;
 
         // ──────────────────── Lifecycle ────────────────────
 
         private void Start()
         {
-            if (_enemyPrefab == null)
+            // 如果没有外部注入策略，回退到 legacy loop 模式
+            if (_strategy == null)
             {
-                Debug.LogError("[EnemySpawner] No enemy prefab assigned!");
-                enabled = false;
-                return;
-            }
+                if (_enemyPrefab == null)
+                {
+                    Debug.LogWarning("[EnemySpawner] No enemy prefab and no strategy. Spawner idle.");
+                    return;
+                }
 
-            if (_spawnPoints == null || _spawnPoints.Length == 0)
-            {
-                Debug.LogError("[EnemySpawner] No spawn points assigned!");
-                enabled = false;
-                return;
-            }
+                if (_spawnPoints == null || _spawnPoints.Length == 0)
+                {
+                    Debug.LogError("[EnemySpawner] No spawn points assigned!");
+                    enabled = false;
+                    return;
+                }
 
-            // Create the object pool
-            _pool = new GameObjectPool(_enemyPrefab, transform, _poolPrewarmCount, _poolMaxSize);
+                // 为 legacy prefab 创建专属池
+                _legacyPool = new GameObjectPool(_enemyPrefab, transform, _poolPrewarmCount, _poolMaxSize);
 
-            // Perform initial spawns
-            int toSpawn = Mathf.Min(_initialSpawnCount, _maxAlive);
-            for (int i = 0; i < toSpawn; i++)
-            {
-                SpawnEnemy();
+                var loop = new LoopSpawnStrategy(_enemyPrefab, _maxAlive, _initialSpawnCount, _spawnInterval);
+                SetStrategy(loop);
+                _strategy.Start();
             }
         }
 
-        // ──────────────────── Spawning ────────────────────
+        // ──────────────────── Strategy Injection ────────────────────
 
         /// <summary>
-        /// Spawns a single enemy from the pool at the next spawn point.
+        /// Inject a spawn strategy at runtime. Call before Start() or manually call strategy.Start().
+        /// Typically called by Room.ActivateEnemies() for wave-based encounters.
         /// </summary>
-        public void SpawnEnemy()
+        public void SetStrategy(ISpawnStrategy strategy)
         {
-            if (_aliveCount >= _maxAlive) return;
+            // 清理旧策略
+            _strategy?.Reset();
 
-            // Select spawn point (round-robin)
+            _strategy = strategy;
+            _strategy.Initialize(this);
+            _nextSpawnIndex = 0;
+
+            Debug.Log($"[EnemySpawner] Strategy set: {strategy.GetType().Name}");
+        }
+
+        /// <summary>
+        /// Start the current strategy. Called externally after SetStrategy() when
+        /// the caller needs to control timing (e.g., ArenaController waits for lock animation).
+        /// </summary>
+        public void StartStrategy()
+        {
+            if (_strategy == null)
+            {
+                Debug.LogError("[EnemySpawner] Cannot start — no strategy assigned.");
+                return;
+            }
+            _strategy.Start();
+        }
+
+        // ──────────────────── Public Spawn API ────────────────────
+
+        /// <summary>
+        /// Spawn a single enemy from the pool at the next available spawn point.
+        /// Called by ISpawnStrategy implementations.
+        /// </summary>
+        /// <param name="prefab">The enemy prefab to spawn.</param>
+        /// <returns>The spawned enemy GameObject.</returns>
+        public GameObject SpawnFromPool(GameObject prefab)
+        {
+            if (_spawnPoints == null || _spawnPoints.Length == 0)
+            {
+                Debug.LogError("[EnemySpawner] No spawn points!");
+                return null;
+            }
+
+            // 获取生成位置（轮询）
             Transform spawnPoint = _spawnPoints[_nextSpawnIndex % _spawnPoints.Length];
             _nextSpawnIndex++;
-
             Vector3 position = spawnPoint.position;
 
-            // Get enemy from pool (IPoolable.OnGetFromPool is called automatically)
-            GameObject enemy = _pool.Get(position, Quaternion.identity);
+            // 从对象池获取实例
+            var pool = GetOrCreatePool(prefab);
+            GameObject enemy = pool.Get(position, Quaternion.identity);
 
-            // Reset brain to start fresh from IdleState at new position
+            // 重置 Brain
             var brain = enemy.GetComponent<EnemyBrain>();
             if (brain != null)
             {
                 brain.ResetBrain(position);
             }
 
-            // Apply affixes (elite chance)
+            // 尝试应用精英词缀
             TryApplyAffixes(enemy);
 
-            // Subscribe to death event for respawn management
-            // NOTE: EnemyEntity.OnReturnToPool clears all event subscribers,
-            // so we must re-subscribe every time we get from pool.
+            // 订阅死亡事件（对象池回收会清空事件，所以每次都需重新订阅）
             var entity = enemy.GetComponent<EnemyEntity>();
             if (entity != null)
             {
-                entity.OnDeath += () => OnEnemyDied(enemy);
+                entity.OnDeath += () => HandleEnemyDeath(enemy);
             }
 
-            _aliveCount++;
+            Debug.Log($"[EnemySpawner] Spawned {prefab.name} at {position}");
+            return enemy;
+        }
 
-            Debug.Log($"[EnemySpawner] Spawned enemy at {position}. Alive: {_aliveCount}/{_maxAlive}");
+        // ──────────────────── Pool Management ────────────────────
+
+        private GameObjectPool GetOrCreatePool(GameObject prefab)
+        {
+            // 如果是 legacy prefab 且有专属池，复用
+            if (prefab == _enemyPrefab && _legacyPool != null)
+                return _legacyPool;
+
+            // 否则通过 PoolManager 获取/创建（WaveSpawnStrategy 会使用多种 Prefab）
+            return PoolManager.Instance.GetPool(prefab, _poolPrewarmCount, _poolMaxSize);
         }
 
         // ──────────────────── Affix Application ────────────────────
@@ -130,18 +197,14 @@ namespace ProjectArk.Combat.Enemy
             if (_possibleAffixes == null || _possibleAffixes.Length == 0) return;
             if (_eliteChance <= 0f) return;
 
-            // Roll for elite
-            if (Random.value > _eliteChance) return;
+            if (UnityEngine.Random.value > _eliteChance) return;
 
-            // Get or add AffixController
             var controller = enemy.GetComponent<EnemyAffixController>();
             if (controller == null)
                 controller = enemy.AddComponent<EnemyAffixController>();
 
-            // Clear any previous affixes from pool reuse
             controller.ClearAffixes();
 
-            // Apply 1 to _maxAffixCount random affixes (no duplicates)
             int numAffixes = Mathf.Min(_maxAffixCount, _possibleAffixes.Length);
             var usedIndices = new System.Collections.Generic.HashSet<int>();
 
@@ -151,7 +214,7 @@ namespace ProjectArk.Combat.Enemy
                 int attempts = 0;
                 do
                 {
-                    idx = Random.Range(0, _possibleAffixes.Length);
+                    idx = UnityEngine.Random.Range(0, _possibleAffixes.Length);
                     attempts++;
                 }
                 while (usedIndices.Contains(idx) && attempts < 20);
@@ -166,30 +229,28 @@ namespace ProjectArk.Combat.Enemy
 
         // ──────────────────── Death Handling ────────────────────
 
-        private void OnEnemyDied(GameObject enemy)
+        private void HandleEnemyDeath(GameObject enemy)
         {
-            _aliveCount--;
+            Debug.Log($"[EnemySpawner] Enemy died: {enemy.name}");
 
-            Debug.Log($"[EnemySpawner] Enemy died. Alive: {_aliveCount}/{_maxAlive}");
+            _strategy?.OnEnemyDied(enemy);
 
-            // Schedule respawn if below max
-            if (_aliveCount < _maxAlive)
+            // 检查策略是否完成
+            if (_strategy != null && _strategy.IsEncounterComplete)
             {
-                RespawnAfterDelay().Forget();
+                OnEncounterComplete?.Invoke();
             }
         }
 
-        private async UniTaskVoid RespawnAfterDelay()
-        {
-            await UniTask.Delay(
-                System.TimeSpan.FromSeconds(_spawnInterval),
-                cancellationToken: destroyCancellationToken);
+        // ──────────────────── Reset ────────────────────
 
-            // Double check we still need to spawn
-            if (_aliveCount < _maxAlive)
-            {
-                SpawnEnemy();
-            }
+        /// <summary>
+        /// Reset the spawner and its strategy. Used by Room.ResetEnemies() for respawn.
+        /// </summary>
+        public void ResetSpawner()
+        {
+            _strategy?.Reset();
+            _nextSpawnIndex = 0;
         }
 
         // ──────────────────── Debug ────────────────────

@@ -2646,3 +2646,93 @@ Assets/Scripts/Level/
 
 - `ServiceLocator.Get<KeyInventory>()` 查询玩家钥匙背包
 - `_hasLoggedMissingKey` 防止 `OnTriggerStay2D` 每帧输出日志
+
+---
+
+## Level Module Phase 3 — 战斗房间逻辑 — 2026-02-13 11:15
+
+### L10: EncounterSystem（波次生成系统）
+
+#### 新建文件
+
+| 文件 | 内容 | 目的 |
+|------|------|------|
+| `Assets/Scripts/Combat/Enemy/ISpawnStrategy.cs` | 策略接口，定义 `Initialize/Start/OnEnemyDied/IsEncounterComplete/Reset` | 将生成行为抽象为可插拔策略，解耦 EnemySpawner 与具体逻辑 |
+| `Assets/Scripts/Combat/Enemy/LoopSpawnStrategy.cs` | 循环刷怪策略（封装原有 EnemySpawner 逻辑） | 向后兼容：维持固定存活数，死亡后延迟重生，`IsEncounterComplete` 永远为 false |
+| `Assets/Scripts/Level/Room/WaveSpawnStrategy.cs` | EncounterSO 驱动的波次生成策略 | 逐波生成敌人，当前波全灭后延迟 `DelayBeforeWave` 秒启动下一波，全部波次完成触发 `OnEncounterComplete` 事件 |
+
+#### 修改文件
+
+| 文件 | 变更 | 目的 |
+|------|------|------|
+| `Assets/Scripts/Combat/Enemy/EnemySpawner.cs` | 完全重构为策略模式上下文 | 保留通用基建（生成点轮询、精英词缀、对象池），新增 `SetStrategy()`/`StartStrategy()`/`SpawnFromPool(prefab)`/`ResetSpawner()` 公共 API，新增 `OnEncounterComplete` 事件 |
+| `Assets/Scripts/Level/Room/Room.cs` | 重写 `ActivateEnemies()` 集成 WaveSpawnStrategy | 有 EncounterSO + EnemySpawner 且未清除 → 创建并启动 WaveSpawnStrategy；否则回退到激活预放置子对象。新增 `HandleEncounterComplete()` → 调用 `RoomManager.NotifyRoomCleared()`。`ResetEnemies()` 增加 spawner 和策略重置逻辑 |
+
+#### 架构决策
+
+- `WaveSpawnStrategy` 放在 `ProjectArk.Level` 程序集（依赖 `EncounterSO`），`ISpawnStrategy`/`LoopSpawnStrategy` 放在 `ProjectArk.Combat`（与 `EnemySpawner` 同级）。避免 Level→Combat 循环引用。
+- `EnemySpawner` 只认识 `ISpawnStrategy` 接口，不依赖具体策略实现类。
+- 多 Prefab 的池管理通过 `PoolManager.Instance.GetPool(prefab)` 按需创建，单 Prefab legacy 模式复用 `_legacyPool`。
+
+#### 技术
+
+- Strategy 模式（ISpawnStrategy → LoopSpawnStrategy / WaveSpawnStrategy）
+- UniTask 异步波次间延迟 + CancellationTokenSource 生命周期管理
+- PoolManager.GetPool() 按 Prefab InstanceID 索引，支持多种敌人 Prefab 共存
+
+---
+
+### L11: ArenaController（竞技场编排器）
+
+#### 新建文件
+
+| 文件 | 内容 | 目的 |
+|------|------|------|
+| `Assets/Scripts/Level/Room/ArenaController.cs` | Arena/Boss 房间战斗编排器 | 完整的遭遇序列：锁门→警报音效→预延迟→启动 WaveSpawnStrategy→全清→后延迟→解锁门→胜利音效→可选奖励掉落→标记 Cleared |
+
+#### 修改文件
+
+| 文件 | 变更 | 目的 |
+|------|------|------|
+| `Assets/Scripts/Level/Room/RoomManager.cs` | `EnterRoom()` 中 Arena/Boss 分支改为检测 ArenaController | 有 ArenaController 则委托其编排（包含锁门），无则回退到仅锁门（向后兼容） |
+
+#### 设计
+
+- `ArenaController` 挂在 Arena/Boss 类型的 Room 上，`[RequireComponent(typeof(Room))]`
+- 全异步流程用 `async UniTaskVoid`，绑定 `destroyCancellationToken`
+- Cleared 房间再次进入不重复触发（`BeginEncounter()` 检查 `RoomState.Cleared`）
+- 音效通过 `ServiceLocator.Get<AudioManager>().PlaySFX2D()` 播放
+- 奖励暂用 `Instantiate`（非战斗循环内，允许），后续可改对象池
+
+#### 技术
+
+- UniTask 异步遭遇序列
+- 事件驱动：WaveSpawnStrategy.OnEncounterComplete → ArenaController.HandleWavesCleared
+- ServiceLocator 获取 AudioManager、RoomManager
+
+---
+
+### L12: Hazard System（环境机关系统）
+
+#### 新建文件
+
+| 文件 | 内容 | 目的 |
+|------|------|------|
+| `Assets/Scripts/Level/Hazard/EnvironmentHazard.cs` | 抽象基类 | 统一伤害/击退/目标层配置，通过 `IDamageable.TakeDamage(DamagePayload)` 走统一伤害管线 |
+| `Assets/Scripts/Level/Hazard/DamageZone.cs` | 持续伤害区域（酸液池/辐射区） | `OnTriggerStay2D` + `_tickInterval` 定时器，`Dictionary<int, float>` 追踪每目标下次伤害时间 |
+| `Assets/Scripts/Level/Hazard/ContactHazard.cs` | 接触伤害（激光栅栏/电弧） | `OnTriggerEnter2D` 首次接触立即伤害 + `_hitCooldown` 冷却，`OnTriggerStay2D` 处理冷却期内进入的目标 |
+| `Assets/Scripts/Level/Hazard/TimedHazard.cs` | 周期性开关机关（钻头陷阱/间歇激光） | `Update()` 中按 `_activeDuration`/`_inactiveDuration` 循环切换 Collider 启用状态，激活时按 ContactHazard 逻辑伤害，支持 `_startDelay` 和 `SpriteRenderer` alpha 视觉同步 |
+
+#### 架构决策
+
+- 继承层次：`EnvironmentHazard`（abstract）→ `DamageZone` / `ContactHazard` / `TimedHazard`
+- 所有 Hazard 均在 `ProjectArk.Level` 程序集，引用 `ProjectArk.Core`（DamagePayload/IDamageable/DamageType）
+- `EnvironmentHazard` 的 `Awake()` 自动修复非 trigger 的 Collider2D
+- 每种 Hazard 的冷却/伤害追踪使用 `Dictionary<int, float>`（InstanceID → expiry time），`OnTriggerExit2D` / `OnDisable` 清理
+
+#### 技术
+
+- Template Method 模式（基类 `EnvironmentHazard` 提供 `ApplyDamage()`/`IsValidTarget()`，子类实现触发逻辑）
+- `DamagePayload` 结构体走统一伤害管线
+- `LayerMask _targetLayer` 显式声明目标层（遵循项目规范，禁止 `~0`）
+- `TimedHazard` 的 `Update()` 使用模运算实现周期循环，避免额外计时器
