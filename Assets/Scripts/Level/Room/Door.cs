@@ -30,6 +30,10 @@ namespace ProjectArk.Level
         [Tooltip("If true, uses longer transition effect (for floor/layer changes).")]
         [SerializeField] private bool _isLayerTransition;
 
+        [Header("Lock")]
+        [Tooltip("If set, this door requires a key to open. Used by Lock component / UI tooltip.")]
+        [SerializeField] private string _requiredKeyID;
+
         [Header("Player Detection")]
         [Tooltip("Layer mask for the player ship.")]
         [SerializeField] private LayerMask _playerLayer;
@@ -53,6 +57,9 @@ namespace ProjectArk.Level
 
         /// <summary> Whether this is a layer transition (longer fade). </summary>
         public bool IsLayerTransition => _isLayerTransition;
+
+        /// <summary> Required key ID for this door (empty = no key needed). </summary>
+        public string RequiredKeyID => _requiredKeyID;
 
         // ──────────────────── Lifecycle ────────────────────
 

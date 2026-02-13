@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using ProjectArk.Core;
 
 namespace ProjectArk.Ship
 {
@@ -64,6 +65,8 @@ namespace ProjectArk.Ship
 
         private void Awake()
         {
+            ServiceLocator.Register(this);
+
             _mainCamera = Camera.main;
             if (_mainCamera == null)
             {
@@ -78,6 +81,11 @@ namespace ProjectArk.Ship
             _fireAction = shipMap.FindAction("Fire");
             _fireSecondaryAction = shipMap.FindAction("FireSecondary");
             _interactAction = shipMap.FindAction("Interact");
+        }
+
+        private void OnDestroy()
+        {
+            ServiceLocator.Unregister(this);
         }
 
         private void OnEnable()

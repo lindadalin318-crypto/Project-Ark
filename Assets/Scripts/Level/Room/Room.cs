@@ -162,6 +162,31 @@ namespace ProjectArk.Level
             }
         }
 
+        /// <summary>
+        /// Reset all enemies in this room to their initial state.
+        /// Used by death/respawn system to repopulate the room.
+        /// Deactivates all enemies, resets room state to Entered, then reactivates.
+        /// </summary>
+        public void ResetEnemies()
+        {
+            // 先全部关闭
+            DeactivateEnemies();
+
+            // 重置房间战斗状态（如果已清除，恢复到 Entered 以允许再次战斗）
+            if (_state == RoomState.Cleared)
+            {
+                _state = RoomState.Entered;
+            }
+
+            // 解锁战斗锁定的门
+            UnlockCombatDoors();
+
+            // 重新激活
+            ActivateEnemies();
+
+            Debug.Log($"[Room] {RoomID}: Enemies reset.");
+        }
+
         // ──────────────────── Door Helpers ────────────────────
 
         /// <summary>

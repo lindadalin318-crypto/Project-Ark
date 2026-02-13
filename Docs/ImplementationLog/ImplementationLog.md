@@ -2419,3 +2419,180 @@ CLAUDE.md 是 AI 对话的"ground truth"。架构大修后未同步更新会导�
 - 利用 `GetComponentInChildren<T>(true)` 的 includeInactive 参数确保即使 StarChartPanel 被隐藏也能被找到
 - `FindObjectsByType<Canvas>(FindObjectsInactive.Include, ...)` 搜索包含未激活的 Canvas
 - Section Builder 方法返回创建的组件引用，供后续 Section 连线使用（如 UIManager 需要 HeatBarHUD 等引用）
+
+---
+
+## 关卡模块 Phase 2 — 进度系统全量实现 — 2026-02-13 09:04
+
+### 概述
+
+实现 Level Module Phase 2 的全部 5 个子系统：检查点 (L6)、物品拾取 (L8)、锁钥 (L7)、死亡重生 (L9)、世界进度 (L9.5)。同时修复 Phase 1 git 回退后遗失的 InputHandler ServiceLocator 注册，以及为 ShipHealth 添加 Heal() 方法。
+
+### 前置修复
+
+| 文件 | 变更 | 目的 |
+|------|------|------|
+| `Assets/Scripts/Ship/Input/InputHandler.cs` | 添加 `using ProjectArk.Core;`，在 `Awake()` 中 `ServiceLocator.Register(this)`，新增 `OnDestroy()` 取消注册 | Phase 1 验证时已添加但被 git reset 回退，DoorTransitionController 和所有 Phase 2 系统均依赖此注册 |
+| `Assets/Scripts/Ship/Combat/ShipHealth.cs` | 新增 `Heal(float amount)` 公共方法 | HealthPickup (L8) 需要按固定量恢复 HP |
+
+### L6: CheckpointSystem（检查点系统）
+
+| 文件 | 类型 | 目的 |
+|------|------|------|
+| `Assets/Scripts/Level/Data/CheckpointSO.cs` | **新建** | 检查点配置 SO：CheckpointID、DisplayName、RestoreHP/RestoreHeat 开关、ActivationSFX |
+| `Assets/Scripts/Level/Checkpoint/Checkpoint.cs` | **新建** | 场景检查点组件：Trigger 检测 + Interact 激活，恢复 HP/热量，通知 CheckpointManager，Sprite 颜色视觉反馈 |
+| `Assets/Scripts/Level/Checkpoint/CheckpointManager.cs` | **新建** | 检查点管理器：ServiceLocator 注册，追踪活跃检查点/重生位置，广播 LevelEvents.RaiseCheckpointActivated，自动存档 |
+
+**设计要点**：
+- Checkpoint 在 OnEnable/OnDisable 订阅 InputHandler.OnInteractPerformed，玩家进入范围后按 Interact 激活
+- CheckpointManager.GetCheckpointRoom() 通过 GetComponentInParent<Room>() 找到检查点所在房间，供 GameFlowManager 死亡重生使用
+- 激活检查点时自动调用 SaveManager.Save() 持久化
+
+### L8: ItemPickup（物品拾取系统）
+
+| 文件 | 类型 | 目的 |
+|------|------|------|
+| `Assets/Scripts/Level/Pickup/PickupBase.cs` | **新建** | 抽象拾取基类：auto vs interact 拾取模式，PrimeTween bob 浮动动画，拾取后缩小消失动画，UniTask 异步 |
+| `Assets/Scripts/Level/Pickup/KeyPickup.cs` | **新建** | 钥匙拾取：OnPickedUp → KeyInventory.AddKey() |
+| `Assets/Scripts/Level/Pickup/HealthPickup.cs` | **新建** | 血量回复拾取：OnPickedUp → ShipHealth.Heal() |
+| `Assets/Scripts/Level/Pickup/HeatPickup.cs` | **新建** | 热量清空拾取：OnPickedUp → HeatSystem.ResetHeat() |
+
+**设计要点**：
+- PickupBase 用 PrimeTween.LocalPositionY 做无限循环 bob 动画，拾取后 Tween.Scale 缩到 0 再 SetActive(false)
+- _autoPickup=true 时碰到自动拾取，false 时需要外部调用 TryInteractPickup()
+- 所有 Pickup 都兼容对象池（OnEnable 重置 consumed/scale/position）
+
+### L7: LockKeySystem（锁钥系统）
+
+| 文件 | 类型 | 目的 |
+|------|------|------|
+| `Assets/Scripts/Level/Data/KeyItemSO.cs` | **新建** | 钥匙 SO：KeyID、DisplayName、Icon、Description |
+| `Assets/Scripts/Level/Progression/KeyInventory.cs` | **新建** | 玩家钥匙背包：HashSet<string> 存储，ServiceLocator 注册，序列化到 ProgressSaveData.Flags（key_ 前缀） |
+| `Assets/Scripts/Level/Progression/Lock.cs` | **新建** | 锁组件：Trigger + Interact 检测，检查 KeyInventory.HasKey()，成功 → Door.SetState(Open) + 音效；失败 → 提示音 |
+| `Assets/Scripts/Level/Room/Door.cs` | **修改** | 新增 `[SerializeField] string _requiredKeyID` 字段和 `RequiredKeyID` 属性，供 Lock/UI 查询 |
+
+**设计要点**：
+- KeyInventory 用 ProgressSaveData.Flags 持久化（key 格式: `key_{keyID}`），与通用 flag 系统共存
+- Lock 组件可选消耗钥匙（_consumeKey），解锁后自动 disabled
+- Door 新增 RequiredKeyID 为可选元数据，Lock 组件自身持有完整解锁逻辑
+
+### L9: Death & Respawn（死亡与重生）
+
+| 文件 | 类型 | 目的 |
+|------|------|------|
+| `Assets/Scripts/Level/GameFlow/GameFlowManager.cs` | **新建** | 游戏流程管理器：订阅 ShipHealth.OnDeath，异步编排死亡→黑屏→传送→重生序列 |
+| `Assets/Scripts/Level/Room/Room.cs` | **修改** | 新增 `ResetEnemies()` 方法：关闭所有敌人 → 重置房间状态 → 解锁战斗门 → 重新激活 |
+
+**死亡→重生序列（async UniTaskVoid）**：
+1. 禁用输入
+2. 死亡音效
+3. PrimeTween 淡黑 (0.5s)
+4. 黑屏停留 (1s)
+5. 获取重生位置 (CheckpointManager.GetRespawnPosition)
+6. 传送玩家 + 清零速度
+7. 切换到检查点房间 (RoomManager.EnterRoom)
+8. 重置 HP + 热量
+9. 重置当前房间敌人 (Room.ResetEnemies)
+10. 重生音效
+11. 淡入 (0.5s)
+12. 恢复输入
+13. 存档
+
+**设计要点**：
+- 复用与 DoorTransitionController 相同的 fade Image（可共享或独立分配）
+- CancellationTokenSource 绑定 destroyCancellationToken 防止对象销毁后继续执行
+- Room.ResetEnemies() 会将 Cleared 状态回退到 Entered，允许重新触发战斗锁门
+
+### L9.5: WorldProgressManager（世界进度管理器）
+
+| 文件 | 类型 | 目的 |
+|------|------|------|
+| `Assets/Scripts/Level/Data/WorldProgressStageSO.cs` | **新建** | 世界进度阶段 SO：StageIndex、StageName、RequiredBossIDs、UnlockDoorIDs |
+| `Assets/Scripts/Level/Progression/WorldProgressManager.cs` | **新建** | 世界进度管理器：订阅 LevelEvents.OnBossDefeated，数据驱动阶段推进，广播 OnWorldStageChanged |
+| `Assets/Scripts/Core/Save/SaveData.cs` | **修改** | ProgressSaveData 新增 `int WorldStage` 字段 |
+
+**设计要点**：
+- WorldProgressStageSO 定义阶段推进条件（RequiredBossIDs 全部满足才升级）
+- 阶段推进是单向的（irreversible），按顺序检查（遇到未满足条件即停止）
+- UnlockDoorIDs 目前仅日志输出，完整实现需要 Door 注册表（留作后续扩展）
+
+### 新增文件夹结构
+
+```
+Assets/Scripts/Level/
+├── Checkpoint/
+│   ├── Checkpoint.cs
+│   └── CheckpointManager.cs
+├── Pickup/
+│   ├── PickupBase.cs
+│   ├── KeyPickup.cs
+│   ├── HealthPickup.cs
+│   └── HeatPickup.cs
+├── Progression/
+│   ├── KeyInventory.cs
+│   ├── Lock.cs
+│   └── WorldProgressManager.cs
+├── GameFlow/
+│   └── GameFlowManager.cs
+├── Data/
+│   ├── CheckpointSO.cs    (new)
+│   ├── KeyItemSO.cs        (new)
+│   └── WorldProgressStageSO.cs (new)
+└── ... (existing Phase 1 files)
+```
+
+### 技术
+
+- **UniTask**：GameFlowManager 的死亡重生序列使用 async UniTaskVoid + CancellationTokenSource，零 GC
+- **PrimeTween**：PickupBase bob 动画（无限循环 Yoyo），拾取消失动画（Scale InBack），GameFlowManager 淡入淡出
+- **ServiceLocator**：CheckpointManager、KeyInventory、GameFlowManager、WorldProgressManager 全部注册，InputHandler 补注册
+- **LevelEvents 静态事件总线**：OnCheckpointActivated（L6）、OnBossDefeated（L9.5 订阅）、OnWorldStageChanged（L9.5 广播）
+- **SaveManager 集成**：检查点激活自动存档，世界进度通过 ProgressSaveData.WorldStage 和 DefeatedBossIDs 持久化，钥匙通过 Flags 持久化
+
+### 编辑器配置清单（需用户在 Unity Editor 中完成）
+
+1. **Physics2D 碰撞矩阵**：确保 Checkpoint/Pickup/Lock 的 Trigger 层与 Player 层碰撞
+2. **场景 GameObject**：创建 CheckpointManager、KeyInventory、GameFlowManager、WorldProgressManager 空 GameObject 并挂载对应脚本
+3. **GameFlowManager**：拖入 FadeImage 引用（可与 DoorTransitionController 共享）
+4. **创建 SO 资产**：在 `Assets/_Data/Level/Checkpoints/` 和 `Assets/_Data/Level/Keys/` 下创建 CheckpointSO 和 KeyItemSO 资产
+5. **Checkpoint Prefab**：Collider2D (Trigger) + SpriteRenderer + Checkpoint 组件，配置 PlayerLayer 和 CheckpointSO 引用
+6. **Pickup Prefab**：Collider2D (Trigger) + SpriteRenderer + 对应 Pickup 子类组件
+7. **Lock Prefab / 配置**：在需要锁定的门附近放置 Lock 组件，引用 KeyItemSO 和 Door
+
+---
+
+## LevelAssetCreator 一键创建 Phase 2 SO 资产 — 2026-02-13 09:22
+
+### 新建文件
+
+| 文件 | 目的 |
+|------|------|
+| `Assets/Scripts/Level/Editor/ProjectArk.Level.Editor.asmdef` | Level 模块 Editor 脚本程序集定义（仅 Editor 平台），引用 ProjectArk.Level + ProjectArk.Core |
+| `Assets/Scripts/Level/Editor/LevelAssetCreator.cs` | 一键创建 Phase 2 全部 SO 资产的编辑器工具 |
+
+### 菜单项
+
+| 菜单路径 | 功能 |
+|----------|------|
+| `ProjectArk > Level > Create Phase 2 Assets (All)` | 一键创建所有 Checkpoint + Key + WorldStage 资产 |
+| `ProjectArk > Level > Create Checkpoint Assets` | 仅创建 CheckpointSO 资产 |
+| `ProjectArk > Level > Create Key Item Assets` | 仅创建 KeyItemSO 资产 |
+| `ProjectArk > Level > Create World Progress Stage Assets` | 仅创建 WorldProgressStageSO 资产 |
+
+### 创建的资产
+
+| 资产路径 | 内容 |
+|---------|------|
+| `Assets/_Data/Level/Checkpoints/Checkpoint_Start.asset` | 起始锚点，恢复 HP+热量 |
+| `Assets/_Data/Level/Checkpoints/Checkpoint_Corridor.asset` | 走廊锚点，恢复 HP+热量 |
+| `Assets/_Data/Level/Checkpoints/Checkpoint_Combat.asset` | 战斗区锚点，仅恢复 HP（不恢复热量） |
+| `Assets/_Data/Level/Keys/Key_AccessAlpha.asset` | Alpha 通行证（测试用钥匙） |
+| `Assets/_Data/Level/Keys/Key_BossGate.asset` | 核心门钥（Boss 区域钥匙） |
+| `Assets/_Data/Level/WorldStages/Stage_0_Initial.asset` | 初始阶段（无条件） |
+| `Assets/_Data/Level/WorldStages/Stage_1_PostGuardian.asset` | Guardian Boss 击败后解锁 |
+
+### 技术
+
+- 遵循 EnemyAssetCreator 的幂等模式：已存在的资产跳过，不会重复创建
+- 使用 SerializedObject + FindProperty 写入私有 `[SerializeField]` 字段
+- 所有音效/图标引用留空，等美术资源就绪后手动分配

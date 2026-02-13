@@ -78,6 +78,9 @@ namespace ProjectArk.Core.Save
         /// <summary> Unlocked abilities / traversal upgrades. </summary>
         public List<string> UnlockedAbilityIDs = new();
 
+        /// <summary> Current world progress stage (0 = initial, increments on boss defeats). </summary>
+        public int WorldStage;
+
         /// <summary> Generic key-value flags for quest/story state. </summary>
         public List<SaveFlag> Flags = new();
     }

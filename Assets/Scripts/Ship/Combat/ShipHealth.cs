@@ -165,6 +165,17 @@ namespace ProjectArk.Ship
         // ──────────────────── Public API ────────────────────
 
         /// <summary>
+        /// Heal the ship by a flat amount. Clamped to MaxHP.
+        /// </summary>
+        public void Heal(float amount)
+        {
+            if (_isDead || amount <= 0f) return;
+
+            _currentHP = Mathf.Min(_currentHP + amount, MaxHP);
+            OnDamageTaken?.Invoke(-amount, _currentHP); // 负伤害 = 治疗，复用事件更新 HUD
+        }
+
+        /// <summary>
         /// Reset health to maximum. Useful for respawn or level restart.
         /// </summary>
         public void ResetHealth()

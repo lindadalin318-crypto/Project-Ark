@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a85d65c57b12a624199e95aca079d654, type: 3}
+  m_Name: Key_AccessAlpha
+  m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.KeyItemSO
+  _keyID: access_alpha
+  _displayName: "Alpha \u901A\u884C\u8BC1"
+  _icon: {fileID: 0}
+  _description: "\u6253\u5F00\u901A\u5F80\u8D70\u5ECA\u7684\u95E8\u3002\u8868\u9762\u523B\u7740\u6A21\u7CCA\u7684\u5149\u8C31\u6807\u8BB0\u3002"
