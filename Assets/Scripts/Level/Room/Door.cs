@@ -88,18 +88,61 @@ namespace ProjectArk.Level
         {
             if (!IsPlayerLayer(other.gameObject)) return;
             _playerInRange = true;
+            TryAutoTransition();
+        }
 
-            // Auto-transition for Open doors when player enters trigger
-            if (_currentState == DoorState.Open && !_isTransitioning)
-            {
-                TryTransition();
-            }
+        private void OnTriggerStay2D(Collider2D other)
+        {
+            // 当玩家被传送到门的 Trigger 内时，OnTriggerEnter2D 在转场期间触发会被拒绝，
+            // 转场结束后 Stay 会重新尝试，避免"卡门"问题
+            if (!_playerInRange) return;
+            if (!IsPlayerLayer(other.gameObject)) return;
+            TryAutoTransition();
         }
 
         private void OnTriggerExit2D(Collider2D other)
         {
             if (!IsPlayerLayer(other.gameObject)) return;
             _playerInRange = false;
+            _hasLoggedMissingKey = false; // 离开后重置，下次进入重新提示
+        }
+
+        private bool _hasLoggedMissingKey;
+
+        private void TryAutoTransition()
+        {
+            if (_isTransitioning) return;
+
+            // 全局转场保护：另一扇门的转场还在进行中时不触发
+            var controller = ServiceLocator.Get<DoorTransitionController>();
+            if (controller != null && controller.IsTransitioning) return;
+
+            // ── 钥匙检查：Locked_Key 状态自动验证玩家背包 ──
+            if (_currentState == DoorState.Locked_Key && !string.IsNullOrEmpty(_requiredKeyID))
+            {
+                var inventory = ServiceLocator.Get<KeyInventory>();
+                if (inventory != null && inventory.HasKey(_requiredKeyID))
+                {
+                    // 有钥匙 → 自动解锁
+                    Debug.Log($"[Door] {gameObject.name}: 持有钥匙 '{_requiredKeyID}'，门自动解锁！");
+                    SetState(DoorState.Open);
+                    _hasLoggedMissingKey = false;
+                }
+                else
+                {
+                    // 没有钥匙 → 提示一次（避免 Stay 每帧刷屏）
+                    if (!_hasLoggedMissingKey)
+                    {
+                        Debug.Log($"[Door] {gameObject.name}: 需要钥匙 '{_requiredKeyID}' 才能通过！");
+                        _hasLoggedMissingKey = true;
+                    }
+                    return;
+                }
+            }
+
+            if (_currentState != DoorState.Open) return;
+
+            TryTransition();
         }
 
         private bool IsPlayerLayer(GameObject obj)

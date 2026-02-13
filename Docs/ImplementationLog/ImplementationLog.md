@@ -2596,3 +2596,53 @@ Assets/Scripts/Level/
 - 遵循 EnemyAssetCreator 的幂等模式：已存在的资产跳过，不会重复创建
 - 使用 SerializedObject + FindProperty 写入私有 `[SerializeField]` 字段
 - 所有音效/图标引用留空，等美术资源就绪后手动分配
+
+---
+
+## Door 转场卡门修复 + OnTriggerStay2D — 2026-02-13 10:00
+
+### 修改文件
+
+| 文件 | 变更 | 目的 |
+|------|------|------|
+| `Assets/Scripts/Level/Room/Door.cs` | 新增 `OnTriggerStay2D` 和 `TryAutoTransition()` 方法 | 修复传送后"卡门"问题 |
+
+### 问题
+
+玩家从 Door_ToCoridor 传送到 Room_Corridor 后，SpawnPoint 恰好在 Door_ToStart 的 Trigger 范围内。`OnTriggerEnter2D` 在转场尚未结束时触发，被 `DoorTransitionController.IsTransitioning` 拒绝。转场结束后玩家一直在 Trigger 内，`OnTriggerEnter2D` 不会再次触发，导致门永远无法通过。
+
+### 修复
+
+- 新增 `OnTriggerStay2D`：每个 FixedUpdate 帧检测，如果玩家仍在范围内且转场已结束，重新尝试过渡
+- 提取 `TryAutoTransition()` 统一入口：检查 Door 自身状态 + `DoorTransitionController.IsTransitioning` 全局锁
+- 性能影响可忽略：仅在玩家处于 Door Trigger 内时触发，方法体全是 O(1) 检查
+
+---
+
+## Door 钥匙自动检查 — 2026-02-13 10:30
+
+### 修改文件
+
+| 文件 | 变更 | 目的 |
+|------|------|------|
+| `Assets/Scripts/Level/Room/Door.cs` | `TryAutoTransition()` 中集成 `Locked_Key` 自动钥匙验证逻辑 | 玩家碰到锁定门时自动检查背包，有钥匙即解锁并传送，无钥匙 Console 提示 |
+
+### 行为变更
+
+- **无钥匙碰门**：Console 输出 `需要钥匙 'xxx' 才能通过！`（单次提示，离开后重进才会再提示，避免 Stay 每帧刷屏）
+- **有钥匙碰门**：Console 输出 `持有钥匙 'xxx'，门自动解锁！` → `SetState(Open)` → 立刻触发传送
+- **Open 状态门**：碰到直接传送（不变）
+- 新增 `_hasLoggedMissingKey` 标记：`OnTriggerExit2D` 时重置
+
+### 设计决策
+
+将钥匙验证逻辑从 Lock 组件迁入 Door 本身。原因：
+1. 玩家期望碰到门自动处理，不需要额外按 Interact
+2. Door 已持有 `_requiredKeyID` 字段，天然拥有所需信息
+3. 减少配置复杂度（不需要额外挂 Lock 组件 + 配置 Collider）
+4. Lock 组件仍保留用于更复杂的场景（如远离门的独立开关）
+
+### 技术
+
+- `ServiceLocator.Get<KeyInventory>()` 查询玩家钥匙背包
+- `_hasLoggedMissingKey` 防止 `OnTriggerStay2D` 每帧输出日志
