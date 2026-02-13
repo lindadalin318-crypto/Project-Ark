@@ -6,7 +6,7 @@ namespace ProjectArk.Level
     /// Data asset for a key item. Keys unlock doors/barriers in the level.
     /// Create assets in Assets/_Data/Level/Keys/.
     /// </summary>
-    [CreateAssetMenu(fileName = "New Key Item", menuName = "Project Ark/Level/Key Item")]
+    [CreateAssetMenu(fileName = "New Key Item", menuName = "ProjectArk/Level/Key Item")]
     public class KeyItemSO : ScriptableObject
     {
         [Header("Identity")]

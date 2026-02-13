@@ -7,7 +7,7 @@ namespace ProjectArk.Level
     /// Each stage represents an irreversible milestone (e.g., Boss A defeated, core area unlocked).
     /// WorldProgressManager checks stage requirements and advances automatically.
     /// </summary>
-    [CreateAssetMenu(fileName = "New World Stage", menuName = "Project Ark/Level/World Progress Stage")]
+    [CreateAssetMenu(fileName = "New World Stage", menuName = "ProjectArk/Level/World Progress Stage")]
     public class WorldProgressStageSO : ScriptableObject
     {
         [Header("Identity")]

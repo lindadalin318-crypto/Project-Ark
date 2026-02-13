@@ -6,7 +6,7 @@ namespace ProjectArk.Level
     /// Configuration data for a checkpoint. Defines what happens on activation
     /// (restore HP/heat, play SFX) and stores display metadata.
     /// </summary>
-    [CreateAssetMenu(fileName = "New Checkpoint", menuName = "Project Ark/Level/Checkpoint")]
+    [CreateAssetMenu(fileName = "New Checkpoint", menuName = "ProjectArk/Level/Checkpoint")]
     public class CheckpointSO : ScriptableObject
     {
         [Header("Identity")]

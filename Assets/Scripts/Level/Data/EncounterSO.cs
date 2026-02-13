@@ -7,7 +7,7 @@ namespace ProjectArk.Level
     /// Data-driven encounter definition: defines enemy waves for a combat room.
     /// Referenced by RoomSO. Used by EnemySpawner's WaveSpawnStrategy (Phase 3).
     /// </summary>
-    [CreateAssetMenu(fileName = "New Encounter", menuName = "Project Ark/Level/Encounter")]
+    [CreateAssetMenu(fileName = "New Encounter", menuName = "ProjectArk/Level/Encounter")]
     public class EncounterSO : ScriptableObject
     {
         [Tooltip("Ordered list of enemy waves. Waves spawn sequentially after the previous wave is cleared.")]

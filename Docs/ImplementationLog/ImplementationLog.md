@@ -2880,3 +2880,105 @@ Assets/Scripts/Level/
 - TriggerFall() 的 TODO 注释列出完整 9 步实现方案（供未来叙事过场开发参考）
 - 支持 PlayableAsset（Timeline）引用，为未来 Timeline 集成预留接口
 - ResetTrigger() 方法用于死亡/重生后重置触发器状态
+
+---
+
+## Ship Feel Enhancement — 飞船手感增强系统 — 2026-02-13 15:27
+
+### 概述
+
+全面升级飞船操控手感，涵盖曲线驱动移动、Dash/闪避系统、受击反馈（HitStop + 屏幕震动 + 无敌帧）、以及视觉 Juice（倾斜、Squash/Stretch、引擎粒子、Dash 残影）。所有参数通过 ScriptableObject 暴露，支持 Play Mode 热调参。
+
+### 新建文件
+
+| 路径 | 用途 |
+|------|------|
+| `Assets/Scripts/Ship/Data/ShipJuiceSettingsSO.cs` | 视觉 Juice 参数 SO（倾斜角度、Squash/Stretch 强度、残影数量、引擎粒子阈值） |
+| `Assets/Scripts/Ship/Movement/ShipDash.cs` | Dash/闪避核心逻辑（async UniTaskVoid、输入缓冲、冷却、无敌帧、出口动量保留） |
+| `Assets/Scripts/Ship/Input/InputBuffer.cs` | 通用输入缓冲工具类（Record/Consume/Peek/Clear） |
+| `Assets/Scripts/Ship/Combat/HitFeedbackService.cs` | 静态服务：HitStop（Time.timeScale 冻结）+ ScreenShake（Cinemachine Impulse） |
+| `Assets/Scripts/Ship/VFX/ShipVisualJuice.cs` | 移动倾斜 + Squash/Stretch（操控视觉子物体，PrimeTween 补间） |
+| `Assets/Scripts/Ship/VFX/ShipEngineVFX.cs` | 引擎尾焰粒子控制（发射率/尺寸随速度缩放，Dash 爆发） |
+| `Assets/Scripts/Ship/VFX/DashAfterImage.cs` | 残影单体组件（池化 Prefab，PrimeTween Alpha 淡出，IPoolable） |
+| `Assets/Scripts/Ship/VFX/DashAfterImageSpawner.cs` | 残影生成器（监听 ShipDash 事件，等间距从对象池生成残影） |
+
+### 修改文件
+
+| 路径 | 变更内容 |
+|------|----------|
+| `Assets/Scripts/Ship/Data/ShipStatsSO.cs` | 新增 Movement Curves（AccelerationCurve、DecelerationCurve、SharpTurn、InitialBoost）、Dash 参数（Speed/Duration/Cooldown/Buffer/ExitRatio/IFrames）、HitFeedback 参数（HitStop/IFrame/ScreenShake） |
+| `Assets/Scripts/Ship/Movement/ShipMotor.cs` | 重写为曲线驱动移动：AnimationCurve.Evaluate 加减速、急转弯惩罚、首帧 Boost、IsDashing 属性、SetVelocityOverride/ClearVelocityOverride API |
+| `Assets/Scripts/Ship/Input/InputHandler.cs` | 新增 `_dashAction` + `OnDashPressed` 事件 + OnEnable/OnDisable 回调绑定 |
+| `Assets/Scripts/Ship/Combat/ShipHealth.cs` | 新增 `IsInvulnerable` + `SetInvulnerable()` + `IFrameBlinkAsync()` 闪烁无敌帧 + TakeDamage 集成 HitStop/ScreenShake |
+| `Assets/Scripts/Ship/ProjectArk.Ship.asmdef` | 新增 `Unity.Cinemachine` + `PrimeTween.Runtime` 程序集引用 |
+
+### 技术要点
+
+- **曲线驱动移动**：`AnimationCurve.Evaluate(progress)` 替代线性 MoveTowards，progress 基于当前速度/最大速度比值
+- **急转弯惩罚**：`Vector2.Angle()` 检测输入方向 vs 当前速度方向，超过阈值（默认 90°）时施加速度乘数惩罚
+- **Dash 异步流程**：`async UniTaskVoid` + `destroyCancellationToken` 生命周期管理，无 Coroutine
+- **输入缓冲**：通用 `InputBuffer` 类，基于 `Time.unscaledTime` 时间戳 + 窗口消费机制
+- **HitStop**：`Time.timeScale = 0` + `UniTask.Delay(ignoreTimeScale: true)` 实现帧冻结
+- **ScreenShake**：`CinemachineImpulseSource.GenerateImpulse(intensity)` 需外部注册
+- **无敌帧闪烁**：SpriteRenderer alpha 交替 1.0/0.3，CancellationTokenSource 管理可取消
+- **残影系统**：PoolManager 对象池 + PrimeTween.Tween.Alpha 淡出 + IPoolable 回收清理
+- **视觉子物体分离**：ShipVisualJuice 操控 child Transform，不干扰 physics/aiming
+- **向后兼容**：保留 `ApplyImpulse()` 接口和 `OnSpeedChanged` 事件
+
+### Play Mode 验证清单
+
+- [ ] 加速曲线：起步有推力爆发感
+- [ ] 减速曲线：松手后有滑行惯性
+- [ ] 急转弯：90°+ 转向时明显减速
+- [ ] Dash：按下后快速冲刺，冷却 0.3s 可再次使用
+- [ ] Dash 无敌：冲刺期间不受伤
+- [ ] Dash 动量保留：冲刺结束后有惯性延续
+- [ ] Dash 输入缓冲：冷却结束前按 Dash 可自动执行
+- [ ] HitStop：受伤瞬间有短暂顿帧
+- [ ] 屏幕震动：受伤时摄像机抖动
+- [ ] 无敌帧：受伤后 1s 内不再受伤，精灵闪烁
+- [ ] 移动倾斜：横移时飞船视觉倾斜
+- [ ] 引擎粒子：移动时有尾焰
+- [ ] Dash 残影：冲刺时身后留下半透明残影
+- [ ] 热调参：Play Mode 中修改 SO 参数即时生效
+- [ ] `ApplyImpulse()` 仍正常工作
+
+---
+
+## 杂项
+
+### CreateAssetMenu menuName 统一 — 2026-02-13 15:40
+
+**修改文件：**
+- `Assets/Scripts/Level/Data/CheckpointSO.cs`
+- `Assets/Scripts/Level/Data/EncounterSO.cs`
+- `Assets/Scripts/Level/Data/KeyItemSO.cs`
+- `Assets/Scripts/Level/Data/RoomSO.cs`
+- `Assets/Scripts/Level/Data/WorldProgressStageSO.cs`
+
+**内容：** 将 `[CreateAssetMenu]` 的 `menuName` 参数从 `"Project Ark/Level/..."` (带空格) 统一为 `"ProjectArk/Level/..."` (无空格)。
+
+**目的：** 消除 Unity Editor Project 右键 Create 菜单中出现两个分组（"ProjectArk" 和 "Project Ark"）的问题，统一到 `ProjectArk` 分组下。
+
+**技术：** `[CreateAssetMenu]` attribute menuName 字符串修改。
+
+---
+
+### 飞船手感 SO 资产一键导入脚本 — 2026-02-13 15:42
+
+**新建文件：**
+- `Assets/Scripts/Ship/Editor/ProjectArk.Ship.Editor.asmdef` — Ship Editor 程序集定义（Editor-only，引用 ProjectArk.Ship）
+- `Assets/Scripts/Ship/Editor/ShipFeelAssetCreator.cs` — 一键创建/更新 ShipStatsSO 和 ShipJuiceSettingsSO 资产
+
+**内容：**
+- `ShipFeelAssetCreator` 提供 3 个菜单入口：
+  - `ProjectArk > Ship > Create Ship Feel Assets (All)` — 一键创建所有资产
+  - `ProjectArk > Ship > Create Ship Stats Asset` — 仅创建/更新 ShipStatsSO
+  - `ProjectArk > Ship > Create Ship Juice Settings Asset` — 仅创建 ShipJuiceSettingsSO
+- 幂等设计：已存在的资产不会重复创建
+- 对已存在的 `DefaultShipStats.asset`，会智能填充新增字段（Dash/HitFeedback/Curves）的默认值，同时保留用户已手动调整的旧字段值
+- 所有参数通过 `SerializedProperty` 精确设置，与 SO 中的 `[SerializeField]` 字段一一对应
+
+**目的：** 让用户无需手动在 Inspector 中逐个配置新增的 20+ 个参数，一键即可生成完整配置的 SO 资产。
+
+**技术：** `UnityEditor.MenuItem` + `SerializedObject` / `SerializedProperty` API + `AssetDatabase.CreateAsset` + 幂等检查。

@@ -7,7 +7,7 @@ namespace ProjectArk.Level
     /// Only stores non-spatial data (ID, display name, floor level, map icon, room type, encounter reference).
     /// Spatial data (bounds, doors, spawn points, tilemap) lives on the Room MonoBehaviour in the scene.
     /// </summary>
-    [CreateAssetMenu(fileName = "New Room", menuName = "Project Ark/Level/Room")]
+    [CreateAssetMenu(fileName = "New Room", menuName = "ProjectArk/Level/Room")]
     public class RoomSO : ScriptableObject
     {
         [Header("Identity")]

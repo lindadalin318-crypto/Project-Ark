@@ -1,14 +1,12 @@
 {
-    "name": "ProjectArk.Ship",
-    "rootNamespace": "ProjectArk.Ship",
+    "name": "ProjectArk.Ship.Editor",
+    "rootNamespace": "ProjectArk.Ship.Editor",
     "references": [
-        "ProjectArk.Core",
-        "Unity.InputSystem",
-        "UniTask",
-        "Unity.Cinemachine",
-        "PrimeTween.Runtime"
+        "ProjectArk.Ship"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

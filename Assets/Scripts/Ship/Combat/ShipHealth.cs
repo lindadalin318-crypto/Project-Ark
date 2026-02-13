@@ -22,6 +22,7 @@ namespace ProjectArk.Ship
         // ──────────────────── Runtime State ────────────────────
         private float _currentHP;
         private bool _isDead;
+        private bool _isInvulnerable;
 
         // ──────────────────── Cached Components ────────────────────
         private Rigidbody2D _rigidbody;
@@ -44,6 +45,9 @@ namespace ProjectArk.Ship
 
         /// <inheritdoc/>
         public bool IsAlive => !_isDead;
+
+        /// <summary> True when the ship cannot take damage (dash i-frames or post-hit i-frames). </summary>
+        public bool IsInvulnerable => _isInvulnerable;
 
         // ──────────────────── Lifecycle ────────────────────
 
@@ -81,6 +85,7 @@ namespace ProjectArk.Ship
         public void TakeDamage(DamagePayload payload)
         {
             if (_isDead) return;
+            if (_isInvulnerable) return;
 
             // Player has no elemental resistance for now — use base damage directly
             float damage = payload.BaseDamage;
@@ -96,10 +101,22 @@ namespace ProjectArk.Ship
             if (_spriteRenderer != null)
                 HitFlashAsync().Forget();
 
+            // Hit-stop + screen shake feedback
+            if (_stats != null)
+            {
+                float shakeIntensity = _stats.ScreenShakeBaseIntensity + damage * _stats.ScreenShakeDamageScale;
+                HitFeedbackService.TriggerHitStop(_stats.HitStopDuration).Forget();
+                HitFeedbackService.TriggerScreenShake(shakeIntensity);
+            }
+
             // Notify listeners
             OnDamageTaken?.Invoke(damage, _currentHP);
 
             Debug.Log($"[ShipHealth] Took {damage} damage (type: {payload.Type}). HP: {_currentHP}/{MaxHP}");
+
+            // Start post-hit i-frames
+            if (_stats != null && _stats.IFrameDuration > 0f)
+                IFrameBlinkAsync().Forget();
 
             // Death check
             if (_currentHP <= 0f)
@@ -133,6 +150,62 @@ namespace ProjectArk.Ship
 
             // NOTE: Game Over / Respawn logic is NOT implemented here.
             // Other systems should subscribe to OnDeath and handle accordingly.
+        }
+
+        // ──────────────────── Invulnerability ────────────────────
+
+        /// <summary>
+        /// Externally set invulnerability (e.g., dash i-frames).
+        /// </summary>
+        public void SetInvulnerable(bool value)
+        {
+            _isInvulnerable = value;
+        }
+
+        private CancellationTokenSource _iFrameCts;
+
+        private async UniTaskVoid IFrameBlinkAsync()
+        {
+            // Cancel any existing i-frame blink
+            _iFrameCts?.Cancel();
+            _iFrameCts?.Dispose();
+            _iFrameCts = new CancellationTokenSource();
+            var token = CancellationTokenSource.CreateLinkedTokenSource(
+                _iFrameCts.Token, destroyCancellationToken).Token;
+
+            _isInvulnerable = true;
+
+            float elapsed = 0f;
+            float duration = _stats.IFrameDuration;
+            float blinkInterval = _stats.IFrameBlinkInterval;
+            bool visible = true;
+
+            while (elapsed < duration)
+            {
+                if (token.IsCancellationRequested) break;
+
+                visible = !visible;
+                if (_spriteRenderer != null)
+                {
+                    Color c = _spriteRenderer.color;
+                    c.a = visible ? 1f : 0.3f;
+                    _spriteRenderer.color = c;
+                }
+
+                int delayMs = Mathf.RoundToInt(blinkInterval * 1000f);
+                await UniTask.Delay(delayMs, cancellationToken: token);
+                elapsed += blinkInterval;
+            }
+
+            // Restore visibility and end i-frames
+            if (_spriteRenderer != null)
+            {
+                Color c = _spriteRenderer.color;
+                c.a = 1f;
+                _spriteRenderer.color = c;
+            }
+
+            _isInvulnerable = false;
         }
 
         // ──────────────────── Visual Feedback ────────────────────
@@ -181,6 +254,20 @@ namespace ProjectArk.Ship
         public void ResetHealth()
         {
             InitializeHP();
+            _isInvulnerable = false;
+
+            // Cancel any in-flight i-frame blink
+            _iFrameCts?.Cancel();
+            _iFrameCts?.Dispose();
+            _iFrameCts = null;
+
+            // Restore sprite alpha
+            if (_spriteRenderer != null)
+            {
+                Color c = _spriteRenderer.color;
+                c.a = 1f;
+                _spriteRenderer.color = c;
+            }
 
             // Re-enable input if it was disabled
             if (_inputHandler != null)
