@@ -133,7 +133,7 @@ namespace ProjectArk.Level
                 if (_fadeImage != null)
                 {
                     _fadeImage.raycastTarget = true;
-                    Tween.Custom(0f, 1f, _deathFadeDuration, useUnscaledTime: true,
+                    _ = Tween.Custom(0f, 1f, _deathFadeDuration, useUnscaledTime: true,
                         onValueChange: v =>
                         {
                             if (_fadeImage != null)
@@ -205,7 +205,7 @@ namespace ProjectArk.Level
                 // ── 11. Fade in ──
                 if (_fadeImage != null)
                 {
-                    Tween.Custom(1f, 0f, _respawnFadeDuration, useUnscaledTime: true,
+                    _ = Tween.Custom(1f, 0f, _respawnFadeDuration, useUnscaledTime: true,
                         onValueChange: v =>
                         {
                             if (_fadeImage != null)

@@ -28,8 +28,9 @@ namespace ProjectArk.Combat.Enemy
         // (dot > 0.3 means within ~72° cone heading our way)
         private const float HEADING_THRESHOLD = 0.3f;
 
-        // NonAlloc buffer for projectile scan
+        // Buffer for projectile scan
         private static readonly Collider2D[] _scanBuffer = new Collider2D[8];
+        private static ContactFilter2D _contactFilter = new ContactFilter2D();
 
         // ──────────────────── Public Properties ────────────────────
 
@@ -72,8 +73,9 @@ namespace ProjectArk.Combat.Enemy
             float radius = _stats.ThreatDetectionRadius;
             Vector2 myPos = transform.position;
 
-            int count = Physics2D.OverlapCircleNonAlloc(
-                myPos, radius, _scanBuffer, _projectileMask);
+            _contactFilter.SetLayerMask(_projectileMask);
+            int count = Physics2D.OverlapCircle(
+                myPos, radius, _contactFilter, _scanBuffer);
 
             if (count == 0) return;
 

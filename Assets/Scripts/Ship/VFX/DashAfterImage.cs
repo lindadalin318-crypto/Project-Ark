@@ -34,8 +34,18 @@ namespace ProjectArk.Ship
             _spriteRenderer.color = c;
 
             // Fade out then return to pool
-            _fadeTween = Tween.Alpha(_spriteRenderer, startAlpha, 0f, fadeDuration, Ease.Linear,
-                onComplete: ReturnToPool);
+            _fadeTween = Tween.Custom(this, startAlpha, 0f, fadeDuration,
+                (target, val) =>
+                {
+                    if (target._spriteRenderer != null)
+                    {
+                        Color col = target._spriteRenderer.color;
+                        col.a = val;
+                        target._spriteRenderer.color = col;
+                    }
+                },
+                Ease.Linear)
+                .OnComplete(this, target => target.ReturnToPool());
         }
 
         private void ReturnToPool()

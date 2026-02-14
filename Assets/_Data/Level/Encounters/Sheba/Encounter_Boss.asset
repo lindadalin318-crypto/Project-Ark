@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 223a10a120874c04cbcfb109b5ae3392, type: 3}
+  m_Name: Encounter_Boss
+  m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.EncounterSO
+  _waves:
+  - DelayBeforeWave: 0
+    Entries:
+    - EnemyPrefab: {fileID: 8387863050932857702, guid: e3ac4aafee500d54294c436f96c28322, type: 3}
+      Count: 1

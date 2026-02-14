@@ -40,8 +40,9 @@ namespace ProjectArk.Combat.Enemy
             }
         }
 
-        // Legacy fallback buffer (NonAlloc)
+        // Legacy fallback buffer
         private static readonly Collider2D[] _legacyBuffer = new Collider2D[4];
+        private static ContactFilter2D _contactFilter = new ContactFilter2D();
 
         public StalkerStrikeState(StalkerBrain brain)
         {
@@ -131,12 +132,13 @@ namespace ProjectArk.Combat.Enemy
             }
             else
             {
-                // Legacy fallback: circle overlap with NonAlloc
+                // Legacy fallback: circle overlap with ContactFilter2D
                 float damage = _brain.Stats.AttackDamage;
                 float knockback = _brain.Stats.AttackKnockback;
                 float range = _brain.Stats.AttackRange;
 
-                int count = Physics2D.OverlapCircleNonAlloc(origin, range, _legacyBuffer, PlayerLayerMask);
+                _contactFilter.SetLayerMask(PlayerLayerMask);
+                int count = Physics2D.OverlapCircle(origin, range, _contactFilter, _legacyBuffer);
 
                 for (int i = 0; i < count; i++)
                 {

@@ -73,8 +73,9 @@ namespace ProjectArk.Combat.Enemy
         private const float VISION_CHECK_INTERVAL = 0.2f; // 5 Hz
         private const float ARRIVAL_THRESHOLD = 0.5f;
 
-        // NonAlloc buffers for faction scanning
+        // Buffers for faction scanning
         private static readonly Collider2D[] _factionBuffer = new Collider2D[16];
+        private static ContactFilter2D _factionContactFilter = new ContactFilter2D();
 
         // Cached enemy layer mask
         private static int _enemyLayerMask = -1;
@@ -221,7 +222,8 @@ namespace ProjectArk.Combat.Enemy
             if (string.IsNullOrEmpty(_stats.FactionID)) return;
 
             Vector2 myPos = transform.position;
-            int count = Physics2D.OverlapCircleNonAlloc(myPos, _stats.SightRange, _factionBuffer, EnemyLayerMask);
+            _factionContactFilter.SetLayerMask(EnemyLayerMask);
+            int count = Physics2D.OverlapCircle(myPos, _stats.SightRange, _factionContactFilter, _factionBuffer);
 
             if (count == 0) return;
 

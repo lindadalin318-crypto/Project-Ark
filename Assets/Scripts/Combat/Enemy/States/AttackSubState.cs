@@ -29,8 +29,9 @@ namespace ProjectArk.Combat.Enemy
             }
         }
 
-        // Fallback buffer for legacy path (NonAlloc)
+        // Fallback buffer for legacy path
         private static readonly Collider2D[] _legacyBuffer = new Collider2D[8];
+        private static ContactFilter2D _contactFilter = new ContactFilter2D();
 
         public AttackSubState(EnemyBrain brain, EngageState engage)
         {
@@ -91,8 +92,9 @@ namespace ProjectArk.Combat.Enemy
                 // Legacy path: circle overlap using EnemyStatsSO flat fields
                 var stats = _brain.Stats;
                 Vector2 attackOrigin = origin + facing * (stats.AttackRange * 0.5f);
-                hitCount = Physics2D.OverlapCircleNonAlloc(
-                    attackOrigin, stats.AttackRange, _legacyBuffer, PlayerLayerMask);
+                _contactFilter.SetLayerMask(PlayerLayerMask);
+                hitCount = Physics2D.OverlapCircle(
+                    attackOrigin, stats.AttackRange, _contactFilter, _legacyBuffer);
                 hits = _legacyBuffer;
             }
 

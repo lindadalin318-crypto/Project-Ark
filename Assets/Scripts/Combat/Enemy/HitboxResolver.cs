@@ -4,12 +4,15 @@ namespace ProjectArk.Combat
 {
     /// <summary>
     /// Static utility for resolving melee hitbox queries based on <see cref="AttackDataSO"/> shape settings.
-    /// All queries use NonAlloc variants with a shared static buffer — zero GC allocation.
+    /// All queries use buffer overloads with ContactFilter2D — zero GC allocation.
     /// </summary>
     public static class HitboxResolver
     {
         // Shared buffer: 8 targets is more than enough for melee overlap detection
         private static readonly Collider2D[] _buffer = new Collider2D[8];
+
+        // Reusable ContactFilter2D (configured per-call)
+        private static ContactFilter2D _contactFilter = new ContactFilter2D();
 
         /// <summary>
         /// Perform a physics overlap query matching the <see cref="AttackDataSO"/>'s hitbox shape.
@@ -49,7 +52,8 @@ namespace ProjectArk.Combat
 
         private static int ResolveCircle(Vector2 center, float radius, int layerMask)
         {
-            return Physics2D.OverlapCircleNonAlloc(center, radius, _buffer, layerMask);
+            _contactFilter.SetLayerMask(layerMask);
+            return Physics2D.OverlapCircle(center, radius, _contactFilter, _buffer);
         }
 
         // ──────────────────── Box ────────────────────
@@ -64,7 +68,8 @@ namespace ProjectArk.Combat
             // Calculate rotation angle from facing direction
             float angle = Mathf.Atan2(facingDirection.y, facingDirection.x) * Mathf.Rad2Deg - 90f;
 
-            return Physics2D.OverlapBoxNonAlloc(boxCenter, size, angle, _buffer, layerMask);
+            _contactFilter.SetLayerMask(layerMask);
+            return Physics2D.OverlapBox(boxCenter, size, angle, _contactFilter, _buffer);
         }
 
         // ──────────────────── Cone (Circle + Angle Filter) ────────────────────
@@ -73,7 +78,8 @@ namespace ProjectArk.Combat
                                        float radius, float halfAngle, int layerMask)
         {
             // Step 1: broad-phase circle query
-            int rawCount = Physics2D.OverlapCircleNonAlloc(center, radius, _buffer, layerMask);
+            _contactFilter.SetLayerMask(layerMask);
+            int rawCount = Physics2D.OverlapCircle(center, radius, _contactFilter, _buffer);
 
             if (rawCount == 0) return 0;
 

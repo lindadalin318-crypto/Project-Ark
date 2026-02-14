@@ -2982,3 +2982,114 @@ Assets/Scripts/Level/
 **目的：** 让用户无需手动在 Inspector 中逐个配置新增的 20+ 个参数，一键即可生成完整配置的 SO 资产。
 
 **技术：** `UnityEditor.MenuItem` + `SerializedObject` / `SerializedProperty` API + `AssetDatabase.CreateAsset` + 幂等检查。
+
+---
+
+### DashAfterImage PrimeTween API 修复 — 2026-02-13 16:00
+
+**修改文件：**
+- `Assets/Scripts/Ship/VFX/DashAfterImage.cs`
+
+**内容：** 将 `Tween.Alpha(_spriteRenderer, ...)` 替换为 `Tween.Custom(this, startAlpha, 0f, ...)` + `.OnComplete(this, target => target.ReturnToPool())`。
+
+**目的：** 修复编译错误 CS1739。PrimeTween 的 `Tween.Alpha()` 仅支持 UI Graphic 组件，不支持 SpriteRenderer，且无 `onComplete` 命名参数。
+
+**技术：** 使用 `Tween.Custom<T>` 零 GC 重载手动插值 SpriteRenderer.color.a，配合零 GC `OnComplete(target, callback)` 链式调用触发回池。
+
+---
+
+### 批量修复 CS0618 + CS4014 编译器警告 — 2026-02-13 16:15
+
+**修改文件（CS0618 — Physics2D NonAlloc 弃用，共 11 处）：**
+- `Assets/Scripts/Combat/Enemy/HitboxResolver.cs` — 3 处（Circle、Box、Cone）
+- `Assets/Scripts/Combat/Enemy/EnemyPerception.cs` — 1 处（FactionScan）
+- `Assets/Scripts/Combat/Enemy/States/AttackSubState.cs` — 1 处（Legacy fallback）
+- `Assets/Scripts/Combat/Enemy/EnemyAffixController.cs` — 2 处（Explosive、Reflect）
+- `Assets/Scripts/Combat/Enemy/ThreatSensor.cs` — 1 处（ProjectileScan）
+- `Assets/Scripts/Combat/Enemy/States/StalkerStrikeState.cs` — 1 处（Legacy fallback）
+- `Assets/Scripts/Combat/Enemy/EnemyEntity.cs` — 2 处（ResolveOverlap、GetSeparationForce）
+
+**内容：** 将所有 `Physics2D.OverlapCircleNonAlloc(pos, radius, buffer, layerMask)` 替换为 `Physics2D.OverlapCircle(pos, radius, contactFilter, buffer)`，`OverlapBoxNonAlloc` 同理。每个类新增一个 `static ContactFilter2D` 字段，调用前通过 `SetLayerMask()` 配置。
+
+**目的：** Unity 6 将 `NonAlloc` 后缀 API 标记为 `[Obsolete]`，新版 `OverlapCircle`/`OverlapBox` 的 `ContactFilter2D + Collider2D[]` 重载是官方替代，功能等价且同样零 GC。
+
+**技术：** `ContactFilter2D.SetLayerMask(int)` + `Physics2D.OverlapCircle(Vector2, float, ContactFilter2D, Collider2D[])` / `Physics2D.OverlapBox(...)` 缓冲区重载。
+
+---
+
+**修改文件（CS4014 — 未 await 的 PrimeTween 调用，共 3 处）：**
+- `Assets/Scripts/Level/Pickup/PickupBase.cs` — `Tween.Scale` fire-and-forget
+- `Assets/Scripts/Level/GameFlow/GameFlowManager.cs` — 2 处 `Tween.Custom` fade 补间
+
+**内容：** 在返回值前加 `_ =` 显式丢弃，告知编译器这是有意为之的 fire-and-forget 调用。
+
+**目的：** 消除 CS4014 警告。PrimeTween 补间动画不需要 await（由引擎 Update 驱动），但 C# 编译器会对未 await 的异步返回值发出警告。
+
+**技术：** C# discard `_ =` 模式。
+
+---
+
+### 验收清单文档可读性优化 — 2026-02-13 16:30
+
+**修改文件：**
+- `Docs/VerificationChecklist_Phase3-5_ShipFeel.md`
+
+**内容：**
+- 第三步（飞船 Prefab 配置）：新增完整 Hierarchy 树形图，说明 4 个新组件为何必须放在根 GO 上（RequireComponent 依赖），将原始密集表格拆分为 5 个子步骤（3-1 到 3-5），每个组件独立表格逐字段说明赋值来源
+- 第四步 4B（Arena 配置）：拆分为 RoomSO / Room GO / ArenaController 三层，表格化字段配置
+- 第四步 4C（Hazard 配置）：拆分 3 种 Hazard 各自独立步骤，每种含完整的创建+配置表格
+- 第六步（Phase 4-5 UI）：每个子步骤增加概览说明（"这是什么"、"放在哪里"），Inspector 字段表格增加"拖入来源"列明确 Hierarchy vs Project 窗口，6F 管理器表格增加"挂在哪"和"是否新增"列
+- 第八步（层间转场）：增加组件定位说明和 BGM 配合说明
+- 第九步（NarrativeFallTrigger）：表格化 Inspector 配置
+
+**目的：** 提升配置文档可读性，消除"组件该挂在哪个 GameObject 上"和"字段值从哪里拖入"的歧义。
+
+**技术：** 纯文档重构，无代码变更。
+
+---
+
+### ImpulseSourceRegistrar 自动注册脚本 — 2026-02-13 16:40
+
+**新建文件：**
+- `Assets/Scripts/Ship/Combat/ImpulseSourceRegistrar.cs`
+
+**内容：** MonoBehaviour，`[RequireComponent(typeof(CinemachineImpulseSource))]`，`Start()` 中自动调用 `HitFeedbackService.RegisterImpulseSource()`。
+
+**目的：** 消除手动在初始化脚本中注册 ImpulseSource 的步骤，挂到 CinemachineCamera 上即可自动完成注册。
+
+**技术：** `[RequireComponent]` + `GetComponent<CinemachineImpulseSource>()` + 静态服务注册。
+
+---
+
+### 验收清单文档二次优化（补全前置步骤） — 2026-02-13 17:00
+
+**修改文件：**
+- `Docs/VerificationChecklist_Phase3-5_ShipFeel.md`
+
+**内容：**
+- **第四步（Phase 3 关卡配置）**：全面重写，拆分为 4A~4E 五个子步骤
+  - 4A（EncounterSO）：增加"EncounterSO 是什么"解释，详细说明 Waves 数组如何点 `+` 添加
+  - 4B（RoomSO）：新增"RoomSO 是什么"解释，区分"从零创建"和"修改 Scaffolder 已创建的"两条路径，表格化全部字段
+  - 4C（Room GameObject）：新增"Room GameObject 是什么"解释，从零创建的完整步骤（含刷怪点、EnemySpawner），已有 Room 的快捷路径
+  - 4D（ArenaController）：独立为单独子步骤，解释"ArenaController 是什么"和 RequireComponent 依赖关系，附完成后的 Hierarchy 树形图
+  - 4E（Hazard）：增加"Hazard 是什么"和 Layer 使用说明
+- **第五步（Sheba Scaffolder）**：增加 Scaffolder 功能解释，后续手动配置拆分为 6 个编号子项，每项标注操作位置和具体字段
+
+**目的：** 解决"Arena 是什么、从哪来、怎么配"等前置知识缺失问题，确保从零开始的用户也能按照文档独立完成配置。
+
+**技术：** 纯文档重构，无代码变更。
+
+---
+
+### 修复 CameraConfiner PolygonCollider2D 阻挡飞船 — 2026-02-13 17:20
+
+**修改文件：**
+- `Assets/Scripts/Level/Editor/ShebaLevelScaffolder.cs`
+
+**内容：**
+- 修复 `CreateRoomGameObjects()` 中 CameraConfiner 子物体的 Layer：从 `Default`(0) 改为 `Ignore Raycast`(2)
+- 新增 `[MenuItem("ProjectArk/Fix CameraConfiner Layers")]` 一键修复菜单，批量将场景中所有已存在的 CameraConfiner 子物体的 Layer 设为 `Ignore Raycast`
+
+**目的：** CameraConfiner 的 PolygonCollider2D 设计上仅供 Cinemachine Confiner 读取边界，但因为 `isTrigger = false` 且 Layer = Default，Physics2D 将其视为实体碰撞墙壁，导致飞船被推到房间外无法进入。改为 `Ignore Raycast` 层后该碰撞体不再参与任何物理碰撞。
+
+**技术：** `GameObject.layer = 2`（Ignore Raycast 内置层），Editor MenuItem + `Undo.RecordObject` 批量修复。

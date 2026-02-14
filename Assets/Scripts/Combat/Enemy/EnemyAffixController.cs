@@ -50,8 +50,9 @@ namespace ProjectArk.Combat.Enemy
             }
         }
 
-        // NonAlloc buffer for AoE
+        // Buffer for AoE queries
         private static readonly Collider2D[] _aoeBuffer = new Collider2D[8];
+        private static ContactFilter2D _contactFilter = new ContactFilter2D();
 
         // ──────────────────── Public Properties ────────────────────
 
@@ -206,7 +207,8 @@ namespace ProjectArk.Combat.Enemy
 
             // AoE damage on death
             Vector2 pos = transform.position;
-            int count = Physics2D.OverlapCircleNonAlloc(pos, _explosiveRadius, _aoeBuffer, PlayerLayerMask);
+            _contactFilter.SetLayerMask(PlayerLayerMask);
+            int count = Physics2D.OverlapCircle(pos, _explosiveRadius, _contactFilter, _aoeBuffer);
 
             for (int i = 0; i < count; i++)
             {
@@ -233,7 +235,8 @@ namespace ProjectArk.Combat.Enemy
             if (reflectDamage <= 0f) return;
 
             Vector2 pos = transform.position;
-            int count = Physics2D.OverlapCircleNonAlloc(pos, 5f, _aoeBuffer, PlayerLayerMask);
+            _contactFilter.SetLayerMask(PlayerLayerMask);
+            int count = Physics2D.OverlapCircle(pos, 5f, _contactFilter, _aoeBuffer);
 
             for (int i = 0; i < count; i++)
             {

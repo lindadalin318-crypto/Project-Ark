@@ -308,9 +308,10 @@ namespace ProjectArk.Combat.Enemy
         // 最小允许距离（略大于两个 CircleCollider2D 半径之和 ≈ 0.8）
         private const float MIN_ENEMY_DISTANCE = 0.9f;
 
-        // 共享静态缓冲区：NonAlloc 查询复用，零 GC 分配
+        // 共享静态缓冲区：查询复用，零 GC 分配
         // 16 = 同屏同一小范围内的邻居上限，远超实际需求
         private static readonly Collider2D[] _neighborBuffer = new Collider2D[16];
+        private static ContactFilter2D _neighborContactFilter = new ContactFilter2D();
 
         /// <summary>
         /// Continuous overlap resolution in FixedUpdate.
@@ -325,8 +326,9 @@ namespace ProjectArk.Combat.Enemy
 
         private void ResolveOverlap()
         {
-            int count = Physics2D.OverlapCircleNonAlloc(
-                transform.position, MIN_ENEMY_DISTANCE, _neighborBuffer, EnemyLayerMask);
+            _neighborContactFilter.SetLayerMask(EnemyLayerMask);
+            int count = Physics2D.OverlapCircle(
+                transform.position, MIN_ENEMY_DISTANCE, _neighborContactFilter, _neighborBuffer);
 
             for (int i = 0; i < count; i++)
             {
@@ -366,8 +368,9 @@ namespace ProjectArk.Combat.Enemy
             Vector2 separation = Vector2.zero;
             int neighborCount = 0;
 
-            int count = Physics2D.OverlapCircleNonAlloc(
-                transform.position, radius, _neighborBuffer, EnemyLayerMask);
+            _neighborContactFilter.SetLayerMask(EnemyLayerMask);
+            int count = Physics2D.OverlapCircle(
+                transform.position, radius, _neighborContactFilter, _neighborBuffer);
 
             for (int i = 0; i < count; i++)
             {

@@ -350,9 +350,16 @@ namespace ProjectArk.Level.Editor
                 boxCol.size = def.Size;
 
                 // PolygonCollider2D for camera confiner (non-trigger, child object)
+                // Must be on a Layer that doesn't collide with anything in Physics2D,
+                // otherwise the solid collider will block the player ship.
                 var confinerChild = new GameObject("CameraConfiner");
                 confinerChild.transform.SetParent(roomGO.transform);
                 confinerChild.transform.localPosition = Vector3.zero;
+
+                // Use "Ignore Raycast" layer (built-in, index 2) to prevent physics collision
+                // while still being readable by Cinemachine Confiner.
+                confinerChild.layer = 2; // Ignore Raycast
+
                 var polyCol = confinerChild.AddComponent<PolygonCollider2D>();
                 polyCol.isTrigger = false;
                 // Set confiner bounds to match room size
@@ -496,6 +503,38 @@ namespace ProjectArk.Level.Editor
                     current = next;
                 }
             }
+        }
+
+        // ──────────────────── Fix Existing CameraConfiners ────────────────────
+
+        /// <summary>
+        /// Batch-fix all CameraConfiner children to use "Ignore Raycast" layer.
+        /// Prevents PolygonCollider2D from acting as a physics wall that blocks the player.
+        /// </summary>
+        [MenuItem("ProjectArk/Fix CameraConfiner Layers")]
+        public static void FixCameraConfinerLayers()
+        {
+            int fixedCount = 0;
+            var rooms = Object.FindObjectsByType<Room>(FindObjectsSortMode.None);
+
+            foreach (var room in rooms)
+            {
+                var confinerTransform = room.transform.Find("CameraConfiner");
+                if (confinerTransform == null) continue;
+
+                if (confinerTransform.gameObject.layer != 2) // 2 = Ignore Raycast
+                {
+                    Undo.RecordObject(confinerTransform.gameObject, "Fix CameraConfiner Layer");
+                    confinerTransform.gameObject.layer = 2;
+                    EditorUtility.SetDirty(confinerTransform.gameObject);
+                    fixedCount++;
+                }
+            }
+
+            Debug.Log($"[FixCameraConfinerLayers] Fixed {fixedCount} CameraConfiner(s) → Layer 'Ignore Raycast'.");
+
+            if (fixedCount == 0)
+                Debug.Log("[FixCameraConfinerLayers] All CameraConfiners already on correct layer.");
         }
 
         private static void PrintChecklist()

@@ -1,11 +1,13 @@
 # 验收清单：Level Phase 3-5 + 飞船手感增强系统
 
-**版本：** v1.0  
+**版本：** v1.1（优化版）
 **涵盖范围：**
 - Level Phase 3 (L10-L12)：EncounterSystem、ArenaController、Hazard System
 - Level Phase 4 (L13-L15)：Minimap/Map System、Save Integration、Sheba Scaffolder
 - Level Phase 5 (L16-L19)：Multi-Floor、Enhanced Layer Transition、Narrative Fall Placeholder
 - Ship Feel Enhancement：曲线移动、Dash、受击反馈、视觉 Juice
+
+> **使用说明**：本文档为分步操作指南。每个步骤都标注了"在哪里操作"（Unity 菜单栏 / Project 窗口 / Hierarchy / 场景中），请按照指示在对应的 Unity 面板中操作。
 
 ---
 
@@ -88,8 +90,8 @@
 
 ### 第一步：编译检查
 
-1. 打开 Unity 项目，等待编译完成
-2. 查看 Console → 确认 **零红色错误**
+1. 打开 **Unity Editor**，等待编译完成
+2. 在 **Console 窗口**中查看，确认 **零红色错误**
 3. 如有 `CS0246` / `CS0117` / `CS4014` 等错误，记录并报告
 
 ---
@@ -98,10 +100,10 @@
 
 > 此步骤确保飞船手感相关的 SO 资产存在
 
-1. 菜单 → `ProjectArk > Ship > Create Ship Feel Assets (All)`
-2. 确认 Console 输出创建成功日志
-3. 确认以下资产存在：
-   - `Assets/_Data/Ship/DefaultShipStats.asset` — 展开 Inspector，确认包含：
+1. 在 **Unity 菜单栏**中，点击 `ProjectArk` → `Ship` → `Create Ship Feel Assets (All)`
+2. 观察 **Console 窗口**，确认输出创建成功日志
+3. 在 **Project 窗口**中确认以下资产存在：
+   - `Assets/_Data/Ship/DefaultShipStats.asset` — 选中该文件展开 Inspector，确认包含：
      - **Movement — Curves & Feel** 区：`_accelerationCurve`、`_decelerationCurve`、`_sharpTurnAngleThreshold`(90)、`_sharpTurnSpeedPenalty`(0.7)、`_initialBoostMultiplier`(1.5)
      - **Dash** 区：`_dashSpeed`(30)、`_dashDuration`(0.15)、`_dashCooldown`(0.3)、`_dashBufferWindow`(0.15)、`_dashExitSpeedRatio`(0.5)、`_dashIFrames`(true)
      - **Hit Feedback** 区：`_hitStopDuration`(0.05)、`_iFrameDuration`(1)、`_iFrameBlinkInterval`(0.1)、`_screenShakeBaseIntensity`(0.3)
@@ -114,191 +116,530 @@
 
 ### 第三步：配置飞船 Prefab
 
-> 前置条件：飞船 Prefab 已有 InputHandler、ShipMotor、ShipAiming、ShipHealth
+> **前置条件**：飞船 Prefab 已有 `InputHandler`、`ShipMotor`、`ShipAiming`、`ShipHealth`
+>
+> **本步骤操作位置**：在 **Project 窗口**（编辑 Prefab）+ **Hierarchy**（放置到场景后）中
 
-1. 打开飞船 Prefab（如 `Assets/_Prefabs/Ship/Ship.prefab`）
+完成本步骤后，飞船 Prefab 的 Hierarchy 和组件分布如下（供参考）：
 
-2. **创建视觉子物体**（如果 SpriteRenderer 仍在根 GameObject 上）：
-   - 在根下新建子 GameObject `ShipVisual`
-   - 将根上的 SpriteRenderer 移到 `ShipVisual`
-   - 确认 ShipAiming 等脚本不直接引用根的 SpriteRenderer（如有引用，更新为子物体）
+```
+Ship (根 GameObject)                         ← 物理 + 逻辑层
+│  ● Rigidbody2D
+│  ● BoxCollider2D
+│  ● InputHandler          (已有)
+│  ● ShipMotor             (已有)
+│  ● ShipAiming            (已有)
+│  ● ShipHealth            (已有)
+│  ● ShipDash              ← 【新增】
+│  ● ShipVisualJuice       ← 【新增】
+│  ● ShipEngineVFX         ← 【新增】
+│  ● DashAfterImageSpawner ← 【新增】
+│
+├── ShipVisual (子 GameObject)               ← 纯视觉层（Juice 操作此节点）
+│      ● SpriteRenderer
+│
+└── EngineExhaust (子 GameObject)            ← 引擎尾焰粒子
+       ● ParticleSystem
+```
 
-3. **添加组件并绑定引用**：
+> **为什么新增的 4 个组件全部放在根 GameObject 上？**
+> 因为它们都用了 `[RequireComponent(typeof(ShipMotor))]` 或 `[RequireComponent(typeof(ShipDash))]`，
+> Unity 要求它们必须与依赖组件在同一个 GameObject 上。
 
-   | 组件 | 所在 GameObject | 需配置的字段 |
-   |------|----------------|-------------|
-   | `ShipDash` | 根（与 ShipMotor 同 GO） | `_stats` → DefaultShipStats.asset |
-   | `ShipVisualJuice` | 根 | `_visualChild` → ShipVisual 子物体的 Transform；`_juiceSettings` → DefaultShipJuiceSettings.asset |
-   | `ShipEngineVFX` | 根 | `_engineParticles` → 步骤 4 创建的粒子；`_juiceSettings` → DefaultShipJuiceSettings.asset |
-   | `DashAfterImageSpawner` | 根 | `_afterImagePrefab` → 步骤 5 创建的 Prefab；`_shipSpriteRenderer` → ShipVisual 的 SpriteRenderer；`_juiceSettings` → DefaultShipJuiceSettings.asset；`_stats` → DefaultShipStats.asset |
+#### 3-1. 创建 ShipVisual 视觉子物体
 
-4. **创建引擎粒子**：
-   - 在飞船根下新建子 GameObject `EngineExhaust`
-   - 添加 `ParticleSystem`
-   - 推荐设置：Shape = Cone, Start Size = 0.1-0.3, Start Lifetime = 0.3, Emission Rate = 20
-   - 将此 ParticleSystem 赋给 `ShipEngineVFX._engineParticles`
+> 如果飞船的 SpriteRenderer 已经在根 GameObject 上，需要分离到子物体，
+> 这样 `ShipVisualJuice` 才能对视觉做倾斜/缩放而不影响物理碰撞体。
 
-5. **创建 Dash 残影 Prefab**：
-   - 新建 Prefab（如 `Assets/_Prefabs/Ship/DashAfterImage.prefab`）
-   - 添加 `SpriteRenderer`（Sprite 留空，运行时从飞船拷贝）
-   - 添加 `DashAfterImage` 组件
-   - 将此 Prefab 赋给 `DashAfterImageSpawner._afterImagePrefab`
+1. 在 **Ship (根)** 下右键 → Create Empty，命名为 `ShipVisual`
+2. 把根上的 `SpriteRenderer` 移到 `ShipVisual` 上（拖拽组件标题右键 → Move to `ShipVisual`，或重建）
+3. 检查其他脚本（如 `ShipAiming`）若直接引用了根的 SpriteRenderer，更新引用指向 `ShipVisual`
 
-6. **配置 ScreenShake**：
-   - 在 CinemachineCamera（或 Virtual Camera）上添加 `CinemachineImpulseSource`
-   - 在场景初始化脚本中调用 `HitFeedbackService.RegisterImpulseSource(source)`
-   - 或创建一个简单的启动脚本将其注册（挂到相机 GameObject 上）：
-     ```csharp
-     void Start() {
-         var source = GetComponent<CinemachineImpulseSource>();
-         HitFeedbackService.RegisterImpulseSource(source);
-     }
-     ```
+#### 3-2. 创建 EngineExhaust 引擎尾焰粒子
+
+1. 在 **Ship (根)** 下右键 → Create Empty，命名为 `EngineExhaust`
+2. 选中 `EngineExhaust` → Add Component → `Particle System`
+3. 推荐初始设置（后续可调）：
+
+   | 参数 | 推荐值 |
+   |------|--------|
+   | Shape | Cone |
+   | Start Size | 0.1 ~ 0.3 |
+   | Start Lifetime | 0.3 |
+   | Emission → Rate over Time | 20 |
+   | Renderer → Sorting Layer | 与飞船一致或更低 |
+
+#### 3-3. 创建 Dash 残影 Prefab（独立资产，不在飞船 Hierarchy 内）
+
+1. 在 Project 窗口新建 Prefab：`Assets/_Prefabs/Ship/DashAfterImage.prefab`
+2. 打开 Prefab，在根 GameObject 上添加：
+   - `SpriteRenderer`（**Sprite 留空**，运行时由代码从飞船拷贝）
+   - `DashAfterImage` 脚本
+3. 保存 Prefab 后关闭
+
+#### 3-4. 在飞船根 GameObject 上添加 4 个新组件
+
+回到飞船 Prefab，选中 **Ship (根 GameObject)**，依次 Add Component：
+
+**组件 ①：`ShipDash`**
+
+| Inspector 字段 | 赋值 |
+|---------------|------|
+| `_stats` | `Assets/_Data/Ship/DefaultShipStats.asset` |
+
+> 注：`ShipMotor`、`InputHandler`、`ShipHealth` 由代码自动 GetComponent，无需手动赋值。
+
+**组件 ②：`ShipVisualJuice`**
+
+| Inspector 字段 | 赋值 |
+|---------------|------|
+| `_visualChild` | 拖入步骤 3-1 创建的 **ShipVisual** 子物体（Transform） |
+| `_juiceSettings` | `Assets/_Data/Ship/DefaultShipJuiceSettings.asset` |
+
+**组件 ③：`ShipEngineVFX`**
+
+| Inspector 字段 | 赋值 |
+|---------------|------|
+| `_engineParticles` | 拖入步骤 3-2 创建的 **EngineExhaust** 子物体上的 ParticleSystem |
+| `_juiceSettings` | `Assets/_Data/Ship/DefaultShipJuiceSettings.asset` |
+
+**组件 ④：`DashAfterImageSpawner`**
+
+| Inspector 字段 | 赋值 |
+|---------------|------|
+| `_afterImagePrefab` | 步骤 3-3 创建的 `DashAfterImage.prefab`（从 Project 窗口拖入） |
+| `_shipSpriteRenderer` | **ShipVisual** 子物体上的 `SpriteRenderer`（从 Hierarchy 拖入） |
+| `_juiceSettings` | `Assets/_Data/Ship/DefaultShipJuiceSettings.asset` |
+| `_stats` | `Assets/_Data/Ship/DefaultShipStats.asset` |
+
+#### 3-5. 配置屏幕震动（ScreenShake）
+
+> 这一步在**场景中的相机 GameObject** 上操作，不在飞船 Prefab 内。
+
+**在哪里操作**：在 **Hierarchy** 中找到场景的相机
+
+1. 在 **Hierarchy** 中找到你的主相机（通常是 `Main Camera` 或 `CinemachineCamera` 相关的 GameObject）
+2. 选中该相机 GameObject → Add Component → `Cinemachine Impulse Source`（添加后会自动出现 Impulse 配置面板）
+3. 选中该相机 GameObject → Add Component → `ImpulseSourceRegistrar`（位于 `Assets/Scripts/Ship/Combat/ImpulseSourceRegistrar.cs`，无需配置任何字段，启动时自动注册）
 
 ---
 
 ### 第四步：配置关卡场景（Phase 3 验证准备）
 
-> 如果已有测试场景，跳到对应项。如果需要从 Sheba Scaffolder 开始，先做第五步。
+> **前置条件**：你需要一个**已有房间和门的测试场景**。
+> - 如果你已经跑通过 Phase 1/2（有 Room + Door 的场景），直接在现有场景上操作
+> - 如果是全新开始，建议先执行**第五步（Sheba Scaffolder）** 自动生成 12 个房间，再回到这里
+>
+> **本步骤目标**：在已有的房间基础上，增加**战斗遭遇**（敌人波次）和**环境危害**功能
 
-#### 4A. EncounterSO 配置
+---
 
-1. 打开 `Create > ProjectArk > Level > Encounter` 创建测试 EncounterSO
-2. 配置 2 波：
-   - Wave 0：DelayBeforeWave = 0, Entries = [敌人 Prefab × 2]
-   - Wave 1：DelayBeforeWave = 1.5, Entries = [敌人 Prefab × 3]
-3. **必须**为每个 Entry 的 `EnemyPrefab` 指定有效的敌人 Prefab（含 EnemyEntity + EnemyBrain）
+#### 4A. 创建 EncounterSO 资产（敌人波次配置）
 
-#### 4B. Arena 房间配置
+> **EncounterSO 是什么？** 它定义一个房间内的战斗遭遇——有几波敌人、每波什么敌人、每波几个。
+> Arena 房间通过引用 EncounterSO 来知道该刷什么怪。
 
-1. 选择一个 Arena 类型的 Room GameObject
-2. 确认其 RoomSO 的 `_type = Arena`，`_encounter` 引用了上面的 EncounterSO
-3. 确认 Room 子物体中有 `EnemySpawner`，`_spawnPoints` 已配置（≥1 个）
-4. 确认 Room GameObject 上有 `ArenaController` 组件
-5. ArenaController 配置：
-   - `_preEncounterDelay` = 1.5（锁门到刷怪的延迟）
-   - `_postClearDelay` = 1.0（全清到解锁的延迟）
-   - `_alarmSFX` / `_victorySFX` — 可选，先留空
-   - `_rewardPrefab` — 可选
+**在哪里操作**：在 **Project 窗口**中
 
-#### 4C. Hazard 配置（测试用）
+1. 在 **Project 窗口**中导航到 `Assets/_Data/Level/Encounters/`（如果目录不存在，右键创建文件夹）
+2. 在该目录下右键 → `Create` → `ProjectArk` → `Level` → `Encounter`
+3. 命名为如 `TestArenaEncounter`
+4. 选中该 `.asset` 文件，在 **Inspector** 中配置波次：
 
-1. 在测试场景中放置 3 个 Hazard：
-   - **DamageZone**：添加 BoxCollider2D (trigger) + DamageZone 组件
-     - `_damage` = 5, `_tickInterval` = 0.5, `_targetLayer` = Player 层
-   - **ContactHazard**：添加 BoxCollider2D (trigger) + ContactHazard 组件
-     - `_damage` = 10, `_hitCooldown` = 1.0, `_targetLayer` = Player 层
-   - **TimedHazard**：添加 BoxCollider2D (trigger) + TimedHazard 组件
-     - `_damage` = 8, `_activeDuration` = 2.0, `_inactiveDuration` = 3.0
-     - 可选：挂 SpriteRenderer 赋给 `_visual` 查看开关状态
+   **Waves 数组**（点击 `+` 添加 2 个元素）：
 
-2. **Physics2D 碰撞矩阵**：确认 Hazard 所在层与 Player 层能互相触发 Trigger（在 `Edit > Project Settings > Physics 2D` 中配置）
+   | 波次 | `DelayBeforeWave` | `Entries` |
+   |------|-------------------|-----------|
+   | Wave 0 | 0（立即开始） | 点 `+` 添加 1 个 Entry：`EnemyPrefab` = 你的敌人 Prefab，`Count` = 2 |
+   | Wave 1 | 1.5（上一波清完后等 1.5 秒） | 点 `+` 添加 1 个 Entry：`EnemyPrefab` = 你的敌人 Prefab，`Count` = 3 |
+
+   > **关键**：`EnemyPrefab` 必须是有效的敌人 Prefab（带 `EnemyEntity` + `EnemyBrain` 子类组件）。
+   > 如果你还没有敌人 Prefab，参考 `Assets/_Prefabs/Enemies/` 目录。
+
+---
+
+#### 4B. 创建 RoomSO 资产（房间数据配置）
+
+> **RoomSO 是什么？** 它是房间的"身份证"——定义房间 ID、名称、类型（Normal/Arena/Boss/Safe）、
+> 关联的遭遇数据等。每个 Room GameObject 都必须引用一个 RoomSO。
+>
+> 如果你用了 Sheba Scaffolder（第五步），RoomSO 已经自动创建好了，可以**跳到下面的"修改已有 RoomSO"部分**。
+
+**从零创建 RoomSO**（在 **Project 窗口**中操作）：
+
+1. 导航到 `Assets/_Data/Level/Rooms/`
+2. 右键 → `Create` → `ProjectArk` → `Level` → `Room`
+3. 命名为如 `TestArenaRoom`
+4. 选中该 `.asset`，在 **Inspector** 中配置：
+
+   | RoomSO 字段 | 值 | 说明 |
+   |-------------|------|------|
+   | `_roomID` | `test_arena` | 唯一标识符，不能与其他房间重复 |
+   | `_displayName` | `测试竞技场` | 地图上显示的名字 |
+   | `_floorLevel` | 0 | 楼层编号（0 = 地面层） |
+   | `_type` | **Arena** | 关键！必须选 Arena 或 Boss，否则不会触发战斗 |
+   | `_encounter` | 拖入步骤 4A 的 `TestArenaEncounter.asset` | 关联遭遇数据 |
+   | `_mapIcon` | （可选） | 地图上的图标 |
+   | `_ambientMusic` | （可选） | 房间背景音乐 |
+
+**修改已有 RoomSO**（如果 Scaffolder 已创建）：
+
+1. 在 **Project 窗口**中找到 `Assets/_Data/Level/Rooms/Sheba/` 下的某个 `.asset`
+2. 选中它，在 Inspector 中把 `_type` 改为 **Arena**
+3. 把 `_encounter` 字段拖入步骤 4A 创建的 EncounterSO
+
+---
+
+#### 4C. 创建 / 配置 Arena 房间的 GameObject
+
+> **Room GameObject 是什么？** 它是场景中代表一个房间的实际 GameObject，
+> 包含碰撞体（定义房间范围）、`Room` 组件（引用 RoomSO）、门、刷怪点等。
+>
+> 如果你用了 Sheba Scaffolder，Room GameObject 已经自动创建好了，跳到**"在已有 Room 上添加 Arena 功能"**。
+
+**从零创建 Room GameObject**（在 **Hierarchy** 中操作）：
+
+1. 在 **Hierarchy** 中右键 → Create Empty，命名为 `Room_TestArena`
+2. 选中它 → Add Component → `Room`（会自动添加 `BoxCollider2D`）
+3. 调整 `BoxCollider2D` 大小覆盖房间区域，勾选 **Is Trigger**
+4. 在 Inspector 中配置 `Room` 组件：
+
+   | Room 字段 | 赋值 |
+   |-----------|------|
+   | `_data` | 拖入步骤 4B 创建的 `TestArenaRoom.asset`（RoomSO） |
+   | `_confinerBounds` | 拖入自身的 BoxCollider2D（或另建一个 PolygonCollider2D 用于相机边界） |
+   | `_spawnPoints` | 见下方"创建刷怪点" |
+   | `_playerLayer` | 下拉菜单选 `Player` |
+
+5. **创建刷怪点**：在 `Room_TestArena` 下右键 → Create Empty，命名为 `SpawnPoint_1`，摆放到房间内部合适位置。再创建 `SpawnPoint_2`。把它们拖入 Room 的 `_spawnPoints` 数组。
+
+6. **创建 EnemySpawner**：在 `Room_TestArena` 下右键 → Create Empty，命名为 `EnemySpawner`，Add Component → `EnemySpawner`，配置：
+
+   | EnemySpawner 字段 | 赋值 |
+   |-------------------|------|
+   | `_spawnPoints` | 拖入上面的 SpawnPoint_1、SpawnPoint_2 |
+   | `_poolPrewarmCount` | 5 |
+   | `_poolMaxSize` | 10 |
+   | 其余字段 | 保持默认（Arena 模式下由 WaveSpawnStrategy 接管，不使用 loop 字段） |
+
+**在已有 Room 上添加 Arena 功能**：
+
+如果 Room GameObject 已存在（来自 Scaffolder 或之前的 Phase），只需：
+
+1. 确认 Room 组件的 `_data` 引用的 RoomSO 的 `_type` = **Arena**，且 `_encounter` 已赋值
+2. 确认子物体中有 `EnemySpawner`，`_spawnPoints` 至少有 1 个 Transform
+3. 继续下一步添加 `ArenaController`
+
+---
+
+#### 4D. 添加 ArenaController 组件
+
+> **ArenaController 是什么？** 它是 Arena/Boss 房间的战斗控制器——
+> 玩家进入房间时自动锁门、刷怪、全清后解锁。
+> 它必须和 `Room` 组件在**同一个 GameObject** 上（`[RequireComponent(typeof(Room))]`）。
+
+**在哪里操作**：在 **Hierarchy** 中选中 Arena 房间的 GameObject
+
+1. 选中 Arena 房间的 Room GameObject
+2. Add Component → `ArenaController`
+3. Inspector 配置：
+
+   | ArenaController 字段 | 推荐值 | 说明 |
+   |---------------------|--------|------|
+   | `_preEncounterDelay` | 1.5 | 锁门后等多久开始刷怪（秒） |
+   | `_postClearDelay` | 1.0 | 全清后等多久解锁门（秒） |
+   | `_alarmSFX` | （可选，先留空） | 锁门时播放的警报音效 |
+   | `_victorySFX` | （可选，先留空） | 全清时播放的胜利音效 |
+   | `_rewardPrefab` | （可选） | 全清后在房间中心生成的奖励 Prefab |
+   | `_rewardOffset` | (0, 0, 0) | 奖励生成位置的偏移 |
+
+> **完成后的 Hierarchy 结构应该是**：
+> ```
+> Room_TestArena                ← Room + BoxCollider2D + ArenaController
+> ├── SpawnPoint_1              ← 空 Transform，标记刷怪位置
+> ├── SpawnPoint_2              ← 空 Transform
+> ├── EnemySpawner              ← EnemySpawner 组件
+> └── Door_ToXxx (如果有门)     ← Door 组件
+> ```
+
+#### 4E. Hazard 配置（测试用）
+
+> **Hazard 是什么？** 环境危害——不是敌人，而是固定在场景中的伤害源（酸液地板、激光栅栏、间歇性陷阱等）。
+> 它们通过 Collider2D Trigger 检测玩家碰撞，自动造成伤害。
+>
+> **Layer 说明**：Hazard 可以放在 `Default` 层或自定义的 `Hazard` 层。
+> 关键是确保该 Layer 与 `Player` Layer 在碰撞矩阵中互相勾选（见下方 Physics2D 碰撞矩阵部分）。
+>
+> **创建位置**：在 **Hierarchy** 中的场景里创建，建议放在房间内部用于测试。
+
+**Hazard ①：DamageZone**（持续伤害区域，如酸液地板）
+
+1. 在 **Hierarchy** 中，右键 → Create Empty，命名为 `TestDamageZone`
+2. 选中该 GameObject → Add Component → `BoxCollider2D`，勾选 **Is Trigger**，调整大小覆盖区域
+3. Add Component → `DamageZone`
+4. Inspector 配置：
+
+   | 字段 | 值 |
+   |------|----|
+   | `_damage` | 5 |
+   | `_tickInterval` | 0.5（每 0.5 秒伤害一次） |
+   | `_targetLayer` | Player |
+
+**Hazard ②：ContactHazard**（接触伤害，如激光栅栏）
+
+1. 在 **Hierarchy** 中，右键 → Create Empty，命名为 `TestContactHazard`
+2. 选中该 GameObject → Add Component → `BoxCollider2D`，勾选 **Is Trigger**
+3. Add Component → `ContactHazard`
+4. Inspector 配置：
+
+   | 字段 | 值 |
+   |------|----|
+   | `_damage` | 10 |
+   | `_hitCooldown` | 1.0（碰一次后 1 秒内不再伤害） |
+   | `_targetLayer` | Player |
+
+**Hazard ③：TimedHazard**（周期开关，如间歇性激光）
+
+1. 在 **Hierarchy** 中，右键 → Create Empty，命名为 `TestTimedHazard`
+2. 选中该 GameObject → Add Component → `BoxCollider2D`，勾选 **Is Trigger**
+3. Add Component → `TimedHazard`
+4. （可选）在该 GameObject 上添加 `SpriteRenderer`，将其赋给 `_visual` 字段，运行时会自动淡入淡出表示开关状态
+5. Inspector 配置：
+
+   | 字段 | 值 |
+   |------|----|
+   | `_damage` | 8 |
+   | `_activeDuration` | 2.0（激活 2 秒） |
+   | `_inactiveDuration` | 3.0（关闭 3 秒） |
+   | `_targetLayer` | Player |
+   | `_visual` | （可选）上面的 SpriteRenderer |
+
+**Physics2D 碰撞矩阵**：
+1. 在 Unity 菜单栏中，点击 `Edit` → `Project Settings` → `Physics 2D`
+2. 在 **Layer Collision Matrix** 区域中
+3. 找到 Hazard 所在的 Layer（如 "Hazard" 或你创建的自定义 Layer）与 "Player" Layer 的交叉单元格
+4. 确认该交叉单元格**已勾选**（否则 Trigger 不会触发）
 
 ---
 
 ### 第五步：执行 Sheba Level Scaffolder
 
-1. 菜单 → `ProjectArk > Scaffold Sheba Level`
-2. 确认弹窗提示 → 点击 "Scaffold"
-3. 等待完成，检查：
-   - **Hierarchy**：出现 `--- Sheba Level ---` 父物体，下挂 12 个 `Room_sheba_*`
-   - **Project**：
-     - `Assets/_Data/Level/Rooms/Sheba/` 下有 12 个 `.asset`
-     - `Assets/_Data/Level/Encounters/Sheba/` 下有 4-5 个 `.asset`
-   - **Console**：输出 10 步配置清单
+> **Sheba Scaffolder 是什么？** 一个编辑器工具，一键自动生成示巴星关卡的 12 个房间——
+> 包括场景中的 Room GameObject、RoomSO 资产、EncounterSO 资产、和双向 Door 连接。
+> 执行后你会得到一个**骨架关卡**，然后按照清单完成手动配置即可。
 
-4. **Scaffolder 后续手动配置**（按 Console 清单）：
-   - [ ] 为所有 Room 和 Door 的 `_playerLayer` 字段设置 Player 层
-   - [ ] 为每个 EncounterSO 分配敌人 Prefab
-   - [ ] 在 Safe 房间放置 Checkpoint
-   - [ ] 在 `sheba_entrance` 放置玩家出生点
-   - [ ] 在 `sheba_key_chamber` 放置钥匙拾取物
-   - [ ] 根据需要调整 BoxCollider2D / PolygonCollider2D 尺寸
+**在哪里操作**：在 **Unity 菜单栏** + **Project 窗口** + **Hierarchy** 中
+
+#### 5-1. 执行 Scaffolder
+
+1. 在 **Unity 菜单栏**中，点击 `ProjectArk` → `Scaffold Sheba Level`
+2. 确认弹窗提示 → 点击 "Scaffold"
+3. 等待完成（约 2-5 秒），然后检查结果：
+
+   **在 Hierarchy 中**：
+   - 出现 `--- Sheba Level ---` 父物体
+   - 下面挂有 12 个 `Room_sheba_*`（如 `Room_sheba_entrance`、`Room_sheba_arena_1` 等）
+   - 每个 Room 之间有自动创建的 Door 子物体
+
+   **在 Project 窗口中**：
+   - `Assets/_Data/Level/Rooms/Sheba/` 下有 12 个 `.asset`（RoomSO）
+   - `Assets/_Data/Level/Encounters/Sheba/` 下有 4-5 个 `.asset`（EncounterSO，但**敌人 Prefab 为空**，需要手动填）
+
+   **在 Console 中**：
+   - 输出一份 10 步配置清单，列出所有需要手动完成的配置项
+
+#### 5-2. Scaffolder 后续手动配置
+
+> Scaffolder 只创建骨架，以下内容**必须手动完成**才能让关卡可玩。
+
+**① 设置 Player Layer**（在 **Hierarchy** 中操作）：
+- 逐个选中每个 `Room_sheba_*` GameObject，在 Inspector 中把 `Room` 组件的 `_playerLayer` 设为 `Player`
+- 逐个选中每个 Door 子物体，把 `Door` 组件的 `_playerLayer` 也设为 `Player`
+- 或者：使用搜索框搜 `Room_sheba`，全选后批量操作
+
+**② 为 EncounterSO 分配敌人 Prefab**（在 **Project 窗口**中操作）：
+- 打开 `Assets/_Data/Level/Encounters/Sheba/` 下的每个 `.asset`
+- 在 Inspector 中找到 `Waves` → `Entries` → `EnemyPrefab` 字段
+- 从 `Assets/_Prefabs/Enemies/` 中拖入有效的敌人 Prefab（必须带 `EnemyEntity` + `EnemyBrain`）
+
+**③ 放置 Checkpoint（存档点）**（在 **Hierarchy** 中操作）：
+- 找到类型为 Safe 的房间（如 `Room_sheba_safe_hub`）
+- 在该 Room 下右键 → Create Empty，命名为 `Checkpoint_Hub`
+- 选中 → Add Component → `Checkpoint`（会自动添加 `Collider2D`），Inspector 配置：
+
+   | Checkpoint 字段 | 赋值 |
+   |-----------------|------|
+   | `_data` | 需要先创建 CheckpointSO：在 Project 窗口 → 右键 → `Create` → `ProjectArk` → `Level` → `Checkpoint`，填写 `_checkpointID` 和 `_displayName`，然后拖入此处 |
+   | `_playerLayer` | 下拉菜单选 `Player` |
+   | `_spriteRenderer` | （可选）如果有视觉表现，拖入子物体的 SpriteRenderer |
+
+> 玩家进入 Checkpoint 触发区后按 **Interact 键** 激活存档点。激活后会恢复 HP/Heat（取决于 CheckpointSO 配置）。
+
+**④ 放置玩家出生点**：
+- 在 `Room_sheba_entrance` 下创建空 GameObject，命名为 `PlayerSpawn`
+- 把飞船 Prefab 的初始位置设在这里（或在 `GameFlowManager` 中引用此 Transform）
+
+**⑤ 放置钥匙拾取物**（在 **Hierarchy** 中操作）：
+- 在 `Room_sheba_key_chamber` 下创建 GameObject，添加 `KeyPickup` 组件
+- 配置 `KeyItemSO`（从 `Create > ProjectArk > Level > Key Item` 创建）
+
+**⑥ 调整房间大小**：
+- 选中各 Room，调整 `BoxCollider2D`（房间触发区域）和 `PolygonCollider2D`（相机边界）的大小
+- 在 Scene View 中拖动编辑点来适配你的 Tilemap 美术
 
 ---
 
 ### 第六步：配置 Level Phase 4-5 UI 组件
 
+> **概览**：本步骤需要创建 3 个 UI Prefab（6A/6B/6C），然后在场景 Canvas 下搭建 2 个 UI 面板（6D/6E），
+> 最后确认场景管理器 GameObject 都已就位（6F）。
+>
+> **本步骤操作位置**：在 **Hierarchy** + **Project 窗口**中
+
 #### 6A. 创建 MapRoomWidget Prefab
 
-1. 新建 GameObject `MapRoomWidget`，添加 `MapRoomWidget` 脚本
-2. 添加子物体层级：
-   ```
-   MapRoomWidget (RectTransform)
-   ├── Background (Image) ← 赋给 _background
-   ├── IconOverlay (Image) ← 赋给 _iconOverlay (默认 disabled)
-   ├── CurrentHighlight (Image) ← 赋给 _currentHighlight (边框效果)
-   ├── FogOverlay (Image) ← 赋给 _fogOverlay (半透明黑色)
-   └── Label (TMP_Text) ← 赋给 _labelText
-   ```
-3. 保存为 Prefab（如 `Assets/_Prefabs/UI/Map/MapRoomWidget.prefab`）
+> 这是地图上代表"一个房间"的 UI 小块，全屏地图和角落小地图都会实例化它。
+
+1. 在 **Hierarchy** 中任意 Canvas 下右键 → UI → Image，命名为 `MapRoomWidget`
+2. 在 `MapRoomWidget` 下依次创建 4 个子 Image 和 1 个 TextMeshPro：
+
+```
+MapRoomWidget (RectTransform, 大小约 60×40)
+│  ● MapRoomWidget 脚本       ← Add Component
+│
+├── Background (Image)        ← 房间底色，不同 RoomType 显示不同颜色
+├── IconOverlay (Image)       ← 特殊图标（Boss/Safe 等），默认 disabled
+├── CurrentHighlight (Image)  ← 当前所在房间的高亮边框，默认 disabled
+├── FogOverlay (Image)        ← 未访问房间的半透明黑色遮罩（RGBA 0,0,0,180）
+└── Label (TextMeshPro)       ← 房间名文字
+```
+
+3. 选中 `MapRoomWidget` 根，在 Inspector 中找到 `MapRoomWidget` 脚本，绑定字段：
+
+   | Inspector 字段 | 拖入 |
+   |---------------|------|
+   | `_background` | ← Hierarchy 中的 `Background` |
+   | `_iconOverlay` | ← Hierarchy 中的 `IconOverlay` |
+   | `_currentHighlight` | ← Hierarchy 中的 `CurrentHighlight` |
+   | `_fogOverlay` | ← Hierarchy 中的 `FogOverlay` |
+   | `_labelText` | ← Hierarchy 中的 `Label` |
+
+4. 将 `MapRoomWidget` 从 Hierarchy **拖到 Project 窗口**保存为 Prefab：
+   `Assets/_Prefabs/UI/Map/MapRoomWidget.prefab`
+5. 删除 Hierarchy 中的临时实例
 
 #### 6B. 创建 MapConnectionLine Prefab
 
-1. 新建 GameObject `MapConnectionLine`，添加 `Image` + `MapConnectionLine` 脚本
-2. Image 使用纯白色 1x1 sprite，Raycast Target = false
-3. 保存为 Prefab（如 `Assets/_Prefabs/UI/Map/MapConnectionLine.prefab`）
+> 这是地图上连接两个房间的线段 UI。
+> **创建位置**：`Assets/_Prefabs/UI/Map/`
+
+1. 在 **Hierarchy** 中，选中任意 Canvas，右键 → UI → Image，命名为 `MapConnectionLine`
+2. 在 Inspector 中设置 Image 组件：Sprite 使用内置纯白 `UISprite` 或 1×1 白色图片，**取消勾选** `Raycast Target`
+3. 选中该 GameObject → Add Component → `MapConnectionLine` 脚本
+4. 在 **Project 窗口**中，将 `MapConnectionLine` 拖入 `Assets/_Prefabs/UI/Map/` 目录保存为 Prefab
+5. 在 **Hierarchy** 中删除临时实例
 
 #### 6C. 创建 Floor Tab Button Prefab
 
-1. 新建 UI Button（`UI > Button - TextMeshPro`）
-2. 调整大小适合 Tab 样式（如 80×30）
-3. 保存为 Prefab（如 `Assets/_Prefabs/UI/Map/FloorTabButton.prefab`）
+> 这是全屏地图顶部切换楼层的按钮。
+> **创建位置**：`Assets/_Prefabs/UI/Map/`
 
-#### 6D. 配置 MapPanel
+1. 在 **Hierarchy** 中，选中任意 Canvas，右键 → UI → Button - TextMeshPro，命名为 `FloorTabButton`
+2. 在 Inspector 中调整按钮大小为 Tab 样式（约 80×30）
+3. 在 **Project 窗口**中，将 `FloorTabButton` 拖入 `Assets/_Prefabs/UI/Map/` 目录保存为 Prefab
+4. 在 **Hierarchy** 中删除临时实例
 
-1. 在持久化 Canvas 下创建：
-   ```
-   MapPanel (MapPanel 脚本)
-   ├── ScrollRect (ScrollRect 组件)
-   │   ├── Viewport (Mask + Image)
-   │   │   └── MapContent (RectTransform) ← _mapContent
-   │   └── PlayerIcon (Image, 小三角/圆点) ← _playerIcon
-   └── FloorTabContainer (HorizontalLayoutGroup) ← _floorTabContainer
-   ```
-2. 赋值：
-   - `_inputActions` → ShipActions.inputactions
-   - `_scrollRect` → ScrollRect 组件
-   - `_mapContent` → MapContent 的 RectTransform
-   - `_floorTabContainer` → FloorTabContainer 的 RectTransform
-   - `_roomWidgetPrefab` → 步骤 6A 的 Prefab
-   - `_connectionLinePrefab` → 步骤 6B 的 Prefab
-   - `_floorTabPrefab` → 步骤 6C 的 Prefab
-   - `_playerIcon` → PlayerIcon 的 RectTransform
-3. 默认隐藏（脚本 Awake 会自动 SetActive(false)）
+#### 6D. 配置 MapPanel（全屏地图面板）
 
-#### 6E. 配置 MinimapHUD
+> 放在**持久化 Canvas** 下（即始终存在的 UI Canvas，不随场景切换销毁）。
+> 运行时按 M 键打开/关闭。
 
-1. 在持久化 Canvas 下创建角落 UI：
-   ```
-   MinimapHUD (MinimapHUD 脚本, 锚点右下角)
-   ├── Background (Image, 半透明黑色)
-   ├── Content (RectTransform) ← _content
-   └── FloorLabel (TMP_Text) ← _floorLabel
-   ```
-2. 赋值：
-   - `_content` → Content 的 RectTransform
-   - `_background` → Background 的 Image
-   - `_miniRoomWidgetPrefab` → MapRoomWidget Prefab（或单独的小版本）
-   - `_miniConnectionLinePrefab` → MapConnectionLine Prefab
-   - `_worldToMinimapScale` = 2, `_visibleRadius` = 30
+**在哪里操作**：在 **Hierarchy** 中的场景 Canvas 下
 
-#### 6F. 场景管理器配置
+1. 在 Canvas 下（建议创建名为 `PersistentUI` 的 Canvas）右键 → Create Empty，命名为 `MapPanel`
+2. 设置 `MapPanel` 的 RectTransform：铺满全屏（Anchors 设为 stretch/stretch）
+3. 选中 `MapPanel` → Add Component → `MapPanel`
+4. 在 `MapPanel` 下创建以下子物体：
 
-在场景中确保以下管理器 GameObject 存在并挂了对应组件：
+```
+MapPanel                                     ← 全屏铺满，Add Component → MapPanel 脚本
+│
+├── ScrollView (ScrollRect 组件)             ← 支持拖拽平移
+│   ├── Viewport (Image + Mask)              ← 裁剪可视区域
+│   │   └── MapContent (RectTransform)       ← 房间节点和连接线的容器
+│   └── PlayerIcon (Image, 小三角/圆点)      ← 标记玩家位置
+│
+└── FloorTabContainer (HorizontalLayoutGroup) ← 楼层切换按钮的容器
+```
 
-| 组件 | 必需 | 说明 |
-|------|------|------|
-| `MinimapManager` | Phase 4 | `_saveSlot` = 0 |
-| `SaveBridge` | Phase 4 | `_saveSlot` = 0 |
-| `RoomManager` | 已有 | 无需额外配置 |
-| `GameFlowManager` | 已有 | 现在 Start() 会自动调用 SaveBridge.LoadAll() |
-| `CheckpointManager` | 已有 | 已改为通过 SaveBridge 存档 |
-| `WorldProgressManager` | 已有 | 已改为通过 SaveBridge 存档 |
+2. 选中 `MapPanel` 根，在 Inspector 中绑定 `MapPanel` 脚本的字段：
 
----
+   | Inspector 字段 | 拖入来源 |
+   |---------------|---------|
+   | `_inputActions` | **Project** 窗口 → `Assets/Input/ShipActions.inputactions` |
+   | `_scrollRect` | Hierarchy → `ScrollView` 上的 ScrollRect 组件 |
+   | `_mapContent` | Hierarchy → `MapContent` 的 RectTransform |
+   | `_floorTabContainer` | Hierarchy → `FloorTabContainer` 的 RectTransform |
+   | `_roomWidgetPrefab` | **Project** 窗口 → 步骤 6A 的 `MapRoomWidget.prefab` |
+   | `_connectionLinePrefab` | **Project** 窗口 → 步骤 6B 的 `MapConnectionLine.prefab` |
+   | `_floorTabPrefab` | **Project** 窗口 → 步骤 6C 的 `FloorTabButton.prefab` |
+   | `_playerIcon` | Hierarchy → `PlayerIcon` 的 RectTransform |
+
+3. 无需手动隐藏——`MapPanel` 脚本的 `Awake()` 会自动 `SetActive(false)`
+
+#### 6E. 配置 MinimapHUD（角落小地图）
+
+> 同样放在**持久化 Canvas** 下，锚定到屏幕右下角，始终显示。
+
+**在哪里操作**：在 **Hierarchy** 中的场景 Canvas 下
+
+1. 在 Canvas 下右键 → Create Empty，命名为 `MinimapHUD`
+2. 设置 RectTransform：锚点设为右下角，大小设为约 200×200
+3. 选中 `MinimapHUD` → Add Component → `MinimapHUD`
+4. 在 `MinimapHUD` 下创建以下子物体：
+
+```
+MinimapHUD (锚点 = 右下角, 大小约 200×200)   ← Add Component → MinimapHUD 脚本
+│
+├── Background (Image)                        ← 半透明黑色背景 (RGBA 0,0,0,150)
+├── Content (RectTransform)                   ← 房间/连接线的渲染容器
+└── FloorLabel (TextMeshPro)                  ← 显示当前楼层 "F0" / "F-1"
+```
+
+2. 选中 `MinimapHUD` 根，绑定脚本字段：
+
+   | Inspector 字段 | 拖入来源 |
+   |---------------|---------|
+   | `_content` | Hierarchy → `Content` 的 RectTransform |
+   | `_background` | Hierarchy → `Background` 的 Image |
+   | `_miniRoomWidgetPrefab` | **Project** → `MapRoomWidget.prefab`（同 6A，可复用） |
+   | `_miniConnectionLinePrefab` | **Project** → `MapConnectionLine.prefab`（同 6B） |
+   | `_worldToMinimapScale` | 数值 `2`（根据实际地图大小调） |
+   | `_visibleRadius` | 数值 `30`（可视范围半径） |
+
+#### 6F. 确认场景管理器 GameObject
+
+> 以下管理器组件需要挂在场景中的 GameObject 上。
+
+**在哪里操作**：在 **Hierarchy** 中（可以放在同一个 `Managers` 空物体下，也可分开）
+
+1. 在场景中创建一个空的 GameObject，命名为 `Managers`（如果已存在则跳过）
+2. 选中 `Managers` GameObject，根据下表添加或确认组件：
+
+| 组件 | 是否新增 | Inspector 配置 |
+|------|---------|---------------|
+| `MinimapManager` | **新增 (Phase 4)** | `_saveSlot` = 0 |
+| `SaveBridge` | **新增 (Phase 4)** | `_saveSlot` = 0 |
+| `RoomManager` | 已有 | 无需改动 |
+| `GameFlowManager` | 已有 | 无需改动（代码已自动调 `SaveBridge.LoadAll()`） |
+| `CheckpointManager` | 已有 | 无需改动（已改为通过 SaveBridge 存档） |
+| `WorldProgressManager` | 已有 | 无需改动（已改为通过 SaveBridge 存档） |
+
+> **已有** 表示前面的 Phase 已经创建过，只需确认还在。
 
 ### 第七步：Play Mode 功能验证
+
+> 本步骤需要在 **Unity Play Mode** 中进行测试。
 
 #### 7A. 飞船手感（优先级最高，可独立验证）
 
@@ -352,31 +693,50 @@
 
 ### 第八步：层间转场增强配置（可选，Phase 5 细化）
 
-> 以下字段在 `DoorTransitionController` Inspector 上配置。均为可选，未配置时只使用基础淡入淡出。
+> 层间转场效果通过 **`DoorTransitionController`** 组件控制。
 
-| 字段 | 推荐值 | 说明 |
-|------|--------|------|
-| `_layerTransitionParticles` | 子 ParticleSystem | 下降/上升粒子，创建子物体挂 ParticleSystem |
-| `_layerTransitionSFX` | AudioClip | 转场音效（rumble / whoosh） |
-| `_bgmCrossfadeDuration` | 1.5 | BGM 交叉淡入时长 |
-| `_layerZoomOutAmount` | 2 | 相机 zoom-out 幅度 |
-| `_layerZoomDuration` | 0.3 | zoom 动画时长 |
+**在哪里找到或创建 DoorTransitionController：**
 
-配合在 `RoomSO` 上为不同楼层房间设置 `_ambientMusic`（AudioClip），实现楼层间 BGM 切换。
+1. 在 **Hierarchy** 中找到场景中的 `Managers` GameObject（或创建一个空的 GameObject 命名为 `TransitionController`）
+2. 如果该 GameObject 上没有 `DoorTransitionController` 组件，选中它 → Add Component → `DoorTransitionController`
+3. 以下字段**均为可选**——不配置时转场只使用基础淡入淡出（和普通 Door 一样）。
+4. 在 Inspector 中配置：
+
+| Inspector 字段 | 推荐值 | 说明 |
+|---------------|--------|------|
+| `_layerTransitionParticles` | 在该 GO 下创建子物体，挂 ParticleSystem，拖入 | 层间转场时播放的粒子效果（如下落/上升） |
+| `_layerTransitionSFX` | Project 中的 AudioClip | 转场音效（rumble / whoosh），从 Project 窗口拖入 |
+| `_bgmCrossfadeDuration` | 1.5 | BGM 交叉淡入时长（秒） |
+| `_layerZoomOutAmount` | 2 | 转场时相机缩放幅度（正交 Size 增加量） |
+| `_layerZoomDuration` | 0.3 | 缩放动画时长（秒） |
+
+> **配合 RoomSO 设置 BGM**：要实现楼层间 BGM 切换，需要在目标楼层的 `RoomSO` 资产中设置 `_ambientMusic` 字段（拖入 AudioClip）。
+> 当玩家通过 `IsLayerTransition = true` 的门进入该房间时，`DoorTransitionController` 会自动交叉淡入新 BGM。
 
 ---
 
 ### 第九步：NarrativeFallTrigger 验证（占位符）
 
-> 当前为占位符实现，仅验证脚本可放置和基本传送功能。
+> 当前为**占位符实现**，仅验证脚本可放置和基本传送功能。
+> 完整的叙事坠落动画（相机跟随、粒子特效、Timeline 等）将在后续版本实现。
 
-1. 在测试场景中创建空 GameObject，添加 BoxCollider2D (trigger) + `NarrativeFallTrigger`
-2. 配置：
-   - `_targetRoom` → 目标楼层的 Room
-   - `_landingPoint` → 目标 Room 下的一个 Transform
-   - `_playerLayer` → Player 层
-3. Play Mode：飞船进入触发区 → Console 输出 `PLACEHOLDER — Fall sequence triggered`
-4. 飞船被传送到目标房间（无动画，纯传送 — 这是正确的占位行为）
+**在哪里操作**：在 **Hierarchy** 中的场景里
+
+1. 在场景中创建空 GameObject，命名为 `TestFallTrigger`
+2. Add Component → `BoxCollider2D`，勾选 **Is Trigger**，放在想触发坠落的位置
+3. Add Component → `NarrativeFallTrigger`
+4. Inspector 配置：
+
+   | 字段 | 赋值 |
+   |------|------|
+   | `_targetRoom` | Hierarchy → 目标楼层的 Room GameObject |
+   | `_landingPoint` | Hierarchy → 目标 Room 下的某个子 Transform（着陆点位置） |
+   | `_playerLayer` | Layer 下拉菜单选 `Player` |
+
+5. **Play Mode 验证**：
+   - 飞船进入触发区 → Console 输出 `PLACEHOLDER — Fall sequence triggered`
+   - 飞船被瞬间传送到目标房间的 `_landingPoint` 位置
+   - 这是**正确的占位行为**，不会有动画效果
 
 ---
 
