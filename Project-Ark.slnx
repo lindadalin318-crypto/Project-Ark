@@ -10,6 +10,6 @@
   <Project Path="ProjectArk.Combat.Tests.csproj" />
   <Project Path="ProjectArk.Combat.Editor.csproj" />
   <Project Path="ProjectArk.Core.Tests.csproj" />
-  <Project Path="ProjectArk.Ship.Editor.csproj" />
   <Project Path="ProjectArk.Level.Editor.csproj" />
+  <Project Path="ProjectArk.Ship.Editor.csproj" />
 </Solution>

@@ -3177,3 +3177,270 @@ Assets/Scripts/Level/
 **目的：** 提供一键配置工具降低 Phase 6 系统的配置门槛；在验收清单中提供完整的分步操作指南，覆盖所有 Phase 6 组件的配置和验证。
 
 ---
+
+### RoomBatchEditor 批量房间编辑器 — 2026-02-15 22:57
+
+**新建/修改文件：**
+
+| 路径 | 操作 | 用途 |
+|------|------|------|
+| `Assets/Scripts/Level/Editor/RoomBatchEditor.cs` | 修改 | 批量房间编辑器工具，提供房间列表管理、批量属性编辑、拓扑可视化、验证检查、JSON导入/导出功能 |
+
+**功能特性：**
+
+1. **房间列表管理**
+   - 自动发现场景中所有Room组件（包含inactive）
+   - 支持多选房间进行批量操作
+   - 提供搜索功能（按房间名称或RoomID过滤）
+   - 显示房间总数和选中数量
+
+2. **批量属性编辑**
+   - 批量修改RoomSO引用（使用SerializedObject安全修改私有`_data`字段）
+   - 批量修改房间类型（Normal/Arena/Boss/Safe）
+   - 批量修改楼层级别（FloorLevel）
+   - 支持Undo/Redo（使用Undo.RecordObjects）
+   - 自动保存AssetDatabase
+
+3. **拓扑可视化**
+   - 网格布局显示所有房间节点
+   - 按房间类型颜色区分（Normal=蓝，Arena=红，Boss=深红，Safe=绿）
+   - 支持鼠标滚轮缩放和平移
+   - 选中房间高亮显示（黄色边框）
+
+4. **验证检查**
+   - 检查缺失RoomSO引用（Error级别）
+   - 检查BoxCollider2D是否为Trigger（Warning级别）
+   - 检查CameraConfiner是否在Ignore Raycast层（Warning级别）
+   - 支持定位到问题房间
+
+5. **JSON导入/导出**
+   - 导出房间数据为JSON（名称、RoomID、类型、楼层、位置、是否有遭遇）
+   - 导入JSON数据（仅数据导入，不创建GameObjects）
+   - 使用JsonUtility序列化
+
+6. **快捷操作**
+   - 在Scene视图中聚焦选中房间
+   - 在Hierarchy中选中房间
+   - 激活/禁用选中房间
+
+**技术要点：**
+- 命名规范：常量使用PascalCase（WindowTitle、MenuPath），私有字段使用_camelCase
+- 使用SerializedObject和SerializedProperty安全修改私有[SerializeField]字段
+- 正确使用GUI.matrix并通过try/finally恢复状态
+- 遵循项目架构原则：数据驱动、事件卫生、运行时数据隔离
+- Editor-only代码，使用#if UNITY_EDITOR条件编译
+- 遵循项目代码规范：XML文档注释、正确的命名空间（ProjectArk.Level.Editor）
+
+**目的：** 提升关卡编辑效率，允许策划/开发者一次性对多个房间进行批量操作，避免逐个手动修改的繁琐过程。同时提供验证功能帮助发现常见配置错误。
+
+---
+
+## 可视化关卡编辑器（Visual Level Designer）
+
+### 68. LevelElementLibrary — 关卡元素库 — 2026-02-15
+
+**新建文件：**
+- `Assets/Scripts/Level/Data/LevelElementLibrary.cs`
+
+**内容：** ScriptableObject 数据容器，定义关卡设计时可使用的所有元素Prefab：
+- Room Elements: `_roomTemplate`（房间模板Prefab）
+- Wall Elements: `_wallBasic`（基础墙）、`_wallCorner`（墙角）
+- Prop Elements: `_crateWooden`（木箱）、`_crateMetal`（金属箱）
+- Door Elements: `_doorBasic`（基础门）
+- Checkpoint Elements: `_checkpoint`（存档点）
+- Spawn Points: `_playerSpawnPoint`（玩家出生点）、`_enemySpawnPoint`（敌人出生点）
+
+**目的：** 统一管理所有可放置的关卡元素Prefab，让LevelDesignerWindow可以动态获取元素库。
+
+**技术：** ScriptableObject, `[CreateAssetMenu]`, 数据驱动模式。
+
+---
+
+### 69. LevelScaffoldData — 关卡脚手架数据 — 2026-02-15
+
+**新建文件：**
+- `Assets/Scripts/Level/Data/LevelScaffoldData.cs`
+
+**内容：**
+- **LevelScaffoldData**：ScriptableObject，包含：
+  - `_levelName`：关卡名称
+  - `_floorLevel`：楼层级别
+  - `_rooms`：List<ScaffoldRoom> 房间列表
+  
+- **ScaffoldRoom**：Serializable类，单个房间数据：
+  - `_roomID`：唯一ID（Guid生成）
+  - `_displayName`：显示名称
+  - `_roomType`：房间类型（RoomType枚举）
+  - `_position`：世界坐标位置
+  - `_size`：房间尺寸（宽×高）
+  - `_connections`：List<ScaffoldDoorConnection> 门连接列表
+  - `_roomSO`：关联的RoomSO（可选，自动生成）
+  
+- **ScaffoldDoorConnection**：Serializable类，门连接数据：
+  - `_targetRoomID`：目标房间ID
+  - `_doorPosition`：门在房间内的位置
+  - `_doorDirection`：门朝向（指向目标房间）
+  - `_isLayerTransition`：是否为层过渡（更长的淡入淡出）
+
+**目的：** 将关卡设计数据与Unity场景分离，支持保存/加载，为可视化编辑器提供数据结构。
+
+**技术：** ScriptableObject, `[Serializable]` 类, Guid唯一ID生成, 数据驱动设计。
+
+---
+
+### 70. LevelGenerator — 关卡生成器 — 2026-02-15
+
+**新建文件：**
+- `Assets/Scripts/Level/Editor/LevelGenerator.cs`
+
+**内容：** 静态工具类，从LevelScaffoldData生成Unity场景对象：
+1. **GenerateLevel()**：主入口，接收scaffold、elementLibrary、可选parentTransform
+2. **CreateLevelRoot()**：创建关卡根GameObject（`--- {LevelName} ---`格式）
+3. **GenerateRooms()**：遍历scaffold.Rooms生成所有Room对象
+4. **GenerateSingleRoom()**：生成单个Room对象，设置位置、大小、Collider
+5. **SetupRoomCollider()**：配置BoxCollider2D为Trigger，设置size和offset
+6. **SetupRoomData()**：配置Room组件的_data引用，自动创建RoomSO（如果为空）
+7. **CreateRoomSO()**：创建新的RoomSO资产并保存到Assets/_Data/Level/Rooms/
+8. **SetupDoorConnections()**：设置所有房间之间的门连接
+9. **CreateDoor()**：创建Door对象，配置目标房间和生成点
+10. **CreateSpawnPoint()**：在目标房间创建玩家生成点
+
+**技术要点：**
+- 完整的Undo/Redo支持（Undo.SetCurrentGroupName, Undo.RegisterCreatedObjectUndo）
+- 使用PrefabUtility.InstantiatePrefab实例化Prefab
+- 使用SerializedObject和SerializedProperty安全修改私有字段
+- 异常处理 + 自动回滚（Undo.RevertAllDownToGroup）
+- 自动创建目录和保存AssetDatabase
+- Editor-only代码，放在Editor文件夹
+
+**目的：** 一键将脚手架数据转换为完整的Unity场景，包括Room、Door、Collider、RoomSO等所有必要组件，无需手动配置。
+
+---
+
+### 71. LevelDesignerWindow — 可视化关卡设计器 — 2026-02-15
+
+**新建文件：**
+- `Assets/Scripts/Level/Editor/LevelDesignerWindow.cs`
+
+**内容：** EditorWindow，完整的可视化关卡编辑器，包含以下功能模块：
+
+1. **设置面板**
+   - Level Scaffold：选择/创建关卡脚手架数据
+   - Element Library：选择关卡元素库
+   - New Scaffold：一键创建新的LevelScaffoldData资产
+
+2. **房间列表**
+   - Add Room：添加新房间
+   - 房间展开/折叠：显示/隐藏房间详情
+   - 房间编辑：修改名称、类型、位置、大小、RoomSO
+   - 连接管理：添加/编辑/删除门连接
+   - 删除房间：带确认对话框
+
+3. **拓扑视图（核心功能）**
+   - 网格背景：50px网格线
+   - 房间节点：彩色矩形表示房间，按RoomType着色
+   - 连接线：蓝色线条表示门连接
+   - 拖拽移动：鼠标左键拖拽房间移动位置
+   - 缩放控制：Zoom滑块（0.25x - 2x）
+   - 视图重置：Reset View按钮
+   - 标签显示：房间名称标签
+
+4. **Scene视图集成**
+   - 房间Gizmo：在Scene视图中绘制房间WireCube
+   - 选中高亮：选中的房间显示白色边框和标签
+   - 位置同步：拓扑视图和Scene视图位置实时同步
+
+5. **一键生成**
+   - Generate to Scene：确认对话框后调用LevelGenerator
+   - 完整Undo：所有生成操作可撤销
+
+**技术要点：**
+- EditorWindow生命周期（OnEnable/OnDisable）
+- SceneView.duringSceneGui事件订阅
+- Handles绘制API（DrawSolidRectangleWithOutline, DrawLine, Label）
+- GUI事件处理（MouseDown, MouseDrag, MouseUp）
+- 世界坐标 ↔ 拓扑坐标转换（WorldToTopology/TopologyToWorld）
+- Undo系统集成（Undo.RecordObject）
+- EditorUtility.DisplayDialog确认对话框
+- EditorUtility.SaveFilePanelInProject文件保存面板
+
+**工作流：**
+1. 创建LevelElementLibrary并配置所有元素Prefab
+2. 创建LevelScaffoldData
+3. 在LevelDesignerWindow中选择Scaffold和Library
+4. 点击"Add Room"添加房间，或在拓扑视图中拖拽
+5. 配置房间属性（名称、类型、位置、大小）
+6. 添加门连接，配置目标房间和位置
+7. 点击"Generate to Scene"一键生成到Unity场景
+8. 生成的场景包含完整的Room、Door、Collider、RoomSO
+
+**目的：** 提供"搭积木"式的关卡编辑体验，让策划/设计师可以直观地布置房间、连接门，然后一键生成完整的Unity场景，所有组件自动配置完成。
+
+---
+
+## 修复与优化
+
+### 72. RoomBatchEditor 过时API修复 — 2026-02-16 17:30
+
+**修改文件：**
+- `Assets/Scripts/Level/Editor/RoomBatchEditor.cs`
+
+**内容：** 修复过时API警告 CS0618：
+- 将 `FindObjectsOfType<Room>()` 替换为 `FindObjectsByType<Room>(FindObjectsInactive.Include, FindObjectsSortMode.None)`
+- Unity 6.0+ 推荐使用新的 `FindObjectsByType` API 替代已弃用的 `FindObjectsOfType`
+
+**目的：** 消除编译警告，使用Unity推荐的最新API，确保代码的长期可维护性。
+
+**技术：** `Object.FindObjectsByType`, `FindObjectsInactive`, `FindObjectsSortMode`
+
+---
+
+### 73. LevelDesignerWindow GUI布局错误修复 — 2026-02-16 17:32
+
+**修改文件：**
+- `Assets/Scripts/Level/Editor/LevelDesignerWindow.cs`
+
+**内容：**
+1. **修复CS1061错误**：`GUI.BeginScrollView()` 直接返回 Rect，不需要访问 `.position` 属性
+2. **修复CS0117错误**：RoomType 枚举值不匹配，移除了不存在的 `Treasure`, `Rest`, `Entrance`, `Exit`，保留 `Normal`, `Arena`, `Boss`, `Safe`
+3. **修复CS0649警告**：`_topologyScrollPosition` 正确赋值
+
+**目的：** 解决编译错误，使LevelDesignerWindow能够正常编译和运行。
+
+---
+
+### 74. LevelDesignerWindow GUI布局优化 — 2026-02-16 17:35
+
+**修改文件：**
+- `Assets/Scripts/Level/Editor/LevelDesignerWindow.cs`
+
+**内容：**
+1. **修复GetLastRect错误**：移除了在布局组刚开始时调用 `GUILayoutUtility.GetLastRect()` 的代码，改用 `GUIStyle` 的 `normal.background` 属性设置背景颜色
+2. **新增MakeTex辅助方法**：创建纯色纹理用于GUI背景样式
+3. **房间初始位置优化**：第一个房间从 (0, 0, 0) 开始，后续房间按 3×3 网格自动排列
+4. **新增Focus All Rooms按钮**：一键聚焦到所有房间
+5. **空房间提示**：当没有房间时显示提示文字
+6. **Reset View修复**：正确重置滚动位置
+
+**目的：** 修复Unity GUI布局错误 "You cannot call GetLast immediately after beginning a group"，并优化用户体验，让房间更容易被看到和操作。
+
+**技术：** `GUIStyle`, `Texture2D`, `EditorGUILayout.VerticalScope`, Unity IMGUI布局系统
+
+---
+
+### 75. LevelDesignerWindow 拓扑视图缩放修复 — 2026-02-16 17:40
+
+**修改文件：**
+- `Assets/Scripts/Level/Editor/LevelDesignerWindow.cs`
+
+**内容：**
+1. **问题分析**：房间尺寸太小（20×15 像素），在拓扑视图中几乎看不见
+2. **添加拓扑缩放系数**：引入 `topologyScale = 10f`，将世界坐标单位放大 10 倍以像素显示
+3. **更新绘制逻辑**：`roomWidth = Size.x * topologyScale * zoomLevel`
+4. **更新拖拽逻辑**：鼠标位置判断和拖拽 delta 计算都使用相同的 `topologyScale`
+
+**目的：** 让房间在拓扑视图中可见且易于操作，修复"按下 Add Room 后看不到房间"的问题。
+
+**技术：** 坐标缩放转换、Unity Handles 绘制、鼠标事件处理
+
+---
