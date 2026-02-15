@@ -81,6 +81,15 @@ namespace ProjectArk.Core.Save
         /// <summary> Current world progress stage (0 = initial, increments on boss defeats). </summary>
         public int WorldStage;
 
+        /// <summary> World clock elapsed time in seconds within current cycle. </summary>
+        public float WorldClockTime;
+
+        /// <summary> World clock completed cycle count. </summary>
+        public int WorldClockCycle;
+
+        /// <summary> Current world phase index (e.g., 0=Radiation, 1=Calm, 2=Storm, 3=Silence). </summary>
+        public int CurrentPhaseIndex;
+
         /// <summary> Generic key-value flags for quest/story state. </summary>
         public List<SaveFlag> Flags = new();
     }

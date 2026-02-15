@@ -34,6 +34,10 @@ namespace ProjectArk.Level
         [Tooltip("If set, this door requires a key to open. Used by Lock component / UI tooltip.")]
         [SerializeField] private string _requiredKeyID;
 
+        [Header("Schedule (for Locked_Schedule doors)")]
+        [Tooltip("Phase indices during which this door opens. Only relevant if initialState is Locked_Schedule.")]
+        [SerializeField] private int[] _openDuringPhases;
+
         [Header("Player Detection")]
         [Tooltip("Layer mask for the player ship.")]
         [SerializeField] private LayerMask _playerLayer;
@@ -80,6 +84,66 @@ namespace ProjectArk.Level
                 col.isTrigger = true;
                 Debug.LogWarning($"[Door] {gameObject.name}: Collider was not set as trigger. Auto-fixed.");
             }
+        }
+
+        private void Start()
+        {
+            // Subscribe to phase changes for schedule-locked doors
+            if (_initialState == DoorState.Locked_Schedule)
+            {
+                LevelEvents.OnPhaseChanged += HandlePhaseChanged;
+
+                // Apply initial state from current phase
+                var phaseManager = ServiceLocator.Get<WorldPhaseManager>();
+                if (phaseManager != null && phaseManager.CurrentPhaseIndex >= 0)
+                {
+                    EvaluateSchedule(phaseManager.CurrentPhaseIndex);
+                }
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (_initialState == DoorState.Locked_Schedule)
+            {
+                LevelEvents.OnPhaseChanged -= HandlePhaseChanged;
+            }
+        }
+
+        // ──────────────────── Schedule Logic ────────────────────
+
+        private void HandlePhaseChanged(int phaseIndex, string phaseName)
+        {
+            if (_initialState != DoorState.Locked_Schedule) return;
+            EvaluateSchedule(phaseIndex);
+        }
+
+        private void EvaluateSchedule(int currentPhaseIndex)
+        {
+            bool shouldOpen = IsOpenDuringPhase(currentPhaseIndex);
+
+            if (shouldOpen && _currentState == DoorState.Locked_Schedule)
+            {
+                SetState(DoorState.Open);
+            }
+            else if (!shouldOpen && _currentState == DoorState.Open && _initialState == DoorState.Locked_Schedule)
+            {
+                SetState(DoorState.Locked_Schedule);
+            }
+        }
+
+        private bool IsOpenDuringPhase(int phaseIndex)
+        {
+            if (_openDuringPhases == null || _openDuringPhases.Length == 0)
+                return false;
+
+            for (int i = 0; i < _openDuringPhases.Length; i++)
+            {
+                if (_openDuringPhases[i] == phaseIndex)
+                    return true;
+            }
+
+            return false;
         }
 
         // ──────────────────── Player Detection ────────────────────

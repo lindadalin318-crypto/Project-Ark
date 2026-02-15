@@ -30,6 +30,13 @@ namespace ProjectArk.Level
         [Tooltip("Positions where enemies can be spawned in this room.")]
         [SerializeField] private Transform[] _spawnPoints;
 
+        [Header("Variants")]
+        [Tooltip("Optional room variants for different world phases (e.g., day/night configs). Leave empty if room doesn't change.")]
+        [SerializeField] private RoomVariantSO[] _variants;
+
+        [Tooltip("Environment child GameObjects corresponding to variant indices. Index 0 = first child, etc. Disabled/enabled by variant switching.")]
+        [SerializeField] private GameObject[] _variantEnvironments;
+
         [Header("Player Detection")]
         [Tooltip("Layer mask for the player. Used to filter OnTriggerEnter2D.")]
         [SerializeField] private LayerMask _playerLayer;
@@ -40,6 +47,7 @@ namespace ProjectArk.Level
         private Door[] _doors;
         private EnemySpawner _spawner;
         private WaveSpawnStrategy _waveStrategy;
+        private RoomVariantSO _activeVariant; // currently active variant (null = default)
 
         // ──────────────────── Events ────────────────────
 
@@ -97,6 +105,30 @@ namespace ProjectArk.Level
             }
         }
 
+        private void Start()
+        {
+            // Subscribe to phase changes for variant support
+            if (_variants != null && _variants.Length > 0)
+            {
+                LevelEvents.OnPhaseChanged += HandlePhaseChanged;
+
+                // Apply initial variant from current phase
+                var phaseManager = ServiceLocator.Get<WorldPhaseManager>();
+                if (phaseManager != null && phaseManager.CurrentPhaseIndex >= 0)
+                {
+                    ApplyVariantForPhase(phaseManager.CurrentPhaseIndex);
+                }
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (_variants != null && _variants.Length > 0)
+            {
+                LevelEvents.OnPhaseChanged -= HandlePhaseChanged;
+            }
+        }
+
         // ──────────────────── Player Detection ────────────────────
 
         private void OnTriggerEnter2D(Collider2D other)
@@ -141,10 +173,11 @@ namespace ProjectArk.Level
         /// </summary>
         public void ActivateEnemies()
         {
-            // 波次刷怪模式：有 EncounterSO 且房间未清除且有 Spawner
-            if (_data != null && _data.HasEncounter && _state != RoomState.Cleared && _spawner != null)
+            // 波次刷怪模式：有 EncounterSO（含变体覆盖）且房间未清除且有 Spawner
+            var encounter = ActiveEncounter;
+            if (encounter != null && _state != RoomState.Cleared && _spawner != null)
             {
-                StartWaveEncounter();
+                StartWaveEncounter(encounter);
                 return;
             }
 
@@ -153,17 +186,18 @@ namespace ProjectArk.Level
         }
 
         /// <summary>
-        /// Start a wave-based encounter using the RoomSO's EncounterSO data.
+        /// Start a wave-based encounter using the given EncounterSO data.
+        /// Supports variant override encounters.
         /// </summary>
-        private void StartWaveEncounter()
+        private void StartWaveEncounter(EncounterSO encounter)
         {
-            _waveStrategy = new WaveSpawnStrategy(_data.Encounter);
+            _waveStrategy = new WaveSpawnStrategy(encounter);
             _waveStrategy.OnEncounterComplete += HandleEncounterComplete;
 
             _spawner.SetStrategy(_waveStrategy);
             _spawner.StartStrategy();
 
-            Debug.Log($"[Room] {RoomID}: Wave encounter started ({_data.Encounter.WaveCount} waves)");
+            Debug.Log($"[Room] {RoomID}: Wave encounter started ({encounter.WaveCount} waves)");
         }
 
         /// <summary>
@@ -251,6 +285,65 @@ namespace ProjectArk.Level
             ActivateEnemies();
 
             Debug.Log($"[Room] {RoomID}: Enemies reset.");
+        }
+
+        // ──────────────────── Variant Support ────────────────────
+
+        private void HandlePhaseChanged(int phaseIndex, string phaseName)
+        {
+            ApplyVariantForPhase(phaseIndex);
+        }
+
+        private void ApplyVariantForPhase(int phaseIndex)
+        {
+            if (_variants == null || _variants.Length == 0) return;
+
+            RoomVariantSO matchingVariant = null;
+            foreach (var variant in _variants)
+            {
+                if (variant != null && variant.IsActiveInPhase(phaseIndex))
+                {
+                    matchingVariant = variant;
+                    break;
+                }
+            }
+
+            if (matchingVariant == _activeVariant) return;
+
+            _activeVariant = matchingVariant;
+
+            // 切换环境子物体
+            ApplyVariantEnvironment(matchingVariant);
+
+            Debug.Log($"[Room] {RoomID}: Variant switched to '{(matchingVariant != null ? matchingVariant.VariantName : "Default")}' for phase {phaseIndex}");
+        }
+
+        private void ApplyVariantEnvironment(RoomVariantSO variant)
+        {
+            if (_variantEnvironments == null || _variantEnvironments.Length == 0) return;
+
+            int targetIndex = variant != null ? variant.EnvironmentIndex : -1;
+
+            for (int i = 0; i < _variantEnvironments.Length; i++)
+            {
+                if (_variantEnvironments[i] != null)
+                {
+                    _variantEnvironments[i].SetActive(i == targetIndex);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Returns the currently active encounter: variant override if available, else the default from RoomSO.
+        /// </summary>
+        public EncounterSO ActiveEncounter
+        {
+            get
+            {
+                if (_activeVariant != null && _activeVariant.OverrideEncounter != null)
+                    return _activeVariant.OverrideEncounter;
+                return _data != null ? _data.Encounter : null;
+            }
         }
 
         // ──────────────────── Door Helpers ────────────────────

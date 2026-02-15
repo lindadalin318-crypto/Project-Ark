@@ -5,10 +5,11 @@
   <Project Path="ProjectArk.Combat.csproj" />
   <Project Path="ProjectArk.Core.Audio.csproj" />
   <Project Path="ProjectArk.Heat.csproj" />
+  <Project Path="ProjectArk.Ship.csproj" />
   <Project Path="ProjectArk.Enemy.csproj" />
   <Project Path="ProjectArk.Combat.Tests.csproj" />
   <Project Path="ProjectArk.Combat.Editor.csproj" />
   <Project Path="ProjectArk.Core.Tests.csproj" />
-  <Project Path="ProjectArk.Ship.csproj" />
+  <Project Path="ProjectArk.Ship.Editor.csproj" />
   <Project Path="ProjectArk.Level.Editor.csproj" />
 </Solution>

@@ -1,10 +1,11 @@
-# 验收清单：Level Phase 3-5 + 飞船手感增强系统
+# 验收清单：Level Phase 3-6 + 飞船手感增强系统
 
-**版本：** v1.1（优化版）
+**版本：** v2.0
 **涵盖范围：**
 - Level Phase 3 (L10-L12)：EncounterSystem、ArenaController、Hazard System
 - Level Phase 4 (L13-L15)：Minimap/Map System、Save Integration、Sheba Scaffolder
 - Level Phase 5 (L16-L19)：Multi-Floor、Enhanced Layer Transition、Narrative Fall Placeholder
+- **Level Phase 6 (L20-L27)：WorldClock、WorldPhaseManager、ScheduledBehaviour、WorldEventTrigger、TilemapVariantSwitcher、AmbienceController、Room Variant**
 - Ship Feel Enhancement：曲线移动、Dash、受击反馈、视觉 Juice
 
 > **使用说明**：本文档为分步操作指南。每个步骤都标注了"在哪里操作"（Unity 菜单栏 / Project 窗口 / Hierarchy / 场景中），请按照指示在对应的 Unity 面板中操作。
@@ -65,6 +66,22 @@
 - [ ] **E4** `Assets/_Data/Level/Encounters/Sheba/` 下生成 4-5 个 EncounterSO
 - [ ] **E5** 每个 Room 之间有双向 Door 连接
 - [ ] **E6** Console 输出 10 步配置清单
+
+### G. Level Phase 6 — 世界时钟 & 动态关卡
+
+- [ ] **G1** 菜单 `ProjectArk > Level > Phase 6: Setup All (Assets + Scene)` 可见
+- [ ] **G2** `Assets/_Data/Level/WorldPhases/` 下有 4 个 WorldPhaseSO 资产
+- [ ] **G3** 场景中有 WorldClock、WorldPhaseManager、AmbienceController 组件
+- [ ] **G4** WorldPhaseManager 的 `_phases` 数组有 4 个元素且引用正确
+- [ ] **G5** Play Mode 中 Console 输出阶段切换日志
+- [ ] **G6** WorldClock 时间持续递增，周期完成后重置
+- [ ] **G7** ScheduledBehaviour 组件按阶段启用/禁用目标 GO
+- [ ] **G8** Door(Locked_Schedule) 在配置的阶段自动开/关
+- [ ] **G9** TilemapVariantSwitcher 可切换子 Tilemap 变体
+- [ ] **G10** WorldEventTrigger 在达到指定 WorldStage 时触发效果
+- [ ] **G11** 存档后 WorldClockTime / CurrentPhaseIndex 正确持久化
+- [ ] **G12** AmbienceController 阶段切换时驱动后处理渐变（如已配置 Volume）
+- [ ] **G13** Room 变体按阶段切换环境子物体和遭遇配置
 
 ### F. 飞船手感增强系统
 
@@ -489,135 +506,63 @@ Ship (根 GameObject)                         ← 物理 + 逻辑层
 
 ---
 
-### 第六步：配置 Level Phase 4-5 UI 组件
+### 第六步：配置 Level Phase 4-5 UI 组件（一键生成）
 
-> **概览**：本步骤需要创建 3 个 UI Prefab（6A/6B/6C），然后在场景 Canvas 下搭建 2 个 UI 面板（6D/6E），
-> 最后确认场景管理器 GameObject 都已就位（6F）。
->
-> **本步骤操作位置**：在 **Hierarchy** + **Project 窗口**中
+> **概览**：使用 MapUIBuilder 一键生成所有 Map UI Prefab 和场景层级。
+> 只需运行两个菜单命令，所有 Prefab、场景层级和字段连线都会自动完成。
 
-#### 6A. 创建 MapRoomWidget Prefab
+#### 6A. 一键创建 Prefab（自动）
 
-> 这是地图上代表"一个房间"的 UI 小块，全屏地图和角落小地图都会实例化它。
+1. 菜单 → `ProjectArk > Map > Build Map UI Prefabs`
+2. 确认 Console 日志显示 3 个 Prefab 创建成功
+3. 在 Project 窗口确认 `Assets/_Prefabs/UI/Map/` 下出现：
+   - `MapRoomWidget.prefab` — 房间节点 UI（含 Background/IconOverlay/CurrentHighlight/FogOverlay/Label 子物体，已自动连线）
+   - `MapConnectionLine.prefab` — 连接线 UI（含 Image，已自动连线）
+   - `FloorTabButton.prefab` — 楼层 Tab 按钮（含 Button + Label，80x30）
 
-1. 在 **Hierarchy** 中任意 Canvas 下右键 → UI → Image，命名为 `MapRoomWidget`
-2. 在 `MapRoomWidget` 下依次创建 4 个子 Image 和 1 个 TextMeshPro：
+#### 6B. 一键创建场景层级（自动）
 
-```
-MapRoomWidget (RectTransform, 大小约 60×40)
-│  ● MapRoomWidget 脚本       ← Add Component
-│
-├── Background (Image)        ← 房间底色，不同 RoomType 显示不同颜色
-├── IconOverlay (Image)       ← 特殊图标（Boss/Safe 等），默认 disabled
-├── CurrentHighlight (Image)  ← 当前所在房间的高亮边框，默认 disabled
-├── FogOverlay (Image)        ← 未访问房间的半透明黑色遮罩（RGBA 0,0,0,180）
-└── Label (TextMeshPro)       ← 房间名文字
-```
+1. 菜单 → `ProjectArk > Map > Build Map UI Scene`
+2. 确认 Console 日志显示 MapPanel 和 MinimapHUD 创建成功
+3. 在 Hierarchy 中确认：
 
-3. 选中 `MapRoomWidget` 根，在 Inspector 中找到 `MapRoomWidget` 脚本，绑定字段：
+   **MapPanel**（全屏地图，默认隐藏）：
+   ```
+   Canvas (已有或自动创建)
+   └── MapPanel (CanvasGroup + MapPanel 脚本, inactive)
+       ├── Background (暗色半透明全屏)
+       ├── ScrollView (ScrollRect, 支持拖拽平移)
+       │   └── Viewport (Mask)
+       │       └── MapContent (2000x2000, 房间/连接线容器)
+       ├── FloorTabBar (HorizontalLayoutGroup, 楼层切换)
+       └── PlayerIcon (黄色菱形, 玩家位置标记)
+   ```
+   
+   **MinimapHUD**（角落小地图）：
+   ```
+   Canvas
+   └── MinimapHUD (MinimapHUD 脚本, 右下角 200x200)
+       ├── Border (边框效果)
+       ├── Background (暗色半透明)
+       ├── Content (带 Mask 的内容区域)
+       └── FloorLabel (楼层文字 "F0")
+   ```
 
-   | Inspector 字段 | 拖入 |
-   |---------------|------|
-   | `_background` | ← Hierarchy 中的 `Background` |
-   | `_iconOverlay` | ← Hierarchy 中的 `IconOverlay` |
-   | `_currentHighlight` | ← Hierarchy 中的 `CurrentHighlight` |
-   | `_fogOverlay` | ← Hierarchy 中的 `FogOverlay` |
-   | `_labelText` | ← Hierarchy 中的 `Label` |
+4. 所有字段已自动连线：
+   - `_inputActions` → ShipActions.inputactions（自动查找）
+   - `_scrollRect` / `_mapContent` / `_floorTabContainer` / `_playerIcon` → 场景子物体
+   - `_roomWidgetPrefab` / `_connectionLinePrefab` / `_floorTabPrefab` → 步骤 6A 的 Prefab
+   - MinimapHUD 的 `_content` / `_background` / `_floorLabel` / Prefab 引用 → 全部自动连线
 
-4. 将 `MapRoomWidget` 从 Hierarchy **拖到 Project 窗口**保存为 Prefab：
-   `Assets/_Prefabs/UI/Map/MapRoomWidget.prefab`
-5. 删除 Hierarchy 中的临时实例
+> 如果 InputActionAsset 未自动找到（Console 警告），请手动赋值 `Assets/Input/ShipActions.inputactions` 到 MapPanel 的 `_inputActions`。
 
-#### 6B. 创建 MapConnectionLine Prefab
+#### 6C. 手动微调（可选）
 
-> 这是地图上连接两个房间的线段 UI。
-> **创建位置**：`Assets/_Prefabs/UI/Map/`
+- 调整 MinimapHUD 的锚点/大小（默认右下角 200x200，间距 10px）
+- 为 MinimapHUD 创建更小版本的 MapRoomWidget Prefab（当前与全屏地图共用）
+- 调整 MapPanel 的 `_worldToMapScale`（默认 5）以适配你的关卡尺寸
 
-1. 在 **Hierarchy** 中，选中任意 Canvas，右键 → UI → Image，命名为 `MapConnectionLine`
-2. 在 Inspector 中设置 Image 组件：Sprite 使用内置纯白 `UISprite` 或 1×1 白色图片，**取消勾选** `Raycast Target`
-3. 选中该 GameObject → Add Component → `MapConnectionLine` 脚本
-4. 在 **Project 窗口**中，将 `MapConnectionLine` 拖入 `Assets/_Prefabs/UI/Map/` 目录保存为 Prefab
-5. 在 **Hierarchy** 中删除临时实例
-
-#### 6C. 创建 Floor Tab Button Prefab
-
-> 这是全屏地图顶部切换楼层的按钮。
-> **创建位置**：`Assets/_Prefabs/UI/Map/`
-
-1. 在 **Hierarchy** 中，选中任意 Canvas，右键 → UI → Button - TextMeshPro，命名为 `FloorTabButton`
-2. 在 Inspector 中调整按钮大小为 Tab 样式（约 80×30）
-3. 在 **Project 窗口**中，将 `FloorTabButton` 拖入 `Assets/_Prefabs/UI/Map/` 目录保存为 Prefab
-4. 在 **Hierarchy** 中删除临时实例
-
-#### 6D. 配置 MapPanel（全屏地图面板）
-
-> 放在**持久化 Canvas** 下（即始终存在的 UI Canvas，不随场景切换销毁）。
-> 运行时按 M 键打开/关闭。
-
-**在哪里操作**：在 **Hierarchy** 中的场景 Canvas 下
-
-1. 在 Canvas 下（建议创建名为 `PersistentUI` 的 Canvas）右键 → Create Empty，命名为 `MapPanel`
-2. 设置 `MapPanel` 的 RectTransform：铺满全屏（Anchors 设为 stretch/stretch）
-3. 选中 `MapPanel` → Add Component → `MapPanel`
-4. 在 `MapPanel` 下创建以下子物体：
-
-```
-MapPanel                                     ← 全屏铺满，Add Component → MapPanel 脚本
-│
-├── ScrollView (ScrollRect 组件)             ← 支持拖拽平移
-│   ├── Viewport (Image + Mask)              ← 裁剪可视区域
-│   │   └── MapContent (RectTransform)       ← 房间节点和连接线的容器
-│   └── PlayerIcon (Image, 小三角/圆点)      ← 标记玩家位置
-│
-└── FloorTabContainer (HorizontalLayoutGroup) ← 楼层切换按钮的容器
-```
-
-2. 选中 `MapPanel` 根，在 Inspector 中绑定 `MapPanel` 脚本的字段：
-
-   | Inspector 字段 | 拖入来源 |
-   |---------------|---------|
-   | `_inputActions` | **Project** 窗口 → `Assets/Input/ShipActions.inputactions` |
-   | `_scrollRect` | Hierarchy → `ScrollView` 上的 ScrollRect 组件 |
-   | `_mapContent` | Hierarchy → `MapContent` 的 RectTransform |
-   | `_floorTabContainer` | Hierarchy → `FloorTabContainer` 的 RectTransform |
-   | `_roomWidgetPrefab` | **Project** 窗口 → 步骤 6A 的 `MapRoomWidget.prefab` |
-   | `_connectionLinePrefab` | **Project** 窗口 → 步骤 6B 的 `MapConnectionLine.prefab` |
-   | `_floorTabPrefab` | **Project** 窗口 → 步骤 6C 的 `FloorTabButton.prefab` |
-   | `_playerIcon` | Hierarchy → `PlayerIcon` 的 RectTransform |
-
-3. 无需手动隐藏——`MapPanel` 脚本的 `Awake()` 会自动 `SetActive(false)`
-
-#### 6E. 配置 MinimapHUD（角落小地图）
-
-> 同样放在**持久化 Canvas** 下，锚定到屏幕右下角，始终显示。
-
-**在哪里操作**：在 **Hierarchy** 中的场景 Canvas 下
-
-1. 在 Canvas 下右键 → Create Empty，命名为 `MinimapHUD`
-2. 设置 RectTransform：锚点设为右下角，大小设为约 200×200
-3. 选中 `MinimapHUD` → Add Component → `MinimapHUD`
-4. 在 `MinimapHUD` 下创建以下子物体：
-
-```
-MinimapHUD (锚点 = 右下角, 大小约 200×200)   ← Add Component → MinimapHUD 脚本
-│
-├── Background (Image)                        ← 半透明黑色背景 (RGBA 0,0,0,150)
-├── Content (RectTransform)                   ← 房间/连接线的渲染容器
-└── FloorLabel (TextMeshPro)                  ← 显示当前楼层 "F0" / "F-1"
-```
-
-2. 选中 `MinimapHUD` 根，绑定脚本字段：
-
-   | Inspector 字段 | 拖入来源 |
-   |---------------|---------|
-   | `_content` | Hierarchy → `Content` 的 RectTransform |
-   | `_background` | Hierarchy → `Background` 的 Image |
-   | `_miniRoomWidgetPrefab` | **Project** → `MapRoomWidget.prefab`（同 6A，可复用） |
-   | `_miniConnectionLinePrefab` | **Project** → `MapConnectionLine.prefab`（同 6B） |
-   | `_worldToMinimapScale` | 数值 `2`（根据实际地图大小调） |
-   | `_visibleRadius` | 数值 `30`（可视范围半径） |
-
-#### 6F. 确认场景管理器 GameObject
+#### 6D. 确认场景管理器 GameObject
 
 > 以下管理器组件需要挂在场景中的 GameObject 上。
 
@@ -740,6 +685,244 @@ MinimapHUD (锚点 = 右下角, 大小约 200×200)   ← Add Component → Mini
 
 ---
 
+### 第十步：配置 Phase 6 — 世界时钟与动态关卡（一键生成 + 手动配置）
+
+> **概览**：Phase 6 包含世界时钟（时间循环）、阶段管理（辐射潮/平静期/风暴期/寂静时）、
+> 定时行为（ScheduledBehaviour）、永久世界变化（WorldEventTrigger）、Tilemap 变体切换、
+> 全局氛围控制（后处理+粒子+BGM+低通滤波）和房间变体系统。
+>
+> **一键创建** 可以完成 80% 的配置。剩余 20% 是需要手动赋值的美术/音频资源。
+
+---
+
+#### 10A. 一键创建 Phase 6 资产和场景管理器（自动）
+
+1. 在 **Unity 菜单栏**中，点击 `ProjectArk` → `Level` → `Phase 6: Setup All (Assets + Scene)`
+2. 等待弹窗确认 → 点击 "OK"
+3. 检查结果：
+
+   **在 Project 窗口中**（`Assets/_Data/Level/WorldPhases/`）：
+
+   | 资产文件 | 阶段名 | 时间范围（归一化） | 氛围色 | 特殊效果 |
+   |---------|--------|-------------------|--------|---------|
+   | `Phase_0_RadiationTide.asset` | Radiation Tide（辐射潮） | 0.000 ~ 0.208 | 偏红 | — |
+   | `Phase_1_CalmPeriod.asset` | Calm Period（平静期） | 0.208 ~ 0.500 | 暖白 | 敌人伤害/血量 ×0.9 |
+   | `Phase_2_StormPeriod.asset` | Storm Period（风暴期） | 0.500 ~ 0.750 | 偏蓝灰 | 低通滤波 800Hz，敌人 ×1.3/×1.2 |
+   | `Phase_3_SilentHour.asset` | Silent Hour（寂静时） | 0.750 ~ 1.000 | 偏紫暗 | 隐藏通道可见 |
+
+   **在 Hierarchy 中**：
+
+   ```
+   Managers
+   ├── ... (已有的管理器)
+   ├── WorldClock           ← WorldClock 组件，周期 1200s，倍速 1x
+   ├── WorldPhaseManager    ← WorldPhaseManager 组件，_phases 数组已连接 4 个 SO
+   └── AmbienceController   ← AmbienceController 组件（Volume/粒子待手动赋值）
+   ```
+
+> 如果 `Managers` GameObject 不存在，工具会自动创建。
+> 如果组件已存在，工具会跳过不重复创建（幂等设计）。
+
+---
+
+#### 10B. 手动配置 AmbienceController（可选，提升体验）
+
+> AmbienceController 的后处理和粒子引用需要手动赋值。不赋值也不影响其他功能运行。
+
+**在哪里操作**：在 **Hierarchy** 中选中 `Managers/AmbienceController` GameObject
+
+| Inspector 字段 | 赋值方式 | 说明 |
+|---------------|---------|------|
+| `_postProcessVolume` | 从 Hierarchy 拖入场景中的 **Global Volume** | 用于 Vignette 和 ColorAdjustments 渐变。如果场景中没有 Volume，创建一个：Hierarchy → 右键 → Volume → Global Volume |
+| `_phaseParticles` | 设置数组大小为 4，每个元素对应一个阶段的 ParticleSystem | 索引 0 = 辐射潮粒子，1 = 平静期（可为空），2 = 风暴期粒子，3 = 寂静时粒子。不需要的阶段留空即可 |
+| `_postProcessTransitionDuration` | 2.0（默认） | 后处理渐变时长 |
+| `_bgmCrossfadeDuration` | 2.0（默认） | BGM 交叉淡入时长 |
+
+**为 WorldPhaseSO 配置 BGM**（可选）：
+
+1. 在 **Project 窗口**选中 `Assets/_Data/Level/WorldPhases/Phase_2_StormPeriod.asset`
+2. 在 Inspector 中将你的风暴 BGM AudioClip 拖入 `_phaseBGM` 字段
+3. 对其他阶段重复此操作（每个阶段可以有不同的 BGM，也可以留空表示不切换）
+
+---
+
+#### 10C. 配置 ScheduledBehaviour（定时行为）
+
+> 用于让 NPC、门、通道等按世界阶段自动启用/禁用。
+
+**在哪里操作**：在 **Hierarchy** 中，选中需要按时间控制的 GameObject
+
+**示例：平静期 NPC 交易**
+
+1. 在房间内创建一个 NPC GameObject（或任意你想控制的对象）
+2. 在该 GameObject 上（或其父物体上）Add Component → `ScheduledBehaviour`
+3. Inspector 配置：
+
+   | 字段 | 值 | 说明 |
+   |------|----|------|
+   | `_activePhaseIndices` | `[1]`（数组大小 1，值为 1） | 索引 1 = Calm Period，只在平静期显示 |
+   | `_targetGameObject` | 拖入 NPC 的 GameObject（或留空表示控制自身子物体） | 被控制的目标 |
+   | `_invertLogic` | false | false = 在指定阶段启用。true 则反转 |
+
+**示例：风暴期隐藏通道**
+
+   | 字段 | 值 | 说明 |
+   |------|----|------|
+   | `_activePhaseIndices` | `[3]`（索引 3 = Silent Hour） | 只在寂静时显示 |
+   | `_targetGameObject` | 拖入隐藏通道 GameObject | |
+   | `_invertLogic` | false | |
+
+---
+
+#### 10D. 配置 Door Locked_Schedule（定时门）
+
+> 让门按世界阶段自动开关。例如某扇门只在"平静期"打开。
+
+**在哪里操作**：在 **Hierarchy** 中选中一个 Door GameObject
+
+1. 在 Door 组件的 Inspector 中：
+   - 将 `_initialState` 设为 **Locked_Schedule**
+   - 展开 `_openDuringPhases` 数组，设置大小为 1，值为 `1`（Calm Period）
+2. Play Mode 验证：
+   - 当世界时间进入平静期 → 门自动变为 Open
+   - 当世界时间离开平静期 → 门自动变为 Locked_Schedule
+
+> **注意**：只有 `_initialState = Locked_Schedule` 的门才会响应阶段变化。普通门不受影响。
+
+---
+
+#### 10E. 配置 WorldEventTrigger（永久世界变化）
+
+> 用于 Boss 击杀后开放新区域、地形塌陷等不可逆变化。
+
+**在哪里操作**：在 **Hierarchy** 中创建新 GameObject
+
+1. 创建空 GameObject，命名如 `PostBoss_OpenNewArea`
+2. Add Component → `WorldEventTrigger`
+3. Inspector 配置：
+
+   | 字段 | 值 | 说明 |
+   |------|----|------|
+   | `_requiredWorldStage` | 1 | 当 WorldProgressManager 达到 stage 1（击杀 Boss）时触发 |
+   | `_enableOnTrigger` | 拖入要开放的新区域 GameObject（如被禁用的新通道） | 触发后启用 |
+   | `_disableOnTrigger` | 拖入要移除的旧障碍 GameObject（如挡路的石块） | 触发后禁用 |
+   | `_onTriggered` | （可选）点 `+` 添加 UnityEvent 回调 | 可调用 TilemapVariantSwitcher.SwitchToVariant |
+   | `_persistenceKey` | 留空（默认用 gameObject.name）或填自定义 key | 存档持久化标识 |
+
+> **持久化**：WorldEventTrigger 的触发状态通过 `ProgressSaveData.Flags` 保存。
+> 关闭游戏再打开，已触发的变化不会丢失。
+
+---
+
+#### 10F. 配置 TilemapVariantSwitcher（Tilemap 变体）
+
+> 用于结构性地形变化（如塌陷前/塌陷后的两套 Tilemap）。
+
+**在哪里操作**：在 **Hierarchy** 中
+
+1. 创建一个空 GameObject，命名如 `TerrainVariants`
+2. 在其下创建两个子物体，分别放置不同的 Tilemap：
+   ```
+   TerrainVariants
+   ├── BeforeCollapse    ← 子物体 0：塌陷前的 Tilemap
+   └── AfterCollapse     ← 子物体 1：塌陷后的 Tilemap（初始禁用）
+   ```
+3. 在 `TerrainVariants` 上 Add Component → `TilemapVariantSwitcher`
+4. Inspector 配置：
+   - `_defaultVariantIndex` = `0`（默认显示 BeforeCollapse）
+5. 配合 WorldEventTrigger 使用：
+   - 在 WorldEventTrigger 的 `_onTriggered` UnityEvent 中，点 `+`
+   - 拖入 `TerrainVariants` GameObject
+   - 选择函数 `TilemapVariantSwitcher > SwitchToVariant`
+   - 参数填 `1`（切换到 AfterCollapse）
+
+---
+
+#### 10G. 配置 Room 变体（可选）
+
+> 让房间在不同世界阶段有不同的敌人配置和环境。
+
+**在哪里操作**：在 **Hierarchy** 中选中一个 Room GameObject + **Project 窗口**创建资产
+
+1. 先创建 RoomVariantSO 资产：
+   - Project 窗口 → 右键 → `Create` → `ProjectArk` → `Level` → `Room Variant`
+   - 命名如 `Room_Hub_NightVariant`
+   - Inspector 配置：
+
+   | 字段 | 值 | 说明 |
+   |------|----|------|
+   | `_variantName` | "Night Config" | 变体名称 |
+   | `_activePhaseIndices` | `[2, 3]`（风暴期和寂静时） | 在这些阶段激活此变体 |
+   | `_overrideEncounter` | （可选）拖入一个夜间专用 EncounterSO | 覆盖默认怪物配置 |
+   | `_environmentIndex` | 0 | 启用 Room 的 `_variantEnvironments[0]` 子物体 |
+
+2. 在 Room GameObject 的 Inspector 中：
+   - 展开 `_variants` 数组，拖入上面创建的 RoomVariantSO
+   - 展开 `_variantEnvironments` 数组，拖入对应的环境子物体（如不同的灯光/装饰 GameObject）
+
+> 当世界阶段切换到匹配的 phase 时，Room 会自动激活对应变体的环境子物体并使用变体的遭遇配置。
+
+---
+
+#### 10H. 快速测试建议
+
+> 默认周期是 1200 秒（20 分钟），太长不便于测试。
+
+**加速测试方法**：
+
+1. 在 Hierarchy 选中 `Managers/WorldClock`
+2. 在 Inspector 中将 `_cycleDuration` 临时改为 `60`（1 分钟完整周期）
+3. 或者将 `_timeSpeed` 改为 `20`（20 倍速，1 分钟跑完 20 分钟的周期）
+4. 进入 Play Mode，观察 Console 日志：
+   - `[WorldPhaseManager] Phase changed: Radiation Tide → Calm Period (index 1)` — 阶段切换
+   - `[WorldClock] Cycle completed` — 周期完成
+
+---
+
+### 第十一步：Phase 6 Play Mode 功能验证
+
+#### 11A. 世界时钟基础
+
+| # | 测试项 | 操作 | 预期 |
+|---|--------|------|------|
+| G5 | 阶段切换日志 | 加速时钟后等待 | Console 依次输出 4 个阶段的切换日志 |
+| G6 | 时间递增 | 观察 WorldClock Inspector | `CurrentTime` 持续增长，到达 CycleDuration 后重置 |
+| G6 | 周期完成 | 等待完整周期 | Console 输出 `[WorldClock]` cycle completed 日志 |
+
+#### 11B. 阶段驱动功能
+
+| # | 测试项 | 操作 | 预期 |
+|---|--------|------|------|
+| G7 | ScheduledBehaviour | 配置一个只在 Calm 显示的 GO | GO 在平静期出现，其他阶段消失 |
+| G8 | Door Locked_Schedule | 配置定时门 | 门在配置的阶段自动开/关 |
+| G13 | Room 变体 | 配置房间变体 | 阶段切换时环境子物体自动切换 |
+
+#### 11C. 永久世界变化
+
+| # | 测试项 | 操作 | 预期 |
+|---|--------|------|------|
+| G10 | WorldEventTrigger | 手动调用 `LevelEvents.RaiseWorldStageChanged(1)` 或击杀 Boss | 配置的 GO 启用/禁用 |
+| G9 | TilemapVariantSwitcher | 由 WorldEventTrigger 调用 | 子 Tilemap 从变体 0 切换到变体 1 |
+| G10 | 持久化 | 触发后存档 → 重新加载 | 触发状态保持，不重复触发 |
+
+#### 11D. 氛围系统
+
+| # | 测试项 | 操作 | 预期 |
+|---|--------|------|------|
+| G12 | 后处理渐变 | 阶段切换（需配置 Volume） | Vignette 强度 + 色调过滤渐变 |
+| G12 | BGM 切换 | 阶段切换（需配置 PhaseBGM） | 音乐交叉淡入 |
+| G12 | 低通滤波 | 进入风暴期 | 声音变闷（低通滤波 800Hz） |
+| G12 | 粒子切换 | 阶段切换（需配置 _phaseParticles） | 对应阶段的环境粒子播放/停止 |
+
+#### 11E. 存档集成
+
+| # | 测试项 | 操作 | 预期 |
+|---|--------|------|------|
+| G11 | 时钟存档 | 在某阶段激活存档点 → 退出重进 | WorldClock 恢复到存档时的时间 |
+| G11 | 阶段存档 | 同上 | WorldPhaseManager 恢复到存档时的阶段 |
+
+---
+
 ## 常见问题排查
 
 | 现象 | 可能原因 | 解决方案 |
@@ -755,3 +938,12 @@ MinimapHUD (锚点 = 右下角, 大小约 200×200)   ← Add Component → Mini
 | Arena 不刷怪 | EncounterSO 的 Entry.EnemyPrefab 为空 | 赋值有效的敌人 Prefab |
 | 存档无效 | SaveBridge 未在场景中 | 添加 SaveBridge 到管理器 GO |
 | Scaffolder 菜单不可见 | Editor asmdef 配置问题 | 确认 `ProjectArk.Level.Editor.asmdef` 引用正确 |
+| Phase 6 菜单不可见 | Editor asmdef 缺少引用 | 确认 `ProjectArk.Level.Editor.asmdef` 引用 `ProjectArk.Level` |
+| WorldPhaseManager 无阶段 | 未运行资产创建工具 | 先运行 `ProjectArk > Level > Phase 6: Create World Clock Assets` |
+| 阶段不切换 | WorldClock 未在场景中 | 确认 Managers 下有 WorldClock 组件 |
+| 阶段切换太慢看不到 | 默认 1200s 周期 | 临时把 `_cycleDuration` 改为 60，或 `_timeSpeed` 改为 20 |
+| AmbienceController 无效果 | Volume 未赋值 | 将场景 Global Volume 拖入 `_postProcessVolume` 字段 |
+| ScheduledBehaviour 无反应 | `_activePhaseIndices` 未填 | 确认数组有值且对应正确的阶段索引 |
+| Door Locked_Schedule 不开关 | `_initialState` 不是 Locked_Schedule | 必须设为 Locked_Schedule 才会响应阶段 |
+| WorldEventTrigger 重复触发 | 存档 Flag 丢失 | 确认 SaveBridge 在场景中且正常保存 |
+| Room 变体不切换 | `_variants` 数组为空 | 需创建 RoomVariantSO 并拖入 Room 的 `_variants` |

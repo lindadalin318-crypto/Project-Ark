@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 79129d4c8cd23489b889214f74180743, type: 3}
+  m_Name: Phase_3_SilentHour
+  m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.WorldPhaseSO
+  _phaseName: Silent Hour
+  _description: "\u5BC2\u9759\u65F6\u3002\u4F4E\u80FD\u89C1\u5EA6\u4F46\u9690\u85CF\u901A\u9053\u51FA\u73B0\uFF0C\u7A00\u6709
+    NPC \u53EA\u5728\u6B64\u65F6\u6BB5\u51FA\u6CA1\u3002"
+  _startTime: 0.75
+  _endTime: 1
+  _ambientColor: {r: 0.6, g: 0.55, b: 0.75, a: 1}
+  _phaseBGM: {fileID: 0}
+  _applyLowPassFilter: 0
+  _lowPassCutoffHz: 22000
+  _enemyDamageMultiplier: 1
+  _enemyHealthMultiplier: 1
+  _hiddenPathsVisible: 1

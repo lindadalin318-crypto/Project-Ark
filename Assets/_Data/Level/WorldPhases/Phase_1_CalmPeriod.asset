@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 79129d4c8cd23489b889214f74180743, type: 3}
+  m_Name: Phase_1_CalmPeriod
+  m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.WorldPhaseSO
+  _phaseName: Calm Period
+  _description: "\u5E73\u9759\u671F\u3002\u6700\u4F73\u63A2\u7D22\u548C\u4EA4\u6613\u7A97\u53E3\u3002NPC
+    \u51FA\u6765\u6446\u644A\uFF0C\u67D0\u4E9B\u5B9A\u65F6\u95E8\u6253\u5F00\u3002"
+  _startTime: 0.208
+  _endTime: 0.5
+  _ambientColor: {r: 1, g: 1, b: 0.95, a: 1}
+  _phaseBGM: {fileID: 0}
+  _applyLowPassFilter: 0
+  _lowPassCutoffHz: 22000
+  _enemyDamageMultiplier: 0.9
+  _enemyHealthMultiplier: 0.9
+  _hiddenPathsVisible: 0

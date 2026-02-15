@@ -6,7 +6,9 @@
         "ProjectArk.Core",
         "ProjectArk.Combat",
         "ProjectArk.Ship",
-        "ProjectArk.Enemy"
+        "ProjectArk.Enemy",
+        "Unity.TextMeshPro",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [
         "Editor"

@@ -3093,3 +3093,87 @@ Assets/Scripts/Level/
 **目的：** CameraConfiner 的 PolygonCollider2D 设计上仅供 Cinemachine Confiner 读取边界，但因为 `isTrigger = false` 且 Layer = Default，Physics2D 将其视为实体碰撞墙壁，导致飞船被推到房间外无法进入。改为 `Ignore Raycast` 层后该碰撞体不再参与任何物理碰撞。
 
 **技术：** `GameObject.layer = 2`（Ignore Raycast 内置层），Editor MenuItem + `Undo.RecordObject` 批量修复。
+
+---
+
+### MapUIBuilder — Map UI 一键生成工具
+
+**文件：**
+
+| 路径 | 操作 | 用途 |
+|------|------|------|
+| `Assets/Scripts/Level/Editor/MapUIBuilder.cs` | 新建 | 两个 MenuItem：`ProjectArk > Map > Build Map UI Prefabs`（创建 3 个 Prefab）和 `ProjectArk > Map > Build Map UI Scene`（创建 MapPanel + MinimapHUD 场景层级并连线所有引用） |
+| `Assets/Scripts/Level/Editor/ProjectArk.Level.Editor.asmdef` | 修改 | 添加 `Unity.TextMeshPro` 和 `Unity.InputSystem` 引用 |
+
+**技术要点：**
+- 遵循 UICanvasBuilder 的模式：`WireField(Component, string, Object)` 绑定 SerializeField，`PrefabUtility.SaveAsPrefabAsset()` 保存 Prefab
+- 创建 3 个 Prefab：MapRoomWidget（含 Background/IconOverlay/CurrentHighlight/FogOverlay/Label 5 个子物体）、MapConnectionLine（含 Image）、FloorTabButton（含 Button + Label）
+- MapPanel 场景层级：CanvasGroup + ScrollRect（Viewport + MapContent）+ FloorTabBar（HorizontalLayoutGroup）+ PlayerIcon（菱形旋转 45°）
+- MinimapHUD 场景层级：锚定右下角 200×200，含 Background + Border + 带 Mask 的 Content + FloorLabel
+- 自动查找 ShipActions InputActionAsset 并赋值
+- 幂等设计：已存在的 Prefab / 组件不会重复创建
+
+---
+
+### Level Phase 6: 世界时钟与动态关卡系统 (L20-L27) — 2026-02-15 14:30
+
+**新建文件：**
+
+| 路径 | 用途 |
+|------|------|
+| `Assets/Scripts/Level/WorldClock/WorldClock.cs` | L20: 游戏内时钟核心，ServiceLocator 注册，可配置周期长度(默认1200s)、时间倍速、暂停恢复。每帧广播 `LevelEvents.OnTimeChanged(float normalizedTime)`，周期完成时广播 `OnCycleCompleted(int cycleCount)` |
+| `Assets/Scripts/Level/WorldClock/WorldPhaseManager.cs` | L21: 世界阶段管理器，ServiceLocator 注册，持有 `WorldPhaseSO[]` 阶段定义列表，监听 `OnTimeChanged` 判定当前阶段，阶段切换时广播 `LevelEvents.OnPhaseChanged(int, string)` |
+| `Assets/Scripts/Level/Data/WorldPhaseSO.cs` | L21: 世界时间阶段 SO 定义，含 PhaseName、StartTime/EndTime(归一化0..1)、AmbientColor、PhaseBGM、低通滤波器开关、敌人伤害/生命倍率、隐藏通道可见性。支持跨午夜时间范围 |
+| `Assets/Scripts/Level/DynamicWorld/ScheduledBehaviour.cs` | L23: 通用阶段驱动组件，配置 `_activePhaseIndices[]` 指定在哪些阶段启用目标 GameObject。支持反转逻辑。用于 NPC 交易窗口、定时门、隐藏通道等 |
+| `Assets/Scripts/Level/DynamicWorld/WorldEventTrigger.cs` | L24: 进度事件驱动的永久世界变化组件。监听 `OnWorldStageChanged`，当达到 `_requiredWorldStage` 时一次性触发：启用/禁用指定 GameObject + UnityEvent 回调。通过 `ProgressSaveData.Flags` 持久化触发状态 |
+| `Assets/Scripts/Level/DynamicWorld/TilemapVariantSwitcher.cs` | L26: Tilemap 变体切换器，管理多个子 Tilemap（如塌陷前/塌陷后），`SwitchToVariant(int)` 公共 API 供 UnityEvent 调用 |
+| `Assets/Scripts/Level/Data/RoomVariantSO.cs` | L25: 房间变体 SO 定义，含 VariantName、`ActivePhaseIndices[]`（激活阶段）、`OverrideEncounter`（覆盖怪物配置）、`EnvironmentIndex`（环境子物体索引） |
+| `Assets/Scripts/Level/DynamicWorld/AmbienceController.cs` | L27: 全局氛围控制器，ServiceLocator 注册。监听 `OnPhaseChanged`，驱动 URP Volume 后处理渐变（Vignette + ColorAdjustments via PrimeTween）、环境粒子启停、BGM crossfade（AudioManager）、低通滤波器开关 |
+
+**修改文件：**
+
+| 路径 | 变更 |
+|------|------|
+| `Assets/Scripts/Core/LevelEvents.cs` | 新增 `OnTimeChanged(float)`、`OnCycleCompleted(int)`、`OnPhaseChanged(int, string)` 三组事件 + Raise 方法 |
+| `Assets/Scripts/Core/Save/SaveData.cs` | `ProgressSaveData` 新增 `WorldClockTime`(float)、`WorldClockCycle`(int)、`CurrentPhaseIndex`(int) 三个字段 |
+| `Assets/Scripts/Level/SaveBridge.cs` | `CollectProgressData` 新增 WorldClock + WorldPhaseManager 数据收集；`DistributeProgressData` 新增 WorldClock 时间恢复 + WorldPhaseManager 阶段恢复 |
+| `Assets/Scripts/Level/Room/Door.cs` | 新增 `_openDuringPhases[]` 配置字段；新增 `Start()`/`OnDestroy()` 订阅 `OnPhaseChanged`；新增 `EvaluateSchedule()` 在阶段切换时自动在 `Open`/`Locked_Schedule` 间切换 |
+| `Assets/Scripts/Level/Room/Room.cs` | 新增 `_variants[]` (RoomVariantSO) + `_variantEnvironments[]` 配置字段；新增 `Start()`/`OnDestroy()` 订阅 `OnPhaseChanged`；新增 `ApplyVariantForPhase()` 按阶段切换遭遇配置和环境子物体；`ActivateEnemies()` 改用 `ActiveEncounter` 属性支持变体覆盖 |
+| `Assets/Scripts/Level/ProjectArk.Level.asmdef` | 新增 `Unity.RenderPipelines.Core.Runtime`、`Unity.RenderPipelines.Universal.Runtime` 引用（AmbienceController 需要访问 Volume/Vignette/ColorAdjustments） |
+
+**技术要点：**
+- 所有管理器遵循 ServiceLocator 注册模式（Awake 注册、OnDestroy 注销）
+- 事件卫生：所有 `OnPhaseChanged`/`OnWorldStageChanged` 订阅均在 `OnDestroy` 中取消
+- 异步纪律：AmbienceController 使用 `async UniTaskVoid` + `CancellationTokenSource` + `destroyCancellationToken` 链接
+- PrimeTween 模式：后处理渐变使用 `Tween.Custom(..., useUnscaledTime: true, ease: Ease.InOutSine)` 与 DoorTransitionController 一致
+- 数据驱动：WorldPhaseSO 支持跨午夜时间范围（`ContainsTime` 方法处理 start > end 的环绕情况）
+- 运行时数据隔离：WorldPhaseSO 仅被读取，运行时状态由 WorldPhaseManager 管理
+- WorldEventTrigger 持久化：通过 `ProgressSaveData.Flags` 以 key-value 形式存储触发状态，确保保存/加载后不重复触发
+
+**目的：** 完成关卡模块 Phase 6（L20-L27），实现混合时间模型——事件驱动大阶段 + 轻量循环小周期。为"活的世界"体验提供完整系统支撑：定时门/NPC/隐藏通道（ScheduledBehaviour）、Boss击杀→永久世界变化（WorldEventTrigger）、Tilemap结构改变（TilemapVariantSwitcher）、全局氛围渐变（AmbienceController）。
+
+---
+
+### Phase6AssetCreator 一键配置工具 + 验收清单 Phase 6 章节 — 2026-02-15 15:30
+
+**新建文件：**
+
+| 路径 | 用途 |
+|------|------|
+| `Assets/Scripts/Level/Editor/Phase6AssetCreator.cs` | 三个 MenuItem：`Phase 6: Create World Clock Assets`（创建 4 个 WorldPhaseSO）、`Phase 6: Build Scene Managers`（创建 WorldClock/WorldPhaseManager/AmbienceController 管理器并连线）、`Phase 6: Setup All`（一键执行以上两步） |
+
+**修改文件：**
+
+| 路径 | 变更 |
+|------|------|
+| `Docs/VerificationChecklist_Phase3-5_ShipFeel.md` | 版本升级到 v2.0。新增 G 分组（Phase 6 共 13 项检查）、第十步（Phase 6 详细配置，含 10A-10H 八个子步骤）、第十一步（Phase 6 Play Mode 验证，含 5 个子表）、常见问题排查追加 10 条 Phase 6 相关条目 |
+
+**技术要点：**
+- Phase6AssetCreator 遵循 LevelAssetCreator 的模式：`SerializedObject` + `FindProperty` 设置 SO 字段
+- 幂等设计：已存在的资产和组件不会重复创建
+- 4 个 WorldPhaseSO 的时间范围按 GDD 定义分配：辐射潮(0~0.208)、平静期(0.208~0.5)、风暴期(0.5~0.75)、寂静时(0.75~1.0)
+- 场景管理器创建为 Managers 的子物体，WorldPhaseManager 自动连线 4 个 SO
+
+**目的：** 提供一键配置工具降低 Phase 6 系统的配置门槛；在验收清单中提供完整的分步操作指南，覆盖所有 Phase 6 组件的配置和验证。
+
+---

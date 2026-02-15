@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 79129d4c8cd23489b889214f74180743, type: 3}
+  m_Name: Phase_0_RadiationTide
+  m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.WorldPhaseSO
+  _phaseName: Radiation Tide
+  _description: "\u8F90\u5C04\u6F6E\u6D8C\u3002\u67D0\u4E9B\u533A\u57DF\u51FA\u73B0\u8F90\u5C04\u4F24\u5BB3\uFF0CNPC
+    \u8EB2\u85CF\uFF0C\u7279\u6B8A\u654C\u4EBA\u51FA\u6CA1\u3002"
+  _startTime: 0
+  _endTime: 0.208
+  _ambientColor: {r: 1, g: 0.6, b: 0.6, a: 1}
+  _phaseBGM: {fileID: 0}
+  _applyLowPassFilter: 0
+  _lowPassCutoffHz: 22000
+  _enemyDamageMultiplier: 1
+  _enemyHealthMultiplier: 1
+  _hiddenPathsVisible: 0

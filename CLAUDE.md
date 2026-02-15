@@ -3,7 +3,7 @@
 这是一个 **Top-Down 2D (俯视角) 动作冒险游戏**，融合了 **银河恶魔城 (Metroidvania)** 的探索结构与 **类魂 (Soulslike)** 的叙事氛围。  
 核心体验是驾驶飞船"金丝雀号"在手工打造的异星关卡中探索，通过组合"星图"部件（类似 Roguelike 的随机池，但用于 RPG 式的永久构建）来定制武器。Unity 6 + URP 2D + New Input System。
 
-**当前阶段**：已完成核心战斗循环（射击 + 星图编织 + 热量）、敌人 AI 三层架构（躯壳/大脑/导演，Phase 1-3 全部完成）、星图 UI + 拖拽装备、架构基建大修（UniTask + PrimeTween + ServiceLocator + 统一伤害管线 + SaveManager + AudioManager + CombatEvents 事件总线）。**当前正在进行关卡模块构建**（LevelModulePlan v3.0 已定稿）。
+**当前阶段**：已完成核心战斗循环（射击 + 星图编织 + 热量）、敌人 AI 三层架构（躯壳/大脑/导演，Phase 1-3 全部完成）、星图 UI + 拖拽装备、架构基建大修（UniTask + PrimeTween + ServiceLocator + 统一伤害管线 + SaveManager + AudioManager + CombatEvents 事件总线）、**关卡模块全部完成**（Phase 1-6，含世界时钟、动态关卡、地图、存档集成）。**当前进入场景配置与验证阶段**。
 
 ---
 
@@ -90,7 +90,7 @@
 - **数据资产 (Data)**: `*StatsSO` 全系列, CSV→SO 导入管线 (`BestiaryImporter`)
 - **UI**: 星图面板 (`StarChartPanel` + 拖拽装备), 热量条 (`HeatBarHUD`), 血条 (`HealthBarHUD`), 编织态过渡 (`WeavingStateTransition`)
 - **基建 (Infrastructure)**: 服务定位 (`ServiceLocator`), 伤害管线 (`DamagePayload` + `DamageCalculator`), 存档 (`SaveManager` + `PlayerSaveData`), 音频 (`AudioManager`), 跨程序集事件总线 (`CombatEvents`), 数据驱动 AI 转换 (`TransitionRuleEvaluator`)
-- **关卡系统 (Level)**: [计划已定稿，开始实现] 房间系统 (`Room` + `RoomManager` + `Door`)，进度管理 (`CheckpointSystem` + `LockKeySystem` + `WorldProgressManager`)，战斗房间 (`EncounterSystem` + `WaveSpawnStrategy`)，世界时钟 (`WorldClock` + `WorldPhaseManager`)，动态关卡 (`ScheduledBehaviour` + `WorldEventTrigger`)，多层结构（FloorLevel + 层间过渡）。架构：单场景 + Tilemap 房间 + Cinemachine Confiner。详见 `Docs/LevelModulePlan.md` v3.0
+- **关卡系统 (Level)**: [全部完成] 房间系统 (`Room` + `RoomManager` + `Door`)，进度管理 (`CheckpointSystem` + `LockKeySystem` + `WorldProgressManager`)，战斗房间 (`EncounterSystem` + `WaveSpawnStrategy` + `ArenaController` + `Hazard`)，地图 (`MinimapManager` + `MapPanel` + `MinimapHUD`)，世界时钟 (`WorldClock` + `WorldPhaseManager` + `WorldPhaseSO`)，动态关卡 (`ScheduledBehaviour` + `WorldEventTrigger` + `TilemapVariantSwitcher` + `AmbienceController`)，房间变体 (`RoomVariantSO`)，多层结构（FloorLevel + 层间过渡 + `NarrativeFallTrigger`），存档集成 (`SaveBridge`)。架构：单场景 + Tilemap 房间 + Cinemachine Confiner。详见 `Docs/LevelModulePlan.md` v3.0
 
 ---
 
@@ -270,15 +270,20 @@ Assets/
 | 补完 | 韧性/顿帧/群聚算法/血条 HUD/拖拽装备 | 已完成 |
 | 架构基建大修 | UniTask + PrimeTween + ServiceLocator + 伤害管线 + 存档 + 音频 + 事件总线 + 数据驱动AI + 单元测试 | 已完成 |
 
+### 已完成（续）
+
+| 阶段 | 内容 | 状态 |
+|------|------|------|
+| 关卡 Phase 1 (L1-L5) | Room + RoomManager + Door + Camera Confiner（基础结构） | 已完成 |
+| 关卡 Phase 2 (L6-L9.5) | Checkpoint + LockKey + Death&Respawn + WorldProgressManager（进度系统） | 已完成 |
+| 关卡 Phase 3 (L10-L12) | EncounterSystem + Arena + Hazard（战斗房间） | 已完成 |
+| 关卡 Phase 4 (L13-L15) | Minimap + SaveSystem集成 + 示巴星关卡布局 | 已完成 |
+| 关卡 Phase 5 (L16-L19) | 多层结构（FloorLevel + 层间过渡演出 + 小地图楼层切换） | 已完成 |
+| 关卡 Phase 6 (L20-L27) | 世界时钟 + 动态关卡（WorldClock + WorldPhaseManager + ScheduledBehaviour + WorldEventTrigger + TilemapVariantSwitcher + AmbienceController + Room 变体） | 已完成 |
+
 ### 进行中
 
-- **关卡模块构建** (LevelModulePlan v3.0)：
-  - Phase 1 (L1-L5)：Room + RoomManager + Door + Camera Confiner（基础结构）
-  - Phase 2 (L6-L9.5)：Checkpoint + LockKey + Death&Respawn + WorldProgressManager（进度系统）
-  - Phase 3 (L10-L12)：EncounterSystem + Arena + Hazard（战斗房间）
-  - Phase 4 (L13-L15)：Minimap + SaveSystem集成 + 示巴星关卡布局
-  - Phase 5 (L16-L19)：多层结构（FloorLevel + 层间过渡演出 + 小地图楼层切换）
-  - Phase 6 (L20-L27)：世界时钟 + 动态关卡（WorldClock + WorldPhaseManager + ScheduledBehaviour + WorldEventTrigger）
+- **场景配置与验证**：在 Unity Editor 中配置 WorldPhaseSO 资产（4个阶段）、AmbienceController 引用、场景中挂载 WorldClock/WorldPhaseManager/AmbienceController 管理器
 
 ---
 

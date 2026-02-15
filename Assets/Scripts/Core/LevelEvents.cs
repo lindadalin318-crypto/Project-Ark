@@ -101,6 +101,45 @@ namespace ProjectArk.Core
             OnFloorChanged?.Invoke(newFloor);
         }
 
+        // ──────────────────── World Clock Events ────────────────────
+
+        /// <summary>
+        /// Broadcast every frame with the normalized world time (0..1).
+        /// Published by WorldClock, consumed by WorldPhaseManager.
+        /// </summary>
+        public static event Action<float> OnTimeChanged;
+
+        public static void RaiseTimeChanged(float normalizedTime)
+        {
+            OnTimeChanged?.Invoke(normalizedTime);
+        }
+
+        /// <summary>
+        /// Broadcast when the world clock completes a full cycle.
+        /// Params: new cycle count.
+        /// Published by WorldClock.
+        /// </summary>
+        public static event Action<int> OnCycleCompleted;
+
+        public static void RaiseCycleCompleted(int cycleCount)
+        {
+            OnCycleCompleted?.Invoke(cycleCount);
+        }
+
+        // ──────────────────── World Phase Events ────────────────────
+
+        /// <summary>
+        /// Broadcast when the world time phase changes (e.g., Calm → Storm).
+        /// Params: phaseIndex, phaseName.
+        /// Published by WorldPhaseManager, consumed by ScheduledBehaviour/Door/Room/AmbienceController.
+        /// </summary>
+        public static event Action<int, string> OnPhaseChanged;
+
+        public static void RaisePhaseChanged(int phaseIndex, string phaseName)
+        {
+            OnPhaseChanged?.Invoke(phaseIndex, phaseName);
+        }
+
         // ──────────────────── World Progress Events ────────────────────
 
         /// <summary>

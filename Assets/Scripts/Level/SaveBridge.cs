@@ -104,6 +104,21 @@ namespace ProjectArk.Level
                 }
                 data.Progress.WorldStage = worldProgress.CurrentWorldStage;
             }
+
+            // WorldClock → time state
+            var worldClock = ServiceLocator.Get<WorldClock>();
+            if (worldClock != null)
+            {
+                data.Progress.WorldClockTime = worldClock.CurrentTime;
+                data.Progress.WorldClockCycle = worldClock.CycleCount;
+            }
+
+            // WorldPhaseManager → current phase
+            var phaseManager = ServiceLocator.Get<WorldPhaseManager>();
+            if (phaseManager != null)
+            {
+                data.Progress.CurrentPhaseIndex = phaseManager.CurrentPhaseIndex;
+            }
         }
 
         private void CollectPlayerState(PlayerSaveData data)
@@ -146,6 +161,20 @@ namespace ProjectArk.Level
             }
 
             // WorldProgressManager loads its own data in Start() — no need to push here
+
+            // WorldClock → restore time state
+            var worldClock = ServiceLocator.Get<WorldClock>();
+            if (worldClock != null)
+            {
+                worldClock.SetTimeExact(data.Progress.WorldClockTime, data.Progress.WorldClockCycle);
+            }
+
+            // WorldPhaseManager → restore phase (will be re-evaluated from clock time, but set for immediate accuracy)
+            var phaseManager = ServiceLocator.Get<WorldPhaseManager>();
+            if (phaseManager != null && data.Progress.CurrentPhaseIndex >= 0)
+            {
+                phaseManager.SetPhaseIndex(data.Progress.CurrentPhaseIndex);
+            }
         }
 
         private void DistributePlayerState(PlayerSaveData data)
