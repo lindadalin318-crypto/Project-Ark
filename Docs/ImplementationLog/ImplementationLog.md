@@ -3444,3 +3444,317 @@ Assets/Scripts/Level/
 **技术：** 坐标缩放转换、Unity Handles 绘制、鼠标事件处理
 
 ---
+
+## 飞船操作手感优化
+
+### 76. 飞船操作手感全面优化 — 2026-02-16 17:45
+
+**修改文件：**
+- `Assets/Scripts/Ship/Data/ShipStatsSO.cs`
+- `Assets/Scripts/Ship/Movement/ShipMotor.cs`
+- `Assets/_Data/Ship/DefaultShipStats.asset`
+
+**内容：**
+
+### 一、参数调整（立即生效）
+
+| 参数 | 原值 | 新值 | 目的 |
+|------|------|------|------|
+| `MoveSpeed` | 12 | 14 | 整体速度更快，更有爽快感 |
+| `Acceleration` | 45 | 70 | 加速更快，响应更直接 |
+| `Deceleration` | 25 | 55 | 减速更快，停止更干脆 |
+| `SharpTurnAngleThreshold` | 90° | 120° | 放宽转向惩罚触发条件 |
+| `SharpTurnSpeedPenalty` | 0.7 | 0.9 | 减少转向速度惩罚 |
+| `InitialBoostMultiplier` | 1.5 | 2.2 | 初始爆发更强 |
+| `InitialBoostDuration` | 0.05s | 0.12s | 初始爆发持续更长 |
+
+### 二、新增参数（更精细控制）
+
+1. **`DirectionChangeSnappiness` (0.65)**
+   - 范围：0.0 ~ 1.0
+   - 0 = 非常滑（保持原方向）
+   - 1 = 立即转向（无惯性）
+   - 0.65 = 平衡值，有惯性但可控
+
+2. **`MinSpeedForDirectionChange` (0.5)**
+   - 最低速度阈值，低于此速度时不应用方向混合
+   - 防止低速时抖动
+
+### 三、曲线优化
+
+**加速度曲线**：
+- 起始点 (0, 1.0) = 初始响应快
+- 中点 (0.3, 1.2) = 中期加速快
+- 终点 (1.0, 0.6) = 接近最高速时平缓
+
+**减速曲线**：
+- 起始点 (0, 1.3) = 松开摇杆立即快速减速
+- 中点 (0.4, 1.0) = 中期减速平稳
+- 终点 (1.0, 0.7) = 低速时自然停止
+
+### 四、代码改进
+
+在 `ShipMotor.HandleMovement()` 中新增：
+- 方向变化平滑混合（Lerp）
+- 基于 `DirectionChangeSnappiness` 的可控转向
+
+---
+
+## LevelDesigner Door 配置自动化
+
+### 77. LevelScaffoldData Door 配置扩展 — 2026-02-16 18:00
+
+**修改文件：**
+- `Assets/Scripts/Level/Data/LevelScaffoldData.cs`
+
+**内容：**
+1. **新增 `ScaffoldDoorElementConfig` 类**：专门存储 Door 元素的配置
+   - `InitialState`：门的初始状态（Open / Locked_Combat / Locked_Key 等）
+   - `RequiredKeyID`：需要的钥匙 ID
+   - `OpenDuringPhases`：开门阶段（Locked_Schedule 用）
+2. **扩展 `ScaffoldElement` 类**：
+   - 新增 `DoorConfig` 字段，仅在 Door 类型时使用
+   - 新增 `BoundConnectionID` 字段，绑定到 ScaffoldDoorConnection
+   - 新增 `EnsureDoorConfigExists()` 方法，确保配置对象存在
+3. **扩展 `ScaffoldDoorConnection` 类**：
+   - 新增 `ConnectionID` 字段（GUID），用于 Door 元素绑定
+4. **所有新增字段都有 `[Tooltip]` 和 `[SerializeField]`，符合 C# 编码规范**
+
+**目的：** 实现 Door 元素与 Room Connection 的数据绑定，为后续一键放置 Door 功能做准备。
+
+---
+
+### 78. LevelDesignerWindow 一键放置 Door — 2026-02-16 18:05
+
+**修改文件：**
+- `Assets/Scripts/Level/Editor/LevelDesignerWindow.cs`
+
+**内容：**
+1. **Connection 编辑器新增 Place Door 按钮**：
+   - 当 Connection 已配置 TargetRoom 时，按钮可用
+   - 点击后自动创建 Door 元素，绑定到该 Connection
+   - Door 的位置自动设为 Connection 的 DoorPosition
+   - Door 的旋转自动从 Connection 的 DoorDirection 计算
+   - 自动初始化 DoorConfig
+2. **Connection 编辑器新增 Remove Door 按钮**：
+   - 当 Door 已放置时显示 ✓ 提示
+   - 点击可以移除绑定的 Door 元素
+3. **Door Position 同步功能**：
+   - 当修改 Connection 的 DoorPosition 时，自动同步到绑定的 Door 元素
+4. **Room Elements 模式 Door 配置面板**：
+   - 选中 Door 元素后，显示 Door Configuration 区域
+   - 可编辑 Initial State、Required Key ID、Open During Phases
+5. **新增辅助方法**：
+   - `FindBoundDoor()`：查找绑定到 Connection 的 Door 元素
+   - `PlaceDoorForConnection()`：一键放置 Door
+   - `SyncDoorPosition()`：同步 Door 位置
+
+**目的：** 让 Door 配置变得超级简单，只需在 Connection 面板点一下按钮，所有 Door 配置（包括 TargetRoom、SpawnPoint、InitialState 等）都会自动生成。
+
+**技术：** Unity IMGUI、Undo 系统、Scaffold 数据绑定、自动旋转计算（Vector2.SignedAngle）
+
+---
+
+### 79. LevelGenerator Door 自动配置 — 2026-02-16 18:10
+
+**修改文件：**
+- `Assets/Scripts/Level/Editor/LevelGenerator.cs`
+
+**内容：**
+1. **移除旧的 SetupDoorConnections 流程**：不再单独生成 Door，改为由元素系统统一处理
+2. **更新 GenerateSingleElement 方法**：
+   - 新增 `scaffold` 和 `roomMap` 参数
+   - 当元素是 Door 且绑定了 Connection 时，自动调用 SetupDoorFromBinding
+3. **新增 SetupDoorFromBinding 方法**：
+   - 查找绑定的 ScaffoldDoorConnection
+   - 自动配置 Door 组件的所有字段：
+     - `_targetRoom`：从 Connection 的 TargetRoomID 查找
+     - `_targetSpawnPoint`：调用 CreateSpawnPoint 自动生成
+     - `_isLayerTransition`：继承自 Connection
+     - `_initialState`：从 DoorConfig 读取
+     - `_requiredKeyID`：从 DoorConfig 读取
+     - `_openDuringPhases`：从 DoorConfig 读取
+4. **新增 GetRoomID 辅助方法**：根据 Room 组件反向查找 RoomID
+5. **更新 GenerateRoomElements 调用**：传入正确的参数
+
+**目的：** 实现 Door 生成时的全自动配置，不需要任何手动操作，所有属性从 Scaffold 数据自动读取并赋值。
+
+**技术：** Unity SerializedObject 访问私有字段、Undo 系统、Room 组件与 Scaffold 数据映射
+
+---
+
+### 80. RoomSO 下拉栏选择 — 2026-02-16 18:15
+
+**修改文件：**
+- `Assets/Scripts/Level/Editor/LevelDesignerWindow.cs`
+
+**内容：**
+1. **新增 `DrawRoomSOPopup` 方法**：
+   - 使用 `AssetDatabase.FindAssets("t:RoomSO")` 自动检索所有 RoomSO 资源
+   - 加载所有找到的 RoomSO 并收集它们的名字
+   - 生成下拉选项列表，第一个选项是 `(None)`
+2. **替换 `ObjectField` 为 `EditorGUILayout.Popup`**：
+   - 从原来的拖拽赋值改为点击下拉选择
+   - 选择后自动更新 ScaffoldRoom.RoomSO
+   - 支持 Undo/Redo
+3. **保持原有功能**：`(None)` 选项对应 null 值，与旧行为一致
+
+**目的：** 让 RoomSO 选择更直观、更快捷，不需要再去 Project 窗口找文件拖过来。
+
+**技术：** `AssetDatabase.FindAssets`、`AssetDatabase.LoadAssetAtPath`、`EditorGUILayout.Popup`、Undo 系统
+
+---
+
+### 81. 房间自动吸附对齐功能 — 2026-02-16 18:20
+
+**修改文件：**
+- `Assets/Scripts/Level/Editor/LevelDesignerWindow.cs`
+
+**内容：**
+1. **新增 `SnapToOtherRooms` 方法**：
+   - `snapThreshold = 1f`：吸附阈值 1 个单位
+   - 计算每个房间的四个边缘（左、右、上、下）
+   - 当拖拽房间的边缘靠近其他房间的边缘时（小于阈值），自动吸附
+   - 支持四个方向的吸附：右对左、左对右、下对上、上对下
+2. **修改拖拽逻辑**：
+   - 在 `MouseDrag` 事件中，先计算原始拖拽位置
+   - 调用 `SnapToOtherRooms` 获得吸附后的位置
+   - 将房间位置设为吸附后的位置
+3. **保持流畅体验**：
+   - 只在鼠标拖拽时应用吸附
+   - 吸附后立即生效，不需要松开鼠标
+   - Undo/Redo 正常工作
+
+**目的：** 让房间对齐变得超级简单，不需要手动微调位置，靠近边缘会自动吸过去，方便建造房间网。
+
+**技术：** 边缘碰撞检测、距离阈值判断、坐标自动对齐
+
+---
+
+### 82. Element 形状配置与 Q/W/E/R 变换工具 — 2026-02-16 18:30
+
+**修改文件：**
+- `Assets/Scripts/Level/Data/LevelScaffoldData.cs`
+- `Assets/Scripts/Level/Editor/LevelDesignerWindow.cs`
+
+**内容：**
+
+#### 一、LevelScaffoldData.cs 修改
+1. **新增 `ElementGizmoShape` 枚举**：
+   - `Square`：正方形
+   - `Circle`：圆形
+   - `Diamond`：菱形
+2. **扩展 `ScaffoldElement` 类**：
+   - 新增 `_gizmoShape` 字段，默认值 `Square`
+   - 新增 `GizmoShape` 公共属性
+   - 新增 `SetDefaultGizmoShapeForType()` 方法，根据元素类型设置默认形状
+     - Wall/WallCorner/CrateWooden/CrateMetal/Door → Square
+     - Checkpoint/PlayerSpawn/EnemySpawn/Hazard → Circle
+3. **修改 `ElementType` setter**：设置类型时自动调用 `SetDefaultGizmoShapeForType()`
+
+#### 二、LevelDesignerWindow.cs 修改
+1. **新增 `ElementTransformTool` 枚举**：
+   - `Select`：选择模式
+   - `Move`：移动模式
+   - `Rotate`：旋转模式
+   - `Scale`：缩放模式
+2. **新增工具条 UI**：
+   - 在 Room Elements 面板顶部添加 Q/W/E/R 四个按钮的 Toolbar
+3. **新增快捷键支持**：
+   - `Q` → Select
+   - `W` → Move
+   - `E` → Rotate
+   - `R` → Scale
+4. **修改 `DrawRoomCanvasElements` 方法**：
+   - 根据 `GizmoShape` 绘制不同形状
+   - Square：`Handles.DrawSolidRectangleWithOutline`
+   - Circle：`Handles.DrawSolidDisc`
+   - Diamond：`Handles.DrawSolidPolygon` 绘制四边形
+5. **新增 `DrawElementTransformGizmo` 方法**：
+   - Move 模式：绘制红/绿方向箭头
+   - Rotate 模式：绘制圆环
+   - Scale 模式：绘制红/绿方向手柄
+6. **修改 `HandleRoomCanvasInput` 方法**：
+   - 支持快捷键切换工具
+   - 拖拽时根据当前工具执行不同操作
+   - Move：直接修改 LocalPosition
+   - Rotate：通过鼠标与元素中心的夹角计算旋转
+   - Scale：通过鼠标位移计算缩放，最小 0.1 防止负数
+7. **Element Properties 面板新增 Gizmo Shape 下拉栏**：
+   - 可以随时手动切换元素的显示形状
+8. **修改 `AddElementToRoom` 方法**：
+   - 新增元素时调用 `SetDefaultGizmoShapeForType()`
+
+**目的：**
+- 让不同类型的元素默认用合适的形状显示（Wall 是方的，Spawn 是圆的）
+- 提供和 Unity Editor 一样的变换工具体验（Q/W/E/R 快捷键）
+- 可以直观地拖拽移动、旋转、缩放元素
+
+**技术：** Unity IMGUI、Handles 绘制、Keyboard Input、Undo 系统、向量夹角计算（Vector2.SignedAngle）
+
+---
+
+### 83. 房间吸附功能优化 — 2026-02-16 18:45
+
+**修改文件：**
+- `Assets/Scripts/Level/Editor/LevelDesignerWindow.cs`
+
+**内容：**
+1. **增大默认吸附阈值**：从 1 个单位 → 3 个单位
+2. **添加可配置参数**：新增 `_roomSnapThreshold` 字段，默认值 3f
+3. **UI 面板新增设置**：在 Settings 面板添加 "Room Snap Settings" 部分
+   - 滑块：可在 0.5f 到 10f 之间调整阈值
+   - HelpBox：说明 "Higher = easier to snap"
+4. **修改吸附逻辑**：`SnapToOtherRooms` 方法使用 `_roomSnapThreshold` 替代硬编码值
+
+**目的：**
+- 原来 1 个单位的阈值太小，在 Topology View 中只有 10 像素，很难感受到
+- 现在默认 3 个单位（30 像素），吸附更明显
+- 用户可以根据自己的喜好调整阈值
+
+**技术：** Unity IMGUI、EditorGUILayout.Slider、Mathf.Abs 距离检测
+
+---
+
+### 73. Level Architect Tool — 完整实现（Task 1-10）— 2026-02-16 10:56
+
+**新建文件：**
+
+| 文件路径 | 操作 | 简述 |
+|---|---|---|
+| `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs` | 新建 | 主入口EditorWindow，管理工具模式(Select/Blockout/Connect)、SceneView工具栏、侧边面板、各子系统集成 |
+| `Assets/Scripts/Level/Editor/LevelArchitect/RoomBlockoutRenderer.cs` | 新建 | 房间白膜渲染（颜色编码矩形）、鼠标交互（选择/拖拽/吸附/框选）、门图标和连接线、悬停信息浮窗 |
+| `Assets/Scripts/Level/Data/RoomPresetSO.cs` | 新建 | ScriptableObject房间预设模板（名称/尺寸/房间类型/SpawnPoint数量/ArenaController配置） |
+| `Assets/Scripts/Level/Editor/LevelArchitect/RoomFactory.cs` | 新建 | 从预设创建完整Room GameObject、自动创建子对象（Confiner/SpawnPoints/Spawner）、自动生成RoomSO资产 |
+| `Assets/Scripts/Level/Editor/LevelArchitect/DoorWiringService.cs` | 新建 | 自动检测房间共享边缘、创建双向门连接对、SceneView连接模式交互、门位置更新 |
+| `Assets/Scripts/Level/Editor/LevelArchitect/ScaffoldSceneBinder.cs` | 新建 | 维护ScaffoldRoom到场景Room的映射、双向同步Scene↔Scaffold变化 |
+| `Assets/Scripts/Level/Editor/LevelArchitect/BlockoutModeHandler.cs` | 新建 | 矩形和走廊笔刷工具、拖拽绘制预览、链式绘制(Shift)、Quick Play、内置预设创建 |
+| `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs` | 新建 | 8项验证规则、自动修复、轻量级SceneView叠加检查、Error/Warning/Info分级 |
+| `Assets/Scripts/Level/Editor/LevelArchitect/BatchEditPanel.cs` | 新建 | 多选房间批量属性编辑、右键上下文菜单、Copy/Paste配置、批量RoomType/FloorLevel/Size调整 |
+| `Assets/Scripts/Level/Editor/LevelArchitect/PacingOverlayRenderer.cs` | 新建 | Pacing Overlay（战斗强度色阶）、Critical Path（BFS最短路径）、Lock-Key Graph（锁钥依赖） |
+| `Assets/Scripts/Level/Editor/LevelArchitect/SceneScanner.cs` | 新建 | 反向扫描场景Room/Door构建LevelScaffoldData、自动创建缺失RoomSO |
+
+**修改文件：**
+
+| 文件路径 | 操作 | 简述 |
+|---|---|---|
+| `Assets/Scripts/Level/Editor/RoomBatchEditor.cs` | 修改 | 添加[Obsolete]标记 |
+| `Assets/Scripts/Level/Editor/LevelDesignerWindow.cs` | 修改 | 添加[Obsolete]标记 |
+| `Assets/Scripts/Level/Editor/ShebaLevelScaffolder.cs` | 修改 | 添加[Obsolete]标记 |
+
+**内容简述：**
+全新的统一关卡编辑工具，替代原有3个分散工具（RoomBatchEditor/LevelDesignerWindow/ShebaLevelScaffolder）。10个模块：
+1. **基础框架** — EditorWindow + SceneView.duringSceneGui集成，模式切换工具栏
+2. **白膜渲染** — 颜色编码房间矩形、选择/拖拽/吸附/框选交互
+3. **预设系统** — RoomPresetSO + RoomFactory一键创建标准化房间
+4. **智能门连接** — 共享边检测、双向Door自动创建、SceneView拖线连接
+5. **双向同步** — ScaffoldData ↔ Scene Room实时同步
+6. **白膜搭建** — 矩形/走廊笔刷、链式绘制、Quick Play
+7. **验证修复** — 8项规则检查、Auto-Fix、SceneView红色警告叠加
+8. **批量编辑** — 多选属性修改、右键菜单、Copy/Paste配置
+9. **节奏可视化** — 战斗强度色阶、BFS关键路径、锁钥依赖图
+10. **场景扫描** — 反向导入已有场景、旧工具[Obsolete]标记
+
+**目的：** 提供Scene-View-First的关卡设计体验，让策划能在几分钟内完成关卡白膜搭建、自动配置门连接、一键验证修复错误、直观查看关卡节奏，大幅提升关卡制作效率。
+
+**技术：** EditorWindow/SceneView集成、Handles绘制系统、SerializedObject批量编辑、BFS图搜索、ScriptableObject数据驱动、Undo撤销支持、AssetDatabase资产管理。

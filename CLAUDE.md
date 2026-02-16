@@ -352,6 +352,27 @@ Assets/
 
 ---
 
+## 实用开发 Tips
+
+### 快速编译检查项目错误
+
+在终端中运行以下命令，可以快速编译项目并检查所有 C# 错误：
+
+```bash
+cd /Users/dada/Documents/GitHub/Project-Ark
+dotnet build Project-Ark.slnx
+```
+
+**好处：**
+- 不需要打开 Unity Editor 就能发现编译错误
+- 比 Unity 编译速度更快
+- 错误信息更清晰，直接显示文件路径和行号
+- 在修改大量代码后，可以用这个命令快速验证
+
+**说明：** 这个命令会编译所有 .csproj 项目，包括 `ProjectArk.Level.Editor` 等 Editor 程序集。
+
+---
+
 ## 常见任务
 
 ### A. 新增飞船/武器参数

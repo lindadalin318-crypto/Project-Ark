@@ -54,6 +54,15 @@ namespace ProjectArk.Ship
         [Range(0f, 0.5f)]
         [SerializeField] private float _minMoveSpeedThreshold = 0.1f;
 
+        [Header("Movement — Advanced (New!)")]
+        [Tooltip("Controls how snappy direction changes feel (0 = slidey, 1 = instant direction change).")]
+        [Range(0f, 1f)]
+        [SerializeField] private float _directionChangeSnappiness = 0.65f;
+
+        [Tooltip("Minimum speed (units/sec) before input starts affecting direction. Prevents jitter at very low speeds.")]
+        [Min(0f)]
+        [SerializeField] private float _minSpeedForDirectionChange = 0.5f;
+
         // ══════════════════════════════════════════════════════════════
         // Aiming
         // ══════════════════════════════════════════════════════════════
@@ -145,6 +154,8 @@ namespace ProjectArk.Ship
         public float InitialBoostMultiplier => _initialBoostMultiplier;
         public float InitialBoostDuration => _initialBoostDuration;
         public float MinMoveSpeedThreshold => _minMoveSpeedThreshold;
+        public float DirectionChangeSnappiness => _directionChangeSnappiness;
+        public float MinSpeedForDirectionChange => _minSpeedForDirectionChange;
 
         // ══════════════════════════════════════════════════════════════
         // Public Getters — Aiming

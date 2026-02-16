@@ -12,19 +12,39 @@ namespace ProjectArk.Level
     /// - Drag-and-drop room placement
     /// - Visual topology view
     /// - Room connection management
+    /// - In-room element placement
     /// - One-click generation to Unity scene
     /// </summary>
+    [System.Obsolete("Use LevelArchitectWindow instead. Open via Window > ProjectArk > Level Architect.")]
     public class LevelDesignerWindow : EditorWindow
     {
         private const string WindowTitle = "Level Designer";
         private const string MenuPath = "Window/ProjectArk/Level Designer";
+
+        private enum EditorMode
+        {
+            Topology,
+            RoomElements
+        }
+
+        private enum ElementTransformTool
+        {
+            Select,
+            Move,
+            Rotate,
+            Scale
+        }
 
         // ──────────────────── State ────────────────────
 
         [SerializeField] private LevelScaffoldData _currentScaffold;
         [SerializeField] private LevelElementLibrary _elementLibrary;
 
+        private EditorMode _currentMode = EditorMode.Topology;
+        private ElementTransformTool _elementTool = ElementTransformTool.Move;
         private ScaffoldRoom _selectedRoom;
+        private ScaffoldElement _selectedElement;
+        private ScaffoldElementType _selectedElementType;
         private Vector2 _scrollPosition;
         private Vector2 _topologyScrollPosition;
         private float _zoomLevel = 1f;
@@ -33,9 +53,18 @@ namespace ProjectArk.Level
         private ScaffoldRoom _draggingRoom;
         private Vector2 _dragStartMousePos;
         private Vector3 _dragStartRoomPos;
+        private bool _isDraggingElement;
+        private ScaffoldElement _draggingElement;
+        private Vector2 _elementDragStartMouse;
+        private Vector3 _elementDragStartPos;
+        private float _elementDragStartRotation;
+        private Vector3 _elementDragStartScale;
         private bool _isConnectingRooms;
         private ScaffoldRoom _connectionStartRoom;
         private Vector2 _connectionStartPos;
+
+        [Header("Snap Settings")]
+        private float _roomSnapThreshold = 3f;
 
         // ──────────────────── Menu Item ────────────────────
 
@@ -43,7 +72,7 @@ namespace ProjectArk.Level
         public static void ShowWindow()
         {
             var window = GetWindow<LevelDesignerWindow>(WindowTitle);
-            window.minSize = new Vector2(800, 600);
+            window.minSize = new Vector2(1000, 700);
             window.Show();
         }
 
@@ -68,8 +97,18 @@ namespace ProjectArk.Level
             DrawHeader();
             DrawSettingsPanel();
             DrawToolbar();
-            DrawRoomList();
-            DrawTopologyView();
+            DrawModeTabs();
+
+            if (_currentMode == EditorMode.Topology)
+            {
+                DrawRoomList();
+                DrawTopologyView();
+            }
+            else
+            {
+                DrawElementLibrary();
+                DrawRoomElementCanvas();
+            }
 
             EditorGUILayout.EndScrollView();
         }
@@ -103,6 +142,11 @@ namespace ProjectArk.Level
             _elementLibrary = (LevelElementLibrary)EditorGUILayout.ObjectField(
                 "Element Library", _elementLibrary, typeof(LevelElementLibrary), false);
 
+            EditorGUILayout.Space(5);
+            EditorGUILayout.LabelField("Room Snap Settings", EditorStyles.boldLabel);
+            _roomSnapThreshold = EditorGUILayout.Slider("Snap Threshold", _roomSnapThreshold, 0.5f, 10f);
+            EditorGUILayout.HelpBox("Threshold for room snapping (in world units). Higher = easier to snap.", MessageType.Info);
+
             EditorGUILayout.EndVertical();
             EditorGUILayout.Space(10);
         }
@@ -133,6 +177,433 @@ namespace ProjectArk.Level
 
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.Space(10);
+        }
+
+        /// <summary>
+        /// Draws the mode selection tabs.
+        /// </summary>
+        private void DrawModeTabs()
+        {
+            EditorGUILayout.BeginHorizontal();
+
+            if (GUILayout.Toggle(_currentMode == EditorMode.Topology, "Topology", "ButtonLeft"))
+            {
+                _currentMode = EditorMode.Topology;
+            }
+
+            EditorGUI.BeginDisabledGroup(_selectedRoom == null);
+            if (GUILayout.Toggle(_currentMode == EditorMode.RoomElements, "Room Elements", "ButtonRight"))
+            {
+                _currentMode = EditorMode.RoomElements;
+            }
+            EditorGUI.EndDisabledGroup();
+
+            EditorGUILayout.EndHorizontal();
+
+            if (_currentMode == EditorMode.RoomElements && _selectedRoom == null)
+            {
+                EditorGUILayout.HelpBox("Select a room first to edit elements.", MessageType.Info);
+            }
+
+            EditorGUILayout.Space(10);
+        }
+
+        /// <summary>
+        /// Draws the element library panel.
+        /// </summary>
+        private void DrawElementLibrary()
+        {
+            if (_currentScaffold == null)
+                return;
+
+            EditorGUILayout.LabelField("Element Library", EditorStyles.boldLabel);
+            EditorGUILayout.Space(5);
+
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+            var elementTypes = Enum.GetValues(typeof(ScaffoldElementType)).Cast<ScaffoldElementType>().ToList();
+
+            for (int i = 0; i < elementTypes.Count; i++)
+            {
+                bool isSelected = _selectedElementType == elementTypes[i];
+                Color bgColor = isSelected ? new Color(0.3f, 0.6f, 0.9f, 0.3f) : Color.white;
+
+                GUIStyle btnStyle = new GUIStyle(EditorStyles.miniButton);
+                if (isSelected)
+                {
+                    btnStyle.normal.background = MakeTex(2, 2, bgColor);
+                }
+
+                if (GUILayout.Button(elementTypes[i].ToString(), btnStyle))
+                {
+                    _selectedElementType = elementTypes[i];
+                }
+            }
+
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.Space(10);
+        }
+
+        /// <summary>
+        /// Draws the room element editing canvas.
+        /// </summary>
+        private void DrawRoomElementCanvas()
+        {
+            if (_currentScaffold == null || _selectedRoom == null)
+                return;
+
+            EditorGUILayout.LabelField("Room Elements - " + _selectedRoom.DisplayName, EditorStyles.boldLabel);
+            EditorGUILayout.Space(5);
+
+            EditorGUILayout.BeginHorizontal();
+            EditorGUI.BeginChangeCheck();
+            _elementTool = (ElementTransformTool)GUILayout.Toolbar((int)_elementTool, new[] { "Q", "W", "E", "R" }, GUILayout.Height(25));
+            if (EditorGUI.EndChangeCheck())
+            {
+                Repaint();
+            }
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.Space(5);
+
+            Rect viewRect = EditorGUILayout.GetControlRect(false, 400);
+            Handles.BeginGUI();
+
+            _topologyScrollPosition = GUI.BeginScrollView(
+                viewRect,
+                _topologyScrollPosition,
+                new Rect(0, 0, viewRect.width, viewRect.height));
+
+            DrawRoomCanvasBackground(viewRect);
+            DrawRoomCanvasElements(viewRect);
+            HandleRoomCanvasInput(viewRect);
+
+            GUI.EndScrollView();
+
+            Handles.EndGUI();
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Add Selected Element"))
+            {
+                AddElementToRoom();
+            }
+            if (GUILayout.Button("Remove Selected"))
+            {
+                RemoveSelectedElement();
+            }
+            EditorGUILayout.EndHorizontal();
+
+            if (_selectedElement != null)
+            {
+                EditorGUILayout.Space(10);
+                EditorGUILayout.LabelField("Element Properties", EditorStyles.boldLabel);
+                EditorGUI.indentLevel++;
+                _selectedElement.GizmoShape = (ElementGizmoShape)EditorGUILayout.EnumPopup("Gizmo Shape", _selectedElement.GizmoShape);
+                _selectedElement.LocalPosition = EditorGUILayout.Vector3Field("Position", _selectedElement.LocalPosition);
+                _selectedElement.Rotation = EditorGUILayout.Slider("Rotation", _selectedElement.Rotation, -180, 180);
+                _selectedElement.Scale = EditorGUILayout.Vector3Field("Scale", _selectedElement.Scale);
+
+                if (_selectedElement.ElementType == ScaffoldElementType.Door)
+                {
+                    _selectedElement.EnsureDoorConfigExists();
+                    EditorGUILayout.Space(5);
+                    EditorGUILayout.LabelField("Door Configuration", EditorStyles.boldLabel);
+                    _selectedElement.DoorConfig.InitialState = (DoorState)EditorGUILayout.EnumPopup("Initial State", _selectedElement.DoorConfig.InitialState);
+                    _selectedElement.DoorConfig.RequiredKeyID = EditorGUILayout.TextField("Required Key ID", _selectedElement.DoorConfig.RequiredKeyID);
+
+                    EditorGUILayout.LabelField("Open During Phases (Locked_Schedule only)");
+                    EditorGUI.indentLevel++;
+                    int oldSize = _selectedElement.DoorConfig.OpenDuringPhases?.Length ?? 0;
+                    int newSize = EditorGUILayout.IntField("Size", oldSize);
+                    if (newSize != oldSize)
+                    {
+                        int[] newPhases = new int[newSize];
+                        if (_selectedElement.DoorConfig.OpenDuringPhases != null)
+                        {
+                            Array.Copy(_selectedElement.DoorConfig.OpenDuringPhases, newPhases, Math.Min(oldSize, newSize));
+                        }
+                        _selectedElement.DoorConfig.OpenDuringPhases = newPhases;
+                    }
+                    if (_selectedElement.DoorConfig.OpenDuringPhases != null)
+                    {
+                        for (int i = 0; i < _selectedElement.DoorConfig.OpenDuringPhases.Length; i++)
+                        {
+                            _selectedElement.DoorConfig.OpenDuringPhases[i] = EditorGUILayout.IntField($"Phase {i + 1}", _selectedElement.DoorConfig.OpenDuringPhases[i]);
+                        }
+                    }
+                    EditorGUI.indentLevel--;
+                }
+
+                EditorGUI.indentLevel--;
+            }
+
+            EditorGUILayout.Space(10);
+        }
+
+        /// <summary>
+        /// Draws the canvas background and room outline.
+        /// </summary>
+        private void DrawRoomCanvasBackground(Rect viewRect)
+        {
+            Handles.color = new Color(0.2f, 0.2f, 0.2f, 1f);
+            Handles.DrawSolidRectangleWithOutline(viewRect, new Color(0.15f, 0.15f, 0.15f, 1f), new Color(0.3f, 0.3f, 0.3f, 1f));
+
+            float roomWidth = _selectedRoom.Size.x * 20;
+            float roomHeight = _selectedRoom.Size.y * 20;
+            Vector2 center = new Vector2(viewRect.width / 2, viewRect.height / 2);
+
+            Rect roomRect = new Rect(
+                center.x - roomWidth / 2,
+                center.y - roomHeight / 2,
+                roomWidth,
+                roomHeight);
+
+            Color roomColor = GetRoomColor(_selectedRoom.RoomType, true);
+            Handles.DrawSolidRectangleWithOutline(roomRect, new Color(roomColor.r, roomColor.g, roomColor.b, 0.3f), Color.white);
+
+            Handles.color = Color.gray;
+            Handles.Label(center + new Vector2(-_selectedRoom.DisplayName.Length * 5, -roomHeight / 2 - 20), _selectedRoom.DisplayName);
+        }
+
+        /// <summary>
+        /// Draws elements in the canvas.
+        /// </summary>
+        private void DrawRoomCanvasElements(Rect viewRect)
+        {
+            float roomWidth = _selectedRoom.Size.x * 20;
+            float roomHeight = _selectedRoom.Size.y * 20;
+            Vector2 center = new Vector2(viewRect.width / 2, viewRect.height / 2);
+
+            foreach (var element in _selectedRoom.Elements)
+            {
+                Vector2 elementPos = center + new Vector2(element.LocalPosition.x * 20, -element.LocalPosition.y * 20);
+                bool isSelected = _selectedElement == element;
+                float size = isSelected ? 15f : 10f;
+
+                Color elementColor = isSelected ? Color.yellow : GetElementColor(element.ElementType);
+                Handles.color = elementColor;
+
+                switch (element.GizmoShape)
+                {
+                    case ElementGizmoShape.Square:
+                        Rect rect = new Rect(elementPos.x - size, elementPos.y - size, size * 2, size * 2);
+                        Handles.DrawSolidRectangleWithOutline(rect, elementColor, Color.clear);
+                        break;
+                    case ElementGizmoShape.Circle:
+                        Handles.DrawSolidDisc(elementPos, Vector3.forward, size);
+                        break;
+                    case ElementGizmoShape.Diamond:
+                        for (int i = 0; i < 4; i++)
+                        {
+                            float angle = i * Mathf.PI / 2 + Mathf.PI / 4;
+                            Vector2 p1 = new Vector2(Mathf.Cos(angle) * size, Mathf.Sin(angle) * size);
+                            float angle2 = (i + 1) * Mathf.PI / 2 + Mathf.PI / 4;
+                            Vector2 p2 = new Vector2(Mathf.Cos(angle2) * size, Mathf.Sin(angle2) * size);
+                            Handles.DrawLine((Vector3)elementPos + (Vector3)p1, (Vector3)elementPos + (Vector3)p2);
+                        }
+                        break;
+                }
+
+                if (isSelected)
+                {
+                    DrawElementTransformGizmo(elementPos, element, size);
+                }
+
+                Handles.color = Color.white;
+                Handles.Label(elementPos + new Vector2(-element.ElementType.ToString().Length * 4, -size - 8), element.ElementType.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Draws the transform gizmo for selected element.
+        /// </summary>
+        private void DrawElementTransformGizmo(Vector2 elementPos, ScaffoldElement element, float size)
+        {
+            Handles.color = Color.white;
+
+            if (_elementTool == ElementTransformTool.Move)
+            {
+                Handles.color = Color.red;
+                Handles.DrawLine(elementPos, elementPos + Vector2.right * 30);
+                Handles.color = Color.green;
+                Handles.DrawLine(elementPos, elementPos + Vector2.up * 30);
+            }
+            else if (_elementTool == ElementTransformTool.Rotate)
+            {
+                Handles.DrawWireDisc(elementPos, Vector3.forward, size + 15);
+            }
+            else if (_elementTool == ElementTransformTool.Scale)
+            {
+                Handles.color = Color.red;
+                Handles.DrawLine(elementPos, elementPos + Vector2.right * 25);
+                Handles.DrawSolidDisc(elementPos + Vector2.right * 25, Vector3.forward, 5);
+                Handles.color = Color.green;
+                Handles.DrawLine(elementPos, elementPos + Vector2.up * 25);
+                Handles.DrawSolidDisc(elementPos + Vector2.up * 25, Vector3.forward, 5);
+            }
+        }
+
+        /// <summary>
+        /// Handles input in the room canvas.
+        /// </summary>
+        private void HandleRoomCanvasInput(Rect viewRect)
+        {
+            Event evt = Event.current;
+            Vector2 mousePos = evt.mousePosition;
+
+            if (evt.type == EventType.KeyDown)
+            {
+                if (evt.keyCode == KeyCode.Q)
+                {
+                    _elementTool = ElementTransformTool.Select;
+                    evt.Use();
+                    Repaint();
+                }
+                else if (evt.keyCode == KeyCode.W)
+                {
+                    _elementTool = ElementTransformTool.Move;
+                    evt.Use();
+                    Repaint();
+                }
+                else if (evt.keyCode == KeyCode.E)
+                {
+                    _elementTool = ElementTransformTool.Rotate;
+                    evt.Use();
+                    Repaint();
+                }
+                else if (evt.keyCode == KeyCode.R)
+                {
+                    _elementTool = ElementTransformTool.Scale;
+                    evt.Use();
+                    Repaint();
+                }
+            }
+
+            float roomWidth = _selectedRoom.Size.x * 20;
+            float roomHeight = _selectedRoom.Size.y * 20;
+            Vector2 center = new Vector2(viewRect.width / 2, viewRect.height / 2);
+
+            if (evt.type == EventType.MouseDown && evt.button == 0)
+            {
+                foreach (var element in _selectedRoom.Elements)
+                {
+                    Vector2 elementPos = center + new Vector2(element.LocalPosition.x * 20, -element.LocalPosition.y * 20);
+                    if (Vector2.Distance(mousePos, elementPos) < 15f)
+                    {
+                        _selectedElement = element;
+                        _isDraggingElement = true;
+                        _draggingElement = element;
+                        _elementDragStartMouse = mousePos;
+                        _elementDragStartPos = element.LocalPosition;
+                        _elementDragStartRotation = element.Rotation;
+                        _elementDragStartScale = element.Scale;
+                        evt.Use();
+                        break;
+                    }
+                }
+                Repaint();
+            }
+            else if (evt.type == EventType.MouseDrag && _isDraggingElement && _draggingElement != null)
+            {
+                Vector2 elementPos = center + new Vector2(_draggingElement.LocalPosition.x * 20, -_draggingElement.LocalPosition.y * 20);
+                Vector2 delta = (mousePos - _elementDragStartMouse);
+
+                Undo.RecordObject(_currentScaffold, "Transform Element");
+
+                if (_elementTool == ElementTransformTool.Move)
+                {
+                    Vector2 moveDelta = delta / 20f;
+                    _draggingElement.LocalPosition = _elementDragStartPos + new Vector3(moveDelta.x, -moveDelta.y, 0);
+                }
+                else if (_elementTool == ElementTransformTool.Rotate)
+                {
+                    Vector2 startDir = (_elementDragStartMouse - elementPos).normalized;
+                    Vector2 currentDir = (mousePos - elementPos).normalized;
+                    float angleDelta = Vector2.SignedAngle(startDir, currentDir);
+                    _draggingElement.Rotation = _elementDragStartRotation + angleDelta;
+                }
+                else if (_elementTool == ElementTransformTool.Scale)
+                {
+                    float scaleDelta = (delta.x + delta.y) / 200f;
+                    _draggingElement.Scale = _elementDragStartScale + Vector3.one * scaleDelta;
+                    _draggingElement.Scale = new Vector3(
+                        Mathf.Max(0.1f, _draggingElement.Scale.x),
+                        Mathf.Max(0.1f, _draggingElement.Scale.y),
+                        Mathf.Max(0.1f, _draggingElement.Scale.z));
+                }
+
+                EditorUtility.SetDirty(_currentScaffold);
+                evt.Use();
+                Repaint();
+            }
+            else if (evt.type == EventType.MouseUp && evt.button == 0)
+            {
+                _isDraggingElement = false;
+                _draggingElement = null;
+                evt.Use();
+            }
+        }
+
+        /// <summary>
+        /// Adds the selected element type to the room.
+        /// </summary>
+        private void AddElementToRoom()
+        {
+            if (_selectedRoom == null)
+                return;
+
+            Undo.RecordObject(_currentScaffold, "Add Element");
+
+            ScaffoldElement newElement = new ScaffoldElement
+            {
+                ElementType = _selectedElementType,
+                LocalPosition = Vector3.zero,
+                Rotation = 0f,
+                Scale = Vector3.one
+            };
+            newElement.SetDefaultGizmoShapeForType();
+
+            _selectedRoom.AddElement(newElement);
+            _selectedElement = newElement;
+
+            EditorUtility.SetDirty(_currentScaffold);
+            Repaint();
+        }
+
+        /// <summary>
+        /// Removes the selected element.
+        /// </summary>
+        private void RemoveSelectedElement()
+        {
+            if (_selectedElement == null || _selectedRoom == null)
+                return;
+
+            Undo.RecordObject(_currentScaffold, "Remove Element");
+            _selectedRoom.RemoveElement(_selectedElement);
+            _selectedElement = null;
+
+            EditorUtility.SetDirty(_currentScaffold);
+            Repaint();
+        }
+
+        /// <summary>
+        /// Gets the color for an element type.
+        /// </summary>
+        private Color GetElementColor(ScaffoldElementType type)
+        {
+            return type switch
+            {
+                ScaffoldElementType.Wall => new Color(0.6f, 0.6f, 0.6f, 1f),
+                ScaffoldElementType.WallCorner => new Color(0.5f, 0.5f, 0.5f, 1f),
+                ScaffoldElementType.CrateWooden => new Color(0.8f, 0.5f, 0.2f, 1f),
+                ScaffoldElementType.CrateMetal => new Color(0.4f, 0.4f, 0.5f, 1f),
+                ScaffoldElementType.Door => new Color(0.3f, 0.7f, 0.8f, 1f),
+                ScaffoldElementType.Checkpoint => new Color(0.3f, 0.9f, 0.4f, 1f),
+                ScaffoldElementType.PlayerSpawn => new Color(0.9f, 0.8f, 0.2f, 1f),
+                ScaffoldElementType.EnemySpawn => new Color(0.9f, 0.3f, 0.3f, 1f),
+                ScaffoldElementType.Hazard => new Color(0.9f, 0.2f, 0.8f, 1f),
+                _ => Color.white
+            };
         }
 
         /// <summary>
@@ -189,7 +660,7 @@ namespace ProjectArk.Level
 
                 EditorGUILayout.BeginVertical();
                 room.DisplayName = EditorGUILayout.TextField("Name", room.DisplayName);
-                EditorGUILayout.LabelField($"Type: {room.RoomType} | Pos: {room.Position}");
+                EditorGUILayout.LabelField($"Type: {room.RoomType} | Pos: {room.Position} | Elements: {room.Elements.Count}");
                 EditorGUILayout.EndVertical();
 
                 if (GUILayout.Button("Delete", EditorStyles.miniButtonRight, GUILayout.Width(60)))
@@ -201,6 +672,7 @@ namespace ProjectArk.Level
                         if (_selectedRoom == room)
                         {
                             _selectedRoom = null;
+                            _selectedElement = null;
                         }
                         EditorUtility.SetDirty(_currentScaffold);
                         GUIUtility.ExitGUI();
@@ -235,6 +707,42 @@ namespace ProjectArk.Level
         }
 
         /// <summary>
+        /// Draws a dropdown to select RoomSO.
+        /// </summary>
+        private void DrawRoomSOPopup(ScaffoldRoom room)
+        {
+            string[] guids = AssetDatabase.FindAssets("t:RoomSO");
+            List<RoomSO> roomSOList = new List<RoomSO>();
+            List<string> roomSONames = new List<string>();
+
+            roomSOList.Add(null);
+            roomSONames.Add("(None)");
+
+            foreach (string guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                RoomSO roomSO = AssetDatabase.LoadAssetAtPath<RoomSO>(path);
+                if (roomSO != null)
+                {
+                    roomSOList.Add(roomSO);
+                    roomSONames.Add(roomSO.name);
+                }
+            }
+
+            int currentIndex = roomSOList.IndexOf(room.RoomSO);
+            if (currentIndex < 0) currentIndex = 0;
+
+            EditorGUI.BeginChangeCheck();
+            int newIndex = EditorGUILayout.Popup("Room SO", currentIndex, roomSONames.ToArray());
+            if (EditorGUI.EndChangeCheck())
+            {
+                Undo.RecordObject(_currentScaffold, "Change Room SO");
+                room.RoomSO = roomSOList[newIndex];
+                EditorUtility.SetDirty(_currentScaffold);
+            }
+        }
+
+        /// <summary>
         /// Draws the detailed editor for a selected room.
         /// </summary>
         private void DrawRoomEditor(ScaffoldRoom room)
@@ -244,7 +752,8 @@ namespace ProjectArk.Level
             room.RoomType = (RoomType)EditorGUILayout.EnumPopup("Room Type", room.RoomType);
             room.Position = EditorGUILayout.Vector3Field("Position", room.Position);
             room.Size = EditorGUILayout.Vector2Field("Size", room.Size);
-            room.RoomSO = (RoomSO)EditorGUILayout.ObjectField("Room SO", room.RoomSO, typeof(RoomSO), false);
+
+            DrawRoomSOPopup(room);
 
             EditorGUILayout.Space(5);
             EditorGUILayout.LabelField("Connections", EditorStyles.boldLabel);
@@ -304,11 +813,89 @@ namespace ProjectArk.Level
                 EditorUtility.SetDirty(_currentScaffold);
             }
 
+            EditorGUI.BeginChangeCheck();
             connection.DoorPosition = EditorGUILayout.Vector3Field("Door Position", connection.DoorPosition);
+            if (EditorGUI.EndChangeCheck())
+            {
+                Undo.RecordObject(_currentScaffold, "Change Door Position");
+                SyncDoorPosition(room, connection);
+                EditorUtility.SetDirty(_currentScaffold);
+            }
+
             connection.DoorDirection = EditorGUILayout.Vector2Field("Door Direction", connection.DoorDirection);
             connection.IsLayerTransition = EditorGUILayout.Toggle("Is Layer Transition", connection.IsLayerTransition);
 
+            EditorGUILayout.Space(5);
+            EditorGUILayout.BeginHorizontal();
+
+            ScaffoldElement boundDoor = FindBoundDoor(room, connection);
+            if (boundDoor != null)
+            {
+                EditorGUILayout.HelpBox("Door placed ✓", MessageType.Info);
+                if (GUILayout.Button("Remove Door", EditorStyles.miniButton))
+                {
+                    Undo.RecordObject(_currentScaffold, "Remove Bound Door");
+                    room.RemoveElement(boundDoor);
+                    EditorUtility.SetDirty(_currentScaffold);
+                }
+            }
+            else
+            {
+                EditorGUI.BeginDisabledGroup(string.IsNullOrEmpty(connection.TargetRoomID));
+                if (GUILayout.Button("Place Door", GUILayout.Height(25)))
+                {
+                    PlaceDoorForConnection(room, connection);
+                }
+                EditorGUI.EndDisabledGroup();
+            }
+
+            EditorGUILayout.EndHorizontal();
+
             EditorGUILayout.EndVertical();
+        }
+
+        /// <summary>
+        /// Finds the door element bound to a connection.
+        /// </summary>
+        private ScaffoldElement FindBoundDoor(ScaffoldRoom room, ScaffoldDoorConnection connection)
+        {
+            return room.Elements.FirstOrDefault(e =>
+                e.ElementType == ScaffoldElementType.Door &&
+                e.BoundConnectionID == connection.ConnectionID);
+        }
+
+        /// <summary>
+        /// Places a door for the given connection.
+        /// </summary>
+        private void PlaceDoorForConnection(ScaffoldRoom room, ScaffoldDoorConnection connection)
+        {
+            Undo.RecordObject(_currentScaffold, "Place Door");
+
+            ScaffoldElement newDoor = new ScaffoldElement
+            {
+                ElementType = ScaffoldElementType.Door,
+                LocalPosition = connection.DoorPosition,
+                Rotation = Vector2.SignedAngle(Vector2.right, connection.DoorDirection),
+                Scale = Vector3.one,
+                BoundConnectionID = connection.ConnectionID
+            };
+            newDoor.EnsureDoorConfigExists();
+
+            room.AddElement(newDoor);
+            EditorUtility.SetDirty(_currentScaffold);
+            Repaint();
+        }
+
+        /// <summary>
+        /// Syncs the door element position with the connection door position.
+        /// </summary>
+        private void SyncDoorPosition(ScaffoldRoom room, ScaffoldDoorConnection connection)
+        {
+            ScaffoldElement boundDoor = FindBoundDoor(room, connection);
+            if (boundDoor != null)
+            {
+                boundDoor.LocalPosition = connection.DoorPosition;
+            }
         }
 
         /// <summary>
@@ -482,8 +1069,12 @@ namespace ProjectArk.Level
             else if (evt.type == EventType.MouseDrag && _isDraggingRoom && _draggingRoom != null)
             {
                 Vector2 delta = (mousePos - _dragStartMousePos) / (topologyScale * _zoomLevel);
+                Vector3 newPosition = _dragStartRoomPos + new Vector3(delta.x, -delta.y, 0);
+                
+                Vector3 snappedPosition = SnapToOtherRooms(_draggingRoom, newPosition);
+                
                 Undo.RecordObject(_currentScaffold, "Move Room");
-                _draggingRoom.Position = _dragStartRoomPos + new Vector3(delta.x, -delta.y, 0);
+                _draggingRoom.Position = snappedPosition;
                 EditorUtility.SetDirty(_currentScaffold);
                 evt.Use();
                 Repaint();
@@ -502,19 +1093,14 @@ namespace ProjectArk.Level
         private Color GetRoomColor(RoomType type, bool isSelected)
         {
             float alpha = isSelected ? 0.9f : 0.6f;
-            switch (type)
+            return type switch
             {
-                case RoomType.Normal:
-                    return new Color(0.3f, 0.5f, 0.7f, alpha);
-                case RoomType.Arena:
-                    return new Color(0.8f, 0.6f, 0.3f, alpha);
-                case RoomType.Boss:
-                    return new Color(0.8f, 0.3f, 0.3f, alpha);
-                case RoomType.Safe:
-                    return new Color(0.3f, 0.8f, 0.5f, alpha);
-                default:
-                    return new Color(0.5f, 0.5f, 0.5f, alpha);
-            }
+                RoomType.Normal => new Color(0.3f, 0.5f, 0.7f, alpha),
+                RoomType.Arena => new Color(0.8f, 0.6f, 0.3f, alpha),
+                RoomType.Boss => new Color(0.8f, 0.3f, 0.3f, alpha),
+                RoomType.Safe => new Color(0.3f, 0.8f, 0.5f, alpha),
+                _ => new Color(0.5f, 0.5f, 0.5f, alpha)
+            };
         }
 
         /// <summary>
@@ -536,6 +1122,48 @@ namespace ProjectArk.Level
                 (topologyPos.x - 1000) / _zoomLevel,
                 -(topologyPos.y - 1000) / _zoomLevel,
                 0);
+        }
+
+        /// <summary>
+        /// Snaps a room to other rooms' edges when close enough.
+        /// </summary>
+        private Vector3 SnapToOtherRooms(ScaffoldRoom draggingRoom, Vector3 desiredPosition)
+        {
+            Vector3 snappedPosition = desiredPosition;
+
+            foreach (var otherRoom in _currentScaffold.Rooms)
+            {
+                if (otherRoom == draggingRoom) continue;
+
+                float left = otherRoom.Position.x - otherRoom.Size.x / 2;
+                float right = otherRoom.Position.x + otherRoom.Size.x / 2;
+                float top = otherRoom.Position.y + otherRoom.Size.y / 2;
+                float bottom = otherRoom.Position.y - otherRoom.Size.y / 2;
+
+                float draggingLeft = desiredPosition.x - draggingRoom.Size.x / 2;
+                float draggingRight = desiredPosition.x + draggingRoom.Size.x / 2;
+                float draggingTop = desiredPosition.y + draggingRoom.Size.y / 2;
+                float draggingBottom = desiredPosition.y - draggingRoom.Size.y / 2;
+
+                if (Mathf.Abs(draggingRight - left) < _roomSnapThreshold)
+                {
+                    snappedPosition.x = left - draggingRoom.Size.x / 2;
+                }
+                if (Mathf.Abs(draggingLeft - right) < _roomSnapThreshold)
+                {
+                    snappedPosition.x = right + draggingRoom.Size.x / 2;
+                }
+                if (Mathf.Abs(draggingBottom - top) < _roomSnapThreshold)
+                {
+                    snappedPosition.y = top + draggingRoom.Size.y / 2;
+                }
+                if (Mathf.Abs(draggingTop - bottom) < _roomSnapThreshold)
+                {
+                    snappedPosition.y = bottom - draggingRoom.Size.y / 2;
+                }
+            }
+
+            return snappedPosition;
         }
 
         // ──────────────────── Scene GUI ────────────────────

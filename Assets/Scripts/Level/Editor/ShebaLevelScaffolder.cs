@@ -13,6 +13,7 @@ namespace ProjectArk.Level.Editor
     /// 
     /// Menu: ProjectArk > Scaffold Sheba Level
     /// </summary>
+    [System.Obsolete("Use LevelArchitectWindow instead. Open via Window > ProjectArk > Level Architect.")]
     public static class ShebaLevelScaffolder
     {
         // ──────────────────── Constants ────────────────────

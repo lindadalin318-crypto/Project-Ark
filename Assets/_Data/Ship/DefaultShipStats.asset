@@ -12,15 +12,33 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e2b5ac2c789250b438979e67441297a3, type: 3}
   m_Name: DefaultShipStats
   m_EditorClassIdentifier: 
-  _moveSpeed: 12
-  _acceleration: 45
-  _deceleration: 25
+  _moveSpeed: 14
+  _acceleration: 70
+  _deceleration: 55
   _accelerationCurve:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
       time: 0
-      value: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.3
+      value: 1.2
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.7
+      value: 0.8
       inSlope: 0
       outSlope: 0
       tangentMode: 0
@@ -29,7 +47,7 @@ MonoBehaviour:
       outWeight: 0
     - serializedVersion: 3
       time: 1
-      value: 1
+      value: 0.6
       inSlope: 0
       outSlope: 0
       tangentMode: 0
@@ -44,7 +62,16 @@ MonoBehaviour:
     m_Curve:
     - serializedVersion: 3
       time: 0
-      value: 0
+      value: 1.3
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.4
+      value: 1
       inSlope: 0
       outSlope: 0
       tangentMode: 0
@@ -53,7 +80,7 @@ MonoBehaviour:
       outWeight: 0
     - serializedVersion: 3
       time: 1
-      value: 1
+      value: 0.7
       inSlope: 0
       outSlope: 0
       tangentMode: 0
@@ -63,11 +90,13 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  _sharpTurnAngleThreshold: 90
-  _sharpTurnSpeedPenalty: 0.7
-  _initialBoostMultiplier: 1.5
-  _initialBoostDuration: 0.05
-  _minMoveSpeedThreshold: 0.1
+  _sharpTurnAngleThreshold: 120
+  _sharpTurnSpeedPenalty: 0.9
+  _initialBoostMultiplier: 2.2
+  _initialBoostDuration: 0.12
+  _minMoveSpeedThreshold: 0.08
+  _directionChangeSnappiness: 0.65
+  _minSpeedForDirectionChange: 0.5
   _rotationSpeed: 720
   _dashSpeed: 30
   _dashDuration: 0.15

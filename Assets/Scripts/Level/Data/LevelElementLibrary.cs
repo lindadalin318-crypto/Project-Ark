@@ -42,6 +42,10 @@ namespace ProjectArk.Level
         [Tooltip("Prefab for an enemy spawn point")]
         [SerializeField] private GameObject _enemySpawnPoint;
 
+        [Header("Hazard Elements")]
+        [Tooltip("Prefab for a generic hazard (spikes, etc.)")]
+        [SerializeField] private GameObject _hazard;
+
         // ──────────────────── Public Properties ────────────────────
 
         public GameObject RoomTemplate => _roomTemplate;
@@ -53,5 +57,28 @@ namespace ProjectArk.Level
         public GameObject Checkpoint => _checkpoint;
         public GameObject PlayerSpawnPoint => _playerSpawnPoint;
         public GameObject EnemySpawnPoint => _enemySpawnPoint;
+        public GameObject Hazard => _hazard;
+
+        // ──────────────────── Public Methods ────────────────────
+
+        /// <summary>
+        /// Gets the prefab for a given element type.
+        /// </summary>
+        public GameObject GetPrefabForType(ScaffoldElementType type)
+        {
+            return type switch
+            {
+                ScaffoldElementType.Wall => _wallBasic,
+                ScaffoldElementType.WallCorner => _wallCorner,
+                ScaffoldElementType.CrateWooden => _crateWooden,
+                ScaffoldElementType.CrateMetal => _crateMetal,
+                ScaffoldElementType.Door => _doorBasic,
+                ScaffoldElementType.Checkpoint => _checkpoint,
+                ScaffoldElementType.PlayerSpawn => _playerSpawnPoint,
+                ScaffoldElementType.EnemySpawn => _enemySpawnPoint,
+                ScaffoldElementType.Hazard => _hazard,
+                _ => null
+            };
+        }
     }
 }

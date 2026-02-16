@@ -14,22 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.LevelScaffoldData
   _levelName: New Level
   _floorLevel: 0
-  _rooms:
-  - _roomID: 2d17f8d1-b382-418f-bd9f-9d1f3075773b
-    _displayName: Room 1
-    _roomType: 0
-    _position: {x: 0, y: 0, z: 0}
-    _size: {x: 20, y: 15}
-    _connections: []
-    _roomSO: {fileID: 0}
-  - _roomID: 2890ede0-2a6e-4d98-b539-cd5002f5c157
-    _displayName: Room 2
-    _roomType: 0
-    _position: {x: 30, y: 0, z: 0}
-    _size: {x: 20, y: 15}
-    _connections:
-    - _targetRoomID: 
-      _doorPosition: {x: 0, y: 0, z: 0}
-      _doorDirection: {x: 0, y: 0}
-      _isLayerTransition: 0
-    _roomSO: {fileID: 0}
+  _rooms: []

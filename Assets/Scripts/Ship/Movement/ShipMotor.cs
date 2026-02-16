@@ -110,7 +110,21 @@ namespace ProjectArk.Ship
                 // Reset deceleration tracking
                 _decelerationProgress = 0f;
 
-                // ── Sharp Turn Detection ──
+                // ── Direction Change Snappiness (New!) ──
+                if (currentVel.sqrMagnitude > _stats.MinSpeedForDirectionChange * _stats.MinSpeedForDirectionChange)
+                {
+                    Vector2 currentDir = currentVel.normalized;
+                    Vector2 targetDir = input.normalized;
+                    
+                    // Blend between current and target direction based on snappiness
+                    Vector2 blendedDir = Vector2.Lerp(currentDir, targetDir, _stats.DirectionChangeSnappiness).normalized;
+                    
+                    // Blend the velocity magnitude
+                    float speed = currentVel.magnitude;
+                    currentVel = blendedDir * speed;
+                }
+
+                // ── Sharp Turn Detection (Relaxed) ──
                 float sharpTurnMultiplier = 1f;
                 if (currentVel.sqrMagnitude > 0.01f)
                 {
