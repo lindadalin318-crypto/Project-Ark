@@ -1,11 +1,15 @@
-
+    
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace ProjectArk.SpaceLife
 {
     [RequireComponent(typeof(Rigidbody2D))]
     public class PlayerController2D : MonoBehaviour
     {
+        [Header("Input")]
+        [SerializeField] private InputActionAsset _inputActions;
+
         [Header("Movement")]
         [SerializeField] private float _moveSpeed = 5f;
         [SerializeField] private float _jumpForce = 8f;
@@ -17,6 +21,8 @@ namespace ProjectArk.SpaceLife
         [SerializeField] private Animator _animator;
 
         private Rigidbody2D _rb;
+        private InputAction _moveAction;
+        private InputAction _jumpAction;
         private Vector2 _moveInput;
         private bool _isGrounded;
         private bool _jumpRequested;
@@ -29,11 +35,27 @@ namespace ProjectArk.SpaceLife
                 _spriteRenderer = GetComponent<SpriteRenderer>();
             if (_animator == null)
                 _animator = GetComponent<Animator>();
+
+            var shipMap = _inputActions.FindActionMap("Ship");
+            _moveAction = shipMap.FindAction("Move");
+            _jumpAction = shipMap.FindAction("SpaceLifeJump");
+        }
+
+        private void OnEnable()
+        {
+            if (_jumpAction != null)
+                _jumpAction.performed += OnJumpActionPerformed;
+        }
+
+        private void OnDisable()
+        {
+            if (_jumpAction != null)
+                _jumpAction.performed -= OnJumpActionPerformed;
         }
 
         private void Update()
         {
-            HandleInput();
+            ReadMovementInput();
             CheckGrounded();
         }
 
@@ -43,12 +65,18 @@ namespace ProjectArk.SpaceLife
             ApplyJump();
         }
 
-        private void HandleInput()
+        private void ReadMovementInput()
         {
-            float horizontal = Input.GetAxis("Horizontal");
-            _moveInput = new Vector2(horizontal, 0f);
+            if (_moveAction != null)
+            {
+                Vector2 input = _moveAction.ReadValue<Vector2>();
+                _moveInput = new Vector2(input.x, 0f);
+            }
+        }
 
-            if ((Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.Space)) && _isGrounded)
+        private void OnJumpActionPerformed(InputAction.CallbackContext ctx)
+        {
+            if (_isGrounded)
             {
                 _jumpRequested = true;
             }

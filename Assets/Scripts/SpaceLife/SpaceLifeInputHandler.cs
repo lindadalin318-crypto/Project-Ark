@@ -1,30 +1,43 @@
 
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace ProjectArk.SpaceLife
 {
     public class SpaceLifeInputHandler : MonoBehaviour
     {
-        [Header("Key Bindings")]
-        [SerializeField] private KeyCode _toggleSpaceLifeKey = KeyCode.Tab;
+        [Header("Input")]
+        [SerializeField] private InputActionAsset _inputActions;
 
-        private void Update()
+        private InputAction _toggleSpaceLifeAction;
+
+        private void Awake()
         {
-            HandleToggleSpaceLife();
+            var shipMap = _inputActions.FindActionMap("Ship");
+            _toggleSpaceLifeAction = shipMap.FindAction("ToggleSpaceLife");
         }
 
-        private void HandleToggleSpaceLife()
+        private void OnEnable()
         {
-            if (Input.GetKeyDown(_toggleSpaceLifeKey))
+            if (_toggleSpaceLifeAction != null)
+                _toggleSpaceLifeAction.performed += OnToggleSpaceLifePerformed;
+        }
+
+        private void OnDisable()
+        {
+            if (_toggleSpaceLifeAction != null)
+                _toggleSpaceLifeAction.performed -= OnToggleSpaceLifePerformed;
+        }
+
+        private void OnToggleSpaceLifePerformed(InputAction.CallbackContext ctx)
+        {
+            if (SpaceLifeManager.Instance != null)
             {
-                if (SpaceLifeManager.Instance != null)
-                {
-                    SpaceLifeManager.Instance.ToggleSpaceLife();
-                }
-                else
-                {
-                    Debug.LogWarning("[SpaceLifeInputHandler] SpaceLifeManager not found!");
-                }
+                SpaceLifeManager.Instance.ToggleSpaceLife();
+            }
+            else
+            {
+                Debug.LogWarning("[SpaceLifeInputHandler] SpaceLifeManager not found!");
             }
         }
     }

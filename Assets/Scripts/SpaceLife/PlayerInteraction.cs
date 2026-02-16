@@ -1,15 +1,38 @@
 
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace ProjectArk.SpaceLife
 {
     public class PlayerInteraction : MonoBehaviour
     {
+        [Header("Input")]
+        [SerializeField] private InputActionAsset _inputActions;
+
         [Header("Settings")]
-        [SerializeField] private KeyCode _interactKey = KeyCode.E;
         [SerializeField] private float _interactionRange = 2f;
 
+        private InputAction _interactAction;
         private Interactable _nearestInteractable;
+        private bool _interactRequested;
+
+        private void Awake()
+        {
+            var shipMap = _inputActions.FindActionMap("Ship");
+            _interactAction = shipMap.FindAction("Interact");
+        }
+
+        private void OnEnable()
+        {
+            if (_interactAction != null)
+                _interactAction.performed += OnInteractActionPerformed;
+        }
+
+        private void OnDisable()
+        {
+            if (_interactAction != null)
+                _interactAction.performed -= OnInteractActionPerformed;
+        }
 
         private void Update()
         {
@@ -36,11 +59,17 @@ namespace ProjectArk.SpaceLife
             }
         }
 
+        private void OnInteractActionPerformed(InputAction.CallbackContext ctx)
+        {
+            _interactRequested = true;
+        }
+
         private void HandleInteractionInput()
         {
-            if (Input.GetKeyDown(_interactKey) && _nearestInteractable != null)
+            if (_interactRequested && _nearestInteractable != null)
             {
                 _nearestInteractable.Interact();
+                _interactRequested = false;
             }
         }
 

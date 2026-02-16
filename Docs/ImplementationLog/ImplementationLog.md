@@ -3900,3 +3900,32 @@ Assets/Scripts/Level/
 
 **技术：**
 Markdown文档、系统检查清单、状态报告。
+
+---
+
+## SpaceLife 模块 New Input System 统一迁移 — 2026-02-16
+
+### 新建/修改文件：
+| 文件路径 | 变更说明 |
+|---------|---------|
+| `Assets/Input/ShipActions.inputactions` | 新增 ToggleSpaceLife 和 SpaceLifeJump 两个 Action，添加相应键盘/手柄绑定 |
+| `Assets/Scripts/SpaceLife/ProjectArk.SpaceLife.asmdef` | 添加 Unity.InputSystem 程序集引用，添加 rootNamespace |
+| `Assets/Scripts/SpaceLife/SpaceLifeInputHandler.cs` | 重构为使用 New Input System，移除旧 Input 类 |
+| `Assets/Scripts/SpaceLife/PlayerInteraction.cs` | 重构为使用 New Input System，移除旧 Input 类 |
+| `Assets/Scripts/SpaceLife/PlayerController2D.cs` | 重构为使用 New Input System，移除旧 Input 类 |
+
+### 内容：
+将 SpaceLife 模块的所有输入处理统一迁移到 New Input System，与项目其他模块保持一致：
+1. 在 ShipActions.inputactions 中新增 ToggleSpaceLife Action（绑定 Tab 键）
+2. 在 ShipActions.inputactions 中新增 SpaceLifeJump Action（绑定 W/↑/Space/Gamepad 按钮）
+3. 复用 Ship map 中已有的 Move Action 和 Interact Action
+4. 重构 SpaceLifeInputHandler 使用 ToggleSpaceLife Action
+5. 重构 PlayerInteraction 使用 Interact Action
+6. 重构 PlayerController2D 使用 Move Action 和 SpaceLifeJump Action
+7. 更新 ProjectArk.SpaceLife.asmdef 添加 Unity.InputSystem 引用
+
+### 目的：
+确保 SpaceLife 模块与项目整体架构一致，使用 CLAUDE.md 中明确要求的 New Input System 技术栈，避免新旧输入系统混用导致的潜在问题。
+
+### 技术：
+Unity New Input System、InputActionAsset、InputAction、事件驱动输入处理。

@@ -1,8 +1,10 @@
 
 {
     "name": "ProjectArk.SpaceLife",
+    "rootNamespace": "ProjectArk.SpaceLife",
     "references": [
-        "ProjectArk.Core"
+        "ProjectArk.Core",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
