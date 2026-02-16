@@ -36,6 +36,12 @@ namespace ProjectArk.UI
         /// <summary> Fired when this cell is clicked. </summary>
         public event Action OnClicked;
 
+        /// <summary> Fired when the pointer enters this cell and an item is displayed. </summary>
+        public event Action<StarChartItemSO> OnPointerEntered;
+
+        /// <summary> Fired when the pointer exits this cell. </summary>
+        public event Action OnPointerExited;
+
         /// <summary> The item currently displayed in this cell (null if empty/spanned). </summary>
         public StarChartItemSO DisplayedItem { get; private set; }
 
@@ -163,55 +169,68 @@ namespace ProjectArk.UI
         public void OnPointerEnter(PointerEventData eventData)
         {
             var mgr = DragDropManager.Instance;
-            if (mgr == null || !mgr.IsDragging) return;
-
-            var payload = mgr.CurrentPayload;
-            if (payload == null) return;
-
-            // Type matching: Core items → core cells, Prism items → prism cells
-            bool typeMatch = (payload.Item.ItemType == StarChartItemType.Core && IsCoreCell)
-                          || (payload.Item.ItemType == StarChartItemType.Prism && !IsCoreCell);
-
-            // Space check via the owning track
-            bool hasSpace = false;
-            if (typeMatch && OwnerTrack != null)
+            if (mgr != null && mgr.IsDragging)
             {
-                hasSpace = OwnerTrack.HasSpaceForItem(payload.Item, IsCoreCell);
+                var payload = mgr.CurrentPayload;
+                if (payload == null) return;
+
+                // Type matching: Core items → core cells, Prism items → prism cells
+                bool typeMatch = (payload.Item.ItemType == StarChartItemType.Core && IsCoreCell)
+                              || (payload.Item.ItemType == StarChartItemType.Prism && !IsCoreCell);
+
+                // Space check via the owning track
+                bool hasSpace = false;
+                if (typeMatch && OwnerTrack != null)
+                {
+                    hasSpace = OwnerTrack.HasSpaceForItem(payload.Item, IsCoreCell);
+                }
+
+                bool valid = typeMatch && hasSpace;
+                _isHighlightedValid = valid;
+
+                // Store drop target info in the manager
+                mgr.DropTargetTrack = OwnerTrack?.Track;
+                mgr.DropTargetIsCoreLayer = IsCoreCell;
+                mgr.DropTargetValid = valid;
+
+                // Highlight this cell and adjacent cells for SlotSize > 1
+                if (OwnerTrack != null)
+                    OwnerTrack.SetMultiCellHighlight(CellIndex, payload.Item.SlotSize, IsCoreCell, valid);
+                else
+                    SetHighlight(valid);
             }
-
-            bool valid = typeMatch && hasSpace;
-            _isHighlightedValid = valid;
-
-            // Store drop target info in the manager
-            mgr.DropTargetTrack = OwnerTrack?.Track;
-            mgr.DropTargetIsCoreLayer = IsCoreCell;
-            mgr.DropTargetValid = valid;
-
-            // Highlight this cell and adjacent cells for SlotSize > 1
-            if (OwnerTrack != null)
-                OwnerTrack.SetMultiCellHighlight(CellIndex, payload.Item.SlotSize, IsCoreCell, valid);
             else
-                SetHighlight(valid);
+            {
+                // Not dragging - show tooltip if there's an item
+                if (DisplayedItem != null)
+                    OnPointerEntered?.Invoke(DisplayedItem);
+            }
         }
 
         public void OnPointerExit(PointerEventData eventData)
         {
             var mgr = DragDropManager.Instance;
-            if (mgr == null || !mgr.IsDragging) return;
-
-            // Clear highlights
-            if (OwnerTrack != null)
-                OwnerTrack.ClearAllHighlights();
-            else
-                ClearHighlight();
-
-            _isHighlightedValid = false;
-
-            // Clear drop target in manager
-            if (mgr.DropTargetTrack == OwnerTrack?.Track)
+            if (mgr != null && mgr.IsDragging)
             {
-                mgr.DropTargetTrack = null;
-                mgr.DropTargetValid = false;
+                // Clear highlights
+                if (OwnerTrack != null)
+                    OwnerTrack.ClearAllHighlights();
+                else
+                    ClearHighlight();
+
+                _isHighlightedValid = false;
+
+                // Clear drop target in manager
+                if (mgr.DropTargetTrack == OwnerTrack?.Track)
+                {
+                    mgr.DropTargetTrack = null;
+                    mgr.DropTargetValid = false;
+                }
+            }
+            else
+            {
+                // Not dragging - hide tooltip
+                OnPointerExited?.Invoke();
             }
         }
 

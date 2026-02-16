@@ -29,6 +29,12 @@ namespace ProjectArk.UI
         /// <summary> Fired when a player clicks an item in the inventory. </summary>
         public event Action<StarChartItemSO> OnItemSelected;
 
+        /// <summary> Fired when the pointer enters an item in the inventory. </summary>
+        public event Action<StarChartItemSO> OnItemPointerEntered;
+
+        /// <summary> Fired when the pointer exits an item in the inventory. </summary>
+        public event Action OnItemPointerExited;
+
         private StarChartInventorySO _inventory;
         private StarChartItemType? _activeFilter;
         private readonly List<InventoryItemView> _itemViews = new();
@@ -85,6 +91,8 @@ namespace ProjectArk.UI
                 bool equipped = _isEquippedCheck?.Invoke(item) ?? false;
                 view.Setup(item, equipped);
                 view.OnClicked += HandleItemClicked;
+                view.OnPointerEntered += (i) => OnItemPointerEntered?.Invoke(i);
+                view.OnPointerExited += () => OnItemPointerExited?.Invoke();
                 view.gameObject.SetActive(true);
                 _itemViews.Add(view);
                 count++;

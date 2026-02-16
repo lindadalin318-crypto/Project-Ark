@@ -34,6 +34,12 @@ namespace ProjectArk.UI
         /// <summary> Fired when the track select button is clicked. </summary>
         public event Action<TrackView> OnTrackSelected;
 
+        /// <summary> Fired when the pointer enters a cell with an item. </summary>
+        public event Action<StarChartItemSO> OnCellPointerEntered;
+
+        /// <summary> Fired when the pointer exits a cell. </summary>
+        public event Action OnCellPointerExited;
+
         private WeaponTrack _track;
 
         private void Awake()
@@ -51,6 +57,8 @@ namespace ProjectArk.UI
                     _prismCells[i].CellIndex = i;
                     _prismCells[i].OwnerTrack = this;
                     _prismCells[i].OnClicked += () => HandleCellClick(_prismCells[index]);
+                    _prismCells[i].OnPointerEntered += (item) => OnCellPointerEntered?.Invoke(item);
+                    _prismCells[i].OnPointerExited += () => OnCellPointerExited?.Invoke();
                 }
             }
 
@@ -63,6 +71,8 @@ namespace ProjectArk.UI
                     _coreCells[i].CellIndex = i;
                     _coreCells[i].OwnerTrack = this;
                     _coreCells[i].OnClicked += () => HandleCellClick(_coreCells[index]);
+                    _coreCells[i].OnPointerEntered += (item) => OnCellPointerEntered?.Invoke(item);
+                    _coreCells[i].OnPointerExited += () => OnCellPointerExited?.Invoke();
                 }
             }
         }

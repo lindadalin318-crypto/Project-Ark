@@ -13,7 +13,9 @@ namespace ProjectArk.UI
     /// Supports drag-and-drop to equip items onto weapon track slots.
     /// </summary>
     [RequireComponent(typeof(CanvasGroup))]
-    public class InventoryItemView : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+    public class InventoryItemView : MonoBehaviour, 
+        IBeginDragHandler, IDragHandler, IEndDragHandler,
+        IPointerEnterHandler, IPointerExitHandler
     {
         [SerializeField] private Image _iconImage;
         [SerializeField] private TMP_Text _nameLabel;
@@ -35,6 +37,12 @@ namespace ProjectArk.UI
 
         /// <summary> Fired when this item card is clicked. </summary>
         public event Action<StarChartItemSO> OnClicked;
+
+        /// <summary> Fired when the pointer enters this item. </summary>
+        public event Action<StarChartItemSO> OnPointerEntered;
+
+        /// <summary> Fired when the pointer exits this item. </summary>
+        public event Action OnPointerExited;
 
         /// <summary> The item this view represents. </summary>
         public StarChartItemSO Item { get; private set; }
@@ -181,6 +189,20 @@ namespace ProjectArk.UI
             // If the drop wasn't consumed by a valid target, cancel
             if (DragDropManager.Instance != null && DragDropManager.Instance.IsDragging)
                 DragDropManager.Instance.CancelDrag();
+        }
+
+        // ========== Pointer Hover Implementation ==========
+
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            if (_isDragging) return;
+            OnPointerEntered?.Invoke(Item);
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            if (_isDragging) return;
+            OnPointerExited?.Invoke();
         }
     }
 }

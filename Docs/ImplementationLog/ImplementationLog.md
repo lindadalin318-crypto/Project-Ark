@@ -2397,6 +2397,8 @@ CLAUDE.md 是 AI 对话的"ground truth"。架构大修后未同步更新会导�
 | `Assets/Scripts/UI/ProjectArk.UI.asmdef` | 添加 `ProjectArk.Level` 引用 | 使 UI Editor 脚本能引用 Level 模块类型 (DoorTransitionController) |
 | `Assets/Scripts/UI/Editor/UICanvasBuilder.cs` | 重构为幂等 + 新增 DoorTransitionController 段 | 见下方详细说明 |
 
+---
+
 ### UICanvasBuilder 改动详情
 
 **1. 幂等创建（防重复）**
@@ -3758,3 +3760,143 @@ Assets/Scripts/Level/
 **目的：** 提供Scene-View-First的关卡设计体验，让策划能在几分钟内完成关卡白膜搭建、自动配置门连接、一键验证修复错误、直观查看关卡节奏，大幅提升关卡制作效率。
 
 **技术：** EditorWindow/SceneView集成、Handles绘制系统、SerializedObject批量编辑、BFS图搜索、ScriptableObject数据驱动、Undo撤销支持、AssetDatabase资产管理。
+
+---
+
+## 星图系统设计文档 — 2026-02-16
+
+**新建文件：**
+- `Docs/StarChartDesign.md`
+
+**内容：**
+完整的星图系统设计文档，包含：
+- 系统概述与核心概念（星核、棱镜、光帆、伴星、轨道）
+- 轨道布局设计（16:9横版适配、主副轨道背包式布局）
+- 拖拽装备系统
+- 物品说明浮窗（鼠标hover显示，无卸载按钮）
+- 主副轨道自动选中（鼠标靠近自动激活）
+- 武器轨道组合切换（上下按钮，加特林旋转视觉效果）
+- 未来扩展预留（格子数随游戏进度增加）
+
+**目的：** 将星图系统的完整设计需求整理成可执行的文档，为后续实现提供明确的指导。
+
+**技术：** Markdown文档、需求规格化、交互设计。
+
+---
+
+## 太空生活系统设计文档 — 2026-02-16
+
+**新建文件：**
+- `Docs/SpaceLifeSystemDesign.md`
+
+**内容：**
+完整的太空生活系统设计文档，包含：
+- 系统概述（双视角切换：战斗视角 ↔ 飞船内视角）
+- 视角切换机制（Tab键切换，C键打开星图）
+- 飞船内空间布局（主空间网状连接，6个船员房间）
+- 房间类型（驾驶室、星图室、船员休息室、医疗室、厨房、储物室）
+- 2D横版角色移动（WASD移动，空格键跳跃）
+- NPC互动系统（对话、送礼、关系值）
+- 编辑器工具（一键配置向导）
+
+**目的：** 将太空生活系统的完整设计需求整理成可执行的文档，为后续实现提供明确的指导。
+
+**技术：** Markdown文档、需求规格化、游戏设计。
+
+---
+
+## 太空生活系统完整实现 — 2026-02-16
+
+**新建文件（23个）：**
+
+**Runtime (16个)：**
+1. `Assets/Scripts/SpaceLife/SpaceLifeManager.cs` — 单例管理器，处理模式切换、玩家生成、相机切换
+2. `Assets/Scripts/SpaceLife/PlayerController2D.cs` — 2D角色移动控制器（Rigidbody2D，跳跃、地面检测、动画）
+3. `Assets/Scripts/SpaceLife/PlayerInteraction.cs` — 玩家互动组件（查找最近可互动、E键互动）
+4. `Assets/Scripts/SpaceLife/SpaceLifeInputHandler.cs` — 太空生活输入处理器
+5. `Assets/Scripts/SpaceLife/Room.cs` — 房间组件（玩家检测、房间状态）
+6. `Assets/Scripts/SpaceLife/RoomManager.cs` — 房间管理器（查找所有房间）
+7. `Assets/Scripts/SpaceLife/Door.cs` — 门组件（传送玩家、钥匙验证）
+8. `Assets/Scripts/SpaceLife/Interactable.cs` — 可互动对象组件（互动提示、范围检测）
+9. `Assets/Scripts/SpaceLife/NPCController.cs` — NPC控制器
+10. `Assets/Scripts/SpaceLife/RelationshipManager.cs` — 关系管理器（单例，关系值存储与事件）
+11. `Assets/Scripts/SpaceLife/DialogueUI.cs` — 对话UI（打字机效果、选项选择）
+12. `Assets/Scripts/SpaceLife/NPCInteractionUI.cs` — NPC综合互动UI
+13. `Assets/Scripts/SpaceLife/GiftInventory.cs` — 礼物库存
+14. `Assets/Scripts/SpaceLife/GiftUI.cs` — 送礼UI
+15. `Assets/Scripts/SpaceLife/MinimapUI.cs` — 小地图UI
+16. `Assets/Scripts/SpaceLife/SpaceLifeQuickSetup.cs` — 快速设置脚本
+
+**Data (3个)：**
+17. `Assets/Scripts/SpaceLife/Data/NPCDataSO.cs` — NPC数据ScriptableObject
+18. `Assets/Scripts/SpaceLife/Data/ItemSO.cs` — 物品数据ScriptableObject
+19. `Assets/Scripts/SpaceLife/Data/DialogueData.cs` — 对话数据结构
+
+**Editor (4个)：**
+20. `Assets/Scripts/SpaceLife/Editor/SpaceLifeSetupWindow.cs` — 设置向导窗口（分Phase 1-5，一键配置）
+21. `Assets/Scripts/SpaceLife/Editor/SpaceLifeMenuItems.cs` — 快捷菜单工具
+22. `Assets/Scripts/SpaceLife/Editor/ProjectArk.SpaceLife.Editor.asmdef` — Editor程序集定义
+23. `Assets/Scripts/SpaceLife/ProjectArk.SpaceLife.asmdef` — Runtime程序集定义
+
+**内容简述：**
+完整的太空生活系统实现，包括：
+1. **核心管理器** — SpaceLifeManager单例，处理模式切换、玩家生成、相机切换
+2. **2D角色移动** — Rigidbody2D物理移动、跳跃、地面检测、动画控制
+3. **房间系统** — Room/RoomManager/Door组件
+4. **NPC系统** — NPCController/NPCDataSO/RelationshipManager
+5. **对话系统** — DialogueUI带打字机效果
+6. **送礼系统** — GiftInventory/GiftUI
+7. **编辑器工具** — SpaceLifeSetupWindow分阶段向导、SpaceLifeMenuItems快捷菜单
+
+**目的：** 完整实现太空生活系统，提供双视角切换、2D角色移动、NPC互动等核心功能。
+
+**技术：** Unity MonoBehaviour、ScriptableObject、单例模式、事件驱动、Rigidbody2D物理、PrimeTween动画、UniTask异步。
+
+---
+
+## Unity 废弃 API 更新：FindObjectOfType → FindFirstObjectByType — 2026-02-16
+
+### 概述
+将 Space Life 系统中所有废弃的 Unity API 调用更新到现代替代方案，消除编译警告并确保与 Unity 最新版本的兼容性。
+
+### 修改文件
+
+| 文件路径 | 变更说明 |
+|---------|---------|
+| `Assets/Scripts/SpaceLife/Room.cs` | `FindObjectOfType&lt;PlayerController2D&gt;()` → `FindFirstObjectByType&lt;PlayerController2D&gt;()` |
+| `Assets/Scripts/SpaceLife/PlayerInteraction.cs` | `FindObjectsOfType&lt;Interactable&gt;()` → `FindObjectsByType&lt;Interactable&gt;(FindObjectsSortMode.None)` |
+| `Assets/Scripts/SpaceLife/Door.cs` | `FindObjectOfType&lt;PlayerController2D&gt;()` → `FindFirstObjectByType&lt;PlayerController2D&gt;()` |
+| `Assets/Scripts/SpaceLife/RoomManager.cs` | `FindObjectsOfType&lt;Room&gt;()` → `FindObjectsByType&lt;Room&gt;(FindObjectsSortMode.None)` |
+| `Assets/Scripts/SpaceLife/Interactable.cs` | `FindObjectOfType&lt;PlayerController2D&gt;()` → `FindFirstObjectByType&lt;PlayerController2D&gt;()` |
+| `Assets/Scripts/SpaceLife/Editor/SpaceLifeSetupWindow.cs` | 更新 14 处 `FindObjectOfType` 调用为 `Object.FindFirstObjectByType`；修复 `SetupPhase` 枚举访问修饰符 (internal → public)；修复隐式数组类型错误 (显式声明 `UnityEngine.MonoBehaviour[]`) |
+| `Assets/Scripts/SpaceLife/Editor/SpaceLifeMenuItems.cs` | 更新 `FindObjectOfType` 调用为 `Object.FindFirstObjectByType`；添加缺失的 `using ProjectArk.SpaceLife.Data;` 命名空间引用 |
+
+### 目的
+消除所有 CS0618 废弃 API 警告，确保项目与 Unity 6 及未来版本的兼容性。同时修复了在更新过程中暴露的编译错误（命名空间缺失、访问修饰符不一致、隐式类型数组）。
+
+### 技术
+- 单对象查找：`Object.FindObjectOfType&lt;T&gt;()` → `Object.FindFirstObjectByType&lt;T&gt;()`
+- 多对象查找（无序）：`Object.FindObjectsOfType&lt;T&gt;()` → `Object.FindObjectsByType&lt;T&gt;(FindObjectsSortMode.None)`
+- 现代 Unity API 迁移，向后兼容保持行为一致性
+
+---
+
+## 太空生活系统实现检查清单 — 2026-02-16
+
+**新建文件：**
+- `Docs/SpaceLifeImplementationChecklist.md`
+
+**内容：**
+完整的太空生活系统实现检查报告，包含：
+- 整体进度概览（总体完成度约85%）
+- 详细实现检查（核心管理器、2D角色移动、房间系统、NPC系统、对话系统、关系系统、送礼系统、双视角切换、输入处理、编辑器工具）
+- Unity API更新状态
+- 待完成功能清单
+- 文件清单（23个已创建文件）
+- 总结与下一步建议
+
+**目的：**
+系统地检查太空生活系统的实现状态，对比设计文档，列出所有已实现和缺失的功能，为后续开发提供清晰的指导。
+
+**技术：**
+Markdown文档、系统检查清单、状态报告。

@@ -18,6 +18,9 @@ namespace ProjectArk.UI
         [SerializeField] private InventoryView _inventoryView;
         [SerializeField] private ItemDetailView _itemDetailView;
 
+        // [Header("Tooltip")]
+        // [SerializeField] private ItemTooltipView _itemTooltipView;
+
         [Header("Drag & Drop")]
         [SerializeField] private DragDropManager _dragDropManager;
 
@@ -48,6 +51,8 @@ namespace ProjectArk.UI
                 _primaryTrackView.Bind(controller.PrimaryTrack);
                 _primaryTrackView.OnTrackSelected += HandleTrackSelected;
                 _primaryTrackView.OnCellClicked += HandleCellClicked;
+                // _primaryTrackView.OnCellPointerEntered += HandleCellPointerEntered;
+                // _primaryTrackView.OnCellPointerExited += HandleCellPointerExited;
             }
 
             if (_secondaryTrackView != null)
@@ -55,6 +60,8 @@ namespace ProjectArk.UI
                 _secondaryTrackView.Bind(controller.SecondaryTrack);
                 _secondaryTrackView.OnTrackSelected += HandleTrackSelected;
                 _secondaryTrackView.OnCellClicked += HandleCellClicked;
+                // _secondaryTrackView.OnCellPointerEntered += HandleCellPointerEntered;
+                // _secondaryTrackView.OnCellPointerExited += HandleCellPointerExited;
             }
 
             // 绑定库存
@@ -62,6 +69,8 @@ namespace ProjectArk.UI
             {
                 _inventoryView.Bind(inventory, IsItemEquipped);
                 _inventoryView.OnItemSelected += HandleInventoryItemSelected;
+                // _inventoryView.OnItemPointerEntered += HandleInventoryItemPointerEntered;
+                // _inventoryView.OnItemPointerExited += HandleInventoryItemPointerExited;
             }
 
             // 绑定详情
@@ -97,9 +106,34 @@ namespace ProjectArk.UI
             else if (DragDropManager.Instance != null)
                 DragDropManager.Instance.CancelDrag();
 
+            // Hide tooltip
+            // _itemTooltipView?.Hide();
+
             gameObject.SetActive(false);
             OnClosed?.Invoke();
         }
+
+        // ========== Tooltip Handlers ==========
+
+        // private void HandleCellPointerEntered(StarChartItemSO item)
+        // {
+        //     _itemTooltipView?.Show(item);
+        // }
+        //
+        // private void HandleCellPointerExited()
+        // {
+        //     _itemTooltipView?.Hide();
+        // }
+        //
+        // private void HandleInventoryItemPointerEntered(StarChartItemSO item)
+        // {
+        //     _itemTooltipView?.Show(item);
+        // }
+        //
+        // private void HandleInventoryItemPointerExited()
+        // {
+        //     _itemTooltipView?.Hide();
+        // }
 
         /// <summary> Is the panel currently visible? </summary>
         public bool IsOpen => gameObject.activeSelf;

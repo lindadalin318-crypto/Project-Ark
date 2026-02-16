@@ -9,6 +9,8 @@
   <Project Path="ProjectArk.Ship.csproj" />
   <Project Path="ProjectArk.Enemy.csproj" />
   <Project Path="ProjectArk.Combat.Tests.csproj" />
+  <Project Path="ProjectArk.SpaceLife.Editor.csproj" />
+  <Project Path="ProjectArk.SpaceLife.csproj" />
   <Project Path="ProjectArk.Combat.Editor.csproj" />
   <Project Path="ProjectArk.Core.Tests.csproj" />
   <Project Path="ProjectArk.Ship.Editor.csproj" />
