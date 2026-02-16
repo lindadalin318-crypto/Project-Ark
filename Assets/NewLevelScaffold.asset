@@ -14,4 +14,61 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.LevelScaffoldData
   _levelName: New Level
   _floorLevel: 0
-  _rooms: []
+  _rooms:
+  - _roomID: ec695eb6-9a5c-4c19-8d1f-293df0c2e5f9
+    _displayName: Room 1
+    _roomType: 0
+    _position: {x: -147.5, y: 4.100002, z: 0}
+    _size: {x: 20, y: 15}
+    _connections: []
+    _elements:
+    - _elementID: 21624839-a5a3-4bb5-92a6-c37648e56fe2
+      _elementType: 0
+      _gizmoShape: 0
+      _localPosition: {x: -6.15, y: -0.45000005, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: a2a860ff-5809-4b89-918f-1b0bd5dec834
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: -2, y: 2.6, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 2ec230f9-d63e-4d24-9b01-4007b623cd89
+      _elementType: 4
+      _gizmoShape: 0
+      _localPosition: {x: 7, y: 0.05, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: cacc59ac-5fdc-4007-97cb-62e7a957a513
+    _displayName: Room 2
+    _roomType: 0
+    _position: {x: 259.20004, y: 0.90000045, z: 0}
+    _size: {x: 20, y: 15}
+    _connections: []
+    _elements: []
+    _roomSO: {fileID: 0}
+  - _roomID: dc6fec94-0197-4696-b1f4-7f66c51ef6e1
+    _displayName: Room 3
+    _roomType: 0
+    _position: {x: 60, y: 0, z: 0}
+    _size: {x: 20, y: 15}
+    _connections: []
+    _elements: []
+    _roomSO: {fileID: 0}
