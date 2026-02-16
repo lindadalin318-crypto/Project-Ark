@@ -150,16 +150,7 @@ namespace ProjectArk.SpaceLife
             _currentNPC = null;
         }
 
-        private void Update()
-        {
-            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Tab))
-            {
-                if (_giftPanel != null && _giftPanel.activeSelf)
-                {
-                    CloseUI();
-                }
-            }
-        }
+
 
         private void OnDestroy()
         {

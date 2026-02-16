@@ -43,14 +43,24 @@ namespace ProjectArk.SpaceLife
 
         private void OnEnable()
         {
+            if (_moveAction != null)
+                _moveAction.Enable();
             if (_jumpAction != null)
+            {
+                _jumpAction.Enable();
                 _jumpAction.performed += OnJumpActionPerformed;
+            }
         }
 
         private void OnDisable()
         {
+            if (_moveAction != null)
+                _moveAction.Disable();
             if (_jumpAction != null)
+            {
                 _jumpAction.performed -= OnJumpActionPerformed;
+                _jumpAction.Disable();
+            }
         }
 
         private void Update()

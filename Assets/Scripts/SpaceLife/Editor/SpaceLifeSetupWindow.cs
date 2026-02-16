@@ -20,7 +20,7 @@ namespace ProjectArk.SpaceLife.Editor
         private Vector2 _scrollPosition;
         private bool _createDemoContent = true;
 
-        [MenuItem("Project Ark/Space Life/Setup Wizard")]
+        [MenuItem("ProjectArk/Space Life/Setup Wizard")]
         public static SpaceLifeSetupWindow ShowWindow()
         {
             var window = GetWindow<SpaceLifeSetupWindow>("Space Life Setup");

@@ -7,37 +7,37 @@ namespace ProjectArk.SpaceLife.Editor
 {
     public static class SpaceLifeMenuItems
     {
-        [MenuItem("Project Ark/Space Life/Setup/Phase 1 - Core & Basics", priority = 10)]
+        [MenuItem("ProjectArk/Space Life/Setup/Phase 1 - Core & Basics", priority = 10)]
         public static void SetupPhase1()
         {
             SetupWizardForPhase(SpaceLifeSetupWindow.SetupPhase.Phase1_CoreBasics);
         }
 
-        [MenuItem("Project Ark/Space Life/Setup/Phase 2 - NPC System", priority = 11)]
+        [MenuItem("ProjectArk/Space Life/Setup/Phase 2 - NPC System", priority = 11)]
         public static void SetupPhase2()
         {
             SetupWizardForPhase(SpaceLifeSetupWindow.SetupPhase.Phase2_NPCSystem);
         }
 
-        [MenuItem("Project Ark/Space Life/Setup/Phase 3 - Relationship & Gifting", priority = 12)]
+        [MenuItem("ProjectArk/Space Life/Setup/Phase 3 - Relationship & Gifting", priority = 12)]
         public static void SetupPhase3()
         {
             SetupWizardForPhase(SpaceLifeSetupWindow.SetupPhase.Phase3_RelationshipGifting);
         }
 
-        [MenuItem("Project Ark/Space Life/Setup/Phase 4 - Rooms & Scenes", priority = 13)]
+        [MenuItem("ProjectArk/Space Life/Setup/Phase 4 - Rooms & Scenes", priority = 13)]
         public static void SetupPhase4()
         {
             SetupWizardForPhase(SpaceLifeSetupWindow.SetupPhase.Phase4_RoomsScenes);
         }
 
-        [MenuItem("Project Ark/Space Life/Setup/Phase 5 - Full Integration", priority = 14)]
+        [MenuItem("ProjectArk/Space Life/Setup/Phase 5 - Full Integration", priority = 14)]
         public static void SetupPhase5()
         {
             SetupWizardForPhase(SpaceLifeSetupWindow.SetupPhase.Phase5_FullIntegration);
         }
 
-        [MenuItem("Project Ark/Space Life/Setup/All Phases - Complete Setup", priority = 15)]
+        [MenuItem("ProjectArk/Space Life/Setup/All Phases - Complete Setup", priority = 15)]
         public static void SetupAllPhases()
         {
             SetupWizardForPhase(SpaceLifeSetupWindow.SetupPhase.AllPhases);
@@ -48,13 +48,19 @@ namespace ProjectArk.SpaceLife.Editor
             var window = SpaceLifeSetupWindow.ShowWindow(phase);
         }
 
-        [MenuItem("Project Ark/Space Life/Create/SpaceLifeManager", priority = 30)]
+        [MenuItem("ProjectArk/Space Life/Create/SpaceLifeManager", priority = 30)]
         public static void CreateSpaceLifeManager()
         {
             CreateSingleton<SpaceLifeManager>("SpaceLifeManager");
         }
 
-        [MenuItem("Project Ark/Space Life/Create/Player Controller", priority = 31)]
+        [MenuItem("ProjectArk/Space Life/Create/SpaceLifeInputHandler", priority = 31)]
+        public static void CreateSpaceLifeInputHandler()
+        {
+            CreateSingleton<SpaceLifeInputHandler>("SpaceLifeInputHandler");
+        }
+
+        [MenuItem("ProjectArk/Space Life/Create/Player Controller", priority = 32)]
         public static void CreatePlayerController()
         {
             if (Object.FindFirstObjectByType<PlayerController2D>() != null)
@@ -81,25 +87,25 @@ namespace ProjectArk.SpaceLife.Editor
             Debug.Log("[SpaceLife] Created Player2D");
         }
 
-        [MenuItem("Project Ark/Space Life/Create/RoomManager", priority = 32)]
+        [MenuItem("ProjectArk/Space Life/Create/RoomManager", priority = 33)]
         public static void CreateRoomManager()
         {
             CreateSingleton<RoomManager>("RoomManager");
         }
 
-        [MenuItem("Project Ark/Space Life/Create/RelationshipManager", priority = 33)]
+        [MenuItem("ProjectArk/Space Life/Create/RelationshipManager", priority = 34)]
         public static void CreateRelationshipManager()
         {
             CreateSingleton<RelationshipManager>("RelationshipManager");
         }
 
-        [MenuItem("Project Ark/Space Life/Create/GiftInventory", priority = 34)]
+        [MenuItem("ProjectArk/Space Life/Create/GiftInventory", priority = 35)]
         public static void CreateGiftInventory()
         {
             CreateSingleton<GiftInventory>("GiftInventory");
         }
 
-        [MenuItem("Project Ark/Space Life/Create/Create NPC", priority = 40)]
+        [MenuItem("ProjectArk/Space Life/Create/Create NPC", priority = 40)]
         public static void CreateNPC()
         {
             GameObject npcGo = new GameObject("NPC");
@@ -113,7 +119,7 @@ namespace ProjectArk.SpaceLife.Editor
             Debug.Log("[SpaceLife] NPC created");
         }
 
-        [MenuItem("Project Ark/Space Life/Create/Create Room", priority = 41)]
+        [MenuItem("ProjectArk/Space Life/Create/Create Room", priority = 41)]
         public static void CreateRoom()
         {
             GameObject roomGo = new GameObject("Room");
@@ -124,7 +130,7 @@ namespace ProjectArk.SpaceLife.Editor
             Debug.Log("[SpaceLife] Room created");
         }
 
-        [MenuItem("Project Ark/Space Life/Create/Create Door", priority = 42)]
+        [MenuItem("ProjectArk/Space Life/Create/Create Door", priority = 42)]
         public static void CreateDoor()
         {
             GameObject doorGo = new GameObject("Door");
@@ -136,7 +142,7 @@ namespace ProjectArk.SpaceLife.Editor
             Debug.Log("[SpaceLife] Door created");
         }
 
-        [MenuItem("Project Ark/Space Life/Create/Create Interactable Object", priority = 43)]
+        [MenuItem("ProjectArk/Space Life/Create/Create Interactable Object", priority = 43)]
         public static void CreateInteractable()
         {
             GameObject go = new GameObject("Interactable");
@@ -147,13 +153,13 @@ namespace ProjectArk.SpaceLife.Editor
             Debug.Log("[SpaceLife] Interactable created");
         }
 
-        [MenuItem("Project Ark/Space Life/Assets/Create NPC Data", priority = 50)]
+        [MenuItem("ProjectArk/Space Life/Assets/Create NPC Data", priority = 50)]
         public static void CreateNPCData()
         {
             CreateScriptableObject<NPCDataSO>("NPCData");
         }
 
-        [MenuItem("Project Ark/Space Life/Assets/Create Item", priority = 51)]
+        [MenuItem("ProjectArk/Space Life/Assets/Create Item", priority = 51)]
         public static void CreateItem()
         {
             CreateScriptableObject<ItemSO>("Item");

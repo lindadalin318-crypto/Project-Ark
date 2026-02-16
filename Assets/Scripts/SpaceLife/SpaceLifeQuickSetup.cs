@@ -45,17 +45,6 @@ namespace ProjectArk.SpaceLife
             Debug.Log("Press TAB to toggle Space Life mode!");
             Debug.Log("==================================");
         }
-
-        private void Update()
-        {
-            if (Input.GetKeyDown(KeyCode.Tab))
-            {
-                if (_spaceLifeManager != null)
-                {
-                    _spaceLifeManager.ToggleSpaceLife();
-                }
-            }
-        }
     }
 }
 

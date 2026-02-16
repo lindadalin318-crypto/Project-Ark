@@ -25,13 +25,19 @@ namespace ProjectArk.SpaceLife
         private void OnEnable()
         {
             if (_interactAction != null)
+            {
+                _interactAction.Enable();
                 _interactAction.performed += OnInteractActionPerformed;
+            }
         }
 
         private void OnDisable()
         {
             if (_interactAction != null)
+            {
                 _interactAction.performed -= OnInteractActionPerformed;
+                _interactAction.Disable();
+            }
         }
 
         private void Update()

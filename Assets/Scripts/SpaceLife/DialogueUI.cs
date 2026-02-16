@@ -187,28 +187,7 @@ namespace ProjectArk.SpaceLife
             OnDialogueEnd?.Invoke();
         }
 
-        private void Update()
-        {
-            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Tab))
-            {
-                if (_dialoguePanel != null && _dialoguePanel.activeSelf)
-                {
-                    if (_isTyping)
-                    {
-                        StopAllCoroutines();
-                        _isTyping = false;
-                        if (_dialogueText != null && _currentLine != null)
-                        {
-                            _dialogueText.text = _currentLine.text;
-                        }
-                    }
-                    else
-                    {
-                        CloseDialogue();
-                    }
-                }
-            }
-        }
+
 
         private void OnDestroy()
         {

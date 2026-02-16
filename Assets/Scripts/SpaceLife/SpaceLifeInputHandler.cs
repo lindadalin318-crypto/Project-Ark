@@ -20,13 +20,19 @@ namespace ProjectArk.SpaceLife
         private void OnEnable()
         {
             if (_toggleSpaceLifeAction != null)
+            {
+                _toggleSpaceLifeAction.Enable();
                 _toggleSpaceLifeAction.performed += OnToggleSpaceLifePerformed;
+            }
         }
 
         private void OnDisable()
         {
             if (_toggleSpaceLifeAction != null)
+            {
                 _toggleSpaceLifeAction.performed -= OnToggleSpaceLifePerformed;
+                _toggleSpaceLifeAction.Disable();
+            }
         }
 
         private void OnToggleSpaceLifePerformed(InputAction.CallbackContext ctx)
