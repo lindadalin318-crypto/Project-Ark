@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -42,7 +43,7 @@ namespace ProjectArk.Level
             {
                 GameObject levelRoot = CreateLevelRoot(scaffold, parentTransform);
                 Dictionary<string, Room> generatedRooms = GenerateRooms(scaffold, elementLibrary, levelRoot);
-                SetupDoorConnections(scaffold, generatedRooms, elementLibrary);
+                GenerateRoomElements(scaffold, generatedRooms, elementLibrary);
 
                 Debug.Log($"[LevelGenerator] Successfully generated level: {scaffold.LevelName}");
                 EditorUtility.SetDirty(levelRoot);
@@ -192,84 +193,6 @@ namespace ProjectArk.Level
         }
 
         /// <summary>
-        /// Sets up door connections between rooms.
-        /// </summary>
-        private static void SetupDoorConnections(
-            LevelScaffoldData scaffold,
-            Dictionary<string, Room> roomMap,
-            LevelElementLibrary elementLibrary)
-        {
-            foreach (ScaffoldRoom scaffoldRoom in scaffold.Rooms)
-            {
-                if (!roomMap.TryGetValue(scaffoldRoom.RoomID, out Room room))
-                {
-                    continue;
-                }
-
-                foreach (ScaffoldDoorConnection connection in scaffoldRoom.Connections)
-                {
-                    if (!roomMap.TryGetValue(connection.TargetRoomID, out Room targetRoom))
-                    {
-                        continue;
-                    }
-
-                    CreateDoor(room, targetRoom, connection, elementLibrary);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Creates a door between two rooms.
-        /// </summary>
-        private static void CreateDoor(
-            Room sourceRoom,
-            Room targetRoom,
-            ScaffoldDoorConnection connection,
-            LevelElementLibrary elementLibrary)
-        {
-            GameObject doorObj;
-
-            if (elementLibrary.DoorBasic != null)
-            {
-                doorObj = (GameObject)PrefabUtility.InstantiatePrefab(elementLibrary.DoorBasic);
-                Undo.RegisterCreatedObjectUndo(doorObj, "Instantiate Door");
-            }
-            else
-            {
-                doorObj = new GameObject("Door");
-                Undo.RegisterCreatedObjectUndo(doorObj, "Create Door");
-                Undo.AddComponent<Door>(doorObj);
-                Undo.AddComponent<BoxCollider2D>(doorObj);
-            }
-
-            Undo.SetTransformParent(doorObj.transform, sourceRoom.transform, "Set Door Parent");
-            doorObj.transform.localPosition = connection.DoorPosition;
-
-            Door door = doorObj.GetComponent<Door>();
-            if (door == null)
-            {
-                door = Undo.AddComponent<Door>(doorObj);
-            }
-
-            BoxCollider2D collider = doorObj.GetComponent<BoxCollider2D>();
-            if (collider != null)
-            {
-                collider.isTrigger = true;
-                collider.size = new Vector2(1, 3);
-            }
-
-            Transform spawnPoint = CreateSpawnPoint(targetRoom, connection);
-
-            SerializedObject serializedDoor = new SerializedObject(door);
-            serializedDoor.FindProperty("_targetRoom").objectReferenceValue = targetRoom;
-            serializedDoor.FindProperty("_targetSpawnPoint").objectReferenceValue = spawnPoint;
-            serializedDoor.FindProperty("_isLayerTransition").boolValue = connection.IsLayerTransition;
-            serializedDoor.ApplyModifiedProperties();
-
-            EditorUtility.SetDirty(door);
-        }
-
-        /// <summary>
         /// Creates a spawn point in the target room for a door.
         /// </summary>
         private static Transform CreateSpawnPoint(Room targetRoom, ScaffoldDoorConnection connection)
@@ -282,6 +205,131 @@ namespace ProjectArk.Level
             spawnPointObj.transform.localPosition = connection.DoorPosition + spawnOffset;
 
             return spawnPointObj.transform;
+        }
+
+        /// <summary>
+        /// Generates a single element inside a room.
+        /// </summary>
+        private static void GenerateSingleElement(
+            ScaffoldElement element,
+            Room parentRoom,
+            LevelElementLibrary elementLibrary,
+            LevelScaffoldData scaffold,
+            Dictionary<string, Room> roomMap)
+        {
+            GameObject prefab = elementLibrary.GetPrefabForType(element.ElementType);
+            if (prefab == null)
+            {
+                Debug.LogWarning($"[LevelGenerator] No prefab found for element type: {element.ElementType}");
+                return;
+            }
+
+            GameObject elementObj = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            Undo.RegisterCreatedObjectUndo(elementObj, $"Instantiate {element.ElementType}");
+
+            Undo.SetTransformParent(elementObj.transform, parentRoom.transform, "Set Element Parent");
+            elementObj.transform.localPosition = element.LocalPosition;
+            elementObj.transform.localRotation = Quaternion.Euler(0, 0, element.Rotation);
+            elementObj.transform.localScale = element.Scale;
+
+            if (element.ElementType == ScaffoldElementType.Door && !string.IsNullOrEmpty(element.BoundConnectionID))
+            {
+                SetupDoorFromBinding(element, elementObj, parentRoom, scaffold, roomMap);
+            }
+
+            EditorUtility.SetDirty(elementObj);
+        }
+
+        /// <summary>
+        /// Sets up a Door element from its bound connection.
+        /// </summary>
+        private static void SetupDoorFromBinding(
+            ScaffoldElement element,
+            GameObject doorObj,
+            Room sourceRoom,
+            LevelScaffoldData scaffold,
+            Dictionary<string, Room> roomMap)
+        {
+            ScaffoldRoom sourceScaffoldRoom = scaffold.Rooms.FirstOrDefault(r => r.RoomID == GetRoomID(sourceRoom, roomMap));
+            if (sourceScaffoldRoom == null) return;
+
+            ScaffoldDoorConnection connection = sourceScaffoldRoom.Connections.FirstOrDefault(c => c.ConnectionID == element.BoundConnectionID);
+            if (connection == null) return;
+
+            if (!roomMap.TryGetValue(connection.TargetRoomID, out Room targetRoom))
+            {
+                return;
+            }
+
+            Door door = doorObj.GetComponent<Door>();
+            if (door == null)
+            {
+                door = Undo.AddComponent<Door>(doorObj);
+            }
+
+            Transform spawnPoint = CreateSpawnPoint(targetRoom, connection);
+
+            SerializedObject serializedDoor = new SerializedObject(door);
+            serializedDoor.FindProperty("_targetRoom").objectReferenceValue = targetRoom;
+            serializedDoor.FindProperty("_targetSpawnPoint").objectReferenceValue = spawnPoint;
+            serializedDoor.FindProperty("_isLayerTransition").boolValue = connection.IsLayerTransition;
+
+            if (element.DoorConfig != null)
+            {
+                serializedDoor.FindProperty("_initialState").enumValueIndex = (int)element.DoorConfig.InitialState;
+                serializedDoor.FindProperty("_requiredKeyID").stringValue = element.DoorConfig.RequiredKeyID;
+
+                if (element.DoorConfig.OpenDuringPhases != null)
+                {
+                    SerializedProperty phasesProp = serializedDoor.FindProperty("_openDuringPhases");
+                    phasesProp.ClearArray();
+                    for (int i = 0; i < element.DoorConfig.OpenDuringPhases.Length; i++)
+                    {
+                        phasesProp.InsertArrayElementAtIndex(i);
+                        phasesProp.GetArrayElementAtIndex(i).intValue = element.DoorConfig.OpenDuringPhases[i];
+                    }
+                }
+            }
+
+            serializedDoor.ApplyModifiedProperties();
+            EditorUtility.SetDirty(door);
+        }
+
+        /// <summary>
+        /// Gets the room ID from a Room component by looking it up in the room map.
+        /// </summary>
+        private static string GetRoomID(Room room, Dictionary<string, Room> roomMap)
+        {
+            foreach (var kvp in roomMap)
+            {
+                if (kvp.Value == room)
+                {
+                    return kvp.Key;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Generates all elements placed inside rooms.
+        /// </summary>
+        private static void GenerateRoomElements(
+            LevelScaffoldData scaffold,
+            Dictionary<string, Room> roomMap,
+            LevelElementLibrary elementLibrary)
+        {
+            foreach (ScaffoldRoom scaffoldRoom in scaffold.Rooms)
+            {
+                if (!roomMap.TryGetValue(scaffoldRoom.RoomID, out Room room))
+                {
+                    continue;
+                }
+
+                foreach (ScaffoldElement element in scaffoldRoom.Elements)
+                {
+                    GenerateSingleElement(element, room, elementLibrary, scaffold, roomMap);
+                }
+            }
         }
     }
 }

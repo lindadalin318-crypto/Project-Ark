@@ -18,6 +18,7 @@ namespace ProjectArk.Level.Editor
     /// 
     /// Menu: Window > ProjectArk > Room Batch Editor
     /// </summary>
+    [System.Obsolete("Use LevelArchitectWindow instead. Open via Window > ProjectArk > Level Architect.")]
     public class RoomBatchEditor : EditorWindow
     {
         private const string WindowTitle = "Room Batch Editor";
