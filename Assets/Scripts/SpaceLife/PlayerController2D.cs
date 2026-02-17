@@ -1,4 +1,4 @@
-    
+using ProjectArk.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -12,9 +12,8 @@ namespace ProjectArk.SpaceLife
 
         [Header("Movement")]
         [SerializeField] private float _moveSpeed = 5f;
-        [SerializeField] private float _jumpForce = 8f;
-        [SerializeField] private float _groundCheckDistance = 0.5f;
-        [SerializeField] private LayerMask _groundLayer;
+        [SerializeField] private float _acceleration = 15f;
+        [SerializeField] private float _deceleration = 20f;
 
         [Header("Visuals")]
         [SerializeField] private SpriteRenderer _spriteRenderer;
@@ -22,123 +21,145 @@ namespace ProjectArk.SpaceLife
 
         private Rigidbody2D _rb;
         private InputAction _moveAction;
-        private InputAction _jumpAction;
         private Vector2 _moveInput;
-        private bool _isGrounded;
-        private bool _jumpRequested;
+        private Vector2 _currentVelocity;
+
+        public Vector2 MoveInput => _moveInput;
+        public Vector2 CurrentVelocity => _currentVelocity;
 
         private void Awake()
         {
+            ServiceLocator.Register(this);
+            
             _rb = GetComponent<Rigidbody2D>();
+            _rb.gravityScale = 0f;
 
             if (_spriteRenderer == null)
                 _spriteRenderer = GetComponent<SpriteRenderer>();
             if (_animator == null)
                 _animator = GetComponent<Animator>();
 
-            var shipMap = _inputActions.FindActionMap("Ship");
-            _moveAction = shipMap.FindAction("Move");
-            _jumpAction = shipMap.FindAction("SpaceLifeJump");
+            if (_inputActions == null)
+            {
+                Debug.LogWarning("[PlayerController2D] InputActions is NULL, trying to find it...");
+#if UNITY_EDITOR
+                TryFindInputActionAsset();
+#endif
+            }
+
+            if (_inputActions != null)
+            {
+                var spaceLifeMap = _inputActions.FindActionMap("SpaceLife");
+                if (spaceLifeMap != null)
+                {
+                    _moveAction = spaceLifeMap.FindAction("Move");
+                }
+            }
         }
+
+#if UNITY_EDITOR
+        private void TryFindInputActionAsset()
+        {
+            var guids = UnityEditor.AssetDatabase.FindAssets("ShipActions t:InputActionAsset");
+            foreach (var guid in guids)
+            {
+                var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<InputActionAsset>(path);
+                if (asset != null)
+                {
+                    _inputActions = asset;
+                    Debug.Log($"[PlayerController2D] Auto-found InputActionAsset: {path}");
+                    break;
+                }
+            }
+        }
+#endif
 
         private void OnEnable()
         {
+            if (_inputActions == null) return;
+            
+            var spaceLifeMap = _inputActions.FindActionMap("SpaceLife");
+            if (spaceLifeMap != null && !spaceLifeMap.enabled)
+            {
+                spaceLifeMap.Enable();
+            }
+            
             if (_moveAction != null)
                 _moveAction.Enable();
-            if (_jumpAction != null)
-            {
-                _jumpAction.Enable();
-                _jumpAction.performed += OnJumpActionPerformed;
-            }
         }
 
         private void OnDisable()
         {
-            if (_moveAction != null)
-                _moveAction.Disable();
-            if (_jumpAction != null)
+            if (_moveAction != null && _inputActions != null)
             {
-                _jumpAction.performed -= OnJumpActionPerformed;
-                _jumpAction.Disable();
+                _moveAction.Disable();
+            }
+            
+            if (_inputActions != null)
+            {
+                var spaceLifeMap = _inputActions.FindActionMap("SpaceLife");
+                if (spaceLifeMap != null && spaceLifeMap.enabled)
+                {
+                    spaceLifeMap.Disable();
+                }
             }
         }
 
         private void Update()
         {
             ReadMovementInput();
-            CheckGrounded();
         }
 
         private void FixedUpdate()
         {
             ApplyMovement();
-            ApplyJump();
         }
 
         private void ReadMovementInput()
         {
             if (_moveAction != null)
             {
-                Vector2 input = _moveAction.ReadValue<Vector2>();
-                _moveInput = new Vector2(input.x, 0f);
-            }
-        }
+                _moveInput = _moveAction.ReadValue<Vector2>();
 
-        private void OnJumpActionPerformed(InputAction.CallbackContext ctx)
-        {
-            if (_isGrounded)
-            {
-                _jumpRequested = true;
+                if (_moveInput.sqrMagnitude > 1f)
+                    _moveInput = _moveInput.normalized;
             }
-        }
-
-        private void CheckGrounded()
-        {
-            _isGrounded = Physics2D.Raycast(
-                transform.position,
-                Vector2.down,
-                _groundCheckDistance,
-                _groundLayer
-            );
         }
 
         private void ApplyMovement()
         {
-            Vector2 velocity = _rb.linearVelocity;
-            velocity.x = _moveInput.x * _moveSpeed;
-            _rb.linearVelocity = velocity;
+            Vector2 targetVelocity = _moveInput * _moveSpeed;
 
-            if (_moveInput.x != 0f && _spriteRenderer != null)
-            {
-                _spriteRenderer.flipX = _moveInput.x < 0f;
-            }
+            float accel = _moveInput.sqrMagnitude > 0.01f ? _acceleration : _deceleration;
+            _currentVelocity = Vector2.MoveTowards(_currentVelocity, targetVelocity, accel * Time.fixedDeltaTime);
+            _rb.linearVelocity = _currentVelocity;
 
             UpdateAnimation();
-        }
-
-        private void ApplyJump()
-        {
-            if (_jumpRequested && _isGrounded)
-            {
-                _rb.linearVelocity = new Vector2(_rb.linearVelocity.x, _jumpForce);
-                _jumpRequested = false;
-            }
         }
 
         private void UpdateAnimation()
         {
             if (_animator == null) return;
 
-            bool isMoving = Mathf.Abs(_moveInput.x) > 0.1f;
+            bool isMoving = _moveInput.sqrMagnitude > 0.01f;
             _animator.SetBool("IsMoving", isMoving);
-            _animator.SetBool("IsGrounded", _isGrounded);
+
+            if (isMoving)
+            {
+                _animator.SetFloat("MoveX", _moveInput.x);
+                _animator.SetFloat("MoveY", _moveInput.y);
+
+                if (_spriteRenderer != null && Mathf.Abs(_moveInput.x) > 0.1f)
+                {
+                    _spriteRenderer.flipX = _moveInput.x < 0f;
+                }
+            }
         }
 
-        private void OnDrawGizmosSelected()
+        private void OnDestroy()
         {
-            Gizmos.color = Color.red;
-            Gizmos.DrawLine(transform.position, transform.position + Vector3.down * _groundCheckDistance);
+            ServiceLocator.Unregister(this);
         }
     }
 }
-

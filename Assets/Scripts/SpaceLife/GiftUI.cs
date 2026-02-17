@@ -1,5 +1,6 @@
 
 using System;
+using ProjectArk.Core;
 using ProjectArk.SpaceLife.Data;
 using UnityEngine;
 using UnityEngine.UI;
@@ -8,8 +9,6 @@ namespace ProjectArk.SpaceLife
 {
     public class GiftUI : MonoBehaviour
     {
-        public static GiftUI Instance { get; private set; }
-
         [Header("UI Elements")]
         [SerializeField] private GameObject _giftPanel;
         [SerializeField] private Transform _itemsContainer;
@@ -18,21 +17,19 @@ namespace ProjectArk.SpaceLife
         [SerializeField] private Button _closeButton;
 
         private NPCController _currentNPC;
+        private GiftInventory _giftInventory;
 
         public event Action OnGiftGiven;
 
         private void Awake()
         {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-            Instance = this;
+            ServiceLocator.Register(this);
         }
 
         private void Start()
         {
+            _giftInventory = ServiceLocator.Get<GiftInventory>();
+            
             if (_giftPanel != null)
                 _giftPanel.SetActive(false);
 
@@ -59,9 +56,9 @@ namespace ProjectArk.SpaceLife
         {
             ClearItems();
 
-            if (GiftInventory.Instance == null) return;
+            if (_giftInventory == null) return;
 
-            foreach (var item in GiftInventory.Instance.Items)
+            foreach (var item in _giftInventory.Items)
             {
                 CreateItemButton(item);
             }
@@ -112,11 +109,11 @@ namespace ProjectArk.SpaceLife
         public void GiveGift(NPCController npc, ItemSO gift)
         {
             if (npc == null || gift == null) return;
-            if (GiftInventory.Instance == null) return;
+            if (_giftInventory == null) return;
 
             int relationshipChange = CalculateGiftValue(npc, gift);
 
-            if (GiftInventory.Instance.RemoveItem(gift))
+            if (_giftInventory.RemoveItem(gift))
             {
                 npc.ChangeRelationship(relationshipChange);
                 Debug.Log($"[GiftUI] Gave {gift.itemName} to {npc.NPCName}. +{relationshipChange} relationship");
@@ -150,15 +147,12 @@ namespace ProjectArk.SpaceLife
             _currentNPC = null;
         }
 
-
-
         private void OnDestroy()
         {
             if (_closeButton != null)
                 _closeButton.onClick.RemoveListener(CloseUI);
 
-            if (Instance == this)
-                Instance = null;
+            ServiceLocator.Unregister(this);
         }
     }
 }

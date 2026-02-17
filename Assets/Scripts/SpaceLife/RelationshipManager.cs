@@ -1,6 +1,7 @@
 
 using System;
 using System.Collections.Generic;
+using ProjectArk.Core;
 using ProjectArk.SpaceLife.Data;
 using UnityEngine;
 
@@ -8,8 +9,6 @@ namespace ProjectArk.SpaceLife
 {
     public class RelationshipManager : MonoBehaviour
     {
-        public static RelationshipManager Instance { get; private set; }
-
         [Serializable]
         public class NPCRelationship
         {
@@ -24,12 +23,7 @@ namespace ProjectArk.SpaceLife
 
         private void Awake()
         {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-            Instance = this;
+            ServiceLocator.Register(this);
         }
 
         public int GetRelationship(NPCDataSO npcData)
@@ -134,8 +128,7 @@ namespace ProjectArk.SpaceLife
 
         private void OnDestroy()
         {
-            if (Instance == this)
-                Instance = null;
+            ServiceLocator.Unregister(this);
         }
     }
 

@@ -1,4 +1,3 @@
-
 using UnityEditor;
 using UnityEngine;
 using ProjectArk.SpaceLife.Data;
@@ -45,7 +44,38 @@ namespace ProjectArk.SpaceLife.Editor
 
         private static void SetupWizardForPhase(SpaceLifeSetupWindow.SetupPhase phase)
         {
-            var window = SpaceLifeSetupWindow.ShowWindow(phase);
+            SpaceLifeSetupWindow.ShowWindow(phase);
+        }
+
+        internal static UnityEngine.Object FindInputActionAsset()
+        {
+            var guids = AssetDatabase.FindAssets("ShipActions t:InputActionAsset");
+            foreach (var guid in guids)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
+                if (asset != null)
+                {
+                    return asset;
+                }
+            }
+            return null;
+        }
+
+        internal static Sprite CreateSquareSprite(Color color)
+        {
+            Texture2D texture = new Texture2D(64, 64);
+            Color[] pixels = new Color[64 * 64];
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                pixels[i] = color;
+            }
+            texture.SetPixels(pixels);
+            texture.Apply();
+
+            Rect rect = new Rect(0, 0, 64, 64);
+            Vector2 pivot = new Vector2(0.5f, 0.5f);
+            return Sprite.Create(texture, rect, pivot, 64);
         }
 
         [MenuItem("ProjectArk/Space Life/Create/SpaceLifeManager", priority = 30)]
@@ -57,7 +87,20 @@ namespace ProjectArk.SpaceLife.Editor
         [MenuItem("ProjectArk/Space Life/Create/SpaceLifeInputHandler", priority = 31)]
         public static void CreateSpaceLifeInputHandler()
         {
-            CreateSingleton<SpaceLifeInputHandler>("SpaceLifeInputHandler");
+            var go = CreateSingleton<SpaceLifeInputHandler>("SpaceLifeInputHandler");
+            if (go != null)
+            {
+                var handler = go.GetComponent<SpaceLifeInputHandler>();
+                var inputAsset = FindInputActionAsset();
+                if (inputAsset != null && handler != null)
+                {
+                    var serializedObject = new SerializedObject(handler);
+                    var property = serializedObject.FindProperty("_inputActions");
+                    property.objectReferenceValue = inputAsset;
+                    serializedObject.ApplyModifiedProperties();
+                    Debug.Log($"[SpaceLifeMenuItems] Auto-assigned InputActionAsset to SpaceLifeInputHandler");
+                }
+            }
         }
 
         [MenuItem("ProjectArk/Space Life/Create/Player Controller", priority = 32)]
@@ -77,20 +120,36 @@ namespace ProjectArk.SpaceLife.Editor
             }
 
             GameObject go = new GameObject("Player2D");
-            go.AddComponent<Rigidbody2D>().gravityScale = 3f;
+            go.AddComponent<Rigidbody2D>().gravityScale = 0f;
             go.AddComponent<CapsuleCollider2D>();
-            go.AddComponent<PlayerController2D>();
-            go.AddComponent<PlayerInteraction>();
+            var playerController = go.AddComponent<PlayerController2D>();
+            var playerInteraction = go.AddComponent<PlayerInteraction>();
+            
+            var inputAsset = FindInputActionAsset();
+            if (inputAsset != null)
+            {
+                var serializedController = new SerializedObject(playerController);
+                var controllerProp = serializedController.FindProperty("_inputActions");
+                controllerProp.objectReferenceValue = inputAsset;
+                serializedController.ApplyModifiedProperties();
+                
+                var serializedInteraction = new SerializedObject(playerInteraction);
+                var interactionProp = serializedInteraction.FindProperty("_inputActions");
+                interactionProp.objectReferenceValue = inputAsset;
+                serializedInteraction.ApplyModifiedProperties();
+                
+                Debug.Log($"[SpaceLifeMenuItems] Auto-assigned InputActionAsset to Player2D");
+            }
             
             Selection.activeGameObject = go;
             Undo.RegisterCreatedObjectUndo(go, "Create Player2D");
             Debug.Log("[SpaceLife] Created Player2D");
         }
 
-        [MenuItem("ProjectArk/Space Life/Create/RoomManager", priority = 33)]
+        [MenuItem("ProjectArk/Space Life/Create/SpaceLifeRoomManager", priority = 33)]
         public static void CreateRoomManager()
         {
-            CreateSingleton<RoomManager>("RoomManager");
+            CreateSingleton<SpaceLifeRoomManager>("SpaceLifeRoomManager");
         }
 
         [MenuItem("ProjectArk/Space Life/Create/RelationshipManager", priority = 34)]
@@ -123,7 +182,7 @@ namespace ProjectArk.SpaceLife.Editor
         public static void CreateRoom()
         {
             GameObject roomGo = new GameObject("Room");
-            roomGo.AddComponent<Room>();
+            roomGo.AddComponent<SpaceLifeRoom>();
             
             Selection.activeGameObject = roomGo;
             Undo.RegisterCreatedObjectUndo(roomGo, "Create Room");
@@ -134,7 +193,7 @@ namespace ProjectArk.SpaceLife.Editor
         public static void CreateDoor()
         {
             GameObject doorGo = new GameObject("Door");
-            doorGo.AddComponent<Door>();
+            doorGo.AddComponent<SpaceLifeDoor>();
             doorGo.AddComponent<Interactable>();
             
             Selection.activeGameObject = doorGo;
@@ -153,25 +212,50 @@ namespace ProjectArk.SpaceLife.Editor
             Debug.Log("[SpaceLife] Interactable created");
         }
 
-        [MenuItem("ProjectArk/Space Life/Assets/Create NPC Data", priority = 50)]
+        [MenuItem("ProjectArk/Space Life/Create/Create Dialogue UI", priority = 44)]
+        public static void CreateDialogueUI()
+        {
+            CreateSingleton<DialogueUI>("DialogueUI");
+        }
+
+        [MenuItem("ProjectArk/Space Life/Create/Create Gift UI", priority = 45)]
+        public static void CreateGiftUI()
+        {
+            CreateSingleton<GiftUI>("GiftUI");
+        }
+
+        [MenuItem("ProjectArk/Space Life/Create/Create Minimap UI", priority = 46)]
+        public static void CreateMinimapUI()
+        {
+            CreateSingleton<MinimapUI>("MinimapUI");
+        }
+
+        [MenuItem("ProjectArk/Space Life/Create/Create Transition UI", priority = 47)]
+        public static void CreateTransitionUI()
+        {
+            CreateSingleton<TransitionUI>("TransitionUI");
+        }
+
+        [MenuItem("ProjectArk/Space Life/Data/Create NPC Data", priority = 60)]
         public static void CreateNPCData()
         {
-            CreateScriptableObject<NPCDataSO>("NPCData");
+            CreateScriptableObject<NPCDataSO>("NewNPCData");
         }
 
-        [MenuItem("ProjectArk/Space Life/Assets/Create Item", priority = 51)]
-        public static void CreateItem()
+        [MenuItem("ProjectArk/Space Life/Data/Create Item Data", priority = 61)]
+        public static void CreateItemData()
         {
-            CreateScriptableObject<ItemSO>("Item");
+            CreateScriptableObject<ItemSO>("NewItem");
         }
 
-        private static void CreateSingleton<T>(string name) where T : MonoBehaviour
+        private static GameObject CreateSingleton<T>(string name) where T : MonoBehaviour
         {
             if (Object.FindFirstObjectByType<T>() != null)
             {
                 Debug.LogWarning($"[SpaceLife] {name} already exists!");
-                Selection.activeObject = Object.FindFirstObjectByType<T>().gameObject;
-                return;
+                var existing = Object.FindFirstObjectByType<T>().gameObject;
+                Selection.activeObject = existing;
+                return existing;
             }
             else
             {
@@ -180,6 +264,7 @@ namespace ProjectArk.SpaceLife.Editor
                 Selection.activeGameObject = go;
                 Undo.RegisterCreatedObjectUndo(go, $"Create {name}");
                 Debug.Log($"[SpaceLife] {name} created");
+                return go;
             }
         }
 

@@ -26,6 +26,7 @@ namespace ProjectArk.Core
                 Debug.LogWarning($"[ServiceLocator] Service '{type.Name}' is already registered. Overwriting.");
             }
             _services[type] = service;
+            Debug.Log($"[ServiceLocator] Registered: {type.Name}");
         }
 
         /// <summary>
@@ -33,7 +34,14 @@ namespace ProjectArk.Core
         /// </summary>
         public static T Get<T>() where T : class
         {
-            return _services.TryGetValue(typeof(T), out var service) ? (T)service : null;
+            var type = typeof(T);
+            if (_services.TryGetValue(type, out var service))
+            {
+                Debug.Log($"[ServiceLocator] Get: {type.Name} = found");
+                return (T)service;
+            }
+            Debug.LogWarning($"[ServiceLocator] Get: {type.Name} = NOT FOUND");
+            return null;
         }
 
         /// <summary>

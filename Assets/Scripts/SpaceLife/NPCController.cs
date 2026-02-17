@@ -1,5 +1,6 @@
 
 using System.Collections.Generic;
+using ProjectArk.Core;
 using ProjectArk.SpaceLife.Data;
 using UnityEngine;
 
@@ -16,10 +17,13 @@ namespace ProjectArk.SpaceLife
         [SerializeField] private Animator _animator;
 
         private Interactable _interactable;
+        private RelationshipManager _relationshipManager;
+        private DialogueUI _dialogueUI;
+        private NPCInteractionUI _npcInteractionUI;
 
         public NPCDataSO NPCData => _npcData;
-        public int CurrentRelationship => RelationshipManager.Instance != null && _npcData != null
-            ? RelationshipManager.Instance.GetRelationship(_npcData)
+        public int CurrentRelationship => _relationshipManager != null && _npcData != null
+            ? _relationshipManager.GetRelationship(_npcData)
             : 0;
         public string NPCName => _npcData != null ? _npcData.npcName : "Unknown";
 
@@ -35,6 +39,10 @@ namespace ProjectArk.SpaceLife
 
         private void Start()
         {
+            _relationshipManager = ServiceLocator.Get<RelationshipManager>();
+            _dialogueUI = ServiceLocator.Get<DialogueUI>();
+            _npcInteractionUI = ServiceLocator.Get<NPCInteractionUI>();
+
             if (_npcData != null)
             {
                 SetupInteractable();
@@ -44,12 +52,12 @@ namespace ProjectArk.SpaceLife
 
         private void InitializeRelationship()
         {
-            if (RelationshipManager.Instance != null && _npcData != null)
+            if (_relationshipManager != null && _npcData != null)
             {
-                int current = RelationshipManager.Instance.GetRelationship(_npcData);
+                int current = _relationshipManager.GetRelationship(_npcData);
                 if (current == 0 && _npcData.startingRelationship > 0)
                 {
-                    RelationshipManager.Instance.SetRelationship(_npcData, _npcData.startingRelationship);
+                    _relationshipManager.SetRelationship(_npcData, _npcData.startingRelationship);
                 }
             }
         }
@@ -65,9 +73,9 @@ namespace ProjectArk.SpaceLife
 
         private void OnInteract()
         {
-            if (NPCInteractionUI.Instance != null)
+            if (_npcInteractionUI != null)
             {
-                NPCInteractionUI.Instance.ShowInteractionUI(this);
+                _npcInteractionUI.ShowInteractionUI(this);
             }
             else
             {
@@ -85,9 +93,9 @@ namespace ProjectArk.SpaceLife
 
             DialogueLine startingLine = GetAppropriateDialogue();
 
-            if (startingLine != null && DialogueUI.Instance != null)
+            if (startingLine != null && _dialogueUI != null)
             {
-                DialogueUI.Instance.ShowDialogue(startingLine, this);
+                _dialogueUI.ShowDialogue(startingLine, this);
             }
             else
             {
@@ -123,9 +131,9 @@ namespace ProjectArk.SpaceLife
 
         public void ChangeRelationship(int amount)
         {
-            if (RelationshipManager.Instance != null && _npcData != null)
+            if (_relationshipManager != null && _npcData != null)
             {
-                RelationshipManager.Instance.ChangeRelationship(_npcData, amount);
+                _relationshipManager.ChangeRelationship(_npcData, amount);
                 Debug.Log($"[NPCController] {NPCName} relationship: {CurrentRelationship}");
             }
         }

@@ -3929,3 +3929,520 @@ Markdown文档、系统检查清单、状态报告。
 
 ### 技术：
 Unity New Input System、InputActionAsset、InputAction、事件驱动输入处理。
+
+---
+
+## SpaceLife 模块完整重构 — 2026-02-17 11:10
+
+### 新建文件：
+| 文件路径 | 变更说明 |
+|---------|---------|
+| `Assets/Scripts/SpaceLife/TransitionUI.cs` | 过渡动画系统（打字机效果 + 淡入淡出） |
+
+### 修改文件：
+| 文件路径 | 变更说明 |
+|---------|---------|
+| `Assets/Scripts/SpaceLife/SpaceLifeManager.cs` | ServiceLocator + PoolManager + AudioManager + TransitionUI + 异步过渡 |
+| `Assets/Scripts/SpaceLife/PlayerController2D.cs` | Top-Down 移动 + 加速度/减速度曲线 |
+| `Assets/Scripts/SpaceLife/DialogueUI.cs` | UniTask 打字机效果 + CancellationToken |
+| `Assets/Scripts/SpaceLife/RoomManager.cs` | UniTask 相机移动 + CancellationToken |
+| `Assets/Scripts/SpaceLife/MinimapUI.cs` | 房间导航按钮动态生成 |
+| `Assets/Scripts/SpaceLife/Room.cs` | 新增 Doors 列表属性 |
+| `Assets/Scripts/SpaceLife/Door.cs` | 新增 ConnectedRoom 属性 |
+| `Assets/Scripts/SpaceLife/RelationshipManager.cs` | Singleton → ServiceLocator |
+| `Assets/Scripts/SpaceLife/GiftInventory.cs` | Singleton → ServiceLocator |
+| `Assets/Scripts/SpaceLife/GiftUI.cs` | Singleton → ServiceLocator |
+| `Assets/Scripts/SpaceLife/NPCInteractionUI.cs` | Singleton → ServiceLocator |
+| `Assets/Scripts/SpaceLife/NPCController.cs` | ServiceLocator 引用更新 |
+| `Assets/Scripts/SpaceLife/Interactable.cs` | 缓存引用替代 Find |
+| `Assets/Scripts/SpaceLife/SpaceLifeInputHandler.cs` | ServiceLocator |
+| `Assets/Scripts/SpaceLife/ProjectArk.SpaceLife.asmdef` | 添加 UniTask + ProjectArk.Core.Audio 引用 |
+| `Assets/Scripts/SpaceLife/Editor/SpaceLifeSetupWindow.cs` | 完全重写，自动创建 Prefab 和场景结构 |
+| `ProjectArk.SpaceLife.csproj` | 添加 ProjectArk.Core.Audio 项目引用 |
+
+### 内容：
+
+#### Phase 1: 架构合规重构
+- 迁移所有 Singleton 到 ServiceLocator 模式
+- 移除所有 FindAnyObjectByType/FindFirstObjectByType 调用
+- 使用缓存引用或 ServiceLocator.Get 替代
+
+#### Phase 2: PlayerController2D 优化
+- 改为 Top-Down 2D 移动（gravityScale = 0）
+- 添加加速度/减速度曲线，提升手感
+- 移除跳跃功能（根据用户反馈）
+
+#### Phase 3: Coroutine → UniTask 迁移
+- DialogueUI 打字机效果改用 UniTask
+- RoomManager 相机移动改用 UniTask
+- 添加 CancellationToken 支持取消操作
+
+#### Phase 4: 集成核心系统
+- PoolManager: 玩家 Spawn 使用对象池
+- AudioManager: 添加进入/退出音效支持
+
+#### Phase 5: 过渡动画和小地图
+- TransitionUI: 打字机效果 + 淡入淡出
+- MinimapUI: 动态生成房间导航按钮
+
+#### Bug 修复
+1. **看不到 PlayerCharacter**: 一键生成菜单现在自动创建 Player2D_Prefab 并赋值
+2. **Tab 无法退出**: SpaceLifeInputHandler 独立于 _shipRoot，进入时启用、退出时禁用
+
+### 目的：
+1. 统一架构风格，与项目整体 ServiceLocator 模式保持一致
+2. 提升性能，移除 O(n) 的 Find 调用
+3. 现代化异步处理，使用 UniTask 替代 Coroutine
+4. 集成项目核心系统（PoolManager、AudioManager）
+5. 修复用户反馈的两个关键 Bug
+
+### 技术：
+- ServiceLocator 依赖注入模式
+- UniTask 异步编程 + CancellationToken
+- GameObjectPool 对象池
+- Top-Down 2D 移动物理
+- Unity Editor 脚本（PrefabUtility、SerializedObject）
+- 程序集定义（asmdef）引用管理
+
+---
+
+## SpaceLife Setup 窗口增强 — 2026-02-17 11:23
+
+### 修改文件：
+| 文件路径 | 变更说明 |
+|---------|---------|
+| `Assets/Scripts/SpaceLife/Editor/SpaceLifeSetupWindow.cs` | 智能检测 + 补齐引用 + Player 可见性修复 |
+
+### 内容：
+
+#### 问题修复
+1. **Player 不可见**：Player Prefab 添加 `SpriteRenderer` 组件（使用 Unity 内置 Knob sprite 作为占位符）
+2. **重复创建检测**：已存在对象时不再跳过，而是检查并补齐缺失引用
+
+#### 新增功能
+- `EnsureManagerReferences()` 方法：统一检查并补齐 SpaceLifeManager 的所有引用
+  - `_spaceLifePlayerPrefab`
+  - `_spaceLifeSceneRoot`
+  - `_spaceLifeSpawnPoint`
+  - `_spaceLifeCamera`
+  - `_spaceLifeInputHandler`
+
+#### 行为改进
+- 已存在 SpaceLifeManager → 检查引用并补齐
+- 已存在 Player Prefab → 自动赋值给 Manager
+- 已存在 SpaceLifeScene → 检查子对象并补齐缺失的 SpawnPoint/Camera
+- 已存在 SpaceLifeInputHandler → 自动赋值给 Manager
+
+### 目的：
+1. 修复 Player 在 SpaceLife 模式下不可见的问题
+2. 支持增量 Setup，避免重复创建对象
+3. 自动补齐缺失的引用，减少手动配置
+
+### 技术：
+- SpriteRenderer 组件、Unity 内置资源
+- SerializedObject 属性检查与赋值
+- Editor 脚本增量检测逻辑
+
+---
+
+## SpaceLife 类重命名避免冲突 — 2026-02-17 11:35
+
+### 新建文件：
+| 文件路径 | 变更说明 |
+|---------|---------|
+| `Assets/Scripts/SpaceLife/SpaceLifeRoom.cs` | 原 Room.cs 重命名 |
+| `Assets/Scripts/SpaceLife/SpaceLifeRoomManager.cs` | 原 RoomManager.cs 重命名 |
+| `Assets/Scripts/SpaceLife/SpaceLifeDoor.cs` | 原 Door.cs 重命名 |
+
+### 删除文件：
+| 文件路径 | 变更说明 |
+|---------|---------|
+| `Assets/Scripts/SpaceLife/Room.cs` | 重命名为 SpaceLifeRoom.cs |
+| `Assets/Scripts/SpaceLife/RoomManager.cs` | 重命名为 SpaceLifeRoomManager.cs |
+| `Assets/Scripts/SpaceLife/Door.cs` | 重命名为 SpaceLifeDoor.cs |
+
+### 修改文件：
+| 文件路径 | 变更说明 |
+|---------|---------|
+| `Assets/Scripts/SpaceLife/MinimapUI.cs` | 更新引用 SpaceLifeRoom/SpaceLifeRoomManager |
+| `Assets/Scripts/SpaceLife/SpaceLifeQuickSetup.cs` | 更新引用 SpaceLifeRoomManager |
+| `Assets/Scripts/SpaceLife/Editor/SpaceLifeMenuItems.cs` | 更新菜单创建逻辑 |
+| `Assets/Scripts/SpaceLife/Editor/SpaceLifeSetupWindow.cs` | 更新 Setup 窗口创建逻辑 |
+| `ProjectArk.SpaceLife.csproj` | 更新文件引用 |
+
+### 内容：
+将 SpaceLife 模块中的房间相关类重命名，添加 `SpaceLife` 前缀，避免与 `Level/Room` 模块中的同名类冲突：
+
+| 原类名 | 新类名 | 说明 |
+|--------|--------|------|
+| `Room` | `SpaceLifeRoom` | 太空生活房间 |
+| `RoomManager` | `SpaceLifeRoomManager` | 太空生活房间管理器 |
+| `RoomType` | `SpaceLifeRoomType` | 太空生活房间类型枚举 |
+| `Door` | `SpaceLifeDoor` | 太空生活门 |
+
+### 目的：
+1. 解决 `Level/Room/RoomManager.cs` 与 `SpaceLife/RoomManager.cs` 的命名冲突
+2. 保持两个模块独立，避免 ServiceLocator 注册冲突
+3. 清晰区分不同模块的职责
+
+### 技术：
+- 类重命名、枚举重命名
+- 程序集内引用更新
+- Unity Editor 菜单更新
+
+---
+
+## 删除 One-Click Quick Setup 并合并功能 — 2026-02-17 11:40
+
+### 删除功能：
+- 移除 `ProjectArk/Space Life/🚀 One-Click Quick Setup (Visible!)` 菜单项
+- 删除相关方法：`CreateSpaceLifeSystem`, `CreateManagers`, `CreatePlayerPrefab`, `CreateSceneContent`, `CreateNPC`, `CreateUI`, `ConnectEverything`
+
+### 合并到 Setup Wizard：
+| 功能 | 实现位置 |
+|------|----------|
+| 可见 Player (青色方块) | `CreatePlayerPrefab()` 使用 `CreateSquareSprite(Color.cyan)` |
+| 可见 NPC (彩色方块) | `CreateDemoNPCs()` 为每个 NPC 添加 SpriteRenderer |
+| 可见 Background | 新增 `CreateBackground()` 方法 |
+
+### 修改文件：
+| 文件路径 | 变更说明 |
+|---------|---------|
+| `Assets/Scripts/SpaceLife/Editor/SpaceLifeMenuItems.cs` | 删除 One-Click Setup，保留工具方法 |
+| `Assets/Scripts/SpaceLife/Editor/SpaceLifeSetupWindow.cs` | 添加 Background 创建，更新 Player/NPC 可视化 |
+
+### 目的：
+1. 统一 Setup 入口，避免用户困惑
+2. Setup Wizard 具备智能检测和补齐引用功能
+3. 所有创建的对象都可见，便于调试
+
+### 技术：
+- `CreateSquareSprite(Color)` 生成纯色 Sprite
+- SpriteRenderer.drawMode = Tiled 实现可平铺背景
+- sortingOrder 控制渲染层级
+
+---
+
+## Setup Wizard 完整性修复 — 2026-02-17 11:45
+
+### 问题修复：
+
+| 问题 | 解决方案 |
+|------|----------|
+| SpaceLifeInputHandler 缺少 InputActionAsset | 新增 `EnsureInputHandlerReferences()` 自动查找并分配 |
+| Player Prefab 缺少 InputActionAsset | 创建 Prefab 时自动分配给 PlayerController2D 和 PlayerInteraction |
+| SpaceLifeManager 缺少 _shipRoot 引用 | `EnsureManagerReferences()` 自动查找 Ship.InputHandler 并赋值 |
+
+### 修改文件：
+| 文件路径 | 变更说明 |
+|---------|---------|
+| `Assets/Scripts/SpaceLife/Editor/SpaceLifeSetupWindow.cs` | 添加 InputActionAsset 自动分配逻辑 |
+
+### 新增方法：
+```csharp
+private void EnsureInputHandlerReferences(SpaceLifeInputHandler handler)
+{
+    // 自动查找并分配 InputActionAsset
+}
+```
+
+### 自动连接的引用：
+| 组件 | 字段 | 来源 |
+|------|------|------|
+| SpaceLifeManager | _spaceLifePlayerPrefab | Assets/Scripts/SpaceLife/Prefabs/Player2D_Prefab.prefab |
+| SpaceLifeManager | _spaceLifeSceneRoot | GameObject.Find("SpaceLifeScene") |
+| SpaceLifeManager | _spaceLifeSpawnPoint | SpaceLifeScene/SpawnPoint |
+| SpaceLifeManager | _spaceLifeCamera | SpaceLifeScene/SpaceLifeCamera |
+| SpaceLifeManager | _spaceLifeInputHandler | FindFirstObjectByType<SpaceLifeInputHandler>() |
+| SpaceLifeManager | _shipRoot | FindFirstObjectByType<Ship.InputHandler>().gameObject |
+| SpaceLifeInputHandler | _inputActions | AssetDatabase.FindAssets("ShipActions") |
+| PlayerController2D (Prefab) | _inputActions | 同上 |
+| PlayerInteraction (Prefab) | _inputActions | 同上 |
+
+### 技术：
+- SerializedObject + SerializedProperty 运行时赋值
+- AssetDatabase.FindAssets 查找资源
+- Object.FindFirstObjectByType 查找场景对象
+
+---
+
+## 输入系统 ActionMap 冲突修复 — 2026-02-17 11:50
+
+### 问题：
+飞船和 SpaceLife 人物都无法控制
+
+### 根本原因：
+1. `Ship/Input/InputHandler` 在 `OnDisable` 时调用 `shipMap.Disable()`
+2. `PlayerController2D` 和 `SpaceLifeInputHandler` 依赖同一个 `Ship` ActionMap
+3. 当 `SpaceLifeManager` 禁用 `Ship/Input/InputHandler` 时，整个 `Ship` ActionMap 被禁用
+4. 导致所有依赖该 ActionMap 的组件都无法接收输入
+
+### 解决方案：
+让需要输入的组件在 `OnEnable` 时主动启用 ActionMap
+
+### 修改文件：
+| 文件路径 | 变更说明 |
+|---------|---------|
+| `Assets/Scripts/SpaceLife/PlayerController2D.cs` | OnEnable 时检查并启用 Ship ActionMap |
+| `Assets/Scripts/SpaceLife/SpaceLifeInputHandler.cs` | OnEnable 时检查并启用 Ship ActionMap |
+
+### 修改代码：
+```csharp
+// PlayerController2D.OnEnable()
+var shipMap = _inputActions.FindActionMap("Ship");
+if (shipMap != null && !shipMap.enabled)
+{
+    shipMap.Enable();
+}
+```
+
+### 技术：
+- InputActionMap.enabled 检查状态
+- 多组件共享 ActionMap 时的启用策略
+
+---
+
+## Player Prefab 更新机制 & 飞船输入修复 — 2026-02-17 11:55
+
+### 问题：
+1. Player2D Prefab 缺少 SpriteRenderer（已存在的 Prefab 不会更新）
+2. 飞船 WASD 不可用
+
+### 根本原因：
+1. Setup Wizard 在 Prefab 已存在时直接返回，不检查/更新组件
+2. `SpaceLifeInputHandler` 在游戏开始时处于启用状态，干扰了 `Ship/Input/InputHandler`
+
+### 解决方案：
+
+#### 1. 新增 `UpdatePlayerPrefabComponents()` 方法
+检查并补齐已存在 Prefab 的缺失组件：
+- SpriteRenderer + Sprite
+- Rigidbody2D (gravityScale = 0)
+- CapsuleCollider2D
+- PlayerController2D + InputActionAsset
+- PlayerInteraction + InputActionAsset
+
+#### 2. SpaceLifeManager.Start() 禁用 SpaceLifeInputHandler
+```csharp
+if (_spaceLifeInputHandler != null)
+    _spaceLifeInputHandler.enabled = false;
+```
+
+### 修改文件：
+| 文件路径 | 变更说明 |
+|---------|---------|
+| `Assets/Scripts/SpaceLife/Editor/SpaceLifeSetupWindow.cs` | 新增 UpdatePlayerPrefabComponents 方法 |
+| `Assets/Scripts/SpaceLife/SpaceLifeManager.cs` | Start 时禁用 SpaceLifeInputHandler |
+
+### 输入系统状态流程：
+```
+游戏启动:
+  - Ship/Input/InputHandler: enabled (ActionMap 启用)
+  - SpaceLifeInputHandler: disabled
+  - 飞船 WASD 可用 ✓
+
+进入 SpaceLife:
+  - Ship/Input/InputHandler: disabled (ActionMap 禁用)
+  - SpaceLifeInputHandler: enabled (OnEnable 重新启用 ActionMap)
+  - PlayerController2D: enabled (OnEnable 重新启用 ActionMap)
+  - SpaceLife 人物 WASD 可用 ✓
+
+退出 SpaceLife:
+  - SpaceLifeInputHandler: disabled
+  - PlayerController2D: disabled
+  - Ship/Input/InputHandler: enabled (OnEnable 重新启用 ActionMap)
+  - 飞船 WASD 可用 ✓
+```
+
+### 技术：
+- EditorUtility.SetDirty + AssetDatabase.SaveAssets 保存 Prefab 更改
+- 组件启用/禁用顺序控制输入系统状态
+
+---
+
+## Prefab 存放位置修正 — 2026-02-17 12:00
+
+### 问题：
+SpaceLife Prefab 存放在 `Assets/Scripts/SpaceLife/Prefabs/`，不符合项目规范
+
+### 项目规范 (CLAUDE.md)：
+```
+Assets/
+├── _Prefabs/                 # 游戏 Prefab
+│   ├── Ship/
+│   └── Enemies/
+```
+
+### 修改：
+将 Prefab 路径从 `Assets/Scripts/SpaceLife/Prefabs/` 改为 `Assets/_Prefabs/SpaceLife/`
+
+### 修改文件：
+| 文件路径 | 变更说明 |
+|---------|---------|
+| `Assets/Scripts/SpaceLife/Editor/SpaceLifeSetupWindow.cs` | 更新 prefabPath 和 folderPath |
+
+### 新路径：
+```
+Assets/_Prefabs/SpaceLife/Player2D_Prefab.prefab
+```
+
+### 技术：
+- AssetDatabase.IsValidFolder 检查文件夹是否存在
+- AssetDatabase.CreateFolder 创建嵌套文件夹
+
+---
+
+## Tab 无法进入 SpaceLife 修复 — 2026-02-17 12:05
+
+### 问题：
+按 Tab 无法进入 SpaceLife 模式
+
+### 根本原因：
+`SpaceLifeInputHandler` 在游戏开始时被禁用（为了不干扰飞船输入），所以无法接收 Tab 输入
+
+### 解决方案：
+让 `Ship/Input/InputHandler` 也监听 `ToggleSpaceLife` action，通过事件通知 `SpaceLifeManager`
+
+### 修改文件：
+| 文件路径 | 变更说明 |
+|---------|---------|
+| `Assets/Scripts/Ship/Input/InputHandler.cs` | 添加 OnToggleSpaceLifePerformed 事件 |
+| `Assets/Scripts/SpaceLife/SpaceLifeManager.cs` | 订阅 Ship InputHandler 的事件 |
+
+### 新增代码：
+```csharp
+// InputHandler.cs
+public event Action OnToggleSpaceLifePerformed;
+private InputAction _toggleSpaceLifeAction;
+
+// OnEnable
+if (_toggleSpaceLifeAction != null)
+    _toggleSpaceLifeAction.performed += OnToggleSpaceLifeActionPerformed;
+
+// SpaceLifeManager.cs Start()
+_shipInputHandler.OnToggleSpaceLifePerformed += ToggleSpaceLife;
+```
+
+### 输入系统架构：
+```
+飞船模式:
+  Ship/Input/InputHandler (enabled)
+    └── 监听 ToggleSpaceLife → 触发 OnToggleSpaceLifePerformed 事件
+    └── SpaceLifeManager 订阅事件 → 调用 ToggleSpaceLife()
+
+SpaceLife 模式:
+  SpaceLifeInputHandler (enabled)
+    └── 监听 ToggleSpaceLife → 直接调用 SpaceLifeManager.ToggleSpaceLife()
+```
+
+### 技术：
+- 事件订阅模式解耦输入处理
+- 双入口确保两种模式都能切换
+
+---
+
+## 输入系统全面修复 — 2026-02-17 13:00
+
+### 问题：
+1. 按 Tab 无反应
+2. 飞船只能旋转，WASD 移动无效
+3. Console 报错 `Action map must be contained in state`
+4. `[ServiceLocator] Get: InputHandler = NOT FOUND`
+
+### 根本原因：
+1. **场景中缺少 `Ship/Input/InputHandler` 组件** - 这是 Tab 切换和飞船移动的核心组件
+2. **OnDisable 时禁用已无效的 Action** - 当 ActionMap 被禁用后再尝试禁用单个 Action 会报错
+
+### 修复内容：
+
+#### 1. 修复 OnDisable 安全检查
+三个组件都需要检查 ActionMap 状态后再禁用 Action：
+
+```csharp
+// PlayerController2D.OnDisable()
+if (_moveAction != null && _inputActions != null)
+{
+    var shipMap = _inputActions.FindActionMap("Ship");
+    if (shipMap != null && shipMap.enabled)
+    {
+        _moveAction.Disable();
+    }
+}
+```
+
+同样修复应用于：
+- `PlayerController2D.cs`
+- `PlayerInteraction.cs`
+- `SpaceLifeInputHandler.cs`
+
+#### 2. Setup Wizard 状态检查增强
+新增 `Ship/InputHandler` 状态检查：
+
+```csharp
+bool hasShipInputHandler = Object.FindFirstObjectByType<ProjectArk.Ship.InputHandler>() != null;
+DrawStatusItem("Ship/InputHandler (CRITICAL)", hasShipInputHandler);
+
+if (!hasShipInputHandler)
+{
+    EditorGUILayout.HelpBox("Ship/InputHandler is MISSING! This is required for Tab toggle to work.", MessageType.Error);
+}
+```
+
+#### 3. 添加全面调试日志
+- `InputHandler.Awake()` - 检查 _inputActions 是否为 null
+- `InputHandler.OnEnable()` - 确认 ActionMap 已启用
+- `SpaceLifeManager.Start()` - 确认订阅事件成功
+- `ServiceLocator.Register/Get` - 追踪服务注册和获取
+
+### 修改文件：
+| 文件路径 | 变更说明 |
+|---------|---------|
+| `Assets/Scripts/SpaceLife/PlayerController2D.cs` | OnDisable 安全检查 |
+| `Assets/Scripts/SpaceLife/PlayerInteraction.cs` | OnDisable 安全检查 |
+| `Assets/Scripts/SpaceLife/SpaceLifeInputHandler.cs` | OnDisable 安全检查 |
+| `Assets/Scripts/Ship/Input/InputHandler.cs` | 添加 null 检查和调试日志 |
+| `Assets/Scripts/SpaceLife/SpaceLifeManager.cs` | 添加调试日志 |
+| `Assets/Scripts/Core/ServiceLocator.cs` | 添加注册/获取日志 |
+| `Assets/Scripts/SpaceLife/Editor/SpaceLifeSetupWindow.cs` | 检查 Ship/InputHandler 状态 |
+
+### 用户需要确认：
+**场景中必须有 `Ship/Input/InputHandler` 组件！**
+
+这个组件通常在 Ship Prefab 上，由 `ShipMotor` 或 `ShipDash` 的 `RequireComponent` 自动添加。
+
+### 技术：
+- InputAction.Disable() 前检查 ActionMap.enabled
+- ServiceLocator 调试日志追踪服务生命周期
+- Editor 状态检查提示用户缺失的关键组件
+
+---
+
+## SpaceLife 模块 Bug 修复与架构清理 — 2026-02-17 21:08
+
+### 概述
+修复 SpaceLife 模块 3 大核心 Bug 并完成输入系统架构解耦，共涉及 8 个任务。
+
+### 修改文件：
+| 文件路径 | 变更说明 |
+|---------|---------|
+| `Assets/Input/ShipActions.inputactions` | 新增独立的 `SpaceLife` ActionMap（Move/Interact/ToggleSpaceLife）；移除多余的 `SpaceLifeJump` Action 及其 4 条绑定 |
+| `Assets/Scripts/SpaceLife/SpaceLifeInputHandler.cs` | 从 Ship ActionMap 切换到 SpaceLife ActionMap；OnEnable/OnDisable 操作独立 Map 不再干扰 Ship 输入 |
+| `Assets/Scripts/SpaceLife/PlayerController2D.cs` | 从 Ship ActionMap 切换到 SpaceLife ActionMap；Enable/Disable 独立不影响 Ship |
+| `Assets/Scripts/SpaceLife/SpaceLifeManager.cs` | 增强序列化引用 fallback 自动获取逻辑（_spaceLifeInputHandler/FindFirstObjectByType、_mainCamera/Camera.main、_shipInputHandler/FindFirstObjectByType fallback）；EnterSpaceLife 和 ToggleSpaceLife 入口添加前置条件检查；所有错误日志增加具体组件名+修复建议 |
+| `Assets/Scripts/SpaceLife/Editor/SpaceLifeSetupWindow.cs` | 新增 Scene Health Check 面板（检查所有关键组件 ✅/❌ 状态）；新增 "Add Ship to Scene" 按钮（从 Prefab 实例化）；新增 "Auto-Wire References" 按钮（自动填充 SpaceLifeManager 可推导的序列化引用） |
+
+### 内容简述：
+1. **输入系统解耦（B3/B6）**：在 ShipActions.inputactions 中新增独立的 `SpaceLife` ActionMap，包含 Move（WASD 4方向+方向键+Gamepad摇杆）、Interact（E键+Gamepad Y）、ToggleSpaceLife（Tab+Gamepad Back）。SpaceLifeInputHandler 和 PlayerController2D 完全切换到 SpaceLife Map，与 Ship Map 零耦合。
+2. **移除 SpaceLifeJump（B5）**：从 Ship ActionMap 删除冗余的 SpaceLifeJump Action 和 4 条绑定（W/↑/Space/Gamepad South）。SpaceLife 确认使用 4 方向移动不需要跳跃。
+3. **序列化引用修复（B4）**：SpaceLifeManager.Start() 中为 _spaceLifeInputHandler、_mainCamera、_shipInputHandler 增加运行时 fallback 自动获取+Warning 日志。
+4. **防御性增强（B1/B2）**：ToggleSpaceLife 和 EnterSpaceLife 入口增加 _spaceLifePlayerPrefab/_spaceLifeCamera/_spaceLifeSceneRoot 的 null 前置条件检查，失败时打印具体原因。
+5. **Editor 工具增强**：SpaceLifeSetupWindow 新增 Scene Health Check 面板，含一键添加 Ship 到场景和 Auto-Wire References 功能。
+
+### 目的：
+修复 SpaceLife 模块无法通过 Tab 进入、输入系统 Ship/SpaceLife 互相干扰、序列化引用缺失导致静默失败等问题，建立清晰的输入架构边界。
+
+### 技术方案：
+- 方案 A（独立 ActionMap）：在同一 InputActionAsset 中新增 SpaceLife ActionMap，避免共享 Ship Map 的 Enable/Disable 互相干扰
+- SpaceLifeManager 使用 ServiceLocator + FindFirstObjectByType 双重 fallback 策略
+- Editor 工具使用 SerializedObject API 检查和自动填充序列化引用
+- PrefabUtility.InstantiatePrefab 用于一键添加 Ship 到场景

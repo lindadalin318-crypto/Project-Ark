@@ -1,4 +1,5 @@
 
+using ProjectArk.Core;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -6,8 +7,6 @@ namespace ProjectArk.SpaceLife
 {
     public class NPCInteractionUI : MonoBehaviour
     {
-        public static NPCInteractionUI Instance { get; private set; }
-
         [Header("UI Elements")]
         [SerializeField] private GameObject _interactionPanel;
         [SerializeField] private Text _npcNameText;
@@ -16,19 +15,19 @@ namespace ProjectArk.SpaceLife
         [SerializeField] private Button _closeButton;
 
         private NPCController _currentNPC;
+        private GiftInventory _giftInventory;
+        private GiftUI _giftUI;
 
         private void Awake()
         {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-            Instance = this;
+            ServiceLocator.Register(this);
         }
 
         private void Start()
         {
+            _giftInventory = ServiceLocator.Get<GiftInventory>();
+            _giftUI = ServiceLocator.Get<GiftUI>();
+
             if (_interactionPanel != null)
                 _interactionPanel.SetActive(false);
 
@@ -51,9 +50,9 @@ namespace ProjectArk.SpaceLife
             if (_npcNameText != null)
                 _npcNameText.text = npc.NPCName;
 
-            if (_giftButton != null && GiftInventory.Instance != null)
+            if (_giftButton != null && _giftInventory != null)
             {
-                _giftButton.interactable = GiftInventory.Instance.GetItemCount() > 0;
+                _giftButton.interactable = _giftInventory.GetItemCount() > 0;
             }
 
             if (_interactionPanel != null)
@@ -71,9 +70,9 @@ namespace ProjectArk.SpaceLife
 
         private void OnGiftClicked()
         {
-            if (_currentNPC != null && GiftUI.Instance != null)
+            if (_currentNPC != null && _giftUI != null)
             {
-                GiftUI.Instance.ShowGiftUI(_currentNPC);
+                _giftUI.ShowGiftUI(_currentNPC);
                 CloseUI();
             }
         }
@@ -86,8 +85,6 @@ namespace ProjectArk.SpaceLife
             _currentNPC = null;
         }
 
-
-
         private void OnDestroy()
         {
             if (_talkButton != null)
@@ -99,8 +96,7 @@ namespace ProjectArk.SpaceLife
             if (_closeButton != null)
                 _closeButton.onClick.RemoveListener(CloseUI);
 
-            if (Instance == this)
-                Instance = null;
+            ServiceLocator.Unregister(this);
         }
     }
 }

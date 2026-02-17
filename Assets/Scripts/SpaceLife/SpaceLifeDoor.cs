@@ -1,14 +1,14 @@
-
+using ProjectArk.Core;
 using UnityEngine;
 
 namespace ProjectArk.SpaceLife
 {
     [RequireComponent(typeof(Interactable))]
-    public class Door : MonoBehaviour
+    public class SpaceLifeDoor : MonoBehaviour
     {
         [Header("Door Settings")]
         [SerializeField] private Transform _targetPosition;
-        [SerializeField] private Room _targetRoom;
+        [SerializeField] private SpaceLifeRoom _targetRoom;
         [SerializeField] private bool _autoOpen = true;
 
         [Header("Visuals")]
@@ -18,9 +18,11 @@ namespace ProjectArk.SpaceLife
         [SerializeField] private Sprite _closedSprite;
 
         private Interactable _interactable;
+        private SpaceLifeRoomManager _roomManager;
         private bool _isOpen;
 
         public bool IsOpen => _isOpen;
+        public SpaceLifeRoom ConnectedRoom => _targetRoom;
 
         private void Awake()
         {
@@ -34,6 +36,7 @@ namespace ProjectArk.SpaceLife
 
         private void Start()
         {
+            _roomManager = ServiceLocator.Get<SpaceLifeRoomManager>();
             SetupInteractable();
         }
 
@@ -53,7 +56,7 @@ namespace ProjectArk.SpaceLife
 
         public void UseDoor()
         {
-            PlayerController2D player = FindFirstObjectByType<PlayerController2D>();
+            PlayerController2D player = ServiceLocator.Get<PlayerController2D>();
             if (player == null) return;
 
             if (_targetPosition != null)
@@ -61,9 +64,9 @@ namespace ProjectArk.SpaceLife
                 player.transform.position = _targetPosition.position;
             }
 
-            if (_targetRoom != null && RoomManager.Instance != null)
+            if (_targetRoom != null && _roomManager != null)
             {
-                RoomManager.Instance.SetCurrentRoom(_targetRoom);
+                _roomManager.SetCurrentRoom(_targetRoom);
             }
 
             ToggleOpen();
@@ -102,4 +105,3 @@ namespace ProjectArk.SpaceLife
         }
     }
 }
-

@@ -1,4 +1,5 @@
 
+using ProjectArk.Core;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -16,6 +17,7 @@ namespace ProjectArk.SpaceLife
 
         private bool _isInRange;
         private GameObject _indicator;
+        private PlayerController2D _cachedPlayer;
 
         public string InteractionText
         {
@@ -26,6 +28,11 @@ namespace ProjectArk.SpaceLife
         public float InteractionRange => _interactionRange;
         public bool IsInRange => _isInRange;
 
+        private void Start()
+        {
+            _cachedPlayer = ServiceLocator.Get<PlayerController2D>();
+        }
+
         private void Update()
         {
             CheckPlayerInRange();
@@ -34,14 +41,13 @@ namespace ProjectArk.SpaceLife
 
         private void CheckPlayerInRange()
         {
-            GameObject player = FindPlayer();
-            if (player == null)
+            if (_cachedPlayer == null)
             {
                 _isInRange = false;
                 return;
             }
 
-            float distance = Vector2.Distance(transform.position, player.transform.position);
+            float distance = Vector2.Distance(transform.position, _cachedPlayer.transform.position);
             _isInRange = distance <= _interactionRange;
         }
 
@@ -51,12 +57,6 @@ namespace ProjectArk.SpaceLife
 
             Debug.Log($"[Interactable] Interacted with {gameObject.name}");
             OnInteract?.Invoke();
-        }
-
-        private GameObject FindPlayer()
-        {
-            PlayerController2D player = FindFirstObjectByType<PlayerController2D>();
-            return player != null ? player.gameObject : null;
         }
 
         private void UpdateIndicator()

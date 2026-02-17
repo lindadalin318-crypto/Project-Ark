@@ -53,11 +53,15 @@ namespace ProjectArk.Ship
         /// <summary> Fired once when the dash button is pressed. </summary>
         public event Action OnDashPressed;
 
+        /// <summary> Fired once when ToggleSpaceLife is performed. </summary>
+        public event Action OnToggleSpaceLifePerformed;
+
         private InputAction _moveAction;
         private InputAction _aimPositionAction;
         private InputAction _aimStickAction;
         private InputAction _fireAction;
         private InputAction _fireSecondaryAction;
+        private InputAction _toggleSpaceLifeAction;
         private InputAction _interactAction;
         private InputAction _dashAction;
         private Camera _mainCamera;
@@ -69,7 +73,15 @@ namespace ProjectArk.Ship
 
         private void Awake()
         {
+            Debug.Log("[InputHandler] Awake called");
+            
             ServiceLocator.Register(this);
+
+            if (_inputActions == null)
+            {
+                Debug.LogError("[InputHandler] _inputActions is NULL! Please assign InputActionAsset in Inspector!");
+                return;
+            }
 
             _mainCamera = Camera.main;
             if (_mainCamera == null)
@@ -79,6 +91,12 @@ namespace ProjectArk.Ship
             }
 
             var shipMap = _inputActions.FindActionMap("Ship");
+            if (shipMap == null)
+            {
+                Debug.LogError("[InputHandler] Ship ActionMap not found in InputActionAsset!");
+                return;
+            }
+
             _moveAction = shipMap.FindAction("Move");
             _aimPositionAction = shipMap.FindAction("AimPosition");
             _aimStickAction = shipMap.FindAction("AimStick");
@@ -86,6 +104,9 @@ namespace ProjectArk.Ship
             _fireSecondaryAction = shipMap.FindAction("FireSecondary");
             _interactAction = shipMap.FindAction("Interact");
             _dashAction = shipMap.FindAction("Dash");
+            _toggleSpaceLifeAction = shipMap.FindAction("ToggleSpaceLife");
+            
+            Debug.Log($"[InputHandler] Actions found - Move: {_moveAction != null}, ToggleSpaceLife: {_toggleSpaceLifeAction != null}");
         }
 
         private void OnDestroy()
@@ -95,8 +116,17 @@ namespace ProjectArk.Ship
 
         private void OnEnable()
         {
+            Debug.Log("[InputHandler] OnEnable called");
+            
+            if (_inputActions == null)
+            {
+                Debug.LogError("[InputHandler] Cannot enable - _inputActions is null!");
+                return;
+            }
+            
             var shipMap = _inputActions.FindActionMap("Ship");
             shipMap.Enable();
+            Debug.Log($"[InputHandler] Ship ActionMap enabled: {shipMap.enabled}");
 
             // 监听 performed 事件来自动检测设备切换
             _aimPositionAction.performed += OnMouseAimPerformed;
@@ -113,6 +143,12 @@ namespace ProjectArk.Ship
 
             if (_dashAction != null)
                 _dashAction.performed += OnDashActionPerformed;
+
+            if (_toggleSpaceLifeAction != null)
+            {
+                _toggleSpaceLifeAction.performed += OnToggleSpaceLifeActionPerformed;
+                Debug.Log("[InputHandler] ToggleSpaceLife callback registered");
+            }
         }
 
         private void OnDisable()
@@ -133,6 +169,9 @@ namespace ProjectArk.Ship
 
             if (_dashAction != null)
                 _dashAction.performed -= OnDashActionPerformed;
+
+            if (_toggleSpaceLifeAction != null)
+                _toggleSpaceLifeAction.performed -= OnToggleSpaceLifeActionPerformed;
 
             var shipMap = _inputActions.FindActionMap("Ship");
             shipMap.Disable();
@@ -240,6 +279,12 @@ namespace ProjectArk.Ship
         private void OnDashActionPerformed(InputAction.CallbackContext ctx)
         {
             OnDashPressed?.Invoke();
+        }
+
+        private void OnToggleSpaceLifeActionPerformed(InputAction.CallbackContext ctx)
+        {
+            Debug.Log("[InputHandler] ToggleSpaceLife action PERFORMED! Invoking event...");
+            OnToggleSpaceLifePerformed?.Invoke();
         }
     }
 }

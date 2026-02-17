@@ -1,5 +1,8 @@
 
 using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
+using ProjectArk.Core;
 using ProjectArk.SpaceLife.Data;
 using UnityEngine;
 using UnityEngine.UI;
@@ -8,8 +11,6 @@ namespace ProjectArk.SpaceLife
 {
     public class DialogueUI : MonoBehaviour
     {
-        public static DialogueUI Instance { get; private set; }
-
         [Header("UI Elements")]
         [SerializeField] private GameObject _dialoguePanel;
         [SerializeField] private Image _avatarImage;
@@ -24,17 +25,13 @@ namespace ProjectArk.SpaceLife
         private DialogueLine _currentLine;
         private NPCController _currentNPC;
         private bool _isTyping;
+        private CancellationTokenSource _typewriterCts;
 
         public event Action OnDialogueEnd;
 
         private void Awake()
         {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-            Instance = this;
+            ServiceLocator.Register(this);
         }
 
         private void Start()
@@ -75,8 +72,9 @@ namespace ProjectArk.SpaceLife
 
             if (_dialogueText != null)
             {
-                StopAllCoroutines();
-                StartCoroutine(TypeTextCoroutine(line.text));
+                CancelTypewriter();
+                _typewriterCts = new CancellationTokenSource();
+                TypeTextAsync(line.text, _typewriterCts.Token).Forget();
             }
 
             ClearOptions();
@@ -94,17 +92,36 @@ namespace ProjectArk.SpaceLife
             }
         }
 
-        private System.Collections.IEnumerator TypeTextCoroutine(string text)
+        private async UniTaskVoid TypeTextAsync(string text, CancellationToken ct)
         {
             _isTyping = true;
             _dialogueText.text = "";
 
-            foreach (char c in text)
+            try
             {
-                _dialogueText.text += c;
-                yield return new WaitForSeconds(_typewriterSpeed);
+                foreach (char c in text)
+                {
+                    if (ct.IsCancellationRequested) return;
+                    
+                    _dialogueText.text += c;
+                    await UniTask.Delay(TimeSpan.FromSeconds(_typewriterSpeed), cancellationToken: ct);
+                }
+            }
+            catch (OperationCanceledException)
+            {
             }
 
+            _isTyping = false;
+        }
+
+        private void CancelTypewriter()
+        {
+            if (_typewriterCts != null)
+            {
+                _typewriterCts.Cancel();
+                _typewriterCts.Dispose();
+                _typewriterCts = null;
+            }
             _isTyping = false;
         }
 
@@ -175,8 +192,7 @@ namespace ProjectArk.SpaceLife
 
         public void CloseDialogue()
         {
-            StopAllCoroutines();
-            _isTyping = false;
+            CancelTypewriter();
 
             if (_dialoguePanel != null)
                 _dialoguePanel.SetActive(false);
@@ -187,12 +203,10 @@ namespace ProjectArk.SpaceLife
             OnDialogueEnd?.Invoke();
         }
 
-
-
         private void OnDestroy()
         {
-            if (Instance == this)
-                Instance = null;
+            CancelTypewriter();
+            ServiceLocator.Unregister(this);
         }
     }
 }

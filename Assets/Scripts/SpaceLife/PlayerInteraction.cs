@@ -18,12 +18,46 @@ namespace ProjectArk.SpaceLife
 
         private void Awake()
         {
-            var shipMap = _inputActions.FindActionMap("Ship");
-            _interactAction = shipMap.FindAction("Interact");
+            if (_inputActions == null)
+            {
+                Debug.LogWarning("[PlayerInteraction] InputActions is NULL, trying to find it...");
+#if UNITY_EDITOR
+                TryFindInputActionAsset();
+#endif
+            }
+
+            if (_inputActions != null)
+            {
+                var shipMap = _inputActions.FindActionMap("Ship");
+                if (shipMap != null)
+                {
+                    _interactAction = shipMap.FindAction("Interact");
+                }
+            }
         }
+
+#if UNITY_EDITOR
+        private void TryFindInputActionAsset()
+        {
+            var guids = UnityEditor.AssetDatabase.FindAssets("ShipActions t:InputActionAsset");
+            foreach (var guid in guids)
+            {
+                var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<InputActionAsset>(path);
+                if (asset != null)
+                {
+                    _inputActions = asset;
+                    Debug.Log($"[PlayerInteraction] Auto-found InputActionAsset: {path}");
+                    break;
+                }
+            }
+        }
+#endif
 
         private void OnEnable()
         {
+            if (_inputActions == null) return;
+            
             if (_interactAction != null)
             {
                 _interactAction.Enable();
@@ -33,10 +67,15 @@ namespace ProjectArk.SpaceLife
 
         private void OnDisable()
         {
-            if (_interactAction != null)
+            if (_interactAction != null && _inputActions != null)
             {
                 _interactAction.performed -= OnInteractActionPerformed;
-                _interactAction.Disable();
+                
+                var shipMap = _inputActions.FindActionMap("Ship");
+                if (shipMap != null && shipMap.enabled)
+                {
+                    _interactAction.Disable();
+                }
             }
         }
 

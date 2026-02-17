@@ -1,5 +1,6 @@
 
 using System.Collections.Generic;
+using ProjectArk.Core;
 using ProjectArk.SpaceLife.Data;
 using UnityEngine;
 
@@ -7,8 +8,6 @@ namespace ProjectArk.SpaceLife
 {
     public class GiftInventory : MonoBehaviour
     {
-        public static GiftInventory Instance { get; private set; }
-
         [Header("Inventory")]
         [SerializeField] private List<ItemSO> _items = new List<ItemSO>();
 
@@ -18,12 +17,7 @@ namespace ProjectArk.SpaceLife
 
         private void Awake()
         {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-            Instance = this;
+            ServiceLocator.Register(this);
         }
 
         public void AddItem(ItemSO item)
@@ -61,8 +55,7 @@ namespace ProjectArk.SpaceLife
 
         private void OnDestroy()
         {
-            if (Instance == this)
-                Instance = null;
+            ServiceLocator.Unregister(this);
         }
     }
 }
