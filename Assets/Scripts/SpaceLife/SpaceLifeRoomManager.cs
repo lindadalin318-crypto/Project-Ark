@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Threading;
-using Cysharp.Threading.Tasks;
+using PrimeTween;
 using ProjectArk.Core;
 using UnityEngine;
 
@@ -19,7 +18,7 @@ namespace ProjectArk.SpaceLife
         [SerializeField] private bool _smoothCameraTransition = true;
 
         private SpaceLifeRoom _currentRoom;
-        private CancellationTokenSource _cameraMoveCts;
+        private Tween _cameraTween;
 
         public SpaceLifeRoom CurrentRoom => _currentRoom;
         public List<SpaceLifeRoom> AllRooms => _rooms;
@@ -33,22 +32,29 @@ namespace ProjectArk.SpaceLife
 
         private void Start()
         {
-            if (_rooms.Count == 0)
-            {
-                FindAllRooms();
-            }
-
             if (_startingRoom != null)
             {
                 SetCurrentRoom(_startingRoom);
             }
         }
 
-        private void FindAllRooms()
+        /// <summary>
+        /// Called by SpaceLifeRoom.OnEnable to self-register into the room list.
+        /// </summary>
+        public void RegisterRoom(SpaceLifeRoom room)
         {
-            SpaceLifeRoom[] foundRooms = FindObjectsByType<SpaceLifeRoom>(FindObjectsSortMode.None);
-            _rooms.AddRange(foundRooms);
-            Debug.Log($"[SpaceLifeRoomManager] Found {_rooms.Count} rooms");
+            if (room != null && !_rooms.Contains(room))
+            {
+                _rooms.Add(room);
+            }
+        }
+
+        /// <summary>
+        /// Called by SpaceLifeRoom.OnDisable to self-unregister from the room list.
+        /// </summary>
+        public void UnregisterRoom(SpaceLifeRoom room)
+        {
+            _rooms.Remove(room);
         }
 
         public void SetCurrentRoom(SpaceLifeRoom room)
@@ -68,53 +74,23 @@ namespace ProjectArk.SpaceLife
 
             if (_currentRoom.CameraTarget != null)
             {
+                Vector3 targetPos = _currentRoom.CameraTarget.position;
+                targetPos.z = _roomCamera.transform.position.z;
+
                 if (_smoothCameraTransition)
                 {
-                    CancelCameraMove();
-                    _cameraMoveCts = new CancellationTokenSource();
-                    SmoothMoveCameraAsync(_currentRoom.CameraTarget.position, _cameraMoveCts.Token).Forget();
+                    if (_cameraTween.isAlive) _cameraTween.Stop();
+
+                    float distance = Vector3.Distance(_roomCamera.transform.position, targetPos);
+                    float duration = Mathf.Max(0.1f, distance / _cameraMoveSpeed);
+
+                    _cameraTween = Tween.Position(_roomCamera.transform, targetPos, duration,
+                        ease: Ease.InOutQuad);
                 }
                 else
                 {
-                    Vector3 targetPos = _currentRoom.CameraTarget.position;
-                    targetPos.z = _roomCamera.transform.position.z;
                     _roomCamera.transform.position = targetPos;
                 }
-            }
-        }
-
-        private async UniTaskVoid SmoothMoveCameraAsync(Vector3 targetPosition, CancellationToken ct)
-        {
-            targetPosition.z = _roomCamera.transform.position.z;
-
-            try
-            {
-                while (Vector3.Distance(_roomCamera.transform.position, targetPosition) > 0.01f)
-                {
-                    if (ct.IsCancellationRequested) return;
-
-                    _roomCamera.transform.position = Vector3.Lerp(
-                        _roomCamera.transform.position,
-                        targetPosition,
-                        _cameraMoveSpeed * Time.deltaTime
-                    );
-                    await UniTask.Yield(ct);
-                }
-
-                _roomCamera.transform.position = targetPosition;
-            }
-            catch (OperationCanceledException)
-            {
-            }
-        }
-
-        private void CancelCameraMove()
-        {
-            if (_cameraMoveCts != null)
-            {
-                _cameraMoveCts.Cancel();
-                _cameraMoveCts.Dispose();
-                _cameraMoveCts = null;
             }
         }
 
@@ -144,7 +120,8 @@ namespace ProjectArk.SpaceLife
 
         private void OnDestroy()
         {
-            CancelCameraMove();
+            if (_cameraTween.isAlive) _cameraTween.Stop();
+            OnRoomChanged = null;
             ServiceLocator.Unregister(this);
         }
     }

@@ -6,6 +6,7 @@
         "ProjectArk.Core",
         "ProjectArk.Core.Audio",
         "ProjectArk.Ship",
+        "PrimeTween.Runtime",
         "UniTask",
         "Unity.InputSystem"
     ],

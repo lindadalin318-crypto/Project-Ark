@@ -25,7 +25,7 @@ namespace ProjectArk.SpaceLife
         public int CurrentRelationship => _relationshipManager != null && _npcData != null
             ? _relationshipManager.GetRelationship(_npcData)
             : 0;
-        public string NPCName => _npcData != null ? _npcData.npcName : "Unknown";
+        public string NPCName => _npcData != null ? _npcData.NpcName : "Unknown";
 
         private void Awake()
         {
@@ -55,9 +55,9 @@ namespace ProjectArk.SpaceLife
             if (_relationshipManager != null && _npcData != null)
             {
                 int current = _relationshipManager.GetRelationship(_npcData);
-                if (current == 0 && _npcData.startingRelationship > 0)
+                if (current == 0 && _npcData.StartingRelationship > 0)
                 {
-                    _relationshipManager.SetRelationship(_npcData, _npcData.startingRelationship);
+                    _relationshipManager.SetRelationship(_npcData, _npcData.StartingRelationship);
                 }
             }
         }
@@ -105,20 +105,20 @@ namespace ProjectArk.SpaceLife
 
         private DialogueLine GetAppropriateDialogue()
         {
-            List<DialogueLine> dialoguePool;
+            IReadOnlyList<DialogueLine> dialoguePool;
             int relationship = CurrentRelationship;
 
             if (relationship >= 80)
             {
-                dialoguePool = _npcData.bestFriendDialogues;
+                dialoguePool = _npcData.BestFriendDialogues;
             }
             else if (relationship >= 50)
             {
-                dialoguePool = _npcData.friendlyDialogues;
+                dialoguePool = _npcData.FriendlyDialogues;
             }
             else
             {
-                dialoguePool = _npcData.defaultDialogues;
+                dialoguePool = _npcData.DefaultDialogues;
             }
 
             if (dialoguePool.Count > 0)
@@ -140,12 +140,12 @@ namespace ProjectArk.SpaceLife
 
         public bool IsLikedGift(ItemSO gift)
         {
-            return _npcData != null && _npcData.likedGifts.Contains(gift);
+            return _npcData != null && _npcData.LikedGifts.Contains(gift);
         }
 
         public bool IsDislikedGift(ItemSO gift)
         {
-            return _npcData != null && _npcData.dislikedGifts.Contains(gift);
+            return _npcData != null && _npcData.DislikedGifts.Contains(gift);
         }
 
         private void OnDestroy()

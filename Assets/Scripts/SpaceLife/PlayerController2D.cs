@@ -57,6 +57,19 @@ namespace ProjectArk.SpaceLife
             }
         }
 
+        private void Start()
+        {
+            // Defensive: hide Player2D if not in SpaceLife mode.
+            // Prevents Player2D from being visible during ship operation
+            // (e.g. if pooled instance was pre-warmed or left in scene).
+            var manager = ServiceLocator.Get<SpaceLifeManager>();
+            if (manager != null && !manager.IsInSpaceLifeMode)
+            {
+                gameObject.SetActive(false);
+                Debug.Log("[PlayerController2D] Auto-hidden: not in SpaceLife mode.");
+            }
+        }
+
 #if UNITY_EDITOR
         private void TryFindInputActionAsset()
         {

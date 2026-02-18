@@ -26,7 +26,7 @@ namespace ProjectArk.SpaceLife
 
             _items.Add(item);
             OnInventoryChanged?.Invoke();
-            Debug.Log($"[GiftInventory] Added: {item.itemName}");
+            Debug.Log($"[GiftInventory] Added: {item.ItemName}");
         }
 
         public bool RemoveItem(ItemSO item)
@@ -36,7 +36,7 @@ namespace ProjectArk.SpaceLife
             if (_items.Remove(item))
             {
                 OnInventoryChanged?.Invoke();
-                Debug.Log($"[GiftInventory] Removed: {item.itemName}");
+                Debug.Log($"[GiftInventory] Removed: {item.ItemName}");
                 return true;
             }
 
@@ -55,6 +55,7 @@ namespace ProjectArk.SpaceLife
 
         private void OnDestroy()
         {
+            OnInventoryChanged = null;
             ServiceLocator.Unregister(this);
         }
     }

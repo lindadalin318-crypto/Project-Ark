@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using PrimeTween;
 using ProjectArk.Core;
 using UnityEngine;
 using UnityEngine.UI;
@@ -101,40 +102,38 @@ namespace ProjectArk.SpaceLife
         {
             if (_fadeOverlay == null) return;
 
-            float elapsed = 0f;
             float startAlpha = _fadeOverlay.color.a;
+            var tween = Tween.Custom(startAlpha, 0f, duration, useUnscaledTime: true,
+                onValueChange: v => SetFadeAlpha(v), ease: Ease.Linear);
 
-            while (elapsed < duration)
+            try
             {
-                if (ct.IsCancellationRequested) return;
-
-                elapsed += Time.deltaTime;
-                float alpha = Mathf.Lerp(startAlpha, 0f, elapsed / duration);
-                SetFadeAlpha(alpha);
-                await UniTask.Yield(ct);
+                await tween.ToUniTask(cancellationToken: ct);
             }
-
-            SetFadeAlpha(0f);
+            catch (OperationCanceledException)
+            {
+                if (tween.isAlive) tween.Stop();
+                throw;
+            }
         }
 
         public async UniTask FadeOutAsync(float duration, CancellationToken ct = default)
         {
             if (_fadeOverlay == null) return;
 
-            float elapsed = 0f;
             float startAlpha = _fadeOverlay.color.a;
+            var tween = Tween.Custom(startAlpha, 1f, duration, useUnscaledTime: true,
+                onValueChange: v => SetFadeAlpha(v), ease: Ease.Linear);
 
-            while (elapsed < duration)
+            try
             {
-                if (ct.IsCancellationRequested) return;
-
-                elapsed += Time.deltaTime;
-                float alpha = Mathf.Lerp(startAlpha, 1f, elapsed / duration);
-                SetFadeAlpha(alpha);
-                await UniTask.Yield(ct);
+                await tween.ToUniTask(cancellationToken: ct);
             }
-
-            SetFadeAlpha(1f);
+            catch (OperationCanceledException)
+            {
+                if (tween.isAlive) tween.Stop();
+                throw;
+            }
         }
 
         private void SetFadeAlpha(float alpha)

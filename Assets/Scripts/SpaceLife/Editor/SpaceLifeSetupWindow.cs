@@ -679,7 +679,7 @@ namespace ProjectArk.SpaceLife.Editor
             GameObject playerGo = new GameObject("Player2D");
             
             var sr = playerGo.AddComponent<SpriteRenderer>();
-            sr.sprite = SpaceLifeMenuItems.CreateSquareSprite(Color.cyan);
+            sr.sprite = SpaceLifeMenuItems.CreateCapsuleSprite(Color.white);
             sr.sortingOrder = 10;
             
             var rb = playerGo.AddComponent<Rigidbody2D>();
@@ -750,10 +750,10 @@ namespace ProjectArk.SpaceLife.Editor
             
             if (sr.sprite == null)
             {
-                sr.sprite = SpaceLifeMenuItems.CreateSquareSprite(Color.cyan);
+                sr.sprite = SpaceLifeMenuItems.CreateCapsuleSprite(Color.white);
                 sr.sortingOrder = 10;
                 changed = true;
-                Debug.Log("[SpaceLife Setup] Added sprite to Player Prefab SpriteRenderer");
+                Debug.Log("[SpaceLife Setup] Added capsule sprite to Player Prefab SpriteRenderer");
             }
             
             var rb = prefab.GetComponent<Rigidbody2D>();

@@ -4446,3 +4446,68 @@ if (!hasShipInputHandler)
 - SpaceLifeManager 使用 ServiceLocator + FindFirstObjectByType 双重 fallback 策略
 - Editor 工具使用 SerializedObject API 检查和自动填充序列化引用
 - PrefabUtility.InstantiatePrefab 用于一键添加 Ship 到场景
+
+---
+
+## SpaceLife Player2D 可见性修复 + 胶囊 Sprite — 2026-02-18 01:05
+
+### 修改文件：
+- `Assets/Scripts/SpaceLife/Editor/SpaceLifeMenuItems.cs` — 新增 `CreateCapsuleSprite` 方法；`CreatePlayerController` 菜单项添加 SpriteRenderer + 白色胶囊 sprite
+- `Assets/Scripts/SpaceLife/Editor/SpaceLifeSetupWindow.cs` — `CreatePlayerPrefab` 和 `UpdatePlayerPrefabComponents` 改用白色胶囊 sprite（替换原来的 cyan 方形）
+- `Assets/Scripts/SpaceLife/PlayerController2D.cs` — 新增 `Start()` 方法，防御性隐藏：非 SpaceLife 模式时自动 `SetActive(false)`
+
+### 内容简述：
+1. **CreateCapsuleSprite**：程序化生成 32×64 像素白色胶囊形状 Sprite（半圆顶+矩形身体+半圆底），用于 Player2D 的默认视觉
+2. **Setup Wizard / Menu Items**：所有创建 Player2D 的入口（Wizard Phase 1、Create Player Controller 菜单、Update 检查）统一使用白色胶囊 sprite 替代原来的 cyan 方形
+3. **Player2D 可见性**：在 `PlayerController2D.Start()` 中通过 `ServiceLocator.Get<SpaceLifeManager>()` 检查当前模式，如果不在 SpaceLife 模式则自动隐藏 gameObject，防止 Player2D 在飞船操作期间意外显示
+
+### 目的：
+- 修复 Setup Wizard 创建的 Player2D 缺少 SpriteRenderer / 使用错误形状的问题
+- 修复 Player2D 在飞船操作期间仍然可见的 bug
+
+### 技术方案：
+- 程序化纹理生成（Texture2D + Sprite.Create）绘制胶囊形状，利用圆心距离判断像素是否在胶囊边界内
+- 防御性 Start() 检查利用 ServiceLocator 查询 SpaceLifeManager 状态，确保 Player2D 只在 SpaceLife 模式激活时可见
+
+---
+
+## SpaceLife + StarChart 模块 CLAUDE.md 代码规范合规修复 — 2026-02-18 10:15
+
+### 修改文件：
+- `Assets/Scripts/SpaceLife/PlayerInteraction.cs` — 替换 FindObjectsByType 为 Trigger 检测模式（OnTriggerEnter2D/Exit2D + \_nearbyInteractables 列表）
+- `Assets/Scripts/SpaceLife/SpaceLifeRoomManager.cs` — 移除 FindAllRooms()/FindObjectsByType，改为 RegisterRoom/UnregisterRoom 自注册模式；手写 Lerp 相机平移替换为 PrimeTween.Position；添加 PrimeTween 依赖
+- `Assets/Scripts/SpaceLife/SpaceLifeRoom.cs` — 添加 OnEnable/OnDisable 自注册到 RoomManager
+- `Assets/Scripts/SpaceLife/SpaceLifeManager.cs` — 移除 FindFirstObjectByType fallback，改为 ServiceLocator-only；OnDestroy 添加 OnEnterSpaceLife/OnExitSpaceLife = null 事件清理
+- `Assets/Scripts/SpaceLife/Data/NPCDataSO.cs` — public 字段改为 [SerializeField] private + PascalCase 只读属性
+- `Assets/Scripts/SpaceLife/Data/ItemSO.cs` — public 字段改为 [SerializeField] private + PascalCase 只读属性
+- `Assets/Scripts/SpaceLife/Data/DialogueData.cs` — DialogueLine/DialogueOption public 字段改为 [SerializeField] private + PascalCase 只读属性
+- `Assets/Scripts/SpaceLife/NPCController.cs` — 更新所有 NPCDataSO/DialogueLine 字段引用为新属性名
+- `Assets/Scripts/SpaceLife/RelationshipManager.cs` — 更新 NPCDataSO 引用；OnDestroy 添加 OnRelationshipChanged = null；移除 RelationshipLevel 枚举
+- `Assets/Scripts/SpaceLife/DialogueUI.cs` — 更新 DialogueLine/DialogueOption 引用；OnDestroy 添加 OnDialogueEnd = null
+- `Assets/Scripts/SpaceLife/GiftUI.cs` — 更新 ItemSO 引用；OnDestroy 添加 OnGiftGiven = null
+- `Assets/Scripts/SpaceLife/GiftInventory.cs` — 更新 ItemSO 引用；OnDestroy 添加 OnInventoryChanged = null
+- `Assets/Scripts/SpaceLife/TransitionUI.cs` — FadeInAsync/FadeOutAsync 手写 Lerp 替换为 PrimeTween.Custom + ToUniTask
+- `Assets/Scripts/SpaceLife/Interactable.cs` — 运行时 Instantiate/Destroy 指示器改为 Awake 预创建 + SetActive 切换
+- `Assets/Scripts/Combat/StarChart/StarChartController.cs` — 动态 AddComponent<AudioSource> 改为 [RequireComponent] + GetComponent；OnDestroy 添加 OnTrackFired/OnLightSailChanged/OnSatellitesChanged = null
+
+### 新建文件：
+- `Assets/Scripts/SpaceLife/SpaceLifeRoomType.cs` — 从 SpaceLifeRoom.cs 提取的枚举
+- `Assets/Scripts/SpaceLife/RelationshipLevel.cs` — 从 RelationshipManager.cs 提取的枚举
+- `Assets/Scripts/SpaceLife/Data/NPCRole.cs` — 从 NPCDataSO.cs 提取的枚举
+- `Assets/Scripts/SpaceLife/ProjectArk.SpaceLife.asmdef` — 新增 PrimeTween.Runtime 引用
+- `Assets/Scripts/SpaceLife/Editor/ProjectArk.SpaceLife.Editor.asmdef` — 新增 rootNamespace 字段
+
+### 内容简述：
+全面修复 SpaceLife 模块（20个文件）和 StarChart 模块的 CLAUDE.md 代码规范违规项，共覆盖 9 个需求类别。
+
+### 目的：
+确保 SpaceLife 和 StarChart 模块完全符合 CLAUDE.md 架构原则和代码规范，消除所有运行时 Find* 调用、public SO 字段、缺失的事件清理、手写 Lerp 补间、动态 AddComponent、枚举与类同文件等技术债务。
+
+### 技术方案：
+1. **禁止运行时 Find***：PlayerInteraction 改为 Trigger 碰撞检测 + 列表维护；RoomManager 改为自注册模式；SpaceLifeManager 移除 fallback
+2. **SO 数据封装**：NPCDataSO/ItemSO/DialogueData 所有 public 字段改为 `[SerializeField] private` + PascalCase 只读属性（IReadOnlyList 暴露集合）
+3. **一文件一类**：SpaceLifeRoomType、RelationshipLevel、NPCRole 枚举各自独立文件
+4. **事件卫生**：所有 event/Action 在 OnDestroy 中 `= null` 清空，防止内存泄漏
+5. **PrimeTween 替代手写 Lerp**：TransitionUI 的 fade 用 Tween.Custom + useUnscaledTime:true；RoomManager 相机用 Tween.Position
+6. **[RequireComponent] 替代动态 AddComponent**：StarChartController 的 AudioSource
+7. **Interactable 指示器预创建**：Awake 中创建或引用，SetActive 切换，避免运行时 Instantiate/Destroy

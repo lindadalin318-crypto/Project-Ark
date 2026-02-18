@@ -63,14 +63,12 @@ namespace ProjectArk.SpaceLife
             if (_spaceLifeSceneRoot != null)
                 _spaceLifeSceneRoot.SetActive(false);
 
-            // Auto-find _spaceLifeInputHandler via fallback
+            // Get SpaceLifeInputHandler via ServiceLocator only
             if (_spaceLifeInputHandler == null)
             {
-                _spaceLifeInputHandler = FindFirstObjectByType<SpaceLifeInputHandler>();
-                if (_spaceLifeInputHandler != null)
-                    Debug.LogWarning("[SpaceLifeManager] WARNING: _spaceLifeInputHandler auto-found via fallback. Please assign in Inspector.");
-                else
-                    Debug.LogError("[SpaceLifeManager] CRITICAL: SpaceLifeInputHandler not found in scene. Ensure a GameObject with SpaceLifeInputHandler component exists.");
+                _spaceLifeInputHandler = ServiceLocator.Get<SpaceLifeInputHandler>();
+                if (_spaceLifeInputHandler == null)
+                    Debug.LogError("[SpaceLifeManager] CRITICAL: SpaceLifeInputHandler not found via ServiceLocator or Inspector. Ensure it is registered.");
             }
 
             if (_spaceLifeInputHandler != null)
@@ -89,17 +87,12 @@ namespace ProjectArk.SpaceLife
                     Debug.LogError("[SpaceLifeManager] CRITICAL: Main Camera not found. Ensure a Camera tagged 'MainCamera' exists in scene.");
             }
 
-            // Get Ship InputHandler from ServiceLocator
+            // Get Ship InputHandler from ServiceLocator only — no FindFirstObjectByType fallback
             _shipInputHandler = ServiceLocator.Get<InputHandler>();
             
             if (_shipInputHandler == null)
             {
-                // Fallback: try FindFirstObjectByType
-                _shipInputHandler = FindFirstObjectByType<InputHandler>();
-                if (_shipInputHandler != null)
-                    Debug.LogWarning("[SpaceLifeManager] WARNING: _shipInputHandler auto-found via FindFirstObjectByType fallback. Ensure Ship Prefab registers to ServiceLocator.");
-                else
-                    Debug.LogError("[SpaceLifeManager] CRITICAL: InputHandler not found via ServiceLocator or FindFirstObjectByType. Ensure Ship Prefab is in scene and has InputHandler component.");
+                Debug.LogError("[SpaceLifeManager] CRITICAL: InputHandler not found via ServiceLocator. Ensure Ship Prefab is in scene and registers InputHandler.");
             }
             
             Debug.Log($"[SpaceLifeManager] ShipInputHandler found: {_shipInputHandler != null}");
@@ -361,6 +354,9 @@ namespace ProjectArk.SpaceLife
         private void OnDestroy()
         {
             CancelTransition();
+            
+            OnEnterSpaceLife = null;
+            OnExitSpaceLife = null;
             
             if (_shipInputHandler != null)
             {

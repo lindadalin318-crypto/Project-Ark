@@ -1,6 +1,7 @@
 
 {
   "name": "ProjectArk.SpaceLife.Editor",
+  "rootNamespace": "ProjectArk.SpaceLife.Editor",
   "references": [
     "GUID:096ec43cf9c8f7d45807061530e5493d",
     "ProjectArk.SpaceLife",

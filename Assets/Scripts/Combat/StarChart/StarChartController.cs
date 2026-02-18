@@ -17,6 +17,7 @@ namespace ProjectArk.Combat
     [RequireComponent(typeof(InputHandler))]
     [RequireComponent(typeof(ShipAiming))]
     [RequireComponent(typeof(ShipMotor))]
+    [RequireComponent(typeof(AudioSource))]
     public class StarChartController : MonoBehaviour
     {
         [Header("Fire Points")]
@@ -169,10 +170,10 @@ namespace ProjectArk.Combat
             _shipAiming = GetComponent<ShipAiming>();
             _shipMotor = GetComponent<ShipMotor>();
 
-            // 专用 AudioSource，避免干扰其他音频
-            _audioSource = gameObject.AddComponent<AudioSource>();
+            // Dedicated AudioSource for firing SFX (must be pre-attached via RequireComponent)
+            _audioSource = GetComponent<AudioSource>();
             _audioSource.playOnAwake = false;
-            _audioSource.spatialBlend = 0f; // 2D 音效
+            _audioSource.spatialBlend = 0f; // 2D sound
 
             _primaryTrack = new WeaponTrack(WeaponTrack.TrackId.Primary);
             _secondaryTrack = new WeaponTrack(WeaponTrack.TrackId.Secondary);
@@ -211,6 +212,10 @@ namespace ProjectArk.Combat
 
         private void OnDestroy()
         {
+            OnTrackFired = null;
+            OnLightSailChanged = null;
+            OnSatellitesChanged = null;
+            
             ServiceLocator.Unregister<StarChartController>(this);
             _lightSailRunner?.Dispose();
             for (int i = 0; i < _satelliteRunners.Count; i++)

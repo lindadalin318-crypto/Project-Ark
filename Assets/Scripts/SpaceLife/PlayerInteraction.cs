@@ -1,9 +1,14 @@
-
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace ProjectArk.SpaceLife
 {
+    /// <summary>
+    /// Detects nearby Interactable objects via trigger overlap and handles player interaction input.
+    /// Requires a Collider2D (set as trigger) whose radius matches the interaction range.
+    /// </summary>
+    [RequireComponent(typeof(Collider2D))]
     public class PlayerInteraction : MonoBehaviour
     {
         [Header("Input")]
@@ -15,9 +20,13 @@ namespace ProjectArk.SpaceLife
         private InputAction _interactAction;
         private Interactable _nearestInteractable;
         private bool _interactRequested;
+        private readonly List<Interactable> _nearbyInteractables = new();
+        private CircleCollider2D _detectionCollider;
 
         private void Awake()
         {
+            SetupDetectionCollider();
+
             if (_inputActions == null)
             {
                 Debug.LogWarning("[PlayerInteraction] InputActions is NULL, trying to find it...");
@@ -34,6 +43,18 @@ namespace ProjectArk.SpaceLife
                     _interactAction = shipMap.FindAction("Interact");
                 }
             }
+        }
+
+        private void SetupDetectionCollider()
+        {
+            // Use existing CircleCollider2D or add one for detection
+            _detectionCollider = GetComponent<CircleCollider2D>();
+            if (_detectionCollider == null)
+            {
+                _detectionCollider = gameObject.AddComponent<CircleCollider2D>();
+            }
+            _detectionCollider.isTrigger = true;
+            _detectionCollider.radius = _interactionRange;
         }
 
 #if UNITY_EDITOR
@@ -77,6 +98,8 @@ namespace ProjectArk.SpaceLife
                     _interactAction.Disable();
                 }
             }
+            _nearbyInteractables.Clear();
+            _nearestInteractable = null;
         }
 
         private void Update()
@@ -90,16 +113,43 @@ namespace ProjectArk.SpaceLife
             _nearestInteractable = null;
             float nearestDistance = float.MaxValue;
 
-            Interactable[] interactables = FindObjectsByType<Interactable>(FindObjectsSortMode.None);
-
-            foreach (var interactable in interactables)
+            for (int i = _nearbyInteractables.Count - 1; i >= 0; i--)
             {
-                float distance = Vector2.Distance(transform.position, interactable.transform.position);
+                // Clean up destroyed or disabled interactables
+                if (_nearbyInteractables[i] == null || !_nearbyInteractables[i].isActiveAndEnabled)
+                {
+                    _nearbyInteractables.RemoveAt(i);
+                    continue;
+                }
 
-                if (distance <= _interactionRange && distance < nearestDistance)
+                float distance = Vector2.Distance(transform.position, _nearbyInteractables[i].transform.position);
+                if (distance < nearestDistance)
                 {
                     nearestDistance = distance;
-                    _nearestInteractable = interactable;
+                    _nearestInteractable = _nearbyInteractables[i];
+                }
+            }
+        }
+
+        private void OnTriggerEnter2D(Collider2D other)
+        {
+            if (other.TryGetComponent<Interactable>(out var interactable))
+            {
+                if (!_nearbyInteractables.Contains(interactable))
+                {
+                    _nearbyInteractables.Add(interactable);
+                }
+            }
+        }
+
+        private void OnTriggerExit2D(Collider2D other)
+        {
+            if (other.TryGetComponent<Interactable>(out var interactable))
+            {
+                _nearbyInteractables.Remove(interactable);
+                if (_nearestInteractable == interactable)
+                {
+                    _nearestInteractable = null;
                 }
             }
         }
@@ -125,4 +175,3 @@ namespace ProjectArk.SpaceLife
         }
     }
 }
-

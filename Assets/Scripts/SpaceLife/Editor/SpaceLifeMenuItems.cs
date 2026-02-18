@@ -78,6 +78,59 @@ namespace ProjectArk.SpaceLife.Editor
             return Sprite.Create(texture, rect, pivot, 64);
         }
 
+        /// <summary>
+        /// Creates a procedural capsule-shaped sprite (rounded rectangle).
+        /// Width=32, Height=64 with semicircle caps at top and bottom.
+        /// </summary>
+        internal static Sprite CreateCapsuleSprite(Color color)
+        {
+            const int width = 32;
+            const int height = 64;
+            const int radius = width / 2; // 16px semicircle caps
+
+            Texture2D texture = new Texture2D(width, height);
+            Color transparent = new Color(0, 0, 0, 0);
+            Color[] pixels = new Color[width * height];
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    float cx = x - (width * 0.5f - 0.5f);
+                    float cy;
+                    bool inside;
+
+                    if (y < radius)
+                    {
+                        // Bottom cap
+                        cy = y - (radius - 0.5f);
+                        inside = (cx * cx + cy * cy) <= (radius * radius);
+                    }
+                    else if (y >= height - radius)
+                    {
+                        // Top cap
+                        cy = y - (height - radius - 0.5f);
+                        inside = (cx * cx + cy * cy) <= (radius * radius);
+                    }
+                    else
+                    {
+                        // Middle rectangle
+                        inside = true;
+                    }
+
+                    pixels[y * width + x] = inside ? color : transparent;
+                }
+            }
+
+            texture.SetPixels(pixels);
+            texture.filterMode = FilterMode.Bilinear;
+            texture.Apply();
+
+            Rect rect = new Rect(0, 0, width, height);
+            Vector2 pivot = new Vector2(0.5f, 0.5f);
+            return Sprite.Create(texture, rect, pivot, 64);
+        }
+
         [MenuItem("ProjectArk/Space Life/Create/SpaceLifeManager", priority = 30)]
         public static void CreateSpaceLifeManager()
         {
@@ -120,6 +173,9 @@ namespace ProjectArk.SpaceLife.Editor
             }
 
             GameObject go = new GameObject("Player2D");
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = CreateCapsuleSprite(Color.white);
+            sr.sortingOrder = 10;
             go.AddComponent<Rigidbody2D>().gravityScale = 0f;
             go.AddComponent<CapsuleCollider2D>();
             var playerController = go.AddComponent<PlayerController2D>();

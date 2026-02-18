@@ -38,7 +38,7 @@ namespace ProjectArk.SpaceLife
 
             if (npcData != null)
             {
-                return npcData.startingRelationship;
+                return npcData.StartingRelationship;
             }
 
             return 0;
@@ -128,16 +128,9 @@ namespace ProjectArk.SpaceLife
 
         private void OnDestroy()
         {
+            OnRelationshipChanged = null;
             ServiceLocator.Unregister(this);
         }
-    }
-
-    public enum RelationshipLevel
-    {
-        Stranger,
-        Acquainted,
-        Friend,
-        BestFriend
     }
 }
 

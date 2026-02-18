@@ -85,12 +85,12 @@ namespace ProjectArk.SpaceLife
 
             if (buttonText != null)
             {
-                buttonText.text = item.itemName;
+                buttonText.text = item.ItemName;
             }
 
-            if (buttonImage != null && item.icon != null)
+            if (buttonImage != null && item.Icon != null)
             {
-                buttonImage.sprite = item.icon;
+                buttonImage.sprite = item.Icon;
             }
 
             if (button != null)
@@ -116,7 +116,7 @@ namespace ProjectArk.SpaceLife
             if (_giftInventory.RemoveItem(gift))
             {
                 npc.ChangeRelationship(relationshipChange);
-                Debug.Log($"[GiftUI] Gave {gift.itemName} to {npc.NPCName}. +{relationshipChange} relationship");
+                Debug.Log($"[GiftUI] Gave {gift.ItemName} to {npc.NPCName}. +{relationshipChange} relationship");
 
                 OnGiftGiven?.Invoke();
                 CloseUI();
@@ -125,7 +125,7 @@ namespace ProjectArk.SpaceLife
 
         private int CalculateGiftValue(NPCController npc, ItemSO gift)
         {
-            int baseValue = gift != null ? gift.baseGiftValue : 10;
+            int baseValue = gift != null ? gift.BaseGiftValue : 10;
 
             if (npc.IsLikedGift(gift))
             {
@@ -149,6 +149,8 @@ namespace ProjectArk.SpaceLife
 
         private void OnDestroy()
         {
+            OnGiftGiven = null;
+            
             if (_closeButton != null)
                 _closeButton.onClick.RemoveListener(CloseUI);
 

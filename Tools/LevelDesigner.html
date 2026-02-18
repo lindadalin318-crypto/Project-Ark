@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Ark - Level Designer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        .left-panel {
+            width: 180px;
+            background: #16213e;
+            border-right: 1px solid #0f3460;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .panel-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #e94560;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #0f3460;
+        }
+        
+        .room-presets, .element-presets {
+            margin-bottom: 15px;
+        }
+        
+        .preset-item {
+            padding: 8px 10px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            cursor: grab;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        
+        .preset-item:hover {
+            transform: translateX(3px);
+        }
+        
+        .preset-item.safe { background: #2d5a27; border-left: 3px solid #4caf50; }
+        .preset-item.normal { background: #5a4a27; border-left: 3px solid #ff9800; }
+        .preset-item.arena { background: #5a2727; border-left: 3px solid #f44336; }
+        .preset-item.boss { background: #4a275a; border-left: 3px solid #9c27b0; }
+        
+        .preset-item.element {
+            background: #2a3a4a;
+            border-left: 3px solid #2196f3;
+        }
+        
+        .color-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        
+        .canvas-area {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background-color: #1a1a2e;
+            background-image: 
+                linear-gradient(#1a2a4a 1px, transparent 1px),
+                linear-gradient(90deg, #1a2a4a 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        
+        #grid-canvas {
+            display: none;
+        }
+        
+        .right-panel {
+            width: 220px;
+            background: #16213e;
+            border-left: 1px solid #0f3460;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .property-group {
+            margin-bottom: 15px;
+        }
+        
+        .property-label {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 3px;
+        }
+        
+        .property-input {
+            width: 100%;
+            padding: 6px 8px;
+            background: #0f3460;
+            border: 1px solid #1a1a2e;
+            border-radius: 3px;
+            color: #eee;
+            font-size: 12px;
+        }
+        
+        .property-input:focus {
+            outline: none;
+            border-color: #e94560;
+        }
+        
+        select.property-input {
+            cursor: pointer;
+        }
+        
+        .btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.2s;
+            margin-bottom: 5px;
+            width: 100%;
+        }
+        
+        .btn-primary {
+            background: #e94560;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #ff6b6b;
+        }
+        
+        .btn-secondary {
+            background: #0f3460;
+            color: #eee;
+        }
+        
+        .btn-secondary:hover {
+            background: #1a4a7a;
+        }
+        
+        .btn-danger {
+            background: #5a2727;
+            color: #eee;
+        }
+        
+        .btn-danger:hover {
+            background: #7a3737;
+        }
+        
+        .ascii-preview {
+            flex: 1;
+            background: #0a0a1a;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            line-height: 1.2;
+            overflow: auto;
+            white-space: pre;
+            color: #4caf50;
+        }
+        
+        .toolbar {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #16213e;
+            border-radius: 6px;
+            padding: 5px 10px;
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .toolbar-btn {
+            padding: 6px 12px;
+            background: #0f3460;
+            border: none;
+            border-radius: 4px;
+            color: #eee;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        
+        .toolbar-btn:hover {
+            background: #1a4a7a;
+        }
+        
+        .toolbar-btn.active {
+            background: #e94560;
+        }
+        
+        .mode-indicator {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #e94560;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            display: none;
+        }
+        
+        .mode-indicator.active {
+            display: block;
+        }
+        
+        .room {
+            position: absolute;
+            border-radius: 4px;
+            cursor: move;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 11px;
+            font-weight: bold;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            user-select: none;
+        }
+        
+        .room:hover:not(.resizing) {
+            box-shadow: 0 0 15px rgba(255,255,255,0.3);
+        }
+        
+        .room.selected {
+            box-shadow: 0 0 0 2px #e94560, 0 0 20px rgba(233,69,96,0.5);
+        }
+        
+        .room.safe { background: #2d5a27; border: 2px solid #4caf50; }
+        .room.normal { background: #5a4a27; border: 2px solid #ff9800; }
+        .room.arena { background: #5a2727; border: 2px solid #f44336; }
+        .room.boss { background: #4a275a; border: 2px solid #9c27b0; }
+        
+        .room-name {
+            margin-bottom: 2px;
+            pointer-events: none;
+        }
+        
+        .room-type {
+            font-size: 9px;
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        
+        .connection-point {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background: #e94560;
+            border-radius: 50%;
+            cursor: crosshair;
+            opacity: 0;
+            z-index: 10;
+        }
+        
+        .room:hover .connection-point,
+        .room.selected .connection-point {
+            opacity: 1;
+        }
+        
+        .connection-point.north { top: -7px; left: 50%; transform: translateX(-50%); }
+        .connection-point.south { bottom: -7px; left: 50%; transform: translateX(-50%); }
+        .connection-point.east { right: -7px; top: 50%; transform: translateY(-50%); }
+        .connection-point.west { left: -7px; top: 50%; transform: translateY(-50%); }
+        
+        .connection-point:hover {
+            transform: scale(1.4);
+            background: #ff6b6b;
+        }
+        
+        .connection-point.north:hover { transform: translateX(-50%) scale(1.4); }
+        .connection-point.south:hover { transform: translateX(-50%) scale(1.4); }
+        .connection-point.east:hover { transform: translateY(-50%) scale(1.4); }
+        .connection-point.west:hover { transform: translateY(-50%) scale(1.4); }
+        
+        .resize-handle {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #2196f3;
+            border-radius: 2px;
+            cursor: nwse-resize;
+            opacity: 0;
+            z-index: 10;
+        }
+        
+        .room:hover .resize-handle,
+        .room.selected .resize-handle {
+            opacity: 1;
+        }
+        
+        .resize-handle:hover {
+            background: #64b5f6;
+            transform: scale(1.2);
+        }
+        
+        .resize-handle.nw { top: -6px; left: -6px; cursor: nwse-resize; }
+        .resize-handle.ne { top: -6px; right: -6px; cursor: nesw-resize; }
+        .resize-handle.sw { bottom: -6px; left: -6px; cursor: nesw-resize; }
+        .resize-handle.se { bottom: -6px; right: -6px; cursor: nwse-resize; }
+        
+        #connections-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+        
+        .connection-line {
+            stroke: #e94560;
+            stroke-width: 2;
+            fill: none;
+        }
+        
+        .temp-connection-line {
+            stroke: #ff6b6b;
+            stroke-width: 2;
+            stroke-dasharray: 8, 4;
+            fill: none;
+        }
+        
+        .room-element {
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            font-size: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: grab;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        
+        .room-element:hover {
+            transform: scale(1.2);
+            border-color: #fff;
+            box-shadow: 0 0 8px rgba(255,255,255,0.5);
+        }
+        
+        .room-element:active {
+            cursor: grabbing;
+        }
+        
+        .element-spawn { background: #4caf50; }
+        .element-door { background: #ff9800; }
+        .element-enemy { background: #f44336; }
+        .element-chest { background: #ffeb3b; color: #333; }
+        .element-checkpoint { background: #2196f3; }
+        .element-npc { background: #9c27b0; }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: #16213e;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow: auto;
+        }
+        
+        .modal-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #e94560;
+        }
+        
+        #json-output {
+            width: 100%;
+            height: 300px;
+            background: #0a0a1a;
+            border: 1px solid #0f3460;
+            border-radius: 4px;
+            color: #4caf50;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            padding: 10px;
+            resize: none;
+        }
+        
+        .help-text {
+            font-size: 10px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .instructions {
+            position: absolute;
+            top: 50px;
+            right: 10px;
+            background: rgba(22, 33, 62, 0.9);
+            border-radius: 6px;
+            padding: 10px;
+            font-size: 11px;
+            max-width: 200px;
+            z-index: 50;
+        }
+        
+        .instructions h4 {
+            color: #e94560;
+            margin-bottom: 8px;
+        }
+        
+        .instructions ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .instructions li {
+            margin-bottom: 4px;
+            color: #aaa;
+        }
+        
+        .instructions li::before {
+            content: "• ";
+            color: #4caf50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left-panel">
+            <div class="room-presets">
+                <div class="panel-title">房间类型</div>
+                <div class="preset-item safe" draggable="true" data-type="safe">
+                    <div class="color-dot" style="background: #4caf50;"></div>
+                    Safe (安全区)
+                </div>
+                <div class="preset-item normal" draggable="true" data-type="normal">
+                    <div class="color-dot" style="background: #ff9800;"></div>
+                    Normal (普通)
+                </div>
+                <div class="preset-item arena" draggable="true" data-type="arena">
+                    <div class="color-dot" style="background: #f44336;"></div>
+                    Arena (竞技场)
+                </div>
+                <div class="preset-item boss" draggable="true" data-type="boss">
+                    <div class="color-dot" style="background: #9c27b0;"></div>
+                    Boss (Boss)
+                </div>
+            </div>
+            
+            <div class="element-presets">
+                <div class="panel-title">房间元素</div>
+                <div class="preset-item element" draggable="true" data-element="spawn">
+                    <div class="color-dot" style="background: #4caf50;"></div>
+                    生成点
+                </div>
+                <div class="preset-item element" draggable="true" data-element="door">
+                    <div class="color-dot" style="background: #ff9800;"></div>
+                    门
+                </div>
+                <div class="preset-item element" draggable="true" data-element="enemy">
+                    <div class="color-dot" style="background: #f44336;"></div>
+                    敌人
+                </div>
+                <div class="preset-item element" draggable="true" data-element="chest">
+                    <div class="color-dot" style="background: #ffeb3b;"></div>
+                    宝箱
+                </div>
+                <div class="preset-item element" draggable="true" data-element="checkpoint">
+                    <div class="color-dot" style="background: #2196f3;"></div>
+                    检查点
+                </div>
+                <div class="preset-item element" draggable="true" data-element="npc">
+                    <div class="color-dot" style="background: #9c27b0;"></div>
+                    NPC
+                </div>
+            </div>
+            
+            <div style="margin-top: auto;">
+                <button class="btn btn-secondary" onclick="clearAll()">清空画布</button>
+            </div>
+        </div>
+        
+        <div class="canvas-area" id="canvas-area">
+            <canvas id="grid-canvas"></canvas>
+            <svg id="connections-svg"></svg>
+            
+            <div class="toolbar">
+                <button class="toolbar-btn active" id="select-mode" onclick="setMode('select')">选择</button>
+                <button class="toolbar-btn" id="delete-mode" onclick="setMode('delete')">删除</button>
+                <button class="toolbar-btn" onclick="showExportModal()">导出 JSON</button>
+                <button class="toolbar-btn" onclick="saveToLocal()">保存</button>
+                <button class="toolbar-btn" onclick="loadFromLocal()">加载</button>
+            </div>
+            
+            <div class="instructions">
+                <h4>操作说明</h4>
+                <ul>
+                    <li>拖拽房间到画布</li>
+                    <li>点击红点拖出连接线</li>
+                    <li>拖拽四角调整大小</li>
+                    <li>拖拽房间移动位置</li>
+                </ul>
+            </div>
+            
+            <div class="mode-indicator" id="mode-indicator">点击目标房间完成连接</div>
+        </div>
+        
+        <div class="right-panel">
+            <div class="panel-title">属性面板</div>
+            
+            <div id="properties-panel">
+                <div class="help-text" style="text-align: center; margin-top: 50px;">
+                    选择一个房间<br>查看和编辑属性
+                </div>
+            </div>
+            
+            <div id="room-properties" style="display: none;">
+                <div class="property-group">
+                    <div class="property-label">房间 ID</div>
+                    <input type="text" class="property-input" id="prop-id" onchange="updateRoomProperty('id', this.value)">
+                </div>
+                
+                <div class="property-group">
+                    <div class="property-label">显示名称</div>
+                    <input type="text" class="property-input" id="prop-name" onchange="updateRoomProperty('name', this.value)">
+                </div>
+                
+                <div class="property-group">
+                    <div class="property-label">类型</div>
+                    <select class="property-input" id="prop-type" onchange="updateRoomProperty('type', this.value)">
+                        <option value="safe">Safe (安全区)</option>
+                        <option value="normal">Normal (普通)</option>
+                        <option value="arena">Arena (竞技场)</option>
+                        <option value="boss">Boss (Boss)</option>
+                    </select>
+                </div>
+                
+                <div class="property-group">
+                    <div class="property-label">楼层</div>
+                    <input type="number" class="property-input" id="prop-floor" onchange="updateRoomProperty('floor', parseInt(this.value))">
+                </div>
+                
+                <div class="property-group">
+                    <div class="property-label">尺寸 (宽 x 高)</div>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="number" class="property-input" id="prop-width" style="width: 50%;" onchange="updateRoomSize()">
+                        <input type="number" class="property-input" id="prop-height" style="width: 50%;" onchange="updateRoomSize()">
+                    </div>
+                </div>
+                
+                <div class="property-group">
+                    <div class="property-label">连接</div>
+                    <div id="connections-list" style="font-size: 11px; max-height: 100px; overflow-y: auto;"></div>
+                </div>
+                
+                <div class="property-group">
+                    <div class="property-label">元素</div>
+                    <div id="elements-list" style="font-size: 11px; max-height: 80px; overflow-y: auto;"></div>
+                </div>
+                
+                <button class="btn btn-danger" onclick="deleteSelectedRoom()">删除房间</button>
+            </div>
+            
+            <div style="margin-top: auto;">
+                <div class="panel-title">ASCII 预览</div>
+                <div class="ascii-preview" id="ascii-preview"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal" id="export-modal">
+        <div class="modal-content">
+            <div class="modal-title">导出 JSON</div>
+            <textarea id="json-output" readonly></textarea>
+            <div style="margin-top: 10px; display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="copyJson()">复制到剪贴板</button>
+                <button class="btn btn-secondary" onclick="downloadJson()">下载文件</button>
+                <button class="btn btn-secondary" onclick="closeExportModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let rooms = [];
+        let connections = [];
+        let selectedRoom = null;
+        let currentMode = 'select';
+        let roomIdCounter = 1;
+        
+        let isDraggingRoom = false;
+        let dragStartX, dragStartY, dragOrigX, dragOrigY;
+        
+        let isResizing = false;
+        let resizeHandle = null;
+        let resizeStartX, resizeStartY, resizeOrigWidth, resizeOrigHeight, resizeOrigX, resizeOrigY;
+        
+        let isConnecting = false;
+        let connectFromRoom = null;
+        let connectFromDir = null;
+        let tempLine = null;
+        let mouseX = 0, mouseY = 0;
+        let lastResizeUpdate = 0;
+        const RESIZE_UPDATE_INTERVAL = 50;
+        
+        let isDraggingElement = false;
+        let dragElementRoom = null;
+        let dragElementIndex = -1;
+        let dragElementStartX = 0;
+        let dragElementStartY = 0;
+        let dragElementOrigX = 0;
+        let dragElementOrigY = 0;
+        
+        const GRID_SIZE = 20;
+        const ROOM_DEFAULT_WIDTH = 160;
+        const ROOM_DEFAULT_HEIGHT = 120;
+        const MIN_ROOM_SIZE = 40;
+        
+        const canvasArea = document.getElementById('canvas-area');
+        const gridCanvas = document.getElementById('grid-canvas');
+        const ctx = gridCanvas.getContext('2d');
+        const svg = document.getElementById('connections-svg');
+        
+        function resizeCanvas() {
+            gridCanvas.width = canvasArea.clientWidth;
+            gridCanvas.height = canvasArea.clientHeight;
+            drawGrid();
+        }
+        
+        function drawGrid() {
+            ctx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
+            ctx.strokeStyle = '#1a2a4a';
+            ctx.lineWidth = 1;
+            
+            for (let x = 0; x < gridCanvas.width; x += GRID_SIZE) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, gridCanvas.height);
+                ctx.stroke();
+            }
+            
+            for (let y = 0; y < gridCanvas.height; y += GRID_SIZE) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(gridCanvas.width, y);
+                ctx.stroke();
+            }
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        
+        document.querySelectorAll('.preset-item[draggable="true"]').forEach(item => {
+            item.addEventListener('dragstart', (e) => {
+                if (item.dataset.type) {
+                    e.dataTransfer.setData('roomType', item.dataset.type);
+                } else if (item.dataset.element) {
+                    e.dataTransfer.setData('elementType', item.dataset.element);
+                }
+            });
+        });
+        
+        canvasArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+        
+        canvasArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const rect = canvasArea.getBoundingClientRect();
+            const x = Math.round((e.clientX - rect.left) / GRID_SIZE) * GRID_SIZE;
+            const y = Math.round((e.clientY - rect.top) / GRID_SIZE) * GRID_SIZE;
+            
+            const roomType = e.dataTransfer.getData('roomType');
+            const elementType = e.dataTransfer.getData('elementType');
+            
+            if (roomType) {
+                createRoom(roomType, x, y);
+            } else if (elementType && selectedRoom) {
+                addElementToRoom(selectedRoom, elementType, x, y);
+            }
+        });
+        
+        function createRoom(type, x, y) {
+            const room = {
+                id: `room_${type}_${roomIdCounter++}`,
+                name: `${getTypeLabel(type)}`,
+                type: type,
+                floor: 0,
+                x: x,
+                y: y,
+                width: ROOM_DEFAULT_WIDTH,
+                height: ROOM_DEFAULT_HEIGHT,
+                elements: []
+            };
+            
+            rooms.push(room);
+            renderRoom(room);
+            selectRoom(room);
+            updateAsciiPreview();
+        }
+        
+        function getTypeLabel(type) {
+            const labels = {
+                safe: '安全区',
+                normal: '普通房间',
+                arena: '竞技场',
+                boss: 'Boss房'
+            };
+            return labels[type] || type;
+        }
+        
+        function renderRoom(room) {
+            const existing = document.getElementById(room.id);
+            if (existing) existing.remove();
+            
+            const div = document.createElement('div');
+            div.id = room.id;
+            div.className = `room ${room.type}`;
+            div.style.left = room.x + 'px';
+            div.style.top = room.y + 'px';
+            div.style.width = room.width + 'px';
+            div.style.height = room.height + 'px';
+            
+            div.innerHTML = `
+                <div class="room-name">${room.name}</div>
+                <div class="room-type">${room.type.toUpperCase()}</div>
+                <div class="connection-point north" data-dir="north"></div>
+                <div class="connection-point south" data-dir="south"></div>
+                <div class="connection-point east" data-dir="east"></div>
+                <div class="connection-point west" data-dir="west"></div>
+                <div class="resize-handle nw" data-handle="nw"></div>
+                <div class="resize-handle ne" data-handle="ne"></div>
+                <div class="resize-handle sw" data-handle="sw"></div>
+                <div class="resize-handle se" data-handle="se"></div>
+            `;
+            
+            room.elements.forEach((el, idx) => {
+                const elDiv = document.createElement('div');
+                elDiv.className = `room-element element-${el.type}`;
+                elDiv.textContent = getElementIcon(el.type);
+                elDiv.style.left = (el.x / room.width * 100) + '%';
+                elDiv.style.top = (el.y / room.height * 100) + '%';
+                elDiv.title = el.type;
+                elDiv.dataset.index = idx;
+                div.appendChild(elDiv);
+            });
+            
+            setupRoomEvents(div, room);
+            canvasArea.appendChild(div);
+        }
+        
+        function setupRoomEvents(div, room) {
+            div.addEventListener('mousedown', (e) => {
+                if (e.target.classList.contains('connection-point')) {
+                    startConnection(room, e.target.dataset.dir, e);
+                    return;
+                }
+                
+                if (e.target.classList.contains('resize-handle')) {
+                    startResize(room, e.target.dataset.handle, e);
+                    return;
+                }
+                
+                if (e.target.classList.contains('room-element')) {
+                    startDragElement(room, e.target, e);
+                    return;
+                }
+                
+                if (currentMode === 'delete') {
+                    deleteRoom(room);
+                    return;
+                }
+                
+                selectRoom(room);
+                
+                isDraggingRoom = true;
+                dragStartX = e.clientX;
+                dragStartY = e.clientY;
+                dragOrigX = room.x;
+                dragOrigY = room.y;
+                e.preventDefault();
+            });
+            
+            div.querySelectorAll('.connection-point').forEach(point => {
+                point.addEventListener('mouseenter', () => {
+                    if (!isConnecting) {
+                        point.style.opacity = '1';
+                    }
+                });
+            });
+        }
+        
+        function startDragElement(room, elementDiv, e) {
+            const index = parseInt(elementDiv.dataset.index);
+            if (index < 0 || index >= room.elements.length) return;
+            
+            isDraggingElement = true;
+            dragElementRoom = room;
+            dragElementIndex = index;
+            dragElementStartX = e.clientX;
+            dragElementStartY = e.clientY;
+            dragElementOrigX = room.elements[index].x;
+            dragElementOrigY = room.elements[index].y;
+            
+            selectRoom(room);
+            e.stopPropagation();
+            e.preventDefault();
+        }
+        
+        function startConnection(room, direction, e) {
+            isConnecting = true;
+            connectFromRoom = room;
+            connectFromDir = direction;
+            
+            const rect = canvasArea.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+            
+            tempLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            tempLine.setAttribute('class', 'temp-connection-line');
+            updateTempLine();
+            svg.appendChild(tempLine);
+            
+            document.getElementById('mode-indicator').classList.add('active');
+            e.stopPropagation();
+        }
+        
+        function updateTempLine() {
+            if (!tempLine || !connectFromRoom) return;
+            
+            const fromPos = getConnectionPointPosition(connectFromRoom, connectFromDir);
+            tempLine.setAttribute('x1', fromPos.x);
+            tempLine.setAttribute('y1', fromPos.y);
+            tempLine.setAttribute('x2', mouseX);
+            tempLine.setAttribute('y2', mouseY);
+        }
+        
+        function getConnectionPointPosition(room, dir) {
+            const positions = {
+                north: { x: room.x + room.width / 2, y: room.y },
+                south: { x: room.x + room.width / 2, y: room.y + room.height },
+                east: { x: room.x + room.width, y: room.y + room.height / 2 },
+                west: { x: room.x, y: room.y + room.height / 2 }
+            };
+            return positions[dir] || { x: room.x, y: room.y };
+        }
+        
+        function startResize(room, handle, e) {
+            isResizing = true;
+            resizeHandle = handle;
+            resizeStartX = e.clientX;
+            resizeStartY = e.clientY;
+            resizeOrigWidth = room.width;
+            resizeOrigHeight = room.height;
+            resizeOrigX = room.x;
+            resizeOrigY = room.y;
+            document.getElementById(room.id).classList.add('resizing');
+            e.stopPropagation();
+        }
+        
+        document.addEventListener('mousemove', (e) => {
+            const rect = canvasArea.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+            
+            if (isConnecting) {
+                updateTempLine();
+            }
+            
+            if (isDraggingRoom && selectedRoom) {
+                const dx = e.clientX - dragStartX;
+                const dy = e.clientY - dragStartY;
+                selectedRoom.x = Math.round((dragOrigX + dx) / GRID_SIZE) * GRID_SIZE;
+                selectedRoom.y = Math.round((dragOrigY + dy) / GRID_SIZE) * GRID_SIZE;
+                
+                const div = document.getElementById(selectedRoom.id);
+                div.style.left = selectedRoom.x + 'px';
+                div.style.top = selectedRoom.y + 'px';
+                renderConnections();
+                updateAsciiPreview();
+            }
+            
+            if (isResizing && selectedRoom) {
+                const dx = e.clientX - resizeStartX;
+                const dy = e.clientY - resizeStartY;
+                
+                let newWidth = resizeOrigWidth;
+                let newHeight = resizeOrigHeight;
+                let newX = resizeOrigX;
+                let newY = resizeOrigY;
+                
+                if (resizeHandle.includes('e')) {
+                    newWidth = Math.max(MIN_ROOM_SIZE, resizeOrigWidth + dx);
+                }
+                if (resizeHandle.includes('w')) {
+                    newWidth = Math.max(MIN_ROOM_SIZE, resizeOrigWidth - dx);
+                    newX = resizeOrigX + (resizeOrigWidth - newWidth);
+                }
+                if (resizeHandle.includes('s')) {
+                    newHeight = Math.max(MIN_ROOM_SIZE, resizeOrigHeight + dy);
+                }
+                if (resizeHandle.includes('n')) {
+                    newHeight = Math.max(MIN_ROOM_SIZE, resizeOrigHeight - dy);
+                    newY = resizeOrigY + (resizeOrigHeight - newHeight);
+                }
+                
+                selectedRoom.width = Math.round(newWidth / GRID_SIZE) * GRID_SIZE;
+                selectedRoom.height = Math.round(newHeight / GRID_SIZE) * GRID_SIZE;
+                selectedRoom.x = Math.round(newX / GRID_SIZE) * GRID_SIZE;
+                selectedRoom.y = Math.round(newY / GRID_SIZE) * GRID_SIZE;
+                
+                const div = document.getElementById(selectedRoom.id);
+                div.style.left = selectedRoom.x + 'px';
+                div.style.top = selectedRoom.y + 'px';
+                div.style.width = selectedRoom.width + 'px';
+                div.style.height = selectedRoom.height + 'px';
+                
+                document.getElementById('prop-width').value = selectedRoom.width / GRID_SIZE;
+                document.getElementById('prop-height').value = selectedRoom.height / GRID_SIZE;
+                
+                const now = Date.now();
+                if (now - lastResizeUpdate > RESIZE_UPDATE_INTERVAL) {
+                    renderConnections();
+                    updateAsciiPreview();
+                    lastResizeUpdate = now;
+                }
+            }
+            
+            if (isDraggingElement && dragElementRoom && dragElementIndex >= 0) {
+                const dx = e.clientX - dragElementStartX;
+                const dy = e.clientY - dragElementStartY;
+                
+                const el = dragElementRoom.elements[dragElementIndex];
+                el.x = Math.max(0, Math.min(dragElementRoom.width, dragElementOrigX + dx));
+                el.y = Math.max(0, Math.min(dragElementRoom.height, dragElementOrigY + dy));
+                
+                const roomDiv = document.getElementById(dragElementRoom.id);
+                const elDiv = roomDiv.querySelectorAll('.room-element')[dragElementIndex];
+                if (elDiv) {
+                    elDiv.style.left = (el.x / dragElementRoom.width * 100) + '%';
+                    elDiv.style.top = (el.y / dragElementRoom.height * 100) + '%';
+                }
+            }
+        });
+        
+        document.addEventListener('mouseup', (e) => {
+            if (isConnecting) {
+                const target = document.elementFromPoint(e.clientX, e.clientY);
+                const roomDiv = target?.closest('.room');
+                
+                if (roomDiv) {
+                    const targetRoom = rooms.find(r => r.id === roomDiv.id);
+                    if (targetRoom && targetRoom.id !== connectFromRoom.id) {
+                        connections.push({
+                            from: connectFromRoom.id,
+                            to: targetRoom.id,
+                            fromDir: connectFromDir,
+                            toDir: getOppositeDirection(connectFromDir)
+                        });
+                        renderConnections();
+                        updateConnectionsList();
+                        updateAsciiPreview();
+                    }
+                }
+                
+                if (tempLine) {
+                    tempLine.remove();
+                    tempLine = null;
+                }
+                
+                isConnecting = false;
+                connectFromRoom = null;
+                connectFromDir = null;
+                document.getElementById('mode-indicator').classList.remove('active');
+            }
+            
+            if (isResizing && selectedRoom) {
+                document.getElementById(selectedRoom.id).classList.remove('resizing');
+                renderConnections();
+                updateAsciiPreview();
+            }
+            
+            isDraggingRoom = false;
+            isResizing = false;
+            resizeHandle = null;
+            isDraggingElement = false;
+            dragElementRoom = null;
+            dragElementIndex = -1;
+        });
+        
+        function getOppositeDirection(dir) {
+            const opposites = { north: 'south', south: 'north', east: 'west', west: 'east' };
+            return opposites[dir] || dir;
+        }
+        
+        function renderConnections() {
+            const existingLines = svg.querySelectorAll('.connection-line');
+            existingLines.forEach(l => l.remove());
+            
+            connections.forEach(conn => {
+                const fromRoom = rooms.find(r => r.id === conn.from);
+                const toRoom = rooms.find(r => r.id === conn.to);
+                if (!fromRoom || !toRoom) return;
+                
+                const fromPos = getConnectionPointPosition(fromRoom, conn.fromDir);
+                const toPos = getConnectionPointPosition(toRoom, conn.toDir);
+                
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', fromPos.x);
+                line.setAttribute('y1', fromPos.y);
+                line.setAttribute('x2', toPos.x);
+                line.setAttribute('y2', toPos.y);
+                line.setAttribute('class', 'connection-line');
+                svg.appendChild(line);
+            });
+        }
+        
+        function selectRoom(room) {
+            document.querySelectorAll('.room.selected').forEach(r => r.classList.remove('selected'));
+            
+            selectedRoom = room;
+            document.getElementById(room.id).classList.add('selected');
+            
+            document.getElementById('properties-panel').style.display = 'none';
+            document.getElementById('room-properties').style.display = 'block';
+            
+            document.getElementById('prop-id').value = room.id;
+            document.getElementById('prop-name').value = room.name;
+            document.getElementById('prop-type').value = room.type;
+            document.getElementById('prop-floor').value = room.floor;
+            document.getElementById('prop-width').value = room.width / GRID_SIZE;
+            document.getElementById('prop-height').value = room.height / GRID_SIZE;
+            
+            updateConnectionsList();
+            updateElementsList();
+        }
+        
+        function updateRoomProperty(prop, value) {
+            if (!selectedRoom) return;
+            
+            if (prop === 'id') {
+                const oldId = selectedRoom.id;
+                selectedRoom.id = value;
+                connections.forEach(c => {
+                    if (c.from === oldId) c.from = value;
+                    if (c.to === oldId) c.to = value;
+                });
+                document.getElementById(oldId).id = value;
+            } else if (prop === 'name') {
+                selectedRoom.name = value;
+                document.getElementById(selectedRoom.id).querySelector('.room-name').textContent = value;
+            } else if (prop === 'type') {
+                selectedRoom.type = value;
+                const div = document.getElementById(selectedRoom.id);
+                div.className = `room ${value} selected`;
+                div.querySelector('.room-type').textContent = value.toUpperCase();
+            } else if (prop === 'floor') {
+                selectedRoom.floor = value;
+            }
+            
+            updateAsciiPreview();
+        }
+        
+        function updateRoomSize() {
+            if (!selectedRoom) return;
+            selectedRoom.width = Math.max(MIN_ROOM_SIZE, parseInt(document.getElementById('prop-width').value) * GRID_SIZE);
+            selectedRoom.height = Math.max(MIN_ROOM_SIZE, parseInt(document.getElementById('prop-height').value) * GRID_SIZE);
+            
+            const div = document.getElementById(selectedRoom.id);
+            div.style.width = selectedRoom.width + 'px';
+            div.style.height = selectedRoom.height + 'px';
+            
+            renderConnections();
+            updateAsciiPreview();
+        }
+        
+        function deleteRoom(room) {
+            connections = connections.filter(c => c.from !== room.id && c.to !== room.id);
+            rooms = rooms.filter(r => r.id !== room.id);
+            document.getElementById(room.id).remove();
+            
+            if (selectedRoom === room) {
+                selectedRoom = null;
+                document.getElementById('properties-panel').style.display = 'block';
+                document.getElementById('room-properties').style.display = 'none';
+            }
+            
+            renderConnections();
+            updateAsciiPreview();
+        }
+        
+        function deleteSelectedRoom() {
+            if (selectedRoom) deleteRoom(selectedRoom);
+        }
+        
+        function addElementToRoom(room, type, canvasX, canvasY) {
+            const el = {
+                type: type,
+                x: canvasX - room.x,
+                y: canvasY - room.y
+            };
+            room.elements.push(el);
+            renderRoom(room);
+            document.getElementById(room.id).classList.add('selected');
+            updateElementsList();
+            updateAsciiPreview();
+        }
+        
+        function updateConnectionsList() {
+            const list = document.getElementById('connections-list');
+            if (!selectedRoom) {
+                list.innerHTML = '-';
+                return;
+            }
+            
+            const roomConns = connections.filter(c => c.from === selectedRoom.id || c.to === selectedRoom.id);
+            if (roomConns.length === 0) {
+                list.innerHTML = '无连接';
+                return;
+            }
+            
+            list.innerHTML = roomConns.map(c => {
+                const target = c.from === selectedRoom.id ? c.to : c.from;
+                const targetRoom = rooms.find(r => r.id === target);
+                return `<div style="padding: 2px 0;">→ ${targetRoom ? targetRoom.name : target}</div>`;
+            }).join('');
+        }
+        
+        function updateElementsList() {
+            const list = document.getElementById('elements-list');
+            if (!selectedRoom || selectedRoom.elements.length === 0) {
+                list.innerHTML = '无元素';
+                return;
+            }
+            
+            list.innerHTML = selectedRoom.elements.map((el, i) => {
+                return `<div style="padding: 2px 0;">${getElementIcon(el.type)} ${el.type}</div>`;
+            }).join('');
+        }
+        
+        function getElementIcon(type) {
+            const icons = {
+                spawn: '⭐',
+                door: '🚪',
+                enemy: '💀',
+                chest: '📦',
+                checkpoint: '🏁',
+                npc: '👤'
+            };
+            return icons[type] || '?';
+        }
+        
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.toolbar-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(mode + '-mode')?.classList.add('active');
+        }
+        
+        function showExportModal() {
+            const data = {
+                levelName: 'New Level',
+                rooms: rooms.map(r => ({
+                    id: r.id,
+                    name: r.name,
+                    type: r.type,
+                    floor: r.floor,
+                    position: [r.x / GRID_SIZE, r.y / GRID_SIZE],
+                    size: [r.width / GRID_SIZE, r.height / GRID_SIZE],
+                    elements: r.elements.map(e => ({
+                        type: e.type,
+                        position: [e.x / GRID_SIZE, e.y / GRID_SIZE]
+                    }))
+                })),
+                connections: connections
+            };
+            
+            document.getElementById('json-output').value = JSON.stringify(data, null, 2);
+            document.getElementById('export-modal').classList.add('active');
+        }
+        
+        function closeExportModal() {
+            document.getElementById('export-modal').classList.remove('active');
+        }
+        
+        function copyJson() {
+            const textarea = document.getElementById('json-output');
+            textarea.select();
+            document.execCommand('copy');
+            alert('已复制到剪贴板！');
+        }
+        
+        function downloadJson() {
+            const data = document.getElementById('json-output').value;
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'level-design.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function saveToLocal() {
+            const data = {
+                rooms: rooms,
+                connections: connections,
+                roomIdCounter: roomIdCounter
+            };
+            localStorage.setItem('levelDesign', JSON.stringify(data));
+            alert('已保存到本地存储！');
+        }
+        
+        function loadFromLocal() {
+            const saved = localStorage.getItem('levelDesign');
+            if (!saved) return;
+            
+            const data = JSON.parse(saved);
+            rooms = data.rooms || [];
+            connections = data.connections || [];
+            roomIdCounter = data.roomIdCounter || 1;
+            
+            document.querySelectorAll('.room').forEach(r => r.remove());
+            
+            rooms.forEach(r => renderRoom(r));
+            renderConnections();
+            updateAsciiPreview();
+        }
+        
+        function clearAll() {
+            if (!confirm('确定要清空画布吗？')) return;
+            rooms = [];
+            connections = [];
+            selectedRoom = null;
+            roomIdCounter = 1;
+            
+            document.querySelectorAll('.room').forEach(r => r.remove());
+            svg.innerHTML = '';
+            document.getElementById('properties-panel').style.display = 'block';
+            document.getElementById('room-properties').style.display = 'none';
+            updateAsciiPreview();
+        }
+        
+        function updateAsciiPreview() {
+            if (rooms.length === 0) {
+                document.getElementById('ascii-preview').textContent = '拖拽房间到画布开始设计';
+                return;
+            }
+            
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            rooms.forEach(r => {
+                minX = Math.min(minX, r.x);
+                minY = Math.min(minY, r.y);
+                maxX = Math.max(maxX, r.x + r.width);
+                maxY = Math.max(maxY, r.y + r.height);
+            });
+            
+            const scale = 3;
+            const width = Math.ceil((maxX - minX) / GRID_SIZE) + 4;
+            const height = Math.ceil((maxY - minY) / GRID_SIZE) + 4;
+            
+            const grid = [];
+            for (let y = 0; y < height * scale; y++) {
+                grid[y] = [];
+                for (let x = 0; x < width * scale; x++) {
+                    grid[y][x] = ' ';
+                }
+            }
+            
+            rooms.forEach(r => {
+                const startX = Math.floor((r.x - minX) / GRID_SIZE * scale) + 2;
+                const startY = Math.floor((r.y - minY) / GRID_SIZE * scale) + 2;
+                const w = Math.max(3, Math.floor(r.width / GRID_SIZE * scale));
+                const h = Math.max(2, Math.floor(r.height / GRID_SIZE * scale));
+                
+                for (let x = startX; x < startX + w && x < grid[0].length; x++) {
+                    if (startY >= 0 && startY < grid.length) grid[startY][x] = '─';
+                    if (startY + h - 1 >= 0 && startY + h - 1 < grid.length) grid[startY + h - 1][x] = '─';
+                }
+                for (let y = startY; y < startY + h && y < grid.length; y++) {
+                    if (startX >= 0 && startX < grid[0].length) grid[y][startX] = '│';
+                    if (startX + w - 1 >= 0 && startX + w - 1 < grid[0].length) grid[y][startX + w - 1] = '│';
+                }
+                
+                if (startY >= 0 && startY < grid.length && startX >= 0 && startX < grid[0].length)
+                    grid[startY][startX] = '┌';
+                if (startY >= 0 && startY < grid.length && startX + w - 1 >= 0 && startX + w - 1 < grid[0].length)
+                    grid[startY][startX + w - 1] = '┐';
+                if (startY + h - 1 >= 0 && startY + h - 1 < grid.length && startX >= 0 && startX < grid[0].length)
+                    grid[startY + h - 1][startX] = '└';
+                if (startY + h - 1 >= 0 && startY + h - 1 < grid.length && startX + w - 1 >= 0 && startX + w - 1 < grid[0].length)
+                    grid[startY + h - 1][startX + w - 1] = '┘';
+                
+                const name = r.name.substring(0, 3);
+                const nameX = startX + Math.floor(w / 2) - 1;
+                const nameY = startY + Math.floor(h / 2);
+                for (let i = 0; i < name.length && nameX + i < startX + w - 1; i++) {
+                    if (nameX + i > startX && nameY >= 0 && nameY < grid.length && nameX + i >= 0 && nameX + i < grid[0].length) {
+                        grid[nameY][nameX + i] = name[i];
+                    }
+                }
+            });
+            
+            connections.forEach(c => {
+                const from = rooms.find(r => r.id === c.from);
+                const to = rooms.find(r => r.id === c.to);
+                if (!from || !to) return;
+                
+                const fromX = Math.floor((from.x + from.width / 2 - minX) / GRID_SIZE * scale) + 2;
+                const fromY = Math.floor((from.y + from.height / 2 - minY) / GRID_SIZE * scale) + 2;
+                const toX = Math.floor((to.x + to.width / 2 - minX) / GRID_SIZE * scale) + 2;
+                const toY = Math.floor((to.y + to.height / 2 - minY) / GRID_SIZE * scale) + 2;
+                
+                const dx = Math.sign(toX - fromX);
+                const dy = Math.sign(toY - fromY);
+                let x = fromX, y = fromY;
+                
+                while (x !== toX || y !== toY) {
+                    if (y >= 0 && y < grid.length && x >= 0 && x < grid[0].length && grid[y][x] === ' ') {
+                        grid[y][x] = dx !== 0 && dy !== 0 ? '╲' : (dx !== 0 ? '─' : '│');
+                    }
+                    if (x !== toX) x += dx;
+                    if (y !== toY) y += dy;
+                }
+            });
+            
+            const preview = grid.map(row => row.join('')).join('\n');
+            document.getElementById('ascii-preview').textContent = preview;
+        }
+        
+        canvasArea.addEventListener('click', (e) => {
+            if (e.target === canvasArea || e.target === gridCanvas) {
+                document.querySelectorAll('.room.selected').forEach(r => r.classList.remove('selected'));
+                selectedRoom = null;
+                document.getElementById('properties-panel').style.display = 'block';
+                document.getElementById('room-properties').style.display = 'none';
+            }
+        });
+        
+        loadFromLocal();
+    </script>
+</body>
+</html>

@@ -27,6 +27,8 @@ namespace ProjectArk.SpaceLife
         public Transform CameraTarget => _cameraTarget;
         public List<SpaceLifeDoor> Doors => _doors;
 
+        private SpaceLifeRoomManager _roomManager;
+
         private void Awake()
         {
             if (_roomBounds == null)
@@ -36,9 +38,26 @@ namespace ProjectArk.SpaceLife
                 _cameraTarget = transform;
         }
 
+        private void OnEnable()
+        {
+            _roomManager = ServiceLocator.Get<SpaceLifeRoomManager>();
+            if (_roomManager != null)
+            {
+                _roomManager.RegisterRoom(this);
+            }
+        }
+
         private void Start()
         {
             _cachedPlayer = ServiceLocator.Get<PlayerController2D>();
+        }
+
+        private void OnDisable()
+        {
+            if (_roomManager != null)
+            {
+                _roomManager.UnregisterRoom(this);
+            }
         }
 
         public bool IsPlayerInRoom()
@@ -56,19 +75,5 @@ namespace ProjectArk.SpaceLife
                 Gizmos.DrawWireCube(_roomBounds.bounds.center, _roomBounds.bounds.size);
             }
         }
-    }
-
-    public enum SpaceLifeRoomType
-    {
-        Generic,
-        CommandCenter,
-        Cockpit,
-        StarChartRoom,
-        MedicalBay,
-        Engineering,
-        Kitchen,
-        Lounge,
-        Bedroom,
-        Storage
     }
 }

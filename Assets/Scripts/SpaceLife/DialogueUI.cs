@@ -55,9 +55,9 @@ namespace ProjectArk.SpaceLife
 
         private void UpdateUI(DialogueLine line)
         {
-            if (_avatarImage != null && line.speakerAvatar != null)
+            if (_avatarImage != null && line.SpeakerAvatar != null)
             {
-                _avatarImage.sprite = line.speakerAvatar;
+                _avatarImage.sprite = line.SpeakerAvatar;
                 _avatarImage.gameObject.SetActive(true);
             }
             else if (_avatarImage != null)
@@ -67,21 +67,21 @@ namespace ProjectArk.SpaceLife
 
             if (_speakerNameText != null)
             {
-                _speakerNameText.text = line.speakerName;
+                _speakerNameText.text = line.SpeakerName;
             }
 
             if (_dialogueText != null)
             {
                 CancelTypewriter();
                 _typewriterCts = new CancellationTokenSource();
-                TypeTextAsync(line.text, _typewriterCts.Token).Forget();
+                TypeTextAsync(line.Text, _typewriterCts.Token).Forget();
             }
 
             ClearOptions();
 
-            if (line.options != null && line.options.Count > 0)
+            if (line.Options != null && line.Options.Count > 0)
             {
-                foreach (var option in line.options)
+                foreach (var option in line.Options)
                 {
                     CreateOptionButton(option);
                 }
@@ -145,7 +145,7 @@ namespace ProjectArk.SpaceLife
 
             if (buttonText != null)
             {
-                buttonText.text = option.optionText;
+                buttonText.text = option.OptionText;
             }
 
             if (button != null)
@@ -175,14 +175,14 @@ namespace ProjectArk.SpaceLife
 
         private void OnOptionSelected(DialogueOption option)
         {
-            if (_currentNPC != null && option.relationshipChange != 0)
+            if (_currentNPC != null && option.RelationshipChange != 0)
             {
-                _currentNPC.ChangeRelationship(option.relationshipChange);
+                _currentNPC.ChangeRelationship(option.RelationshipChange);
             }
 
-            if (option.nextLine != null)
+            if (option.NextLine != null)
             {
-                ShowDialogue(option.nextLine, _currentNPC);
+                ShowDialogue(option.NextLine, _currentNPC);
             }
             else
             {
@@ -206,6 +206,7 @@ namespace ProjectArk.SpaceLife
         private void OnDestroy()
         {
             CancelTypewriter();
+            OnDialogueEnd = null;
             ServiceLocator.Unregister(this);
         }
     }

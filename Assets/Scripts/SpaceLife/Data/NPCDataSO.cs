@@ -4,36 +4,39 @@ using UnityEngine;
 
 namespace ProjectArk.SpaceLife.Data
 {
+    /// <summary>
+    /// Authored data for an NPC character in SpaceLife mode.
+    /// </summary>
     [CreateAssetMenu(fileName = "NPCData", menuName = "Project Ark/Space Life/NPC Data")]
     public class NPCDataSO : ScriptableObject
     {
         [Header("Basic Info")]
-        public string npcName;
-        public Sprite avatar;
-        public NPCRole role;
+        [SerializeField] private string _npcName;
+        [SerializeField] private Sprite _avatar;
+        [SerializeField] private NPCRole _role;
         
         [Header("Relationship")]
         [Range(0, 100)]
-        public int startingRelationship = 0;
+        [SerializeField] private int _startingRelationship;
         
         [Header("Dialogues")]
-        public List<DialogueLine> defaultDialogues = new List<DialogueLine>();
-        public List<DialogueLine> friendlyDialogues = new List<DialogueLine>();
-        public List<DialogueLine> bestFriendDialogues = new List<DialogueLine>();
+        [SerializeField] private List<DialogueLine> _defaultDialogues = new();
+        [SerializeField] private List<DialogueLine> _friendlyDialogues = new();
+        [SerializeField] private List<DialogueLine> _bestFriendDialogues = new();
         
         [Header("Gift Preferences")]
-        public List<ItemSO> likedGifts = new List<ItemSO>();
-        public List<ItemSO> dislikedGifts = new List<ItemSO>();
-    }
+        [SerializeField] private List<ItemSO> _likedGifts = new();
+        [SerializeField] private List<ItemSO> _dislikedGifts = new();
 
-    public enum NPCRole
-    {
-        CommunicationsOfficer,
-        Navigator,
-        MedicalOfficer,
-        Engineer,
-        Cook,
-        Other
+        public string NpcName => _npcName;
+        public Sprite Avatar => _avatar;
+        public NPCRole Role => _role;
+        public int StartingRelationship => _startingRelationship;
+        public IReadOnlyList<DialogueLine> DefaultDialogues => _defaultDialogues;
+        public IReadOnlyList<DialogueLine> FriendlyDialogues => _friendlyDialogues;
+        public IReadOnlyList<DialogueLine> BestFriendDialogues => _bestFriendDialogues;
+        public IReadOnlyList<ItemSO> LikedGifts => _likedGifts;
+        public IReadOnlyList<ItemSO> DislikedGifts => _dislikedGifts;
     }
 }
 

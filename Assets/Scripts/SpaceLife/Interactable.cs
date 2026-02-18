@@ -12,11 +12,14 @@ namespace ProjectArk.SpaceLife
         [SerializeField] private float _interactionRange = 2f;
         [SerializeField] private bool _showIndicator = true;
 
+        [Header("Indicator")]
+        [Tooltip("Optional: assign a pre-created indicator child. If empty, one will be auto-created at Awake.")]
+        [SerializeField] private GameObject _indicator;
+
         [Header("Events")]
         public UnityEvent OnInteract;
 
         private bool _isInRange;
-        private GameObject _indicator;
         private PlayerController2D _cachedPlayer;
 
         public string InteractionText
@@ -27,6 +30,11 @@ namespace ProjectArk.SpaceLife
 
         public float InteractionRange => _interactionRange;
         public bool IsInRange => _isInRange;
+
+        private void Awake()
+        {
+            EnsureIndicator();
+        }
 
         private void Start()
         {
@@ -59,22 +67,18 @@ namespace ProjectArk.SpaceLife
             OnInteract?.Invoke();
         }
 
-        private void UpdateIndicator()
+        /// <summary>
+        /// Ensures an indicator child exists. Created once at Awake, toggled via SetActive.
+        /// </summary>
+        private void EnsureIndicator()
         {
-            if (!_showIndicator) return;
-
-            if (_isInRange && _indicator == null)
+            if (_indicator != null)
             {
-                CreateIndicator();
+                _indicator.SetActive(false);
+                return;
             }
-            else if (!_isInRange && _indicator != null)
-            {
-                DestroyIndicator();
-            }
-        }
 
-        private void CreateIndicator()
-        {
+            // Auto-create a simple indicator child
             _indicator = new GameObject("InteractionIndicator");
             _indicator.transform.SetParent(transform);
             _indicator.transform.localPosition = Vector3.up * 1.5f;
@@ -82,14 +86,18 @@ namespace ProjectArk.SpaceLife
             var spriteRenderer = _indicator.AddComponent<SpriteRenderer>();
             spriteRenderer.color = Color.yellow;
             spriteRenderer.sortingOrder = 100;
+
+            _indicator.SetActive(false);
         }
 
-        private void DestroyIndicator()
+        private void UpdateIndicator()
         {
-            if (_indicator != null)
+            if (!_showIndicator || _indicator == null) return;
+
+            bool shouldShow = _isInRange;
+            if (_indicator.activeSelf != shouldShow)
             {
-                Destroy(_indicator);
-                _indicator = null;
+                _indicator.SetActive(shouldShow);
             }
         }
 
