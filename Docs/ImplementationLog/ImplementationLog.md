@@ -4827,3 +4827,160 @@ Markdown方法论文档，综合WorldBible.md（2145行）和ShebaPlanetBible.md
 
 ### 技术方案：
 在数学家条目之后、2.3 种族关系矩阵之前插入完整条目。1.4.2 能力边界表同步补录，保持文档内部一致性。
+
+---
+
+## 示巴星 ACT1+ACT2 关卡 JSON 生成 + LevelDesigner 空格平移功能 — 2026-02-25 20:00
+
+### 新建文件：
+- `Docs/LevelDesigns/Sheba_ACT1_ACT2.json` — 示巴星 ACT1+ACT2 完整关卡布局
+
+### 修改文件：
+- `Tools/LevelDesigner.html` — 空格键平移画布（Figma 风格）+ 多项 Bug 修复
+
+### 内容简述：
+
+#### 1. 示巴星 ACT1+ACT2 关卡 JSON
+根据 `关卡心流与节奏控制-2.csv` 节点 Z1a～Z2d（0:00～90:00，10个节点）生成可直接导入 LevelDesigner.html 的布局文件：
+- **29 个房间**：safe / normal / arena / boss 四种类型，含 Z1d 隐藏墓穴（floor -1）、Z2a 上层平台（floor 1）、Z2d Boss 竞技场（22×13 最大尺寸）
+- **28 条连接**：主线路径 + 侧路分岔，完整覆盖 ACT1 六节点与 ACT2 四节点
+- **元素配置**：生成点、检查点、NPC（缕拉5幕弧触发点）、宝箱、敌人、门，与叙事与遭遇演出表、锁钥矩阵保持一致
+
+#### 2. 空格键平移画布（Figma 风格）
+- 按住 `Space` 光标变 grab，拖拽时变 grabbing，松开恢复正常
+- 引入 `#world` 容器包裹所有房间 div，`transform: translate(panX, panY)` 整体平移
+- SVG 连线层与 `#world` 同步 `transform`，坐标系始终对齐
+- 网格背景（canvas）用 `panX/Y % GRID_SIZE` 取模计算偏移，实现无限滚动网格视觉
+- 输入框聚焦时空格不触发平移
+
+#### 3. Bug 修复（共 6 项）
+1. **连线起点偏移**：`startConnection` 初始化 `mouseX/Y` 时漏减 `panX/Y`
+2. **元素 drop 坐标重复偏移**：`addElementToRoom` 传参时 `x + panX` 重复计算，改为直接传 world 坐标
+3. **pan 模式下误触发房间拖拽**：`setupRoomEvents mousedown` 加 `if (isPanMode) return` 拦截
+4. **pan mousedown 事件时序**：改为 capture 阶段注册（`addEventListener(..., true)`）
+5. **连线消失**：SVG 误放入 `#world`（宽高 0 容器）→ 移回 `canvas-area` 直接子级，`applyPan` 同步 SVG transform
+6. **拖拽元素到画布无反应**：给 `#world` 加 `dragover` 监听；改为坐标 hit-test 自动检测落点所在房间
+
+### 目的：
+提升 LevelDesigner 工具可用性，支持大型关卡（29 个房间）的平移浏览；交付示巴星 ACT1+ACT2 完整关卡布局供策划评审。
+
+### 技术方案：
+- Pan 系统：`#world` + SVG 双层同步 translate，canvas 网格 modulo 偏移
+- 坐标系统一为 world 空间：`worldX = screenX - canvasRect.left - panX`
+- 元素 drop：`world.addEventListener('dragover')` + 坐标 hit-test fallback
+
+---
+
+## LevelDesigner 连接线方向与选中功能 — 2026-02-26 00:50
+
+### 修改文件：
+- `Tools/LevelDesigner.html`
+
+### 内容简述：
+重构 LevelDesigner HTML 工具中的连接线系统，支持单向/双向门配置与连接线交互操作：
+
+1. **单向/双向连接逻辑**：从房间A拉到房间B创建一条A→B单向连接；再从B拉回A创建B→A单向连接，两条记录共存即表示双向互通。同方向不允许重复创建。
+2. **箭头方向渲染**：每条连接线末端带SVG箭头（`<marker>`），指向目标房间。双向连接时两条线各自带箭头，并施加垂直偏移避免重叠。
+3. **连接线可选中**：SVG连接线添加透明宽14px的hitarea层接收鼠标事件，点击选中后高亮为蓝色，属性面板显示连接详情（类型、来源、目标、方向）。
+4. **连接线可删除**：选中连接线后可通过属性面板按钮或Delete/Backspace键删除。双向连接可选择只删单向或删除整对。
+5. **属性面板联动**：选中房间时显示连接列表（标注单向/双向）；选中连接时显示连接属性面板；点击空白取消所有选中。
+
+### 目的：
+让关卡设计师能直观配置门的通行方向（单向门/双向门），为后续对接项目 Door 系统做准备。
+
+### 技术方案：
+- 连接数据结构保持 `{from, to, fromDir, toDir}` 不变，通过是否存在反向记录判断双向
+- SVG 使用 `<marker>` 定义箭头，`<line>` 绘制可见线段与隐形点击区域
+- 双向连接的两条线施加±4px垂直偏移，避免视觉重叠
+- `selectedConnectionIndex` 全局状态管理选中的连接线索引
+- 选中房间与选中连接互斥，切换时自动取消对方的选中状态
+
+---
+
+## LevelDesigner 连接点→门元素关联（doorLink）功能 — 2026-02-26 01:15
+
+### 修改文件：
+- `Tools/LevelDesigner.html`
+
+### 内容简述：
+新增"门关联"（doorLink）功能，允许从房间边缘的连接点拖拽到另一个房间内的"门"元素上，建立关联关系：
+
+1. **交互方式**：从房间连接点（红点）拖拽，松开在目标房间的"🚪门"元素上即可创建 doorLink。拖拽过程中门元素会高亮发光提示可连接。仅门元素可作为目标，其他房间元素不响应。
+2. **虚线可视化**：doorLink 渲染为橙色虚线（`stroke-dasharray: 6,4`），从连接点到门元素位置，末端有小圆点标记门的位置。
+3. **选中与删除**：doorLink 可点击选中（蓝色高亮），属性面板显示连接点来源和目标门信息，支持删除按钮和 Delete/Backspace 键删除。
+4. **位置联动**：拖拽房间移动、调整大小、拖拽门元素位置时，虚线实时更新。删除房间时自动清理相关 doorLinks。
+5. **数据持久化**：doorLinks 数组纳入 JSON 导出/导入、本地保存/加载、画布清空。
+
+### 目的：
+让关卡设计师能直观指定"从某个连接进入后，玩家在哪个门元素位置生成"，为项目中 Door spawn point 系统的配置做准备。
+
+### 技术方案：
+- 新增 `doorLinks` 全局数组，每条记录 `{fromRoomId, fromDir, targetRoomId, targetDoorIndex}`
+- 在 mouseup 的 isConnecting 分支中，优先检测 `document.elementFromPoint` 是否命中 `element-door` 类型的房间元素，命中则创建 doorLink 而非普通连接
+- SVG 虚线渲染通过 `renderDoorLinks()` 函数独立管理，与 `renderConnections()` 分离
+- 门元素拖拽期间高亮提示通过 CSS 类 `door-link-highlight` 实现（`box-shadow + scale`）
+- `selectedDoorLinkIndex` 管理选中状态，与 `selectedConnectionIndex` 和 `selectedRoom` 三者互斥
+
+---
+
+## LevelDesigner 自动生成门元素 + doorLink 功能 — 2026-02-26 01:15
+
+### 修改文件：
+- `Tools/LevelDesigner.html`
+
+### 内容简述：
+当从房间A拉连接线到房间B创建连接时，自动在目标房间B中生成一个"🚪门"元素并自动创建 doorLink 关联：
+
+1. **自动生成门元素**：创建房间连接时，自动在目标房间内靠近入口方向的边缘处放置门元素（12% 内缩偏移），无需手动放置。
+2. **自动创建 doorLink**：门元素生成后，自动创建一条从源连接点到目标门元素的 doorLink 虚线。
+3. **位置推算**：`calculateDoorPosition(room, entryDir)` 根据入口方向（west/east/north/south）计算门在目标房间内的合理位置（靠近入口边缘的中点，12% inset）。
+4. **删除联动**：删除连接时自动清理关联的 doorLinks（`cleanupDoorLinksForConnection`）。删除连接对（双向）时清理双向 doorLinks。
+
+### 目的：
+减少手动配置工作量——创建房间连接后门和 spawn point 自动就位，设计师只需微调位置即可。
+
+### 技术方案：
+- 新增 `calculateDoorPosition(room, entryDir)` 函数，基于 entryDir 返回 `{x, y}` 相对于房间的本地坐标
+- 在 mouseup 的正常连接创建分支中，`connections.push` 后立即调用 `targetRoom.elements.push({ type: 'door', ... })` 和 `doorLinks.push({...})`
+- `deleteSelectedConnection` 和 `deleteConnectionPair` 中新增 `cleanupDoorLinksForConnection(conn)` 调用
+
+---
+
+## LevelDesigner 严重 Bug 修复：mousemove 代码块合并错误 — 2026-02-26 01:03
+
+### 修改文件：
+- `Tools/LevelDesigner.html`
+
+### 内容简述：
+修复 mousemove 事件处理器中 `isDraggingRoom` 与 `isResizing` 两个代码块被错误合并到同一 if 块内的致命 bug。
+
+### 目的：
+修复页面完全无法交互的致命错误（拖拽、选择、连接等所有功能均失效）。
+
+### 技术方案：
+- **根因**：之前的编辑不慎将 `isResizing` 的整段逻辑错误地拼接到了 `isDraggingRoom` 块内部，导致 `const dx` / `const dy` / `const div` 在同一块作用域中被重复声明，触发 JavaScript `SyntaxError`，整个 `<script>` 标签无法执行。
+- **修复**：将 `isDraggingRoom` 块正确关闭（`}`），并将 resize 代码恢复到独立的 `if (isResizing && selectedRoom) { ... }` 块中。
+
+---
+
+## LevelDesigner 连接线箭头精准接触 + 选中/删除功能恢复 — 2026-02-26 01:23
+
+### 修改文件：
+- `Tools/LevelDesigner.html`
+
+### 内容简述：
+重新实现连接线的 SVG 箭头渲染（箭头尖端精确接触房间边缘），并恢复之前丢失的连接线选中、删除、属性面板等功能。
+
+### 目的：
+1. 修复箭头不接触房间边缘的视觉问题（用户反馈"看着难受"）
+2. 恢复在之前编辑过程中意外丢失的连接线交互功能
+
+### 技术方案：
+- **SVG marker 箭头**：定义 `<marker>` 元素（红色/蓝色），关键参数 `refX=markerWidth(10)`，使箭头尖端精确定位在 line 终点
+- **line 终点缩短**：将 line 终点从房间边缘往回缩 `arrowLen(10px)`，这样 marker 的箭头体自然填充这段距离，尖端正好接触边缘
+- **双向连接偏移**：双向连接的两条线做 ±4px 垂直偏移避免重叠
+- **hitarea 选中层**：每条连接线额外绘制透明 14px 宽的 hitarea `<line>` 接收鼠标点击
+- **连接属性面板**：选中连接后右侧面板显示类型/来源/目标/方向，提供删除按钮
+- **Delete/Backspace 快捷键**：支持键盘删除选中的连接线或房间
+- **同方向去重**：连接创建时检查是否已存在 A→B 的同方向连接
+- **连接列表增强**：选中房间时连接列表标注 (单向)/(双向) 类型，使用 →/←/⟷ 符号

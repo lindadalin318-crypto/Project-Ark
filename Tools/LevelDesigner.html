@@ -335,6 +335,14 @@
             pointer-events: none;
             z-index: 5;
         }
+
+        #connections-svg .connection-line-hitarea {
+            stroke: transparent;
+            stroke-width: 14;
+            fill: none;
+            pointer-events: stroke;
+            cursor: pointer;
+        }
         
         #world {
             position: absolute;
@@ -369,6 +377,12 @@
             stroke: #e94560;
             stroke-width: 2;
             fill: none;
+            pointer-events: none;
+        }
+
+        .connection-line.selected {
+            stroke: #4fc3f7;
+            stroke-width: 3;
         }
         
         .temp-connection-line {
@@ -1204,15 +1218,19 @@
                 if (roomDiv) {
                     const targetRoom = rooms.find(r => r.id === roomDiv.id);
                     if (targetRoom && targetRoom.id !== connectFromRoom.id) {
-                        connections.push({
-                            from: connectFromRoom.id,
-                            to: targetRoom.id,
-                            fromDir: connectFromDir,
-                            toDir: getOppositeDirection(connectFromDir)
-                        });
-                        renderConnections();
-                        updateConnectionsList();
-                        updateAsciiPreview();
+                        // Prevent duplicate same-direction connection
+                        const alreadyExists = connections.some(c => c.from === connectFromRoom.id && c.to === targetRoom.id);
+                        if (!alreadyExists) {
+                            connections.push({
+                                from: connectFromRoom.id,
+                                to: targetRoom.id,
+                                fromDir: connectFromDir,
+                                toDir: getOppositeDirection(connectFromDir)
+                            });
+                            renderConnections();
+                            updateConnectionsList();
+                            updateAsciiPreview();
+                        }
                     }
                 }
                 
@@ -1246,11 +1264,29 @@
             return opposites[dir] || dir;
         }
         
+        let selectedConnectionIndex = -1;
+
         function renderConnections() {
-            const existingLines = svg.querySelectorAll('.connection-line');
-            existingLines.forEach(l => l.remove());
+            // Remove existing connection elements
+            svg.querySelectorAll('.connection-line, .connection-line-hitarea, .connection-arrow').forEach(l => l.remove());
             
-            connections.forEach(conn => {
+            // Ensure SVG defs with arrow markers exist
+            let defs = svg.querySelector('defs');
+            if (!defs) {
+                defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+                svg.insertBefore(defs, svg.firstChild);
+            }
+            // Arrow marker: refX = markerWidth so the arrow TIP is exactly at the line endpoint (room edge)
+            defs.innerHTML = `
+                <marker id="arrow-red" markerWidth="10" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                    <polygon points="0,0 10,4 0,8" fill="#e94560"/>
+                </marker>
+                <marker id="arrow-blue" markerWidth="10" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                    <polygon points="0,0 10,4 0,8" fill="#4fc3f7"/>
+                </marker>
+            `;
+            
+            connections.forEach((conn, idx) => {
                 const fromRoom = rooms.find(r => r.id === conn.from);
                 const toRoom = rooms.find(r => r.id === conn.to);
                 if (!fromRoom || !toRoom) return;
@@ -1258,17 +1294,138 @@
                 const fromPos = getConnectionPointPosition(fromRoom, conn.fromDir);
                 const toPos = getConnectionPointPosition(toRoom, conn.toDir);
                 
+                // Check if reverse connection exists (bidirectional)
+                const hasReverse = connections.some(c => c.from === conn.to && c.to === conn.from);
+                const isSelected = selectedConnectionIndex === idx;
+                
+                const dx = toPos.x - fromPos.x;
+                const dy = toPos.y - fromPos.y;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                
+                // Shorten the line by arrow length so the arrow body doesn't overshoot
+                // The arrow tip is at the line endpoint (refX=markerWidth), arrow body extends 10px before it
+                const arrowLen = 10;
+                const endX = len > arrowLen ? toPos.x - (dx / len) * arrowLen : toPos.x;
+                const endY = len > arrowLen ? toPos.y - (dy / len) * arrowLen : toPos.y;
+                
+                // If bidirectional, offset the two lines perpendicular so they don't overlap
+                let offsetX = 0, offsetY = 0;
+                if (hasReverse && len > 0) {
+                    const perpX = -dy / len * 4;
+                    const perpY = dx / len * 4;
+                    offsetX = perpX;
+                    offsetY = perpY;
+                }
+                
+                // Invisible hit area for click selection
+                const hitLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                hitLine.setAttribute('x1', fromPos.x + offsetX);
+                hitLine.setAttribute('y1', fromPos.y + offsetY);
+                hitLine.setAttribute('x2', toPos.x + offsetX);
+                hitLine.setAttribute('y2', toPos.y + offsetY);
+                hitLine.setAttribute('class', 'connection-line-hitarea');
+                hitLine.setAttribute('data-conn-index', idx);
+                hitLine.addEventListener('mousedown', (e) => {
+                    if (isPanMode) return;
+                    e.stopPropagation();
+                    selectConnection(idx);
+                });
+                svg.appendChild(hitLine);
+                
+                // Visible line with arrow marker
                 const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                line.setAttribute('x1', fromPos.x);
-                line.setAttribute('y1', fromPos.y);
-                line.setAttribute('x2', toPos.x);
-                line.setAttribute('y2', toPos.y);
-                line.setAttribute('class', 'connection-line');
+                line.setAttribute('x1', fromPos.x + offsetX);
+                line.setAttribute('y1', fromPos.y + offsetY);
+                line.setAttribute('x2', endX + offsetX);
+                line.setAttribute('y2', endY + offsetY);
+                line.setAttribute('class', 'connection-line' + (isSelected ? ' selected' : ''));
+                line.setAttribute('marker-end', `url(#arrow-${isSelected ? 'blue' : 'red'})`);
+                line.setAttribute('data-conn-index', idx);
                 svg.appendChild(line);
             });
         }
         
+        function selectConnection(idx) {
+            // Deselect room if any
+            if (selectedRoom) {
+                document.querySelectorAll('.room.selected').forEach(r => r.classList.remove('selected'));
+                selectedRoom = null;
+                document.getElementById('room-properties').style.display = 'none';
+            }
+            selectedConnectionIndex = idx;
+            renderConnections();
+            showConnectionProperties(idx);
+        }
+        
+        function deselectConnection() {
+            selectedConnectionIndex = -1;
+            hideConnectionProperties();
+        }
+        
+        function showConnectionProperties(idx) {
+            const conn = connections[idx];
+            if (!conn) return;
+            
+            const fromRoom = rooms.find(r => r.id === conn.from);
+            const toRoom = rooms.find(r => r.id === conn.to);
+            const hasReverse = connections.some(c => c.from === conn.to && c.to === conn.from);
+            const dirLabel = hasReverse ? '双向' : '单向';
+            const fromName = fromRoom ? fromRoom.name : conn.from;
+            const toName = toRoom ? toRoom.name : conn.to;
+            
+            const panel = document.getElementById('properties-panel');
+            panel.style.display = 'block';
+            document.getElementById('room-properties').style.display = 'none';
+            
+            panel.innerHTML = `
+                <div class="help-text" style="text-align: left; margin-top: 10px; padding: 8px;">
+                    <div style="font-weight: bold; color: #4fc3f7; margin-bottom: 8px;">🔗 连接属性</div>
+                    <div style="margin-bottom: 6px;"><b>类型:</b> ${dirLabel}</div>
+                    <div style="margin-bottom: 6px;"><b>从:</b> ${fromName}</div>
+                    <div style="margin-bottom: 6px;"><b>到:</b> ${toName}</div>
+                    <div style="margin-bottom: 6px;"><b>方向:</b> ${conn.fromDir} → ${conn.toDir}</div>
+                    <button style="margin-top: 10px; width: 100%; padding: 6px; background: #e94560; border: none; color: white; border-radius: 4px; cursor: pointer;" onclick="deleteSelectedConnection()">🗑 删除此连接</button>
+                    ${hasReverse ? `<button style="margin-top: 6px; width: 100%; padding: 6px; background: #d32f2f; border: none; color: white; border-radius: 4px; cursor: pointer;" onclick="deleteConnectionPair(${idx})">🗑 删除双向连接</button>` : ''}
+                </div>
+            `;
+        }
+        
+        function hideConnectionProperties() {
+            const panel = document.getElementById('properties-panel');
+            panel.innerHTML = `
+                <div class="help-text" style="text-align: center; margin-top: 50px;">
+                    选择一个房间<br>查看和编辑属性
+                </div>
+            `;
+        }
+        
+        function deleteSelectedConnection() {
+            if (selectedConnectionIndex < 0 || selectedConnectionIndex >= connections.length) return;
+            connections.splice(selectedConnectionIndex, 1);
+            deselectConnection();
+            renderConnections();
+            updateConnectionsList();
+            updateAsciiPreview();
+        }
+        
+        function deleteConnectionPair(idx) {
+            const conn = connections[idx];
+            if (!conn) return;
+            connections = connections.filter(c =>
+                !((c.from === conn.from && c.to === conn.to) || (c.from === conn.to && c.to === conn.from))
+            );
+            deselectConnection();
+            renderConnections();
+            updateConnectionsList();
+            updateAsciiPreview();
+        }
+        
         function selectRoom(room) {
+            // Deselect connection if any
+            if (selectedConnectionIndex >= 0) {
+                selectedConnectionIndex = -1;
+                renderConnections();
+            }
             document.querySelectorAll('.room.selected').forEach(r => r.classList.remove('selected'));
             
             selectedRoom = room;
@@ -1373,9 +1530,20 @@
             }
             
             list.innerHTML = roomConns.map(c => {
-                const target = c.from === selectedRoom.id ? c.to : c.from;
+                const isFrom = c.from === selectedRoom.id;
+                const target = isFrom ? c.to : c.from;
                 const targetRoom = rooms.find(r => r.id === target);
-                return `<div style="padding: 2px 0;">→ ${targetRoom ? targetRoom.name : target}</div>`;
+                const targetName = targetRoom ? targetRoom.name : target;
+                const hasReverse = connections.some(r => r.from === c.to && r.to === c.from);
+                
+                if (hasReverse) {
+                    // Only show bidirectional once (from the 'from' side)
+                    if (!isFrom) return '';
+                    return `<div style="padding: 2px 0;">⟷ ${targetName} <span style="color: #8a8a8a; font-size: 10px;">(双向)</span></div>`;
+                } else {
+                    const arrow = isFrom ? '→' : '←';
+                    return `<div style="padding: 2px 0;">${arrow} ${targetName} <span style="color: #8a8a8a; font-size: 10px;">(单向)</span></div>`;
+                }
             }).join('');
         }
         
@@ -1702,6 +1870,11 @@
                 selectedRoom = null;
                 document.getElementById('properties-panel').style.display = 'block';
                 document.getElementById('room-properties').style.display = 'none';
+                // Deselect connection if any
+                if (selectedConnectionIndex >= 0) {
+                    deselectConnection();
+                    renderConnections();
+                }
             }
         });
         
@@ -1722,14 +1895,25 @@
         }, true); // capture phase: fires before child elements
         
         document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+            
             if (e.code === 'Space') {
-                // Avoid triggering when typing in inputs
-                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
                 if (!isPanMode) {
                     isPanMode = true;
                     canvasArea.classList.add('panning');
                 }
                 e.preventDefault();
+            }
+            
+            // Delete/Backspace to delete selected connection or room
+            if (e.code === 'Delete' || e.code === 'Backspace') {
+                if (selectedConnectionIndex >= 0) {
+                    deleteSelectedConnection();
+                    e.preventDefault();
+                } else if (selectedRoom) {
+                    deleteRoom(selectedRoom);
+                    e.preventDefault();
+                }
             }
         });
         
