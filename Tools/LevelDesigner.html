@@ -1865,7 +1865,7 @@
         }
         
         canvasArea.addEventListener('click', (e) => {
-            if (e.target === canvasArea || e.target === gridCanvas) {
+            if (e.target === canvasArea || e.target === gridCanvas || e.target === svg || e.target === world) {
                 document.querySelectorAll('.room.selected').forEach(r => r.classList.remove('selected'));
                 selectedRoom = null;
                 document.getElementById('properties-panel').style.display = 'block';

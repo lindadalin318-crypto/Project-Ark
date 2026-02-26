@@ -4984,3 +4984,20 @@ Markdown方法论文档，综合WorldBible.md（2145行）和ShebaPlanetBible.md
 - **Delete/Backspace 快捷键**：支持键盘删除选中的连接线或房间
 - **同方向去重**：连接创建时检查是否已存在 A→B 的同方向连接
 - **连接列表增强**：选中房间时连接列表标注 (单向)/(双向) 类型，使用 →/←/⟷ 符号
+
+---
+
+## LevelDesigner Bug修复：点击空白处未取消房间选中状态 — 2026-02-26 11:28
+
+### 修改文件：
+- `Tools/LevelDesigner.html`
+
+### 内容简述：
+修复了点击画布空白区域后，已选中房间的连接点（connection points）仍然显示的问题。
+
+### 目的：
+连接点应仅在房间被选中（selected）或鼠标悬浮（hover）时显示，点击空白处取消选中后连接点应隐藏。
+
+### 技术方案：
+- **根因**：`canvasArea` 的 click 事件中，判断"点击空白处"的条件仅检查了 `e.target === canvasArea || e.target === gridCanvas`，遗漏了 SVG 层（`connections-svg`）和世界容器（`world`）。由于 DOM 层叠结构为 `canvas-area > grid-canvas + connections-svg + world`，点击空白处时 `e.target` 可能命中 SVG 或 world 元素，导致取消选中逻辑未执行。
+- **修复**：将判断条件扩展为 `e.target === canvasArea || e.target === gridCanvas || e.target === svg || e.target === world`，覆盖所有非房间的空白区域元素。
