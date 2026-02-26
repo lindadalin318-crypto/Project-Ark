@@ -1,182 +1,274 @@
 {
   "levelName": "示巴星 · ACT1+ACT2 (Z1a→Z2d)",
-  "description": "覆盖关卡心流CSV节点 Z1a~Z2d，时长 0:00~90:00，共 10 个节点 / 45 个房间",
+  "description": "银河恶魔城式网状关卡布局。覆盖关卡心流CSV节点 Z1a~Z2d，时长 0:00~90:00，共 10 个节点。多路径分支 + 垂直层级 + 捷径回路 + 锁钥循环。",
   "rooms": [
+
+    {"comment": "========== ACT 1 · Z1a · 坠机点 (0:00-5:00 · 张力4) =========="},
+
     {
-      "comment": "===== ACT 1 · Z1a · 坠机点 (0:00-8:00 · 张力4) =====",
       "id": "Z1a_crash_site",
       "name": "坠机点·残骸区",
       "type": "safe",
       "floor": 0,
-      "position": [2, 2],
-      "size": [16, 9],
+      "position": [2, 8],
+      "size": [14, 8],
       "elements": [
-        { "type": "spawn",      "position": [8, 4.5] },
-        { "type": "checkpoint", "position": [14, 4.5] }
+        { "type": "spawn",      "position": [2, 4] },
+        { "type": "checkpoint", "position": [12, 4] }
       ]
     },
     {
       "id": "Z1a_wreckage_east",
-      "name": "坠机点·东侧碎片",
+      "name": "坠机点·东侧碎片带",
       "type": "normal",
       "floor": 0,
-      "position": [20, 2],
-      "size": [10, 9],
+      "position": [18, 8],
+      "size": [10, 8],
       "elements": [
-        { "type": "enemy",  "position": [5, 4.5] },
-        { "type": "enemy",  "position": [8, 4.5] },
-        { "type": "chest",  "position": [9, 4.5] }
+        { "type": "enemy", "position": [3, 3] },
+        { "type": "enemy", "position": [7, 5] },
+        { "type": "chest", "position": [9, 4] }
       ]
     },
     {
-      "id": "Z1a_tutorial_combat",
-      "name": "坠机点·初战场",
-      "type": "arena",
-      "floor": 0,
-      "position": [32, 2],
-      "size": [12, 9],
-      "elements": [
-        { "type": "enemy",  "position": [4, 3] },
-        { "type": "enemy",  "position": [4, 6] },
-        { "type": "enemy",  "position": [8, 4.5] },
-        { "type": "chest",  "position": [11, 4.5] }
-      ]
-    },
-
-    {
-      "comment": "===== ACT 1 · Z1b · 冰雕回廊 (8:00-15:00 · 张力2) =====",
-      "id": "Z1b_ice_corridor",
-      "name": "冰雕回廊",
-      "type": "safe",
-      "floor": 0,
-      "position": [46, 2],
-      "size": [14, 7],
-      "elements": [
-        { "type": "npc",        "position": [7, 3.5] },
-        { "type": "checkpoint", "position": [13, 3.5] }
-      ]
-    },
-    {
-      "id": "Z1b_lyra_trace",
-      "name": "冰雕回廊·缕拉遗迹",
-      "type": "safe",
-      "floor": 0,
-      "position": [62, 2],
-      "size": [10, 7],
-      "elements": [
-        { "type": "chest", "position": [5, 3.5] }
-      ]
-    },
-
-    {
-      "comment": "===== ACT 1 · Z1c · 重炮教学 (15:00-22:00 · 张力7) =====",
-      "id": "Z1c_cannon_arena",
-      "name": "重炮教学·主场",
-      "type": "arena",
-      "floor": 0,
-      "position": [74, 2],
-      "size": [14, 9],
-      "elements": [
-        { "type": "enemy", "position": [5, 4.5] },
-        { "type": "enemy", "position": [9, 3] },
-        { "type": "enemy", "position": [9, 6] },
-        { "type": "enemy", "position": [12, 4.5] },
-        { "type": "chest", "position": [13, 4.5] }
-      ]
-    },
-    {
-      "id": "Z1c_cannon_side",
-      "name": "重炮教学·侧路",
+      "id": "Z1a_south_descent",
+      "name": "坠机点·南侧裂缝",
       "type": "normal",
       "floor": 0,
-      "position": [74, 13],
-      "size": [14, 6],
+      "position": [2, 18],
+      "size": [10, 8],
       "elements": [
-        { "type": "enemy",  "position": [4, 3] },
-        { "type": "enemy",  "position": [10, 3] },
-        { "type": "chest",  "position": [13, 3] }
+        { "type": "enemy", "position": [3, 4] },
+        { "type": "enemy", "position": [7, 4] }
       ]
     },
 
+    {"comment": "========== ACT 1 · Z1b · 寂静雪原 (5:00-12:00 · 张力2) =========="},
+
     {
-      "comment": "===== ACT 1 · Z1d · 克拉德尼花路 (22:00-28:00 · 张力4) =====",
-      "id": "Z1d_flower_path",
-      "name": "克拉德尼花路",
+      "id": "Z1b_ice_sculpture_plaza",
+      "name": "冰雕广场",
       "type": "safe",
       "floor": 0,
-      "position": [90, 2],
-      "size": [12, 7],
+      "position": [30, 6],
+      "size": [14, 10],
       "elements": [
-        { "type": "npc",   "position": [10, 3.5] },
-        { "type": "chest", "position": [6,  3.5] }
+        { "type": "npc",        "position": [7, 5] },
+        { "type": "checkpoint", "position": [12, 5] },
+        { "type": "chest",      "position": [3, 8] }
       ]
     },
     {
-      "id": "Z1d_flower_secret",
-      "name": "花路·隐藏墓穴",
+      "id": "Z1b_lyra_warmth",
+      "name": "冰雕广场·温暖冰雕",
+      "type": "safe",
+      "floor": 0,
+      "position": [46, 6],
+      "size": [10, 8],
+      "elements": [
+        { "type": "npc",   "position": [5, 4] },
+        { "type": "chest", "position": [8, 4] }
+      ]
+    },
+    {
+      "id": "Z1b_hidden_crypt",
+      "name": "冰雕广场·地下隐穴",
       "type": "normal",
       "floor": -1,
-      "position": [90, 11],
+      "position": [30, 18],
+      "size": [12, 8],
+      "elements": [
+        { "type": "chest", "position": [4, 4] },
+        { "type": "chest", "position": [10, 4] }
+      ]
+    },
+    {
+      "id": "Z1b_optional_alcove",
+      "name": "雪原·可选探索角落",
+      "type": "safe",
+      "floor": 0,
+      "position": [46, 16],
+      "size": [8, 7],
+      "elements": [
+        { "type": "chest", "position": [4, 3.5] }
+      ]
+    },
+
+    {"comment": "========== ACT 1 · Z1c · 觉醒战场 (12:00-22:00 · 张力7) =========="},
+
+    {
+      "id": "Z1c_awakening_arena",
+      "name": "觉醒战场·主竞技场",
+      "type": "arena",
+      "floor": 0,
+      "position": [58, 6],
+      "size": [14, 10],
+      "elements": [
+        { "type": "enemy", "position": [3, 3] },
+        { "type": "enemy", "position": [7, 2] },
+        { "type": "enemy", "position": [7, 8] },
+        { "type": "enemy", "position": [11, 5] },
+        { "type": "chest", "position": [13, 5] }
+      ]
+    },
+    {
+      "id": "Z1c_side_passage",
+      "name": "觉醒战场·侧路",
+      "type": "normal",
+      "floor": 0,
+      "position": [58, 18],
+      "size": [12, 7],
+      "elements": [
+        { "type": "enemy", "position": [4, 3.5] },
+        { "type": "enemy", "position": [9, 3.5] },
+        { "type": "chest", "position": [11, 3.5] }
+      ]
+    },
+    {
+      "id": "Z1c_overlook",
+      "name": "觉醒战场·上层观景台",
+      "type": "normal",
+      "floor": 1,
+      "position": [62, -2],
       "size": [10, 6],
       "elements": [
         { "type": "chest", "position": [5, 3] },
-        { "type": "chest", "position": [9, 3] }
+        { "type": "enemy", "position": [8, 3] }
       ]
     },
 
+    {"comment": "========== ACT 1 · Z1d · 音叉林 (22:00-32:00 · 张力4) =========="},
+
     {
-      "comment": "===== ACT 1 · Z1e · 认知转折 (28:00-38:00 · 张力3) =====",
-      "id": "Z1e_cognition_shift",
-      "name": "认知转折·歌唱者",
+      "id": "Z1d_tuningfork_mid",
+      "name": "音叉林·中层主路",
       "type": "normal",
       "floor": 0,
-      "position": [104, 2],
-      "size": [14, 7],
+      "position": [74, 6],
+      "size": [12, 8],
       "elements": [
-        { "type": "enemy",  "position": [5,  3.5] },
-        { "type": "enemy",  "position": [9,  3.5] },
-        { "type": "npc",    "position": [13, 3.5] }
+        { "type": "enemy", "position": [4, 4] },
+        { "type": "enemy", "position": [8, 4] },
+        { "type": "npc",   "position": [10, 4] }
+      ]
+    },
+    {
+      "id": "Z1d_tuningfork_upper",
+      "name": "音叉林·上层树冠",
+      "type": "normal",
+      "floor": 1,
+      "position": [74, -4],
+      "size": [10, 8],
+      "elements": [
+        { "type": "chest", "position": [5, 4] },
+        { "type": "enemy", "position": [8, 4] }
+      ]
+    },
+    {
+      "id": "Z1d_garden_safe",
+      "name": "花园·安全区",
+      "type": "safe",
+      "floor": 0,
+      "position": [88, 8],
+      "size": [10, 8],
+      "elements": [
+        { "type": "checkpoint", "position": [5, 4] },
+        { "type": "npc",        "position": [8, 4] }
+      ]
+    },
+    {
+      "id": "Z1d_shortcut_ledge",
+      "name": "音叉林·捷径悬崖",
+      "type": "normal",
+      "floor": 0,
+      "position": [86, 18],
+      "size": [8, 7],
+      "elements": [
+        { "type": "chest", "position": [4, 3.5] }
+      ]
+    },
+
+    {"comment": "========== ACT 1 · Z1e · 战后余波 (32:00-38:00 · 张力3) =========="},
+
+    {
+      "id": "Z1e_aftermath",
+      "name": "战后余波·碎片检查",
+      "type": "normal",
+      "floor": 0,
+      "position": [14, 28],
+      "size": [12, 8],
+      "elements": [
+        { "type": "enemy", "position": [4, 4] },
+        { "type": "enemy", "position": [8, 4] },
+        { "type": "npc",   "position": [10, 4] }
       ]
     },
     {
       "id": "Z1e_moral_room",
-      "name": "认知转折·道德选择",
+      "name": "战后余波·道德选择",
       "type": "safe",
       "floor": 0,
-      "position": [120, 2],
+      "position": [28, 28],
+      "size": [10, 8],
+      "elements": [
+        { "type": "npc",        "position": [5, 4] },
+        { "type": "checkpoint", "position": [8, 4] }
+      ]
+    },
+    {
+      "id": "Z1e_optional_sideroom",
+      "name": "战后余波·支线碎片密室",
+      "type": "normal",
+      "floor": -1,
+      "position": [14, 38],
       "size": [10, 7],
       "elements": [
-        { "type": "enemy", "position": [5, 3.5] },
-        { "type": "chest", "position": [9, 3.5] }
+        { "type": "chest", "position": [3, 3.5] },
+        { "type": "chest", "position": [7, 3.5] }
       ]
     },
 
+    {"comment": "========== ACT 1 · Z1f · 下行通道+首棱镜 (38:00-50:00 · 张力6) =========="},
+
     {
-      "comment": "===== ACT 1 · Z1f · 首棱镜 + 远目击 (38:00-50:00 · 张力6) =====",
-      "id": "Z1f_prism_unlock",
-      "name": "首棱镜·竞技场",
-      "type": "arena",
+      "id": "Z1f_descent_corridor",
+      "name": "下行通道·管壁走廊",
+      "type": "normal",
       "floor": 0,
-      "position": [132, 2],
-      "size": [14, 9],
+      "position": [40, 28],
+      "size": [12, 8],
       "elements": [
-        { "type": "enemy",      "position": [4,  4.5] },
-        { "type": "enemy",      "position": [7,  2] },
-        { "type": "enemy",      "position": [7,  7] },
-        { "type": "enemy",      "position": [10, 4.5] },
-        { "type": "chest",      "position": [13, 4.5] },
-        { "type": "checkpoint", "position": [13, 7.5] }
+        { "type": "enemy", "position": [3, 4] },
+        { "type": "enemy", "position": [6, 2] },
+        { "type": "enemy", "position": [6, 6] },
+        { "type": "enemy", "position": [9, 4] }
       ]
     },
     {
-      "id": "Z1f_lyra_first_sight",
-      "name": "Z1f·缕拉首次目击点",
+      "id": "Z1f_prism_arena",
+      "name": "首棱镜·竞技场",
+      "type": "arena",
+      "floor": 0,
+      "position": [54, 28],
+      "size": [14, 10],
+      "elements": [
+        { "type": "enemy",      "position": [4, 5] },
+        { "type": "enemy",      "position": [7, 2] },
+        { "type": "enemy",      "position": [7, 8] },
+        { "type": "enemy",      "position": [10, 5] },
+        { "type": "chest",      "position": [13, 5] },
+        { "type": "checkpoint", "position": [1, 5] }
+      ]
+    },
+    {
+      "id": "Z1f_lyra_sighting",
+      "name": "缕拉首次目击点",
       "type": "safe",
       "floor": 0,
-      "position": [148, 2],
+      "position": [70, 30],
       "size": [10, 7],
       "elements": [
-        { "type": "npc", "position": [9, 3.5] }
+        { "type": "npc", "position": [5, 3.5] }
       ]
     },
     {
@@ -184,197 +276,221 @@
       "name": "ACT1出口·峡谷入口",
       "type": "safe",
       "floor": 0,
-      "position": [160, 2],
+      "position": [82, 30],
       "size": [8, 7],
       "elements": [
-        { "type": "door", "position": [7, 3.5] }
+        { "type": "door",       "position": [6, 3.5] },
+        { "type": "checkpoint", "position": [2, 3.5] }
       ]
     },
 
+    {"comment": "========== ACT 2 · Z2a · 管风琴走廊 (50:00-60:00 · 张力5) =========="},
+
     {
-      "comment": "===== ACT 2 · Z2a · 叹息峡谷·降临段 (50:00-57:00 · 张力5) =====",
-      "id": "Z2a_canyon_descent",
-      "name": "叹息峡谷·降临段",
+      "id": "Z2a_organ_corridor",
+      "name": "管风琴走廊·入口",
       "type": "normal",
       "floor": 0,
-      "position": [170, 2],
-      "size": [14, 10],
-      "elements": [
-        { "type": "enemy",  "position": [4,  5] },
-        { "type": "enemy",  "position": [9,  5] },
-        { "type": "npc",    "position": [13, 5] },
-        { "type": "checkpoint", "position": [1, 5] }
-      ]
-    },
-    {
-      "id": "Z2a_canyon_upper",
-      "name": "叹息峡谷·上层平台",
-      "type": "normal",
-      "floor": 1,
-      "position": [170, -10],
+      "position": [92, 30],
       "size": [14, 8],
       "elements": [
-        { "type": "enemy",  "position": [4, 4] },
-        { "type": "enemy",  "position": [10, 4] },
-        { "type": "chest",  "position": [13, 4] }
+        { "type": "enemy",      "position": [4, 4] },
+        { "type": "enemy",      "position": [10, 4] },
+        { "type": "checkpoint", "position": [1, 4] }
       ]
     },
     {
-      "id": "Z2a_lyra_remote_aid",
-      "name": "叹息峡谷·缕拉远程援助",
+      "id": "Z2a_upper_platform",
+      "name": "管风琴走廊·上层平台",
+      "type": "normal",
+      "floor": 1,
+      "position": [94, 20],
+      "size": [10, 8],
+      "elements": [
+        { "type": "enemy", "position": [4, 4] },
+        { "type": "enemy", "position": [8, 4] },
+        { "type": "chest", "position": [9, 4] }
+      ]
+    },
+    {
+      "id": "Z2a_upper_secret",
+      "name": "管风琴走廊·上层秘密",
       "type": "safe",
-      "floor": 0,
-      "position": [186, 2],
+      "floor": 1,
+      "position": [106, 20],
       "size": [8, 7],
       "elements": [
-        { "type": "npc",   "position": [4, 3.5] },
-        { "type": "chest", "position": [7, 3.5] }
+        { "type": "chest", "position": [4, 3.5] },
+        { "type": "chest", "position": [6, 3.5] }
+      ]
+    },
+    {
+      "id": "Z2a_lyra_aid",
+      "name": "管风琴走廊·缕拉远程援助",
+      "type": "safe",
+      "floor": 0,
+      "position": [108, 30],
+      "size": [8, 8],
+      "elements": [
+        { "type": "npc",        "position": [4, 4] },
+        { "type": "checkpoint", "position": [6, 4] }
       ]
     },
 
+    {"comment": "========== ACT 2 · Z2b · 涟漪获取 (60:00-70:00 · 张力3) =========="},
+
     {
-      "comment": "===== ACT 2 · Z2b · 涟漪获取 (57:00-67:00 · 张力3) =====",
-      "id": "Z2b_ripple_puzzle",
-      "name": "涟漪获取·水晶墙谜题",
+      "id": "Z2b_sound_corridor",
+      "name": "声之走廊",
       "type": "normal",
       "floor": 0,
-      "position": [196, 2],
-      "size": [14, 9],
+      "position": [108, 40],
+      "size": [14, 8],
       "elements": [
-        { "type": "enemy",  "position": [5, 4.5] },
-        { "type": "enemy",  "position": [9, 4.5] },
-        { "type": "chest",  "position": [13, 4.5] }
+        { "type": "enemy", "position": [5, 4] },
+        { "type": "enemy", "position": [9, 4] }
       ]
     },
     {
       "id": "Z2b_ripple_reward",
-      "name": "涟漪获取·叹息墙破解",
+      "name": "涟漪奖励·密室",
       "type": "safe",
       "floor": 0,
-      "position": [212, 2],
-      "size": [10, 7],
+      "position": [124, 40],
+      "size": [10, 8],
       "elements": [
-        { "type": "chest",      "position": [5, 3.5] },
-        { "type": "checkpoint", "position": [9, 3.5] }
+        { "type": "chest",      "position": [5, 4] },
+        { "type": "checkpoint", "position": [8, 4] }
       ]
     },
     {
-      "id": "Z2b_lyra_face_to_face",
-      "name": "涟漪获取·缕拉首次面对面",
+      "id": "Z2b_lyra_face",
+      "name": "缕拉首次面对面",
       "type": "safe",
       "floor": 0,
-      "position": [224, 2],
-      "size": [10, 7],
+      "position": [136, 40],
+      "size": [10, 8],
       "elements": [
-        { "type": "npc",   "position": [5, 3.5] },
-        { "type": "npc",   "position": [8, 3.5] }
+        { "type": "npc", "position": [5, 4] },
+        { "type": "npc", "position": [8, 4] }
+      ]
+    },
+    {
+      "id": "Z2b_hidden_drop",
+      "name": "涟漪获取·隐藏跌落点",
+      "type": "normal",
+      "floor": 0,
+      "position": [136, 50],
+      "size": [8, 7],
+      "elements": [
+        { "type": "chest", "position": [4, 3.5] }
       ]
     },
 
+    {"comment": "========== ACT 2 · Z2c · 叹息深谷 (70:00-80:00 · 张力5) =========="},
+
     {
-      "comment": "===== ACT 2 · Z2c · 涟漪四重验证 + 世界时钟预兆 (67:00-78:00 · 张力5) =====",
-      "id": "Z2c_ripple_verify_env",
-      "name": "涟漪验证·环境解谜",
+      "id": "Z2c_abyss_entrance",
+      "name": "叹息深谷·入口",
       "type": "normal",
       "floor": 0,
-      "position": [236, 2],
-      "size": [14, 9],
+      "position": [118, 50],
+      "size": [12, 8],
       "elements": [
-        { "type": "chest",  "position": [7, 4.5] },
-        { "type": "enemy",  "position": [4, 4.5] },
-        { "type": "enemy",  "position": [10, 4.5] }
+        { "type": "enemy", "position": [4, 4] },
+        { "type": "enemy", "position": [8, 4] }
       ]
     },
     {
-      "id": "Z2c_ripple_verify_combat",
+      "id": "Z2c_combat_verify",
       "name": "涟漪验证·战斗应用",
       "type": "arena",
       "floor": 0,
-      "position": [252, 2],
+      "position": [118, 60],
       "size": [14, 9],
       "elements": [
-        { "type": "enemy",  "position": [3,  4.5] },
-        { "type": "enemy",  "position": [7,  3] },
-        { "type": "enemy",  "position": [7,  6] },
-        { "type": "enemy",  "position": [11, 4.5] }
+        { "type": "enemy", "position": [3, 4.5] },
+        { "type": "enemy", "position": [7, 3] },
+        { "type": "enemy", "position": [7, 6] },
+        { "type": "enemy", "position": [11, 4.5] }
       ]
     },
     {
-      "id": "Z2c_ripple_echo_path",
-      "name": "涟漪验证·隐形回音路",
+      "id": "Z2c_echo_path",
+      "name": "涟漪验证·回音路",
       "type": "normal",
       "floor": 0,
-      "position": [268, 2],
-      "size": [12, 7],
+      "position": [134, 60],
+      "size": [12, 8],
       "elements": [
-        { "type": "chest",  "position": [11, 3.5] },
-        { "type": "door",   "position": [11, 6] }
+        { "type": "chest", "position": [6, 4] },
+        { "type": "door",  "position": [11, 4] }
       ]
     },
     {
       "id": "Z2c_worldclock_omen",
-      "name": "世界时钟预兆·黑水退潮",
+      "name": "世界时钟预兆·退潮点",
       "type": "safe",
       "floor": 0,
-      "position": [282, 2],
-      "size": [10, 7],
+      "position": [134, 50],
+      "size": [10, 8],
       "elements": [
-        { "type": "checkpoint", "position": [5, 3.5] },
-        { "type": "npc",        "position": [9, 3.5] }
+        { "type": "checkpoint", "position": [5, 4] },
+        { "type": "npc",        "position": [8, 4] }
       ]
     },
     {
       "id": "Z2c_frequency_mark",
-      "name": "世界时钟·频率标记点",
+      "name": "频率标记点",
       "type": "safe",
       "floor": 0,
-      "position": [294, 2],
+      "position": [148, 55],
       "size": [8, 7],
       "elements": [
-        { "type": "npc",   "position": [4, 3.5] },
-        { "type": "chest", "position": [7, 3.5] }
+        { "type": "npc",   "position": [3, 3.5] },
+        { "type": "chest", "position": [6, 3.5] }
       ]
     },
 
+    {"comment": "========== ACT 2 · Z2d · 叹息墙Boss战 (80:00-90:00 · 张力9) =========="},
+
     {
-      "comment": "===== ACT 2 · Z2d · 叹息墙Boss战 (78:00-90:00 · 张力9) =====",
-      "id": "Z2d_sighing_wall_approach",
+      "id": "Z2d_approach",
       "name": "叹息墙·前室",
       "type": "normal",
       "floor": 0,
-      "position": [304, 2],
-      "size": [12, 9],
+      "position": [148, 64],
+      "size": [12, 8],
       "elements": [
-        { "type": "enemy",  "position": [4,  4.5] },
-        { "type": "enemy",  "position": [8,  4.5] },
-        { "type": "enemy",  "position": [10, 4.5] },
-        { "type": "door",   "position": [11, 4.5] }
+        { "type": "enemy", "position": [4, 4] },
+        { "type": "enemy", "position": [8, 4] },
+        { "type": "door",  "position": [11, 4] }
       ]
     },
     {
-      "id": "Z2d_sighing_wall_arena",
+      "id": "Z2d_boss_arena",
       "name": "叹息墙·Boss竞技场",
       "type": "boss",
       "floor": 0,
-      "position": [318, 0],
-      "size": [22, 13],
+      "position": [162, 62],
+      "size": [20, 14],
       "elements": [
-        { "type": "enemy",      "position": [11, 6.5] },
-        { "type": "checkpoint", "position": [1,  6.5] }
+        { "type": "enemy",      "position": [10, 7] },
+        { "type": "checkpoint", "position": [2, 7] }
       ]
     },
     {
-      "id": "Z2d_boss_cleared",
+      "id": "Z2d_boss_reward",
       "name": "叹息墙·Boss后奖励",
       "type": "safe",
       "floor": 0,
-      "position": [342, 2],
-      "size": [12, 9],
+      "position": [184, 64],
+      "size": [12, 8],
       "elements": [
-        { "type": "chest",      "position": [4,  4.5] },
-        { "type": "chest",      "position": [7,  4.5] },
-        { "type": "checkpoint", "position": [11, 4.5] },
-        { "type": "npc",        "position": [9,  4.5] }
+        { "type": "chest",      "position": [3, 4] },
+        { "type": "chest",      "position": [6, 4] },
+        { "type": "npc",        "position": [9, 4] },
+        { "type": "checkpoint", "position": [11, 4] }
       ]
     },
     {
@@ -382,42 +498,182 @@
       "name": "ACT2出口·枢纽入口",
       "type": "safe",
       "floor": 0,
-      "position": [356, 2],
+      "position": [198, 66],
       "size": [8, 7],
       "elements": [
-        { "type": "door",       "position": [7, 3.5] },
-        { "type": "checkpoint", "position": [1, 3.5] }
+        { "type": "door",       "position": [6, 3.5] },
+        { "type": "checkpoint", "position": [2, 3.5] }
       ]
     }
   ],
+
   "connections": [
-    { "from": "Z1a_crash_site",        "to": "Z1a_wreckage_east",       "fromDir": "east",  "toDir": "west"  },
-    { "from": "Z1a_wreckage_east",     "to": "Z1a_tutorial_combat",     "fromDir": "east",  "toDir": "west"  },
-    { "from": "Z1a_tutorial_combat",   "to": "Z1b_ice_corridor",        "fromDir": "east",  "toDir": "west"  },
-    { "from": "Z1b_ice_corridor",      "to": "Z1b_lyra_trace",          "fromDir": "east",  "toDir": "west"  },
-    { "from": "Z1b_lyra_trace",        "to": "Z1c_cannon_arena",        "fromDir": "east",  "toDir": "west"  },
-    { "from": "Z1c_cannon_arena",      "to": "Z1c_cannon_side",         "fromDir": "south", "toDir": "north" },
-    { "from": "Z1c_cannon_arena",      "to": "Z1d_flower_path",         "fromDir": "east",  "toDir": "west"  },
-    { "from": "Z1d_flower_path",       "to": "Z1d_flower_secret",       "fromDir": "south", "toDir": "north" },
-    { "from": "Z1d_flower_path",       "to": "Z1e_cognition_shift",     "fromDir": "east",  "toDir": "west"  },
-    { "from": "Z1e_cognition_shift",   "to": "Z1e_moral_room",          "fromDir": "east",  "toDir": "west"  },
-    { "from": "Z1e_moral_room",        "to": "Z1f_prism_unlock",        "fromDir": "east",  "toDir": "west"  },
-    { "from": "Z1f_prism_unlock",      "to": "Z1f_lyra_first_sight",    "fromDir": "east",  "toDir": "west"  },
-    { "from": "Z1f_lyra_first_sight",  "to": "Z1f_act1_exit",           "fromDir": "east",  "toDir": "west"  },
-    { "from": "Z1f_act1_exit",         "to": "Z2a_canyon_descent",      "fromDir": "east",  "toDir": "west"  },
-    { "from": "Z2a_canyon_descent",    "to": "Z2a_canyon_upper",        "fromDir": "north", "toDir": "south" },
-    { "from": "Z2a_canyon_descent",    "to": "Z2a_lyra_remote_aid",     "fromDir": "east",  "toDir": "west"  },
-    { "from": "Z2a_lyra_remote_aid",   "to": "Z2b_ripple_puzzle",       "fromDir": "east",  "toDir": "west"  },
-    { "from": "Z2b_ripple_puzzle",     "to": "Z2b_ripple_reward",       "fromDir": "east",  "toDir": "west"  },
-    { "from": "Z2b_ripple_reward",     "to": "Z2b_lyra_face_to_face",   "fromDir": "east",  "toDir": "west"  },
-    { "from": "Z2b_lyra_face_to_face", "to": "Z2c_ripple_verify_env",   "fromDir": "east",  "toDir": "west"  },
-    { "from": "Z2c_ripple_verify_env", "to": "Z2c_ripple_verify_combat","fromDir": "east",  "toDir": "west"  },
-    { "from": "Z2c_ripple_verify_combat","to":"Z2c_ripple_echo_path",   "fromDir": "east",  "toDir": "west"  },
-    { "from": "Z2c_ripple_echo_path",  "to": "Z2c_worldclock_omen",     "fromDir": "east",  "toDir": "west"  },
-    { "from": "Z2c_worldclock_omen",   "to": "Z2c_frequency_mark",      "fromDir": "east",  "toDir": "west"  },
-    { "from": "Z2c_frequency_mark",    "to": "Z2d_sighing_wall_approach","fromDir": "east", "toDir": "west"  },
-    { "from": "Z2d_sighing_wall_approach","to":"Z2d_sighing_wall_arena", "fromDir": "east", "toDir": "west"  },
-    { "from": "Z2d_sighing_wall_arena","to": "Z2d_boss_cleared",        "fromDir": "east",  "toDir": "west"  },
-    { "from": "Z2d_boss_cleared",      "to": "Z2d_act2_exit",           "fromDir": "east",  "toDir": "west"  }
+
+    {"comment": "--- Z1a 坠机点 内部连接 (双向) ---"},
+
+    { "from": "Z1a_crash_site",     "to": "Z1a_wreckage_east",    "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z1a_wreckage_east",  "to": "Z1a_crash_site",       "fromDir": "west",  "toDir": "east"  },
+    { "from": "Z1a_crash_site",     "to": "Z1a_south_descent",    "fromDir": "south", "toDir": "north" },
+    { "from": "Z1a_south_descent",  "to": "Z1a_crash_site",       "fromDir": "north", "toDir": "south" },
+
+    {"comment": "--- Z1a → Z1b 东向主路 (双向) ---"},
+
+    { "from": "Z1a_wreckage_east",       "to": "Z1b_ice_sculpture_plaza", "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z1b_ice_sculpture_plaza", "to": "Z1a_wreckage_east",       "fromDir": "west",  "toDir": "east"  },
+
+    {"comment": "--- Z1b 冰雕广场 内部连接 (双向) ---"},
+
+    { "from": "Z1b_ice_sculpture_plaza", "to": "Z1b_lyra_warmth",     "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z1b_lyra_warmth",         "to": "Z1b_ice_sculpture_plaza", "fromDir": "west",  "toDir": "east"  },
+    { "from": "Z1b_ice_sculpture_plaza", "to": "Z1b_hidden_crypt",    "fromDir": "south", "toDir": "north" },
+    { "from": "Z1b_hidden_crypt",        "to": "Z1b_ice_sculpture_plaza", "fromDir": "north", "toDir": "south" },
+    { "from": "Z1b_lyra_warmth",         "to": "Z1b_optional_alcove", "fromDir": "south", "toDir": "north" },
+    { "from": "Z1b_optional_alcove",     "to": "Z1b_lyra_warmth",     "fromDir": "north", "toDir": "south" },
+
+    {"comment": "--- Z1b → Z1c 东向 (双向) ---"},
+
+    { "from": "Z1b_lyra_warmth",    "to": "Z1c_awakening_arena", "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z1c_awakening_arena","to": "Z1b_lyra_warmth",     "fromDir": "west",  "toDir": "east"  },
+
+    {"comment": "--- Z1c 觉醒战场 内部连接 (双向) ---"},
+
+    { "from": "Z1c_awakening_arena", "to": "Z1c_side_passage",    "fromDir": "south", "toDir": "north" },
+    { "from": "Z1c_side_passage",    "to": "Z1c_awakening_arena", "fromDir": "north", "toDir": "south" },
+    { "from": "Z1c_awakening_arena", "to": "Z1c_overlook",        "fromDir": "north", "toDir": "south" },
+    { "from": "Z1c_overlook",        "to": "Z1c_awakening_arena", "fromDir": "south", "toDir": "north" },
+
+    {"comment": "--- 环路1: Z1c侧路 → Z1b隐藏地穴 (双向，形成第一个环路) ---"},
+
+    { "from": "Z1c_side_passage",  "to": "Z1b_hidden_crypt",  "fromDir": "west",  "toDir": "east"  },
+    { "from": "Z1b_hidden_crypt",  "to": "Z1c_side_passage",  "fromDir": "east",  "toDir": "west"  },
+
+    {"comment": "--- Z1c → Z1d 东向 (双向) ---"},
+
+    { "from": "Z1c_awakening_arena", "to": "Z1d_tuningfork_mid",  "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z1d_tuningfork_mid",  "to": "Z1c_awakening_arena", "fromDir": "west",  "toDir": "east"  },
+
+    {"comment": "--- Z1d 音叉林 内部连接 (双向) ---"},
+
+    { "from": "Z1d_tuningfork_mid",   "to": "Z1d_tuningfork_upper", "fromDir": "north", "toDir": "south" },
+    { "from": "Z1d_tuningfork_upper", "to": "Z1d_tuningfork_mid",   "fromDir": "south", "toDir": "north" },
+    { "from": "Z1d_tuningfork_mid",   "to": "Z1d_garden_safe",      "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z1d_garden_safe",      "to": "Z1d_tuningfork_mid",   "fromDir": "west",  "toDir": "east"  },
+    { "from": "Z1d_garden_safe",      "to": "Z1d_shortcut_ledge",   "fromDir": "south", "toDir": "north" },
+    { "from": "Z1d_shortcut_ledge",   "to": "Z1d_garden_safe",      "fromDir": "north", "toDir": "south" },
+
+    {"comment": "--- 捷径1: Z1d悬崖 → Z1b可选角落 (单向跌落，只有A→B) ---"},
+
+    { "from": "Z1d_shortcut_ledge", "to": "Z1b_optional_alcove", "fromDir": "west", "toDir": "east" },
+
+    {"comment": "--- Z1a南向路径 → Z1e (双向，第二条路径) ---"},
+
+    { "from": "Z1a_south_descent", "to": "Z1e_aftermath",   "fromDir": "south", "toDir": "north" },
+    { "from": "Z1e_aftermath",     "to": "Z1a_south_descent","fromDir": "north", "toDir": "south" },
+
+    {"comment": "--- Z1e 战后余波 内部连接 (双向) ---"},
+
+    { "from": "Z1e_aftermath",    "to": "Z1e_moral_room",         "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z1e_moral_room",   "to": "Z1e_aftermath",          "fromDir": "west",  "toDir": "east"  },
+    { "from": "Z1e_aftermath",    "to": "Z1e_optional_sideroom",  "fromDir": "south", "toDir": "north" },
+    { "from": "Z1e_optional_sideroom", "to": "Z1e_aftermath",     "fromDir": "north", "toDir": "south" },
+
+    {"comment": "--- Z1e → Z1f (双向，路径汇聚点) ---"},
+
+    { "from": "Z1e_moral_room",  "to": "Z1f_descent_corridor", "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z1f_descent_corridor", "to": "Z1e_moral_room",  "fromDir": "west",  "toDir": "east"  },
+
+    {"comment": "--- Z1f 下行通道 内部连接 (双向) ---"},
+
+    { "from": "Z1f_descent_corridor", "to": "Z1f_prism_arena",    "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z1f_prism_arena",      "to": "Z1f_descent_corridor","fromDir": "west",  "toDir": "east"  },
+    { "from": "Z1f_prism_arena",      "to": "Z1f_lyra_sighting",  "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z1f_lyra_sighting",    "to": "Z1f_prism_arena",    "fromDir": "west",  "toDir": "east"  },
+    { "from": "Z1f_lyra_sighting",    "to": "Z1f_act1_exit",      "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z1f_act1_exit",        "to": "Z1f_lyra_sighting",  "fromDir": "west",  "toDir": "east"  },
+
+    {"comment": "--- 环路2: Z1d花园 → Z1e道德房间 南向汇聚 (双向) ---"},
+
+    { "from": "Z1d_garden_safe",  "to": "Z1f_descent_corridor", "fromDir": "south", "toDir": "north" },
+    { "from": "Z1f_descent_corridor", "to": "Z1d_garden_safe",  "fromDir": "north", "toDir": "south" },
+
+    {"comment": "--- ACT1出口 → ACT2入口 (双向) ---"},
+
+    { "from": "Z1f_act1_exit",    "to": "Z2a_organ_corridor",   "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z2a_organ_corridor","to": "Z1f_act1_exit",       "fromDir": "west",  "toDir": "east"  },
+
+    {"comment": "--- Z2a 管风琴走廊 内部连接 (双向) ---"},
+
+    { "from": "Z2a_organ_corridor",  "to": "Z2a_upper_platform", "fromDir": "north", "toDir": "south" },
+    { "from": "Z2a_upper_platform",  "to": "Z2a_organ_corridor", "fromDir": "south", "toDir": "north" },
+    { "from": "Z2a_upper_platform",  "to": "Z2a_upper_secret",   "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z2a_upper_secret",    "to": "Z2a_upper_platform", "fromDir": "west",  "toDir": "east"  },
+    { "from": "Z2a_organ_corridor",  "to": "Z2a_lyra_aid",       "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z2a_lyra_aid",        "to": "Z2a_organ_corridor", "fromDir": "west",  "toDir": "east"  },
+
+    {"comment": "--- Z2a → Z2b 向南下行 (双向) ---"},
+
+    { "from": "Z2a_lyra_aid",      "to": "Z2b_sound_corridor",   "fromDir": "south", "toDir": "north" },
+    { "from": "Z2b_sound_corridor","to": "Z2a_lyra_aid",          "fromDir": "north", "toDir": "south" },
+
+    {"comment": "--- Z2b 涟漪获取 内部连接 (双向) ---"},
+
+    { "from": "Z2b_sound_corridor", "to": "Z2b_ripple_reward",   "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z2b_ripple_reward",  "to": "Z2b_sound_corridor",  "fromDir": "west",  "toDir": "east"  },
+    { "from": "Z2b_ripple_reward",  "to": "Z2b_lyra_face",       "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z2b_lyra_face",      "to": "Z2b_ripple_reward",   "fromDir": "west",  "toDir": "east"  },
+    { "from": "Z2b_lyra_face",      "to": "Z2b_hidden_drop",     "fromDir": "south", "toDir": "north" },
+    { "from": "Z2b_hidden_drop",    "to": "Z2b_lyra_face",       "fromDir": "north", "toDir": "south" },
+
+    {"comment": "--- 捷径2: Z2b隐藏跌落 → Z2c深谷入口 (单向跌落) ---"},
+
+    { "from": "Z2b_hidden_drop", "to": "Z2c_abyss_entrance", "fromDir": "west", "toDir": "east" },
+
+    {"comment": "--- Z2b声之走廊 → Z2c深谷入口 正常路径 (双向) ---"},
+
+    { "from": "Z2b_sound_corridor",  "to": "Z2c_abyss_entrance",  "fromDir": "south", "toDir": "north" },
+    { "from": "Z2c_abyss_entrance",  "to": "Z2b_sound_corridor",  "fromDir": "north", "toDir": "south" },
+
+    {"comment": "--- Z2c 叹息深谷 内部连接 (双向) ---"},
+
+    { "from": "Z2c_abyss_entrance",  "to": "Z2c_combat_verify",    "fromDir": "south", "toDir": "north" },
+    { "from": "Z2c_combat_verify",   "to": "Z2c_abyss_entrance",   "fromDir": "north", "toDir": "south" },
+    { "from": "Z2c_combat_verify",   "to": "Z2c_echo_path",        "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z2c_echo_path",       "to": "Z2c_combat_verify",    "fromDir": "west",  "toDir": "east"  },
+    { "from": "Z2c_abyss_entrance",  "to": "Z2c_worldclock_omen",  "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z2c_worldclock_omen", "to": "Z2c_abyss_entrance",   "fromDir": "west",  "toDir": "east"  },
+
+    {"comment": "--- 环路3: Z2c回音路 → Z2c世界时钟 (双向，形成第三个环路) ---"},
+
+    { "from": "Z2c_echo_path",       "to": "Z2c_worldclock_omen",  "fromDir": "north", "toDir": "south" },
+    { "from": "Z2c_worldclock_omen", "to": "Z2c_echo_path",        "fromDir": "south", "toDir": "north" },
+
+    {"comment": "--- Z2c双路汇聚 → Z2c频率标记 (双向) ---"},
+
+    { "from": "Z2c_worldclock_omen", "to": "Z2c_frequency_mark",   "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z2c_frequency_mark",  "to": "Z2c_worldclock_omen",  "fromDir": "west",  "toDir": "east"  },
+    { "from": "Z2c_echo_path",       "to": "Z2c_frequency_mark",   "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z2c_frequency_mark",  "to": "Z2c_echo_path",        "fromDir": "west",  "toDir": "east"  },
+
+    {"comment": "--- Z2c频率标记 → Z2d前室 (双向) ---"},
+
+    { "from": "Z2c_frequency_mark",  "to": "Z2d_approach",         "fromDir": "south", "toDir": "north" },
+    { "from": "Z2d_approach",        "to": "Z2c_frequency_mark",   "fromDir": "north", "toDir": "south" },
+
+    {"comment": "--- Z2d Boss区域 内部连接 (双向) ---"},
+
+    { "from": "Z2d_approach",     "to": "Z2d_boss_arena",   "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z2d_boss_arena",   "to": "Z2d_approach",     "fromDir": "west",  "toDir": "east"  },
+    { "from": "Z2d_boss_arena",   "to": "Z2d_boss_reward",  "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z2d_boss_reward",  "to": "Z2d_boss_arena",   "fromDir": "west",  "toDir": "east"  },
+    { "from": "Z2d_boss_reward",  "to": "Z2d_act2_exit",    "fromDir": "east",  "toDir": "west"  },
+    { "from": "Z2d_act2_exit",    "to": "Z2d_boss_reward",  "fromDir": "west",  "toDir": "east"  }
+  ],
+
+  "doorLinks": [
+    { "roomId": "Z1f_act1_exit",   "entryDir": "east",  "doorIndex": 0 },
+    { "roomId": "Z2a_organ_corridor","entryDir": "west", "doorIndex": -1 },
+    { "roomId": "Z2c_echo_path",   "entryDir": "east",  "doorIndex": 1 },
+    { "roomId": "Z2d_approach",    "entryDir": "east",  "doorIndex": 2 },
+    { "roomId": "Z2d_act2_exit",   "entryDir": "east",  "doorIndex": 0 }
   ]
 }

@@ -88,9 +88,7 @@
             background-size: 20px 20px;
         }
         
-        #grid-canvas {
-            display: none;
-        }
+
         
         .right-panel {
             width: 220px;
@@ -369,10 +367,6 @@
             cursor: grabbing !important;
         }
         
-        .canvas-area.space-ready {
-            cursor: grab;
-        }
-        
         .connection-line {
             stroke: #e94560;
             stroke-width: 2;
@@ -390,6 +384,38 @@
             stroke-width: 2;
             stroke-dasharray: 8, 4;
             fill: none;
+            pointer-events: none;
+        }
+
+        .door-link-line {
+            stroke: #ff9800;
+            stroke-width: 2;
+            stroke-dasharray: 6, 4;
+            fill: none;
+            pointer-events: none;
+        }
+
+        .door-link-line.selected {
+            stroke: #4fc3f7;
+            stroke-width: 3;
+        }
+
+        .door-link-hitarea {
+            stroke: transparent;
+            stroke-width: 14;
+            fill: none;
+            pointer-events: stroke;
+            cursor: pointer;
+        }
+
+        .door-link-dot {
+            pointer-events: none;
+        }
+
+        .room-element.door-link-highlight {
+            box-shadow: 0 0 10px 3px rgba(255, 152, 0, 0.8);
+            transform: scale(1.2);
+            z-index: 10;
         }
         
         .room-element {
@@ -413,6 +439,13 @@
         
         .room-element:active {
             cursor: grabbing;
+        }
+
+        .room-element.element-selected {
+            outline: 2px solid #2196F3;
+            box-shadow: 0 0 8px rgba(33,150,243,0.6);
+            transform: scale(1.15);
+            z-index: 10;
         }
         
         .element-spawn { background: #4caf50; }
@@ -601,7 +634,7 @@
         </div>
         
         <div class="canvas-area" id="canvas-area">
-            <canvas id="grid-canvas"></canvas>
+
             <svg id="connections-svg"></svg>
             <div id="world"></div>
             
@@ -804,6 +837,7 @@
         
         let rooms = [];
         let connections = [];
+        let doorLinks = [];
         let selectedRoom = null;
         let currentMode = 'select';
         let roomIdCounter = 1;
@@ -846,48 +880,14 @@
         const MIN_ROOM_SIZE = 40;
         
         const canvasArea = document.getElementById('canvas-area');
-        const gridCanvas = document.getElementById('grid-canvas');
-        const ctx = gridCanvas.getContext('2d');
         const svg = document.getElementById('connections-svg');
         const world = document.getElementById('world');
-        
-        function resizeCanvas() {
-            gridCanvas.width = canvasArea.clientWidth;
-            gridCanvas.height = canvasArea.clientHeight;
-            drawGrid();
-        }
-        
-        function drawGrid() {
-            ctx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
-            ctx.strokeStyle = '#1a2a4a';
-            ctx.lineWidth = 1;
-            
-            const offsetX = ((panX % GRID_SIZE) + GRID_SIZE) % GRID_SIZE;
-            const offsetY = ((panY % GRID_SIZE) + GRID_SIZE) % GRID_SIZE;
-            
-            for (let x = offsetX - GRID_SIZE; x < gridCanvas.width + GRID_SIZE; x += GRID_SIZE) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, gridCanvas.height);
-                ctx.stroke();
-            }
-            
-            for (let y = offsetY - GRID_SIZE; y < gridCanvas.height + GRID_SIZE; y += GRID_SIZE) {
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(gridCanvas.width, y);
-                ctx.stroke();
-            }
-        }
         
         function applyPan() {
             world.style.transform = `translate(${panX}px, ${panY}px)`;
             svg.style.transform = `translate(${panX}px, ${panY}px)`;
-            drawGrid();
+            canvasArea.style.backgroundPosition = `${panX}px ${panY}px`;
         }
-        
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
         
         document.querySelectorAll('.preset-item[draggable="true"]').forEach(item => {
             item.addEventListener('dragstart', (e) => {
@@ -1088,11 +1088,13 @@
         }
         
         function getConnectionPointPosition(room, dir) {
+            // Border width of .room elements (content-box model, border extends outward)
+            const border = 2;
             const positions = {
-                north: { x: room.x + room.width / 2, y: room.y },
-                south: { x: room.x + room.width / 2, y: room.y + room.height },
-                east: { x: room.x + room.width, y: room.y + room.height / 2 },
-                west: { x: room.x, y: room.y + room.height / 2 }
+                north: { x: room.x + room.width / 2, y: room.y - border },
+                south: { x: room.x + room.width / 2, y: room.y + room.height + border },
+                east:  { x: room.x + room.width + border, y: room.y + room.height / 2 },
+                west:  { x: room.x - border, y: room.y + room.height / 2 }
             };
             return positions[dir] || { x: room.x, y: room.y };
         }
@@ -1126,6 +1128,20 @@
             
             if (isConnecting) {
                 updateTempLine();
+                // Highlight door elements when hovering during connection drag
+                // Use elementsFromPoint to penetrate through SVG overlay and find door elements
+                const hoveredElements = document.elementsFromPoint(e.clientX, e.clientY);
+                const hoveredDoor = hoveredElements.find(el => el.classList && el.classList.contains('room-element') && el.classList.contains('element-door'));
+                // Remove previous highlight
+                const prevHighlight = document.querySelector('.door-link-highlight');
+                if (prevHighlight) prevHighlight.classList.remove('door-link-highlight');
+                // Add highlight if hovering over a door element in a different room
+                if (hoveredDoor) {
+                    const parentRoom = hoveredDoor.closest('.room');
+                    if (parentRoom && parentRoom.id !== connectFromRoom.id) {
+                        hoveredDoor.classList.add('door-link-highlight');
+                    }
+                }
             }
             
             if (isDraggingRoom && selectedRoom) {
@@ -1138,6 +1154,7 @@
                 div.style.left = selectedRoom.x + 'px';
                 div.style.top = selectedRoom.y + 'px';
                 renderConnections();
+                renderDoorLinks();
                 updateAsciiPreview();
             }
             
@@ -1182,6 +1199,7 @@
                 const now = Date.now();
                 if (now - lastResizeUpdate > RESIZE_UPDATE_INTERVAL) {
                     renderConnections();
+                    renderDoorLinks();
                     updateAsciiPreview();
                     lastResizeUpdate = now;
                 }
@@ -1201,6 +1219,8 @@
                     elDiv.style.left = (el.x / dragElementRoom.width * 100) + '%';
                     elDiv.style.top = (el.y / dragElementRoom.height * 100) + '%';
                 }
+                // Update doorLink dashed lines when a door element is moved
+                renderDoorLinks();
             }
         });
         
@@ -1212,24 +1232,82 @@
             }
             
             if (isConnecting) {
-                const target = document.elementFromPoint(e.clientX, e.clientY);
-                const roomDiv = target?.closest('.room');
+                // Remove any door highlight left from mousemove
+                const prevHighlight = document.querySelector('.door-link-highlight');
+                if (prevHighlight) prevHighlight.classList.remove('door-link-highlight');
                 
-                if (roomDiv) {
-                    const targetRoom = rooms.find(r => r.id === roomDiv.id);
-                    if (targetRoom && targetRoom.id !== connectFromRoom.id) {
-                        // Prevent duplicate same-direction connection
-                        const alreadyExists = connections.some(c => c.from === connectFromRoom.id && c.to === targetRoom.id);
-                        if (!alreadyExists) {
-                            connections.push({
-                                from: connectFromRoom.id,
-                                to: targetRoom.id,
-                                fromDir: connectFromDir,
-                                toDir: getOppositeDirection(connectFromDir)
-                            });
-                            renderConnections();
-                            updateConnectionsList();
-                            updateAsciiPreview();
+                // Use elementsFromPoint to penetrate through SVG overlay and find door elements
+                const allTargets = document.elementsFromPoint(e.clientX, e.clientY);
+                const doorTarget = allTargets.find(el => el.classList && el.classList.contains('room-element') && el.classList.contains('element-door'));
+                const target = allTargets.find(el => el.classList && (el.classList.contains('room') || el.classList.contains('room-element'))) || allTargets[0];
+                
+                // Priority 1: Check if dropped on an existing door element → create doorLink only (no connection)
+                if (doorTarget) {
+                    const parentRoomDiv = doorTarget.closest('.room');
+                    if (parentRoomDiv) {
+                        const targetRoom = rooms.find(r => r.id === parentRoomDiv.id);
+                        if (targetRoom && targetRoom.id !== connectFromRoom.id) {
+                            const doorIndex = parseInt(doorTarget.dataset.index);
+                            // Determine entry direction on the target room based on mouse drop position
+                            const entryDir = getNearestConnectionDir(targetRoom, mouseX, mouseY);
+                            // Prevent duplicate doorLink for the same room entry→door
+                            const alreadyLinked = doorLinks.some(dl =>
+                                dl.roomId === targetRoom.id &&
+                                dl.entryDir === entryDir &&
+                                dl.doorIndex === doorIndex
+                            );
+                            if (!alreadyLinked) {
+                                doorLinks.push({
+                                    roomId: targetRoom.id,
+                                    entryDir: entryDir,
+                                    doorIndex: doorIndex
+                                });
+                                renderDoorLinks();
+                                updateAsciiPreview();
+                            }
+                        }
+                    }
+                } else {
+                    // Priority 2: Normal connection creation (drop on a room)
+                    const roomDiv = target?.closest('.room');
+                    
+                    if (roomDiv) {
+                        const targetRoom = rooms.find(r => r.id === roomDiv.id);
+                        if (targetRoom && targetRoom.id !== connectFromRoom.id) {
+                            // Prevent duplicate same-direction connection
+                            const alreadyExists = connections.some(c => c.from === connectFromRoom.id && c.to === targetRoom.id);
+                            if (!alreadyExists) {
+                                const toDir = getNearestConnectionDir(targetRoom, mouseX, mouseY);
+                                connections.push({
+                                    from: connectFromRoom.id,
+                                    to: targetRoom.id,
+                                    fromDir: connectFromDir,
+                                    toDir: toDir
+                                });
+                                
+                                // Auto-generate door element in target room near the entry direction
+                                const doorPos = calculateDoorPosition(targetRoom, toDir);
+                                const doorIndex = targetRoom.elements.length;
+                                targetRoom.elements.push({
+                                    type: 'door',
+                                    x: doorPos.x,
+                                    y: doorPos.y
+                                });
+                                
+                                // Auto-create doorLink: entry from toDir on target room → new door element
+                                doorLinks.push({
+                                    roomId: targetRoom.id,
+                                    entryDir: toDir,
+                                    doorIndex: doorIndex
+                                });
+                                
+                                renderRoom(targetRoom);
+                                document.getElementById(targetRoom.id).classList.remove('selected');
+                                renderConnections();
+                                renderDoorLinks();
+                                updateConnectionsList();
+                                updateAsciiPreview();
+                            }
                         }
                     }
                 }
@@ -1248,9 +1326,23 @@
             if (isResizing && selectedRoom) {
                 document.getElementById(selectedRoom.id).classList.remove('resizing');
                 renderConnections();
+                renderDoorLinks();
                 updateAsciiPreview();
             }
             
+            // Check if element was clicked (not dragged) — select it
+            if (isDraggingElement && dragElementRoom && dragElementIndex >= 0) {
+                const dx = e.clientX - dragElementStartX;
+                const dy = e.clientY - dragElementStartY;
+                const dist = Math.hypot(dx, dy);
+                if (dist < 5) {
+                    // Treat as click, not drag — select the element
+                    selectElement(dragElementRoom.id, dragElementIndex);
+                }
+                // Update doorLinks after element drag (door position may have changed)
+                renderDoorLinks();
+            }
+
             isDraggingRoom = false;
             isResizing = false;
             resizeHandle = null;
@@ -1259,16 +1351,46 @@
             dragElementIndex = -1;
         });
         
-        function getOppositeDirection(dir) {
-            const opposites = { north: 'south', south: 'north', east: 'west', west: 'east' };
-            return opposites[dir] || dir;
+        // Calculate door position inside a room based on entry direction (12% inset from entry edge)
+        function calculateDoorPosition(room, entryDir) {
+            const inset = 0.12;
+            const positions = {
+                west:  { x: room.width * inset,       y: room.height * 0.5 },
+                east:  { x: room.width * (1 - inset), y: room.height * 0.5 },
+                north: { x: room.width * 0.5,         y: room.height * inset },
+                south: { x: room.width * 0.5,         y: room.height * (1 - inset) }
+            };
+            return positions[entryDir] || { x: room.width * 0.5, y: room.height * 0.5 };
+        }
+        
+        // Given a mouse position (world-space) and a target room, return the nearest connection direction
+        function getNearestConnectionDir(room, worldX, worldY) {
+            const points = {
+                north: { x: room.x + room.width / 2, y: room.y },
+                south: { x: room.x + room.width / 2, y: room.y + room.height },
+                east:  { x: room.x + room.width,     y: room.y + room.height / 2 },
+                west:  { x: room.x,                   y: room.y + room.height / 2 }
+            };
+            let nearest = 'north';
+            let minDist = Infinity;
+            for (const [dir, pt] of Object.entries(points)) {
+                const d = Math.hypot(pt.x - worldX, pt.y - worldY);
+                if (d < minDist) {
+                    minDist = d;
+                    nearest = dir;
+                }
+            }
+            return nearest;
         }
         
         let selectedConnectionIndex = -1;
+        let selectedDoorLinkIndex = -1;
+        let selectedElementRoomId = null;
+        let selectedElementIndex = -1;
 
         function renderConnections() {
             // Remove existing connection elements
-            svg.querySelectorAll('.connection-line, .connection-line-hitarea, .connection-arrow').forEach(l => l.remove());
+svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => l.remove());
             
             // Ensure SVG defs with arrow markers exist
             let defs = svg.querySelector('defs');
@@ -1302,11 +1424,8 @@
                 const dy = toPos.y - fromPos.y;
                 const len = Math.sqrt(dx * dx + dy * dy);
                 
-                // Shorten the line by arrow length so the arrow body doesn't overshoot
-                // The arrow tip is at the line endpoint (refX=markerWidth), arrow body extends 10px before it
-                const arrowLen = 10;
-                const endX = len > arrowLen ? toPos.x - (dx / len) * arrowLen : toPos.x;
-                const endY = len > arrowLen ? toPos.y - (dy / len) * arrowLen : toPos.y;
+                // Arrow tip is placed at line endpoint via refX=markerWidth in the marker definition.
+                // No need to shorten the line — the arrow body extends backward from the tip naturally.
                 
                 // If bidirectional, offset the two lines perpendicular so they don't overlap
                 let offsetX = 0, offsetY = 0;
@@ -1336,8 +1455,8 @@
                 const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                 line.setAttribute('x1', fromPos.x + offsetX);
                 line.setAttribute('y1', fromPos.y + offsetY);
-                line.setAttribute('x2', endX + offsetX);
-                line.setAttribute('y2', endY + offsetY);
+                line.setAttribute('x2', toPos.x + offsetX);
+                line.setAttribute('y2', toPos.y + offsetY);
                 line.setAttribute('class', 'connection-line' + (isSelected ? ' selected' : ''));
                 line.setAttribute('marker-end', `url(#arrow-${isSelected ? 'blue' : 'red'})`);
                 line.setAttribute('data-conn-index', idx);
@@ -1352,8 +1471,15 @@
                 selectedRoom = null;
                 document.getElementById('room-properties').style.display = 'none';
             }
+            // Deselect doorLink if any
+            if (selectedDoorLinkIndex >= 0) {
+                selectedDoorLinkIndex = -1;
+            }
+            // Deselect element if any
+            clearElementSelection();
             selectedConnectionIndex = idx;
             renderConnections();
+            renderDoorLinks();
             showConnectionProperties(idx);
         }
         
@@ -1370,8 +1496,8 @@
             const toRoom = rooms.find(r => r.id === conn.to);
             const hasReverse = connections.some(c => c.from === conn.to && c.to === conn.from);
             const dirLabel = hasReverse ? '双向' : '单向';
-            const fromName = fromRoom ? fromRoom.name : conn.from;
-            const toName = toRoom ? toRoom.name : conn.to;
+            const fromName = fromRoom ? `${fromRoom.name} (${conn.from})` : conn.from;
+            const toName = toRoom ? `${toRoom.name} (${conn.to})` : conn.to;
             
             const panel = document.getElementById('properties-panel');
             panel.style.display = 'block';
@@ -1401,9 +1527,12 @@
         
         function deleteSelectedConnection() {
             if (selectedConnectionIndex < 0 || selectedConnectionIndex >= connections.length) return;
+            const conn = connections[selectedConnectionIndex];
+            cleanupDoorLinksForConnection(conn);
             connections.splice(selectedConnectionIndex, 1);
             deselectConnection();
             renderConnections();
+            renderDoorLinks();
             updateConnectionsList();
             updateAsciiPreview();
         }
@@ -1411,21 +1540,265 @@
         function deleteConnectionPair(idx) {
             const conn = connections[idx];
             if (!conn) return;
+            // Cleanup doorLinks for both directions before removing connections
+            const pairConns = connections.filter(c =>
+                (c.from === conn.from && c.to === conn.to) || (c.from === conn.to && c.to === conn.from)
+            );
+            pairConns.forEach(c => cleanupDoorLinksForConnection(c));
             connections = connections.filter(c =>
                 !((c.from === conn.from && c.to === conn.to) || (c.from === conn.to && c.to === conn.from))
             );
             deselectConnection();
             renderConnections();
+            renderDoorLinks();
             updateConnectionsList();
             updateAsciiPreview();
         }
         
+        // ===== DoorLink System =====
+        
+        function renderDoorLinks() {
+            // Remove existing doorLink elements
+            svg.querySelectorAll('.door-link-line, .door-link-hitarea, .door-link-dot').forEach(el => el.remove());
+            
+            doorLinks.forEach((dl, idx) => {
+                const room = rooms.find(r => r.id === dl.roomId);
+                if (!room) return;
+                
+                const doorEl = room.elements[dl.doorIndex];
+                if (!doorEl) return;
+                
+                // From: connection point on THIS room's entry edge
+                const fromPos = getConnectionPointPosition(room, dl.entryDir);
+                // To: door element absolute position inside this room
+                const toX = room.x + doorEl.x;
+                const toY = room.y + doorEl.y;
+                
+                const isSelected = selectedDoorLinkIndex === idx;
+                
+                // Invisible hit area for click selection
+                const hitLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                hitLine.setAttribute('x1', fromPos.x);
+                hitLine.setAttribute('y1', fromPos.y);
+                hitLine.setAttribute('x2', toX);
+                hitLine.setAttribute('y2', toY);
+                hitLine.setAttribute('class', 'door-link-hitarea');
+                hitLine.setAttribute('data-doorlink-index', idx);
+                hitLine.addEventListener('mousedown', (e) => {
+                    if (isPanMode) return;
+                    e.stopPropagation();
+                    selectDoorLink(idx);
+                });
+                svg.appendChild(hitLine);
+                
+                // Visible dashed line
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', fromPos.x);
+                line.setAttribute('y1', fromPos.y);
+                line.setAttribute('x2', toX);
+                line.setAttribute('y2', toY);
+                line.setAttribute('class', 'door-link-line' + (isSelected ? ' selected' : ''));
+                line.setAttribute('data-doorlink-index', idx);
+                svg.appendChild(line);
+                
+                // Small circle dot at the door end
+                const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                dot.setAttribute('cx', toX);
+                dot.setAttribute('cy', toY);
+                dot.setAttribute('r', 4);
+                dot.setAttribute('fill', isSelected ? '#4fc3f7' : '#ff9800');
+                dot.setAttribute('class', 'door-link-dot');
+                svg.appendChild(dot);
+            });
+        }
+        
+        function selectDoorLink(idx) {
+            // Deselect room if any
+            if (selectedRoom) {
+                document.querySelectorAll('.room.selected').forEach(r => r.classList.remove('selected'));
+                selectedRoom = null;
+                document.getElementById('room-properties').style.display = 'none';
+            }
+            // Deselect connection if any
+            if (selectedConnectionIndex >= 0) {
+                selectedConnectionIndex = -1;
+            }
+            // Deselect element if any
+            clearElementSelection();
+            selectedDoorLinkIndex = idx;
+            renderConnections();
+            renderDoorLinks();
+            showDoorLinkProperties(idx);
+        }
+        
+        function deselectDoorLink() {
+            selectedDoorLinkIndex = -1;
+            hideConnectionProperties();
+        }
+        
+        function showDoorLinkProperties(idx) {
+            const dl = doorLinks[idx];
+            if (!dl) return;
+            
+            const room = rooms.find(r => r.id === dl.roomId);
+            const roomName = room ? room.name : dl.roomId;
+            
+            const panel = document.getElementById('properties-panel');
+            panel.style.display = 'block';
+            document.getElementById('room-properties').style.display = 'none';
+            
+            panel.innerHTML = `
+                <div class="help-text" style="text-align: left; margin-top: 10px; padding: 8px;">
+                    <div style="font-weight: bold; color: #ff9800; margin-bottom: 8px;">🚪 门关联属性</div>
+                    <div style="margin-bottom: 6px;"><b>所在房间:</b> ${roomName}</div>
+                    <div style="margin-bottom: 6px;"><b>入口方向:</b> ${dl.entryDir}</div>
+                    <div style="margin-bottom: 6px;"><b>门元素序号:</b> #${dl.doorIndex}</div>
+                    <div style="margin-bottom: 6px; color: #888; font-size: 11px;">含义：从 ${dl.entryDir} 方向进入此房间 → 出生在门#${dl.doorIndex}位置</div>
+                    <button style="margin-top: 10px; width: 100%; padding: 6px; background: #e94560; border: none; color: white; border-radius: 4px; cursor: pointer;" onclick="deleteSelectedDoorLink()">🗑 删除此门关联</button>
+                </div>
+            `;
+        }
+        
+        function deleteSelectedDoorLink() {
+            if (selectedDoorLinkIndex < 0 || selectedDoorLinkIndex >= doorLinks.length) return;
+            doorLinks.splice(selectedDoorLinkIndex, 1);
+            deselectDoorLink();
+            renderDoorLinks();
+            updateAsciiPreview();
+        }
+        
+        function cleanupDoorLinksForConnection(conn) {
+            // Remove doorLinks in the target room that match the entry direction of this connection
+            const entryDir = conn.toDir;
+            doorLinks = doorLinks.filter(dl =>
+                !(dl.roomId === conn.to && dl.entryDir === entryDir)
+            );
+        }
+        
+        function clearElementSelection() {
+            if (selectedElementRoomId !== null && selectedElementIndex >= 0) {
+                const roomDiv = document.getElementById(selectedElementRoomId);
+                if (roomDiv) {
+                    const elDivs = roomDiv.querySelectorAll('.room-element');
+                    if (elDivs[selectedElementIndex]) {
+                        elDivs[selectedElementIndex].classList.remove('element-selected');
+                    }
+                }
+            }
+            selectedElementRoomId = null;
+            selectedElementIndex = -1;
+        }
+
+        function selectElement(roomId, index) {
+            // Deselect room if any
+            if (selectedRoom) {
+                document.querySelectorAll('.room.selected').forEach(r => r.classList.remove('selected'));
+                selectedRoom = null;
+                document.getElementById('room-properties').style.display = 'none';
+            }
+            // Deselect connection if any
+            if (selectedConnectionIndex >= 0) {
+                selectedConnectionIndex = -1;
+                renderConnections();
+            }
+            // Deselect doorLink if any
+            if (selectedDoorLinkIndex >= 0) {
+                selectedDoorLinkIndex = -1;
+                renderDoorLinks();
+            }
+            // Clear previous element selection
+            clearElementSelection();
+
+            selectedElementRoomId = roomId;
+            selectedElementIndex = index;
+
+            const roomDiv = document.getElementById(roomId);
+            if (roomDiv) {
+                const elDivs = roomDiv.querySelectorAll('.room-element');
+                if (elDivs[index]) {
+                    elDivs[index].classList.add('element-selected');
+                }
+            }
+
+            showElementProperties(roomId, index);
+        }
+
+        function showElementProperties(roomId, elementIndex) {
+            const room = rooms.find(r => r.id === roomId);
+            if (!room || elementIndex < 0 || elementIndex >= room.elements.length) return;
+
+            const el = room.elements[elementIndex];
+            const icon = getElementIcon(el.type);
+            const posX = (el.x / GRID_SIZE).toFixed(1);
+            const posY = (el.y / GRID_SIZE).toFixed(1);
+
+            const panel = document.getElementById('properties-panel');
+            panel.style.display = 'block';
+            document.getElementById('room-properties').style.display = 'none';
+
+            panel.innerHTML = `
+                <div class="help-text" style="text-align: left; margin-top: 10px; padding: 8px;">
+                    <div style="font-weight: bold; color: #2196F3; margin-bottom: 8px;">${icon} 元素属性</div>
+                    <div style="margin-bottom: 6px;"><b>类型:</b> ${el.type}</div>
+                    <div style="margin-bottom: 6px;"><b>所属房间:</b> ${room.name} (${roomId})</div>
+                    <div style="margin-bottom: 6px;"><b>位置(网格):</b> x=${posX}, y=${posY}</div>
+                    <div style="margin-bottom: 6px;"><b>序号:</b> #${elementIndex}</div>
+                    <button style="margin-top: 10px; width: 100%; padding: 6px; background: #e94560; border: none; color: white; border-radius: 4px; cursor: pointer;" onclick="deleteSelectedElement()">🗑️ 删除元素</button>
+                </div>
+            `;
+        }
+
+        function deleteSelectedElement() {
+            if (selectedElementRoomId === null || selectedElementIndex < 0) return;
+
+            const room = rooms.find(r => r.id === selectedElementRoomId);
+            if (!room || selectedElementIndex >= room.elements.length) return;
+
+            const deletedElement = room.elements[selectedElementIndex];
+            const deletedIndex = selectedElementIndex;
+            const roomId = selectedElementRoomId;
+
+            // Remove element from room
+            room.elements.splice(deletedIndex, 1);
+
+            // If deleted element is a door, cleanup doorLinks
+            if (deletedElement.type === 'door') {
+                // Remove doorLinks referencing this door
+                doorLinks = doorLinks.filter(dl => !(dl.roomId === roomId && dl.doorIndex === deletedIndex));
+                // Fix doorIndex for remaining doorLinks in the same room with higher indices
+                doorLinks.forEach(dl => {
+                    if (dl.roomId === roomId && dl.doorIndex > deletedIndex) {
+                        dl.doorIndex--;
+                    }
+                });
+            }
+
+            // Clear selection
+            clearElementSelection();
+
+            // Re-render
+            renderRoom(room);
+            if (selectedRoom === room) {
+                document.getElementById(room.id).classList.add('selected');
+            }
+            renderDoorLinks();
+            hideConnectionProperties();
+            updateAsciiPreview();
+        }
+
         function selectRoom(room) {
             // Deselect connection if any
             if (selectedConnectionIndex >= 0) {
                 selectedConnectionIndex = -1;
                 renderConnections();
             }
+            // Deselect doorLink if any
+            if (selectedDoorLinkIndex >= 0) {
+                selectedDoorLinkIndex = -1;
+                renderDoorLinks();
+            }
+            // Deselect element if any
+            clearElementSelection();
             document.querySelectorAll('.room.selected').forEach(r => r.classList.remove('selected'));
             
             selectedRoom = room;
@@ -1455,6 +1828,9 @@
                     if (c.from === oldId) c.from = value;
                     if (c.to === oldId) c.to = value;
                 });
+                doorLinks.forEach(dl => {
+                    if (dl.roomId === oldId) dl.roomId = value;
+                });
                 document.getElementById(oldId).id = value;
             } else if (prop === 'name') {
                 selectedRoom.name = value;
@@ -1481,11 +1857,21 @@
             div.style.height = selectedRoom.height + 'px';
             
             renderConnections();
+            renderDoorLinks();
             updateAsciiPreview();
         }
         
         function deleteRoom(room) {
+            // Clear element selection if the selected element belongs to this room
+            if (selectedElementRoomId === room.id) {
+                clearElementSelection();
+            }
+            // Cleanup doorLinks created by connections involving this room
+            const relatedConns = connections.filter(c => c.from === room.id || c.to === room.id);
+            relatedConns.forEach(c => cleanupDoorLinksForConnection(c));
             connections = connections.filter(c => c.from !== room.id && c.to !== room.id);
+            // Also remove doorLinks whose room is this room
+            doorLinks = doorLinks.filter(dl => dl.roomId !== room.id);
             rooms = rooms.filter(r => r.id !== room.id);
             document.getElementById(room.id).remove();
             
@@ -1496,6 +1882,7 @@
             }
             
             renderConnections();
+            renderDoorLinks();
             updateAsciiPreview();
         }
         
@@ -1592,7 +1979,8 @@
                         position: [e.x / GRID_SIZE, e.y / GRID_SIZE]
                     }))
                 })),
-                connections: connections
+                connections: connections.map(c => ({from: c.from, to: c.to, fromDir: c.fromDir, toDir: c.toDir})),
+                doorLinks: doorLinks.map(d => ({roomId: d.roomId, entryDir: d.entryDir, doorIndex: d.doorIndex}))
             };
         }
         
@@ -1661,11 +2049,17 @@
             world.querySelectorAll('.room').forEach(r => r.remove());
             svg.innerHTML = '';
             selectedRoom = null;
+            selectedConnectionIndex = -1;
+            selectedDoorLinkIndex = -1;
+            selectedElementRoomId = null;
+            selectedElementIndex = -1;
             document.getElementById('properties-panel').style.display = 'block';
             document.getElementById('room-properties').style.display = 'none';
+            hideConnectionProperties();
             
             rooms = [];
             connections = [];
+            doorLinks = [];
             
             // Parse rooms
             if (data.rooms && Array.isArray(data.rooms)) {
@@ -1711,9 +2105,19 @@
                 }));
             }
             
+            // Parse doorLinks
+            if (data.doorLinks && Array.isArray(data.doorLinks)) {
+                doorLinks = data.doorLinks.map(dl => ({
+                    roomId: dl.roomId,
+                    entryDir: dl.entryDir,
+                    doorIndex: dl.doorIndex
+                }));
+            }
+            
             // Render everything
             rooms.forEach(r => renderRoom(r));
             renderConnections();
+            renderDoorLinks();
             updateAsciiPreview();
         }
         
@@ -1739,6 +2143,7 @@
             const data = {
                 rooms: rooms,
                 connections: connections,
+                doorLinks: doorLinks,
                 roomIdCounter: roomIdCounter
             };
             localStorage.setItem('levelDesign', JSON.stringify(data));
@@ -1752,12 +2157,24 @@
             const data = JSON.parse(saved);
             rooms = data.rooms || [];
             connections = data.connections || [];
+            doorLinks = data.doorLinks || [];
             roomIdCounter = data.roomIdCounter || 1;
             
+            selectedRoom = null;
+            selectedConnectionIndex = -1;
+            selectedDoorLinkIndex = -1;
+            selectedElementRoomId = null;
+            selectedElementIndex = -1;
+            
             world.querySelectorAll('.room').forEach(r => r.remove());
+            svg.innerHTML = '';
+            
+            document.getElementById('properties-panel').style.display = 'block';
+            document.getElementById('room-properties').style.display = 'none';
             
             rooms.forEach(r => renderRoom(r));
             renderConnections();
+            renderDoorLinks();
             updateAsciiPreview();
         }
         
@@ -1765,7 +2182,12 @@
             if (!confirm('确定要清空画布吗？')) return;
             rooms = [];
             connections = [];
+            doorLinks = [];
             selectedRoom = null;
+            selectedConnectionIndex = -1;
+            selectedDoorLinkIndex = -1;
+            selectedElementRoomId = null;
+            selectedElementIndex = -1;
             roomIdCounter = 1;
             
             world.querySelectorAll('.room').forEach(r => r.remove());
@@ -1865,16 +2287,25 @@
         }
         
         canvasArea.addEventListener('click', (e) => {
-            if (e.target === canvasArea || e.target === gridCanvas || e.target === svg || e.target === world) {
+            if (e.target === canvasArea || e.target === svg || e.target === world) {
+                // Deselect room
                 document.querySelectorAll('.room.selected').forEach(r => r.classList.remove('selected'));
                 selectedRoom = null;
-                document.getElementById('properties-panel').style.display = 'block';
                 document.getElementById('room-properties').style.display = 'none';
                 // Deselect connection if any
                 if (selectedConnectionIndex >= 0) {
-                    deselectConnection();
+                    selectedConnectionIndex = -1;
                     renderConnections();
                 }
+                // Deselect doorLink if any
+                if (selectedDoorLinkIndex >= 0) {
+                    selectedDoorLinkIndex = -1;
+                    renderDoorLinks();
+                }
+                // Deselect element if any
+                clearElementSelection();
+                // Reset properties panel to default hint
+                hideConnectionProperties();
             }
         });
         
@@ -1905,10 +2336,16 @@
                 e.preventDefault();
             }
             
-            // Delete/Backspace to delete selected connection or room
+            // Delete/Backspace to delete selected element, connection, doorLink, or room
             if (e.code === 'Delete' || e.code === 'Backspace') {
-                if (selectedConnectionIndex >= 0) {
+                if (selectedElementIndex >= 0) {
+                    deleteSelectedElement();
+                    e.preventDefault();
+                } else if (selectedConnectionIndex >= 0) {
                     deleteSelectedConnection();
+                    e.preventDefault();
+                } else if (selectedDoorLinkIndex >= 0) {
+                    deleteSelectedDoorLink();
                     e.preventDefault();
                 } else if (selectedRoom) {
                     deleteRoom(selectedRoom);

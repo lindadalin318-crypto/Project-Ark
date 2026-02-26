@@ -5001,3 +5001,314 @@ Markdown方法论文档，综合WorldBible.md（2145行）和ShebaPlanetBible.md
 ### 技术方案：
 - **根因**：`canvasArea` 的 click 事件中，判断"点击空白处"的条件仅检查了 `e.target === canvasArea || e.target === gridCanvas`，遗漏了 SVG 层（`connections-svg`）和世界容器（`world`）。由于 DOM 层叠结构为 `canvas-area > grid-canvas + connections-svg + world`，点击空白处时 `e.target` 可能命中 SVG 或 world 元素，导致取消选中逻辑未执行。
 - **修复**：将判断条件扩展为 `e.target === canvasArea || e.target === gridCanvas || e.target === svg || e.target === world`，覆盖所有非房间的空白区域元素。
+
+---
+
+## LevelDesigner Bug修复：连接线箭头未接触房间边缘 — 2026-02-26 11:30
+
+### 修改文件：
+- `Tools/LevelDesigner.html`
+
+### 内容简述：
+修复了连接线箭头尖端与房间视觉边缘之间存在明显间距、未精确接触的问题。
+
+### 目的：
+箭头尖端应精确接触房间的视觉边缘（border 外缘），而非停留在 content 边缘内侧。
+
+### 技术方案：
+两处根因，两处修复：
+
+1. **连接点坐标未计算 border 偏移**：
+   - `getConnectionPointPosition` 返回的坐标基于 `room.x/y/width/height`（content 区域边缘），但房间 DOM 使用 `content-box` 模型 + `border: 2px`，视觉边缘比 content 边缘外扩 2px。
+   - **修复**：为四个方向的连接点坐标各加上 `border = 2` 的偏移量（north: `y - 2`, south: `y + height + 2`, east: `x + width + 2`, west: `x - 2`）。
+
+2. **线段被错误缩短导致箭头远离终点**：
+   - 原代码将可见线段终点缩短了 `arrowLen = 10px`，而 SVG marker 的 `refX=10` 让箭头尖端锚定在缩短后的线段终点，导致箭头尖端实际位于 `toPos - 10px` 处。
+   - **修复**：移除线段缩短逻辑，直接以 `toPos`（房间边缘）为线段终点。marker `refX=markerWidth` 已保证箭头尖端对齐线段终点，箭头体自然向后延伸，无需手动缩短。
+
+---
+
+### LevelDesigner 自动生成门元素 + doorLink 功能实现 — 2026-02-26 12:11
+
+**修改文件：**
+- `Tools/LevelDesigner.html`
+
+**内容简述：**
+实现了连接线创建时自动在目标房间生成门元素（door）并建立 doorLink 关联的完整功能。
+
+**目的：**
+当两个房间通过连接点建立连接时，自动在目标房间的入口方向附近生成一个门元素，并通过橙色虚线（doorLink）将源房间连接点与目标房间门元素关联起来，实现连接→门的自动化工作流。
+
+**技术方案：**
+
+1. **数据结构**：
+   - 全局 `doorLinks` 数组，每个元素包含 `{ fromRoomId, fromDir, targetRoomId, targetDoorIndex }`
+   - 全局 `selectedDoorLinkIndex` 用于选中交互
+
+2. **CSS 样式**：
+   - `.door-link-line`：橙色虚线（stroke-dasharray: 6,4），选中时变蓝变粗
+   - `.door-link-hitarea`：14px 宽透明点击区域
+   - `.door-link-dot`：橙色小圆点标记门端位置
+   - `.room-element.door-link-highlight`：门元素高亮效果（橙色发光+缩放）
+
+3. **核心函数**：
+   - `calculateDoorPosition(room, entryDir)`：根据入口方向计算门元素在房间内的位置（12%内缩）
+   - `renderDoorLinks()`：SVG 渲染所有 doorLink 虚线、点击区域、端点圆点
+   - `selectDoorLink(idx)` / `deselectDoorLink()`：选中/取消选中交互，互斥房间/连接选中
+   - `showDoorLinkProperties(idx)`：在属性面板显示 doorLink 详情
+   - `deleteSelectedDoorLink()`：删除选中的 doorLink
+   - `cleanupDoorLinksForConnection(conn)`：删除连接时联动清理对应的 doorLinks
+
+4. **自动生成逻辑**：
+   - 在 mouseup isConnecting 分支中，创建连接后自动调用 `calculateDoorPosition` 在目标房间生成门元素
+   - 同时创建 doorLink 将源连接点与新门元素关联
+
+5. **交互支持**：
+   - 点击虚线选中 doorLink，属性面板显示详情和删除按钮
+   - Delete/Backspace 键删除选中的 doorLink
+   - 选中 doorLink/连接/房间三者互斥
+   - 删除连接或删除房间时联动清理相关 doorLinks
+
+6. **数据持久化**：
+   - `getExportData()` 导出 doorLinks
+   - `importJsonData()` 导入 doorLinks 并渲染
+   - `saveToLocal()` / `loadFromLocal()` 保存/加载 doorLinks
+   - `clearAll()` 清空 doorLinks
+
+7. **实时更新**：
+   - 房间拖拽、缩放时同步更新 doorLinks 渲染
+   - 画布点击空白处取消 doorLink 选中
+
+---
+
+## LevelDesigner 补全 doorLink 手动关联交互 — 2026-02-26 12:20
+
+### 修改文件：
+- `Tools/LevelDesigner.html`
+
+### 内容简述：
+补全 doorLink 功能中缺失的两项手动关联交互：
+
+1. **拖拽过程门元素高亮提示**：在 `mousemove` 的 `isConnecting` 分支中，通过 `document.elementFromPoint` 实时检测鼠标下方是否为门元素（`element-door`），命中时添加 `door-link-highlight` CSS class（橙色发光 + scale 1.2），离开时移除。仅对非源房间的门元素响应。
+2. **拖拽到已有门元素创建 doorLink**：在 `mouseup` 的 `isConnecting` 分支中，优先检测 `elementFromPoint` 是否命中 `element-door` 类型的房间元素。命中时仅创建 doorLink（不创建普通连接线），含重复检测防止同一源→目标门的重复关联。未命中门元素时走原有逻辑（创建连接线 + 自动生成门 + 自动 doorLink）。
+
+### 目的：
+补全 doorLink 功能的手动关联模式——允许用户从连接点拖拽到已有的门元素上建立关联关系，与自动关联模式互补，提供更灵活的关卡设计工作流。
+
+### 技术方案：
+- **mousemove 高亮**：每帧 `elementFromPoint` 检测 → 移除旧 `.door-link-highlight` → 命中门元素且非源房间则添加 class
+- **mouseup 优先级分支**：Priority 1 检测门元素 → 创建 doorLink only；Priority 2 走原有 `closest('.room')` → 创建连接 + 自动门 + 自动 doorLink
+- **防重复**：`doorLinks.some()` 检查 fromRoomId + fromDir + targetRoomId + targetDoorIndex 四元组唯一性
+- **清理**：mouseup 开头统一移除残留的 `door-link-highlight` class
+
+---
+
+## LevelDesigner doorLink 语义修正（虚线起点改为目标房间入口连接点） — 2026-02-26 12:27
+
+### 修改文件：
+- `Tools/LevelDesigner.html`
+
+### 内容简述：
+修正 doorLink 的数据结构与渲染语义，使虚线从目标房间的入口连接点画到房间内的门元素，而非从源房间的连接点画过去。
+
+1. **数据结构重构**：`doorLink` 从 `{fromRoomId, fromDir, targetRoomId, targetDoorIndex}` 改为 `{roomId, entryDir, doorIndex}`，语义变为"从 entryDir 方向进入 roomId 房间 → 出生在门 #doorIndex 位置"。
+2. **渲染修正**：`renderDoorLinks()` 起点从 `getConnectionPointPosition(fromRoom, fromDir)` 改为 `getConnectionPointPosition(room, entryDir)`，虚线在同一个房间内部从入口边缘连到门元素。
+3. **属性面板更新**：显示"所在房间"、"入口方向"、"门元素序号"三个字段，并新增含义说明文案。
+4. **全链路字段名同步**：更新了 doorLinks.push（两处）、renderDoorLinks、showDoorLinkProperties、cleanupDoorLinksForConnection、deleteRoom、importJsonData 共 7 处引用。
+
+### 目的：
+doorLink 的正确语义是"从某方向进入此房间后的出生点位置"，虚线应在目标房间内部从入口连接点连到门元素，而不是跨房间从源房间连过来。
+
+### 技术方案：
+- 新字段 `roomId` = 门所在房间（即连接的目标房间 B）
+- 新字段 `entryDir` = 入口方向（即 `toDir`，`getOppositeDirection(connectFromDir)`）
+- 新字段 `doorIndex` = 房间 elements 数组中的门元素索引
+- `renderDoorLinks` 中 `fromPos = getConnectionPointPosition(room, dl.entryDir)`，`toPos = room.x + doorEl.x, room.y + doorEl.y`
+- `cleanupDoorLinksForConnection` 匹配条件改为 `dl.roomId === conn.to && dl.entryDir === conn.toDir`
+- `deleteRoom` 清理条件简化为 `dl.roomId !== room.id`
+
+---
+
+## LevelDesigner 修复 doorLink 手动关联无法命中门元素 — 2026-02-26 12:38
+
+### 修改文件：
+- `Tools/LevelDesigner.html`
+
+### 内容简述：
+修复从连接点拖拽到另一个房间的门元素上无法建立 doorLink 的问题。
+
+1. **根因**：`document.elementFromPoint` 只返回最顶层元素，SVG 层（`z-index: 5`）和临时连接线覆盖在门元素上方，导致鼠标释放时无法命中 18x18px 的门元素 div。
+2. **修复方案**：将 `document.elementFromPoint`（单数）改为 `document.elementsFromPoint`（复数），穿透所有层级查找门元素。
+3. **临时连接线屏蔽**：为 `.temp-connection-line` 添加 `pointer-events: none`，确保拖拽线不截获鼠标事件。
+4. **高亮检测同步修复**：mousemove 中的门元素高亮检测也从 `elementFromPoint` 改为 `elementsFromPoint`，确保拖拽过程中门元素能正确高亮发光提示。
+
+### 目的：
+确保手动关联模式（从连接点拖拽到已有门元素上建立 doorLink）能正常工作。
+
+### 技术方案：
+- mouseup 中：`const allTargets = document.elementsFromPoint(e.clientX, e.clientY)`，用 `allTargets.find()` 分别查找 `doorTarget`（门元素优先）和 `target`（房间元素回退）
+- mousemove 中：同样使用 `elementsFromPoint` 穿透查找门元素进行高亮
+- CSS `.temp-connection-line` 新增 `pointer-events: none`
+
+---
+
+## LevelDesigner 全面代码审查与Bug修复 — 2026-02-26 12:46
+
+### 修改文件：
+- `Tools/LevelDesigner.html`
+
+### 内容简述：
+对 LevelDesigner.html 进行全面代码审查，修复4个Bug并清理2处冗余代码：
+
+1. **Bug修复 — updateRoomProperty ID同步**：修改房间ID时未同步更新 `doorLinks` 数组中的 `roomId` 引用，导致重命名后 doorLink 虚线断裂。新增 `doorLinks.forEach(dl => { if (dl.roomId === oldId) dl.roomId = value; })` 同步逻辑。
+2. **Bug修复 — updateRoomSize 缺少 renderDoorLinks**：通过属性面板手动调整房间尺寸后，连接线会更新但 doorLink 虚线不跟随更新。在 `renderConnections()` 后补充 `renderDoorLinks()` 调用。
+3. **Bug修复 — deleteRoom doorLinks 清理不完整**：删除房间时直接过滤 connections，但未先调用 `cleanupDoorLinksForConnection` 清理关联的 doorLinks（那些因连接自动创建在目标房间中的 doorLinks）。改为先遍历相关 connections 调用 cleanup，再 filter 删除。
+4. **Bug修复 — loadFromLocal 状态重置缺失**：从本地加载数据后未重置 `selectedRoom`、`selectedConnectionIndex`、`selectedDoorLinkIndex` 和属性面板显示状态，导致加载后可能出现残留选中状态。补充完整的状态重置逻辑。
+5. **冗余清理 — getOppositeDirection**：该函数定义后未在任何地方被调用，直接删除。
+6. **冗余清理 — Canvas 网格系统**：`<canvas id="grid-canvas">` 及关联的 `gridCanvas`、`ctx`、`drawGrid()`、`resizeCanvas()` 完全冗余——canvas 设置为 `display:none`，网格效果已由 CSS `background-image` 实现。删除全部 canvas 相关代码（HTML元素、CSS规则、JS变量和函数），`applyPan()` 中的 `drawGrid()` 调用替换为 `canvasArea.style.backgroundPosition` 更新以实现网格跟随平移。同步清理 click 事件中对已删除 `gridCanvas` 变量的引用。
+
+### 目的：
+确保 LevelDesigner 工具代码逻辑正确、无隐藏Bug、无冗余代码，提升可维护性。
+
+### 技术方案：
+- `updateRoomProperty` 的 `id` 分支新增 doorLinks roomId 同步
+- `updateRoomSize` 末尾追加 `renderDoorLinks()` 调用
+- `deleteRoom` 开头先收集 relatedConns 并逐个 `cleanupDoorLinksForConnection`，再 filter 删除 connections
+- `loadFromLocal` 在解析数据后、渲染前重置三个选中状态变量和属性面板 display
+- 删除 `getOppositeDirection` 函数定义（4行）
+- 删除 canvas 相关代码约40行（`gridCanvas`/`ctx` 变量、`resizeCanvas`/`drawGrid` 函数、`window.resize` 监听、HTML `<canvas>` 元素、CSS `#grid-canvas` 规则）
+- `applyPan` 中 `drawGrid()` 替换为 `canvasArea.style.backgroundPosition = \`${panX}px ${panY}px\``
+
+---
+
+## LevelDesigner 房间元素选中与删除功能 — 2026-02-26 13:04
+
+### 修改文件：
+- `Tools/LevelDesigner.html`
+
+### 内容简述：
+为 LevelDesigner 工具中的房间元素（spawn、door、enemy、chest、checkpoint、npc）添加选中和删除功能：
+
+1. **元素选中状态管理**：新增 `selectedElementRoomId` 和 `selectedElementIndex` 全局变量，`clearElementSelection()` 清除函数。与 `selectedRoom`、`selectedConnectionIndex`、`selectedDoorLinkIndex` 三者互斥——选中任一类型自动取消其他类型的选中状态。
+2. **点击选中交互**：在 mouseup 事件中区分元素拖拽与点击（位移 < 5px 判定为点击），点击时调用 `selectElement(roomId, index)` 选中元素。选中元素添加 `.element-selected` CSS 类呈现蓝色边框+发光高亮。
+3. **属性面板联动**：`showElementProperties(roomId, elementIndex)` 在属性面板中显示元素类型（带 emoji）、所属房间、坐标位置、序号，并提供"🗑️ 删除元素"按钮。点击画布空白区域时清除选中并恢复默认面板。
+4. **元素删除逻辑**：`deleteSelectedElement()` 从房间 `elements` 数组中 splice 移除元素。删除 door 类型元素时自动清理所有匹配的 doorLinks，并修正同房间内后续 doorLinks 的 `doorIndex` 索引偏移。
+5. **多触发方式**：支持属性面板删除按钮和 Delete/Backspace 快捷键。键盘删除优先级：元素 → 连接线 → doorLink → 房间。
+6. **边界情况**：deleteRoom 时若选中元素属于该房间则自动清除选中；clearAll 和 loadFromLocal 重置元素选中状态变量。
+
+### 目的：
+让关卡设计师能够选中查看房间内元素的属性，并通过多种方式删除不需要的元素，包括正确处理门元素删除时的 doorLink 联动清理。
+
+### 技术方案：
+- `selectedElementRoomId`（string|null）+ `selectedElementIndex`（int，-1 表示无选中）管理选中状态
+- `.element-selected` CSS：`outline: 2px solid #2196F3; box-shadow: 0 0 8px rgba(33,150,243,0.6); transform: scale(1.15)`
+- mouseup 中 `Math.hypot(dx, dy) < 5` 区分拖拽与点击
+- `selectElement()` 内部调用所有其他 deselect 逻辑确保互斥
+- `deleteSelectedElement()` 对 door 类型执行 `doorLinks.filter()` 清除 + `doorLinks.forEach()` 索引修正
+- `selectRoom()`、`selectConnection()`、`selectDoorLink()` 入口处调用 `clearElementSelection()`
+- keydown 处理中 `selectedElementIndex >= 0` 优先级最高
+
+---
+
+## LevelDesigner.html Bug 修复与功能完善 — 2026-02-26 13:32
+
+### 修改文件：
+- `Tools/LevelDesigner.html`
+
+### 内容简述：
+对 LevelDesigner 关卡编辑工具进行全面代码审查后，修复了 6 类 Bug 并清理了冗余代码：
+
+1. **importJsonData 元素选中状态重置遗漏**：JSON 导入函数中未重置 `selectedElementRoomId` 和 `selectedElementIndex`，导致导入后可能出现幽灵选中引用。追加了这两个变量的重置以及 `hideConnectionProperties()` 调用。
+2. **getExportData() 值拷贝问题**：`connections` 和 `doorLinks` 使用直接引用导出而非值拷贝。改为 `.map()` 创建独立的浅拷贝对象，确保导出数据不受后续编辑污染。
+3. **元素位置显示像素 → 网格单位**：`showElementProperties` 中的坐标从 `Math.round(el.x)` 改为 `(el.x / GRID_SIZE).toFixed(1)`，标签更新为"位置(网格)"，与导出 JSON 中的单位一致。
+4. **连接属性面板房间名称补全**：`showConnectionProperties` 中"从/到"字段从仅显示房间名改为 `名称 (ID)` 格式，方便快速识别连接关系。
+5. **选中状态互斥 — 空白点击修复**：重构画布空白区域 click 事件处理，确保点击空白时：直接重置所有选中状态变量（room/connection/doorLink/element），最后调用 `hideConnectionProperties()` 统一恢复属性面板为默认提示文本。
+6. **冗余代码清理**：移除未使用的 `.canvas-area.space-ready` CSS 类；清理 `renderConnections` 中无效的 `.connection-arrow` selector 引用。
+
+### 目的：
+消除全面审查中发现的 Bug，确保工具的数据导入导出健壮性、UI 信息一致性、选中状态互斥正确性，以及代码精简可维护。
+
+### 技术方案：
+- `importJsonData` 状态重置区域追加 `selectedElementRoomId = null; selectedElementIndex = -1; hideConnectionProperties();`
+- `getExportData()` 中 `connections: connections.map(c => ({from, to, fromDir, toDir}))` 和 `doorLinks: doorLinks.map(d => ({roomId, entryDir, doorIndex}))`
+- `showElementProperties` 坐标转换 `el.x / GRID_SIZE` 保留一位小数
+- `showConnectionProperties` 中 `fromName = fromRoom ? \`${fromRoom.name} (${conn.from})\` : conn.from`
+- 画布空白点击：避免调用 `deselectConnection/deselectDoorLink` 中间函数（它们内部会独立调用 hideConnectionProperties），改为直接变量赋值 + 最后统一调用 `hideConnectionProperties()`
+- 移除 CSS `.canvas-area.space-ready { cursor: grab; }` 和 JS 中 `.connection-arrow` 无效引用
+
+---
+
+## 关卡设计：示巴星 ACT1+ACT2 银河恶魔城式关卡重构
+
+### 示巴星 ACT1+ACT2 关卡布局全面重构 — 2026-02-26 13:46
+
+**修改文件：**
+- `Docs/LevelDesigns/Sheba_ACT1_ACT2.json` — 完全重写
+
+**内容简述：**
+将原线性"一本道"关卡（28个房间，全east→west连接）重构为银河恶魔城式网状拓扑布局（38个房间）。覆盖ACT1 Z1a~Z1f + ACT2 Z2a~Z2d共10个心流节点，严格对齐CSV张力曲线4→2→7→4→3→6→5→3→5→9。
+
+**关键设计特性：**
+1. **网状拓扑**：多路径分支（Z1a起点提供东向+南向两条路径）、分支汇聚点（Z1e+Z1f双路汇入）
+2. **垂直层级**：3个floor层（-1地下/0地面/1上层），Z1b隐藏地穴(floor=-1)、Z1c上层观景台(floor=1)、Z1d音叉林上层(floor=1)、Z2a上层平台(floor=1)
+3. **3个环路**：Z1c侧路↔Z1b地穴、Z1d花园↔Z1f下行通道、Z2c回音路↔世界时钟预兆
+4. **2条单向捷径**：Z1d悬崖→Z1b可选角落（跌落）、Z2b隐藏跌落→Z2c深谷入口（跌落）
+5. **4种房间类型**：safe(16)、normal(18)、arena(3)、boss(1)
+6. **6种元素类型**：spawn(1)、checkpoint(13)、enemy(39)、chest(23)、npc(13)、door(4)
+7. **84条连接**（大部分双向A↔B）+ **5个doorLinks**
+8. **Boss竞技场**：20×14（满足≥18×12要求）
+
+**拓扑概念：**
+```
+ACT1:
+Z1a(坠机点)→东→Z1b(冰雕广场)→东→Z1c(觉醒战场)→东→Z1d(音叉林)→花园
+     ↓南                  ↕地穴    ↕侧路↔地穴(环1)     ↕上层  ↓悬崖→Z1b(捷径1)
+Z1e(战后余波)→东→Z1f(下行通道)→首棱镜→缕拉目击→ACT1出口
+                  ↑ Z1d花园直连(环2)
+
+ACT2:
+Z2a(管风琴走廊)→Z2a缕拉援助→↓南→Z2b(声之走廊)→涟漪奖励→缕拉面对面
+     ↕上层平台+秘密                   ↓南               ↓隐藏跌落→Z2c(捷径2)
+                        Z2c(深谷入口)→↓南→Z2c战斗→Z2c回音路
+                             ↕世界时钟←→↕回音路(环3)→频率标记→Z2d前室→Boss→奖励→出口
+```
+
+**目的：**
+从线性走廊改为银河恶魔城式网状探索，让玩家体验分支选择、垂直层叠、捷径回路和延迟回报。保持CSV心流节奏不变。
+
+**技术方案：**
+- JSON格式完全对齐LevelDesigner.html的getExportData()输出：rooms(id/name/type/floor/position/size/elements) + connections(from/to/fromDir/toDir) + doorLinks(roomId/entryDir/doorIndex)
+- 双向连接：每条通道2条connection（A→B + B→A）
+- 单向连接：捷径/跌落仅1条connection（A→B）
+- comment字段用于人类可读的区域分隔标注（导入时被忽略但保留在JSON中）
+- 位置坐标使用上下左右四方向展开，非线性排列
+
+---
+
+## HTML Scaffold JSON → LevelScaffoldData 导入工具 — 2026-02-26 14:12
+
+**新建文件：**
+- `Assets/Scripts/Level/Editor/HtmlScaffoldImporter.cs` — EditorWindow + 导入管线 + 嵌入式MiniJSON解析器
+
+**内容简述：**
+实现了完整的 HTML LevelDesigner JSON → Unity `LevelScaffoldData` ScriptableObject 一键导入脚本。
+
+功能包括：
+1. **EditorWindow UI**：菜单入口 `Window > ProjectArk > Import HTML Scaffold JSON`，文件选择（JSON输入 + .asset输出）、网格缩放因子
+2. **JSON 解析**：内嵌轻量级递归下降 MiniJSON 解析器（因项目用 .NET Framework 配置级别，System.Text.Json 不可用），自动过滤 comment 对象
+3. **房间映射**：HTML `id/name/type/floor/position/size` → `ScaffoldRoom`（RoomType枚举映射 + y轴翻转 + 缩放）
+4. **元素映射**：`spawn→PlayerSpawn, enemy→EnemySpawn, checkpoint→Checkpoint, door→Door, chest→CrateWooden(占位), npc→Checkpoint(占位)`，坐标从房间左上角偏移转换为房间中心偏移
+5. **连接转换**：全局 `connections[]` → 每个房间内嵌 `ScaffoldDoorConnection`，方向映射 + 房间边缘中点定位 + 跨楼层标记 `IsLayerTransition`
+6. **doorLinks 绑定**：Door 元素的 `BoundConnectionID` 绑定到匹配方向的连接
+7. **Floor 层级**：多楼层检测、主楼层自动选择、非主楼层房间名称追加 `[F=n]` 标记
+8. **Undo 支持**：整个导入操作可 Ctrl+Z 撤销
+9. **详尽日志**：Console 摘要（房间/连接/元素/跳过/占位映射/楼层分布）+ 成功对话框 + 自动选中创建的 asset
+
+**目的：**
+让策划可以从浏览器端 LevelDesigner.html 的可视化设计无缝导入 Unity，生成可直接用于 LevelArchitectWindow 和 LevelGenerator 的 ScaffoldData asset。
+
+**技术方案：**
+- 嵌入式 MiniJSON 递归下降解析器（Dictionary/List模式），兼容 Unity .NET Framework 配置
+- SerializedObject 操作 private 字段（`_levelName`, `_floorLevel`）
+- 所有公共 API 字段通过 public setter 设置
+- 无任何第三方依赖，完全自包含
