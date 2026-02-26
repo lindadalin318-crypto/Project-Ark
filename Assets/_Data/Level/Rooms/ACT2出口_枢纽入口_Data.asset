@@ -10,11 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 20b9e9a1f25dcd04697f8268d0e76a1e, type: 3}
-  m_Name: Room_Combat_SO
+  m_Name: "ACT2\u51FA\u53E3_\u67A2\u7EBD\u5165\u53E3_Data"
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.RoomSO
-  _roomID: combat
-  _displayName: "\u6218\u6597\u95F4"
+  _roomID: fc8006bd-d7d0-402a-a026-b207ed1437c1
+  _displayName: "ACT2\u51FA\u53E3\xB7\u67A2\u7EBD\u5165\u53E3"
   _floorLevel: 0
-  _type: 0
+  _type: 3
   _mapIcon: {fileID: 0}
+  _ambientMusic: {fileID: 0}
   _encounter: {fileID: 0}

@@ -1,0 +1,1765 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 684395b1aa74141fc9e2901dabfadc63, type: 3}
+  m_Name: "\u793A\u5DF4\u661F___ACT1+ACT2__Z1a\u2192Z2d_"
+  m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.LevelScaffoldData
+  _levelName: "\u793A\u5DF4\u661F \xB7 ACT1+ACT2 (Z1a\u2192Z2d)"
+  _floorLevel: 0
+  _rooms:
+  - _roomID: 6940097d-e419-4f03-85b3-2d6c6c28a6ee
+    _displayName: "\u5760\u673A\u70B9\xB7\u6B8B\u9AB8\u533A"
+    _roomType: 3
+    _position: {x: 2, y: -8, z: 0}
+    _size: {x: 14, y: 8}
+    _connections:
+    - _connectionID: 4cb85d18-0a36-4f54-974d-b0eb572674a4
+      _targetRoomID: 326e4782-360b-47f0-bb5d-7f7c146b811c
+      _doorPosition: {x: 7, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: db1abe81-b437-4511-8fb6-0aa7362bcece
+      _targetRoomID: f3c93282-d5c8-4ab6-9812-fa6054ede303
+      _doorPosition: {x: 0, y: -4, z: 0}
+      _doorDirection: {x: 0, y: -1}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 43e2f02f-9d6d-40b3-bbdc-0c93fc17cca8
+      _elementType: 6
+      _gizmoShape: 1
+      _localPosition: {x: -5, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 458c2f71-2de8-4764-af95-efaac2b18a3a
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: 5, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: 326e4782-360b-47f0-bb5d-7f7c146b811c
+    _displayName: "\u5760\u673A\u70B9\xB7\u4E1C\u4FA7\u788E\u7247\u5E26"
+    _roomType: 0
+    _position: {x: 18, y: -8, z: 0}
+    _size: {x: 10, y: 8}
+    _connections:
+    - _connectionID: a376f31e-c518-440e-861a-ab255243a592
+      _targetRoomID: 6940097d-e419-4f03-85b3-2d6c6c28a6ee
+      _doorPosition: {x: -5, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: 7b3d42f8-be85-4805-ad98-a504099c26ba
+      _targetRoomID: 779d8d28-0975-4c98-88c1-d6dcb37edcaf
+      _doorPosition: {x: 5, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 1c0a4ba6-a9f8-479b-b5b3-6679fc39dcda
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: -2, y: 1, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: b5db6930-703a-4505-9d2c-5c8a10dbf288
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 2, y: -1, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 3eeac41d-c9bc-40ac-8fdf-64f28e7a2c16
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: 4, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: f3c93282-d5c8-4ab6-9812-fa6054ede303
+    _displayName: "\u5760\u673A\u70B9\xB7\u5357\u4FA7\u88C2\u7F1D"
+    _roomType: 0
+    _position: {x: 2, y: -18, z: 0}
+    _size: {x: 10, y: 8}
+    _connections:
+    - _connectionID: 24d33804-8b94-4cc1-aaa8-1f4d6764aecc
+      _targetRoomID: 6940097d-e419-4f03-85b3-2d6c6c28a6ee
+      _doorPosition: {x: 0, y: 4, z: 0}
+      _doorDirection: {x: 0, y: 1}
+      _isLayerTransition: 0
+    - _connectionID: 008ec203-42d4-4101-a108-d02a46ca96db
+      _targetRoomID: 9311e4fa-1a0c-48de-a82f-767c62a84a08
+      _doorPosition: {x: 0, y: -4, z: 0}
+      _doorDirection: {x: 0, y: -1}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: a4083f7b-6023-447c-a907-44c5bf80d008
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: -2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 6601060e-0635-442f-bbb5-d9e479b5b3bd
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: 779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    _displayName: "\u51B0\u96D5\u5E7F\u573A"
+    _roomType: 3
+    _position: {x: 30, y: -6, z: 0}
+    _size: {x: 14, y: 10}
+    _connections:
+    - _connectionID: b1dec245-642a-4977-a16d-6f8129a4c5ba
+      _targetRoomID: 326e4782-360b-47f0-bb5d-7f7c146b811c
+      _doorPosition: {x: -7, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: b37e888f-64f0-4970-a89d-e5f3f95ded41
+      _targetRoomID: 3782df51-4579-42d2-9f1d-a02ec9b2276d
+      _doorPosition: {x: 7, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: 0c793056-74e1-4be3-8d8b-aea8c7a448e3
+      _targetRoomID: fd17064a-f860-4229-b005-d48678335a05
+      _doorPosition: {x: 0, y: -5, z: 0}
+      _doorDirection: {x: 0, y: -1}
+      _isLayerTransition: 1
+    _elements:
+    - _elementID: 1280d117-7e54-4b2e-a69d-581f5af127c8
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: 0, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: d3181c8e-63b4-4c4c-bf48-1680571078f5
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: 5, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: fd944116-d422-45d3-8d05-0980e78998aa
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: -4, y: -3, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: 3782df51-4579-42d2-9f1d-a02ec9b2276d
+    _displayName: "\u51B0\u96D5\u5E7F\u573A\xB7\u6E29\u6696\u51B0\u96D5"
+    _roomType: 3
+    _position: {x: 46, y: -6, z: 0}
+    _size: {x: 10, y: 8}
+    _connections:
+    - _connectionID: 96a92f84-7d90-4839-9db7-a994454211ef
+      _targetRoomID: 779d8d28-0975-4c98-88c1-d6dcb37edcaf
+      _doorPosition: {x: -5, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: 1b92311f-54b5-4e11-8c30-d1174b1f169d
+      _targetRoomID: f708d2a4-96ea-4942-b665-76ababc6943c
+      _doorPosition: {x: 0, y: -4, z: 0}
+      _doorDirection: {x: 0, y: -1}
+      _isLayerTransition: 0
+    - _connectionID: b3987844-bd86-4d1a-b48b-640ed7c4f29b
+      _targetRoomID: b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+      _doorPosition: {x: 5, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 07376827-51b4-4f24-bf2e-d32e4f3d7baa
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: 0, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 4bac9163-6082-4069-ba39-4f045ed31047
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: 3, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: fd17064a-f860-4229-b005-d48678335a05
+    _displayName: "\u51B0\u96D5\u5E7F\u573A\xB7\u5730\u4E0B\u9690\u7A74 [F=-1]"
+    _roomType: 0
+    _position: {x: 30, y: -18, z: 0}
+    _size: {x: 12, y: 8}
+    _connections:
+    - _connectionID: 906d3540-e8ae-4a7b-a2ea-7b3b20cd0ddd
+      _targetRoomID: 779d8d28-0975-4c98-88c1-d6dcb37edcaf
+      _doorPosition: {x: 0, y: 4, z: 0}
+      _doorDirection: {x: 0, y: 1}
+      _isLayerTransition: 1
+    - _connectionID: 1181f7fb-c1ac-458d-aa79-490a4a8369c5
+      _targetRoomID: ad27a7ed-130d-4ced-9bbb-31d899d07d88
+      _doorPosition: {x: 6, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 1
+    _elements:
+    - _elementID: 32b58eb4-de38-4b79-9a91-7400dfec5bb7
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: -2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 36f43358-08a8-4d23-b34b-45cab495c8b0
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: 4, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: f708d2a4-96ea-4942-b665-76ababc6943c
+    _displayName: "\u96EA\u539F\xB7\u53EF\u9009\u63A2\u7D22\u89D2\u843D"
+    _roomType: 3
+    _position: {x: 46, y: -16, z: 0}
+    _size: {x: 8, y: 7}
+    _connections:
+    - _connectionID: 3743345e-1114-4a90-9e27-8e6435faefcd
+      _targetRoomID: 3782df51-4579-42d2-9f1d-a02ec9b2276d
+      _doorPosition: {x: 0, y: 3.5, z: 0}
+      _doorDirection: {x: 0, y: 1}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 668ea9c2-6d54-4fbd-9864-3a48362d2c2f
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: 0, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    _displayName: "\u89C9\u9192\u6218\u573A\xB7\u4E3B\u7ADE\u6280\u573A"
+    _roomType: 1
+    _position: {x: 58, y: -6, z: 0}
+    _size: {x: 14, y: 10}
+    _connections:
+    - _connectionID: 975b8636-6dc7-4dec-8143-c0b9174d98a4
+      _targetRoomID: 3782df51-4579-42d2-9f1d-a02ec9b2276d
+      _doorPosition: {x: -7, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: 40541d12-840e-4071-bea4-90cce0542a0c
+      _targetRoomID: ad27a7ed-130d-4ced-9bbb-31d899d07d88
+      _doorPosition: {x: 0, y: -5, z: 0}
+      _doorDirection: {x: 0, y: -1}
+      _isLayerTransition: 0
+    - _connectionID: 8dc76a4c-5bd6-4d9b-89f3-b1e602ed2e61
+      _targetRoomID: 05eb91e4-a726-4f52-99fb-6852fe400a54
+      _doorPosition: {x: 0, y: 5, z: 0}
+      _doorDirection: {x: 0, y: 1}
+      _isLayerTransition: 1
+    - _connectionID: 8c5dd527-d99f-42ff-aca6-13e40e62b81f
+      _targetRoomID: 1a599a51-511e-4973-a2a8-03983a780e2e
+      _doorPosition: {x: 7, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 64a90b7b-ae78-4ecf-8575-b300dcdf22a4
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: -4, y: 2, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 4abf4a47-f851-48c9-a461-91f101ee21af
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 0, y: 3, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: a0e9744b-4101-4276-9063-cc3aa9800289
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 0, y: -3, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: b1ef25ca-1298-445f-a1a8-5c79a101e033
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 4, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 9ad5469b-8285-45f3-bc6c-2ac0da0d082b
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: 6, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: ad27a7ed-130d-4ced-9bbb-31d899d07d88
+    _displayName: "\u89C9\u9192\u6218\u573A\xB7\u4FA7\u8DEF"
+    _roomType: 0
+    _position: {x: 58, y: -18, z: 0}
+    _size: {x: 12, y: 7}
+    _connections:
+    - _connectionID: 5e3bc853-ad0f-4d0b-aaaf-96af89f8a3ca
+      _targetRoomID: b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+      _doorPosition: {x: 0, y: 3.5, z: 0}
+      _doorDirection: {x: 0, y: 1}
+      _isLayerTransition: 0
+    - _connectionID: 1a41c144-b6c1-49db-8e3e-12a8393b1034
+      _targetRoomID: fd17064a-f860-4229-b005-d48678335a05
+      _doorPosition: {x: -6, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 1
+    _elements:
+    - _elementID: 7da23139-b8f7-4db6-9033-3baf60343c4c
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: -2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 96cad821-206b-4a80-9444-8be49e8bd396
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 3, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 2e28406e-3284-43b7-8b18-7ab3106a94c8
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: 5, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: 05eb91e4-a726-4f52-99fb-6852fe400a54
+    _displayName: "\u89C9\u9192\u6218\u573A\xB7\u4E0A\u5C42\u89C2\u666F\u53F0 [F=1]"
+    _roomType: 0
+    _position: {x: 62, y: 2, z: 0}
+    _size: {x: 10, y: 6}
+    _connections:
+    - _connectionID: 5f5a07ac-cc03-45c9-a6c6-09df4a5284b0
+      _targetRoomID: b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+      _doorPosition: {x: 0, y: -3, z: 0}
+      _doorDirection: {x: 0, y: -1}
+      _isLayerTransition: 1
+    _elements:
+    - _elementID: 400baddd-bf9e-4996-a91e-d4e1f6f185f6
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: 0, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 36b33f00-e501-4e9b-9c04-222503ac90e3
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 3, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: 1a599a51-511e-4973-a2a8-03983a780e2e
+    _displayName: "\u97F3\u53C9\u6797\xB7\u4E2D\u5C42\u4E3B\u8DEF"
+    _roomType: 0
+    _position: {x: 74, y: -6, z: 0}
+    _size: {x: 12, y: 8}
+    _connections:
+    - _connectionID: 1d853e15-de51-4c56-9b02-2ca5f2962bf0
+      _targetRoomID: b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+      _doorPosition: {x: -6, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: 878ef971-a709-4e58-948d-daa3089d5421
+      _targetRoomID: 35d649a6-0391-4ac6-ac04-9bb2dce7e054
+      _doorPosition: {x: 0, y: 4, z: 0}
+      _doorDirection: {x: 0, y: 1}
+      _isLayerTransition: 1
+    - _connectionID: de0ca092-3c1c-4ee9-8de3-4ea24f3ea0c7
+      _targetRoomID: 1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+      _doorPosition: {x: 6, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 710fba8d-6a5f-4b6f-80ec-c119ed4d0d64
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: -2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 8e08c3fd-8bb6-48bd-888b-8035a7b869e0
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: a9f02c56-2267-4353-b11a-a27dd62d80e8
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: 4, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: 35d649a6-0391-4ac6-ac04-9bb2dce7e054
+    _displayName: "\u97F3\u53C9\u6797\xB7\u4E0A\u5C42\u6811\u51A0 [F=1]"
+    _roomType: 0
+    _position: {x: 74, y: 4, z: 0}
+    _size: {x: 10, y: 8}
+    _connections:
+    - _connectionID: 1c8c0ed3-dbea-43ac-ad03-2289db03e0da
+      _targetRoomID: 1a599a51-511e-4973-a2a8-03983a780e2e
+      _doorPosition: {x: 0, y: -4, z: 0}
+      _doorDirection: {x: 0, y: -1}
+      _isLayerTransition: 1
+    _elements:
+    - _elementID: 295e09bc-e3fe-4e6d-9945-e64e0a612242
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: 0, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 30c850c0-0a13-4967-bf05-e1e214e6223f
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 3, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: 1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    _displayName: "\u82B1\u56ED\xB7\u5B89\u5168\u533A"
+    _roomType: 3
+    _position: {x: 88, y: -8, z: 0}
+    _size: {x: 10, y: 8}
+    _connections:
+    - _connectionID: 1d047e1e-6934-4b93-89e5-3856ad6bdcd2
+      _targetRoomID: 1a599a51-511e-4973-a2a8-03983a780e2e
+      _doorPosition: {x: -5, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: 726bbbda-d86d-487b-b956-3b5d00f253fe
+      _targetRoomID: 4cbcfa30-796a-42fd-9dc4-7a8f1d0b453c
+      _doorPosition: {x: 0, y: -4, z: 0}
+      _doorDirection: {x: 0, y: -1}
+      _isLayerTransition: 0
+    - _connectionID: 42de5deb-e85c-4da2-ad18-0a6200c3ec80
+      _targetRoomID: 7683010b-81d3-4c51-a891-9604de7a618d
+      _doorPosition: {x: 0, y: -4, z: 0}
+      _doorDirection: {x: 0, y: -1}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 480c147f-8063-4493-9dbe-4fff614746aa
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: 0, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: b742213f-be85-46ab-9578-b5150a8d2721
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: 3, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: 4cbcfa30-796a-42fd-9dc4-7a8f1d0b453c
+    _displayName: "\u97F3\u53C9\u6797\xB7\u6377\u5F84\u60AC\u5D16"
+    _roomType: 0
+    _position: {x: 86, y: -18, z: 0}
+    _size: {x: 8, y: 7}
+    _connections:
+    - _connectionID: a9033ec6-cbbc-47c2-b7e3-287d081ddce5
+      _targetRoomID: 1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+      _doorPosition: {x: 0, y: 3.5, z: 0}
+      _doorDirection: {x: 0, y: 1}
+      _isLayerTransition: 0
+    - _connectionID: ba3a194d-1881-4860-a8ba-582a8ebcebc1
+      _targetRoomID: f708d2a4-96ea-4942-b665-76ababc6943c
+      _doorPosition: {x: -4, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 1b807352-98f3-436b-a47d-fe3ec1cab6e7
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: 0, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: 9311e4fa-1a0c-48de-a82f-767c62a84a08
+    _displayName: "\u6218\u540E\u4F59\u6CE2\xB7\u788E\u7247\u68C0\u67E5"
+    _roomType: 0
+    _position: {x: 14, y: -28, z: 0}
+    _size: {x: 12, y: 8}
+    _connections:
+    - _connectionID: 292036d0-a937-4c9d-8a10-d569c1d6eec0
+      _targetRoomID: f3c93282-d5c8-4ab6-9812-fa6054ede303
+      _doorPosition: {x: 0, y: 4, z: 0}
+      _doorDirection: {x: 0, y: 1}
+      _isLayerTransition: 0
+    - _connectionID: 6e252073-866a-46dc-9205-c1b8bb48e8de
+      _targetRoomID: ba63b2bf-5694-4d2b-ae98-75fc8fb9f338
+      _doorPosition: {x: 6, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: c6487d88-dd04-467b-925a-2200df6a74f1
+      _targetRoomID: cc6ba068-5ed8-45de-be84-d3e979fc58a5
+      _doorPosition: {x: 0, y: -4, z: 0}
+      _doorDirection: {x: 0, y: -1}
+      _isLayerTransition: 1
+    _elements:
+    - _elementID: c925ee78-554e-4d6b-b2fc-f2e250a65e87
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: -2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: bf99e1bf-3f43-4ec4-8da7-bd18bea9d0e1
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: c1b7fcd7-6b53-4619-b262-a30a7c90f96f
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: 4, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: ba63b2bf-5694-4d2b-ae98-75fc8fb9f338
+    _displayName: "\u6218\u540E\u4F59\u6CE2\xB7\u9053\u5FB7\u9009\u62E9"
+    _roomType: 3
+    _position: {x: 28, y: -28, z: 0}
+    _size: {x: 10, y: 8}
+    _connections:
+    - _connectionID: b48136af-9a2e-46eb-97a5-64b1cc359b2e
+      _targetRoomID: 9311e4fa-1a0c-48de-a82f-767c62a84a08
+      _doorPosition: {x: -5, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: 9e880c81-cf16-414e-b88c-0ebe4ecf5ff4
+      _targetRoomID: 7683010b-81d3-4c51-a891-9604de7a618d
+      _doorPosition: {x: 5, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 22ea4521-fe28-439a-b19b-ea547d73fcda
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: 0, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 3425297f-d3aa-4aa9-8baf-03887fb270d0
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: 3, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: cc6ba068-5ed8-45de-be84-d3e979fc58a5
+    _displayName: "\u6218\u540E\u4F59\u6CE2\xB7\u652F\u7EBF\u788E\u7247\u5BC6\u5BA4
+      [F=-1]"
+    _roomType: 0
+    _position: {x: 14, y: -38, z: 0}
+    _size: {x: 10, y: 7}
+    _connections:
+    - _connectionID: 1f4a700d-3906-4fd9-b830-a612d1195af0
+      _targetRoomID: 9311e4fa-1a0c-48de-a82f-767c62a84a08
+      _doorPosition: {x: 0, y: 3.5, z: 0}
+      _doorDirection: {x: 0, y: 1}
+      _isLayerTransition: 1
+    _elements:
+    - _elementID: 35a67c5a-9211-4146-9505-3bda178f96da
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: -2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: f78b1481-7f3a-4b0b-9f2c-629a891ee152
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: 2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: 7683010b-81d3-4c51-a891-9604de7a618d
+    _displayName: "\u4E0B\u884C\u901A\u9053\xB7\u7BA1\u58C1\u8D70\u5ECA"
+    _roomType: 0
+    _position: {x: 40, y: -28, z: 0}
+    _size: {x: 12, y: 8}
+    _connections:
+    - _connectionID: 4f46bd46-1ad1-4023-b265-2b21653e6472
+      _targetRoomID: ba63b2bf-5694-4d2b-ae98-75fc8fb9f338
+      _doorPosition: {x: -6, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: bc971402-6106-4b96-8913-a8f83326b5db
+      _targetRoomID: 2627414d-c9c0-49a3-a21b-7026e0e306aa
+      _doorPosition: {x: 6, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: 4dc93c23-ec71-43d4-82b1-e03b67b83eef
+      _targetRoomID: 1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+      _doorPosition: {x: 0, y: 4, z: 0}
+      _doorDirection: {x: 0, y: 1}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 7acb7224-550c-4cb0-bab6-5ec90aeb117b
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: -3, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 186c8bb7-231c-4fe6-9e04-18457e9b9d9e
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 0, y: 2, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 40793a3c-1897-4fe4-93ae-c888616dc5ea
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 0, y: -2, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: fc174cde-e106-4955-a432-257be478283c
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 3, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: 2627414d-c9c0-49a3-a21b-7026e0e306aa
+    _displayName: "\u9996\u68F1\u955C\xB7\u7ADE\u6280\u573A"
+    _roomType: 1
+    _position: {x: 54, y: -28, z: 0}
+    _size: {x: 14, y: 10}
+    _connections:
+    - _connectionID: 5d2e5fd7-7774-4789-bed2-14b4399731c8
+      _targetRoomID: 7683010b-81d3-4c51-a891-9604de7a618d
+      _doorPosition: {x: -7, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: ab1147d5-53cd-4d19-ba93-2f26c15fad3d
+      _targetRoomID: c6025efe-d59d-4a2e-ab39-ca45c4a8a648
+      _doorPosition: {x: 7, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 0f46fe99-85d3-4ab5-9529-b98d95438dd0
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: -3, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 82d44aff-7565-4162-b58b-c5cd98df90b2
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 0, y: 3, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: e10018d8-a1c0-478b-b65b-0d444cfa2da4
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 0, y: -3, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 3de54c8f-a7b2-42e7-a9db-a0c7eafdfdee
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 3, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 74c52639-08c7-40ac-a178-fb689faaabbd
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: 6, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 7e9a7f33-797c-49d5-9cc3-fc95fcd76c09
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: -6, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: c6025efe-d59d-4a2e-ab39-ca45c4a8a648
+    _displayName: "\u7F15\u62C9\u9996\u6B21\u76EE\u51FB\u70B9"
+    _roomType: 3
+    _position: {x: 70, y: -30, z: 0}
+    _size: {x: 10, y: 7}
+    _connections:
+    - _connectionID: edc8921f-6ffa-4066-8ede-4490cbe0d35e
+      _targetRoomID: 2627414d-c9c0-49a3-a21b-7026e0e306aa
+      _doorPosition: {x: -5, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: 736ab755-167f-42d4-933d-0c57fda33212
+      _targetRoomID: a50d7ba8-2fb6-468c-bccc-59b554dc92bc
+      _doorPosition: {x: 5, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: da8c32f3-acb7-4ba0-862d-2233fc126296
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: 0, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: a50d7ba8-2fb6-468c-bccc-59b554dc92bc
+    _displayName: "ACT1\u51FA\u53E3\xB7\u5CE1\u8C37\u5165\u53E3"
+    _roomType: 3
+    _position: {x: 82, y: -30, z: 0}
+    _size: {x: 8, y: 7}
+    _connections:
+    - _connectionID: 959ffc35-cfb8-4e55-8193-627b98da98cf
+      _targetRoomID: c6025efe-d59d-4a2e-ab39-ca45c4a8a648
+      _doorPosition: {x: -4, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: 69ccb1fa-9612-4c06-abaa-7f468c017df4
+      _targetRoomID: 1d4b5c5d-adc5-41e1-995d-20ef31114356
+      _doorPosition: {x: 4, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 5832730d-bc77-4948-a311-a2d27934d26a
+      _elementType: 4
+      _gizmoShape: 0
+      _localPosition: {x: 2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 69ccb1fa-9612-4c06-abaa-7f468c017df4
+    - _elementID: 504c960a-6609-4b00-9b47-53069e36a9f0
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: -2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: 1d4b5c5d-adc5-41e1-995d-20ef31114356
+    _displayName: "\u7BA1\u98CE\u7434\u8D70\u5ECA\xB7\u5165\u53E3"
+    _roomType: 0
+    _position: {x: 92, y: -30, z: 0}
+    _size: {x: 14, y: 8}
+    _connections:
+    - _connectionID: c9e8469b-64ed-4a7f-9557-f2b5692fdfef
+      _targetRoomID: a50d7ba8-2fb6-468c-bccc-59b554dc92bc
+      _doorPosition: {x: -7, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: 858a312f-299f-4d8d-a916-10b864b07cda
+      _targetRoomID: af5d7fa5-d7b1-463c-a6ac-df396de942ea
+      _doorPosition: {x: 0, y: 4, z: 0}
+      _doorDirection: {x: 0, y: 1}
+      _isLayerTransition: 1
+    - _connectionID: a60698fb-4ce6-450f-88b3-8487c2a1bdbb
+      _targetRoomID: daef1525-de58-49f5-b811-18387e5da1e8
+      _doorPosition: {x: 7, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 1f284cdd-40c0-4ed4-858c-29254aea65f6
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: -3, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 617e0d1d-eec8-4302-8ce1-bf917905a4e7
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 3, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 84cadd40-6b50-43f6-9d7c-1b8c52341866
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: -6, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: af5d7fa5-d7b1-463c-a6ac-df396de942ea
+    _displayName: "\u7BA1\u98CE\u7434\u8D70\u5ECA\xB7\u4E0A\u5C42\u5E73\u53F0 [F=1]"
+    _roomType: 0
+    _position: {x: 94, y: -20, z: 0}
+    _size: {x: 10, y: 8}
+    _connections:
+    - _connectionID: 406cb57f-a6ae-426d-b83b-ed1e280dd05a
+      _targetRoomID: 1d4b5c5d-adc5-41e1-995d-20ef31114356
+      _doorPosition: {x: 0, y: -4, z: 0}
+      _doorDirection: {x: 0, y: -1}
+      _isLayerTransition: 1
+    - _connectionID: bbb88b6a-d858-4a6c-83a5-cb286590f62a
+      _targetRoomID: 54175eab-ed46-4a6e-ae9d-b8bfb7882b3f
+      _doorPosition: {x: 5, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: d3d9e128-d514-4676-9838-ebda5288a397
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: -1, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 23f94f7d-3848-4a6d-a073-314e568e0f55
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 3, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 482c3f7b-228a-4e28-96c2-c38fb5b7b3e0
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: 4, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: 54175eab-ed46-4a6e-ae9d-b8bfb7882b3f
+    _displayName: "\u7BA1\u98CE\u7434\u8D70\u5ECA\xB7\u4E0A\u5C42\u79D8\u5BC6 [F=1]"
+    _roomType: 3
+    _position: {x: 106, y: -20, z: 0}
+    _size: {x: 8, y: 7}
+    _connections:
+    - _connectionID: bd3a9971-910b-40e7-a014-8e535a19387f
+      _targetRoomID: af5d7fa5-d7b1-463c-a6ac-df396de942ea
+      _doorPosition: {x: -4, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 181d57b6-dfea-4616-b3ab-a0cb4b7b8dbb
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: 0, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 5c012957-b040-4d40-867c-ea66b2872722
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: 2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: daef1525-de58-49f5-b811-18387e5da1e8
+    _displayName: "\u7BA1\u98CE\u7434\u8D70\u5ECA\xB7\u7F15\u62C9\u8FDC\u7A0B\u63F4\u52A9"
+    _roomType: 3
+    _position: {x: 108, y: -30, z: 0}
+    _size: {x: 8, y: 8}
+    _connections:
+    - _connectionID: 1f1ada7f-290c-4876-9827-b932c04f2e7d
+      _targetRoomID: 1d4b5c5d-adc5-41e1-995d-20ef31114356
+      _doorPosition: {x: -4, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: dbaa02e6-98d1-43ae-8d74-d7335cc801e2
+      _targetRoomID: 2139fbc7-c0f9-447f-95e5-6f9603fa8823
+      _doorPosition: {x: 0, y: -4, z: 0}
+      _doorDirection: {x: 0, y: -1}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 064241f8-80c4-4f0a-a02e-68658277027d
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: 0, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 742a793e-d1a0-4c2e-b5f4-0937f712f8ea
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: 2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: 2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    _displayName: "\u58F0\u4E4B\u8D70\u5ECA"
+    _roomType: 0
+    _position: {x: 108, y: -40, z: 0}
+    _size: {x: 14, y: 8}
+    _connections:
+    - _connectionID: ce77ebad-17e8-4f55-840a-71c31370d449
+      _targetRoomID: daef1525-de58-49f5-b811-18387e5da1e8
+      _doorPosition: {x: 0, y: 4, z: 0}
+      _doorDirection: {x: 0, y: 1}
+      _isLayerTransition: 0
+    - _connectionID: cbdc898d-56d9-4655-8b6b-d8bfb0c018b0
+      _targetRoomID: 854307ad-8560-4593-a772-9700b1d5815b
+      _doorPosition: {x: 7, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: 2c0dd3f0-79dd-46d6-871e-e70f41bb385c
+      _targetRoomID: c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+      _doorPosition: {x: 0, y: -4, z: 0}
+      _doorDirection: {x: 0, y: -1}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 5db1dc4f-1399-4ffe-b854-c72a0b868119
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: -2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 61b9474d-c582-47bd-aa36-f17127ea7a2d
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: 854307ad-8560-4593-a772-9700b1d5815b
+    _displayName: "\u6D9F\u6F2A\u5956\u52B1\xB7\u5BC6\u5BA4"
+    _roomType: 3
+    _position: {x: 124, y: -40, z: 0}
+    _size: {x: 10, y: 8}
+    _connections:
+    - _connectionID: 96d02a3d-6996-4d24-b730-55d740da40b8
+      _targetRoomID: 2139fbc7-c0f9-447f-95e5-6f9603fa8823
+      _doorPosition: {x: -5, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: ecdae48b-651d-4dd5-9894-12ebfd2cce3c
+      _targetRoomID: 76c9ecc7-70cc-4341-990b-43dc00acf256
+      _doorPosition: {x: 5, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 558a4b95-dd6c-44d5-b6de-c05d7131d71a
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: 0, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: fb409d12-80c0-4114-b110-b342b5f52bc9
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: 3, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: 76c9ecc7-70cc-4341-990b-43dc00acf256
+    _displayName: "\u7F15\u62C9\u9996\u6B21\u9762\u5BF9\u9762"
+    _roomType: 3
+    _position: {x: 136, y: -40, z: 0}
+    _size: {x: 10, y: 8}
+    _connections:
+    - _connectionID: 81f5f93c-e7be-4d3b-b161-cccc0a15eecf
+      _targetRoomID: 854307ad-8560-4593-a772-9700b1d5815b
+      _doorPosition: {x: -5, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: efcb3b88-e0b7-4a1c-b7c0-db7777691b2f
+      _targetRoomID: fadc29b3-70d1-40eb-8113-2f6b89e1e12d
+      _doorPosition: {x: 0, y: -4, z: 0}
+      _doorDirection: {x: 0, y: -1}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 9d4dd262-4310-4f48-ae46-50322b8ce23a
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: 0, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 2f432e21-ef56-46d0-9cd5-2a8b032b0dba
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: 3, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: fadc29b3-70d1-40eb-8113-2f6b89e1e12d
+    _displayName: "\u6D9F\u6F2A\u83B7\u53D6\xB7\u9690\u85CF\u8DCC\u843D\u70B9"
+    _roomType: 0
+    _position: {x: 136, y: -50, z: 0}
+    _size: {x: 8, y: 7}
+    _connections:
+    - _connectionID: 8261634f-ae81-49ac-b0d6-dd8d686f24b5
+      _targetRoomID: 76c9ecc7-70cc-4341-990b-43dc00acf256
+      _doorPosition: {x: 0, y: 3.5, z: 0}
+      _doorDirection: {x: 0, y: 1}
+      _isLayerTransition: 0
+    - _connectionID: 2630d1f7-1c71-41fc-9691-add824b7251d
+      _targetRoomID: c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+      _doorPosition: {x: -4, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 549d452a-95a4-4e6d-aeb6-96a94f0fd72f
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: 0, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    _displayName: "\u53F9\u606F\u6DF1\u8C37\xB7\u5165\u53E3"
+    _roomType: 0
+    _position: {x: 118, y: -50, z: 0}
+    _size: {x: 12, y: 8}
+    _connections:
+    - _connectionID: 3e8ee149-1c3b-47e0-a13c-2653a0da3cb8
+      _targetRoomID: 2139fbc7-c0f9-447f-95e5-6f9603fa8823
+      _doorPosition: {x: 0, y: 4, z: 0}
+      _doorDirection: {x: 0, y: 1}
+      _isLayerTransition: 0
+    - _connectionID: 4bbb2dc3-c2da-46e1-9fe9-8e567cff067c
+      _targetRoomID: d9c66958-d400-4774-acff-278ef8299e83
+      _doorPosition: {x: 0, y: -4, z: 0}
+      _doorDirection: {x: 0, y: -1}
+      _isLayerTransition: 0
+    - _connectionID: 553fbbbc-676c-4c19-83b0-a5d0391cd34d
+      _targetRoomID: 8b872793-1963-4cd7-94a6-fadb915ac949
+      _doorPosition: {x: 6, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 1adabe84-5830-4a5e-9f95-0ef752fe3377
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: -2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 07f06ec9-4263-4258-a5fd-c31393d00c7a
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: d9c66958-d400-4774-acff-278ef8299e83
+    _displayName: "\u6D9F\u6F2A\u9A8C\u8BC1\xB7\u6218\u6597\u5E94\u7528"
+    _roomType: 1
+    _position: {x: 118, y: -60, z: 0}
+    _size: {x: 14, y: 9}
+    _connections:
+    - _connectionID: bb3fa2c6-b9cf-4ac0-9c66-61603fff1628
+      _targetRoomID: c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+      _doorPosition: {x: 0, y: 4.5, z: 0}
+      _doorDirection: {x: 0, y: 1}
+      _isLayerTransition: 0
+    - _connectionID: c9ddbea2-dbe4-4495-a8cc-2b0fcf5c0f70
+      _targetRoomID: a0978ce7-631f-46cb-8a2c-2641134a2c5d
+      _doorPosition: {x: 7, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: b59a945a-1401-48ae-82c9-9912dd34ac2f
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: -4, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 5bcc0151-00ff-4977-9966-c378a4022fc1
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 0, y: 1.5, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 7091650e-f15e-4dc5-9306-dd7d5610d4b5
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 0, y: -1.5, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: cc04836b-cc07-4dff-a91a-385f24bfd2dd
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 4, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    _displayName: "\u6D9F\u6F2A\u9A8C\u8BC1\xB7\u56DE\u97F3\u8DEF"
+    _roomType: 0
+    _position: {x: 134, y: -60, z: 0}
+    _size: {x: 12, y: 8}
+    _connections:
+    - _connectionID: 03719630-6a6e-469b-89eb-9826b78814ab
+      _targetRoomID: d9c66958-d400-4774-acff-278ef8299e83
+      _doorPosition: {x: -6, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: bf27e101-12a0-42e0-a852-353045590b84
+      _targetRoomID: 8b872793-1963-4cd7-94a6-fadb915ac949
+      _doorPosition: {x: 0, y: 4, z: 0}
+      _doorDirection: {x: 0, y: 1}
+      _isLayerTransition: 0
+    - _connectionID: 557479cf-cd87-4f0a-90fe-e0dfee9b5830
+      _targetRoomID: 6dce8cf0-1d84-4afd-87af-80769ba4b56a
+      _doorPosition: {x: 6, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 758c0d1c-14f4-4295-9525-196766873c7e
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: 0, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: bfc76bf4-2977-48e9-8118-fba9c4368ec6
+      _elementType: 4
+      _gizmoShape: 0
+      _localPosition: {x: 5, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: 8b872793-1963-4cd7-94a6-fadb915ac949
+    _displayName: "\u4E16\u754C\u65F6\u949F\u9884\u5146\xB7\u9000\u6F6E\u70B9"
+    _roomType: 3
+    _position: {x: 134, y: -50, z: 0}
+    _size: {x: 10, y: 8}
+    _connections:
+    - _connectionID: e264bfab-52d5-4d20-a126-592060fa4eae
+      _targetRoomID: c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+      _doorPosition: {x: -5, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: e8bee8c9-5bc6-4cea-b6d0-08cbcd166f0c
+      _targetRoomID: a0978ce7-631f-46cb-8a2c-2641134a2c5d
+      _doorPosition: {x: 0, y: -4, z: 0}
+      _doorDirection: {x: 0, y: -1}
+      _isLayerTransition: 0
+    - _connectionID: 4fbfa769-dbe7-400f-aa05-e7f09d5075ef
+      _targetRoomID: 6dce8cf0-1d84-4afd-87af-80769ba4b56a
+      _doorPosition: {x: 5, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: b318d1b8-d87a-49fc-993b-f9561083f838
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: 0, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 535730ba-a140-4173-b123-171ef39030fd
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: 3, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: 6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    _displayName: "\u9891\u7387\u6807\u8BB0\u70B9"
+    _roomType: 3
+    _position: {x: 148, y: -55, z: 0}
+    _size: {x: 8, y: 7}
+    _connections:
+    - _connectionID: 9f221c4d-15e6-43a8-868b-41f331353eba
+      _targetRoomID: 8b872793-1963-4cd7-94a6-fadb915ac949
+      _doorPosition: {x: -4, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: 099637a5-e444-4506-9f14-a166c62a18b3
+      _targetRoomID: a0978ce7-631f-46cb-8a2c-2641134a2c5d
+      _doorPosition: {x: -4, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: 16b83101-bee9-498b-bcc5-825cf4928e78
+      _targetRoomID: bcb82d9d-c840-46db-8f88-465939a6b327
+      _doorPosition: {x: 0, y: -3.5, z: 0}
+      _doorDirection: {x: 0, y: -1}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: eb392c6b-7cad-4947-a6ba-9029061abc75
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: -1, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: f661bcc1-edcd-48de-9ec7-758a596c2a20
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: 2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: bcb82d9d-c840-46db-8f88-465939a6b327
+    _displayName: "\u53F9\u606F\u5899\xB7\u524D\u5BA4"
+    _roomType: 0
+    _position: {x: 148, y: -64, z: 0}
+    _size: {x: 12, y: 8}
+    _connections:
+    - _connectionID: 80363829-32e5-482f-a355-c74c23faf37c
+      _targetRoomID: 6dce8cf0-1d84-4afd-87af-80769ba4b56a
+      _doorPosition: {x: 0, y: 4, z: 0}
+      _doorDirection: {x: 0, y: 1}
+      _isLayerTransition: 0
+    - _connectionID: 0acd699e-0c59-4ed1-8682-6efaa30bcb73
+      _targetRoomID: 6786a9a0-5a75-4122-9f94-8d876fc42bf3
+      _doorPosition: {x: 6, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 9b3bf53e-0044-4ad1-8a4c-6ae02a205d23
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: -2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 4eb8f0ac-e9f9-464b-9747-a872cd7756e1
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: f7330a9c-8c59-439d-b3a8-53fd50b72975
+      _elementType: 4
+      _gizmoShape: 0
+      _localPosition: {x: 5, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: 6786a9a0-5a75-4122-9f94-8d876fc42bf3
+    _displayName: "\u53F9\u606F\u5899\xB7Boss\u7ADE\u6280\u573A"
+    _roomType: 2
+    _position: {x: 162, y: -62, z: 0}
+    _size: {x: 20, y: 14}
+    _connections:
+    - _connectionID: fa3c2c5f-2e86-48f0-ae05-47c62adbe74e
+      _targetRoomID: bcb82d9d-c840-46db-8f88-465939a6b327
+      _doorPosition: {x: -10, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: 460f5f9c-2ce2-49ce-9881-3d4d0146d37a
+      _targetRoomID: bb62e40f-9591-4cdd-b33e-9321c0e4059f
+      _doorPosition: {x: 10, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: ee641a7e-4e5d-451b-b870-ec1e9d27fb6d
+      _elementType: 7
+      _gizmoShape: 1
+      _localPosition: {x: 0, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 7952ffeb-eea3-40e1-b031-80b016cd7e23
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: -8, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: bb62e40f-9591-4cdd-b33e-9321c0e4059f
+    _displayName: "\u53F9\u606F\u5899\xB7Boss\u540E\u5956\u52B1"
+    _roomType: 3
+    _position: {x: 184, y: -64, z: 0}
+    _size: {x: 12, y: 8}
+    _connections:
+    - _connectionID: b7eb9f1a-9ec9-4362-8d96-d96f404eaec2
+      _targetRoomID: 6786a9a0-5a75-4122-9f94-8d876fc42bf3
+      _doorPosition: {x: -6, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    - _connectionID: 3c8c88b1-97d5-4c5a-ada8-0be16b6ed701
+      _targetRoomID: fc8006bd-d7d0-402a-a026-b207ed1437c1
+      _doorPosition: {x: 6, y: 0, z: 0}
+      _doorDirection: {x: 1, y: 0}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 2a435c19-cc7e-4fe7-9fef-50e77a8d6c88
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: -3, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: f77d458c-f15e-49ec-8b93-70119e6e2cd4
+      _elementType: 2
+      _gizmoShape: 0
+      _localPosition: {x: 0, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: cdb2f604-e328-4276-a5bf-7b10feebf5e4
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: 3, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: 5bf10e64-20f3-4901-9a8a-e4000935faee
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: 5, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}
+  - _roomID: fc8006bd-d7d0-402a-a026-b207ed1437c1
+    _displayName: "ACT2\u51FA\u53E3\xB7\u67A2\u7EBD\u5165\u53E3"
+    _roomType: 3
+    _position: {x: 198, y: -66, z: 0}
+    _size: {x: 8, y: 7}
+    _connections:
+    - _connectionID: cea2067a-7f23-41dd-888e-f0370ad8ed74
+      _targetRoomID: bb62e40f-9591-4cdd-b33e-9321c0e4059f
+      _doorPosition: {x: -4, y: 0, z: 0}
+      _doorDirection: {x: -1, y: 0}
+      _isLayerTransition: 0
+    _elements:
+    - _elementID: 519f0ef8-8102-4151-a97e-5f9844415d92
+      _elementType: 4
+      _gizmoShape: 0
+      _localPosition: {x: 2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    - _elementID: e0026053-de7e-436e-b492-1f42b73fdcfc
+      _elementType: 5
+      _gizmoShape: 1
+      _localPosition: {x: -2, y: -0, z: 0}
+      _rotation: 0
+      _scale: {x: 1, y: 1, z: 1}
+      _doorConfig:
+        _initialState: 0
+        _requiredKeyID: 
+        _openDuringPhases: 
+      _boundConnectionID: 
+    _roomSO: {fileID: 0}

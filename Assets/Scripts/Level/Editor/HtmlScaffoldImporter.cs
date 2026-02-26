@@ -386,6 +386,17 @@ namespace ProjectArk.Level.Editor
                 }
             }
 
+            // Refresh the SerializedObject so it picks up the rooms/connections
+            // added via direct C# API (AddRoom, AddConnection, etc.) before
+            // applying the _levelName / _floorLevel changes we set through
+            // SerializedProperty.  Without this Update(), Apply would overwrite
+            // _rooms back to the empty snapshot taken in Step 2.
+            so.Update();
+
+            // Re-apply the fields we set through SerializedProperty
+            so.FindProperty("_levelName").stringValue = htmlData.LevelName ?? "Imported Level";
+            so.FindProperty("_floorLevel").intValue = primaryFloor;
+
             // Apply serialized changes
             so.ApplyModifiedPropertiesWithoutUndo();
 

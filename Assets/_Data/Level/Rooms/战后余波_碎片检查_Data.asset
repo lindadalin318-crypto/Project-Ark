@@ -10,11 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 20b9e9a1f25dcd04697f8268d0e76a1e, type: 3}
-  m_Name: Room_Start_SO
+  m_Name: "\u6218\u540E\u4F59\u6CE2_\u788E\u7247\u68C0\u67E5_Data"
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.RoomSO
-  _roomID: start
-  _displayName: "\u8D77\u59CB\u5E73\u53F0"
+  _roomID: 
+  _displayName: 
   _floorLevel: 0
-  _type: 3
+  _type: 0
   _mapIcon: {fileID: 0}
-  _encounter: {fileID: 0}
+  _ambientMusic: {fileID: 0}
+  _encounter: {fileID: 11400000, guid: 8202e9359701654488cda69e80b1bdaf, type: 2}
