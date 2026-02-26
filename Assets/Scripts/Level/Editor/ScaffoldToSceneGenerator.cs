@@ -176,12 +176,14 @@ namespace ProjectArk.Level.Editor
                     {
                         switch (elem.ElementType)
                         {
-                            case ScaffoldElementType.PlayerSpawn:
-                                CreateElementGO("PlayerSpawn", parentGO.transform, elem.LocalPosition);
+                        case ScaffoldElementType.PlayerSpawn:
+                                CreateElementGO("PlayerSpawn", parentGO.transform, elem.LocalPosition,
+                                    ScaffoldElementType.PlayerSpawn);
                                 break;
 
                             case ScaffoldElementType.EnemySpawn:
-                                var spGO = CreateElementGO($"EnemySpawn_{enemyIdx}", parentGO.transform, elem.LocalPosition);
+                                var spGO = CreateElementGO($"EnemySpawn_{enemyIdx}", parentGO.transform, elem.LocalPosition,
+                                    ScaffoldElementType.EnemySpawn);
                                 roomEnemySpawns[sr.RoomID].Add(spGO.transform);
                                 enemyIdx++;
                                 break;
@@ -195,7 +197,8 @@ namespace ProjectArk.Level.Editor
                                 break;
 
                             default: // Wall, WallCorner, CrateWooden, CrateMetal, Hazard
-                                CreateElementGO($"[{elem.ElementType}]_Placeholder", parentGO.transform, elem.LocalPosition);
+                                CreateElementGO($"[{elem.ElementType}]_Placeholder", parentGO.transform, elem.LocalPosition,
+                                    elem.ElementType);
                                 break;
                         }
                     }
@@ -265,7 +268,7 @@ namespace ProjectArk.Level.Editor
             confinerChild.layer = 2; // Ignore Raycast
 
             var polyCol = confinerChild.AddComponent<PolygonCollider2D>();
-            polyCol.isTrigger = false;
+            polyCol.isTrigger = true;
             float hw = sr.Size.x * 0.5f;
             float hh = sr.Size.y * 0.5f;
             polyCol.points = new Vector2[]
@@ -317,11 +320,89 @@ namespace ProjectArk.Level.Editor
         //  PHASE 3: ELEMENT INSTANTIATION
         // ══════════════════════════════════════════════════════════════
 
-        private GameObject CreateElementGO(string name, Transform parent, Vector3 localPos)
+        /// <summary>
+        /// Returns the world-space size for each scaffold element type's gizmo sprite,
+        /// matching the BoxCollider2D trigger area used at runtime.
+        /// </summary>
+        private static Vector2 GetElementGizmoSize(ScaffoldElementType type)
+        {
+            return type switch
+            {
+                ScaffoldElementType.Door        => new Vector2(3f, 3f),   // matches BoxCollider2D.size
+                ScaffoldElementType.Checkpoint  => new Vector2(2f, 2f),   // matches BoxCollider2D.size
+                ScaffoldElementType.PlayerSpawn => new Vector2(1.5f, 1.5f),
+                ScaffoldElementType.EnemySpawn  => new Vector2(1.5f, 1.5f),
+                _                               => Vector2.one,
+            };
+        }
+
+        /// <summary>
+        /// Returns a distinct color for each scaffold element type, used by gizmo visuals.
+        /// </summary>
+        private static Color GetElementGizmoColor(ScaffoldElementType type)
+        {
+            return type switch
+            {
+                ScaffoldElementType.PlayerSpawn  => new Color(0.9f, 0.8f, 0.2f, 0.8f),  // yellow
+                ScaffoldElementType.EnemySpawn   => new Color(0.9f, 0.3f, 0.3f, 0.8f),  // red
+                ScaffoldElementType.Checkpoint   => new Color(0.3f, 0.9f, 0.4f, 0.8f),  // green
+                ScaffoldElementType.Wall         => new Color(0.6f, 0.6f, 0.6f, 0.8f),  // grey
+                ScaffoldElementType.WallCorner   => new Color(0.5f, 0.5f, 0.5f, 0.8f),  // dark grey
+                ScaffoldElementType.CrateWooden  => new Color(0.8f, 0.5f, 0.2f, 0.8f),  // orange
+                ScaffoldElementType.CrateMetal   => new Color(0.4f, 0.4f, 0.5f, 0.8f),  // blue-grey
+                ScaffoldElementType.Hazard       => new Color(0.9f, 0.2f, 0.8f, 0.8f),  // purple
+                ScaffoldElementType.Door         => new Color(0.3f, 0.7f, 0.8f, 0.8f),  // cyan
+                _                                => new Color(1.0f, 1.0f, 1.0f, 0.8f),  // white fallback
+            };
+        }
+
+        /// <summary>
+        /// Adds a SpriteRenderer (colored square) and a TextMesh label child to a GO.
+        /// <paramref name="size"/> controls the world-space size of the color block so it can
+        /// match the GO's BoxCollider2D trigger area (e.g. pass (3,3) for a Door).
+        /// These are editor-only gizmo visuals; remove/hide before shipping.
+        /// </summary>
+        private static void AddGizmoVisuals(GameObject go, string labelText, Color color,
+            Vector2 size = default)
+        {
+            if (size == default) size = Vector2.one;
+
+            // ── SpriteRenderer color block ──
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            sr.color  = color;
+            sr.sortingOrder = 1;
+            // Scale the GO so the sprite visually matches the collider area
+            go.transform.localScale = new Vector3(size.x, size.y, 1f);
+
+            // ── TextMesh label child ──
+            var labelGO = new GameObject("Label");
+            labelGO.transform.SetParent(go.transform);
+            // Offset label above the block; compensate for parent scale so it stays readable
+            float labelY = 0.5f + (0.6f / size.y);
+            labelGO.transform.localPosition = new Vector3(0f, labelY, 0f);
+            // Counter-scale so text size is independent of parent scale
+            labelGO.transform.localScale    = new Vector3(0.1f / size.x, 0.1f / size.y, 0.1f);
+
+            var tm = labelGO.AddComponent<TextMesh>();
+            tm.text      = labelText;
+            tm.fontSize  = 12;
+            tm.anchor    = TextAnchor.MiddleCenter;
+            tm.alignment = TextAlignment.Center;
+            tm.color     = Color.white;
+
+            var mr = labelGO.GetComponent<MeshRenderer>();
+            if (mr != null) mr.sortingOrder = 2;
+        }
+
+        private GameObject CreateElementGO(string name, Transform parent, Vector3 localPos,
+            ScaffoldElementType type = ScaffoldElementType.PlayerSpawn, string labelOverride = null)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent);
             go.transform.localPosition = localPos;
+            AddGizmoVisuals(go, labelOverride ?? type.ToString(),
+                GetElementGizmoColor(type), GetElementGizmoSize(type));
             return go;
         }
 
@@ -337,6 +418,11 @@ namespace ProjectArk.Level.Editor
             var col = cpGO.AddComponent<BoxCollider2D>();
             col.isTrigger = true;
             col.size = new Vector2(2f, 2f);
+
+            // Gizmo visual — size matches BoxCollider2D (2×2)
+            AddGizmoVisuals(cpGO, "Checkpoint",
+                GetElementGizmoColor(ScaffoldElementType.Checkpoint),
+                GetElementGizmoSize(ScaffoldElementType.Checkpoint));
 
             // Checkpoint component
             var cp = cpGO.AddComponent<Checkpoint>();
@@ -424,6 +510,7 @@ namespace ProjectArk.Level.Editor
                     fwdCol.size = new Vector2(3f, 3f);
 
                     var fwdDoor = fwdDoorGO.AddComponent<Door>();
+                    AddGizmoVisuals(fwdDoorGO, "Door", GetElementGizmoColor(ScaffoldElementType.Door), new Vector2(3f, 3f));
 
                     // ── Find reverse connection's door position ──
                     Vector3 reverseSpawnPos = FindReverseDoorPosition(
@@ -433,6 +520,7 @@ namespace ProjectArk.Level.Editor
                     var fwdSpawn = new GameObject($"SpawnPoint_from_{SanitizeName(sourceDisplayName)}");
                     fwdSpawn.transform.SetParent(target.go.transform);
                     fwdSpawn.transform.localPosition = reverseSpawnPos;
+                    AddGizmoVisuals(fwdSpawn, "SpawnPt", new Color(0.5f, 0.8f, 1.0f, 0.6f), new Vector2(1.5f, 1.5f));
 
                     // ── Reverse door: target → source ──
                     var revDoorGO = new GameObject($"Door_to_{SanitizeName(sourceDisplayName)}");
@@ -444,11 +532,13 @@ namespace ProjectArk.Level.Editor
                     revCol.size = new Vector2(3f, 3f);
 
                     var revDoor = revDoorGO.AddComponent<Door>();
+                    AddGizmoVisuals(revDoorGO, "Door", GetElementGizmoColor(ScaffoldElementType.Door), new Vector2(3f, 3f));
 
                     // ── SpawnPoint in source room (where player appears on reverse) ──
                     var revSpawn = new GameObject($"SpawnPoint_from_{SanitizeName(targetDisplayName)}");
                     revSpawn.transform.SetParent(source.go.transform);
                     revSpawn.transform.localPosition = conn.DoorPosition;
+                    AddGizmoVisuals(revSpawn, "SpawnPt", new Color(0.5f, 0.8f, 1.0f, 0.6f), new Vector2(1.5f, 1.5f));
 
                     // ── Wire forward door ──
                     WireDoor(fwdDoor, target.room, fwdSpawn.transform,
@@ -789,6 +879,7 @@ namespace ProjectArk.Level.Editor
             Debug.Log("  4. 🎨  Add visual decorations, lighting, and particle effects");
             Debug.Log("  5. 🖼️  Add SpriteRenderer to Checkpoint GameObjects");
             Debug.Log("  6. ⚙️  Configure Physics2D collision matrix (Player vs Room/Door/Checkpoint)");
+            Debug.Log("  7. 🎨  [ ] Hide/Remove Gizmo visuals (SpriteRenderer + TextMesh Label children) before shipping");
             Debug.Log("═══════════════════════════════════════════════════════════════");
         }
 

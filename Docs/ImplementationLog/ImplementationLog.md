@@ -5403,3 +5403,107 @@ else
 ### 前提
 
 项目 Tags and Layers 中必须存在名为 **`RoomBounds`** 的 Layer，否则生成时会输出 Warning 并回退到 Default Layer。
+
+---
+
+## BugFix: ScaffoldToSceneGenerator CameraConfiner 实体碰撞阻挡飞船 — 2026-02-26 22:42
+
+### 修改文件
+
+- `Assets/Scripts/Level/Editor/ScaffoldToSceneGenerator.cs`
+
+### 问题描述
+
+通过 `ScaffoldToSceneGenerator` 生成的关卡（示巴星 ACT1+ACT2）中，飞船进入任意 Room 时被卡在房间边缘，无法正常进入。旧版 `ShebaLevelScaffolder` 生成的 Sheba Level 正常。
+
+### 根因
+
+`CreateRoomGameObject` 方法中，`CameraConfiner` 子对象的 `PolygonCollider2D` 被设置为 `isTrigger = false`（实体碰撞体）。`Ignore Raycast`（Layer 2）只忽略射线检测，不忽略 Physics2D 碰撞，导致该实体 PolygonCollider2D 像一堵墙一样包围整个房间，阻止飞船进入。
+
+### 修复
+
+将 `CreateRoomGameObject` 中 `PolygonCollider2D` 的 `isTrigger` 从 `false` 改为 `true`：
+
+```csharp
+// Before
+polyCol.isTrigger = false;
+
+// After
+polyCol.isTrigger = true;
+```
+
+### 影响范围
+
+仅影响 `ScaffoldToSceneGenerator` 生成的新关卡。已生成的场景需手动将各 Room 下 `CameraConfiner/Po
+lygonCollider2D` 的 Is Trigger 勾选为 true，或重新生成关卡。
+
+---
+
+## Feature: ScaffoldToSceneGenerator 元素可视化 Gizmo — 2026-02-26 23:04
+
+### 修改文件
+
+- `Assets/Scripts/Level/Editor/ScaffoldToSceneGenerator.cs`
+
+### 内容简述
+
+为 `ScaffoldToSceneGenerator` 生成的每个房间元素 GO 添加编辑期可视化：彩色 `SpriteRenderer` 色块 + `TextMesh` 文字标签，方便关卡设计师在 Scene 视图中直观识别各元素类型和位置。
+
+### 目的
+
+当前生成的元素 GO（`PlayerSpawn`、`EnemySpawn`、`Wall` 等）在 Scene 视图中是空 GameObject，无任何视觉表示，开发者无法直观区分。
+
+### 技术方案
+
+1. **新增 `GetElementGizmoColor(ScaffoldElementType)`**：静态辅助方法，按元素类型返回对应 `Color`（黄/红/绿/灰/深灰/橙/蓝灰/紫/青，其余白色）。
+
+2. **新增 `AddGizmoVisuals(GameObject, string, Color)`**：通用辅助方法，在目标 GO 上：
+   - 添加 `SpriteRenderer`，使用 `Resources.GetBuiltinResource<Sprite>("Sprites/Default")` 内置白色方块 Sprite，设置颜色与 `sortingOrder = 1`
+   - 创建子 GO `"Label"`，添加 `TextMesh`，设置文字内容、`fontSize=12`、`anchor=MiddleCenter`、`alignment=Center`、白色字体、`localPosition=(0,0.6,0)`、`localScale=(0.1,0.1,0.1)`，`MeshRenderer.sortingOrder = 2`
+
+3. **修改 `CreateElementGO()`**：增加可选参数 `ScaffoldElementType type` 和 `string labelOverride`，方法末尾调用 `AddGizmoVisuals()`；更新 Phase 3 中所有调用处传入对应 `elem.ElementType`。
+
+4. **Phase 4 Door/SpawnPoint 可视化**：在 `GenerateDoors()` 中，对 `Door_to_XXX` GO 添加青色可视化，对 `SpawnPoint_from_XXX` GO 添加浅蓝色可视化。
+
+5. **TODO Checklist 提示**：在 `Generate()` 末尾的 Console 输出中追加提示，提醒开发者发布前隐藏/删除 Gizmo 可视化组件。
+
+---
+
+## ScaffoldToSceneGenerator — Door/SpawnPoint Gizmo 尺寸匹配碰撞体 — 2026-02-26 23:18
+
+**修改文件：**
+- `Assets/Scripts/Level/Editor/ScaffoldToSceneGenerator.cs`
+
+**内容简述：**
+为 `AddGizmoVisuals()` 增加可选 `Vector2 size` 参数，使 SpriteRenderer 色块的世界空间大小可配置，并在 Door 和 SpawnPoint 的调用处传入对应尺寸。
+
+**目的：**
+让开发者在 Scene 视图中能直观看到 Door 触发区域的实际范围（3×3 单位），知道飞船何时进入了传送检测区域。
+
+**技术方案：**
+1. `AddGizmoVisuals(go, label, color, size)` 新增 `size` 参数（默认 `Vector2.one`），通过设置 `go.transform.localScale = (size.x, size.y, 1)` 让 SpriteRenderer 色块与碰撞体等大。
+2. Label 子 GO 的 `localPosition.y` 和 `localScale` 做反向补偿（除以 parent scale），保证文字大小不随色块缩放而变形。
+3. Door GO 调用时传入 `new Vector2(3f, 3f)`，与 `BoxCollider2D.size = (3,3)` 完全对齐。
+4. SpawnPoint GO 调用时传入 `new Vector2(1.5f, 1.5f)`，提供清晰的落点可视范围。
+
+---
+
+## ScaffoldToSceneGenerator — 所有元素 Gizmo Sprite 匹配碰撞体大小 — 2026-02-26 23:24
+
+**修改文件：**
+- `Assets/Scripts/Level/Editor/ScaffoldToSceneGenerator.cs`
+
+**内容简述：**
+新增 `GetElementGizmoSize()` 辅助方法，统一管理各元素类型的 Gizmo sprite 尺寸；修复 `CreateElementGO` 和 `CreateCheckpointElement` 未传 size 导致 sprite 始终为 1×1 的问题。
+
+**目的：**
+让一键生成的所有元素（Door、Checkpoint、PlayerSpawn、EnemySpawn 等）的 SpriteRenderer 色块在 Scene 视图中与其 BoxCollider2D 触发区域完全重叠，方便开发者直观判断检测范围。
+
+**技术方案：**
+新增 `GetElementGizmoSize(ScaffoldElementType)` 方法，返回各类型对应的 `Vector2` 尺寸：
+- `Door` → `(3, 3)`，匹配 `BoxCollider2D.size = (3,3)`
+- `Checkpoint` → `(2, 2)`，匹配 `BoxCollider2D.size = (2,2)`
+- `PlayerSpawn` / `EnemySpawn` → `(1.5, 1.5)`，无碰撞体但提供清晰落点范围
+- 其余 → `(1, 1)` 默认
+
+`CreateElementGO` 调用 `AddGizmoVisuals` 时自动传入 `GetElementGizmoSize(type)`；`CreateCheckpointElement` 也在添加 BoxCollider2D 后立即调用 `AddGizmoVisuals` 并传入 `(2,2)`。
