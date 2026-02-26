@@ -65,6 +65,9 @@
         .preset-item.normal { background: #5a4a27; border-left: 3px solid #ff9800; }
         .preset-item.arena { background: #5a2727; border-left: 3px solid #f44336; }
         .preset-item.boss { background: #4a275a; border-left: 3px solid #9c27b0; }
+        .preset-item.narrative { background: #2a2a5a; border-left: 3px solid #7c4dff; }
+        .preset-item.puzzle { background: #1a4a4a; border-left: 3px solid #00bcd4; }
+        .preset-item.corridor { background: #3a3a3a; border-left: 3px solid #9e9e9e; }
         
         .preset-item.element {
             background: #2a3a4a;
@@ -255,6 +258,9 @@
         .room.normal { background: #5a4a27; border: 2px solid #ff9800; }
         .room.arena { background: #5a2727; border: 2px solid #f44336; }
         .room.boss { background: #4a275a; border: 2px solid #9c27b0; }
+        .room.narrative { background: #2a2a5a; border: 2px solid #7c4dff; }
+        .room.puzzle { background: #1a4a4a; border: 2px solid #00bcd4; }
+        .room.corridor { background: #3a3a3a; border: 2px solid #9e9e9e; }
         
         .room-name {
             margin-bottom: 2px;
@@ -378,6 +384,10 @@
             stroke: #4fc3f7;
             stroke-width: 3;
         }
+
+        .connection-line.tidal  { stroke: #00897b; }
+        .connection-line.locked { stroke: #ffc107; }
+        .connection-line.one_way { stroke: #ff9800; }
         
         .temp-connection-line {
             stroke: #ff6b6b;
@@ -454,6 +464,10 @@
         .element-chest { background: #ffeb3b; color: #333; }
         .element-checkpoint { background: #2196f3; }
         .element-npc { background: #9c27b0; }
+        .element-tidal_door { background: #00897b; border-color: #4db6ac; }
+        .element-resonance_crystal { background: #f9a825; color: #333; border-color: #ffd54f; }
+        .element-lore_audio { background: #e0e0e0; color: #333; border-color: #fff; }
+        .element-black_water { background: #1a1a2e; border-color: #37474f; }
         
         .modal {
             position: fixed;
@@ -575,6 +589,25 @@
             overflow: auto;
             min-height: 40px;
         }
+
+        /* ACT Group Box styles */
+        .act-group-box {
+            position: absolute;
+            border-radius: 6px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .act-group-box .act-group-label {
+            position: absolute;
+            top: 6px;
+            left: 10px;
+            font-size: 11px;
+            font-weight: bold;
+            opacity: 0.85;
+            letter-spacing: 1px;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -597,6 +630,18 @@
                 <div class="preset-item boss" draggable="true" data-type="boss">
                     <div class="color-dot" style="background: #9c27b0;"></div>
                     Boss (Boss)
+                </div>
+                <div class="preset-item narrative" draggable="true" data-type="narrative">
+                    <div class="color-dot" style="background: #7c4dff;"></div>
+                    Narrative (叙事)
+                </div>
+                <div class="preset-item puzzle" draggable="true" data-type="puzzle">
+                    <div class="color-dot" style="background: #00bcd4;"></div>
+                    Puzzle (解谜)
+                </div>
+                <div class="preset-item corridor" draggable="true" data-type="corridor">
+                    <div class="color-dot" style="background: #9e9e9e;"></div>
+                    Corridor (走廊)
                 </div>
             </div>
             
@@ -625,6 +670,22 @@
                 <div class="preset-item element" draggable="true" data-element="npc">
                     <div class="color-dot" style="background: #9c27b0;"></div>
                     NPC
+                </div>
+                <div class="preset-item element" draggable="true" data-element="tidal_door">
+                    <div class="color-dot" style="background: #00897b;"></div>
+                    潮汐门
+                </div>
+                <div class="preset-item element" draggable="true" data-element="resonance_crystal">
+                    <div class="color-dot" style="background: #f9a825;"></div>
+                    共鸣水晶
+                </div>
+                <div class="preset-item element" draggable="true" data-element="lore_audio">
+                    <div class="color-dot" style="background: #e0e0e0;"></div>
+                    Lore音频
+                </div>
+                <div class="preset-item element" draggable="true" data-element="black_water">
+                    <div class="color-dot" style="background: #37474f;"></div>
+                    黑水区域
                 </div>
             </div>
             
@@ -688,6 +749,9 @@
                             <option value="normal">Normal (普通)</option>
                             <option value="arena">Arena (竞技场)</option>
                             <option value="boss">Boss (Boss)</option>
+                            <option value="narrative">Narrative (叙事)</option>
+                            <option value="puzzle">Puzzle (解谜)</option>
+                            <option value="corridor">Corridor (走廊)</option>
                         </select>
                     </div>
                     
@@ -704,6 +768,38 @@
                         </div>
                     </div>
                     
+                    <div class="property-group">
+                        <div class="property-label">Zone ID</div>
+                        <input type="text" class="property-input" id="prop-zone-id" placeholder="如 Z1a" onchange="updateRoomProperty('zoneId', this.value)">
+                    </div>
+                    
+                    <div class="property-group">
+                        <div class="property-label">ACT 分组</div>
+                        <select class="property-input" id="prop-act" onchange="updateRoomProperty('act', this.value)">
+                            <option value="">-- 未分组 --</option>
+                            <option value="ACT1">ACT 1</option>
+                            <option value="ACT2">ACT 2</option>
+                            <option value="ACT3">ACT 3</option>
+                            <option value="ACT4">ACT 4</option>
+                            <option value="ACT5">ACT 5</option>
+                        </select>
+                    </div>
+                    
+                    <div class="property-group">
+                        <div class="property-label">张力值 <span id="tension-display" style="color:#e94560;">0</span></div>
+                        <input type="range" class="property-input" id="prop-tension" min="0" max="10" step="1" value="0" oninput="document.getElementById('tension-display').textContent=this.value; updateRoomProperty('tension', parseInt(this.value))">
+                    </div>
+                    
+                    <div class="property-group">
+                        <div class="property-label">叙事乐章</div>
+                        <input type="text" class="property-input" id="prop-beat-name" placeholder="如 序曲：坠落" onchange="updateRoomProperty('beatName', this.value)">
+                    </div>
+                    
+                    <div class="property-group">
+                        <div class="property-label">时长估算</div>
+                        <input type="text" class="property-input" id="prop-time-range" placeholder="如 0:00-5:00" onchange="updateRoomProperty('timeRange', this.value)">
+                    </div>
+
                     <div class="property-group">
                         <div class="property-label">连接</div>
                         <div id="connections-list" style="font-size: 11px; max-height: 100px; overflow-y: auto;"></div>
@@ -730,9 +826,13 @@
             <!-- Divider 2 -->
             <div class="panel-divider" data-divider="2"></div>
             
-            <!-- Section 3: ASCII Preview -->
+            <!-- Section 3: Tension Chart + ASCII Preview -->
             <div class="right-panel-section" id="section-ascii" style="flex: 0.5; display: flex; flex-direction: column;">
-                <div class="panel-title">ASCII 预览</div>
+                <div id="section-tension" style="flex-shrink: 0;">
+                    <div class="panel-title" style="margin-bottom: 4px;">心流张力曲线</div>
+                    <canvas id="tension-chart" height="90" style="width: 100%; display: block; background: #0a0a1a; border-radius: 4px; border: 1px solid #0f3460;"></canvas>
+                </div>
+                <div class="panel-title" style="margin-top: 8px;">ASCII 预览</div>
                 <div class="ascii-preview" id="ascii-preview" style="flex: 1;"></div>
             </div>
         </div>
@@ -835,6 +935,135 @@
             });
         })();
         
+        // === Undo Stack ===
+        let undoStack = [];
+        const MAX_UNDO_STEPS = 50;
+
+        function pushUndoState() {
+            const snapshot = {
+                rooms: JSON.parse(JSON.stringify(rooms)),
+                connections: JSON.parse(JSON.stringify(connections)),
+                doorLinks: JSON.parse(JSON.stringify(doorLinks))
+            };
+            undoStack.push(snapshot);
+            if (undoStack.length > MAX_UNDO_STEPS) undoStack.shift();
+        }
+
+        // === ACT Group Box Colors ===
+        const ACT_COLORS = {
+            ACT1: { bg: 'rgba(76,175,80,0.08)',  border: 'rgba(76,175,80,0.45)',  label: '#4caf50' },
+            ACT2: { bg: 'rgba(33,150,243,0.08)',  border: 'rgba(33,150,243,0.45)', label: '#2196f3' },
+            ACT3: { bg: 'rgba(255,152,0,0.08)',   border: 'rgba(255,152,0,0.45)',  label: '#ff9800' },
+            ACT4: { bg: 'rgba(233,69,96,0.08)',   border: 'rgba(233,69,96,0.45)',  label: '#e94560' },
+            ACT5: { bg: 'rgba(156,39,176,0.08)',  border: 'rgba(156,39,176,0.45)', label: '#9c27b0' }
+        };
+
+        let actGroupThrottle = null;
+
+        function renderActGroups() {
+            // Throttle when room count > 50
+            if (rooms.length > 50) {
+                if (actGroupThrottle) return;
+                actGroupThrottle = setTimeout(() => {
+                    actGroupThrottle = null;
+                    _doRenderActGroups();
+                }, 16);
+            } else {
+                _doRenderActGroups();
+            }
+        }
+
+        function _doRenderActGroups() {
+            // Remove existing group boxes
+            world.querySelectorAll('.act-group-box').forEach(el => el.remove());
+
+            // Group rooms by ACT
+            const groups = {};
+            rooms.forEach(r => {
+                if (!r.act) return;
+                if (!groups[r.act]) groups[r.act] = [];
+                groups[r.act].push(r);
+            });
+
+            const PAD = 20;
+            Object.entries(groups).forEach(([act, actRooms]) => {
+                const color = ACT_COLORS[act] || { bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.2)', label: '#eee' };
+
+                // Compute bounding box
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                actRooms.forEach(r => {
+                    minX = Math.min(minX, r.x);
+                    minY = Math.min(minY, r.y);
+                    maxX = Math.max(maxX, r.x + r.width);
+                    maxY = Math.max(maxY, r.y + r.height);
+                });
+
+                const box = document.createElement('div');
+                box.className = 'act-group-box';
+                box.style.left   = (minX - PAD) + 'px';
+                box.style.top    = (minY - PAD) + 'px';
+                box.style.width  = (maxX - minX + PAD * 2) + 'px';
+                box.style.height = (maxY - minY + PAD * 2) + 'px';
+                box.style.background = color.bg;
+                box.style.border = `1.5px dashed ${color.border}`;
+
+                const label = document.createElement('div');
+                label.className = 'act-group-label';
+                label.textContent = act.replace('ACT', 'ACT ');
+                label.style.color = color.label;
+                box.appendChild(label);
+
+                // Insert before rooms (prepend to world)
+                world.insertBefore(box, world.firstChild);
+            });
+        }
+
+        function undo() {
+            if (undoStack.length === 0) return;
+            const snapshot = undoStack.pop();
+            // Clear canvas
+            world.querySelectorAll('.room').forEach(r => r.remove());
+            svg.innerHTML = '';
+            selectedRoom = null;
+            selectedConnectionIndex = -1;
+            selectedDoorLinkIndex = -1;
+            selectedElementRoomId = null;
+            selectedElementIndex = -1;
+            document.getElementById('properties-panel').style.display = 'block';
+            document.getElementById('room-properties').style.display = 'none';
+            hideConnectionProperties();
+            // Restore state
+            rooms = snapshot.rooms;
+            connections = snapshot.connections;
+            doorLinks = snapshot.doorLinks;
+            rooms.forEach(r => renderRoom(r));
+            renderConnections();
+            renderDoorLinks();
+            renderActGroups();
+            updateAsciiPreview();
+        }
+
+        function duplicateRoom() {
+            if (!selectedRoom) return;
+            pushUndoState();
+            // Deep-copy the room, generate unique ID
+            const src = selectedRoom;
+            let newId = src.id + '_copy';
+            let suffix = 1;
+            while (rooms.some(r => r.id === newId)) {
+                newId = src.id + '_copy' + (++suffix);
+            }
+            const newRoom = JSON.parse(JSON.stringify(src));
+            newRoom.id = newId;
+            newRoom.x = src.x + 40;
+            newRoom.y = src.y + 40;
+            rooms.push(newRoom);
+            renderRoom(newRoom);
+            selectRoom(newRoom);
+            renderActGroups();
+            updateAsciiPreview();
+        }
+
         let rooms = [];
         let connections = [];
         let doorLinks = [];
@@ -930,6 +1159,7 @@
         });
         
         function createRoom(type, x, y) {
+            pushUndoState();
             const room = {
                 id: `room_${type}_${roomIdCounter++}`,
                 name: `${getTypeLabel(type)}`,
@@ -939,12 +1169,18 @@
                 y: y,
                 width: ROOM_DEFAULT_WIDTH,
                 height: ROOM_DEFAULT_HEIGHT,
-                elements: []
+                elements: [],
+                zoneId: '',
+                act: '',
+                tension: 0,
+                beatName: '',
+                timeRange: ''
             };
             
             rooms.push(room);
             renderRoom(room);
             selectRoom(room);
+            renderActGroups();
             updateAsciiPreview();
         }
         
@@ -953,7 +1189,10 @@
                 safe: '安全区',
                 normal: '普通房间',
                 arena: '竞技场',
-                boss: 'Boss房'
+                boss: 'Boss房',
+                narrative: '叙事房间',
+                puzzle: '解谜房间',
+                corridor: '走廊'
             };
             return labels[type] || type;
         }
@@ -1025,6 +1264,7 @@
                 
                 selectRoom(room);
                 
+                pushUndoState();
                 isDraggingRoom = true;
                 dragStartX = e.clientX;
                 dragStartY = e.clientY;
@@ -1155,6 +1395,7 @@
                 div.style.top = selectedRoom.y + 'px';
                 renderConnections();
                 renderDoorLinks();
+                renderActGroups();
                 updateAsciiPreview();
             }
             
@@ -1256,7 +1497,8 @@
                                 dl.entryDir === entryDir &&
                                 dl.doorIndex === doorIndex
                             );
-                            if (!alreadyLinked) {
+                        if (!alreadyLinked) {
+                                pushUndoState();
                                 doorLinks.push({
                                     roomId: targetRoom.id,
                                     entryDir: entryDir,
@@ -1277,12 +1519,14 @@
                             // Prevent duplicate same-direction connection
                             const alreadyExists = connections.some(c => c.from === connectFromRoom.id && c.to === targetRoom.id);
                             if (!alreadyExists) {
+                                pushUndoState();
                                 const toDir = getNearestConnectionDir(targetRoom, mouseX, mouseY);
-                                connections.push({
+                connections.push({
                                     from: connectFromRoom.id,
                                     to: targetRoom.id,
                                     fromDir: connectFromDir,
-                                    toDir: toDir
+                                    toDir: toDir,
+                                    connectionType: 'normal'
                                 });
                                 
                                 // Auto-generate door element in target room near the entry direction
@@ -1388,9 +1632,17 @@
         let selectedElementRoomId = null;
         let selectedElementIndex = -1;
 
+        // Connection type color/marker config
+        const CONN_TYPE_CONFIG = {
+            normal:  { stroke: '#e94560', marker: 'arrow-red'    },
+            tidal:   { stroke: '#00897b', marker: 'arrow-teal'   },
+            locked:  { stroke: '#ffc107', marker: 'arrow-yellow' },
+            one_way: { stroke: '#ff9800', marker: 'arrow-orange' }
+        };
+
         function renderConnections() {
             // Remove existing connection elements
-svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => l.remove());
+            svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => l.remove());
             
             // Ensure SVG defs with arrow markers exist
             let defs = svg.querySelector('defs');
@@ -1398,14 +1650,13 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
                 defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
                 svg.insertBefore(defs, svg.firstChild);
             }
-            // Arrow marker: refX = markerWidth so the arrow TIP is exactly at the line endpoint (room edge)
+            // Arrow markers for all connection types + selected
             defs.innerHTML = `
-                <marker id="arrow-red" markerWidth="10" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse">
-                    <polygon points="0,0 10,4 0,8" fill="#e94560"/>
-                </marker>
-                <marker id="arrow-blue" markerWidth="10" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse">
-                    <polygon points="0,0 10,4 0,8" fill="#4fc3f7"/>
-                </marker>
+                <marker id="arrow-red"    markerWidth="10" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0,0 10,4 0,8" fill="#e94560"/></marker>
+                <marker id="arrow-blue"   markerWidth="10" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0,0 10,4 0,8" fill="#4fc3f7"/></marker>
+                <marker id="arrow-teal"   markerWidth="10" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0,0 10,4 0,8" fill="#00897b"/></marker>
+                <marker id="arrow-yellow" markerWidth="10" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0,0 10,4 0,8" fill="#ffc107"/></marker>
+                <marker id="arrow-orange" markerWidth="10" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0,0 10,4 0,8" fill="#ff9800"/></marker>
             `;
             
             connections.forEach((conn, idx) => {
@@ -1451,14 +1702,17 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
                 });
                 svg.appendChild(hitLine);
                 
-                // Visible line with arrow marker
+                // Visible line with arrow marker (color by connectionType)
+                const connType = conn.connectionType || 'normal';
+                const typeConfig = CONN_TYPE_CONFIG[connType] || CONN_TYPE_CONFIG.normal;
                 const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                 line.setAttribute('x1', fromPos.x + offsetX);
                 line.setAttribute('y1', fromPos.y + offsetY);
                 line.setAttribute('x2', toPos.x + offsetX);
                 line.setAttribute('y2', toPos.y + offsetY);
-                line.setAttribute('class', 'connection-line' + (isSelected ? ' selected' : ''));
-                line.setAttribute('marker-end', `url(#arrow-${isSelected ? 'blue' : 'red'})`);
+                const lineClass = 'connection-line' + (isSelected ? ' selected' : (connType !== 'normal' ? ' ' + connType : ''));
+                line.setAttribute('class', lineClass);
+                line.setAttribute('marker-end', `url(#${isSelected ? 'arrow-blue' : typeConfig.marker})`);
                 line.setAttribute('data-conn-index', idx);
                 svg.appendChild(line);
             });
@@ -1498,6 +1752,7 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
             const dirLabel = hasReverse ? '双向' : '单向';
             const fromName = fromRoom ? `${fromRoom.name} (${conn.from})` : conn.from;
             const toName = toRoom ? `${toRoom.name} (${conn.to})` : conn.to;
+            const currentType = conn.connectionType || 'normal';
             
             const panel = document.getElementById('properties-panel');
             panel.style.display = 'block';
@@ -1506,14 +1761,29 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
             panel.innerHTML = `
                 <div class="help-text" style="text-align: left; margin-top: 10px; padding: 8px;">
                     <div style="font-weight: bold; color: #4fc3f7; margin-bottom: 8px;">🔗 连接属性</div>
-                    <div style="margin-bottom: 6px;"><b>类型:</b> ${dirLabel}</div>
+                    <div style="margin-bottom: 6px;"><b>方向类型:</b> ${dirLabel}</div>
                     <div style="margin-bottom: 6px;"><b>从:</b> ${fromName}</div>
                     <div style="margin-bottom: 6px;"><b>到:</b> ${toName}</div>
                     <div style="margin-bottom: 6px;"><b>方向:</b> ${conn.fromDir} → ${conn.toDir}</div>
-                    <button style="margin-top: 10px; width: 100%; padding: 6px; background: #e94560; border: none; color: white; border-radius: 4px; cursor: pointer;" onclick="deleteSelectedConnection()">🗑 删除此连接</button>
+                    <div style="margin-bottom: 4px; font-size: 11px; color: #888;">通道类型</div>
+                    <select style="width:100%; padding:5px 6px; background:#0f3460; border:1px solid #1a1a2e; border-radius:3px; color:#eee; font-size:12px; margin-bottom:8px;"
+                        onchange="updateConnectionType(${idx}, this.value)">
+                        <option value="normal"  ${currentType==='normal'  ? 'selected':''}>🔴 普通通道</option>
+                        <option value="tidal"   ${currentType==='tidal'   ? 'selected':''}>🟢 潮汐门（涨潮开启）</option>
+                        <option value="locked"  ${currentType==='locked'  ? 'selected':''}>🟡 锁门（需要钥匙）</option>
+                        <option value="one_way" ${currentType==='one_way' ? 'selected':''}>🟠 单向通道</option>
+                    </select>
+                    <button style="margin-top: 2px; width: 100%; padding: 6px; background: #e94560; border: none; color: white; border-radius: 4px; cursor: pointer;" onclick="deleteSelectedConnection()">🗑 删除此连接</button>
                     ${hasReverse ? `<button style="margin-top: 6px; width: 100%; padding: 6px; background: #d32f2f; border: none; color: white; border-radius: 4px; cursor: pointer;" onclick="deleteConnectionPair(${idx})">🗑 删除双向连接</button>` : ''}
                 </div>
             `;
+        }
+
+        function updateConnectionType(idx, type) {
+            if (idx < 0 || idx >= connections.length) return;
+            connections[idx].connectionType = type;
+            renderConnections();
+            updateAsciiPreview();
         }
         
         function hideConnectionProperties() {
@@ -1527,6 +1797,7 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
         
         function deleteSelectedConnection() {
             if (selectedConnectionIndex < 0 || selectedConnectionIndex >= connections.length) return;
+            pushUndoState();
             const conn = connections[selectedConnectionIndex];
             cleanupDoorLinksForConnection(conn);
             connections.splice(selectedConnectionIndex, 1);
@@ -1540,6 +1811,7 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
         function deleteConnectionPair(idx) {
             const conn = connections[idx];
             if (!conn) return;
+            pushUndoState();
             // Cleanup doorLinks for both directions before removing connections
             const pairConns = connections.filter(c =>
                 (c.from === conn.from && c.to === conn.to) || (c.from === conn.to && c.to === conn.from)
@@ -1661,6 +1933,7 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
         
         function deleteSelectedDoorLink() {
             if (selectedDoorLinkIndex < 0 || selectedDoorLinkIndex >= doorLinks.length) return;
+            pushUndoState();
             doorLinks.splice(selectedDoorLinkIndex, 1);
             deselectDoorLink();
             renderDoorLinks();
@@ -1750,6 +2023,7 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
 
         function deleteSelectedElement() {
             if (selectedElementRoomId === null || selectedElementIndex < 0) return;
+            pushUndoState();
 
             const room = rooms.find(r => r.id === selectedElementRoomId);
             if (!room || selectedElementIndex >= room.elements.length) return;
@@ -1813,6 +2087,12 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
             document.getElementById('prop-floor').value = room.floor;
             document.getElementById('prop-width').value = room.width / GRID_SIZE;
             document.getElementById('prop-height').value = room.height / GRID_SIZE;
+            document.getElementById('prop-zone-id').value = room.zoneId || '';
+            document.getElementById('prop-act').value = room.act || '';
+            document.getElementById('prop-tension').value = room.tension || 0;
+            document.getElementById('tension-display').textContent = room.tension || 0;
+            document.getElementById('prop-beat-name').value = room.beatName || '';
+            document.getElementById('prop-time-range').value = room.timeRange || '';
             
             updateConnectionsList();
             updateElementsList();
@@ -1842,6 +2122,17 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
                 div.querySelector('.room-type').textContent = value.toUpperCase();
             } else if (prop === 'floor') {
                 selectedRoom.floor = value;
+            } else if (prop === 'zoneId') {
+                selectedRoom.zoneId = value;
+            } else if (prop === 'act') {
+                selectedRoom.act = value;
+                renderActGroups();
+            } else if (prop === 'tension') {
+                selectedRoom.tension = value;
+            } else if (prop === 'beatName') {
+                selectedRoom.beatName = value;
+            } else if (prop === 'timeRange') {
+                selectedRoom.timeRange = value;
             }
             
             updateAsciiPreview();
@@ -1862,6 +2153,7 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
         }
         
         function deleteRoom(room) {
+            pushUndoState();
             // Clear element selection if the selected element belongs to this room
             if (selectedElementRoomId === room.id) {
                 clearElementSelection();
@@ -1883,6 +2175,7 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
             
             renderConnections();
             renderDoorLinks();
+            renderActGroups();
             updateAsciiPreview();
         }
         
@@ -1891,6 +2184,7 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
         }
         
         function addElementToRoom(room, type, canvasX, canvasY) {
+            pushUndoState();
             const el = {
                 type: type,
                 x: canvasX - room.x,
@@ -1953,7 +2247,11 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
                 enemy: '💀',
                 chest: '📦',
                 checkpoint: '🏁',
-                npc: '👤'
+                npc: '👤',
+                tidal_door: '🌊',
+                resonance_crystal: '💎',
+                lore_audio: '🎙️',
+                black_water: '🌑'
             };
             return icons[type] || '?';
         }
@@ -1967,20 +2265,29 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
         function getExportData() {
             return {
                 levelName: 'New Level',
-                rooms: rooms.map(r => ({
-                    id: r.id,
-                    name: r.name,
-                    type: r.type,
-                    floor: r.floor,
-                    position: [r.x / GRID_SIZE, r.y / GRID_SIZE],
-                    size: [r.width / GRID_SIZE, r.height / GRID_SIZE],
-                    elements: r.elements.map(e => ({
-                        type: e.type,
-                        position: [e.x / GRID_SIZE, e.y / GRID_SIZE]
-                    }))
-                })),
-                connections: connections.map(c => ({from: c.from, to: c.to, fromDir: c.fromDir, toDir: c.toDir})),
-                doorLinks: doorLinks.map(d => ({roomId: d.roomId, entryDir: d.entryDir, doorIndex: d.doorIndex}))
+                rooms: rooms.map(r => {
+                    const obj = {
+                        id: r.id,
+                        name: r.name,
+                        type: r.type,
+                        floor: r.floor,
+                        position: [r.x / GRID_SIZE, r.y / GRID_SIZE],
+                        size: [r.width / GRID_SIZE, r.height / GRID_SIZE],
+                        elements: r.elements.map(e => ({
+                            type: e.type,
+                            position: [e.x / GRID_SIZE, e.y / GRID_SIZE]
+                        }))
+                    };
+                    // Only include optional fields if non-empty
+                    if (r.zoneId) obj.zoneId = r.zoneId;
+                    if (r.act) obj.act = r.act;
+                    if (r.tension && r.tension > 0) obj.tension = r.tension;
+                    if (r.beatName) obj.beatName = r.beatName;
+                    if (r.timeRange) obj.timeRange = r.timeRange;
+                    return obj;
+                }),
+                connections: connections.map(c => ({ from: c.from, to: c.to, fromDir: c.fromDir, toDir: c.toDir, connectionType: c.connectionType || 'normal' })),
+                doorLinks: doorLinks.map(d => ({ roomId: d.roomId, entryDir: d.entryDir, doorIndex: d.doorIndex }))
             };
         }
         
@@ -2073,7 +2380,13 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
                         y: (r.position ? r.position[1] : 0) * GRID_SIZE,
                         width: (r.size ? r.size[0] : ROOM_DEFAULT_WIDTH / GRID_SIZE) * GRID_SIZE,
                         height: (r.size ? r.size[1] : ROOM_DEFAULT_HEIGHT / GRID_SIZE) * GRID_SIZE,
-                        elements: []
+                        elements: [],
+                        // Backward-compatible: new fields default to empty/0 if absent
+                        zoneId:    r.zoneId    || '',
+                        act:       r.act       || '',
+                        tension:   r.tension   || 0,
+                        beatName:  r.beatName  || '',
+                        timeRange: r.timeRange || ''
                     };
                     
                     if (r.elements && Array.isArray(r.elements)) {
@@ -2095,13 +2408,14 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
                 });
             }
             
-            // Parse connections
+            // Parse connections (backward-compatible: connectionType defaults to 'normal')
             if (data.connections && Array.isArray(data.connections)) {
                 connections = data.connections.map(c => ({
                     from: c.from,
                     to: c.to,
                     fromDir: c.fromDir || 'east',
-                    toDir: c.toDir || 'west'
+                    toDir: c.toDir || 'west',
+                    connectionType: c.connectionType || 'normal'
                 }));
             }
             
@@ -2118,9 +2432,110 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
             rooms.forEach(r => renderRoom(r));
             renderConnections();
             renderDoorLinks();
+            renderActGroups();
             updateAsciiPreview();
         }
         
+        function renderTensionChart() {
+            const canvas = document.getElementById('tension-chart');
+            if (!canvas) return;
+
+            // Collect rooms with tension > 0
+            const tensionRooms = rooms.filter(r => r.tension && r.tension > 0);
+
+            const ctx = canvas.getContext('2d');
+            // Sync canvas pixel size to CSS size
+            canvas.width = canvas.offsetWidth || 200;
+
+            const W = canvas.width;
+            const H = canvas.height;
+            ctx.clearRect(0, 0, W, H);
+
+            if (tensionRooms.length < 2) {
+                ctx.fillStyle = '#444';
+                ctx.font = '10px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(tensionRooms.length === 0 ? '暂无张力数据（请设置房间张力值）' : '至少需要 2 个有张力值的房间', W / 2, H / 2);
+                return;
+            }
+
+            // Sort by ACT then Zone ID (alphanumeric: Z1a < Z1b < Z2a < Z10a)
+            function zoneIdSortKey(r) {
+                const act = r.act || 'ZZZ';
+                const zid = r.zoneId || '';
+                // Extract numeric and alpha parts for natural sort
+                const parts = zid.match(/(\D*)(\d+)(.*)/i);
+                if (parts) return act + '_' + parts[1] + parts[2].padStart(6, '0') + parts[3];
+                return act + '_' + zid;
+            }
+            const sorted = [...tensionRooms].sort((a, b) => zoneIdSortKey(a).localeCompare(zoneIdSortKey(b)));
+
+            const PAD_L = 24, PAD_R = 10, PAD_T = 10, PAD_B = 28;
+            const chartW = W - PAD_L - PAD_R;
+            const chartH = H - PAD_T - PAD_B;
+            const n = sorted.length;
+
+            // Draw Y-axis grid lines (1-10)
+            ctx.strokeStyle = '#1a2a4a';
+            ctx.lineWidth = 1;
+            for (let v = 1; v <= 10; v += 3) {
+                const y = PAD_T + chartH - ((v - 1) / 9) * chartH;
+                ctx.beginPath();
+                ctx.moveTo(PAD_L, y);
+                ctx.lineTo(W - PAD_R, y);
+                ctx.stroke();
+                ctx.fillStyle = '#555';
+                ctx.font = '8px monospace';
+                ctx.textAlign = 'right';
+                ctx.fillText(v, PAD_L - 3, y + 3);
+            }
+
+            // Compute point positions
+            const pts = sorted.map((r, i) => ({
+                x: PAD_L + (n === 1 ? chartW / 2 : (i / (n - 1)) * chartW),
+                y: PAD_T + chartH - ((r.tension - 1) / 9) * chartH,
+                room: r
+            }));
+
+            // Draw lines
+            for (let i = 0; i < pts.length - 1; i++) {
+                const diff = Math.abs(sorted[i + 1].tension - sorted[i].tension);
+                ctx.strokeStyle = diff > 4 ? '#ff9800' : '#4caf50';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(pts[i].x, pts[i].y);
+                ctx.lineTo(pts[i + 1].x, pts[i + 1].y);
+                ctx.stroke();
+            }
+
+            // Draw nodes + labels
+            pts.forEach((pt, i) => {
+                const r = pt.room;
+                // Node circle
+                ctx.fillStyle = '#e94560';
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Tension value above node
+                ctx.fillStyle = '#eee';
+                ctx.font = 'bold 8px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(r.tension, pt.x, pt.y - 5);
+
+                // Zone ID label below (rotated 45°)
+                const label = r.zoneId || r.name.substring(0, 4);
+                ctx.save();
+                ctx.translate(pt.x, H - PAD_B + 10);
+                ctx.rotate(-Math.PI / 4);
+                ctx.fillStyle = '#aaa';
+                ctx.font = '8px monospace';
+                ctx.textAlign = 'right';
+                ctx.fillText(label, 0, 0);
+                ctx.restore();
+            });
+        }
+
         function copyJson() {
             const textarea = document.getElementById('json-output');
             textarea.select();
@@ -2147,7 +2562,14 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
                 roomIdCounter: roomIdCounter
             };
             localStorage.setItem('levelDesign', JSON.stringify(data));
-            alert('已保存到本地存储！');
+            // Brief visual feedback without blocking alert
+            const btn = [...document.querySelectorAll('.toolbar-btn')].find(b => b.textContent.trim() === '保存');
+            if (btn) {
+                const orig = btn.textContent;
+                btn.textContent = '✓ 已保存';
+                btn.style.background = '#2d5a27';
+                setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 1200);
+            }
         }
         
         function loadFromLocal() {
@@ -2175,6 +2597,7 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
             rooms.forEach(r => renderRoom(r));
             renderConnections();
             renderDoorLinks();
+            renderActGroups();
             updateAsciiPreview();
         }
         
@@ -2191,14 +2614,16 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
             roomIdCounter = 1;
             
             world.querySelectorAll('.room').forEach(r => r.remove());
+            world.querySelectorAll('.act-group-box').forEach(el => el.remove());
             svg.innerHTML = '';
             document.getElementById('properties-panel').style.display = 'block';
             document.getElementById('room-properties').style.display = 'none';
             updateAsciiPreview();
-        }
+        }        }
         
         function updateAsciiPreview() {
             updateJsonLivePreview();
+            renderTensionChart();
             
             if (rooms.length === 0) {
                 document.getElementById('ascii-preview').textContent = '拖拽房间到画布开始设计';
@@ -2335,6 +2760,42 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
                 }
                 e.preventDefault();
             }
+
+            // Ctrl+Z: Undo
+            if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ' && !e.shiftKey) {
+                undo();
+                e.preventDefault();
+                return;
+            }
+
+            // Ctrl+D: Duplicate selected room
+            if ((e.ctrlKey || e.metaKey) && e.code === 'KeyD') {
+                duplicateRoom();
+                e.preventDefault();
+                return;
+            }
+
+            // Ctrl+S: Save to local storage
+            if ((e.ctrlKey || e.metaKey) && e.code === 'KeyS') {
+                saveToLocal();
+                e.preventDefault();
+                return;
+            }
+
+            // Escape: Cancel active connection drag
+            if (e.code === 'Escape') {
+                if (isConnecting) {
+                    if (tempLine) { tempLine.remove(); tempLine = null; }
+                    isConnecting = false;
+                    connectFromRoom = null;
+                    connectFromDir = null;
+                    document.getElementById('mode-indicator').classList.remove('active');
+                    const prevHighlight = document.querySelector('.door-link-highlight');
+                    if (prevHighlight) prevHighlight.classList.remove('door-link-highlight');
+                }
+                e.preventDefault();
+                return;
+            }
             
             // Delete/Backspace to delete selected element, connection, doorLink, or room
             if (e.code === 'Delete' || e.code === 'Backspace') {
@@ -2364,6 +2825,7 @@ svg.querySelectorAll('.connection-line, .connection-line-hitarea').forEach(l => 
         });
         
         loadFromLocal();
+        renderActGroups();
         updateJsonLivePreview();
     </script>
 </body>

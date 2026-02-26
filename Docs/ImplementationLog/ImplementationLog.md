@@ -5488,6 +5488,112 @@ lygonCollider2D` 的 Is Trigger 勾选为 true，或重新生成关卡。
 
 ---
 
+## LevelDesigner.html 效率升级（7大功能） — 2026-02-27 00:31
+
+**修改文件：**
+- `Tools/LevelDesigner.html`
+
+**内容简述：**
+对浏览器端关卡可视化编辑工具进行全面效率升级，新增7项功能，覆盖数据扩展、类型扩展、快捷键、可视化辅助和向后兼容修复。
+
+**目的：**
+核心诉求：方便、快捷、尽量一步到位，减少整个制作关卡流程中琐碎的步骤。让设计师在 LevelDesigner.html 中完成更多配置，减少在 Unity 中手动补充的工作量。
+
+**技术方案：**
+
+1. **房间属性扩展（任务1）**：`createRoom()` 新增 `zoneId`、`act`、`tension`、`beatName`、`timeRange` 字段；属性面板新增对应输入控件（Zone ID 文本框、ACT 下拉 ACT1-ACT5、张力滑块 1-10、叙事乐章文本框、时长估算文本框）；`getExportData()` 仅在字段非空时输出对应 key，保持 JSON 简洁。
+
+2. **类型扩展（任务2）**：新增房间类型 `narrative`（蓝紫色）、`puzzle`（青色）、`corridor`（灰色）；新增元素类型 `tidal_door`（潮汐门）、`resonance_crystal`（共鸣水晶）、`lore_audio`（Lore 音频日志）、`black_water`（黑水区域）；更新 `getTypeLabel()` 和 `getElementIcon()` 函数及对应 CSS 样式。
+
+3. **快捷键支持（任务3）**：实现 `undoStack`（最大50条）+ `pushUndoState()` 快照机制，在所有状态变更前保存快照；`undo()` 恢复快照并重新渲染；`duplicateRoom()` 深拷贝选中房间（含所有属性和元素，不含连接关系），ID 自动添加 `_copy` 后缀；`keydown` 事件支持 `Ctrl+Z`/`Ctrl+D`/`Ctrl+S`/`Escape`，焦点在输入框时不触发。
+
+4. **ACT 分组框（任务4）**：`ACT_COLORS` 常量定义5个 ACT 的半透明颜色；`renderActGroups()` 按 ACT 分组计算包围盒（+20px padding），动态创建 `.act-group-box` div（z-index 低于房间），左上角显示 ACT 标签；房间数 >50 时节流（16ms）；在拖拽移动、属性修改、导入、撤销、创建/删除房间后均调用。
+
+5. **心流张力折线图（任务5）**：右侧面板新增 `<canvas>` 元素（高度80px）；`renderTensionChart()` 收集有 `tension > 0` 的房间，按 Zone ID 字母数字排序（Z1a < Z1b < Z2a），绘制折线图；节点显示 Zone ID 标签和张力数值；相邻节点张力差 >4 时连线高亮为橙色；每次 `updateAsciiPreview()` 末尾自动调用。
+
+6. **连接线语义类型（任务6）**：`connections` 对象新增 `connectionType` 字段（默认 `normal`）；选中连接线时属性面板显示类型下拉（`normal`/`tidal`/`locked`/`one_way`）；`renderConnections()` 根据类型选择对应 SVG stroke 颜色（tidal=蓝绿、locked=黄色、one_way=橙色）；`getExportData()` 输出 `connectionType` 字段。
+
+7. **向后兼容修复（任务7）**：`importJsonData()` 补充重置 `selectedElementRoomId`/`selectedElementIndex`；导入时为旧格式 JSON 的 room 补全新字段默认值（`zoneId: ''`、`act: ''`、`tension: 0` 等）；connections 导入时补全 `connectionType: 'normal'`；`getExportData()` 中 connections/doorLinks 改为值拷贝（`.map()` 展开字段）。
+
+---
+
+## ScaffoldToSceneGenerator — Asset 按 LevelName 分文件夹存放 — 2026-02-27 00:47
+
+**修改文件：**
+- `Assets/Scripts/Level/Editor/ScaffoldToSceneGenerator.cs`
+
+**内容简述：**
+移除三个固定常量目录（`ROOM_DATA_DIR`/`ENCOUNTER_DIR`/`CHECKPOINT_DIR`），改为在 `Generate()` 开始时根据 `_scaffold.LevelName` 动态计算每次生成的专属子文件夹路径，并存入实例字段供各阶段方法使用。
+
+**目的：**
+每次生成不同关卡时，所有产出的 RoomSO、EncounterSO、CheckpointSO 资产都自动归入 `Assets/_Data/Level/{LevelName}/` 下的对应子目录，避免多关卡资产混放在同一扁平目录中造成混乱，方便管理和版本控制。
+
+**技术方案：**
+- 删除 `ROOM_DATA_DIR`、`ENCOUNTER_DIR`、`CHECKPOINT_DIR` 三个 `const string` 常量
+- 新增 `LEVEL_DATA_ROOT = "Assets/_Data/Level"` 根目录常量
+- 新增三个实例字段 `_roomDataDir`、`_encounterDir`、`_checkpointDir`
+- 在 `Generate()` try 块最开始，用 `SanitizeName(_scaffold.LevelName)` 计算安全名称，拼出三条路径并调用 `EnsureDirectory()` 确保目录存在
+- `CreateOrUpdateRoomSO()`、`CreateCheckpointElement()`、`SetupArenaBossCombat()`、`SetupNormalRoomCombat()` 中的路径字符串均改为引用对应实例字段
+
+生成结果示例（LevelName = "示巴星_Z1"）：
+```
+Assets/_Data/Level/示巴星_Z1/
+  Rooms/       ← RoomSO assets
+  Encounters/  ← EncounterSO assets
+  Checkpoints/ ← CheckpointSO assets
+```
+
+---
+
+## ScaffoldToSceneGenerator — 效率升级（需求2-8）— 2026-02-27 01:15
+
+**修改文件：**
+- `Assets/Scripts/Level/Editor/ScaffoldToSceneGenerator.cs`
+
+**内容简述：**
+对 ScaffoldToSceneGenerator 进行 6 项效率升级，消灭生成后仍需手动完成的琐碎步骤。
+
+**目的：**
+让关卡设计师在一键生成后能直接进入绘制/调试阶段，减少重复手动操作。
+
+**技术方案：**
+
+1. **需求8 — SanitizeName 空格处理 + 路径预览**
+   - `SanitizeName()` 追加 `.Replace(" ", "_")` 处理空格字符
+   - `OnGUI()` 在 Scaffold Data 字段下方用 `EditorGUILayout.HelpBox` 显示 `Output: Assets/_Data/Level/{SanitizedName}/`，`_scaffold` 为 null 时不显示
+
+2. **需求2 — 房间尺寸 Fallback 与异常警告**
+   - 新增 `GetFallbackSize(RoomType)` 方法，按类型返回默认尺寸（Normal=20×15，Arena=30×20，Boss=40×30，Corridor=20×8，Shop=15×12）
+   - `Generate()` 遍历房间时检测 `Size.x <= 0 || Size.y <= 0`，自动 fallback 并输出 `Debug.LogWarning`
+   - 生成报告 TODO Checklist 中列出所有使用了 fallback 的房间名
+
+3. **需求3 — Door 位置自动推算（边缘吸附）**
+   - 新增 `ResolveDoorPosition(ScaffoldDoorConnection, Vector2)` 方法，根据 `DoorDirection` 返回房间边缘局部坐标
+   - `DoorPosition == Vector3.zero` 时自动调用；已有非零值则直接使用不覆盖
+   - `DoorDirection` 为 None 时保留原 fallback 并输出 Warning
+
+4. **需求4 — 自动创建标准 Tilemap 层级**
+   - 新增 `CreateTilemapHierarchy(GameObject)` 方法，在房间 GO 下创建 `Tilemaps` 子对象
+   - 自动创建三层：`Tilemap_Ground`（sortingOrder=0）、`Tilemap_Wall`（sortingOrder=1）、`Tilemap_Decoration`（sortingOrder=2），每层附加 `Tilemap` + `TilemapRenderer` 组件
+   - `CreateRoomGO()` 末尾自动调用；生成报告提示"直接选中对应层开始绘制"
+
+5. **需求5 — EncounterSO 按 EnemyTypeID 自动填充敌人 Prefab**
+   - `ScaffoldElement` 新增 `EnemyTypeID`（string）字段
+   - `CreateEncounterSO()` 收集房间内所有 EnemySpawn 的 `EnemyTypeID`，从 `Assets/_Prefabs/Enemies/{EnemyTypeID}.prefab` 加载 Prefab，找不到则 fallback 到 `Enemy_Rusher.prefab` 并输出 Warning
+   - 同一 Wave 中为每种类型创建独立 Entry；生成报告列出每个房间的敌人类型汇总
+
+6. **需求6 — 增量更新模式（Update Existing 复选框）**
+   - EditorWindow 新增 `_updateExisting` bool 字段，Generate 按钮旁渲染 Toggle
+   - `Update Existing = true` 时：按 DisplayName 查找已存在的同名 GO，存在则跳过重建，仅更新 RoomSO 引用、BoxCollider2D.size、Door 组件属性，保留 Tilemap 子层级
+   - 增量更新完成后 Console 输出被保留的房间名称列表
+
+7. **需求7 — Gizmo 统一开关（Toggle Gizmos 按钮）**
+   - EditorWindow 新增 `_gizmosVisible` bool 字段（默认 true），Generate 按钮下方渲染 Toggle Gizmos 按钮
+   - 新增 `ToggleGizmos()` 方法：遍历场景中所有 `SpriteRenderer`（sortingOrder==1）和名为 `Label` 的 `MeshRenderer`，统一设置 `enabled`
+   - 按钮文字根据状态动态显示 `Hide Gizmos` / `Show Gizmos`；场景中无 Gizmo 对象时输出提示
+
+---
+
 ## ScaffoldToSceneGenerator — 所有元素 Gizmo Sprite 匹配碰撞体大小 — 2026-02-26 23:24
 
 **修改文件：**

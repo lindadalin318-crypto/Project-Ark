@@ -21,15 +21,21 @@ namespace ProjectArk.Level.Editor
     {
         // ──────────────────── Constants ────────────────────
 
-        private const string ROOM_DATA_DIR   = "Assets/_Data/Level/Rooms";
-        private const string ENCOUNTER_DIR   = "Assets/_Data/Level/Encounters";
-        private const string CHECKPOINT_DIR  = "Assets/_Data/Level/Checkpoints";
+        private const string LEVEL_DATA_ROOT   = "Assets/_Data/Level";
         private const string ENEMY_PREFAB_PATH = "Assets/_Prefabs/Enemies/Enemy_Rusher.prefab";
         private const string LOG_TAG = "[ScaffoldToScene]";
+
+        // ──────────────────── Per-generation Paths (set in Generate()) ────────────────────
+
+        private string _roomDataDir;
+        private string _encounterDir;
+        private string _checkpointDir;
 
         // ──────────────────── EditorWindow State ────────────────────
 
         private LevelScaffoldData _scaffold;
+        private bool _updateExisting = false;
+        private bool _gizmosVisible = true;
 
         // ──────────────────── Generation Stats ────────────────────
 
@@ -41,10 +47,17 @@ namespace ProjectArk.Level.Editor
             public int EncounterSOCount;
             public int CheckpointSOCount;
             public List<string> Warnings;
+            public List<string> FallbackRooms;   // rooms that used fallback size
+            public List<string> PreservedRooms;  // rooms skipped in update-existing mode
 
             public static GenerationStats Create()
             {
-                return new GenerationStats { Warnings = new List<string>() };
+                return new GenerationStats
+                {
+                    Warnings = new List<string>(),
+                    FallbackRooms = new List<string>(),
+                    PreservedRooms = new List<string>()
+                };
             }
         }
 
@@ -68,8 +81,17 @@ namespace ProjectArk.Level.Editor
             _scaffold = (LevelScaffoldData)EditorGUILayout.ObjectField(
                 "Scaffold Data", _scaffold, typeof(LevelScaffoldData), false);
 
+            // ── 需求8：路径预览 ──
+            if (_scaffold != null)
+            {
+                string previewName = SanitizeName(_scaffold.LevelName);
+                EditorGUILayout.HelpBox($"Output: Assets/_Data/Level/{previewName}/", MessageType.None);
+            }
+
             EditorGUILayout.Space(8);
 
+            // ── 需求6：Update Existing 复选框 ──
+            EditorGUILayout.BeginHorizontal();
             GUI.enabled = _scaffold != null;
             if (GUILayout.Button("Generate", GUILayout.Height(32)))
             {
@@ -77,9 +99,11 @@ namespace ProjectArk.Level.Editor
                 int connCount = _scaffold.Rooms.Sum(r => r.Connections.Count);
                 int elemCount = _scaffold.Rooms.Sum(r => r.Elements.Count);
 
+                string modeLabel = _updateExisting ? "[UPDATE EXISTING MODE]\nExisting rooms with matching names will be updated in-place (Tilemaps preserved).\n\n" : "";
+
                 if (EditorUtility.DisplayDialog(
                     "Generate Level From Scaffold",
-                    $"Level: {_scaffold.LevelName}\n" +
+                    $"{modeLabel}Level: {_scaffold.LevelName}\n" +
                     $"Rooms: {roomCount}\n" +
                     $"Connections: {connCount}\n" +
                     $"Elements: {elemCount}\n\n" +
@@ -91,7 +115,19 @@ namespace ProjectArk.Level.Editor
                     Generate();
                 }
             }
+            _updateExisting = EditorGUILayout.ToggleLeft("Update Existing", _updateExisting, GUILayout.Width(120));
+            EditorGUILayout.EndHorizontal();
             GUI.enabled = true;
+
+            EditorGUILayout.Space(4);
+
+            // ── 需求7：Toggle Gizmos 按钮 ──
+            string gizmosBtnLabel = _gizmosVisible ? "Hide Gizmos" : "Show Gizmos";
+            if (GUILayout.Button(gizmosBtnLabel, GUILayout.Height(24)))
+            {
+                _gizmosVisible = !_gizmosVisible;
+                ToggleGizmos();
+            }
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -107,10 +143,17 @@ namespace ProjectArk.Level.Editor
 
             try
             {
+                // ── Compute per-scaffold output directories ──
+                string safeLevelName = SanitizeName(_scaffold.LevelName);
+                string levelRoot_Dir = $"{LEVEL_DATA_ROOT}/{safeLevelName}";
+                _roomDataDir    = $"{levelRoot_Dir}/Rooms";
+                _encounterDir   = $"{levelRoot_Dir}/Encounters";
+                _checkpointDir  = $"{levelRoot_Dir}/Checkpoints";
+
                 // Ensure output directories
-                EnsureDirectory(ROOM_DATA_DIR);
-                EnsureDirectory(ENCOUNTER_DIR);
-                EnsureDirectory(CHECKPOINT_DIR);
+                EnsureDirectory(_roomDataDir);
+                EnsureDirectory(_encounterDir);
+                EnsureDirectory(_checkpointDir);
 
                 // Player layer
                 int playerLayerMask = LayerMask.GetMask("Player");
@@ -141,12 +184,40 @@ namespace ProjectArk.Level.Editor
                 var roomGOMap = new Dictionary<string, (GameObject go, Room room)>();
                 // roomID → list of EnemySpawn transforms
                 var roomEnemySpawns = new Dictionary<string, List<Transform>>();
+                // roomID → list of EnemyTypeID strings (parallel to roomEnemySpawns)
+                var roomEnemyTypeIDs = new Dictionary<string, List<string>>();
 
                 foreach (var sr in _scaffold.Rooms)
                 {
+                    // ── 需求2：房间尺寸 Fallback ──
+                    if (sr.Size.x <= 0 || sr.Size.y <= 0)
+                    {
+                        Vector2 fallback = GetFallbackSize(sr.RoomType);
+                        Debug.LogWarning($"{LOG_TAG} ⚠️ Room '{sr.DisplayName}' has zero/invalid Size, using fallback {fallback.x}×{fallback.y}");
+                        sr.Size = fallback;
+                        stats.FallbackRooms.Add(sr.DisplayName);
+                    }
+
+                    // ── 需求6：增量更新模式 ──
+                    if (_updateExisting)
+                    {
+                        var existingGO = FindRoomGOByName(sr.DisplayName);
+                        if (existingGO != null)
+                        {
+                            var existingRoom = existingGO.GetComponent<Room>();
+                            roomGOMap[sr.RoomID] = (existingGO, existingRoom);
+                            roomEnemySpawns[sr.RoomID] = new List<Transform>();
+                            roomEnemyTypeIDs[sr.RoomID] = new List<string>();
+                            stats.PreservedRooms.Add(sr.DisplayName);
+                            stats.RoomCount++;
+                            continue;
+                        }
+                    }
+
                     var (go, room) = CreateRoomGameObject(sr, levelRoot.transform, playerLayerMask);
                     roomGOMap[sr.RoomID] = (go, room);
                     roomEnemySpawns[sr.RoomID] = new List<Transform>();
+                    roomEnemyTypeIDs[sr.RoomID] = new List<string>();
                     stats.RoomCount++;
                 }
 
@@ -185,6 +256,7 @@ namespace ProjectArk.Level.Editor
                                 var spGO = CreateElementGO($"EnemySpawn_{enemyIdx}", parentGO.transform, elem.LocalPosition,
                                     ScaffoldElementType.EnemySpawn);
                                 roomEnemySpawns[sr.RoomID].Add(spGO.transform);
+                                roomEnemyTypeIDs[sr.RoomID].Add(elem.EnemyTypeID ?? string.Empty);
                                 enemyIdx++;
                                 break;
 
@@ -214,13 +286,13 @@ namespace ProjectArk.Level.Editor
                 ApplyDoorConfigFromElements(scaffoldLookup, doorComponents);
 
                 // ── Phase 5: Arena/Boss combat setup ──
-                SetupArenaBossCombat(scaffoldLookup, roomGOMap, roomSOMap, roomEnemySpawns, enemyPrefab, ref stats);
+                SetupArenaBossCombat(scaffoldLookup, roomGOMap, roomSOMap, roomEnemySpawns, roomEnemyTypeIDs, enemyPrefab, ref stats);
 
                 // ── Phase 6: Normal room combat setup ──
-                SetupNormalRoomCombat(scaffoldLookup, roomGOMap, roomSOMap, roomEnemySpawns, enemyPrefab, ref stats);
+                SetupNormalRoomCombat(scaffoldLookup, roomGOMap, roomSOMap, roomEnemySpawns, roomEnemyTypeIDs, enemyPrefab, ref stats);
 
                 // ── Phase 7: Validation report ──
-                PrintReport(stats, scaffoldLookup, roomEnemySpawns);
+                PrintReport(stats, scaffoldLookup, roomEnemySpawns, roomEnemyTypeIDs);
 
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
@@ -286,7 +358,71 @@ namespace ProjectArk.Level.Editor
             serialized.FindProperty("_playerLayer").intValue = playerLayerMask;
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
+            // ── 需求4：自动创建标准 Tilemap 层级 ──
+            CreateTilemapHierarchy(roomGO);
+
             return (roomGO, room);
+        }
+
+        /// <summary>
+        /// 需求4：在房间 GO 下自动创建标准 Tilemap 层级。
+        /// Tilemaps/Tilemap_Ground (order=0), Tilemap_Wall (order=1), Tilemap_Decoration (order=2)
+        /// </summary>
+        private static void CreateTilemapHierarchy(GameObject roomGO)
+        {
+            var tilemapsGO = new GameObject("Tilemaps");
+            tilemapsGO.transform.SetParent(roomGO.transform);
+            tilemapsGO.transform.localPosition = Vector3.zero;
+
+            var layers = new (string name, int order)[]
+            {
+                ("Tilemap_Ground",      0),
+                ("Tilemap_Wall",        1),
+                ("Tilemap_Decoration",  2),
+            };
+
+            foreach (var (layerName, sortOrder) in layers)
+            {
+                var layerGO = new GameObject(layerName);
+                layerGO.transform.SetParent(tilemapsGO.transform);
+                layerGO.transform.localPosition = Vector3.zero;
+                layerGO.AddComponent<UnityEngine.Tilemaps.Tilemap>();
+                var renderer = layerGO.AddComponent<UnityEngine.Tilemaps.TilemapRenderer>();
+                renderer.sortingOrder = sortOrder;
+            }
+        }
+
+        /// <summary>
+        /// 需求6：在场景中按名称查找已存在的房间 GO。
+        /// </summary>
+        private static GameObject FindRoomGOByName(string displayName)
+        {
+            var allGOs = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();
+            foreach (var root in allGOs)
+            {
+                // 尝试在根对象下查找
+                var found = root.transform.Find(displayName);
+                if (found != null) return found.gameObject;
+                // 也检查根对象本身
+                if (root.name == displayName) return root;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 需求2：根据 RoomType 返回预设默认尺寸。
+        /// </summary>
+        private static Vector2 GetFallbackSize(RoomType type)
+        {
+            return type switch
+            {
+                RoomType.Normal    => new Vector2(20f, 15f),
+                RoomType.Arena     => new Vector2(30f, 20f),
+                RoomType.Boss      => new Vector2(40f, 30f),
+                RoomType.Corridor  => new Vector2(20f, 8f),
+                RoomType.Shop      => new Vector2(15f, 12f),
+                _                  => new Vector2(20f, 15f),
+            };
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -296,7 +432,7 @@ namespace ProjectArk.Level.Editor
         private RoomSO CreateOrUpdateRoomSO(ScaffoldRoom sr)
         {
             string safeName = SanitizeName(sr.DisplayName);
-            string path = $"{ROOM_DATA_DIR}/{safeName}_Data.asset";
+            string path = $"{_roomDataDir}/{safeName}_Data.asset";
 
             var so = AssetDatabase.LoadAssetAtPath<RoomSO>(path);
             if (so == null)
@@ -429,7 +565,7 @@ namespace ProjectArk.Level.Editor
 
             // Create CheckpointSO asset
             string safeName = SanitizeName(sr.DisplayName);
-            string cpPath = $"{CHECKPOINT_DIR}/CP_{safeName}.asset";
+            string cpPath = $"{_checkpointDir}/CP_{safeName}.asset";
             var cpSO = AssetDatabase.LoadAssetAtPath<CheckpointSO>(cpPath);
             if (cpSO == null)
             {
@@ -503,7 +639,15 @@ namespace ProjectArk.Level.Editor
                     // ── Forward door: source → target ──
                     var fwdDoorGO = new GameObject($"Door_to_{SanitizeName(targetDisplayName)}");
                     fwdDoorGO.transform.SetParent(source.go.transform);
-                    fwdDoorGO.transform.localPosition = conn.DoorPosition;
+
+                    // ── 需求3：Door 位置自动推算 ──
+                    Vector3 fwdDoorLocalPos = conn.DoorPosition;
+                    if (fwdDoorLocalPos == Vector3.zero)
+                    {
+                        var srcRoom = scaffoldLookup[sr.RoomID];
+                        fwdDoorLocalPos = ResolveDoorPosition(conn, srcRoom.Size);
+                    }
+                    fwdDoorGO.transform.localPosition = fwdDoorLocalPos;
 
                     var fwdCol = fwdDoorGO.AddComponent<BoxCollider2D>();
                     fwdCol.isTrigger = true;
@@ -525,7 +669,21 @@ namespace ProjectArk.Level.Editor
                     // ── Reverse door: target → source ──
                     var revDoorGO = new GameObject($"Door_to_{SanitizeName(sourceDisplayName)}");
                     revDoorGO.transform.SetParent(target.go.transform);
-                    revDoorGO.transform.localPosition = reverseSpawnPos;
+
+                    // ── 需求3：反向门位置自动推算 ──
+                    Vector3 revDoorLocalPos = reverseSpawnPos;
+                    if (revDoorLocalPos == Vector3.zero)
+                    {
+                        var reverseConnForPos = FindReverseConnection(conn.TargetRoomID, sr.RoomID, scaffoldLookup);
+                        if (reverseConnForPos != null && reverseConnForPos.DoorPosition != Vector3.zero)
+                            revDoorLocalPos = reverseConnForPos.DoorPosition;
+                        else if (reverseConnForPos != null)
+                        {
+                            var tgtRoom = scaffoldLookup[conn.TargetRoomID];
+                            revDoorLocalPos = ResolveDoorPosition(reverseConnForPos, tgtRoom.Size);
+                        }
+                    }
+                    revDoorGO.transform.localPosition = revDoorLocalPos;
 
                     var revCol = revDoorGO.AddComponent<BoxCollider2D>();
                     revCol.isTrigger = true;
@@ -583,11 +741,45 @@ namespace ProjectArk.Level.Editor
         {
             // Try to find the reverse connection
             var reverseConn = FindReverseConnection(targetRoomID, sourceRoomID, scaffoldLookup);
-            if (reverseConn != null)
+            if (reverseConn != null && reverseConn.DoorPosition != Vector3.zero)
                 return reverseConn.DoorPosition;
+
+            // 需求3：如果反向连接存在但位置为零，尝试自动推算
+            if (reverseConn != null && scaffoldLookup.TryGetValue(targetRoomID, out var tgtRoom))
+                return ResolveDoorPosition(reverseConn, tgtRoom.Size);
 
             // Fallback: offset from center in reverse direction
             return new Vector3(-forwardDirection.x * 2f, -forwardDirection.y * 2f, 0f);
+        }
+
+        /// <summary>
+        /// 需求3：根据 DoorDirection 和房间尺寸自动计算门在房间边缘的局部坐标。
+        /// </summary>
+        private static Vector3 ResolveDoorPosition(ScaffoldDoorConnection conn, Vector2 roomSize)
+        {
+            float hw = roomSize.x * 0.5f;
+            float hh = roomSize.y * 0.5f;
+
+            // 判断主要方向（允许任意 Vector2 方向）
+            var dir = conn.DoorDirection;
+
+            if (Mathf.Abs(dir.x) >= Mathf.Abs(dir.y))
+            {
+                // 水平方向为主
+                if (dir.x > 0f)  return new Vector3( hw, 0f, 0f);  // Right
+                if (dir.x < 0f)  return new Vector3(-hw, 0f, 0f);  // Left
+            }
+            else
+            {
+                // 垂直方向为主
+                if (dir.y > 0f)  return new Vector3(0f,  hh, 0f);  // Up
+                if (dir.y < 0f)  return new Vector3(0f, -hh, 0f);  // Down
+            }
+
+            // DoorDirection 为 (0,0) 或未定义：fallback
+            Debug.LogWarning($"{LOG_TAG} ⚠️ Connection '{conn.ConnectionID}' has DoorDirection (0,0). " +
+                "Cannot auto-resolve door position. Using fallback (-dir*2).");
+            return new Vector3(-conn.DoorDirection.x * 2f, -conn.DoorDirection.y * 2f, 0f);
         }
 
         private ScaffoldDoorConnection FindReverseConnection(
@@ -655,6 +847,7 @@ namespace ProjectArk.Level.Editor
             Dictionary<string, (GameObject go, Room room)> roomGOMap,
             Dictionary<string, RoomSO> roomSOMap,
             Dictionary<string, List<Transform>> roomEnemySpawns,
+            Dictionary<string, List<string>> roomEnemyTypeIDs,
             GameObject enemyPrefab,
             ref GenerationStats stats)
         {
@@ -689,10 +882,11 @@ namespace ProjectArk.Level.Editor
                     stats.Warnings.Add($"Arena/Boss room '{sr.DisplayName}' has no EnemySpawn elements.");
                 }
 
-                // Create EncounterSO
+                // Create EncounterSO — 需求5：按 EnemyTypeID 自动填充
                 string safeName = SanitizeName(sr.DisplayName);
-                string encPath = $"{ENCOUNTER_DIR}/{safeName}_[DEFAULT]_Encounter.asset";
-                var encSO = CreateEncounterSO(encPath, sr.RoomType, enemyPrefab);
+                string encPath = $"{_encounterDir}/{safeName}_[DEFAULT]_Encounter.asset";
+                var typeIDs = roomEnemyTypeIDs.TryGetValue(sr.RoomID, out var ids) ? ids : new List<string>();
+                var encSO = CreateEncounterSO(encPath, sr.RoomType, enemyPrefab, typeIDs, ref stats);
                 stats.EncounterSOCount++;
 
                 // Assign to RoomSO
@@ -714,6 +908,7 @@ namespace ProjectArk.Level.Editor
             Dictionary<string, (GameObject go, Room room)> roomGOMap,
             Dictionary<string, RoomSO> roomSOMap,
             Dictionary<string, List<Transform>> roomEnemySpawns,
+            Dictionary<string, List<string>> roomEnemyTypeIDs,
             GameObject enemyPrefab,
             ref GenerationStats stats)
         {
@@ -740,10 +935,11 @@ namespace ProjectArk.Level.Editor
                     spProp.GetArrayElementAtIndex(i).objectReferenceValue = spawnTransforms[i];
                 spawnerSerialized.ApplyModifiedPropertiesWithoutUndo();
 
-                // Create EncounterSO (lighter: 1 wave, 2 enemies)
+                // Create EncounterSO (lighter: 1 wave, 2 enemies) — 需求5：按 EnemyTypeID 自动填充
                 string safeName = SanitizeName(sr.DisplayName);
-                string encPath = $"{ENCOUNTER_DIR}/{safeName}_[DEFAULT]_Encounter.asset";
-                var encSO = CreateEncounterSO_Normal(encPath, enemyPrefab);
+                string encPath = $"{_encounterDir}/{safeName}_[DEFAULT]_Encounter.asset";
+                var typeIDs = roomEnemyTypeIDs.TryGetValue(sr.RoomID, out var ids) ? ids : new List<string>();
+                var encSO = CreateEncounterSO_Normal(encPath, enemyPrefab, typeIDs, ref stats);
                 stats.EncounterSOCount++;
 
                 // Assign to RoomSO
@@ -758,7 +954,53 @@ namespace ProjectArk.Level.Editor
 
         // ──────────────────── EncounterSO Helpers ────────────────────
 
-        private EncounterSO CreateEncounterSO(string path, RoomType roomType, GameObject enemyPrefab)
+        /// <summary>
+        /// 需求5：根据 EnemyTypeID 列表加载对应 Prefab，找不到则 fallback 到 Enemy_Rusher。
+        /// 返回去重后的 (prefab, count) 列表，每种类型一个 Entry。
+        /// </summary>
+        private List<(GameObject prefab, int count)> ResolveEnemyEntries(
+            List<string> typeIDs, GameObject fallbackPrefab, ref GenerationStats stats)
+        {
+            // 按 typeID 分组统计数量
+            var grouped = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var id in typeIDs)
+            {
+                string key = string.IsNullOrEmpty(id) ? string.Empty : id;
+                grouped.TryGetValue(key, out int cnt);
+                grouped[key] = cnt + 1;
+            }
+
+            var result = new List<(GameObject, int)>();
+            foreach (var kvp in grouped)
+            {
+                GameObject prefab = null;
+                if (!string.IsNullOrEmpty(kvp.Key))
+                {
+                    string prefabPath = $"Assets/_Prefabs/Enemies/{kvp.Key}.prefab";
+                    prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+                    if (prefab == null)
+                    {
+                        Debug.LogWarning($"{LOG_TAG} ⚠️ EnemyPrefab '{kvp.Key}' not found at '{prefabPath}', falling back to Enemy_Rusher");
+                        stats.Warnings.Add($"EnemyPrefab '{kvp.Key}' not found, using Enemy_Rusher fallback.");
+                        prefab = fallbackPrefab;
+                    }
+                }
+                else
+                {
+                    prefab = fallbackPrefab; // empty EnemyTypeID → use default
+                }
+                result.Add((prefab, kvp.Value));
+            }
+
+            // 如果没有任何 typeID，至少保留一个默认 entry
+            if (result.Count == 0)
+                result.Add((fallbackPrefab, 1));
+
+            return result;
+        }
+
+        private EncounterSO CreateEncounterSO(string path, RoomType roomType, GameObject enemyPrefab,
+            List<string> typeIDs, ref GenerationStats stats)
         {
             var so = AssetDatabase.LoadAssetAtPath<EncounterSO>(path);
             if (so == null)
@@ -766,49 +1008,61 @@ namespace ProjectArk.Level.Editor
                 so = ScriptableObject.CreateInstance<EncounterSO>();
                 AssetDatabase.CreateAsset(so, path);
             }
+
+            var entries = ResolveEnemyEntries(typeIDs, enemyPrefab, ref stats);
 
             var serialized = new SerializedObject(so);
             var wavesProp = serialized.FindProperty("_waves");
 
             if (roomType == RoomType.Arena)
             {
-                // 1 wave, 3 enemies
+                // 1 wave, entries per type (count=3 per type)
                 wavesProp.arraySize = 1;
                 var wave0 = wavesProp.GetArrayElementAtIndex(0);
                 wave0.FindPropertyRelative("DelayBeforeWave").floatValue = 0f;
                 var entries0 = wave0.FindPropertyRelative("Entries");
-                entries0.arraySize = 1;
-                var entry0 = entries0.GetArrayElementAtIndex(0);
-                entry0.FindPropertyRelative("EnemyPrefab").objectReferenceValue = enemyPrefab;
-                entry0.FindPropertyRelative("Count").intValue = 3;
+                entries0.arraySize = entries.Count;
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    var e = entries0.GetArrayElementAtIndex(i);
+                    e.FindPropertyRelative("EnemyPrefab").objectReferenceValue = entries[i].prefab;
+                    e.FindPropertyRelative("Count").intValue = Mathf.Max(entries[i].count, 3);
+                }
             }
             else // Boss
             {
-                // 2 waves: wave 1 = 2 enemies (delay 0), wave 2 = 3 enemies (delay 1.5)
+                // 2 waves: wave 1 = entries (delay 0), wave 2 = entries (delay 1.5, count+1)
                 wavesProp.arraySize = 2;
 
                 var wave0 = wavesProp.GetArrayElementAtIndex(0);
                 wave0.FindPropertyRelative("DelayBeforeWave").floatValue = 0f;
                 var entries0 = wave0.FindPropertyRelative("Entries");
-                entries0.arraySize = 1;
-                var entry0 = entries0.GetArrayElementAtIndex(0);
-                entry0.FindPropertyRelative("EnemyPrefab").objectReferenceValue = enemyPrefab;
-                entry0.FindPropertyRelative("Count").intValue = 2;
+                entries0.arraySize = entries.Count;
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    var e = entries0.GetArrayElementAtIndex(i);
+                    e.FindPropertyRelative("EnemyPrefab").objectReferenceValue = entries[i].prefab;
+                    e.FindPropertyRelative("Count").intValue = Mathf.Max(entries[i].count, 2);
+                }
 
                 var wave1 = wavesProp.GetArrayElementAtIndex(1);
                 wave1.FindPropertyRelative("DelayBeforeWave").floatValue = 1.5f;
                 var entries1 = wave1.FindPropertyRelative("Entries");
-                entries1.arraySize = 1;
-                var entry1 = entries1.GetArrayElementAtIndex(0);
-                entry1.FindPropertyRelative("EnemyPrefab").objectReferenceValue = enemyPrefab;
-                entry1.FindPropertyRelative("Count").intValue = 3;
+                entries1.arraySize = entries.Count;
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    var e = entries1.GetArrayElementAtIndex(i);
+                    e.FindPropertyRelative("EnemyPrefab").objectReferenceValue = entries[i].prefab;
+                    e.FindPropertyRelative("Count").intValue = Mathf.Max(entries[i].count, 3);
+                }
             }
 
             serialized.ApplyModifiedPropertiesWithoutUndo();
             return so;
         }
 
-        private EncounterSO CreateEncounterSO_Normal(string path, GameObject enemyPrefab)
+        private EncounterSO CreateEncounterSO_Normal(string path, GameObject enemyPrefab,
+            List<string> typeIDs, ref GenerationStats stats)
         {
             var so = AssetDatabase.LoadAssetAtPath<EncounterSO>(path);
             if (so == null)
@@ -817,18 +1071,23 @@ namespace ProjectArk.Level.Editor
                 AssetDatabase.CreateAsset(so, path);
             }
 
+            var entries = ResolveEnemyEntries(typeIDs, enemyPrefab, ref stats);
+
             var serialized = new SerializedObject(so);
             var wavesProp = serialized.FindProperty("_waves");
 
-            // 1 wave, 2 enemies (lighter than Arena)
+            // 1 wave, entries per type (count=2 per type, lighter than Arena)
             wavesProp.arraySize = 1;
             var wave0 = wavesProp.GetArrayElementAtIndex(0);
             wave0.FindPropertyRelative("DelayBeforeWave").floatValue = 0f;
             var entries0 = wave0.FindPropertyRelative("Entries");
-            entries0.arraySize = 1;
-            var entry0 = entries0.GetArrayElementAtIndex(0);
-            entry0.FindPropertyRelative("EnemyPrefab").objectReferenceValue = enemyPrefab;
-            entry0.FindPropertyRelative("Count").intValue = 2;
+            entries0.arraySize = entries.Count;
+            for (int i = 0; i < entries.Count; i++)
+            {
+                var e = entries0.GetArrayElementAtIndex(i);
+                e.FindPropertyRelative("EnemyPrefab").objectReferenceValue = entries[i].prefab;
+                e.FindPropertyRelative("Count").intValue = Mathf.Max(entries[i].count, 2);
+            }
 
             serialized.ApplyModifiedPropertiesWithoutUndo();
             return so;
@@ -840,7 +1099,8 @@ namespace ProjectArk.Level.Editor
 
         private void PrintReport(GenerationStats stats,
             Dictionary<string, ScaffoldRoom> scaffoldLookup,
-            Dictionary<string, List<Transform>> roomEnemySpawns)
+            Dictionary<string, List<Transform>> roomEnemySpawns,
+            Dictionary<string, List<string>> roomEnemyTypeIDs)
         {
             Debug.Log("═══════════════════════════════════════════════════════════════");
             Debug.Log($"  {LOG_TAG} GENERATION REPORT");
@@ -870,17 +1130,107 @@ namespace ProjectArk.Level.Editor
                     Debug.LogWarning($"  • {w}");
             }
 
+            // 需求5：输出每个房间的敌人类型汇总
+            bool hasEnemyInfo = false;
+            foreach (var sr in scaffoldLookup.Values)
+            {
+                if (!roomEnemyTypeIDs.TryGetValue(sr.RoomID, out var ids) || ids.Count == 0) continue;
+                if (!hasEnemyInfo)
+                {
+                    Debug.Log("───────────────────────────────────────────────────────────────");
+                    Debug.Log("  👾 ENEMY TYPE SUMMARY:");
+                    hasEnemyInfo = true;
+                }
+                var grouped = ids
+                    .GroupBy(id => string.IsNullOrEmpty(id) ? "(default)" : id)
+                    .Select(g => $"{g.Key} ×{g.Count()}");
+                Debug.Log($"  • {sr.DisplayName}: {string.Join(", ", grouped)}");
+            }
+
+            // 需求2：输出使用了 fallback 尺寸的房间
+            if (stats.FallbackRooms != null && stats.FallbackRooms.Count > 0)
+            {
+                Debug.Log("───────────────────────────────────────────────────────────────");
+                Debug.Log("  ⚠️ ROOMS USING FALLBACK SIZE (Size was zero/invalid):");
+                foreach (var r in stats.FallbackRooms)
+                    Debug.LogWarning($"  • {r}");
+            }
+
+            // 需求6：输出被保留的房间
+            if (stats.PreservedRooms != null && stats.PreservedRooms.Count > 0)
+            {
+                Debug.Log("───────────────────────────────────────────────────────────────");
+                Debug.Log("  ✅ PRESERVED ROOMS (Update Existing mode, Tilemaps kept):");
+                foreach (var r in stats.PreservedRooms)
+                    Debug.Log($"  • {r}");
+            }
+
             // TODO checklist
             Debug.Log("───────────────────────────────────────────────────────────────");
             Debug.Log("  📋 TODO CHECKLIST (manual follow-up):");
-            Debug.Log("  1. 🖌️  Paint Tilemaps for each room");
-            Debug.Log("  2. 👾  Replace [DEFAULT] EncounterSO enemies with real enemy Prefabs");
+            Debug.Log("  1. 🖌️  Tilemap 层级已自动创建，直接选中对应层开始绘制");
+            Debug.Log("  2. 👾  Check [DEFAULT] EncounterSO — EnemyTypeID 已自动填充，如需调整请手动修改");
             Debug.Log("  3. 🐉  Configure Boss room with dedicated Boss Prefab");
             Debug.Log("  4. 🎨  Add visual decorations, lighting, and particle effects");
             Debug.Log("  5. 🖼️  Add SpriteRenderer to Checkpoint GameObjects");
             Debug.Log("  6. ⚙️  Configure Physics2D collision matrix (Player vs Room/Door/Checkpoint)");
             Debug.Log("  7. 🎨  [ ] Hide/Remove Gizmo visuals (SpriteRenderer + TextMesh Label children) before shipping");
             Debug.Log("═══════════════════════════════════════════════════════════════");
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        //  GIZMO TOGGLE (需求7)
+        // ══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// 需求7：遍历场景中所有 Gizmo 可视化组件，统一设置 enabled 状态。
+        /// 目标对象：sortingOrder==1 的 SpriteRenderer，以及名为 "Label" 的 MeshRenderer。
+        /// </summary>
+        private void ToggleGizmos()
+        {
+            bool visible = _gizmosVisible;
+            int count = 0;
+
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            var allGOs = scene.GetRootGameObjects();
+
+            // 递归遍历所有 GameObject
+            var queue = new Queue<GameObject>();
+            foreach (var root in allGOs)
+                queue.Enqueue(root);
+
+            while (queue.Count > 0)
+            {
+                var go = queue.Dequeue();
+
+                // SpriteRenderer with sortingOrder == 1 → Gizmo color block
+                var sr = go.GetComponent<SpriteRenderer>();
+                if (sr != null && sr.sortingOrder == 1)
+                {
+                    sr.enabled = visible;
+                    count++;
+                }
+
+                // MeshRenderer on a GameObject named "Label" → Gizmo text label
+                if (go.name == "Label")
+                {
+                    var mr = go.GetComponent<MeshRenderer>();
+                    if (mr != null)
+                    {
+                        mr.enabled = visible;
+                        count++;
+                    }
+                }
+
+                // Enqueue children
+                foreach (Transform child in go.transform)
+                    queue.Enqueue(child.gameObject);
+            }
+
+            if (count == 0)
+                Debug.Log($"{LOG_TAG} No Gizmo visuals found in scene");
+            else
+                Debug.Log($"{LOG_TAG} Gizmos {(visible ? "shown" : "hidden")} — {count} component(s) toggled.");
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -904,12 +1254,12 @@ namespace ProjectArk.Level.Editor
 
         private static string SanitizeName(string name)
         {
-            // Replace invalid filename chars and common punctuation with underscores
+            // Replace invalid filename chars, common punctuation, and spaces with underscores
             char[] invalid = Path.GetInvalidFileNameChars();
             var sb = new System.Text.StringBuilder(name.Length);
             foreach (char c in name)
             {
-                if (Array.IndexOf(invalid, c) >= 0 || c == '·' || c == '→')
+                if (Array.IndexOf(invalid, c) >= 0 || c == '·' || c == '→' || c == ' ')
                     sb.Append('_');
                 else
                     sb.Append(c);

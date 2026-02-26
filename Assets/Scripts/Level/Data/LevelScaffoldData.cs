@@ -137,6 +137,9 @@ namespace ProjectArk.Level
         [Tooltip("ID of the ScaffoldDoorConnection this door is bound to")]
         [SerializeField] private string _boundConnectionID;
 
+        [Tooltip("Enemy type ID for EnemySpawn elements (e.g. 'Enemy_Rusher'). Used to auto-fill EncounterSO prefab.")]
+        [SerializeField] private string _enemyTypeID;
+
         // ──────────────────── Public Properties ────────────────────
 
         public string ElementID => _elementID;
@@ -178,6 +181,11 @@ namespace ProjectArk.Level
         {
             get => _boundConnectionID;
             set => _boundConnectionID = value;
+        }
+        public string EnemyTypeID
+        {
+            get => _enemyTypeID;
+            set => _enemyTypeID = value;
         }
 
         // ──────────────────── Public Methods ────────────────────
