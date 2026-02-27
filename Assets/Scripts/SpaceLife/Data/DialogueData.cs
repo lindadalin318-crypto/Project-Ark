@@ -6,6 +6,8 @@ namespace ProjectArk.SpaceLife.Data
 {
     /// <summary>
     /// A single line of dialogue spoken by a character.
+    /// All DialogueLines for an NPC are stored flat in NPCDataSO.DialogueNodes;
+    /// options reference the next node by index to avoid serialization cycles.
     /// </summary>
     [System.Serializable]
     public class DialogueLine
@@ -24,17 +26,25 @@ namespace ProjectArk.SpaceLife.Data
 
     /// <summary>
     /// A selectable option within a dialogue line.
+    /// <para><see cref="NextLineIndex"/> is the index into the owning NPC's
+    /// <c>DialogueNodes</c> list. Use -1 to end the conversation.</para>
     /// </summary>
     [System.Serializable]
     public class DialogueOption
     {
         [TextArea(2, 4)]
         [SerializeField] private string _optionText;
-        [SerializeField] private DialogueLine _nextLine;
+
+        /// <summary>
+        /// Index into NPCDataSO.DialogueNodes. -1 = close dialogue.
+        /// </summary>
+        [Tooltip("Index into the NPC's DialogueNodes list. Set to -1 to end the conversation.")]
+        [SerializeField] private int _nextLineIndex = -1;
+
         [SerializeField] private int _relationshipChange;
 
         public string OptionText => _optionText;
-        public DialogueLine NextLine => _nextLine;
+        public int NextLineIndex => _nextLineIndex;
         public int RelationshipChange => _relationshipChange;
     }
 }

@@ -106,28 +106,7 @@ namespace ProjectArk.SpaceLife
 
         private DialogueLine GetAppropriateDialogue()
         {
-            IReadOnlyList<DialogueLine> dialoguePool;
-            int relationship = CurrentRelationship;
-
-            if (relationship >= 80)
-            {
-                dialoguePool = _npcData.BestFriendDialogues;
-            }
-            else if (relationship >= 50)
-            {
-                dialoguePool = _npcData.FriendlyDialogues;
-            }
-            else
-            {
-                dialoguePool = _npcData.DefaultDialogues;
-            }
-
-            if (dialoguePool.Count > 0)
-            {
-                return dialoguePool[Random.Range(0, dialoguePool.Count)];
-            }
-
-            return null;
+            return _npcData.GetEntryLine(CurrentRelationship);
         }
 
         public void ChangeRelationship(int amount)

@@ -47,6 +47,10 @@ namespace ProjectArk.Level
         private DoorState _currentState;
         private bool _playerInRange;
         private bool _isTransitioning;
+        // Static cooldown shared across all Door instances.
+        // After any transition completes, all doors ignore OnTriggerStay2D for a short window,
+        // preventing the destination door from immediately re-teleporting the player back.
+        private static float _globalTransitionCooldownUntil;
 
         // ──────────────────── Public Properties ────────────────────
 
@@ -152,6 +156,7 @@ namespace ProjectArk.Level
         {
             if (!IsPlayerLayer(other.gameObject)) return;
             _playerInRange = true;
+            // Enter always triggers immediately (player actively walked in)
             TryAutoTransition();
         }
 
@@ -161,6 +166,9 @@ namespace ProjectArk.Level
             // 转场结束后 Stay 会重新尝试，避免"卡门"问题
             if (!_playerInRange) return;
             if (!IsPlayerLayer(other.gameObject)) return;
+            // Cooldown guard: skip Stay triggers for a short window after a transition completes,
+            // preventing the reverse door from immediately re-teleporting the player back.
+            if (Time.unscaledTime < _globalTransitionCooldownUntil) return;
             TryAutoTransition();
         }
 
@@ -229,7 +237,13 @@ namespace ProjectArk.Level
             }
 
             _isTransitioning = true;
-            controller.TransitionThroughDoor(this, () => _isTransitioning = false);
+            controller.TransitionThroughDoor(this, () =>
+            {
+                _isTransitioning = false;
+                // Set a global cooldown so OnTriggerStay2D on ANY door (especially the reverse door
+                // at the destination) won't fire immediately if the spawn point lands inside its collider.
+                _globalTransitionCooldownUntil = Time.unscaledTime + 1f;
+            });
         }
 
         // ──────────────────── State API ────────────────────

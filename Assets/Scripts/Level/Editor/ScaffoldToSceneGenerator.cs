@@ -464,7 +464,7 @@ namespace ProjectArk.Level.Editor
         {
             return type switch
             {
-                ScaffoldElementType.Door        => new Vector2(3f, 3f),   // matches BoxCollider2D.size
+ScaffoldElementType.Door        => new Vector2(1f, 1f),   // matches BoxCollider2D.size
                 ScaffoldElementType.Checkpoint  => new Vector2(2f, 2f),   // matches BoxCollider2D.size
                 ScaffoldElementType.PlayerSpawn => new Vector2(1.5f, 1.5f),
                 ScaffoldElementType.EnemySpawn  => new Vector2(1.5f, 1.5f),
@@ -651,10 +651,10 @@ namespace ProjectArk.Level.Editor
 
                     var fwdCol = fwdDoorGO.AddComponent<BoxCollider2D>();
                     fwdCol.isTrigger = true;
-                    fwdCol.size = new Vector2(3f, 3f);
+            fwdCol.size = new Vector2(1f, 1f);
 
-                    var fwdDoor = fwdDoorGO.AddComponent<Door>();
-                    AddGizmoVisuals(fwdDoorGO, "Door", GetElementGizmoColor(ScaffoldElementType.Door), new Vector2(3f, 3f));
+            var fwdDoor = fwdDoorGO.AddComponent<Door>();
+            AddGizmoVisuals(fwdDoorGO, "Door", GetElementGizmoColor(ScaffoldElementType.Door), new Vector2(1f, 1f));
 
                     // ── Find reverse connection's door position ──
                     Vector3 reverseSpawnPos = FindReverseDoorPosition(
@@ -687,10 +687,10 @@ namespace ProjectArk.Level.Editor
 
                     var revCol = revDoorGO.AddComponent<BoxCollider2D>();
                     revCol.isTrigger = true;
-                    revCol.size = new Vector2(3f, 3f);
+            revCol.size = new Vector2(1f, 1f);
 
-                    var revDoor = revDoorGO.AddComponent<Door>();
-                    AddGizmoVisuals(revDoorGO, "Door", GetElementGizmoColor(ScaffoldElementType.Door), new Vector2(3f, 3f));
+            var revDoor = revDoorGO.AddComponent<Door>();
+            AddGizmoVisuals(revDoorGO, "Door", GetElementGizmoColor(ScaffoldElementType.Door), new Vector2(1f, 1f));
 
                     // ── SpawnPoint in source room (where player appears on reverse) ──
                     var revSpawn = new GameObject($"SpawnPoint_from_{SanitizeName(targetDisplayName)}");
@@ -1058,6 +1058,7 @@ namespace ProjectArk.Level.Editor
             }
 
             serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(so);
             return so;
         }
 
@@ -1090,6 +1091,7 @@ namespace ProjectArk.Level.Editor
             }
 
             serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(so);
             return so;
         }
 

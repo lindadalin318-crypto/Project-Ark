@@ -24,6 +24,7 @@ namespace ProjectArk.SpaceLife
 
         private DialogueLine _currentLine;
         private NPCController _currentNPC;
+        private NPCDataSO _currentNPCData;
         private bool _isTyping;
         private CancellationTokenSource _typewriterCts;
 
@@ -46,6 +47,7 @@ namespace ProjectArk.SpaceLife
 
             _currentLine = line;
             _currentNPC = npc;
+            _currentNPCData = npc != null ? npc.NPCData : null;
 
             if (_dialoguePanel != null)
                 _dialoguePanel.SetActive(true);
@@ -180,9 +182,13 @@ namespace ProjectArk.SpaceLife
                 _currentNPC.ChangeRelationship(option.RelationshipChange);
             }
 
-            if (option.NextLine != null)
+            DialogueLine nextLine = _currentNPCData != null
+                ? _currentNPCData.GetNodeAt(option.NextLineIndex)
+                : null;
+
+            if (nextLine != null)
             {
-                ShowDialogue(option.NextLine, _currentNPC);
+                ShowDialogue(nextLine, _currentNPC);
             }
             else
             {
@@ -199,6 +205,7 @@ namespace ProjectArk.SpaceLife
 
             _currentLine = null;
             _currentNPC = null;
+            _currentNPCData = null;
 
             OnDialogueEnd?.Invoke();
         }

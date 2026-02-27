@@ -157,9 +157,6 @@ namespace ProjectArk.Level
                 _previousRoom.DeactivateEnemies();
             }
 
-            // Activate enemies in the current room
-            _currentRoom.ActivateEnemies();
-
             // ── Director cleanup ──
             // Clear attack tokens to prevent stale references from the previous room
             var director = ServiceLocator.Get<EnemyDirector>();
@@ -169,11 +166,13 @@ namespace ProjectArk.Level
             }
 
             // ── Arena/Boss encounter ──
+            // ArenaController owns the full encounter flow (lock doors → delay → spawn waves → unlock).
+            // Do NOT call ActivateEnemies() for these rooms — it would create a WaveSpawnStrategy that
+            // gets immediately Reset() when ArenaController calls SetStrategy() moments later.
             if (room.Type == RoomType.Arena || room.Type == RoomType.Boss)
             {
                 if (room.State != RoomState.Cleared)
                 {
-                    // ArenaController 负责锁门 + 波次生成 + 解锁
                     var arena = room.GetComponent<ArenaController>();
                     if (arena != null)
                     {
@@ -181,10 +180,16 @@ namespace ProjectArk.Level
                     }
                     else
                     {
-                        // 没有 ArenaController 则仅锁门（向后兼容）
+                        // Fallback: no ArenaController → lock doors + activate directly
                         room.LockAllDoors(DoorState.Locked_Combat);
+                        _currentRoom.ActivateEnemies();
                     }
                 }
+            }
+            else
+            {
+                // Normal / Safe / Corridor rooms: activate enemies directly
+                _currentRoom.ActivateEnemies();
             }
 
             // ── Broadcast events ──

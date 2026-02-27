@@ -442,7 +442,7 @@ namespace ProjectArk.Level.Editor
                 // Collider for player detection
                 var doorCol = doorGO.AddComponent<BoxCollider2D>();
                 doorCol.isTrigger = true;
-                doorCol.size = new Vector2(3f, 3f);
+                doorCol.size = new Vector2(1f, 1f);
 
                 // Door component
                 var door = doorGO.AddComponent<Door>();
@@ -468,7 +468,7 @@ namespace ProjectArk.Level.Editor
 
                 var reverseDoorCol = reverseDoorGO.AddComponent<BoxCollider2D>();
                 reverseDoorCol.isTrigger = true;
-                reverseDoorCol.size = new Vector2(3f, 3f);
+                reverseDoorCol.size = new Vector2(1f, 1f);
 
                 var reverseDoor = reverseDoorGO.AddComponent<Door>();
 

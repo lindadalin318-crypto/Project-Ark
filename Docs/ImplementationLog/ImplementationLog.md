@@ -5613,3 +5613,150 @@ Assets/_Data/Level/示巴星_Z1/
 - 其余 → `(1, 1)` 默认
 
 `CreateElementGO` 调用 `AddGizmoVisuals` 时自动传入 `GetElementGizmoSize(type)`；`CreateCheckpointElement` 也在添加 BoxCollider2D 后立即调用 `AddGizmoVisuals` 并传入 `(2,2)`。
+
+---
+
+## LevelDesigner — 自定义元素功能 — 2026-02-27 09:30
+
+**修改文件：**
+- `Tools/LevelDesigner.html`
+
+**内容简述：**
+在左侧面板新增「自定义元素」区块，允许设计师自由定义名称和颜色，创建自定义元素预设并拖入画布使用，支持 localStorage 持久化、属性面板编辑、JSON 导出/导入向后兼容。
+
+**目的：**
+满足设计师标注项目特有自定义标记点（特殊触发器、剧情锚点、测试标记等）的需求，无需修改代码即可扩展元素类型。
+
+**技术方案：**
+1. **数据结构**：新增 `customElementPresets` 数组（每项含 `label`、`color`），通过 `saveCustomPresets()` / `loadCustomPresets()` 与 `localStorage` 同步（key: `leveldesigner_custom_elements`）
+2. **HTML/CSS**：左侧面板底部新增区块，含名称输入框、颜色选择器（`<input type="color">`）、添加按钮；自定义预设项样式使用动态颜色（左侧色条 + 半透明背景），悬停显示 × 删除按钮
+3. **拖拽**：自定义预设项通过 `dataTransfer` 携带 `elementType=custom`、`customLabel`、`customColor`；`addElementToRoom` 扩展参数接收并存入元素对象
+4. **渲染**：`renderRoom` 中 `type === 'custom'` 时使用 `customColor` 作为背景色，显示截断后的 `customLabel`（超3字符加省略号），CSS 类 `.element-custom` 使用圆角矩形区别于内置圆形图标
+5. **属性面板**：`showElementProperties` 对 custom 类型额外渲染名称输入框和颜色选择器，`updateCustomElementField()` 实时更新元素数据并刷新画布图标
+6. **JSON 兼容**：`getExportData` 对 custom 元素输出 `customLabel`/`customColor` 字段；`importJsonData` 反序列化时向后兼容（旧数据无 custom 字段时不报错）
+7. **辅助函数**：新增 `hexToRgba(hex, alpha)` 将十六进制颜色转 rgba，`escapeHtml(str)` 防 XSS
+
+---
+
+## BugFix: DialogueLine 序列化深度超限修复 — 2026-02-27 09:07
+
+**修改文件：**
+- `Assets/Scripts/SpaceLife/Data/DialogueData.cs`
+- `Assets/Scripts/SpaceLife/Data/NPCDataSO.cs`
+- `Assets/Scripts/SpaceLife/NPCController.cs`
+- `Assets/Scripts/SpaceLife/DialogueUI.cs`
+
+**问题描述：**
+Unity 报错 `Serialization depth limit 10 exceeded at DialogueLine._speakerAvatar`，原因是 `DialogueLine` 内联包含 `List<DialogueOption>`，`DialogueOption` 又内联包含 `DialogueLine`，形成无限递归序列化循环。
+
+**技术方案：**
+1. **DialogueData.cs**：`DialogueOption` 移除 `DialogueLine _nextLine` 字段，改为 `int _nextLineIndex`（-1 表示结束对话），彻底打破序列化循环
+2. **NPCDataSO.cs**：将原三个独立 `List<DialogueLine>`（default/friendly/bestFriend）改为统一的 `List<DialogueLine> _dialogueNodes` 节点池，加入三个入口 index 字段（`_defaultEntryIndex`/`_friendlyEntryIndex`/`_bestFriendEntryIndex`），提供 `GetEntryLine(int relationship)` 和 `GetNodeAt(int index)` 辅助方法
+4. **NPCController.cs**：`GetAppropriateDialogue` 改为调用 `_npcData.GetEntryLine(CurrentRelationship)`，移除冗余的 `using System.Linq`
+4. **DialogueUI.cs**：`ShowDialogue` 缓存 `_currentNPCData`，`OnOptionSelected` 通过 `_currentNPCData.GetNodeAt(option.NextLineIndex)` 查找下一行，`CloseDialogue` 清空 `_currentNPCData`
+
+---
+
+## BugFix: Door 碰撞体过大 + 反复横跳修复 — 2026-02-27 09:19
+
+**修改文件：**
+- `Assets/Scripts/Level/Editor/ScaffoldToSceneGenerator.cs`
+- `Assets/Scripts/Level/Room/Door.cs`
+
+**问题描述：**
+ScaffoldToSceneGenerator 生成的 Door BoxCollider2D 尺寸为 3×3，对于走廊等小房间几乎占满整个通道，导致玩家进入房间后立刻触发传送。同时，传送落点若恰好在目标房间反向门的碰撞体内，`OnTriggerStay2D` 会立刻再次触发反向传送，造成反复横跳。
+
+**技术方案：**
+1. **ScaffoldToSceneGenerator.cs**：将所有 Door 的 `BoxCollider2D.size` 从 `(3f, 3f)` 缩小至 `(1.5f, 1.5f)`，同步更新 Gizmo 可视化尺寸和 `GetDefaultGizmoSize` 中的 Door 默认值（共 5 处）
+2. **Door.cs**：新增 `static float _globalTransitionCooldownUntil` 静态冷却时间戳，所有 Door 实例共享；`TryTransition` 的回调中设置 `_globalTransitionCooldownUntil = Time.unscaledTime + 1f`；`OnTriggerStay2D` 中加入冷却检查，冷却期间跳过 Stay 触发，防止目标房间反向门立刻反向传送玩家
+
+---
+
+## Bug Fix: EnemySpawner 一键生成后不产出敌人 — 2026-02-27 10:30
+
+**修改文件：**
+- `Assets/Scripts/Level/Editor/ScaffoldToSceneGenerator.cs`
+- `Assets/Scripts/Level/Room/RoomManager.cs`
+
+**问题描述：**
+一键生成关卡后进入 Play Mode，所有房间（Arena/Boss/Normal）的 EnemySpawner 均不产出敌人。
+
+**根本原因（双重 Bug）：**
+
+**Bug 1（主因）：EncounterSO `_waves` 数组为空**
+`CreateEncounterSO` 和 `CreateEncounterSO_Normal` 方法在 `AssetDatabase.CreateAsset()` 创建新资产后，通过 `SerializedObject` 写入 `_waves` 数据，但只调用了 `ApplyModifiedPropertiesWithoutUndo()` 而**没有调用 `EditorUtility.SetDirty(so)`**。导致修改只存在于内存中，`AssetDatabase.SaveAssets()` 时无法识别该资产为脏，数据不写入磁盘，最终 `.asset` 文件中 `_waves: []`。
+- `HasEncounter` 返回 `false`（`WaveCount == 0`），`ArenaController.BeginEncounter()` 直接 return
+- `Room.ActivateEnemies()` 虽然调用了 `StartWaveEncounter()`，但 `WaveSpawnStrategy` 因 `WaveCount == 0` 立刻触发 `OnEncounterComplete`，房间被标记为 Cleared
+
+**Bug 2（次因）：Arena/Boss 房间双重启动策略冲突**
+`RoomManager.EnterRoom()` 对 Arena/Boss 房间同时调用了 `_currentRoom.ActivateEnemies()`（创建策略 A 并立即 StartStrategy）和 `arena.BeginEncounter()`（调用 `SetStrategy(B)`，内部先 `Reset()` 策略 A，CancellationToken 被取消）。策略 A 的异步任务被取消，敌人消失。
+
+**技术方案：**
+1. **ScaffoldToSceneGenerator.cs**：在 `CreateEncounterSO` 和 `CreateEncounterSO_Normal` 的 `ApplyModifiedPropertiesWithoutUndo()` 后添加 `EditorUtility.SetDirty(so)`，确保 `_waves` 数据在 `SaveAssets()` 时正确持久化
+2. **RoomManager.cs**：将 `ActivateEnemies()` 移入 `else` 分支，Arena/Boss 房间完全交由 `ArenaController.BeginEncounter()` 管理，不再提前启动策略
+
+**操作说明：**
+修复后需重新一键生成关卡（旧的 `_waves: []` 资产需重新生成才能获得正确数据）。
+
+---
+
+## Bug Fix: LevelDesigner.html 拖拽功能全面修复 — 2026-02-27 11:20
+
+**修改文件：**
+- `Tools/LevelDesigner.html`
+
+**问题描述：**
+LevelDesigner.html 中所有拖拽操作完全失效——无论是从左侧面板拖拽房间类型到画布，还是拖拽元素到房间内，均无法触发 drop 事件。
+
+**根本原因（3 个 Bug）：**
+
+**Bug 1（主因）：`.room` 元素缺少 `dragover` 的 `preventDefault()`**
+HTML5 Drag & Drop API 要求 drop 目标的所有祖先元素在 `dragover` 事件中调用 `e.preventDefault()`，否则浏览器认为该区域不接受 drop。`canvasArea` 和 `world` 已有 `dragover` 监听，但 `.room` 元素（`world` 的子元素）没有。当鼠标拖拽到 `.room` 上方时，`.room` 成为最顶层命中元素，其默认行为阻止了 drop，导致 `canvasArea` 的 `drop` 事件不触发。
+
+**Bug 2（次因）：`mousedown` 注释不清晰，`e.preventDefault()` 位置需说明**
+`setupRoomEvents` 中 `mousedown` 末尾的 `e.preventDefault()` 仅在房间拖动路径执行（其他分支均提前 return），不影响 HTML5 drag & drop 流程，但缺少注释说明，容易误判为干扰源。
+
+**Bug 3（精度问题）：`drop` 事件中目标房间检测依赖坐标范围计算**
+当拖拽图标有偏移时，world-space 坐标可能偏移，导致 `rooms.find()` 找不到正确的目标房间。
+
+**技术方案：**
+1. **`setupRoomEvents` 添加 `dragover` 监听器**：在函数开头为 `div` 添加 `div.addEventListener('dragover', (e) => { e.preventDefault(); })`，确保整条冒泡链路（`.room` → `world` → `canvasArea`）全部允许 drop
+2. **`mousedown` 添加注释**：明确说明 `e.preventDefault()` 仅用于防止文本选中，不调用 `stopPropagation`，不干扰 HTML5 drag 事件冒泡
+3. **`drop` 事件精确命中检测**：将目标房间检测替换为 `document.elementFromPoint(e.clientX, e.clientY)` + `closest('.room')` 精确命中，坐标范围计算作为回退方案
+
+---
+
+## Bug Fix: LevelDesigner.html 拖拽功能修复 v3（#connections-svg 拦截 Drag 事件）— 2026-02-27 11:42
+
+**修改文件：**
+- `Tools/LevelDesigner.html`
+
+**问题描述：**
+上轮修复后拖拽仍然失效。从左侧面板拖拽房间类型/元素到画布，drop 事件依然不触发。
+
+**根本原因：**
+`#connections-svg`（`position: absolute; width: 100%; height: 100%; z-index: 5`）覆盖了整个画布区域，成为浏览器 drag 命中测试的最顶层元素。
+
+关键误解：CSS `pointer-events: none` **只对鼠标事件（click/mousemove 等）有效，对 HTML5 Drag & Drop 事件（dragover/drop）完全无效**。
+
+因此拖拽链路断裂：
+1. 浏览器 drag 命中 → `#connections-svg`（z-index:5）
+2. `#connections-svg` 没有 `dragover` 的 `e.preventDefault()`
+3. 浏览器认为该区域不接受 drop → `canvasArea` 的 `drop` 事件永远不触发
+
+历史上 `gridCanvas` 存在时，`gridCanvas` 是顶层元素，它通过 `canvasArea` 的冒泡获得了 `preventDefault()`，所以拖拽正常。删除 `gridCanvas` 后，SVG 成为顶层，问题暴露。
+
+**技术方案：**
+在 `canvasArea` 和 `world` 的 `dragover` 监听器旁边，添加一行：
+```js
+svg.addEventListener('dragover', (e) => { e.preventDefault(); });
+```
+
+**完整 dragover 链路（修复后）：**
+`preset-item` → `#connections-svg`（新增）→ `#world` → `.room` → `canvasArea`
+
+**验收：**
+- `canvasArea`（第 1371 行）✅
+- `world`（第 1372 行）✅
+- `svg`（第 1373 行）✅ 新增
+- `.room` in `setupRoomEvents`（第 1502 行）✅

@@ -15,6 +15,12 @@ namespace ProjectArk.Level
         Boss,
 
         /// <summary> Safe zone — no enemies, may contain checkpoint/shop/NPC. </summary>
-        Safe
+        Safe,
+
+        /// <summary> Narrow connecting passage between rooms. </summary>
+        Corridor,
+
+        /// <summary> Merchant room — player can purchase items or upgrades. </summary>
+        Shop
     }
 }
