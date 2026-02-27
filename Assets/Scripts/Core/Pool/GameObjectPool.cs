@@ -50,6 +50,14 @@ namespace ProjectArk.Core
         public GameObject Get(Vector3 position, Quaternion rotation)
         {
             var instance = _pool.Get(); // OnGetInstance 中不再激活
+
+            // Guard: pooled instance may have been destroyed externally (e.g. scene unload).
+            // Re-create if the underlying Unity object is gone.
+            if (instance == null)
+            {
+                instance = CreateInstance();
+            }
+
             instance.transform.SetPositionAndRotation(position, rotation);
             instance.SetActive(true);   // 定位后再激活，避免 Trail 跳线
 

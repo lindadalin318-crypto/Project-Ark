@@ -318,11 +318,14 @@ namespace ProjectArk.SpaceLife
 
             if (_playerPool != null)
             {
-                _playerPool.Return(_currentPlayer);
+                // Guard: don't return a destroyed object to the pool
+                if (_currentPlayer != null)
+                    _playerPool.Return(_currentPlayer);
             }
             else
             {
-                Destroy(_currentPlayer);
+                if (_currentPlayer != null)
+                    Destroy(_currentPlayer);
             }
 
             _currentPlayer = null;

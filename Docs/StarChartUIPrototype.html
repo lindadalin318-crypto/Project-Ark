@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Ark — Star Chart UI Prototype v2</title>
+<style>
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-deep:        #060a10;
+  --bg-panel:       #0b1120;
+  --bg-track:       #0f1828;
+  --bg-slot:        #0d1828;
+  --bg-slot-hover:  #162338;
+  --cyan:           #00e5ff;
+  --cyan-dim:       #0097a7;
+  --cyan-glow:      rgba(0,229,255,0.15);
+  --cyan-glow-soft: rgba(0,229,255,0.07);
+  --purple:         #8b5cf6;
+  --purple-dim:     #3b1f6e;
+  --purple-glow:    rgba(139,92,246,0.25);
+  --blue:           #2563eb;
+  --blue-dim:       #1a3060;
+  --blue-glow:      rgba(37,99,235,0.25);
+  --green:          #22c55e;
+  --orange:         #f97316;
+  --red:            #ef4444;
+  /* Type accent colors */
+  --col-sail:       #34d399;
+  --col-sail-dim:   #0d3d28;
+  --col-sail-glow:  rgba(52,211,153,0.22);
+  --col-prism:      #a78bfa;
+  --col-prism-dim:  #3b1f6e;
+  --col-prism-glow: rgba(167,139,250,0.22);
+  --col-core:       #60a5fa;
+  --col-core-dim:   #1a3060;
+  --col-core-glow:  rgba(96,165,250,0.22);
+  --col-sat:        #fbbf24;
+  --col-sat-dim:    #3d2a00;
+  --col-sat-glow:   rgba(251,191,36,0.22);
+  --text-primary:   #dde6f0;
+  --text-dim:       #4a6080;
+  --text-cyan:      #67e8f9;
+  --border:         rgba(0,229,255,0.10);
+  --border-mid:     rgba(0,229,255,0.22);
+  --border-bright:  rgba(0,229,255,0.45);
+  --slot-size:      64px;
+  --inv-slot-size:  56px;
+  --slot-gap:       2px;
+}
+
+body {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 13px;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Animated scanline ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent, transparent 2px,
+    rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px
+  );
+  pointer-events: none;
+  z-index: 9998;
+}
+/* Moving scan beam */
+body::after {
+  content: '';
+  position: fixed;
+  left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(0,229,255,0.12), transparent);
+  animation: scanBeam 4s linear infinite;
+  pointer-events: none;
+  z-index: 9997;
+}
+@keyframes scanBeam {
+  0%   { top: -4px; }
+  100% { top: 100vh; }
+}
+
+/* ── Main Panel ── */
+.star-chart-panel {
+  width: 980px;
+  height: 620px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-bright);
+  border-radius: 3px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(0,229,255,0.04),
+    0 0 60px rgba(0,229,255,0.06),
+    inset 0 0 80px rgba(0,0,0,0.5);
+  position: relative;
+}
+
+/* Corner brackets */
+.star-chart-panel::before,
+.star-chart-panel::after {
+  content: '';
+  position: absolute;
+  width: 20px; height: 20px;
+  border-color: var(--cyan);
+  border-style: solid;
+  pointer-events: none;
+  z-index: 20;
+}
+.star-chart-panel::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+.star-chart-panel::after  { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+/* ── Header ── */
+.header-bar {
+  height: 42px;
+  min-height: 42px;
+  background: linear-gradient(90deg, rgba(0,229,255,0.07) 0%, transparent 70%);
+  border-bottom: 1px solid var(--border-bright);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 10px;
+  flex-shrink: 0;
+  position: relative;
+}
+.header-bar::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 0;
+  width: 120px; height: 1px;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+}
+
+.header-dot {
+  width: 7px; height: 7px;
+  background: var(--cyan);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--cyan);
+  animation: dotPulse 2.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes dotPulse {
+  0%,100% { opacity:1; box-shadow: 0 0 8px var(--cyan); }
+  50%      { opacity:0.4; box-shadow: 0 0 3px var(--cyan); }
+}
+
+.header-title {
+  color: var(--text-dim);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  flex: 1;
+}
+.header-title .ship-name { color: var(--cyan); font-weight: bold; letter-spacing: 0.1em; }
+.header-title .sys-name  { color: var(--text-cyan); }
+
+.header-right { display: flex; align-items: center; gap: 8px; }
+
+.header-badge {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  padding: 2px 8px;
+  border-radius: 2px;
+  border: 1px solid;
+}
+.badge-online { color: var(--green); border-color: rgba(34,197,94,0.35); background: rgba(34,197,94,0.06); }
+.badge-key    { color: var(--text-dim); border-color: var(--border); font-size: 9px; }
+
+.header-close {
+  width: 22px; height: 22px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 12px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 2px;
+  transition: all 0.15s;
+}
+.header-close:hover { border-color: var(--red); color: var(--red); background: rgba(239,68,68,0.08); }
+
+/* ── Loadout Section (upper ~45%) ── */
+.loadout-section {
+  flex-shrink: 0;
+  padding: 8px 12px 6px;
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+/* Left: Gatling switcher column */
+.gatling-col {
+  width: 64px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(0,229,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 8px 4px;
+}
+
+.gatling-btn {
+  width: 40px; height: 32px;
+  background: rgba(0,229,255,0.05);
+  border: 1px solid var(--border-mid);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 2px;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.gatling-btn:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: var(--cyan-glow);
+  box-shadow: 0 0 8px var(--cyan-glow);
+}
+.gatling-btn:active { transform: scale(0.93); }
+
+.gatling-label {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* ── Drum / Flip-clock counter ── */
+.loadout-counter {
+  width: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+/* The drum viewport — clips the flipping tile */
+.drum-viewport {
+  width: 52px;
+  height: 36px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--border-mid);
+  border-radius: 2px;
+  background: rgba(0,0,0,0.35);
+  /* Perspective on the container so children get 3D depth */
+  perspective: 120px;
+  perspective-origin: center center;
+}
+
+/* Subtle top/bottom fade to sell the "cylinder" illusion */
+.drum-viewport::before,
+.drum-viewport::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 10px;
+  z-index: 2;
+  pointer-events: none;
+}
+.drum-viewport::before {
+  top: 0;
+  background: linear-gradient(to bottom, rgba(6,10,16,0.85), transparent);
+}
+.drum-viewport::after {
+  bottom: 0;
+  background: linear-gradient(to top, rgba(6,10,16,0.85), transparent);
+}
+
+/* The tile that sits inside the drum */
+.drum-tile {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center center;
+  backface-visibility: hidden;
+}
+.drum-tile .lc-name {
+  font-size: 9px;
+  font-weight: bold;
+  color: var(--cyan);
+  letter-spacing: 0.08em;
+  text-align: center;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 48px;
+}
+.drum-tile .lc-num {
+  font-size: 8px;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+}
+
+/* Flip animations — "sticker on a drum" feel */
+/* Going NEXT (▼): old tile rolls away upward, new tile rolls in from below */
+.drum-tile.flip-out-up {
+  animation: drumOutUp 0.22s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+.drum-tile.flip-in-down {
+  animation: drumInDown 0.22s cubic-bezier(0, 0, 0.6, 1) forwards;
+}
+/* Going PREV (▲): old tile rolls away downward, new tile rolls in from above */
+.drum-tile.flip-out-down {
+  animation: drumOutDown 0.22s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+.drum-tile.flip-in-up {
+  animation: drumInUp 0.22s cubic-bezier(0, 0, 0.6, 1) forwards;
+}
+
+@keyframes drumOutUp {
+  0%   { transform: rotateX(0deg);    opacity: 1; }
+  100% { transform: rotateX(-80deg);  opacity: 0.1; }
+}
+@keyframes drumInDown {
+  0%   { transform: rotateX(80deg);   opacity: 0.1; }
+  100% { transform: rotateX(0deg);    opacity: 1; }
+}
+@keyframes drumOutDown {
+  0%   { transform: rotateX(0deg);    opacity: 1; }
+  100% { transform: rotateX(80deg);   opacity: 0.1; }
+}
+@keyframes drumInUp {
+  0%   { transform: rotateX(-80deg);  opacity: 0.1; }
+  100% { transform: rotateX(0deg);    opacity: 1; }
+}
+
+/* Horizontal center line on the drum (like a flip-clock crease) */
+.drum-crease {
+  position: absolute;
+  left: 0; right: 0;
+  top: 50%;
+  height: 1px;
+  background: rgba(0,229,255,0.18);
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Right: Loadout card (rotates on switch) */
+.loadout-card-wrapper {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  border-radius: 3px;
+}
+
+.loadout-card {
+  width: 100%;
+  height: 100%;
+  background: var(--bg-track);
+  border: 1px solid var(--border-mid);
+  border-radius: 3px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transform-origin: center center;
+  transition: transform 0.05s, opacity 0.05s;
+}
+
+/* Gatling rotation animation */
+.loadout-card.rotate-out-up {
+  animation: rotateOutUp 0.3s ease-in forwards;
+}
+.loadout-card.rotate-in-down {
+  animation: rotateInDown 0.3s ease-out forwards;
+}
+.loadout-card.rotate-out-down {
+  animation: rotateOutDown 0.3s ease-in forwards;
+}
+.loadout-card.rotate-in-up {
+  animation: rotateInUp 0.3s ease-out forwards;
+}
+
+@keyframes rotateOutUp {
+  0%   { transform: perspective(900px) rotateX(0deg);    opacity: 1; }
+  100% { transform: perspective(900px) rotateX(-55deg);  opacity: 0; }
+}
+@keyframes rotateInDown {
+  0%   { transform: perspective(900px) rotateX(55deg);   opacity: 0; }
+  100% { transform: perspective(900px) rotateX(0deg);    opacity: 1; }
+}
+@keyframes rotateOutDown {
+  0%   { transform: perspective(900px) rotateX(0deg);    opacity: 1; }
+  100% { transform: perspective(900px) rotateX(55deg);   opacity: 0; }
+}
+@keyframes rotateInUp {
+  0%   { transform: perspective(900px) rotateX(-55deg);  opacity: 0; }
+  100% { transform: perspective(900px) rotateX(0deg);    opacity: 1; }
+}
+
+/* Loadout card header */
+.lc-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--border);
+}
+.lc-icon { font-size: 14px; color: var(--cyan); }
+.lc-title {
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.12em;
+  color: var(--cyan);
+  text-transform: uppercase;
+}
+.lc-subtitle {
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  margin-left: auto;
+}
+
+/* Track rows inside loadout card */
+.track-block {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 0;
+  border-radius: 2px;
+  transition: background 0.2s, box-shadow 0.2s;
+  cursor: default;
+}
+.track-block:hover {
+  background: rgba(0,229,255,0.04);
+  box-shadow: inset 2px 0 0 var(--cyan);
+}
+
+.track-block-label {
+  width: 80px;
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+.tb-name {
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  color: var(--text-cyan);
+  text-transform: uppercase;
+}
+.tb-bind {
+  font-size: 9px;
+  color: var(--text-dim);
+  margin-top: 1px;
+}
+
+/* Multi-row track layout */
+.track-rows {
+  display: flex;
+  flex-direction: row;
+  gap: 2px;
+  flex: 1;
+  align-items: stretch;
+}
+
+/* Each type column: SAIL | PRISM | CORE | SAT */
+.track-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+  padding: 4px 6px;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  transition: border-color 0.15s, background 0.15s;
+}
+.track-col:hover {
+  background: rgba(255,255,255,0.02);
+}
+
+/* Vertical separator between columns */
+.track-col + .track-col {
+  border-left: 1px solid var(--border);
+}
+
+/* Column header */
+.track-col-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid;
+  width: 100%;
+  margin-bottom: 2px;
+}
+.trl-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.trl-text {
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+/* Type colors */
+.trl-sail  .trl-dot  { background: var(--col-sail);  box-shadow: 0 0 4px var(--col-sail); }
+.trl-sail  .trl-text { color: var(--col-sail); }
+.trl-sail  { border-color: rgba(52,211,153,0.15) !important; }
+.trl-sail  .track-col-header { border-bottom-color: rgba(52,211,153,0.30); }
+.trl-prism .trl-dot  { background: var(--col-prism); box-shadow: 0 0 4px var(--col-prism); }
+.trl-prism .trl-text { color: var(--col-prism); }
+.trl-prism { border-color: rgba(167,139,250,0.15) !important; }
+.trl-prism .track-col-header { border-bottom-color: rgba(167,139,250,0.30); }
+.trl-core  .trl-dot  { background: var(--col-core);  box-shadow: 0 0 4px var(--col-core); }
+.trl-core  .trl-text { color: var(--col-core); }
+.trl-core  { border-color: rgba(96,165,250,0.15) !important; }
+.trl-core  .track-col-header { border-bottom-color: rgba(96,165,250,0.30); }
+.trl-sat   .trl-dot  { background: var(--col-sat);   box-shadow: 0 0 4px var(--col-sat); }
+.trl-sat   .trl-text { color: var(--col-sat); }
+.trl-sat   { border-color: rgba(251,191,36,0.15) !important; }
+.trl-sat   .track-col-header { border-bottom-color: rgba(251,191,36,0.30); }
+
+/* Slots grid inside each column */
+.track-slots-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--slot-gap);
+  align-content: flex-start;
+}
+
+.track-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+/* Row category label strip (kept for compatibility) */
+.track-row-label {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: 4px;
+  min-width: 52px;
+}
+
+.track-slots-row {
+  display: flex;
+  gap: var(--slot-gap);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ── Slot ── */
+.slot {
+  width: var(--slot-size);
+  height: var(--slot-size);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.12s;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.slot.sail-slot {
+  background: var(--col-sail-dim);
+  border: 1px solid rgba(52,211,153,0.22);
+}
+.slot.sail-slot:hover {
+  border-color: var(--col-sail);
+  box-shadow: 0 0 10px var(--col-sail-glow), inset 0 0 12px rgba(52,211,153,0.1);
+  transform: scale(1.05);
+}
+
+.slot.prism-slot {
+  background: var(--col-prism-dim);
+  border: 1px solid rgba(167,139,250,0.22);
+}
+.slot.prism-slot:hover {
+  border-color: var(--col-prism);
+  box-shadow: 0 0 10px var(--col-prism-glow), inset 0 0 12px rgba(167,139,250,0.1);
+  transform: scale(1.05);
+}
+
+.slot.core-slot {
+  background: var(--col-core-dim);
+  border: 1px solid rgba(96,165,250,0.22);
+}
+.slot.core-slot:hover {
+  border-color: var(--col-core);
+  box-shadow: 0 0 10px var(--col-core-glow), inset 0 0 12px rgba(96,165,250,0.1);
+  transform: scale(1.05);
+}
+
+.slot.sat-slot {
+  background: var(--col-sat-dim);
+  border: 1px solid rgba(251,191,36,0.22);
+}
+.slot.sat-slot:hover {
+  border-color: var(--col-sat);
+  box-shadow: 0 0 10px var(--col-sat-glow), inset 0 0 12px rgba(251,191,36,0.1);
+  transform: scale(1.05);
+}
+
+.slot.empty::after {
+  content: '+';
+  font-size: 20px;
+  color: rgba(255,255,255,0.10);
+  font-weight: 200;
+}
+
+.slot.equipped {
+  border-color: var(--cyan) !important;
+  box-shadow: 0 0 10px var(--cyan-glow), inset 0 0 8px rgba(0,229,255,0.08);
+}
+/* Breathing glow on equipped */
+.slot.equipped::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: 2px;
+  box-shadow: inset 0 0 12px rgba(0,229,255,0.12);
+  animation: slotBreath 2.5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes slotBreath {
+  0%,100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+
+.slot-icon {
+  font-size: 24px;
+  line-height: 1;
+  user-select: none;
+  position: relative;
+  z-index: 1;
+}
+
+.slot-dot {
+  position: absolute;
+  top: 3px; right: 3px;
+  width: 5px; height: 5px;
+  background: var(--cyan);
+  border-radius: 50%;
+  box-shadow: 0 0 5px var(--cyan);
+}
+
+/* Slot type label with type color */
+.slot-type-label {
+  position: absolute;
+  bottom: 2px; left: 0; right: 0;
+  text-align: center;
+  font-size: 7px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  pointer-events: none;
+  opacity: 0.45;
+}
+.sail-slot  .slot-type-label { color: var(--col-sail); }
+.prism-slot .slot-type-label { color: var(--col-prism); }
+.core-slot  .slot-type-label { color: var(--col-core); }
+.sat-slot   .slot-type-label { color: var(--col-sat); }
+
+/* ── Divider ── */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-mid), transparent);
+  margin: 0 12px;
+  flex-shrink: 0;
+}
+
+/* ── Inventory Section (lower ~55%) ── */
+.inventory-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Filter + action bar */
+.inv-bar {
+  height: 34px;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 4px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.filter-btn {
+  padding: 3px 11px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-radius: 2px;
+  transition: all 0.12s;
+}
+.filter-btn:hover { border-color: var(--cyan-dim); color: var(--text-cyan); }
+.filter-btn.active {
+  background: var(--cyan-glow);
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+/* Type-colored filter buttons */
+.filter-sail  { border-color: rgba(52,211,153,0.2);  color: rgba(52,211,153,0.6); }
+.filter-prism { border-color: rgba(167,139,250,0.2); color: rgba(167,139,250,0.6); }
+.filter-core  { border-color: rgba(96,165,250,0.2);  color: rgba(96,165,250,0.6); }
+.filter-sat   { border-color: rgba(251,191,36,0.2);  color: rgba(251,191,36,0.6); }
+.filter-sail.active  { background: rgba(52,211,153,0.1);  border-color: var(--col-sail);  color: var(--col-sail); }
+.filter-prism.active { background: rgba(167,139,250,0.1); border-color: var(--col-prism); color: var(--col-prism); }
+.filter-core.active  { background: rgba(96,165,250,0.1);  border-color: var(--col-core);  color: var(--col-core); }
+.filter-sat.active   { background: rgba(251,191,36,0.1);  border-color: var(--col-sat);   color: var(--col-sat); }
+
+.inv-bar-sep {
+  width: 1px; height: 16px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+.inv-spacer { flex: 1; }
+
+.action-btn {
+  padding: 3px 9px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.07);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  border-radius: 2px;
+  transition: all 0.12s;
+}
+.action-btn:hover { border-color: var(--cyan-dim); color: var(--text-cyan); }
+.action-btn.danger:hover { border-color: var(--red); color: var(--red); }
+
+/* Inventory grid */
+.inventory-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 12px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,229,255,0.2) transparent;
+}
+
+.inventory-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--slot-gap);
+}
+
+/* ── Inventory Slot ── */
+.inv-slot {
+  width: var(--inv-slot-size);
+  height: var(--inv-slot-size);
+  background: var(--bg-slot);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.12s;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.inv-slot:hover {
+  background: var(--bg-slot-hover);
+  border-color: var(--cyan-dim);
+  transform: scale(1.06);
+  z-index: 2;
+}
+.inv-slot.selected {
+  border-color: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan-glow);
+  background: rgba(0,229,255,0.07);
+}
+.inv-slot.is-equipped {
+  border-color: rgba(34,197,94,0.45);
+  background: rgba(34,197,94,0.04);
+}
+
+.inv-icon { font-size: 20px; line-height: 1; }
+.inv-name {
+  font-size: 7px;
+  color: var(--text-dim);
+  text-align: center;
+  margin-top: 3px;
+  padding: 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.inv-type-dot {
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+}
+.dot-core  { background: #60a5fa; }
+.dot-prism { background: #a78bfa; }
+.dot-sail  { background: #34d399; }
+.dot-sat   { background: #fbbf24; }
+
+.inv-eq-badge {
+  position: absolute;
+  bottom: 2px; right: 3px;
+  font-size: 7px;
+  color: var(--green);
+}
+
+/* ── Status bar ── */
+.status-bar {
+  height: 22px;
+  min-height: 22px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 14px;
+  flex-shrink: 0;
+}
+.st-item {
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+}
+.st-item b { color: var(--text-cyan); font-weight: normal; }
+.st-hint { margin-left: auto; font-size: 9px; color: rgba(74,96,128,0.6); letter-spacing: 0.06em; }
+
+/* ── Tooltip ── */
+.tooltip {
+  position: fixed;
+  width: 230px;
+  background: #0a1525;
+  border: 1px solid var(--border-bright);
+  border-radius: 3px;
+  padding: 10px 12px;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.08s linear;
+  box-shadow: 0 6px 30px rgba(0,0,0,0.7), 0 0 16px var(--cyan-glow);
+}
+.tooltip.visible { opacity: 1; }
+
+.tt-header { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.tt-icon   { font-size: 26px; }
+.tt-name   { font-size: 13px; font-weight: bold; color: var(--text-primary); letter-spacing: 0.04em; }
+.tt-type   { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; margin-top: 2px; }
+.tt-type.core  { color: #60a5fa; }
+.tt-type.prism { color: #a78bfa; }
+.tt-type.sail  { color: #34d399; }
+.tt-type.sat   { color: #fbbf24; }
+
+.tt-div { height: 1px; background: var(--border); margin: 6px 0; }
+
+.tt-stat {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; margin-bottom: 3px;
+}
+.tt-arrow { width: 12px; text-align: center; }
+.arr-up   { color: var(--green); }
+.arr-down { color: var(--red); }
+.tt-label { color: var(--text-dim); flex: 1; }
+.tt-val   { color: var(--text-primary); font-weight: bold; }
+
+.tt-desc {
+  font-size: 10px; color: var(--text-dim);
+  line-height: 1.5; font-style: italic; margin-top: 4px;
+}
+.tt-eq-tag {
+  display: inline-block;
+  font-size: 9px; letter-spacing: 0.1em;
+  color: var(--green);
+  border: 1px solid rgba(34,197,94,0.4);
+  padding: 1px 6px; border-radius: 2px; margin-top: 6px;
+}
+.tt-hint {
+  font-size: 9px; color: var(--text-dim);
+  margin-top: 4px; opacity: 0.65;
+}
+
+/* ── Notification ── */
+.notif {
+  position: absolute;
+  bottom: 28px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,229,255,0.08);
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  font-size: 10px; letter-spacing: 0.1em;
+  padding: 5px 16px; border-radius: 2px;
+  pointer-events: none;
+  opacity: 0; transition: opacity 0.18s;
+  white-space: nowrap; z-index: 200;
+}
+.notif.show { opacity: 1; }
+
+/* ── Gatling shake ── */
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20%     { transform: translateX(-2px); }
+  40%     { transform: translateX(2px); }
+  60%     { transform: translateX(-1px); }
+  80%     { transform: translateX(1px); }
+}
+.shake { animation: shake 0.25s ease; }
+
+/* ── Cylinder roll animation ──
+   Loadout card = sticker on a rolling pin.
+   Rolling forward (next): current sticker curls DOWN from top,
+   new sticker unrolls DOWN from above.
+   transform-origin at top edge for out, bottom edge for in.
+*/
+.loadout-card-wrapper {
+  perspective: 1200px;
+  perspective-origin: 50% 50%;
+}
+
+/* Roll current card OUT — top edge anchored, bottom swings away (forward roll) */
+@keyframes cylinderRollOutForward {
+  0%   { transform: rotateX(0deg);    opacity: 1; }
+  100% { transform: rotateX(-90deg);  opacity: 0.2; }
+}
+/* Roll new card IN — bottom edge anchored, top swings down (forward roll) */
+@keyframes cylinderRollInForward {
+  0%   { transform: rotateX(90deg);   opacity: 0.2; }
+  100% { transform: rotateX(0deg);    opacity: 1; }
+}
+/* Roll current card OUT — bottom edge anchored, top swings away (backward roll) */
+@keyframes cylinderRollOutBackward {
+  0%   { transform: rotateX(0deg);    opacity: 1; }
+  100% { transform: rotateX(90deg);   opacity: 0.2; }
+}
+/* Roll new card IN — top edge anchored, bottom swings up (backward roll) */
+@keyframes cylinderRollInBackward {
+  0%   { transform: rotateX(-90deg);  opacity: 0.2; }
+  100% { transform: rotateX(0deg);    opacity: 1; }
+}
+
+.loadout-card {
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
+
+.loadout-card.roll-out-forward {
+  transform-origin: center top;
+  animation: cylinderRollOutForward 0.28s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+.loadout-card.roll-in-forward {
+  transform-origin: center bottom;
+  animation: cylinderRollInForward 0.28s cubic-bezier(0, 0, 0.6, 1) forwards;
+}
+.loadout-card.roll-out-backward {
+  transform-origin: center bottom;
+  animation: cylinderRollOutBackward 0.28s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+.loadout-card.roll-in-backward {
+  transform-origin: center top;
+  animation: cylinderRollInBackward 0.28s cubic-bezier(0, 0, 0.6, 1) forwards;
+}
+</style>
+</head>
+<body>
+
+<div class="star-chart-panel" id="panel">
+
+  <!-- ── Header ── -->
+  <div class="header-bar">
+    <div class="header-dot"></div>
+    <div class="header-title">
+      <span class="ship-name">CANARY</span>
+      <span class="text-dim"> — </span>
+      <span class="sys-name">STAR CHART CALIBRATION SYSTEM</span>
+    </div>
+    <div class="header-right">
+      <div class="header-badge badge-online">SYSTEM ONLINE</div>
+      <div class="header-badge badge-key">Q/E · PgUp/PgDn</div>
+      <button class="header-close" title="Close [Esc]">✕</button>
+    </div>
+  </div>
+
+  <!-- ── Loadout Section ── -->
+  <div class="loadout-section" id="loadoutSection">
+
+    <!-- Gatling Switcher Column -->
+    <div class="gatling-col">
+      <button class="gatling-btn" id="btn-prev" title="Previous Loadout [Q / PgUp]">▲</button>
+      <div class="loadout-counter">
+        <div class="drum-viewport" id="drumViewport">
+          <div class="drum-crease"></div>
+          <div class="drum-tile" id="drumTile">
+            <span class="lc-name" id="lc-name">LOADOUT 1</span>
+            <span class="lc-num"  id="lc-num">1 / 3</span>
+          </div>
+        </div>
+      </div>
+      <button class="gatling-btn" id="btn-next" title="Next Loadout [E / PgDn]">▼</button>
+      <div class="gatling-label">LOADOUT</div>
+    </div>
+
+    <!-- Loadout Card -->
+    <div class="loadout-card-wrapper">
+      <div class="loadout-card" id="loadoutCard">
+
+        <!-- Card header -->
+        <div class="lc-header">
+          <span class="lc-icon">◈</span>
+          <span class="lc-title" id="lc-card-title">ASSAULT CONFIGURATION</span>
+          <span class="lc-subtitle">LOADOUT #<span id="lc-card-num">1</span></span>
+        </div>
+
+        <!-- PRIMARY track: 4 columns SAIL | PRISM | CORE | SAT -->
+        <div class="track-block" id="track-primary" data-track="primary">
+          <div class="track-block-label">
+            <div class="tb-name">PRIMARY</div>
+            <div class="tb-bind">[LMB]</div>
+          </div>
+          <div class="track-rows" id="primary-rows">
+            <div class="track-col trl-sail">
+              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAIL</span></div>
+              <div class="track-slots-grid" id="primary-slots-sail"></div>
+            </div>
+            <div class="track-col trl-prism">
+              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">PRISM</span></div>
+              <div class="track-slots-grid" id="primary-slots-prism"></div>
+            </div>
+            <div class="track-col trl-core">
+              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">CORE</span></div>
+              <div class="track-slots-grid" id="primary-slots-core"></div>
+            </div>
+            <div class="track-col trl-sat">
+              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAT</span></div>
+              <div class="track-slots-grid" id="primary-slots-sat"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECONDARY track: 4 columns SAIL | PRISM | CORE | SAT -->
+        <div class="track-block" id="track-secondary" data-track="secondary">
+          <div class="track-block-label">
+            <div class="tb-name">SECONDARY</div>
+            <div class="tb-bind">[RMB]</div>
+          </div>
+          <div class="track-rows" id="secondary-rows">
+            <div class="track-col trl-sail">
+              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAIL</span></div>
+              <div class="track-slots-grid" id="secondary-slots-sail"></div>
+            </div>
+            <div class="track-col trl-prism">
+              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">PRISM</span></div>
+              <div class="track-slots-grid" id="secondary-slots-prism"></div>
+            </div>
+            <div class="track-col trl-core">
+              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">CORE</span></div>
+              <div class="track-slots-grid" id="secondary-slots-core"></div>
+            </div>
+            <div class="track-col trl-sat">
+              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAT</span></div>
+              <div class="track-slots-grid" id="secondary-slots-sat"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- ── Inventory Section ── -->
+  <div class="inventory-section">
+
+    <!-- Filter + action bar (order: ALL → SAILS → PRISMS → CORES → SATS) -->
+    <div class="inv-bar">
+      <button class="filter-btn active" data-filter="all">ALL</button>
+      <button class="filter-btn filter-sail"  data-filter="sail">SAILS</button>
+      <button class="filter-btn filter-prism" data-filter="prism">PRISMS</button>
+      <button class="filter-btn filter-core"  data-filter="core">CORES</button>
+      <button class="filter-btn filter-sat"   data-filter="sat">SATS</button>
+      <div class="inv-bar-sep"></div>
+      <div class="inv-spacer"></div>
+      <button class="action-btn" id="btn-save">SAVE CONFIG</button>
+      <button class="action-btn" id="btn-rename">RENAME</button>
+      <button class="action-btn danger" id="btn-delete">DELETE</button>
+    </div>
+
+    <!-- Grid -->
+    <div class="inventory-area">
+      <div class="inventory-grid" id="invGrid"></div>
+    </div>
+
+  </div>
+
+  <!-- ── Status Bar ── -->
+  <div class="status-bar">
+    <div class="st-item">EQUIPPED <b id="st-eq">0</b> / 10</div>
+    <div class="st-item">INVENTORY <b id="st-inv">0</b> ITEMS</div>
+    <div class="st-hint">HOVER TO INSPECT · CLICK TO SELECT · CLICK SLOT TO EQUIP</div>
+  </div>
+
+  <div class="notif" id="notif"></div>
+</div>
+
+<!-- ── Tooltip ── -->
+<div class="tooltip" id="tooltip">
+  <div class="tt-header">
+    <div class="tt-icon" id="tt-icon"></div>
+    <div>
+      <div class="tt-name" id="tt-name"></div>
+      <div class="tt-type" id="tt-type"></div>
+    </div>
+  </div>
+  <div class="tt-div"></div>
+  <div id="tt-stats"></div>
+  <div class="tt-desc" id="tt-desc"></div>
+  <div id="tt-eq-tag"></div>
+  <div class="tt-hint" id="tt-hint"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════
+
+const ITEMS = [
+  // CORES
+  { id:'c1', type:'core',  icon:'◎', name:'Matter Core',   short:'Matter',   desc:'"Standard-issue matter projector. Reliable, no frills."',                    stats:[{l:'Damage',d:'n',v:'+0%'},{l:'Fire Rate',d:'n',v:'+0%'},{l:'Piercing',d:'n',v:'0'}] },
+  { id:'c2', type:'core',  icon:'◎', name:'Echo Core',     short:'Echo',     desc:'"Resonance-based wave emitter. Hits multiple targets."',                      stats:[{l:'Damage',d:'-',v:'-15%'},{l:'AoE',d:'+',v:'+2'},{l:'Range',d:'+',v:'+30%'}] },
+  { id:'c3', type:'core',  icon:'◎', name:'Light Core',    short:'Laser',    desc:'"Focused photon beam. Continuous damage output."',                            stats:[{l:'DPS',d:'+',v:'+40%'},{l:'Fire Rate',d:'+',v:'∞'},{l:'Ammo',d:'-',v:'Heat'}] },
+  { id:'c4', type:'core',  icon:'◎', name:'Anomaly Core',  short:'Anomaly',  desc:'"Unstable boomerang trajectory. High risk, high reward."',                    stats:[{l:'Damage',d:'+',v:'+60%'},{l:'Returns',d:'+',v:'×1'},{l:'Speed',d:'-',v:'-20%'}] },
+  { id:'c5', type:'core',  icon:'◎', name:'Void Core',     short:'Void',     desc:'"Fires a slow-moving singularity that pulls enemies inward."',                stats:[{l:'Pull Radius',d:'+',v:'3m'},{l:'Damage',d:'+',v:'+20%'},{l:'Speed',d:'-',v:'-40%'}] },
+  // PRISMS
+  { id:'p1', type:'prism', icon:'◇', name:'Fractal Prism', short:'Twin',     desc:'"Splits the beam into twin parallel streams."',                               stats:[{l:'Projectiles',d:'+',v:'×2'},{l:'Damage',d:'-',v:'-20%'},{l:'Spread',d:'n',v:'8°'}] },
+  { id:'p2', type:'prism', icon:'◇', name:'Accel Prism',   short:'Accel',    desc:'"Accelerates projectile velocity over distance."',                            stats:[{l:'Speed',d:'+',v:'+50%'},{l:'Damage',d:'+',v:'+10%'},{l:'Range',d:'+',v:'+25%'}] },
+  { id:'p3', type:'prism', icon:'◇', name:'Frost Prism',   short:'Frost',    desc:'"Infuses projectiles with cryo energy. Slows on hit."',                      stats:[{l:'Slow',d:'+',v:'-30% spd'},{l:'Duration',d:'+',v:'1.5s'},{l:'Damage',d:'-',v:'-5%'}] },
+  { id:'p4', type:'prism', icon:'◇', name:'Burst Prism',   short:'Burst',    desc:'"Causes projectiles to explode on impact."',                                  stats:[{l:'AoE',d:'+',v:'1.5m'},{l:'Damage',d:'+',v:'+30%'},{l:'Ammo',d:'-',v:'-1/shot'}] },
+  { id:'p5', type:'prism', icon:'◇', name:'Chain Prism',   short:'Chain',    desc:'"Projectiles bounce between nearby enemies."',                                stats:[{l:'Bounces',d:'+',v:'+3'},{l:'Damage',d:'-',v:'-10%/bounce'}] },
+  // SAILS
+  { id:'s1', type:'sail',  icon:'⛵', name:'Speed Sail',    short:'Speed',    desc:'"Converts velocity into bonus damage output."',                               stats:[{l:'Bonus DMG',d:'+',v:'up to +80%'},{l:'Threshold',d:'n',v:'8 m/s'}] },
+  { id:'s2', type:'sail',  icon:'⛵', name:'Drift Sail',    short:'Drift',    desc:'"Reduces turning drag, enabling tighter maneuvers."',                        stats:[{l:'Turn Speed',d:'+',v:'+25%'},{l:'Drift',d:'+',v:'+40%'}] },
+  // SATS
+  { id:'sat1', type:'sat', icon:'🛸', name:'Orbit Sat A',   short:'Orbit-A',  desc:'"Orbiting satellite that fires in sync with primary weapon."',               stats:[{l:'Sync DMG',d:'+',v:'+15%'},{l:'Orbit Rad',d:'n',v:'2.5m'}] },
+  { id:'sat2', type:'sat', icon:'🛸', name:'Shield Sat',    short:'Shield',   desc:'"Generates a rotating energy shield that absorbs one hit."',                 stats:[{l:'Absorb',d:'+',v:'1 hit'},{l:'Cooldown',d:'n',v:'8s'}] },
+];
+
+// Each loadout: { name, primary: [slotObj,...], secondary: [slotObj,...] }
+// slotObj: { type:'core'|'prism', itemId: string|null }
+function makeSlots(coreCount, prismCount) {
+  const slots = [];
+  for (let i = 0; i < coreCount; i++)  slots.push({ type:'core',  itemId: null });
+  for (let i = 0; i < prismCount; i++) slots.push({ type:'prism', itemId: null });
+  return slots;
+}
+
+// Slot layout per track:
+// primary:   { sail:[...], sat:[...], prism:[...], core:[...] }
+// secondary: { sail:[...], prism:[...], core:[...], sat:[...] }
+const state = {
+  loadouts: [
+    {
+      name: 'LOADOUT 1',
+      primary: {
+        sail:  [{ type:'sail',  itemId:'s1' }, { type:'sail',  itemId:null }],
+        sat:   [{ type:'sat',   itemId:'sat1' }],
+        prism: [{ type:'prism', itemId:'p1' }, { type:'prism', itemId:'p2' }, { type:'prism', itemId:null }],
+        core:  [{ type:'core',  itemId:'c1' }],
+      },
+      secondary: {
+        sail:  [{ type:'sail',  itemId:null }],
+        prism: [{ type:'prism', itemId:'p3' }, { type:'prism', itemId:null }],
+        core:  [{ type:'core',  itemId:'c2' }],
+        sat:   [{ type:'sat',   itemId:null }],
+      },
+    },
+    {
+      name: 'LOADOUT 2',
+      primary: {
+        sail:  [{ type:'sail',  itemId:'s2' }, { type:'sail',  itemId:null }],
+        sat:   [{ type:'sat',   itemId:null }],
+        prism: [{ type:'prism', itemId:'p2' }, { type:'prism', itemId:null }, { type:'prism', itemId:null }],
+        core:  [{ type:'core',  itemId:'c3' }],
+      },
+      secondary: {
+        sail:  [{ type:'sail',  itemId:null }],
+        prism: [{ type:'prism', itemId:null }, { type:'prism', itemId:null }],
+        core:  [{ type:'core',  itemId:null }],
+        sat:   [{ type:'sat',   itemId:null }],
+      },
+    },
+    {
+      name: 'LOADOUT 3',
+      primary: {
+        sail:  [{ type:'sail',  itemId:'s1' }, { type:'sail',  itemId:'s2' }],
+        sat:   [{ type:'sat',   itemId:'sat2' }],
+        prism: [{ type:'prism', itemId:'p4' }, { type:'prism', itemId:'p1' }, { type:'prism', itemId:null }],
+        core:  [{ type:'core',  itemId:'c4' }],
+      },
+      secondary: {
+        sail:  [{ type:'sail',  itemId:null }],
+        prism: [{ type:'prism', itemId:'p3' }, { type:'prism', itemId:null }],
+        core:  [{ type:'core',  itemId:'c5' }],
+        sat:   [{ type:'sat',   itemId:'sat1' }],
+      },
+    },
+  ],
+  currentLoadout: 0,
+  selectedInvItem: null,
+  activeFilter: 'all',
+};
+
+// ═══════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════
+
+const getItem = id => ITEMS.find(i => i.id === id);
+
+function currentLoadout() { return state.loadouts[state.currentLoadout]; }
+
+function allSlots(lo) {
+  const rows = ['sail','sat','prism','core'];
+  const result = [];
+  for (const r of rows) {
+    if (lo.primary[r])   result.push(...lo.primary[r].map(s => ({...s, track:'primary',   row:r})));
+    if (lo.secondary[r]) result.push(...lo.secondary[r].map(s => ({...s, track:'secondary', row:r})));
+  }
+  return result;
+}
+
+function isEquippedInCurrentLoadout(itemId) {
+  return allSlots(currentLoadout()).some(s => s.itemId === itemId);
+}
+
+function getEquippedLocation(itemId) {
+  const lo = currentLoadout();
+  for (const r of ['sail','sat','prism','core']) {
+    const pi = (lo.primary[r]||[]).findIndex(s => s.itemId === itemId);
+    if (pi >= 0) return `PRIMARY · ${r.toUpperCase()} ${pi+1}`;
+    const si = (lo.secondary[r]||[]).findIndex(s => s.itemId === itemId);
+    if (si >= 0) return `SECONDARY · ${r.toUpperCase()} ${si+1}`;
+  }
+  return null;
+}
+
+function countEquipped() {
+  return allSlots(currentLoadout()).filter(s => s.itemId).length;
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════
+
+// Render a single type-row of slots into a container
+function renderSlotRow(trackName, rowType, slots) {
+  const containerId = `${trackName}-slots-${rowType}`;
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+
+  slots.forEach((slot, idx) => {
+    const item = slot.itemId ? getItem(slot.itemId) : null;
+    const el = document.createElement('div');
+    el.className = `slot ${slot.type}-slot ${item ? 'equipped' : 'empty'}`;
+    el.dataset.track = trackName;
+    el.dataset.row   = rowType;
+    el.dataset.idx   = idx;
+
+    if (item) {
+      el.innerHTML = `<span class="slot-icon">${item.icon}</span><div class="slot-dot"></div>`;
+    }
+    const lbl = document.createElement('div');
+    lbl.className = 'slot-type-label';
+    lbl.textContent = slot.type.toUpperCase();
+    el.appendChild(lbl);
+
+    el.addEventListener('click', () => onSlotClick(trackName, rowType, idx));
+    el.addEventListener('mouseenter', e => item && showTooltip(e, item, true));
+    el.addEventListener('mousemove',  e => item && moveTooltip(e));
+    el.addEventListener('mouseleave', hideTooltip);
+    container.appendChild(el);
+  });
+}
+
+function renderAllTracks() {
+  const lo = currentLoadout();
+  // PRIMARY: row0 = sail + sat, row1 = prism + core
+  renderSlotRow('primary',   'sail',  lo.primary.sail  || []);
+  renderSlotRow('primary',   'sat',   lo.primary.sat   || []);
+  renderSlotRow('primary',   'prism', lo.primary.prism || []);
+  renderSlotRow('primary',   'core',  lo.primary.core  || []);
+  // SECONDARY: single row = sail + prism + core + sat
+  renderSlotRow('secondary', 'sail',  lo.secondary.sail  || []);
+  renderSlotRow('secondary', 'prism', lo.secondary.prism || []);
+  renderSlotRow('secondary', 'core',  lo.secondary.core  || []);
+  renderSlotRow('secondary', 'sat',   lo.secondary.sat   || []);
+  updateStatusBar();
+}
+
+function renderInventory() {
+  const grid = document.getElementById('invGrid');
+  grid.innerHTML = '';
+  const filter = state.activeFilter;
+  const visible = ITEMS.filter(i => filter === 'all' || i.type === filter);
+
+  visible.forEach(item => {
+    const equipped = isEquippedInCurrentLoadout(item.id);
+    const selected = state.selectedInvItem === item.id;
+    const el = document.createElement('div');
+    el.className = `inv-slot ${equipped ? 'is-equipped' : ''} ${selected ? 'selected' : ''}`;
+    el.dataset.itemId = item.id;
+    el.innerHTML = `
+      <div class="inv-type-dot dot-${item.type}"></div>
+      <div class="inv-icon">${item.icon}</div>
+      <div class="inv-name">${item.short}</div>
+      ${equipped ? '<div class="inv-eq-badge">✓</div>' : ''}
+    `;
+    el.addEventListener('click', () => onInvClick(item.id));
+    el.addEventListener('mouseenter', e => showTooltip(e, item, equipped));
+    el.addEventListener('mousemove',  e => moveTooltip(e));
+    el.addEventListener('mouseleave', hideTooltip);
+    grid.appendChild(el);
+  });
+
+  document.getElementById('st-inv').textContent = visible.length;
+}
+
+function updateStatusBar() {
+  document.getElementById('st-eq').textContent = countEquipped();
+}
+
+function updateLoadoutHeader() {
+  const lo = currentLoadout();
+  const idx = state.currentLoadout;
+  const total = state.loadouts.length;
+  document.getElementById('lc-name').textContent     = lo.name;
+  document.getElementById('lc-num').textContent      = `${idx+1} / ${total}`;
+  document.getElementById('lc-card-title').textContent = `${lo.name} CONFIGURATION`;
+  document.getElementById('lc-card-num').textContent  = idx + 1;
+}
+
+// ═══════════════════════════════════════════════════════
+// INTERACTIONS
+// ═══════════════════════════════════════════════════════
+
+function onInvClick(itemId) {
+  const item = getItem(itemId);
+  if (!item) return;
+
+  if (isEquippedInCurrentLoadout(itemId)) {
+    // Unequip: find and clear
+    const lo = currentLoadout();
+    for (const r of ['sail','sat','prism','core']) {
+      for (const s of (lo.primary[r]||[]))   { if (s.itemId === itemId) { s.itemId = null; } }
+      for (const s of (lo.secondary[r]||[])) { if (s.itemId === itemId) { s.itemId = null; } }
+    }
+    state.selectedInvItem = null;
+    notify(`UNEQUIPPED: ${item.name}`);
+  } else {
+    state.selectedInvItem = (state.selectedInvItem === itemId) ? null : itemId;
+    if (state.selectedInvItem) notify(`SELECTED: ${item.name} — click a slot to equip`);
+  }
+  renderAllTracks();
+  renderInventory();
+}
+
+function onSlotClick(trackName, rowType, idx) {
+  const lo = currentLoadout();
+  const slot = lo[trackName][rowType][idx];
+
+  if (state.selectedInvItem) {
+    const selItem = getItem(state.selectedInvItem);
+    if (selItem.type !== slot.type) {
+      notify(`⚠ ${selItem.name} is a ${selItem.type.toUpperCase()} — needs a ${slot.type.toUpperCase()} slot`);
+      document.getElementById('loadoutCard').classList.add('shake');
+      setTimeout(() => document.getElementById('loadoutCard').classList.remove('shake'), 300);
+      return;
+    }
+    slot.itemId = state.selectedInvItem;
+    notify(`EQUIPPED: ${selItem.name} → ${trackName.toUpperCase()} ${rowType.toUpperCase()} ${idx+1}`);
+    state.selectedInvItem = null;
+  } else if (slot.itemId) {
+    const item = getItem(slot.itemId);
+    slot.itemId = null;
+    notify(`UNEQUIPPED: ${item.name}`);
+  }
+
+  renderAllTracks();
+  renderInventory();
+}
+
+// ── Loadout switching — cylinder roll animation ──
+// The loadout card is a sticker on a rolling pin.
+// 'next' = roll forward: current sticker curls down from top, new one unrolls from above.
+// 'prev' = roll backward: current sticker curls up from bottom, new one unrolls from below.
+let isAnimating = false;
+
+function switchLoadout(direction) {
+  if (isAnimating) return;
+  isAnimating = true;
+
+  const card = document.getElementById('loadoutCard');
+  const outClass = direction === 'next' ? 'roll-out-forward'  : 'roll-out-backward';
+  const inClass  = direction === 'next' ? 'roll-in-forward'   : 'roll-in-backward';
+  const DURATION = 280; // ms — must match CSS animation duration
+
+  // Phase 1: roll current card out
+  card.classList.remove('roll-out-forward','roll-out-backward','roll-in-forward','roll-in-backward');
+  card.classList.add(outClass);
+
+  setTimeout(() => {
+    // Switch data while card is invisible
+    card.classList.remove(outClass);
+    const total = state.loadouts.length;
+    state.currentLoadout = direction === 'next'
+      ? (state.currentLoadout + 1) % total
+      : (state.currentLoadout - 1 + total) % total;
+    state.selectedInvItem = null;
+
+    updateLoadoutHeader();
+    renderAllTracks();
+    renderInventory();
+
+    // Phase 2: roll new card in
+    // Force reflow so the browser registers the class removal before adding the new one
+    void card.offsetWidth;
+    card.classList.add(inClass);
+
+    setTimeout(() => {
+      card.classList.remove(inClass);
+      isAnimating = false;
+    }, DURATION);
+
+    notify(`LOADOUT: ${currentLoadout().name}`);
+  }, DURATION);
+}
+
+document.getElementById('btn-prev').addEventListener('click', () => switchLoadout('prev'));
+document.getElementById('btn-next').addEventListener('click', () => switchLoadout('next'));
+
+// ── Filter ──
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.activeFilter = btn.dataset.filter;
+    renderInventory();
+  });
+});
+
+// ── Action buttons ──
+document.getElementById('btn-save').addEventListener('click', () => {
+  notify(`CONFIG SAVED: ${currentLoadout().name}`);
+});
+document.getElementById('btn-rename').addEventListener('click', () => {
+  const newName = prompt('Enter loadout name:', currentLoadout().name);
+  if (newName && newName.trim()) {
+    currentLoadout().name = newName.trim().toUpperCase();
+    updateLoadoutHeader();
+    notify(`RENAMED TO: ${currentLoadout().name}`);
+  }
+});
+document.getElementById('btn-delete').addEventListener('click', () => {
+  if (state.loadouts.length <= 1) { notify('⚠ CANNOT DELETE LAST LOADOUT'); return; }
+  const name = currentLoadout().name;
+  state.loadouts.splice(state.currentLoadout, 1);
+  state.currentLoadout = Math.min(state.currentLoadout, state.loadouts.length - 1);
+  updateLoadoutHeader();
+  renderAllTracks();
+  renderInventory();
+  notify(`DELETED: ${name}`);
+});
+
+// ── Close ──
+document.querySelector('.header-close').addEventListener('click', () => {
+  notify('PANEL CLOSED (prototype — refresh to reopen)');
+});
+
+// ── Keyboard ──
+document.addEventListener('keydown', e => {
+  if (e.key === 'PageUp'   || e.key === 'q' || e.key === 'Q') switchLoadout('prev');
+  if (e.key === 'PageDown' || e.key === 'e' || e.key === 'E') switchLoadout('next');
+  if (e.key === 'Escape') {
+    state.selectedInvItem = null;
+    renderInventory();
+    notify('SELECTION CLEARED');
+  }
+});
+
+// ── Track hover highlight ──
+['primary','secondary'].forEach(t => {
+  const el = document.getElementById(`track-${t}`);
+  if (el) {
+    el.addEventListener('mouseenter', () => el.style.background = 'rgba(0,229,255,0.05)');
+    el.addEventListener('mouseleave', () => el.style.background = '');
+  }
+});
+
+// ═══════════════════════════════════════════════════════
+// TOOLTIP
+// ═══════════════════════════════════════════════════════
+
+const tooltip = document.getElementById('tooltip');
+let ttTimer = null;
+
+function showTooltip(e, item, equipped) {
+  clearTimeout(ttTimer);
+  ttTimer = setTimeout(() => {
+    document.getElementById('tt-icon').textContent = item.icon;
+    document.getElementById('tt-name').textContent = item.name;
+    const typeEl = document.getElementById('tt-type');
+    typeEl.textContent = `STAR ${item.type.toUpperCase()}`;
+    typeEl.className = `tt-type ${item.type}`;
+
+    document.getElementById('tt-stats').innerHTML = item.stats.map(s => `
+      <div class="tt-stat">
+        <span class="tt-arrow ${s.d==='+' ? 'arr-up' : s.d==='-' ? 'arr-down' : ''}">${s.d==='+' ? '▲' : s.d==='-' ? '▼' : '—'}</span>
+        <span class="tt-label">${s.l}</span>
+        <span class="tt-val">${s.v}</span>
+      </div>`).join('');
+
+    document.getElementById('tt-desc').textContent = item.desc;
+
+    const tagEl  = document.getElementById('tt-eq-tag');
+    const hintEl = document.getElementById('tt-hint');
+    if (equipped) {
+      const loc = getEquippedLocation(item.id);
+      tagEl.innerHTML = `<div class="tt-eq-tag">✓ EQUIPPED · ${loc || ''}</div>`;
+      hintEl.textContent = 'Click to unequip';
+    } else {
+      tagEl.innerHTML = '';
+      hintEl.textContent = state.selectedInvItem === item.id
+        ? 'Selected — click a track slot'
+        : 'Click to select';
+    }
+
+    moveTooltip(e);
+    tooltip.classList.add('visible');
+  }, 150);
+}
+
+function moveTooltip(e) {
+  const W = 230, H = 220;
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if (x + W > window.innerWidth)  x = e.clientX - W - 8;
+  if (y + H > window.innerHeight) y = e.clientY - H - 8;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top  = y + 'px';
+}
+
+function hideTooltip() {
+  clearTimeout(ttTimer);
+  tooltip.classList.remove('visible');
+}
+
+// ═══════════════════════════════════════════════════════
+// NOTIFICATION
+// ═══════════════════════════════════════════════════════
+
+let notifTimer = null;
+function notify(msg) {
+  const el = document.getElementById('notif');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(notifTimer);
+  notifTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+
+updateLoadoutHeader();
+renderAllTracks();
+renderInventory();
+</script>
+</body>
+</html>

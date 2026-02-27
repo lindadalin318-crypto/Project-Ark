@@ -656,14 +656,24 @@ ScaffoldElementType.Door        => new Vector2(1f, 1f),   // matches BoxCollider
             var fwdDoor = fwdDoorGO.AddComponent<Door>();
             AddGizmoVisuals(fwdDoorGO, "Door", GetElementGizmoColor(ScaffoldElementType.Door), new Vector2(1f, 1f));
 
+                    // ── Find reverse connection (used for SpawnOffset and later for IsLayerTransition) ──
+                    var reverseConn = FindReverseConnection(conn.TargetRoomID, sr.RoomID, scaffoldLookup);
+
                     // ── Find reverse connection's door position ──
                     Vector3 reverseSpawnPos = FindReverseDoorPosition(
                         conn.TargetRoomID, sr.RoomID, scaffoldLookup, conn.DoorDirection);
 
                     // ── SpawnPoint in target room (where player appears) ──
+                    // Use reverse connection's SpawnOffset (door element position) if available,
+                    // otherwise fall back to edge midpoint from FindReverseDoorPosition
+                    Vector3 fwdSpawnPos = (reverseConn != null && reverseConn.SpawnOffset != Vector3.zero)
+                        ? reverseConn.SpawnOffset
+                        : reverseSpawnPos;
                     var fwdSpawn = new GameObject($"SpawnPoint_from_{SanitizeName(sourceDisplayName)}");
                     fwdSpawn.transform.SetParent(target.go.transform);
-                    fwdSpawn.transform.localPosition = reverseSpawnPos;
+                    fwdSpawn.transform.localPosition = fwdSpawnPos;
+                    if (reverseConn != null && reverseConn.SpawnOffset != Vector3.zero)
+                        Debug.Log($"{LOG_TAG} SpawnPoint in '{targetDisplayName}' uses custom SpawnOffset from door element");
                     AddGizmoVisuals(fwdSpawn, "SpawnPt", new Color(0.5f, 0.8f, 1.0f, 0.6f), new Vector2(1.5f, 1.5f));
 
                     // ── Reverse door: target → source ──
@@ -693,9 +703,16 @@ ScaffoldElementType.Door        => new Vector2(1f, 1f),   // matches BoxCollider
             AddGizmoVisuals(revDoorGO, "Door", GetElementGizmoColor(ScaffoldElementType.Door), new Vector2(1f, 1f));
 
                     // ── SpawnPoint in source room (where player appears on reverse) ──
+                    // Use conn's SpawnOffset (door element position) if available,
+                    // otherwise fall back to conn.DoorPosition (edge midpoint)
+                    Vector3 revSpawnPos = (conn.SpawnOffset != Vector3.zero)
+                        ? conn.SpawnOffset
+                        : conn.DoorPosition;
                     var revSpawn = new GameObject($"SpawnPoint_from_{SanitizeName(targetDisplayName)}");
                     revSpawn.transform.SetParent(source.go.transform);
-                    revSpawn.transform.localPosition = conn.DoorPosition;
+                    revSpawn.transform.localPosition = revSpawnPos;
+                    if (conn.SpawnOffset != Vector3.zero)
+                        Debug.Log($"{LOG_TAG} SpawnPoint in '{sourceDisplayName}' uses custom SpawnOffset from door element");
                     AddGizmoVisuals(revSpawn, "SpawnPt", new Color(0.5f, 0.8f, 1.0f, 0.6f), new Vector2(1.5f, 1.5f));
 
                     // ── Wire forward door ──
@@ -703,8 +720,6 @@ ScaffoldElementType.Door        => new Vector2(1f, 1f),   // matches BoxCollider
                         conn.IsLayerTransition, DoorState.Open, playerLayerMask);
 
                     // ── Wire reverse door ──
-                    // Find the reverse connection to check IsLayerTransition
-                    var reverseConn = FindReverseConnection(conn.TargetRoomID, sr.RoomID, scaffoldLookup);
                     bool revIsLayerTransition = reverseConn?.IsLayerTransition ?? conn.IsLayerTransition;
 
                     WireDoor(revDoor, source.room, revSpawn.transform,

@@ -61,6 +61,7 @@ namespace ProjectArk.Level.Editor
         public string RoomId;
         public string EntryDir;
         public int DoorIndex;
+        public float[] SpawnOffset; // [x, y] in grid units, relative to room top-left (optional)
     }
 
     /// <summary>
@@ -304,6 +305,7 @@ namespace ProjectArk.Level.Editor
 
             // ── Step 5: Process doorLinks ──
             int doorLinksProcessed = 0;
+            int spawnOffsetApplied = 0;
             if (htmlData.DoorLinks != null)
             {
                 foreach (var link in htmlData.DoorLinks)
@@ -344,6 +346,18 @@ namespace ProjectArk.Level.Editor
                     if (matchingConn != null)
                     {
                         doorElem.BoundConnectionID = matchingConn.ConnectionID;
+
+                        // Apply spawnOffset from door element position if available
+                        if (link.SpawnOffset != null && link.SpawnOffset.Length >= 2)
+                        {
+                            float roomW = room.Size.x / _gridScale;
+                            float roomH = room.Size.y / _gridScale;
+                            float localX = (link.SpawnOffset[0] - roomW / 2f) * _gridScale;
+                            float localY = -(link.SpawnOffset[1] - roomH / 2f) * _gridScale; // y-flip
+                            matchingConn.SpawnOffset = new Vector3(localX, localY, 0f);
+                            spawnOffsetApplied++;
+                        }
+
                         doorLinksProcessed++;
                     }
                     else
@@ -438,6 +452,7 @@ namespace ProjectArk.Level.Editor
                 $"  - Skipped connections: {skippedConnections}\n" +
                 $"  - Placeholder mappings (chest→CrateWooden, npc→Checkpoint): {placeholderMappingCount}\n" +
                 $"  - Door links processed: {doorLinksProcessed}\n" +
+                $"  - Door links with custom spawnOffset: {spawnOffsetApplied}\n" +
                 $"  - Floor levels: {{{floorInfo}}}\n" +
                 $"  - Output: {outputPath}";
 
@@ -548,12 +563,24 @@ namespace ProjectArk.Level.Editor
                     if (!dlDict.ContainsKey("roomId"))
                         continue;
 
-                    data.DoorLinks.Add(new HtmlDoorLink
+                    var doorLink = new HtmlDoorLink
                     {
                         RoomId = GetString(dlDict, "roomId"),
                         EntryDir = GetString(dlDict, "entryDir") ?? "east",
                         DoorIndex = GetInt(dlDict, "doorIndex", -1)
-                    });
+                    };
+
+                    // Parse optional spawnOffset [x, y]
+                    if (dlDict.TryGetValue("spawnOffset", out var soObj) && soObj is List<object> soList && soList.Count >= 2)
+                    {
+                        doorLink.SpawnOffset = new float[]
+                        {
+                            Convert.ToSingle(soList[0]),
+                            Convert.ToSingle(soList[1])
+                        };
+                    }
+
+                    data.DoorLinks.Add(doorLink);
                 }
             }
 

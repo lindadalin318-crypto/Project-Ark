@@ -330,6 +330,9 @@ namespace ProjectArk.Level
         [Tooltip("Is this a layer transition (longer fade)")]
         [SerializeField] private bool _isLayerTransition;
 
+        [Tooltip("Custom spawn offset derived from door element position in level designer (zero = use default edge midpoint)")]
+        [SerializeField] private Vector3 _spawnOffset;
+
         // ──────────────────── Public Properties ────────────────────
 
         public string ConnectionID => _connectionID;
@@ -352,6 +355,11 @@ namespace ProjectArk.Level
         {
             get => _isLayerTransition;
             set => _isLayerTransition = value;
+        }
+        public Vector3 SpawnOffset
+        {
+            get => _spawnOffset;
+            set => _spawnOffset = value;
         }
     }
 }

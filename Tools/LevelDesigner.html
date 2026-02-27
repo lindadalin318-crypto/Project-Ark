@@ -2109,9 +2109,11 @@
                 
                 // From: connection point on THIS room's entry edge
                 const fromPos = getConnectionPointPosition(room, dl.entryDir);
-                // To: door element absolute position inside this room
-                const toX = room.x + doorEl.x;
-                const toY = room.y + doorEl.y;
+                // To: door element CENTER position inside this room
+                // .room-element is 18px content + 2px border = 22px total, center offset = 11px
+                const ELEMENT_CENTER_OFFSET = 11;
+                const toX = room.x + doorEl.x + ELEMENT_CENTER_OFFSET;
+                const toY = room.y + doorEl.y + ELEMENT_CENTER_OFFSET;
                 
                 const isSelected = selectedDoorLinkIndex === idx;
                 
@@ -2603,7 +2605,16 @@
                     return obj;
                 }),
                 connections: connections.map(c => ({ from: c.from, to: c.to, fromDir: c.fromDir, toDir: c.toDir, connectionType: c.connectionType || 'normal' })),
-                doorLinks: doorLinks.map(d => ({ roomId: d.roomId, entryDir: d.entryDir, doorIndex: d.doorIndex }))
+                doorLinks: doorLinks.map(d => {
+                    const obj = { roomId: d.roomId, entryDir: d.entryDir, doorIndex: d.doorIndex };
+                    // Attach spawnOffset from the door element position if available
+                    const room = rooms.find(r => r.id === d.roomId);
+                    if (room && room.elements && room.elements[d.doorIndex] && room.elements[d.doorIndex].type === 'door') {
+                        const doorEl = room.elements[d.doorIndex];
+                        obj.spawnOffset = [doorEl.x / GRID_SIZE, doorEl.y / GRID_SIZE];
+                    }
+                    return obj;
+                })
             };
         }
         
@@ -2942,7 +2953,7 @@
             document.getElementById('properties-panel').style.display = 'block';
             document.getElementById('room-properties').style.display = 'none';
             updateAsciiPreview();
-        }        }
+        }
         
         function updateAsciiPreview() {
             updateJsonLivePreview();
@@ -3035,26 +3046,27 @@
         }
         
         canvasArea.addEventListener('click', (e) => {
-            if (e.target === canvasArea || e.target === svg || e.target === world) {
-                // Deselect room
-                document.querySelectorAll('.room.selected').forEach(r => r.classList.remove('selected'));
-                selectedRoom = null;
-                document.getElementById('room-properties').style.display = 'none';
-                // Deselect connection if any
-                if (selectedConnectionIndex >= 0) {
-                    selectedConnectionIndex = -1;
-                    renderConnections();
-                }
-                // Deselect doorLink if any
-                if (selectedDoorLinkIndex >= 0) {
-                    selectedDoorLinkIndex = -1;
-                    renderDoorLinks();
-                }
-                // Deselect element if any
-                clearElementSelection();
-                // Reset properties panel to default hint
-                hideConnectionProperties();
+            // Use blacklist approach: if click target is NOT inside a room and NOT on a UI overlay, deselect everything
+            if (e.target.closest('.room') || e.target.closest('.toolbar') || e.target.closest('.instructions')) return;
+            
+            // Deselect room
+            document.querySelectorAll('.room.selected').forEach(r => r.classList.remove('selected'));
+            selectedRoom = null;
+            document.getElementById('room-properties').style.display = 'none';
+            // Deselect connection if any
+            if (selectedConnectionIndex >= 0) {
+                selectedConnectionIndex = -1;
+                renderConnections();
             }
+            // Deselect doorLink if any
+            if (selectedDoorLinkIndex >= 0) {
+                selectedDoorLinkIndex = -1;
+                renderDoorLinks();
+            }
+            // Deselect element if any
+            clearElementSelection();
+            // Reset properties panel to default hint
+            hideConnectionProperties();
         });
         
         // === Figma-style Space+Drag Pan ===

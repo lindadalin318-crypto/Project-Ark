@@ -5760,3 +5760,133 @@ svg.addEventListener('dragover', (e) => { e.preventDefault(); });
 - `world`（第 1372 行）✅
 - `svg`（第 1373 行）✅ 新增
 - `.room` in `setupRoomEvents`（第 1502 行）✅
+
+---
+
+## LevelDesigner Bug修复：点击空白处未取消房间选中状态（回归修复） — 2026-02-27 12:49
+
+### 修改文件：
+- `Tools/LevelDesigner.html`
+
+### 内容简述：
+修复了点击画布空白区域后，已选中房间的连接点（connection points）仍然显示的问题（回归 bug）。
+
+### 目的：
+连接点应仅在房间被选中（selected）或鼠标悬浮（hover）时显示，点击空白处取消选中后连接点应隐藏。
+
+### 技术方案：
+- **根因**：`canvasArea` 的 click handler 使用**白名单模式**检查 `e.target`（仅匹配 `canvasArea`、`svg`、`world` 三个元素）。但 `#world` 的 CSS 为 `width: 0; height: 0`（作为 transform 定位容器），导致其永远不会成为 `e.target`。此外，SVG 内部子元素（如 hitarea 线条附近区域、marker polygon 边缘）也可能成为 `e.target`，无法被白名单覆盖。
+- **修复**：改用**黑名单模式**——使用 `e.target.closest('.room')` 检查点击是否在房间内部。只要点击目标不在 `.room`、`.toolbar`、`.instructions` 内，就执行取消选中逻辑。这种方式更健壮，不受 DOM 结构变化影响。
+
+---
+
+## LevelDesigner 优化：DoorLink虚线指向门元素icon正中心 — 2026-02-27 13:30
+
+### 修改文件：
+- `Tools/LevelDesigner.html`
+
+### 内容简述：
+修复了连接点（connection point）到门元素（door element）之间的虚线（doorLink dashed line）终点未指向门元素icon正中心的问题。
+
+### 目的：
+提升视觉美观度，让虚线精确地指向门元素icon的中心而非其左上角。
+
+### 技术方案：
+- **根因**：`renderDoorLinks` 函数中，虚线终点坐标 `(toX, toY)` 使用 `room.x + doorEl.x` / `room.y + doorEl.y`，这对应门元素 div 的**左上角**而非视觉中心。
+- **修复**：加上元素尺寸的中心偏移。`.room-element` CSS 为 `width: 18px; height: 18px; border: 2px`，总显示尺寸 22×22px，中心偏移为 11px。在 `toX` 和 `toY` 上各加 `ELEMENT_CENTER_OFFSET = 11`。
+
+---
+
+## 门元素位置 → SpawnPoint 管线打通 — 2026-02-27 15:14
+
+### 新建文件：
+- 无
+
+### 修改文件：
+- `Assets/Scripts/Level/Data/LevelScaffoldData.cs`
+- `Tools/LevelDesigner.html`
+- `Assets/Scripts/Level/Editor/HtmlScaffoldImporter.cs`
+- `Assets/Scripts/Level/Editor/ScaffoldToSceneGenerator.cs`
+
+### 内容简述：
+实现了门元素位置自动导出为 SpawnOffset，并在一键生成场景时将其应用为玩家出生点（SpawnPoint）位置的完整管线。
+
+### 目的：
+此前 SpawnPoint 始终生成在房间边缘中点（`DoorPosition`），不受 LevelDesigner 中门元素实际位置影响。本次修改使 LevelDesigner 中精心摆放的门元素位置能直接决定穿过该门后的出生位置，实现"设计即所得"。
+
+### 技术方案：
+1. **`LevelScaffoldData.cs` — `ScaffoldDoorConnection` 新增字段**：添加 `[SerializeField] private Vector3 _spawnOffset` 和公开属性 `SpawnOffset`（get/set）。默认值 `Vector3.zero`，确保旧 .asset 文件向后兼容。
+2. **`LevelDesigner.html` — 导出 doorLink 附带 spawnOffset**：修改 `getExportData()` 中 `doorLinks.map()` 逻辑，通过 `doorLink.doorIndex` 在对应房间的 `elements[]` 中查找门元素，将其 `[x / GRID_SIZE, y / GRID_SIZE]` 写入 `spawnOffset` 字段。若门元素不存在或 doorIndex 无效则不包含该字段。
+3. **`HtmlScaffoldImporter.cs` — 解析 spawnOffset 并坐标转换**：
+   - `HtmlDoorLink` 类新增 `float[] SpawnOffset` 字段。
+   - JSON 解析时检查 `spawnOffset` 数组并转为 `float[]`。
+   - Step 5 doorLinks 处理循环中，当 `SpawnOffset` 非空时执行 HTML→Unity 坐标转换（左上角原点→房间中心原点、y 轴翻转、乘以 gridScale），赋值给 `matchingConn.SpawnOffset`。
+   - 新增 `spawnOffsetApplied` 计数器，导入日志中报告应用数量。
+4. **`ScaffoldToSceneGenerator.cs` — Phase 4 使用 SpawnOffset 生成 SpawnPoint**：
+   - 提前查找 `reverseConn`（原在 WireDoor 前才查找），复用于 SpawnOffset 检查和 IsLayerTransition。
+   - **正向 SpawnPoint（fwdSpawn，target 房间内）**：优先使用 `reverseConn.SpawnOffset`（若非零），否则回退 `FindReverseDoorPosition` 边缘中点逻辑。
+   - **反向 SpawnPoint（revSpawn，source 房间内）**：优先使用 `conn.SpawnOffset`（若非零），否则回退 `conn.DoorPosition` 边缘中点逻辑。
+   - 使用自定义 SpawnOffset 时输出日志。
+5. **向后兼容**：旧 JSON（无 spawnOffset 字段）正常导入，SpawnOffset 默认为零向量，回退到旧的边缘中点逻辑。旧 .asset 文件中新字段自动为零向量。
+
+---
+
+## Bug Fix: GameObjectPool MissingReferenceException on Destroyed Pooled Instance — 2026-02-27 16:15
+
+### Modified Files
+- `Assets/Scripts/Core/Pool/GameObjectPool.cs`
+- `Assets/Scripts/SpaceLife/SpaceLifeManager.cs`
+
+### Summary
+Fixed `MissingReferenceException` in `GameObjectPool.Get()` when a pooled instance had been destroyed externally (e.g. scene unload while PoolManager persists via DontDestroyOnLoad). Also added defensive null check in `SpaceLifeManager.ReturnPlayerToPool()` to prevent returning destroyed objects back to the pool.
+
+### Purpose
+Prevent crash when entering SpaceLife mode after pool instances have been externally destroyed.
+
+### Technical Approach
+1. **`GameObjectPool.Get()`**: After retrieving instance from internal `ObjectPool<GameObject>`, added Unity null check (`instance == null`). If the underlying GameObject was destroyed, re-creates a fresh instance via `CreateInstance()` before positioning and activating.
+2. **`SpaceLifeManager.ReturnPlayerToPool()`**: Added secondary Unity null check before calling `_playerPool.Return()` or `Destroy()`, guarding against the case where `_currentPlayer` reference is non-null in C# but the Unity object has been destroyed (early return only checks C# null, not Unity destroyed state).
+
+---
+
+## UI Prototype: Star Chart UI v2 — 2026-02-27 16:43
+
+### Modified Files
+- `Docs/StarChartUIPrototype.html`
+
+### Summary
+Rewrote the Star Chart UI HTML prototype to align with `StarChartUIDesign.md`. Major structural and interaction changes applied.
+
+### Purpose
+Provide an accurate, interactive browser prototype for UI discussion and iteration before implementing in Unity `UICanvasBuilder.cs`.
+
+### Technical Approach
+1. **Layout restructure**: Left column = Gatling switcher (▲/▼ + loadout name + counter). Right = single Loadout Card containing both PRIMARY and SECONDARY tracks stacked vertically (matches design doc §一).
+2. **Gatling rotation animation**: CSS `perspective rotateX` keyframes — `rotate-out-up/down` (280ms) + `rotate-in-down/up` (320ms) simulate barrel-rotation feel. Mechanical shake on `loadout-section` after switch.
+3. **Track slot structure**: Each track is a single flat row of mixed CORE+PRISM slots (type label shown on empty slots). Slot type enforced on equip with shake feedback on mismatch.
+4. **Inventory**: 56×56px slots, 2px gap, flex-wrap — matches design doc紧凑背包布局 spec. 10–12 columns at 980px panel width.
+5. **Hover highlight**: Track blocks highlight with `inset 2px 0 0 cyan` border + background tint on `mouseenter`.
+6. **Scanline + scan beam**: Static scanline overlay + animated moving beam (`scanBeam` keyframe, 4s loop).
+7. **Equipped slot breathing glow**: `slotBreath` keyframe on `::before` pseudo-element for equipped slots.
+8. **Keyboard shortcuts**: Q/E + PageUp/PageDown for loadout switch; Esc to clear selection.
+9. **Action buttons**: SAVE CONFIG / RENAME (prompt) / DELETE (with guard for last loadout).
+10. **Tooltip**: 150ms delay, follows mouse, smart edge-avoidance, shows equipped location tag.
+
+---
+
+## UI Prototype: Star Chart UI v2.1 — Track Multi-Row & Type Colors — 2026-02-27 16:53
+
+### Modified Files
+- `Docs/StarChartUIPrototype.html`
+
+### Summary
+Updated HTML prototype: PRIMARY track now has two rows; all slot types have distinct color identities; inventory filter order matches left-to-right type order (SAIL→PRISM→CORE→SAT).
+
+### Changes
+1. **PRIMARY track → 2 rows**: Row 0 = SAIL slots + SAT slots (left→right). Row 1 = PRISM slots + CORE slots (left→right). SECONDARY track remains single row (SAIL→PRISM→CORE→SAT).
+2. **Type color system**: Added CSS variables `--col-sail` (#34d399 green), `--col-prism` (#a78bfa purple), `--col-core` (#60a5fa blue), `--col-sat` (#fbbf24 yellow) with dim/glow variants. Each slot type has its own background, border, hover glow.
+3. **Row category labels**: Each slot group has a colored dot + type name label (`trl-sail/prism/core/sat` classes) so the user can immediately identify which row is which type.
+4. **Slot type label colors**: `.slot-type-label` now inherits the type accent color instead of a flat dim white.
+5. **Filter button colors**: Each filter button (SAILS/PRISMS/CORES/SATS) has its type accent color; active state uses colored background + border.
+6. **Filter order**: Changed from ALL/CORES/PRISMS/SAILS/SATS → ALL/SAILS/PRISMS/CORES/SATS (left-to-right matches track layout).
+7. **Data structure**: Loadout slots restructured from flat array to `{ sail:[], sat:[], prism:[], core:[] }` per track. `renderTrack` replaced with `renderSlotRow(trackName, rowType, slots)`. `allSlots()` helper flattens for equip/unequip logic.
