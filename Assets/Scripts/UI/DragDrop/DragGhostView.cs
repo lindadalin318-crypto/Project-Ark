@@ -1,30 +1,41 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using TMPro;
+using PrimeTween;
 using ProjectArk.Combat;
 
 namespace ProjectArk.UI
 {
     /// <summary>
+    /// Drop preview state for the drag ghost.
+    /// </summary>
+    public enum DropPreviewState
+    {
+        None,
+        Valid,
+        Replace,
+        Invalid
+    }
+
+    /// <summary>
     /// Semi-transparent ghost that follows the mouse during a drag operation.
-    /// Must live under the StarChart Canvas with <c>CanvasGroup.blocksRaycasts = false</c>
-    /// so it doesn't intercept pointer events intended for drop targets.
+    /// Shows drop state via border color and replace hint label.
+    /// Must live under the StarChart Canvas with <c>CanvasGroup.blocksRaycasts = false</c>.
     /// </summary>
     [RequireComponent(typeof(CanvasGroup))]
     public class DragGhostView : MonoBehaviour
     {
         [SerializeField] private Image _iconImage;
+        [SerializeField] private Image _borderImage;
+        [SerializeField] private TMP_Text _replaceHintLabel;
         [SerializeField] private float _ghostAlpha = 0.7f;
         [SerializeField] private Vector2 _ghostSize = new(64f, 64f);
 
         private RectTransform _rectTransform;
         private CanvasGroup _canvasGroup;
         private Canvas _parentCanvas;
-
-        // Placeholder colors — mirrors InventoryItemView scheme
-        private static readonly Color CORE_COLOR = new(0.9f, 0.55f, 0.1f, 1f);
-        private static readonly Color PRISM_COLOR = new(0.4f, 0.6f, 0.9f, 1f);
-        private static readonly Color DEFAULT_COLOR = new(0.5f, 0.5f, 0.5f, 1f);
+        private Tween _scaleTween;
 
         private void Awake()
         {
@@ -32,16 +43,21 @@ namespace ProjectArk.UI
             _canvasGroup = GetComponent<CanvasGroup>();
             _parentCanvas = GetComponentInParent<Canvas>();
 
-            // Ensure this ghost never blocks raycasts
             if (_canvasGroup != null)
             {
                 _canvasGroup.blocksRaycasts = false;
                 _canvasGroup.interactable = false;
             }
 
-            // Set fixed size
             if (_rectTransform != null)
                 _rectTransform.sizeDelta = _ghostSize;
+
+            // Initialize border and hint
+            if (_borderImage != null)
+                _borderImage.color = Color.clear;
+
+            if (_replaceHintLabel != null)
+                _replaceHintLabel.gameObject.SetActive(false);
 
             gameObject.SetActive(false);
         }
@@ -62,26 +78,60 @@ namespace ProjectArk.UI
                 }
                 else
                 {
-                    // Use a white placeholder sprite tinted by type color
                     _iconImage.sprite = null;
-                    var baseColor = GetPlaceholderColor(item);
+                    var baseColor = StarChartTheme.GetTypeColor(item.ItemType);
                     _iconImage.color = new Color(baseColor.r, baseColor.g, baseColor.b, _ghostAlpha);
                 }
             }
 
             if (_canvasGroup != null)
                 _canvasGroup.alpha = _ghostAlpha;
+
+            // Reset drop state
+            SetDropState(DropPreviewState.None);
+
+            // Pop-in animation: scale 0.8 → 1.0
+            _scaleTween.Stop();
+            if (_rectTransform != null)
+            {
+                _rectTransform.localScale = Vector3.one * 0.8f;
+                _scaleTween = Tween.Scale(_rectTransform, endValue: Vector3.one,
+                    duration: 0.08f, ease: Ease.OutBack, useUnscaledTime: true);
+            }
+        }
+
+        /// <summary>
+        /// Update the ghost's border color and replace hint based on drop preview state.
+        /// </summary>
+        public void SetDropState(DropPreviewState state)
+        {
+            Color borderColor = state switch
+            {
+                DropPreviewState.Valid   => StarChartTheme.HighlightValid,
+                DropPreviewState.Replace => StarChartTheme.HighlightReplace,
+                DropPreviewState.Invalid => StarChartTheme.HighlightInvalid,
+                _                        => Color.clear
+            };
+
+            if (_borderImage != null)
+                _borderImage.color = borderColor;
+
+            if (_replaceHintLabel != null)
+            {
+                bool showHint = state == DropPreviewState.Replace;
+                _replaceHintLabel.gameObject.SetActive(showHint);
+                if (showHint)
+                    _replaceHintLabel.text = "↺ REPLACE";
+            }
         }
 
         /// <summary>
         /// Move the ghost to follow the pointer position.
-        /// Uses ScreenPointToLocalPointInRectangle for Canvas-space accuracy.
         /// </summary>
         public void FollowPointer(PointerEventData eventData)
         {
             if (_rectTransform == null || _parentCanvas == null) return;
 
-            // Get the root Canvas's RectTransform for coordinate conversion
             var canvasRect = _parentCanvas.transform as RectTransform;
             if (canvasRect == null) return;
 
@@ -96,20 +146,23 @@ namespace ProjectArk.UI
             }
         }
 
-        /// <summary> Hide the ghost and deactivate. </summary>
+        /// <summary> Hide the ghost with a shrink animation. </summary>
         public void Hide()
         {
-            gameObject.SetActive(false);
-        }
+            if (!gameObject.activeSelf) return;
 
-        private static Color GetPlaceholderColor(StarChartItemSO item)
-        {
-            return item.ItemType switch
+            _scaleTween.Stop();
+
+            if (_rectTransform != null)
             {
-                StarChartItemType.Core => CORE_COLOR,
-                StarChartItemType.Prism => PRISM_COLOR,
-                _ => DEFAULT_COLOR,
-            };
+                _scaleTween = Tween.Scale(_rectTransform, endValue: Vector3.zero,
+                    duration: 0.08f, ease: Ease.InQuad, useUnscaledTime: true)
+                    .OnComplete(() => gameObject.SetActive(false));
+            }
+            else
+            {
+                gameObject.SetActive(false);
+            }
         }
     }
 }

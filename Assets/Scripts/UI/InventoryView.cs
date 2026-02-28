@@ -29,12 +29,6 @@ namespace ProjectArk.UI
         /// <summary> Fired when a player clicks an item in the inventory. </summary>
         public event Action<StarChartItemSO> OnItemSelected;
 
-        /// <summary> Fired when the pointer enters an item in the inventory. </summary>
-        public event Action<StarChartItemSO> OnItemPointerEntered;
-
-        /// <summary> Fired when the pointer exits an item in the inventory. </summary>
-        public event Action OnItemPointerExited;
-
         private StarChartInventorySO _inventory;
         private StarChartItemType? _activeFilter;
         private readonly List<InventoryItemView> _itemViews = new();
@@ -62,7 +56,6 @@ namespace ProjectArk.UI
             _inventory = inventory;
             _isEquippedCheck = isEquippedCheck;
             UpdateFilterButtonStyles();
-            Debug.Log($"[InventoryView] Bind called. inventory={inventory?.name ?? "NULL"}, ownedItems={inventory?.OwnedItems?.Count ?? -1}");
         }
 
         /// <summary> Set active filter. Null = show all. Triggers refresh. </summary>
@@ -110,22 +103,17 @@ namespace ProjectArk.UI
             ClearViews();
 
             if (_inventory == null || _itemPrefab == null || _contentParent == null)
-            {
-                Debug.LogWarning($"[InventoryView] Refresh aborted: inventory={(_inventory != null ? "OK" : "NULL")}, itemPrefab={(_itemPrefab != null ? "OK" : "NULL")}, contentParent={(_contentParent != null ? "OK" : "NULL")}");
                 return;
-            }
 
             int count = 0;
             foreach (var item in _inventory.GetByType(_activeFilter))
             {
-                if (item == null) { Debug.LogWarning("[InventoryView] Skipping null item in inventory"); continue; }
+                if (item == null) continue;
 
                 var view = Instantiate(_itemPrefab, _contentParent);
                 bool equipped = _isEquippedCheck?.Invoke(item) ?? false;
                 view.Setup(item, equipped);
                 view.OnClicked += HandleItemClicked;
-                view.OnPointerEntered += (i) => OnItemPointerEntered?.Invoke(i);
-                view.OnPointerExited += () => OnItemPointerExited?.Invoke();
                 view.gameObject.SetActive(true);
                 _itemViews.Add(view);
                 count++;
@@ -138,7 +126,7 @@ namespace ProjectArk.UI
                 Canvas.ForceUpdateCanvases();
             }
 
-            Debug.Log($"[InventoryView] Refresh done. Filter={_activeFilter?.ToString() ?? "ALL"}, instantiated {count} items. contentParent.childCount={_contentParent.childCount}");
+
         }
 
         private void HandleItemClicked(StarChartItemSO item)

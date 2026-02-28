@@ -1,12 +1,25 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
+using PrimeTween;
 using ProjectArk.Combat;
 
 namespace ProjectArk.UI
 {
+    /// <summary>
+    /// Slot type enum — distinguishes the four column types in a TrackView.
+    /// </summary>
+    public enum SlotType
+    {
+        Core,
+        Prism,
+        LightSail,
+        Satellite
+    }
+
     /// <summary>
     /// Single grid cell in a weapon track's slot layer.
     /// Displays item icon, empty state, or spanned-by indicator.
@@ -23,7 +36,7 @@ namespace ProjectArk.UI
         [Header("Placeholder Label")]
         [SerializeField] private TMP_Text _placeholderLabel;
 
-        // Current type color set by the owning TrackView (used for occupied background & hover border)
+        // Current type color set by the owning TrackView
         private Color _typeColor = Color.white;
 
         /// <summary> Fired when this cell is clicked. </summary>
@@ -38,10 +51,10 @@ namespace ProjectArk.UI
         /// <summary> The item currently displayed in this cell (null if empty/spanned). </summary>
         public StarChartItemSO DisplayedItem { get; private set; }
 
-        // ========== Drag-and-Drop Properties (set by TrackView on init) ==========
+        // ========== Slot Type & Identity ==========
 
-        /// <summary> True if this cell belongs to the Core layer (false = Prism layer). </summary>
-        public bool IsCoreCell { get; set; }
+        /// <summary> The type of this slot (Core / Prism / LightSail / Satellite). </summary>
+        public SlotType SlotType { get; set; }
 
         /// <summary> Index of this cell within its layer (0, 1, or 2). </summary>
         public int CellIndex { get; set; }
@@ -49,9 +62,21 @@ namespace ProjectArk.UI
         /// <summary> The TrackView that owns this cell. </summary>
         public TrackView OwnerTrack { get; set; }
 
+        /// <summary> True when this cell is displaying an item (not empty/spanned). </summary>
+        public bool IsOccupied => DisplayedItem != null;
+
+        /// <summary>
+        /// Injected by TrackView on init. Returns true if there is space for the given item
+        /// in this cell's layer. Used for SAIL/SAT types that don't use SlotLayer.
+        /// </summary>
+        public Func<StarChartItemSO, bool> HasSpaceForItem { get; set; }
+
         // Tracks whether this cell is currently showing a valid drag highlight
         private bool _isHighlightedValid;
         private bool _isDragSource;
+
+        // PrimeTween handle for flash animation
+        private Sequence _flashSequence;
 
         private void Awake()
         {
@@ -74,8 +99,17 @@ namespace ProjectArk.UI
             DisplayedItem = item;
 
             // Background: dim type color
+            Color targetBg = new Color(_typeColor.r, _typeColor.g, _typeColor.b, 0.22f);
+
+            // Phase C: flash animation (white → type color)
+            _flashSequence.Stop();
             if (_backgroundImage != null)
-                _backgroundImage.color = new Color(_typeColor.r, _typeColor.g, _typeColor.b, 0.22f);
+            {
+                _backgroundImage.color = Color.white;
+                _flashSequence = Sequence.Create()
+                    .Chain(Tween.Color(_backgroundImage, endValue: targetBg, duration: 0.15f,
+                        ease: Ease.OutQuad, useUnscaledTime: true));
+            }
 
             // Hide placeholder label
             if (_placeholderLabel != null)
@@ -92,7 +126,6 @@ namespace ProjectArk.UI
                 }
                 else if (item != null)
                 {
-                    // No icon: show type-colored placeholder square
                     _iconImage.sprite = null;
                     _iconImage.color = StarChartTheme.GetTypeColor(item.ItemType);
                     Debug.Log($"[SlotCellView] Item '{item.DisplayName}' has no icon — showing placeholder.");
@@ -110,8 +143,13 @@ namespace ProjectArk.UI
         {
             DisplayedItem = null;
 
+            // Phase C: fade to empty color
+            _flashSequence.Stop();
             if (_backgroundImage != null)
-                _backgroundImage.color = StarChartTheme.SlotEmpty;
+            {
+                Tween.Color(_backgroundImage, endValue: StarChartTheme.SlotEmpty,
+                    duration: 0.1f, ease: Ease.OutQuad, useUnscaledTime: true);
+            }
 
             if (_iconImage != null)
                 _iconImage.enabled = false;
@@ -140,7 +178,7 @@ namespace ProjectArk.UI
                 _placeholderLabel.enabled = false;
         }
 
-        /// <summary> Highlight the cell (green for valid target, orange for replace, red for invalid). </summary>
+        /// <summary> Highlight the cell (green for valid target, red for invalid). </summary>
         public void SetHighlight(bool valid)
         {
             if (_backgroundImage != null)
@@ -181,30 +219,61 @@ namespace ProjectArk.UI
                 var payload = mgr.CurrentPayload;
                 if (payload == null) return;
 
-                // Type matching: Core items → core cells, Prism items → prism cells
-                bool typeMatch = (payload.Item.ItemType == StarChartItemType.Core && IsCoreCell)
-                              || (payload.Item.ItemType == StarChartItemType.Prism && !IsCoreCell);
+                // Type matching: check if dragged item type matches this slot type
+                bool typeMatch = IsTypeMatch(payload.Item);
 
-                // Space check via the owning track
+                // Space check
                 bool hasSpace = false;
-                if (typeMatch && OwnerTrack != null)
+                if (typeMatch)
                 {
-                    hasSpace = OwnerTrack.HasSpaceForItem(payload.Item, IsCoreCell);
+                    if (HasSpaceForItem != null)
+                    {
+                        // SAIL/SAT: use injected delegate
+                        hasSpace = HasSpaceForItem(payload.Item);
+                    }
+                    else if (OwnerTrack != null)
+                    {
+                        // Core/Prism: use TrackView.HasSpaceForItem
+                        hasSpace = OwnerTrack.HasSpaceForItem(payload.Item, SlotType == SlotType.Core);
+                    }
                 }
 
+                // Determine highlight state
+                bool occupied = IsOccupied;
                 bool valid = typeMatch && hasSpace;
-                _isHighlightedValid = valid;
+                bool isReplace = typeMatch && !hasSpace && occupied;
+
+                _isHighlightedValid = valid || isReplace;
 
                 // Store drop target info in the manager
                 mgr.DropTargetTrack = OwnerTrack?.Track;
-                mgr.DropTargetIsCoreLayer = IsCoreCell;
-                mgr.DropTargetValid = valid;
+                mgr.DropTargetIsCoreLayer = SlotType == SlotType.Core;
+                mgr.DropTargetSlotType = SlotType;
+                mgr.DropTargetValid = valid || isReplace; // both valid and replace are "accept"
+                mgr.DropTargetIsReplace = isReplace;
+
+                // Update ghost drop state
+                if (!typeMatch)
+                    mgr.UpdateGhostDropState(DropPreviewState.Invalid);
+                else if (isReplace)
+                    mgr.UpdateGhostDropState(DropPreviewState.Replace);
+                else if (valid)
+                    mgr.UpdateGhostDropState(DropPreviewState.Valid);
+                else
+                    mgr.UpdateGhostDropState(DropPreviewState.Invalid);
 
                 // Highlight this cell and adjacent cells for SlotSize > 1
                 if (OwnerTrack != null)
-                    OwnerTrack.SetMultiCellHighlight(CellIndex, payload.Item.SlotSize, IsCoreCell, valid);
+                {
+                    if (SlotType == SlotType.Core || SlotType == SlotType.Prism)
+                        OwnerTrack.SetMultiCellHighlight(CellIndex, payload.Item.SlotSize, SlotType == SlotType.Core, valid, isReplace);
+                    else
+                        ApplySingleHighlight(valid, isReplace);
+                }
                 else
-                    SetHighlight(valid);
+                {
+                    ApplySingleHighlight(valid, isReplace);
+                }
             }
             else
             {
@@ -219,7 +288,7 @@ namespace ProjectArk.UI
             var mgr = DragDropManager.Instance;
             if (mgr != null && mgr.IsDragging)
             {
-                // Clear highlights
+                // Clear highlights immediately
                 if (OwnerTrack != null)
                     OwnerTrack.ClearAllHighlights();
                 else
@@ -227,17 +296,29 @@ namespace ProjectArk.UI
 
                 _isHighlightedValid = false;
 
-                // Clear drop target in manager
-                if (mgr.DropTargetTrack == OwnerTrack?.Track)
-                {
-                    mgr.DropTargetTrack = null;
-                    mgr.DropTargetValid = false;
-                }
+                // Delay one frame before clearing DropTargetTrack:
+                // if the pointer moved to another cell in the same TrackView,
+                // OnPointerEnter on the new cell will re-set DropTargetTrack before
+                // the coroutine runs, so we skip the clear and avoid Ghost border flicker.
+                StartCoroutine(ClearDropTargetNextFrame(mgr, OwnerTrack?.Track));
             }
             else
             {
-                // Not dragging - hide tooltip
                 OnPointerExited?.Invoke();
+            }
+        }
+
+        private IEnumerator ClearDropTargetNextFrame(DragDropManager mgr, WeaponTrack trackAtExit)
+        {
+            yield return null; // wait one frame
+
+            // Only clear if DropTargetTrack hasn't been re-set by a new OnPointerEnter
+            if (mgr != null && mgr.IsDragging && mgr.DropTargetTrack == trackAtExit)
+            {
+                mgr.DropTargetTrack = null;
+                mgr.DropTargetValid = false;
+                mgr.DropTargetIsReplace = false;
+                mgr.UpdateGhostDropState(DropPreviewState.None);
             }
         }
 
@@ -250,23 +331,13 @@ namespace ProjectArk.UI
             {
                 mgr.EndDrag(true);
             }
-            // If invalid, do nothing — OnEndDrag on the source will cancel
         }
 
         // ========== Drag Source Implementation (equipped item drag-out) ==========
 
         public void OnBeginDrag(PointerEventData eventData)
         {
-            // Only start drag if this cell has an equipped item
             if (DisplayedItem == null)
-            {
-                _isDragSource = false;
-                return;
-            }
-
-            // Only Core and Prism can be dragged
-            if (DisplayedItem.ItemType != StarChartItemType.Core
-                && DisplayedItem.ItemType != StarChartItemType.Prism)
             {
                 _isDragSource = false;
                 return;
@@ -297,6 +368,33 @@ namespace ProjectArk.UI
 
             if (DragDropManager.Instance != null && DragDropManager.Instance.IsDragging)
                 DragDropManager.Instance.CancelDrag();
+        }
+
+        // ========== Helpers ==========
+
+        private bool IsTypeMatch(StarChartItemSO item)
+        {
+            return SlotType switch
+            {
+                SlotType.Core      => item.ItemType == StarChartItemType.Core,
+                SlotType.Prism     => item.ItemType == StarChartItemType.Prism,
+                SlotType.LightSail => item.ItemType == StarChartItemType.LightSail,
+                SlotType.Satellite => item.ItemType == StarChartItemType.Satellite,
+                _                  => false
+            };
+        }
+
+        private void ApplySingleHighlight(bool valid, bool isReplace)
+        {
+            if (isReplace)
+                SetReplaceHighlight();
+            else
+                SetHighlight(valid);
+        }
+
+        private void OnDestroy()
+        {
+            _flashSequence.Stop();
         }
     }
 }

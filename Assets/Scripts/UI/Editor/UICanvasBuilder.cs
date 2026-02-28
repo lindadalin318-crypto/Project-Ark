@@ -94,9 +94,8 @@ namespace ProjectArk.UI.Editor
             Debug.Log("  │  ├─ CornerBrackets (4 L-shaped decorations)");
             Debug.Log("  │  ├─ Header (STAR CHART title + status dot + close button)");
             Debug.Log("  │  ├─ UpperSection (55%)");
-            Debug.Log("  │  │  ├─ PrimaryTrackView (PRISM label + 3 cells, CORE label + 3 cells)");
-            Debug.Log("  │  │  └─ SecondaryTrackView (PRISM label + 3 cells, CORE label + 3 cells)");
-            Debug.Log("  │  ├─ LowerSection (40%)");
+            Debug.Log("  │  ├─ PrimaryTrackView   (SAIL 1cell | PRISM 3cells | CORE 3cells | SAT 2cells)");
+            Debug.Log("  │  └─ SecondaryTrackView (SAIL 1cell | PRISM 3cells | CORE 3cells | SAT 2cells)");            Debug.Log("  │  ├─ LowerSection (40%)");
             Debug.Log("  │  │  ├─ InventoryView (filters + 64x64 grid)");
             Debug.Log("  │  │  └─ ItemDetailView (icon + name + desc + stats + button)");
             Debug.Log("  │  ├─ StatusBar (22px, StarChartTheme colors)");
@@ -487,24 +486,59 @@ namespace ProjectArk.UI.Editor
             SetStretch(dragDropGo);
             var dragDropMgr = dragDropGo.AddComponent<DragDropManager>();
 
-            // Ghost image for drag preview
+            // DragGhostView — rebuilt as a proper component
             var ghostGo = CreateUIObject("DragGhost", dragDropGo.transform);
             SetAnchors(ghostGo, Vector2.zero, Vector2.zero);
-            ghostGo.GetComponent<RectTransform>().sizeDelta = new Vector2(80, 80);
-            var ghostImg = ghostGo.AddComponent<Image>();
-            ghostImg.color = new Color(1f, 1f, 1f, 0.7f);
-            ghostImg.raycastTarget = false;
+            var ghostRect = ghostGo.GetComponent<RectTransform>();
+            ghostRect.sizeDelta = new Vector2(80, 80);
+            ghostGo.AddComponent<CanvasGroup>(); // required by DragGhostView
+            var ghostView = ghostGo.AddComponent<DragGhostView>();
+
+            // Ghost icon
+            var ghostIconGo = CreateUIObject("GhostIcon", ghostGo.transform);
+            SetAnchors(ghostIconGo, new Vector2(0.1f, 0.1f), new Vector2(0.9f, 0.9f));
+            var ghostIconImg = ghostIconGo.AddComponent<Image>();
+            ghostIconImg.color = new Color(1f, 1f, 1f, 0.7f);
+            ghostIconImg.raycastTarget = false;
+
+            // Ghost border (colored by drop state)
+            var ghostBorderGo = CreateUIObject("GhostBorder", ghostGo.transform);
+            SetStretch(ghostBorderGo);
+            var ghostBorderImg = ghostBorderGo.AddComponent<Image>();
+            ghostBorderImg.color = Color.clear;
+            ghostBorderImg.type = Image.Type.Sliced;
+            ghostBorderImg.raycastTarget = false;
+
+            // Replace hint label
+            var replaceHintGo = CreateUIObject("ReplaceHint", ghostGo.transform);
+            SetAnchors(replaceHintGo, new Vector2(0f, -0.4f), new Vector2(1f, 0f));
+            var replaceHintTmp = replaceHintGo.AddComponent<TextMeshProUGUI>();
+            replaceHintTmp.text = "↺ REPLACE";
+            replaceHintTmp.fontSize = 10;
+            replaceHintTmp.alignment = TextAlignmentOptions.Center;
+            replaceHintTmp.color = StarChartTheme.HighlightReplace;
+            replaceHintTmp.raycastTarget = false;
+            replaceHintGo.SetActive(false);
+
             ghostGo.SetActive(false);
 
-            WireField(dragDropMgr, "_ghostImage", ghostImg);
+            WireField(ghostView, "_iconImage",        ghostIconImg);
+            WireField(ghostView, "_borderImage",      ghostBorderImg);
+            WireField(ghostView, "_replaceHintLabel", replaceHintTmp);
+            WireField(dragDropMgr, "_ghostView",   ghostView);
+            WireField(dragDropMgr, "_rootCanvas",  canvasGo.GetComponent<Canvas>());
+
+            // ── Panel CanvasGroup (for open/close animation) ──
+            var panelCG = panelGo.AddComponent<CanvasGroup>();
 
             // ── Wire StarChartPanel fields ──
-            WireField(starChartPanel, "_primaryTrackView", primaryTrack);
+            WireField(starChartPanel, "_primaryTrackView",   primaryTrack);
             WireField(starChartPanel, "_secondaryTrackView", secondaryTrack);
-            WireField(starChartPanel, "_inventoryView", inventoryView);
-            WireField(starChartPanel, "_itemDetailView", itemDetailView);
-            WireField(starChartPanel, "_dragDropManager", dragDropMgr);
-            WireField(starChartPanel, "_statusBar", statusBarView);
+            WireField(starChartPanel, "_inventoryView",      inventoryView);
+            WireField(starChartPanel, "_itemDetailView",     itemDetailView);
+            WireField(starChartPanel, "_dragDropManager",    dragDropMgr);
+            WireField(starChartPanel, "_statusBar",          statusBarView);
+            WireField(starChartPanel, "_panelCanvasGroup",   panelCG);
 
             Debug.Log("[UICanvasBuilder] Created StarChartPanel (header + tracks + inventory + detail + statusbar)");
             return starChartPanel;
@@ -719,20 +753,36 @@ namespace ProjectArk.UI.Editor
             var selectBtnImg = selectBtnGo.AddComponent<Image>();
             selectBtnImg.color = Color.clear;
 
-            // PRISM type label
+            // ── 4-column layout: SAIL | PRISM | CORE | SAT ──────────────────────────
+            // Column anchors (left→right): SAIL 0-15%, PRISM 16-49%, CORE 51-84%, SAT 85-100%
+
+            // ── SAIL column (1 cell) ──
+            var sailLabelGo = CreateUIObject("SailLabel", root.transform);
+            SetAnchors(sailLabelGo, new Vector2(0.01f, 0.78f), new Vector2(0.15f, 0.88f));
+            var sailLabelTmp = sailLabelGo.AddComponent<TextMeshProUGUI>();
+            sailLabelTmp.text = "SAIL";
+            sailLabelTmp.fontSize = 9;
+            sailLabelTmp.color = StarChartTheme.SailColor;
+            sailLabelTmp.raycastTarget = false;
+
+            var sailCellGo = CreateUIObject("SailColumn", root.transform);
+            SetAnchors(sailCellGo, new Vector2(0.01f, 0.02f), new Vector2(0.15f, 0.76f));
+            var sailCell = BuildSlotCell("SailCell", sailCellGo.transform);
+            SetStretch(sailCell.gameObject);
+
+            // ── PRISM column (3 cells) ──
             var prismLabelGo = CreateUIObject("PrismLabel", root.transform);
-            SetAnchors(prismLabelGo, new Vector2(0.03f, 0.55f), new Vector2(0.5f, 0.65f));
+            SetAnchors(prismLabelGo, new Vector2(0.17f, 0.78f), new Vector2(0.49f, 0.88f));
             var prismLabelTmp = prismLabelGo.AddComponent<TextMeshProUGUI>();
             prismLabelTmp.text = "PRISM";
-            prismLabelTmp.fontSize = 10;
+            prismLabelTmp.fontSize = 9;
             prismLabelTmp.color = StarChartTheme.PrismColor;
             prismLabelTmp.raycastTarget = false;
 
-            // Prism cells row (upper)
             var prismRow = CreateUIObject("PrismRow", root.transform);
-            SetAnchors(prismRow, new Vector2(0.03f, 0.42f), new Vector2(0.97f, 0.82f));
+            SetAnchors(prismRow, new Vector2(0.17f, 0.02f), new Vector2(0.49f, 0.76f));
             var prismHLG = prismRow.AddComponent<HorizontalLayoutGroup>();
-            prismHLG.spacing = 6;
+            prismHLG.spacing = 4;
             prismHLG.childForceExpandWidth = true;
             prismHLG.childForceExpandHeight = true;
 
@@ -740,20 +790,19 @@ namespace ProjectArk.UI.Editor
             for (int i = 0; i < 3; i++)
                 prismCells[i] = BuildSlotCell($"PrismCell_{i}", prismRow.transform);
 
-            // CORE type label
+            // ── CORE column (3 cells) ──
             var coreLabelGo = CreateUIObject("CoreLabel", root.transform);
-            SetAnchors(coreLabelGo, new Vector2(0.03f, 0.12f), new Vector2(0.5f, 0.22f));
+            SetAnchors(coreLabelGo, new Vector2(0.51f, 0.78f), new Vector2(0.83f, 0.88f));
             var coreLabelTmp = coreLabelGo.AddComponent<TextMeshProUGUI>();
             coreLabelTmp.text = "CORE";
-            coreLabelTmp.fontSize = 10;
+            coreLabelTmp.fontSize = 9;
             coreLabelTmp.color = StarChartTheme.CoreColor;
             coreLabelTmp.raycastTarget = false;
 
-            // Core cells row (lower)
             var coreRow = CreateUIObject("CoreRow", root.transform);
-            SetAnchors(coreRow, new Vector2(0.03f, 0.02f), new Vector2(0.97f, 0.40f));
+            SetAnchors(coreRow, new Vector2(0.51f, 0.02f), new Vector2(0.83f, 0.76f));
             var coreHLG = coreRow.AddComponent<HorizontalLayoutGroup>();
-            coreHLG.spacing = 6;
+            coreHLG.spacing = 4;
             coreHLG.childForceExpandWidth = true;
             coreHLG.childForceExpandHeight = true;
 
@@ -761,14 +810,43 @@ namespace ProjectArk.UI.Editor
             for (int i = 0; i < 3; i++)
                 coreCells[i] = BuildSlotCell($"CoreCell_{i}", coreRow.transform);
 
+            // ── SAT column (2 cells) ──
+            var satLabelGo = CreateUIObject("SatLabel", root.transform);
+            SetAnchors(satLabelGo, new Vector2(0.85f, 0.78f), new Vector2(0.99f, 0.88f));
+            var satLabelTmp = satLabelGo.AddComponent<TextMeshProUGUI>();
+            satLabelTmp.text = "SAT";
+            satLabelTmp.fontSize = 9;
+            satLabelTmp.color = StarChartTheme.SatColor;
+            satLabelTmp.raycastTarget = false;
+
+            var satCol = CreateUIObject("SatColumn", root.transform);
+            SetAnchors(satCol, new Vector2(0.85f, 0.02f), new Vector2(0.99f, 0.76f));
+            var satVLG = satCol.AddComponent<VerticalLayoutGroup>();
+            satVLG.spacing = 4;
+            satVLG.childForceExpandWidth = true;
+            satVLG.childForceExpandHeight = true;
+
+            var satCells = new SlotCellView[2];
+            for (int i = 0; i < 2; i++)
+                satCells[i] = BuildSlotCell($"SatCell_{i}", satCol.transform);
+
+            // ── Column dividers ──
+            BuildColumnDivider("DivSailPrism", root.transform, 0.155f);
+            BuildColumnDivider("DivPrismCore", root.transform, 0.50f);
+            BuildColumnDivider("DivCoreSat",  root.transform, 0.845f);
+
             // Wire TrackView fields
             WireField(trackView, "_trackLabel", labelTmp);
+            WireField(trackView, "_sailLabel",  sailLabelTmp);
             WireField(trackView, "_prismLabel", prismLabelTmp);
-            WireField(trackView, "_coreLabel", coreLabelTmp);
-            WireField(trackView, "_selectButton", selectBtn);
+            WireField(trackView, "_coreLabel",  coreLabelTmp);
+            WireField(trackView, "_satLabel",   satLabelTmp);
+            WireField(trackView, "_sailCell",   sailCell);
+            WireField(trackView, "_selectButton",   selectBtn);
             WireField(trackView, "_selectionBorder", borderImg);
             WireArrayField(trackView, "_prismCells", prismCells);
-            WireArrayField(trackView, "_coreCells", coreCells);
+            WireArrayField(trackView, "_coreCells",  coreCells);
+            WireArrayField(trackView, "_satCells",   satCells);
 
             return trackView;
         }
@@ -776,6 +854,15 @@ namespace ProjectArk.UI.Editor
         // =====================================================================
         // SlotCellView Builder
         // =====================================================================
+
+        private static void BuildColumnDivider(string name, Transform parent, float xAnchor)
+        {
+            var go = CreateUIObject(name, parent);
+            SetAnchors(go, new Vector2(xAnchor - 0.003f, 0.02f), new Vector2(xAnchor + 0.003f, 0.98f));
+            var img = go.AddComponent<Image>();
+            img.color = new Color(StarChartTheme.Border.r, StarChartTheme.Border.g, StarChartTheme.Border.b, 0.5f);
+            img.raycastTarget = false;
+        }
 
         private static SlotCellView BuildSlotCell(string name, Transform parent)
         {

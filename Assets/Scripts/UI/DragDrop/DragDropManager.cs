@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using ProjectArk.Combat;
 
@@ -13,6 +14,7 @@ namespace ProjectArk.UI
         public static DragDropManager Instance { get; private set; }
 
         [SerializeField] private DragGhostView _ghostView;
+        [SerializeField] private Canvas _rootCanvas;
 
         /// <summary> True while a drag operation is in progress. </summary>
         public bool IsDragging { get; private set; }
@@ -27,12 +29,24 @@ namespace ProjectArk.UI
         /// <summary> True if the hovered cell belongs to the core layer. </summary>
         public bool DropTargetIsCoreLayer { get; set; }
 
-        /// <summary> Whether the current hover target is a valid drop. </summary>
+        /// <summary> The slot type of the current drop target. </summary>
+        public SlotType DropTargetSlotType { get; set; }
+
+        /// <summary> Whether the current hover target is a valid drop (including replace). </summary>
         public bool DropTargetValid { get; set; }
+
+        /// <summary> Whether the current drop would trigger a forced replace. </summary>
+        public bool DropTargetIsReplace { get; set; }
+
+        /// <summary>
+        /// Items evicted during the last forced replace operation.
+        /// Populated by EvictBlockingItems, consumed by FlyBackAnimator.
+        /// </summary>
+        public List<(StarChartItemSO item, WeaponTrack track)> EvictedItems { get; } = new();
 
         private StarChartPanel _panel;
         private StarChartController _controller;
-        private DragGhostView _ghost;
+        private RectTransform _inventoryRect; // target for fly-back animations
 
         // Source InventoryItemView — used to restore alpha on cancel/end
         private CanvasGroup _sourceCanvasGroup;
@@ -55,36 +69,45 @@ namespace ProjectArk.UI
             _panel = panel;
             _controller = controller;
 
-            // Directly reference scene instance — no Instantiate needed
             if (_ghostView != null)
             {
-                _ghost = _ghostView;
-                _ghost.Hide();
+                _ghostView.Hide();
+            }
+
+            // Cache inventory rect for fly-back target
+            if (_panel != null)
+            {
+                var invView = _panel.GetComponentInChildren<InventoryView>(true);
+                if (invView != null)
+                    _inventoryRect = invView.GetComponent<RectTransform>();
             }
         }
 
         /// <summary>
         /// Start a new drag operation.
         /// </summary>
-        /// <param name="payload">Data describing the dragged item and source.</param>
-        /// <param name="sourceCanvasGroup">Optional: the source view's CanvasGroup to dim.</param>
         public void BeginDrag(DragPayload payload, CanvasGroup sourceCanvasGroup = null)
         {
-            if (IsDragging) return; // only one drag at a time
+            if (IsDragging) return;
+
+            // Skip all in-flight fly-back animations
+            FlyBackAnimator.SkipAll();
 
             IsDragging = true;
             CurrentPayload = payload;
             _sourceCanvasGroup = sourceCanvasGroup;
             DropTargetTrack = null;
             DropTargetValid = false;
+            DropTargetIsReplace = false;
+            EvictedItems.Clear();
 
             // Dim source card
             if (_sourceCanvasGroup != null)
                 _sourceCanvasGroup.alpha = 0.4f;
 
             // Show ghost
-            if (_ghost != null)
-                _ghost.Show(payload.Item);
+            if (_ghostView != null)
+                _ghostView.Show(payload.Item);
         }
 
         /// <summary>
@@ -92,8 +115,17 @@ namespace ProjectArk.UI
         /// </summary>
         public void UpdateGhostPosition(UnityEngine.EventSystems.PointerEventData eventData)
         {
-            if (_ghost != null && IsDragging)
-                _ghost.FollowPointer(eventData);
+            if (_ghostView != null && IsDragging)
+                _ghostView.FollowPointer(eventData);
+        }
+
+        /// <summary>
+        /// Update the ghost's drop preview state (border color + replace hint).
+        /// Called by SlotCellView.OnPointerEnter / OnPointerExit.
+        /// </summary>
+        public void UpdateGhostDropState(DropPreviewState state)
+        {
+            _ghostView?.SetDropState(state);
         }
 
         /// <summary>
@@ -107,13 +139,20 @@ namespace ProjectArk.UI
             {
                 ExecuteDrop();
             }
+            else if (success && !DropTargetValid && CurrentPayload?.Source == DragSource.Slot)
+            {
+                // Slot dragged to empty area — give user feedback
+                _panel?.StatusBar?.ShowMessage(
+                    "CANNOT PLACE HERE",
+                    StarChartTheme.HighlightInvalid,
+                    2f);
+            }
 
             CleanUp();
         }
 
         /// <summary>
         /// Cancel the current drag without performing any action.
-        /// Safe to call when panel closes mid-drag.
         /// </summary>
         public void CancelDrag()
         {
@@ -133,7 +172,6 @@ namespace ProjectArk.UI
 
             if (source == DragSource.Inventory)
             {
-                // Inventory → Slot: equip
                 EquipToTrack(item, DropTargetTrack);
             }
             else if (source == DragSource.Slot)
@@ -142,24 +180,24 @@ namespace ProjectArk.UI
 
                 if (DropTargetTrack == null)
                 {
-                    // Slot → Inventory area: unequip (handled by InventoryView.OnDrop)
                     UnequipFromTrack(item, sourceTrack);
                 }
                 else if (sourceTrack != null && sourceTrack != DropTargetTrack)
                 {
-                    // Cross-track move: unequip from source, equip to target
                     UnequipFromTrack(item, sourceTrack);
                     EquipToTrack(item, DropTargetTrack);
                 }
                 else if (sourceTrack != null && sourceTrack == DropTargetTrack)
                 {
-                    // Same track — no-op (item already there)
+                    // Same track — no-op
                 }
             }
 
-            // Refresh all views and select the item in detail panel
             _panel.RefreshAllViews();
             _panel.SelectAndShowItem(item);
+
+            // Trigger fly-back animations for evicted items
+            TriggerFlyBackAnimations();
         }
 
         /// <summary>
@@ -185,15 +223,65 @@ namespace ProjectArk.UI
             switch (item)
             {
                 case StarCoreSO core:
-                    if (track.EquipCore(core))
-                        track.InitializePools();
+                    if (!track.EquipCore(core))
+                    {
+                        // Force replace: evict blocking items, then retry
+                        EvictBlockingItems(item, track, isCoreLayer: true);
+                        if (track.EquipCore(core))
+                        {
+                            track.InitializePools();
+                            ShowReplaceMessage(item);
+                        }
+                        else
+                        {
+                            Debug.LogWarning($"[DragDropManager] Still failed to equip core '{core.DisplayName}' after eviction");
+                        }
+                    }
                     else
-                        Debug.LogWarning($"[DragDropManager] Failed to equip core '{core.DisplayName}': no space");
+                    {
+                        track.InitializePools();
+                    }
                     break;
 
                 case PrismSO prism:
                     if (!track.EquipPrism(prism))
-                        Debug.LogWarning($"[DragDropManager] Failed to equip prism '{prism.DisplayName}': no space");
+                    {
+                        EvictBlockingItems(item, track, isCoreLayer: false);
+                        if (!track.EquipPrism(prism))
+                        {
+                            Debug.LogWarning($"[DragDropManager] Still failed to equip prism '{prism.DisplayName}' after eviction");
+                        }
+                        else
+                        {
+                            ShowReplaceMessage(item);
+                        }
+                    }
+                    break;
+
+                case LightSailSO sail:
+                    // Evict existing sail if present
+                    var existingSail = _controller?.GetEquippedLightSail();
+                    if (existingSail != null)
+                    {
+                        EvictedItems.Add((existingSail, track));
+                        _controller.UnequipLightSail();
+                        ShowReplaceMessage(item);
+                    }
+                    _controller?.EquipLightSail(sail);
+                    break;
+
+                case SatelliteSO sat:
+                    var sats = _controller?.GetEquippedSatellites();
+                    int maxSats = 2;
+                    if (sats != null && sats.Count >= maxSats)
+                    {
+                        // Evict the oldest satellite
+                        var evicted = sats[0];
+                        EvictedItems.Add((evicted, track));
+                        _controller.UnequipSatellite(evicted);
+                        ShowReplaceMessage(item);
+                    }
+                    _controller?.EquipSatellite(sat);
                     break;
             }
         }
@@ -209,26 +297,103 @@ namespace ProjectArk.UI
                 case PrismSO prism:
                     track.UnequipPrism(prism);
                     break;
+
+                case LightSailSO:
+                    _controller?.UnequipLightSail();
+                    break;
+
+                case SatelliteSO sat:
+                    _controller?.UnequipSatellite(sat);
+                    break;
             }
+        }
+
+        /// <summary>
+        /// Evict all items blocking placement of <paramref name="newItem"/> in the given layer.
+        /// Evicted items are added to <see cref="EvictedItems"/> for fly-back animation.
+        /// </summary>
+        private void EvictBlockingItems(StarChartItemSO newItem, WeaponTrack track, bool isCoreLayer)
+        {
+            if (track == null) return;
+
+            if (isCoreLayer)
+            {
+                var layer = track.CoreLayer;
+                // Evict items until there's enough free space
+                while (layer.FreeSpace < newItem.SlotSize && layer.Items.Count > 0)
+                {
+                    var victim = layer.Items[layer.Items.Count - 1];
+                    EvictedItems.Add((victim, track));
+                    track.UnequipCore(victim as StarCoreSO);
+                }
+            }
+            else
+            {
+                var layer = track.PrismLayer;
+                while (layer.FreeSpace < newItem.SlotSize && layer.Items.Count > 0)
+                {
+                    var victim = layer.Items[layer.Items.Count - 1];
+                    EvictedItems.Add((victim, track));
+                    track.UnequipPrism(victim as PrismSO);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Trigger fly-back animations for all items evicted during the last forced replace.
+        /// </summary>
+        private void TriggerFlyBackAnimations()
+        {
+            if (EvictedItems.Count == 0) return;
+            if (_inventoryRect == null || _rootCanvas == null) return;
+
+            // Find the source slot RectTransform from the current payload
+            // Use the ghost's last position as the "from" point
+            var ghostRect = _ghostView?.GetComponent<RectTransform>();
+
+            foreach (var (evictedItem, _) in EvictedItems)
+            {
+                // Use ghost position as source (it's at the drop point)
+                var fromRect = ghostRect ?? _inventoryRect;
+                FlyBackAnimator.FlyTo(fromRect, _inventoryRect, evictedItem, _rootCanvas);
+            }
+        }
+
+        private void ShowReplaceMessage(StarChartItemSO newItem)
+        {
+            if (EvictedItems.Count == 0) return;
+
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < EvictedItems.Count; i++)
+            {
+                if (i > 0) sb.Append(", ");
+                sb.Append(EvictedItems[i].item.DisplayName);
+            }
+            _panel?.StatusBar?.ShowMessage(
+                $"REPLACED: {sb} → {newItem.DisplayName}",
+                StarChartTheme.HighlightReplace,
+                3f);
         }
 
         private void CleanUp()
         {
-            // Restore source alpha
             if (_sourceCanvasGroup != null)
             {
-                _sourceCanvasGroup.alpha = 1f;
+                // Only directly restore alpha if the source is NOT an InventoryItemView.
+                // InventoryItemView.OnEndDrag handles its own alpha restore via PrimeTween.
+                if (CurrentPayload?.Source != DragSource.Inventory)
+                    _sourceCanvasGroup.alpha = 1f;
                 _sourceCanvasGroup = null;
             }
 
-            // Hide ghost
-            if (_ghost != null)
-                _ghost.Hide();
+            if (_ghostView != null)
+                _ghostView.Hide();
 
             IsDragging = false;
             CurrentPayload = null;
             DropTargetTrack = null;
             DropTargetValid = false;
+            DropTargetIsReplace = false;
             DropTargetIsCoreLayer = false;
         }
 

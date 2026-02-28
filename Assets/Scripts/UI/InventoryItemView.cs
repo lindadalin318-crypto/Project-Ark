@@ -119,7 +119,11 @@ namespace ProjectArk.UI
         public void SetSelected(bool selected)
         {
             if (_selectionBorder != null)
-                _selectionBorder.color = selected ? StarChartTheme.SelectedCyan : Color.clear;
+            {
+                Color targetColor = selected ? StarChartTheme.SelectedCyan : Color.clear;
+                Tween.Color(_selectionBorder, endValue: targetColor,
+                    duration: 0.1f, ease: Ease.OutQuad, useUnscaledTime: true);
+            }
         }
 
         /// <summary> Returns a type-based placeholder color when an item has no icon. </summary>
@@ -146,13 +150,8 @@ namespace ProjectArk.UI
 
         public void OnBeginDrag(PointerEventData eventData)
         {
-            // Only Core and Prism support drag-to-equip
+            // All item types support drag-to-equip
             if (Item == null) return;
-            if (Item.ItemType != StarChartItemType.Core && Item.ItemType != StarChartItemType.Prism)
-            {
-                _isDragging = false;
-                return;
-            }
 
             if (DragDropManager.Instance == null || DragDropManager.Instance.IsDragging)
             {
@@ -162,6 +161,9 @@ namespace ProjectArk.UI
 
             _isDragging = true;
             var payload = new DragPayload(Item, DragSource.Inventory);
+            // Dim source card with animation
+            Tween.Alpha(CachedCanvasGroup, endValue: 0.4f, duration: 0.08f,
+                ease: Ease.OutQuad, useUnscaledTime: true);
             DragDropManager.Instance.BeginDrag(payload, CachedCanvasGroup);
         }
 
@@ -176,6 +178,10 @@ namespace ProjectArk.UI
             if (!_isDragging) return;
             _isDragging = false;
 
+            // Restore alpha with animation
+            Tween.Alpha(CachedCanvasGroup, endValue: 1f, duration: 0.08f,
+                ease: Ease.OutQuad, useUnscaledTime: true);
+
             // If the drop wasn't consumed by a valid target, cancel
             if (DragDropManager.Instance != null && DragDropManager.Instance.IsDragging)
                 DragDropManager.Instance.CancelDrag();
@@ -187,7 +193,7 @@ namespace ProjectArk.UI
         {
             if (_isDragging) return;
             // Scale up on hover
-            Tween.Scale(transform, endValue: Vector3.one * 1.06f, duration: 0.12f, ease: Ease.OutQuad);
+            Tween.Scale(transform, endValue: Vector3.one * 1.06f, duration: 0.12f, ease: Ease.OutQuad, useUnscaledTime: true);
             OnPointerEntered?.Invoke(Item);
         }
 
@@ -195,7 +201,7 @@ namespace ProjectArk.UI
         {
             if (_isDragging) return;
             // Restore scale
-            Tween.Scale(transform, endValue: Vector3.one, duration: 0.12f, ease: Ease.OutQuad);
+            Tween.Scale(transform, endValue: Vector3.one, duration: 0.12f, ease: Ease.OutQuad, useUnscaledTime: true);
             OnPointerExited?.Invoke();
         }
     }

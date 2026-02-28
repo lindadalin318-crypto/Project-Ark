@@ -1,5 +1,7 @@
 using System;
 using UnityEngine;
+using UnityEngine.UI;
+using PrimeTween;
 using ProjectArk.Combat;
 
 namespace ProjectArk.UI
@@ -18,20 +20,24 @@ namespace ProjectArk.UI
         [SerializeField] private InventoryView _inventoryView;
         [SerializeField] private ItemDetailView _itemDetailView;
 
-        // [Header("Tooltip")]
-        // [SerializeField] private ItemTooltipView _itemTooltipView;
-
         [Header("Drag & Drop")]
         [SerializeField] private DragDropManager _dragDropManager;
 
         [Header("Status Bar")]
         [SerializeField] private StatusBarView _statusBar;
 
-        // TODO: 光帆/伴星专用槽位 (Batch 4 扩展)
+        [Header("Panel Animation")]
+        [SerializeField] private CanvasGroup _panelCanvasGroup;
 
         private StarChartController _controller;
         private StarChartInventorySO _inventory;
         private WeaponTrack _selectedTrack;
+
+        /// <summary> Exposes the status bar for DragDropManager to show messages. </summary>
+        public StatusBarView StatusBar => _statusBar;
+
+        /// <summary> Exposes the controller for DragDropManager SAIL/SAT operations. </summary>
+        public StarChartController Controller => _controller;
 
         // 当前在详情面板中选中的物品
         private StarChartItemSO _selectedItem;
@@ -51,20 +57,16 @@ namespace ProjectArk.UI
             // 绑定轨道视图
             if (_primaryTrackView != null)
             {
-                _primaryTrackView.Bind(controller.PrimaryTrack);
+                _primaryTrackView.Bind(controller.PrimaryTrack, controller);
                 _primaryTrackView.OnTrackSelected += HandleTrackSelected;
                 _primaryTrackView.OnCellClicked += HandleCellClicked;
-                // _primaryTrackView.OnCellPointerEntered += HandleCellPointerEntered;
-                // _primaryTrackView.OnCellPointerExited += HandleCellPointerExited;
             }
 
             if (_secondaryTrackView != null)
             {
-                _secondaryTrackView.Bind(controller.SecondaryTrack);
+                _secondaryTrackView.Bind(controller.SecondaryTrack, controller);
                 _secondaryTrackView.OnTrackSelected += HandleTrackSelected;
                 _secondaryTrackView.OnCellClicked += HandleCellClicked;
-                // _secondaryTrackView.OnCellPointerEntered += HandleCellPointerEntered;
-                // _secondaryTrackView.OnCellPointerExited += HandleCellPointerExited;
             }
 
             // 绑定库存
@@ -72,8 +74,6 @@ namespace ProjectArk.UI
             {
                 _inventoryView.Bind(inventory, IsItemEquipped);
                 _inventoryView.OnItemSelected += HandleInventoryItemSelected;
-                // _inventoryView.OnItemPointerEntered += HandleInventoryItemPointerEntered;
-                // _inventoryView.OnItemPointerExited += HandleInventoryItemPointerExited;
             }
 
             // 绑定详情
@@ -98,6 +98,24 @@ namespace ProjectArk.UI
             _selectedItem = null;
             RefreshAll();
             OnOpened?.Invoke();
+
+            // Panel open animation: scale 0.95 → 1.0 + alpha 0 → 1 (200ms OutQuad)
+            if (_panelCanvasGroup != null)
+            {
+                _panelCanvasGroup.interactable = false;
+                _panelCanvasGroup.alpha = 0f;
+                var rt = GetComponent<RectTransform>();
+                if (rt != null) rt.localScale = Vector3.one * 0.95f;
+
+                Sequence.Create()
+                    .Group(Tween.Alpha(_panelCanvasGroup, endValue: 1f,
+                        duration: 0.2f, ease: Ease.OutQuad, useUnscaledTime: true))
+                    .Group(rt != null
+                        ? Tween.Scale(rt, endValue: Vector3.one,
+                            duration: 0.2f, ease: Ease.OutQuad, useUnscaledTime: true)
+                        : Tween.Delay(0f))
+                    .ChainCallback(() => { if (_panelCanvasGroup != null) _panelCanvasGroup.interactable = true; });
+            }
         }
 
         /// <summary> Close the panel. </summary>
@@ -109,41 +127,37 @@ namespace ProjectArk.UI
             else if (DragDropManager.Instance != null)
                 DragDropManager.Instance.CancelDrag();
 
-            // Hide tooltip
-            // _itemTooltipView?.Hide();
+            // Panel close animation: scale 1.0 → 0.95 + alpha 1 → 0 (150ms InQuad)
+            if (_panelCanvasGroup != null)
+            {
+                _panelCanvasGroup.interactable = false;
+                var rt = GetComponent<RectTransform>();
 
-            gameObject.SetActive(false);
-            OnClosed?.Invoke();
+                Sequence.Create()
+                    .Group(Tween.Alpha(_panelCanvasGroup, endValue: 0f,
+                        duration: 0.15f, ease: Ease.InQuad, useUnscaledTime: true))
+                    .Group(rt != null
+                        ? Tween.Scale(rt, endValue: Vector3.one * 0.95f,
+                            duration: 0.15f, ease: Ease.InQuad, useUnscaledTime: true)
+                        : Tween.Delay(0f))
+                    .ChainCallback(() =>
+                    {
+                        gameObject.SetActive(false);
+                        OnClosed?.Invoke();
+                    });
+            }
+            else
+            {
+                gameObject.SetActive(false);
+                OnClosed?.Invoke();
+            }
         }
-
-        // ========== Tooltip Handlers ==========
-
-        // private void HandleCellPointerEntered(StarChartItemSO item)
-        // {
-        //     _itemTooltipView?.Show(item);
-        // }
-        //
-        // private void HandleCellPointerExited()
-        // {
-        //     _itemTooltipView?.Hide();
-        // }
-        //
-        // private void HandleInventoryItemPointerEntered(StarChartItemSO item)
-        // {
-        //     _itemTooltipView?.Show(item);
-        // }
-        //
-        // private void HandleInventoryItemPointerExited()
-        // {
-        //     _itemTooltipView?.Hide();
-        // }
 
         /// <summary> Is the panel currently visible? </summary>
         public bool IsOpen => gameObject.activeSelf;
 
         private void RefreshAll()
         {
-            Debug.Log($"[StarChartPanel] RefreshAll called. inventoryView={(_inventoryView != null ? "OK" : "NULL")}, itemDetailView={(_itemDetailView != null ? "OK" : "NULL")}");
             _primaryTrackView?.Refresh();
             _secondaryTrackView?.Refresh();
             _inventoryView?.Refresh();
@@ -191,7 +205,6 @@ namespace ProjectArk.UI
 
         private void HandleInventoryItemSelected(StarChartItemSO item)
         {
-            Debug.Log($"[StarChartPanel] HandleInventoryItemSelected: {item?.DisplayName ?? "NULL"}, _itemDetailView={(_itemDetailView != null ? "OK" : "NULL")}");
             _selectedItem = item;
             bool equipped = IsItemEquipped(item);
             _itemDetailView?.ShowItem(item, equipped);
@@ -200,7 +213,6 @@ namespace ProjectArk.UI
         private void HandleCellClicked(StarChartItemSO item)
         {
             // 点击已装备的格子 → 在详情面板显示（已装备状态）
-            Debug.Log($"[StarChartPanel] HandleCellClicked: {item?.DisplayName ?? "NULL"}");
             _selectedItem = item;
             _itemDetailView?.ShowItem(item, true);
         }

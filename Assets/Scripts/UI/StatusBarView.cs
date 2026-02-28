@@ -6,8 +6,8 @@ namespace ProjectArk.UI
 {
     /// <summary>
     /// Bottom status bar that shows transient notification messages.
-    /// Messages fade out after a configurable duration.
-    /// New messages immediately interrupt any ongoing fade.
+    /// Messages fade in (150ms) then fade out after a configurable duration.
+    /// New messages immediately interrupt any ongoing animation.
     /// </summary>
     public class StatusBarView : MonoBehaviour
     {
@@ -16,7 +16,7 @@ namespace ProjectArk.UI
         /// <summary> Default idle text shown when no notification is active. </summary>
         [SerializeField] private string _idleText = "DRAG TO EQUIP  ·  CLICK TO INSPECT";
 
-        private Tween _fadeTween;
+        private Sequence _animSequence;
 
         private void Awake()
         {
@@ -25,22 +25,27 @@ namespace ProjectArk.UI
 
         /// <summary>
         /// Display a notification message with the given color.
-        /// The message fades out after <paramref name="duration"/> seconds.
+        /// Fades in over 150ms, holds for <paramref name="duration"/> seconds, then fades out.
         /// </summary>
         public void ShowMessage(string text, Color color, float duration = 3f)
         {
             if (_label == null) return;
 
-            // Interrupt any ongoing fade
-            _fadeTween.Stop();
+            // Interrupt any ongoing animation
+            _animSequence.Stop();
 
             _label.text = text;
-            _label.color = color;
 
-            // Hold for duration, then fade alpha to 0 over 0.5s
-            _fadeTween = Sequence.Create()
+            // Start from alpha 0, fade in → hold → fade out
+            var startColor = new Color(color.r, color.g, color.b, 0f);
+            _label.color = startColor;
+
+            _animSequence = Sequence.Create()
+                .Chain(Tween.Color(_label, endValue: color, duration: 0.15f,
+                    ease: Ease.OutQuad, useUnscaledTime: true))
                 .ChainDelay(duration)
-                .Chain(Tween.Alpha(_label, endValue: 0f, duration: 0.5f, useUnscaledTime: true))
+                .Chain(Tween.Color(_label, endValue: new Color(color.r, color.g, color.b, 0f),
+                    duration: 0.5f, ease: Ease.InQuad, useUnscaledTime: true))
                 .ChainCallback(ShowIdle);
         }
 
@@ -48,14 +53,14 @@ namespace ProjectArk.UI
         public void ShowIdle()
         {
             if (_label == null) return;
-            _fadeTween.Stop();
+            _animSequence.Stop();
             _label.text = _idleText;
             _label.color = StarChartTheme.StatusIdle;
         }
 
         private void OnDestroy()
         {
-            _fadeTween.Stop();
+            _animSequence.Stop();
         }
     }
 }

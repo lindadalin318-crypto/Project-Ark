@@ -1,0 +1,4244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SpinningTop Roguelite</title>
+<style>
+  /* ===== RESET & BASE ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #0a0a0f;
+    color: #e0e0ff;
+    font-family: 'Courier New', Courier, monospace;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ===== MAIN CONTAINER ===== */
+  #app {
+    width: 1280px; height: 720px;
+    position: relative;
+    margin: 0 auto;
+    overflow: hidden;
+    background: #0d0d1a;
+    border: 1px solid #1a1a3a;
+  }
+  @media (max-width: 1280px) {
+    #app { transform-origin: top left; }
+  }
+
+  /* ===== GLOBAL STATUS BAR ===== */
+  #status-bar {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 48px;
+    background: linear-gradient(180deg, #0d0d2a 0%, #0a0a1a 100%);
+    border-bottom: 1px solid #2a2a5a;
+    display: flex; align-items: center; padding: 0 20px;
+    gap: 30px; z-index: 100;
+  }
+  #status-bar .stat-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14px; color: #8888cc;
+  }
+  #status-bar .stat-item .label { color: #5555aa; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  #status-bar .stat-item .value { color: #ccccff; font-size: 16px; font-weight: bold; }
+  #hp-hearts { display: flex; gap: 4px; }
+  .heart { font-size: 18px; }
+  .heart.full { color: #ff4466; }
+  .heart.empty { color: #442233; }
+  #gold-value { color: #ffcc44; }
+  #floor-value { color: #44ccff; }
+
+  /* ===== SCREEN BASE ===== */
+  .screen {
+    position: absolute;
+    top: 48px; left: 0; right: 0; bottom: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .screen.active { display: flex; }
+
+  /* ===== TITLE SCREEN ===== */
+  #screen-title {
+    background: radial-gradient(ellipse at center, #0d0d2a 0%, #050508 100%);
+  }
+  #screen-title .game-title {
+    font-size: 64px; font-weight: bold;
+    color: #fff;
+    text-shadow: 0 0 20px #6644ff, 0 0 40px #4422cc, 0 0 80px #2211aa;
+    letter-spacing: 4px;
+    margin-bottom: 8px;
+  }
+  #screen-title .game-subtitle {
+    font-size: 18px; color: #6655cc;
+    letter-spacing: 8px; text-transform: uppercase;
+    margin-bottom: 60px;
+  }
+  #screen-title .btn-start {
+    padding: 16px 60px; font-size: 20px;
+    background: linear-gradient(135deg, #3322aa, #6644ff);
+    border: 1px solid #8866ff;
+    color: #fff; cursor: pointer;
+    letter-spacing: 3px; text-transform: uppercase;
+    transition: all 0.2s;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  }
+  #screen-title .btn-start:hover {
+    background: linear-gradient(135deg, #4433bb, #7755ff);
+    box-shadow: 0 0 20px #6644ff88;
+    transform: translateY(-2px);
+  }
+  .title-decoration {
+    position: absolute; width: 100%; height: 100%;
+    pointer-events: none; overflow: hidden;
+  }
+  .title-decoration canvas { width: 100%; height: 100%; }
+
+  /* ===== MAP SCREEN ===== */
+  #screen-map {
+    background: #0a0a14;
+    padding: 20px;
+  }
+  #screen-map h2 {
+    font-size: 22px; color: #8877ff;
+    letter-spacing: 3px; text-transform: uppercase;
+    margin-bottom: 20px;
+    text-shadow: 0 0 10px #6644ff66;
+  }
+  #map-container {
+    width: 900px; height: 520px;
+    background: #080812;
+    border: 1px solid #1a1a3a;
+    position: relative;
+    overflow: hidden;
+  }
+  #map-canvas { width: 100%; height: 100%; }
+
+  /* ===== PREP SCREEN ===== */
+  #screen-prep {
+    background: #0a0a14;
+    padding: 20px;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 20px;
+  }
+  .prep-panel {
+    background: #0d0d20;
+    border: 1px solid #1a1a3a;
+    border-radius: 4px;
+    padding: 16px;
+  }
+  .prep-panel h3 {
+    font-size: 13px; color: #6655cc;
+    letter-spacing: 2px; text-transform: uppercase;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #1a1a3a;
+  }
+  #intel-panel { width: 280px; min-height: 300px; }
+  #loadout-panel { width: 340px; min-height: 400px; }
+  #inventory-panel { width: 280px; min-height: 400px; }
+  .intel-item {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 8px; margin-bottom: 6px;
+    background: #0a0a1a; border: 1px solid #1a1a2a;
+    border-radius: 3px; font-size: 13px; color: #aaaadd;
+  }
+  .intel-item .intel-icon { font-size: 16px; flex-shrink: 0; }
+  .part-slot {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px; margin-bottom: 8px;
+    background: #080818; border: 1px solid #1a1a3a;
+    border-radius: 3px; cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .part-slot:hover { border-color: #4433aa; }
+  .part-slot .slot-label {
+    font-size: 10px; color: #5555aa;
+    text-transform: uppercase; letter-spacing: 1px;
+    width: 60px; flex-shrink: 0;
+  }
+  .part-slot .slot-content {
+    flex: 1; font-size: 13px; color: #ccccff;
+  }
+  .part-slot .slot-content.empty { color: #333355; font-style: italic; }
+  .part-slot .slot-rarity { font-size: 10px; }
+  .rarity-common { color: #888899; }
+  .rarity-rare { color: #4488ff; }
+  .rarity-epic { color: #aa44ff; }
+  .rarity-legendary { color: #ffaa00; }
+
+  /* ===== SHOP SCREEN ===== */
+  #screen-shop {
+    background: #0a0a14;
+    padding: 20px;
+    flex-direction: column;
+    align-items: center;
+  }
+  #screen-shop h2 {
+    font-size: 22px; color: #ffcc44;
+    letter-spacing: 3px; text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  #shop-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    width: 800px;
+    margin-bottom: 20px;
+  }
+  .shop-item {
+    background: #0d0d20; border: 1px solid #1a1a3a;
+    border-radius: 4px; padding: 14px;
+    cursor: pointer; transition: all 0.2s;
+    position: relative;
+  }
+  .shop-item:hover { border-color: #4433aa; background: #10102a; }
+  .shop-item.cant-afford { opacity: 0.5; cursor: not-allowed; }
+  .shop-item .item-name { font-size: 14px; color: #ccccff; margin-bottom: 4px; }
+  .shop-item .item-type { font-size: 11px; color: #5555aa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .shop-item .item-desc { font-size: 12px; color: #8888aa; line-height: 1.4; margin-bottom: 8px; }
+  .shop-item .item-price { font-size: 14px; color: #ffcc44; font-weight: bold; }
+  .shop-item .item-rarity-badge {
+    position: absolute; top: 8px; right: 8px;
+    font-size: 10px; padding: 2px 6px;
+    border-radius: 2px; text-transform: uppercase; letter-spacing: 1px;
+  }
+  .badge-common { background: #222233; color: #888899; }
+  .badge-rare { background: #112244; color: #4488ff; }
+  .badge-epic { background: #220044; color: #aa44ff; }
+  .badge-legendary { background: #332200; color: #ffaa00; }
+  #shop-actions { display: flex; gap: 12px; }
+
+  /* ===== LAUNCH SCREEN ===== */
+  #screen-launch {
+    background: #080812;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  #launch-canvas-wrap {
+    position: relative; width: 500px; height: 500px;
+  }
+  #launch-canvas { width: 100%; height: 100%; }
+  #power-gauge-wrap {
+    width: 500px; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  #power-gauge-label { font-size: 13px; color: #8888cc; letter-spacing: 2px; text-transform: uppercase; }
+  #power-gauge-bar-bg {
+    width: 100%; height: 28px;
+    background: #0a0a1a; border: 1px solid #1a1a3a;
+    border-radius: 2px; overflow: hidden; position: relative;
+  }
+  #power-gauge-bar {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, #2244aa, #4466ff);
+    transition: background 0.1s;
+  }
+  #power-gauge-bar.perfect { background: linear-gradient(90deg, #aa8800, #ffcc00); }
+  #power-gauge-bar.good { background: linear-gradient(90deg, #2244aa, #4466ff); }
+  #power-gauge-bar.normal { background: linear-gradient(90deg, #224422, #44aa44); }
+  #power-gauge-bar.miss { background: linear-gradient(90deg, #442222, #aa4444); }
+  #power-gauge-value { font-size: 20px; color: #ccccff; font-weight: bold; }
+
+  /* ===== BATTLE SCREEN ===== */
+  #screen-battle {
+    background: #080812;
+    flex-direction: row;
+    align-items: flex-start;
+    padding: 10px;
+    gap: 10px;
+  }
+  #battle-left { width: 200px; display: flex; flex-direction: column; gap: 10px; }
+  #battle-canvas-wrap { position: relative; flex: 1; height: 520px; }
+  #arena-canvas { width: 100%; height: 100%; }
+  #battle-right { width: 200px; display: flex; flex-direction: column; gap: 10px; }
+  .rpm-display {
+    background: #0d0d20; border: 1px solid #1a1a3a;
+    border-radius: 4px; padding: 12px;
+  }
+  .rpm-display .rpm-label { font-size: 11px; color: #5555aa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .rpm-display .rpm-name { font-size: 13px; color: #ccccff; margin-bottom: 6px; }
+  .rpm-bar-bg { width: 100%; height: 12px; background: #0a0a1a; border-radius: 2px; overflow: hidden; }
+  .rpm-bar { height: 100%; border-radius: 2px; transition: width 0.1s; }
+  .rpm-bar.player { background: linear-gradient(90deg, #22aa44, #44ff88); }
+  .rpm-bar.enemy { background: linear-gradient(90deg, #aa2222, #ff4444); }
+  .rpm-value { font-size: 12px; color: #8888aa; margin-top: 4px; text-align: right; }
+  #intervention-panel {
+    background: #0d0d20; border: 1px solid #1a1a3a;
+    border-radius: 4px; padding: 12px;
+  }
+  #intervention-panel h4 { font-size: 11px; color: #5555aa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .btn-intervention {
+    width: 100%; padding: 8px; margin-bottom: 6px;
+    background: #0a0a1a; border: 1px solid #2a2a5a;
+    color: #8888cc; font-size: 12px; cursor: pointer;
+    border-radius: 2px; transition: all 0.2s;
+    font-family: inherit; text-align: left;
+  }
+  .btn-intervention:hover:not(:disabled) { border-color: #4433aa; color: #ccccff; background: #10102a; }
+  .btn-intervention:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ===== SETTLEMENT SCREEN ===== */
+  #screen-settlement {
+    background: #0a0a14;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  #settlement-title { font-size: 36px; font-weight: bold; letter-spacing: 4px; }
+  #settlement-title.victory { color: #44ff88; text-shadow: 0 0 20px #22aa4488; }
+  #settlement-title.defeat { color: #ff4444; text-shadow: 0 0 20px #aa222288; }
+  #settlement-details {
+    background: #0d0d20; border: 1px solid #1a1a3a;
+    border-radius: 4px; padding: 20px; width: 500px;
+  }
+  .settlement-row {
+    display: flex; justify-content: space-between;
+    padding: 8px 0; border-bottom: 1px solid #1a1a2a;
+    font-size: 14px;
+  }
+  .settlement-row .s-label { color: #8888aa; }
+  .settlement-row .s-value { color: #ccccff; font-weight: bold; }
+  #reward-choices { display: flex; gap: 12px; margin-top: 10px; }
+  .reward-card {
+    width: 160px; padding: 14px;
+    background: #0d0d20; border: 1px solid #1a1a3a;
+    border-radius: 4px; cursor: pointer; transition: all 0.2s;
+    text-align: center;
+  }
+  .reward-card:hover { border-color: #4433aa; background: #10102a; transform: translateY(-3px); }
+  .reward-card .reward-name { font-size: 14px; color: #ccccff; margin-bottom: 6px; }
+  .reward-card .reward-type { font-size: 11px; color: #5555aa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .reward-card .reward-desc { font-size: 12px; color: #8888aa; line-height: 1.4; }
+
+  /* ===== EVENT SCREEN ===== */
+  #screen-event {
+    background: #0a0a14;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  #event-icon { font-size: 64px; }
+  #event-title { font-size: 28px; color: #ccccff; letter-spacing: 2px; }
+  #event-desc {
+    width: 600px; text-align: center;
+    font-size: 15px; color: #8888aa; line-height: 1.6;
+  }
+  #event-choices { display: flex; gap: 16px; }
+  .event-choice {
+    padding: 14px 24px; min-width: 200px;
+    background: #0d0d20; border: 1px solid #1a1a3a;
+    border-radius: 4px; cursor: pointer; transition: all 0.2s;
+    text-align: center;
+  }
+  .event-choice:hover { border-color: #4433aa; background: #10102a; }
+  .event-choice .choice-text { font-size: 14px; color: #ccccff; margin-bottom: 6px; }
+  .event-choice .choice-hint { font-size: 12px; color: #6666aa; }
+
+  /* ===== RUN END SCREEN ===== */
+  #screen-runend {
+    background: radial-gradient(ellipse at center, #0d0d2a 0%, #050508 100%);
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  #runend-title { font-size: 48px; font-weight: bold; letter-spacing: 6px; }
+  #runend-title.win { color: #ffcc44; text-shadow: 0 0 30px #ffaa0088; }
+  #runend-title.lose { color: #ff4444; text-shadow: 0 0 30px #aa222288; }
+  #runend-stats {
+    background: #0d0d20; border: 1px solid #1a1a3a;
+    border-radius: 4px; padding: 20px; width: 500px;
+  }
+  #runend-stats h3 { font-size: 13px; color: #5555aa; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; }
+
+  /* ===== COMMON BUTTONS ===== */
+  .btn-primary {
+    padding: 12px 32px; font-size: 14px;
+    background: linear-gradient(135deg, #3322aa, #6644ff);
+    border: 1px solid #8866ff;
+    color: #fff; cursor: pointer;
+    letter-spacing: 2px; text-transform: uppercase;
+    transition: all 0.2s; font-family: inherit;
+    clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+  }
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #4433bb, #7755ff);
+    box-shadow: 0 0 15px #6644ff66;
+    transform: translateY(-1px);
+  }
+  .btn-secondary {
+    padding: 10px 24px; font-size: 13px;
+    background: #0d0d20; border: 1px solid #2a2a5a;
+    color: #8888cc; cursor: pointer;
+    letter-spacing: 1px; text-transform: uppercase;
+    transition: all 0.2s; font-family: inherit;
+  }
+  .btn-secondary:hover { border-color: #4433aa; color: #ccccff; background: #10102a; }
+  .btn-danger {
+    padding: 10px 24px; font-size: 13px;
+    background: #1a0808; border: 1px solid #5a2222;
+    color: #cc4444; cursor: pointer;
+    letter-spacing: 1px; text-transform: uppercase;
+    transition: all 0.2s; font-family: inherit;
+  }
+  .btn-danger:hover { border-color: #aa3333; color: #ff6666; background: #220a0a; }
+
+  /* ===== TOOLTIP ===== */
+  #tooltip {
+    position: absolute; z-index: 999;
+    background: #0d0d20; border: 1px solid #2a2a5a;
+    border-radius: 4px; padding: 10px 14px;
+    max-width: 240px; pointer-events: none;
+    display: none;
+  }
+  #tooltip .tt-name { font-size: 14px; color: #ccccff; margin-bottom: 4px; }
+  #tooltip .tt-type { font-size: 11px; color: #5555aa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  #tooltip .tt-desc { font-size: 12px; color: #8888aa; line-height: 1.4; }
+
+  /* ===== OVERLAY / MODAL ===== */
+  #overlay {
+    position: absolute; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.7);
+    display: none; align-items: center; justify-content: center;
+  }
+  #overlay.active { display: flex; }
+  #modal {
+    background: #0d0d20; border: 1px solid #2a2a5a;
+    border-radius: 4px; padding: 24px; min-width: 400px;
+    max-width: 600px;
+  }
+  #modal h3 { font-size: 18px; color: #ccccff; margin-bottom: 16px; }
+  #modal-content { margin-bottom: 20px; }
+  #modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* ===== PART SELECTION MODAL ===== */
+  #part-select-list { display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; }
+  .part-select-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px; background: #080818;
+    border: 1px solid #1a1a3a; border-radius: 3px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .part-select-item:hover { border-color: #4433aa; background: #0d0d28; }
+  .part-select-item .psi-name { font-size: 13px; color: #ccccff; flex: 1; }
+  .part-select-item .psi-desc { font-size: 11px; color: #6666aa; }
+  .part-select-item .psi-price { font-size: 12px; color: #ffcc44; }
+
+  /* ===== SCROLLBAR ===== */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0a0a1a; }
+  ::-webkit-scrollbar-thumb { background: #2a2a5a; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #4433aa; }
+
+  /* ===== ANIMATIONS ===== */
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+  @keyframes timerFlash { 0%, 100% { opacity: 1; text-shadow: 0 0 12px #ff4444; } 50% { opacity: 0.4; text-shadow: 0 0 4px #ff2222; } }
+  @keyframes glow {
+    0%, 100% { text-shadow: 0 0 20px #6644ff, 0 0 40px #4422cc; }
+    50% { text-shadow: 0 0 30px #8866ff, 0 0 60px #6644ff, 0 0 100px #4422cc; }
+  }
+  .anim-fadein { animation: fadeIn 0.3s ease; }
+  .anim-slideup { animation: slideUp 0.3s ease; }
+  .anim-pulse { animation: pulse 1.5s infinite; }
+  .anim-glow { animation: glow 2s infinite; }
+
+  /* ===== FLOOR INDICATOR ===== */
+  #floor-indicator {
+    display: flex; gap: 6px; align-items: center;
+  }
+  .floor-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #1a1a3a; border: 1px solid #2a2a5a;
+    transition: all 0.3s;
+  }
+  .floor-dot.current { background: #6644ff; border-color: #8866ff; box-shadow: 0 0 6px #6644ff88; }
+  .floor-dot.done { background: #2a2a5a; border-color: #4433aa; }
+  .floor-dot.boss { background: #aa2222; border-color: #ff4444; }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Global Status Bar -->
+  <div id="status-bar">
+    <div class="stat-item">
+      <span class="label">HP</span>
+      <div id="hp-hearts">
+        <span class="heart full">♥</span>
+        <span class="heart full">♥</span>
+        <span class="heart full">♥</span>
+      </div>
+    </div>
+    <div class="stat-item">
+      <span class="label">Gold</span>
+      <span class="value" id="gold-value">0</span>
+      <span style="color:#ffcc44;font-size:14px;">G</span>
+    </div>
+    <div class="stat-item">
+      <span class="label">Floor</span>
+      <span class="value" id="floor-value">—</span>
+    </div>
+    <div class="stat-item">
+      <span class="label">Node</span>
+      <span class="value" id="node-value">—</span>
+    </div>
+    <div id="floor-indicator">
+      <div class="floor-dot" id="fdot-1"></div>
+      <div class="floor-dot" id="fdot-2"></div>
+      <div class="floor-dot" id="fdot-3"></div>
+      <div class="floor-dot boss" id="fdot-4"></div>
+    </div>
+  </div>
+
+  <!-- Screen: Title -->
+  <div id="screen-title" class="screen active">
+    <div class="title-decoration"><canvas id="title-bg-canvas"></canvas></div>
+    <div class="game-title anim-glow">SPINNING TOP</div>
+    <div class="game-subtitle">Roguelite</div>
+    <div style="display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:8px;">
+      <button class="btn-start" id="btn-new-game">▶ NEW GAME</button>
+      <button class="btn-secondary" id="btn-continue" style="font-size:13px;padding:8px 24px;">⟳ Continue Run</button>
+      <button class="btn-secondary" id="btn-tutorial" style="font-size:12px;padding:6px 20px;">? Tutorial</button>
+    </div>
+    <div style="margin-top:16px;font-size:12px;color:#333355;letter-spacing:2px;">v0.1 MVP</div>
+  </div>
+
+  <!-- Screen: Map -->
+  <div id="screen-map" class="screen">
+    <h2>⬡ NODE MAP</h2>
+    <div id="map-container">
+      <canvas id="map-canvas"></canvas>
+    </div>
+  </div>
+
+  <!-- Screen: Prep -->
+  <div id="screen-prep" class="screen" style="flex-direction:row;align-items:flex-start;padding:16px;gap:16px;justify-content:center;">
+    <div class="prep-panel" id="intel-panel">
+      <h3>🔍 Intel</h3>
+      <div id="intel-list"></div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid #1a1a3a;">
+        <div style="font-size:11px;color:#5555aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Enemy</div>
+        <div id="enemy-preview" style="font-size:13px;color:#cc4444;"></div>
+      </div>
+    </div>
+    <div class="prep-panel" id="loadout-panel">
+      <h3>⚙ Loadout</h3>
+      <div id="part-slots"></div>
+      <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-primary" id="btn-start-battle">⚔ Fight!</button>
+        <button class="btn-secondary" id="btn-prep-shop">🏪 Shop</button>
+        <button class="btn-secondary" id="btn-prep-back">← Map</button>
+      </div>
+    </div>
+    <div class="prep-panel" id="inventory-panel">
+      <h3>📦 Inventory</h3>
+      <div id="inventory-list"></div>
+    </div>
+  </div>
+
+  <!-- Screen: Shop -->
+  <div id="screen-shop" class="screen">
+    <h2>🏪 SHOP</h2>
+    <div id="shop-grid"></div>
+    <div id="shop-actions">
+      <button class="btn-secondary" id="btn-shop-refresh">🔄 Refresh (30G)</button>
+      <button class="btn-secondary" id="btn-shop-back">← Back</button>
+    </div>
+  </div>
+
+  <!-- Screen: Launch -->
+  <div id="screen-launch" class="screen">
+    <div style="font-size:14px;color:#8888cc;letter-spacing:3px;text-transform:uppercase;margin-bottom:4px;">Launch Phase</div>
+    <div id="launch-step" style="font-size:16px;color:#ccccff;font-weight:bold;margin-bottom:4px;">STEP 1 — SET ANGLE</div>
+    <div id="launch-hint" style="font-size:12px;color:#6666aa;margin-bottom:8px;">Watch the rotating arrow. Click when it points your desired direction.</div>
+    <div id="launch-canvas-wrap">
+      <canvas id="launch-canvas" width="320" height="320"></canvas>
+    </div>
+    <div id="power-gauge-wrap">
+      <div id="power-gauge-label">Power — <span id="power-gauge-value">0%</span></div>
+      <div id="power-gauge-bar-bg">
+        <div id="power-gauge-bar"></div>
+      </div>
+      <div style="font-size:12px;color:#5555aa;margin-top:4px;">
+        <span style="color:#ffcc44;">90-100%</span> Perfect &nbsp;
+        <span style="color:#4466ff;">70-89%</span> Good &nbsp;
+        <span style="color:#44aa44;">40-69%</span> Normal &nbsp;
+        <span style="color:#aa4444;">0-39%</span> Miss
+      </div>
+      <button class="btn-primary" id="btn-launch-fire" style="margin-top:8px;">PRESS SPACE / CLICK TO LAUNCH</button>
+    </div>
+  </div>
+
+  <!-- Screen: Battle -->
+  <div id="screen-battle" class="screen">
+    <div id="battle-left">
+      <div class="rpm-display">
+        <div class="rpm-label">⚡ YOUR TOP</div>
+        <div class="rpm-bar-bg"><div class="rpm-bar player" id="player-rpm-bar" style="width:100%"></div></div>
+        <div class="rpm-value"><span id="player-rpm">3000</span> RPM</div>
+      </div>
+      <div style="margin-top:12px;">
+        <div class="rpm-label" style="color:#cc4444;">💀 ENEMY</div>
+        <div class="rpm-bar-bg"><div class="rpm-bar enemy" id="enemy-rpm-bar" style="width:100%;background:#aa2244;"></div></div>
+        <div class="rpm-value" style="color:#ff6666;"><span id="enemy-rpm">3000</span> RPM</div>
+      </div>
+      <div id="intervention-panel" style="margin-top:16px;">
+        <div style="font-size:11px;color:#444466;letter-spacing:1px;margin-bottom:8px;">INTERVENTIONS</div>
+        <button class="btn-intervention" id="btn-thrust">⚡ Thrust (3)</button>
+        <button class="btn-intervention" id="btn-brake">🛑 Brake (3)</button>
+        <button class="btn-intervention" id="btn-activate">✨ Activate</button>
+        <div style="font-size:10px;color:#333355;margin-top:6px;">Q / W / E</div>
+      </div>
+    </div>
+    <div id="battle-canvas-wrap" style="position:relative;">
+      <canvas id="arena-canvas" width="600" height="520"></canvas>
+      <div id="battle-countdown" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font:bold 64px Courier New;color:#fff;text-shadow:0 0 30px #4466ff;pointer-events:none;z-index:30;"></div>
+      <div id="battle-timer" style="position:absolute;top:8px;left:50%;transform:translateX(-50%);font:bold 20px Courier New;color:#aaaacc;text-shadow:0 0 8px #4466ff;pointer-events:none;z-index:20;letter-spacing:2px;">3:00</div>
+      <div id="intervention-feedback" style="position:absolute;top:12px;left:50%;transform:translateX(-50%);font:bold 15px Courier New;color:#44ff88;pointer-events:none;opacity:0;transition:opacity 0.4s;white-space:nowrap;z-index:20;"></div>
+    </div>
+    <div id="battle-right">
+      <div id="enemy-rpm-list"></div>
+    </div>
+  </div>
+
+  <!-- Screen: Settlement -->
+  <div id="screen-settlement" class="screen">
+    <div id="settlement-title" class="victory">VICTORY</div>
+    <div id="settlement-details">
+      <div class="settlement-row"><span class="s-label">Victory Type</span><span class="s-value" id="s-victory-type">—</span></div>
+      <div class="settlement-row"><span class="s-label">Gold Earned</span><span class="s-value" id="s-gold-earned">—</span></div>
+      <div class="settlement-row"><span class="s-label">Remaining RPM</span><span class="s-value" id="s-rpm-remain">—</span></div>
+    </div>
+    <div style="font-size:13px;color:#8888aa;letter-spacing:2px;text-transform:uppercase;">Choose Reward</div>
+    <div id="reward-choices"></div>
+    <button class="btn-secondary" id="btn-settlement-skip">Skip Reward → Continue</button>
+  </div>
+
+  <!-- Screen: Event -->
+  <div id="screen-event" class="screen">
+    <div id="event-icon">❓</div>
+    <div id="event-title">Mystery Event</div>
+    <div id="event-desc"></div>
+    <div id="event-choices"></div>
+  </div>
+
+  <!-- Screen: Run End -->
+  <div id="screen-runend" class="screen">
+    <div id="runend-title" class="win">VICTORY</div>
+    <div style="font-size:14px;color:#8888aa;letter-spacing:3px;margin-bottom:8px;">RUN COMPLETE</div>
+    <div id="runend-stats">
+      <h3>Run Statistics</h3>
+      <div class="settlement-row"><span class="s-label">Floors Cleared</span><span class="s-value" id="re-floors">—</span></div>
+      <div class="settlement-row"><span class="s-label">Enemies Defeated</span><span class="s-value" id="re-enemies">—</span></div>
+      <div class="settlement-row"><span class="s-label">Gold Collected</span><span class="s-value" id="re-gold">—</span></div>
+      <div class="settlement-row"><span class="s-label">Perfect Launches</span><span class="s-value" id="re-perfect">—</span></div>
+      <div class="settlement-row"><span class="s-label">Ring Outs</span><span class="s-value" id="re-ringout">—</span></div>
+      <div class="settlement-row"><span class="s-label">Bursts</span><span class="s-value" id="re-burst">—</span></div>
+    </div>
+    <button class="btn-primary" id="btn-runend-restart">▶ NEW RUN</button>
+  </div>
+
+  <!-- Tooltip -->
+  <div id="tooltip">
+    <div class="tt-name" id="tt-name"></div>
+    <div class="tt-type" id="tt-type"></div>
+    <div class="tt-desc" id="tt-desc"></div>
+  </div>
+
+  <!-- Overlay / Modal -->
+  <div id="overlay">
+    <div id="modal">
+      <h3 id="modal-title"></h3>
+      <div id="modal-content"></div>
+      <div id="modal-actions"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// GAME STATE MACHINE
+// ============================================================
+const GameState = Object.freeze({
+  TITLE:      'TITLE',
+  MAP:        'MAP',
+  PREP:       'PREP',
+  SHOP:       'SHOP',
+  LAUNCH:     'LAUNCH',
+  BATTLE:     'BATTLE',
+  SETTLEMENT: 'SETTLEMENT',
+  EVENT:      'EVENT',
+  RUN_END:    'RUN_END',
+});
+
+const NodeType = Object.freeze({
+  NORMAL:  'NORMAL',
+  ELITE:   'ELITE',
+  SHOP:    'SHOP',
+  EVENT:   'EVENT',
+  BOSS:    'BOSS',
+});
+
+// ---- Global Game State ----
+const G = {
+  state: GameState.TITLE,
+  hp: 3, maxHp: 3,
+  gold: 0,
+  floor: 0,
+  nodeIndex: 0,
+  map: null,
+  currentNode: null,
+  inventory: [],
+  loadout: { ar: null, wd: null, sg: null, bb: null },
+  runStats: { enemiesDefeated: 0, goldCollected: 0, perfectLaunches: 0, ringOuts: 0, bursts: 0 },
+  battleResult: null,
+  launchAngle: 0,
+  launchPower: 0,
+};
+
+// ---- Screen Registry ----
+const screens = {};
+document.querySelectorAll('.screen').forEach(el => {
+  const id = el.id.replace('screen-', '');
+  screens[id] = el;
+});
+
+function showScreen(name) {
+  Object.values(screens).forEach(s => s.classList.remove('active'));
+  const key = name.toLowerCase().replace('_', '');
+  // map GameState keys to screen ids
+  const mapping = {
+    'title':      'title',
+    'map':        'map',
+    'prep':       'prep',
+    'shop':       'shop',
+    'launch':     'launch',
+    'battle':     'battle',
+    'settlement': 'settlement',
+    'event':      'event',
+    'run_end':    'runend',
+  };
+  const screenId = mapping[name.toLowerCase()] || name.toLowerCase();
+  if (screens[screenId]) {
+    screens[screenId].classList.add('active');
+  }
+  G.state = GameState[name] || name;
+  updateStatusBar();
+}
+
+function updateStatusBar() {
+  // HP hearts
+  const heartsEl = document.getElementById('hp-hearts');
+  heartsEl.innerHTML = '';
+  for (let i = 0; i < G.maxHp; i++) {
+    const h = document.createElement('span');
+    h.className = 'heart ' + (i < G.hp ? 'full' : 'empty');
+    h.textContent = '♥';
+    heartsEl.appendChild(h);
+  }
+  document.getElementById('gold-value').textContent = G.gold;
+  document.getElementById('floor-value').textContent = G.floor > 0 ? G.floor : '—';
+  document.getElementById('node-value').textContent = G.currentNode ? G.currentNode.typeLabel : '—';
+  // Floor dots
+  for (let i = 1; i <= 4; i++) {
+    const dot = document.getElementById('fdot-' + i);
+    if (!dot) continue;
+    dot.classList.remove('current', 'done');
+    if (i < G.floor) dot.classList.add('done');
+    else if (i === G.floor) dot.classList.add('current');
+  }
+}
+
+// ---- Tooltip ----
+const tooltip = document.getElementById('tooltip');
+function showTooltip(e, name, type, desc) {
+  document.getElementById('tt-name').textContent = name;
+  document.getElementById('tt-type').textContent = type;
+  document.getElementById('tt-desc').textContent = desc;
+  tooltip.style.display = 'block';
+  moveTooltip(e);
+}
+function moveTooltip(e) {
+  const app = document.getElementById('app');
+  const rect = app.getBoundingClientRect();
+  let x = e.clientX - rect.left + 12;
+  let y = e.clientY - rect.top + 12;
+  if (x + 250 > 1280) x -= 260;
+  if (y + 120 > 672) y -= 130;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+}
+function hideTooltip() { tooltip.style.display = 'none'; }
+document.getElementById('app').addEventListener('mousemove', e => {
+  if (tooltip.style.display === 'block') moveTooltip(e);
+});
+
+// ---- Modal ----
+function showModal(title, contentHTML, actions) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-content').innerHTML = contentHTML;
+  const actionsEl = document.getElementById('modal-actions');
+  actionsEl.innerHTML = '';
+  actions.forEach(a => {
+    const btn = document.createElement('button');
+    btn.className = a.cls || 'btn-secondary';
+    btn.textContent = a.label;
+    btn.onclick = () => { hideModal(); a.onClick(); };
+    actionsEl.appendChild(btn);
+  });
+  document.getElementById('overlay').classList.add('active');
+}
+function hideModal() { document.getElementById('overlay').classList.remove('active'); }
+
+// ---- Title Screen Init ----
+(function initTitleBg() {
+  const canvas = document.getElementById('title-bg-canvas');
+  const app = document.getElementById('app');
+  canvas.width = app.offsetWidth || 1280;
+  canvas.height = app.offsetHeight || 672;
+  const ctx = canvas.getContext('2d');
+  const particles = [];
+  for (let i = 0; i < 60; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.5 + 0.5,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      alpha: Math.random() * 0.5 + 0.1,
+    });
+  }
+  function drawBg() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = canvas.width;
+      if (p.x > canvas.width) p.x = 0;
+      if (p.y < 0) p.y = canvas.height;
+      if (p.y > canvas.height) p.y = 0;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(100, 80, 255, ${p.alpha})`;
+      ctx.fill();
+    });
+    if (document.getElementById('screen-title').classList.contains('active')) {
+      requestAnimationFrame(drawBg);
+    }
+  }
+  drawBg();
+})();
+
+// ---- Button: Title Start (btn-new-game wired in Phase 6; this is the Phase1 fallback) ----
+// btn-new-game is wired in Phase 6 with full reset logic
+
+function startNewRun() {
+  G.hp = 3; G.maxHp = 3;
+  G.gold = 100; // starting gold
+  G.floor = 0;
+  G.nodeIndex = 0;
+  G.inventory = [];
+  G.loadout = { ar: null, wd: null, sg: null, bb: null };
+  G.runStats = { enemiesDefeated: 0, goldCollected: 0, perfectLaunches: 0, ringOuts: 0, bursts: 0 };
+  G.battleResult = null;
+  // Show base selection first
+  showBaseSelection();
+}
+
+function showBaseSelection() {
+  const bases = [
+    PARTS_DB.bb_sharp,
+    PARTS_DB.bb_flat,
+    PARTS_DB.bb_rubber,
+  ];
+
+  const cardsHTML = bases.map(b => {
+    const decayLabel = b.effect && b.effect.decayMult
+      ? `Decay ×${b.effect.decayMult.toFixed(2)}`
+      : '';
+    const styleLabel = b.effect && b.effect.moveStyle
+      ? `Style: ${b.effect.moveStyle}`
+      : '';
+    return `<div class="base-choice-card" data-id="${b.id}" style="
+      background:#0d0d20;border:2px solid #1a1a3a;border-radius:6px;
+      padding:16px;min-width:160px;cursor:pointer;transition:all 0.2s;
+      text-align:center;
+    " onmouseover="this.style.borderColor='#6644ff'" onmouseout="this.style.borderColor='#1a1a3a'">
+      <div style="font-size:22px;margin-bottom:8px;">${b.tipType === 'sharp' ? '🔺' : b.tipType === 'flat' ? '⬛' : '🟢'}</div>
+      <div style="font-size:14px;font-weight:bold;color:#ccccff;margin-bottom:6px;">${b.name}</div>
+      <div style="font-size:11px;color:#8888aa;margin-bottom:8px;">${b.desc}</div>
+      <div style="font-size:11px;color:#6655cc;">${decayLabel}</div>
+      <div style="font-size:11px;color:#5577aa;">${styleLabel}</div>
+    </div>`;
+  }).join('');
+
+  showModal(
+    'Choose Your Base',
+    `<p style="color:#8888aa;font-size:13px;margin-bottom:16px;">Your base determines your core strategy for this entire run. Choose wisely.</p>
+    <div id="base-choices" style="display:flex;gap:12px;justify-content:center;">${cardsHTML}</div>`,
+    []
+  );
+
+  // Wire click handlers after modal renders
+  setTimeout(() => {
+    document.querySelectorAll('.base-choice-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const partId = card.getAttribute('data-id');
+        const part = PARTS_DB[partId];
+        if (part) {
+          G.loadout.bb = { ...part };
+          hideModal();
+          generateMap();
+          showScreen('MAP');
+        }
+      });
+    });
+  }, 50);
+}
+
+// ---- Button: Shop Back ----
+document.getElementById('btn-shop-back').addEventListener('click', () => {
+  showScreen('PREP');
+});
+
+// ---- Button: Prep Fight (btn-start-battle wired in Phase 5; this is Phase1 fallback) ----
+// btn-start-battle is wired in Phase 5 with launch sequence
+
+// ---- Button: Prep Shop ----
+document.getElementById('btn-prep-shop').addEventListener('click', () => {
+  showScreen('SHOP');
+});
+
+// ---- Button: Run End Restart ----
+document.getElementById('btn-runend-restart').addEventListener('click', () => {
+  showScreen('TITLE');
+});
+
+// ============================================================
+// PHASE 2 — DATA LAYER
+// ============================================================
+
+// ---- PARTS DATABASE ----
+const PARTS_DB = {
+
+  // === ATTACK RINGS (AR) ===
+  ar_spike: {
+    id: 'ar_spike', slot: 'ar', name: 'Spike Ring', rarity: 'common',
+    price: 80, sellPrice: 32,
+    desc: 'Collision damage +30%, but attacker also takes rebound damage.',
+    effect: { dmgMult: 1.3, selfDmgMult: 1.15 },
+    element: null,
+  },
+  ar_smooth: {
+    id: 'ar_smooth', slot: 'ar', name: 'Smooth Ring', rarity: 'common',
+    price: 60, sellPrice: 24,
+    desc: 'Reduces RPM loss when hit by 20%.',
+    effect: { incomingDmgMult: 0.8 },
+    element: null,
+  },
+  ar_saw: {
+    id: 'ar_saw', slot: 'ar', name: 'Saw Ring', rarity: 'common',
+    price: 70, sellPrice: 28,
+    desc: 'On collision, applies a bleed: 2% RPM/s for 4s.',
+    effect: { bleedDps: 0.02, bleedDuration: 4 },
+    element: null,
+  },
+  ar_wide: {
+    id: 'ar_wide', slot: 'ar', name: 'Wide Wing', rarity: 'common',
+    price: 75, sellPrice: 30,
+    desc: 'Collision range +40%, but collision force -10%.',
+    effect: { rangeBonus: 1.4, dmgMult: 0.9 },
+    element: null,
+  },
+  ar_flame: {
+    id: 'ar_flame', slot: 'ar', name: 'Flame Ring', rarity: 'rare',
+    price: 120, sellPrice: 48,
+    desc: 'Collision leaves a burning zone: 3% RPM/s for 5s.',
+    effect: { burnDps: 0.03, burnDuration: 5 },
+    element: 'fire',
+  },
+  ar_frost: {
+    id: 'ar_frost', slot: 'ar', name: 'Frost Ring', rarity: 'rare',
+    price: 120, sellPrice: 48,
+    desc: 'Collision slows enemy speed by 30% for 3s.',
+    effect: { slowMult: 0.7, slowDuration: 3 },
+    element: 'ice',
+  },
+  ar_thunder: {
+    id: 'ar_thunder', slot: 'ar', name: 'Thunder Ring', rarity: 'rare',
+    price: 130, sellPrice: 52,
+    desc: 'Collision chains lightning to nearby tops: +8% RPM damage.',
+    effect: { chainDmg: 0.08, chainRange: 120 },
+    element: 'thunder',
+  },
+  ar_venom: {
+    id: 'ar_venom', slot: 'ar', name: 'Venom Ring', rarity: 'rare',
+    price: 110, sellPrice: 44,
+    desc: 'Collision applies poison stacks: each stack = 1% RPM/s.',
+    effect: { poisonDpsPerStack: 0.01, maxStacks: 5 },
+    element: 'poison',
+  },
+  ar_magnet: {
+    id: 'ar_magnet', slot: 'ar', name: 'Magnet Ring', rarity: 'epic',
+    price: 140, sellPrice: 56,
+    desc: 'After collision, pulls enemy top toward you for 2s.',
+    effect: { pullDuration: 2, pullForce: 80 },
+    element: 'magnet',
+  },
+
+  // === WEIGHT DISKS (WD) ===
+  wd_heavy: {
+    id: 'wd_heavy', slot: 'wd', name: 'Heavy Disk', rarity: 'common',
+    price: 90, sellPrice: 36,
+    desc: 'Collision force +40%, knockback resistance +50%, but speed -20%.',
+    effect: { dmgMult: 1.4, knockbackResist: 0.5, speedMult: 0.8 },
+  },
+  wd_light: {
+    id: 'wd_light', slot: 'wd', name: 'Light Disk', rarity: 'common',
+    price: 70, sellPrice: 28,
+    desc: 'Speed +30%, RPM decay -10%, but knockback distance +50%.',
+    effect: { speedMult: 1.3, decayMult: 0.9, knockbackMult: 1.5 },
+  },
+  wd_balance: {
+    id: 'wd_balance', slot: 'wd', name: 'Balance Disk', rarity: 'common',
+    price: 80, sellPrice: 32,
+    desc: 'No bonuses, but slowest RPM decay of all disks.',
+    effect: { decayMult: 0.75 },
+  },
+  wd_eccentric: {
+    id: 'wd_eccentric', slot: 'wd', name: 'Eccentric Disk', rarity: 'rare',
+    price: 85, sellPrice: 34,
+    desc: 'Movement is unpredictable. Collision angle randomized ±15°.',
+    effect: { angleVariance: 15, unpredictable: true },
+  },
+  wd_magnetic: {
+    id: 'wd_magnetic', slot: 'wd', name: 'Magnetic Disk', rarity: 'rare',
+    price: 100, sellPrice: 40,
+    desc: 'Immune to magnet pull effects. Counter-effect vs Magnet Ring enemies.',
+    effect: { magnetImmune: true },
+  },
+
+  // === SPIN GEARS (SG) ===
+  sg_standard_r: {
+    id: 'sg_standard_r', slot: 'sg', name: 'Standard Gear (R)', rarity: 'common',
+    price: 50, sellPrice: 20,
+    desc: 'Right-spin. No special effect.',
+    effect: { spin: 'right' },
+  },
+  sg_standard_l: {
+    id: 'sg_standard_l', slot: 'sg', name: 'Standard Gear (L)', rarity: 'common',
+    price: 50, sellPrice: 20,
+    desc: 'Left-spin. Opposite-spin collisions cause violent knockback.',
+    effect: { spin: 'left' },
+  },
+  sg_turbo: {
+    id: 'sg_turbo', slot: 'sg', name: 'Turbo Gear', rarity: 'rare',
+    price: 100, sellPrice: 40,
+    desc: 'After each collision, briefly recover +8% RPM.',
+    effect: { onHitRpmRecover: 0.08 },
+  },
+  sg_shield: {
+    id: 'sg_shield', slot: 'sg', name: 'Shield Gear', rarity: 'rare',
+    price: 110, sellPrice: 44,
+    desc: 'Once per battle, absorbs one collision completely.',
+    effect: { shieldCharges: 1 },
+  },
+  sg_burst: {
+    id: 'sg_burst', slot: 'sg', name: 'Burst Gear', rarity: 'epic',
+    price: 120, sellPrice: 48,
+    desc: 'When RPM < 30%, collision damage doubles.',
+    effect: { lowRpmDmgThreshold: 0.3, lowRpmDmgMult: 2.0 },
+  },
+  sg_resonance: {
+    id: 'sg_resonance', slot: 'sg', name: 'Resonance Gear', rarity: 'epic',
+    price: 130, sellPrice: 52,
+    desc: 'Matching element AR: element effect duration +50%.',
+    effect: { elementDurationBonus: 1.5 },
+  },
+
+  // === BLADE BASES (BB) ===
+  bb_sharp: {
+    id: 'bb_sharp', slot: 'bb', name: 'Sharp Tip', rarity: 'common',
+    price: 0, sellPrice: 0, // starter
+    desc: 'Stays near center. Slowest RPM decay. Recovers stability quickly after hits.',
+    effect: { decayMult: 0.6, moveStyle: 'defense', centerRpmRegen: 0.02 },
+    tipType: 'sharp',
+  },
+  bb_flat: {
+    id: 'bb_flat', slot: 'bb', name: 'Flat Tip', rarity: 'common',
+    price: 0, sellPrice: 0, // starter
+    desc: 'Wide movement, high collision frequency. Collision RPM recovery +10%.',
+    effect: { decayMult: 1.0, moveStyle: 'attack', onHitRpmRecover: 0.05, dmgMult: 1.2 },
+    tipType: 'flat',
+  },
+  bb_rubber: {
+    id: 'bb_rubber', slot: 'bb', name: 'Rubber Tip', rarity: 'common',
+    price: 0, sellPrice: 0, // starter
+    desc: 'Strong grip. Knockback distance -40%. Medium RPM decay.',
+    effect: { decayMult: 0.8, moveStyle: 'endure', knockbackResist: 0.4 },
+    tipType: 'rubber',
+  },
+  bb_sharp_ex: {
+    id: 'bb_sharp_ex', slot: 'bb', name: 'Sharp EX', rarity: 'rare',
+    price: 180, sellPrice: 72,
+    desc: 'RPM decay -30%. Defense bonus when in center zone.',
+    effect: { decayMult: 0.42, moveStyle: 'defense', centerRpmRegen: 0.02, centerDefenseBonus: 0.2 },
+    tipType: 'sharp',
+  },
+  bb_flat_ex: {
+    id: 'bb_flat_ex', slot: 'bb', name: 'Flat EX', rarity: 'rare',
+    price: 180, sellPrice: 72,
+    desc: 'After each collision, speed briefly increases for chain attacks.',
+    effect: { decayMult: 1.0, moveStyle: 'attack', onHitSpeedBoost: 1.3, onHitSpeedDuration: 1.5, dmgMult: 1.2 },
+    tipType: 'flat',
+  },
+  bb_rubber_ex: {
+    id: 'bb_rubber_ex', slot: 'bb', name: 'Rubber EX', rarity: 'rare',
+    price: 180, sellPrice: 72,
+    desc: '20% chance to reflect collision damage back to attacker.',
+    effect: { decayMult: 0.8, moveStyle: 'endure', knockbackResist: 0.4, reflectChance: 0.2 },
+    tipType: 'rubber',
+  },
+  bb_magnet: {
+    id: 'bb_magnet', slot: 'bb', name: 'Magnet Base', rarity: 'epic',
+    price: 220, sellPrice: 88,
+    desc: 'Moves along a magnetic track. Predictable but nearly impossible to knock out.',
+    effect: { decayMult: 0.7, moveStyle: 'magnet', ringOutResist: 0.9 },
+    tipType: 'magnet',
+  },
+  bb_burst: {
+    id: 'bb_burst', slot: 'bb', name: 'Burst Base', rarity: 'epic',
+    price: 200, sellPrice: 80,
+    desc: 'When hit, 25% chance to trigger controlled burst: parts briefly separate, negating damage.',
+    effect: { decayMult: 0.85, moveStyle: 'endure', burstNegateChance: 0.25 },
+    tipType: 'rubber',
+  },
+};
+
+// Helper: get parts by slot
+function getPartsBySlot(slot) {
+  return Object.values(PARTS_DB).filter(p => p.slot === slot);
+}
+
+// Helper: get starter bases
+function getStarterBases() {
+  return [PARTS_DB.bb_sharp, PARTS_DB.bb_flat, PARTS_DB.bb_rubber];
+}
+
+// ---- ENEMY DATABASE ----
+const ENEMIES_DB = {
+
+  // === ATTACK TYPE ===
+  rusher: {
+    id: 'rusher', name: 'Rusher', type: 'attack', floor: [1,2,3],
+    isElite: false, isBoss: false,
+    desc: 'Charges directly at your top at high speed.',
+    stats: { maxRpm: 100, decayMult: 1.0, speedMult: 1.3, dmgMult: 1.2, mass: 1.0 },
+    ai: 'rusher', archetype: 'Aggressor',
+    parts: { ar: 'ar_spike', wd: 'wd_light', sg: 'sg_standard_r', bb: 'bb_flat' },
+    spin: 'right',
+    weakTo: 'defense',
+    reward: { goldMin: 40, goldMax: 60 },
+    intelPool: [
+      'Enemy type: Attack',
+      'Uses Spike Ring — high collision damage',
+      'Uses Flat Tip — wide movement range',
+      'Weak against defensive builds',
+      'Right-spin rotation',
+    ],
+  },
+  cyclone: {
+    id: 'cyclone', name: 'Cyclone', type: 'attack', floor: [2,3],
+    isElite: false, isBoss: false,
+    desc: 'Wide sweeping attacks, covers large area.',
+    stats: { maxRpm: 100, decayMult: 1.1, speedMult: 1.1, dmgMult: 0.9, mass: 0.9 },
+    ai: 'rusher', archetype: 'Aggressor',
+    parts: { ar: 'ar_wide', wd: 'wd_light', sg: 'sg_standard_r', bb: 'bb_flat' },
+    spin: 'right',
+    weakTo: 'defense',
+    reward: { goldMin: 45, goldMax: 65 },
+    intelPool: [
+      'Enemy type: Attack',
+      'Uses Wide Wing — large collision range',
+      'Low single-hit damage but wide coverage',
+      'Right-spin rotation',
+    ],
+  },
+  buster: {
+    id: 'buster', name: 'Buster', type: 'attack', floor: [2,3],
+    isElite: false, isBoss: false,
+    desc: 'Triggers a self-explosion when RPM drops low.',
+    stats: { maxRpm: 100, decayMult: 1.2, speedMult: 1.0, dmgMult: 1.0, mass: 1.1 },
+    ai: 'buster', archetype: 'Aggressor',
+    parts: { ar: 'ar_spike', wd: 'wd_heavy', sg: 'sg_burst', bb: 'bb_burst' },
+    spin: 'right',
+    weakTo: 'burst_kill',
+    reward: { goldMin: 50, goldMax: 70 },
+    intelPool: [
+      'Enemy type: Attack',
+      'WARNING: Explodes when RPM < 25%',
+      'Kill quickly before it enters low RPM',
+      'Uses Burst Base — may negate hits',
+    ],
+  },
+
+  // === DEFENSE TYPE ===
+  fortress: {
+    id: 'fortress', name: 'Fortress', type: 'defense', floor: [1,2,3],
+    isElite: false, isBoss: false,
+    desc: 'Stays in center, reflects collision damage back.',
+    stats: { maxRpm: 100, decayMult: 0.7, speedMult: 0.5, dmgMult: 0.8, mass: 1.5 },
+    ai: 'fortress', archetype: 'Survivor',
+    parts: { ar: 'ar_smooth', wd: 'wd_heavy', sg: 'sg_shield', bb: 'bb_sharp' },
+    spin: 'right',
+    weakTo: 'endure',
+    reward: { goldMin: 40, goldMax: 60 },
+    intelPool: [
+      'Enemy type: Defense',
+      'Stays near center — hard to knock out',
+      'Uses Smooth Ring — reduces incoming damage',
+      'Uses Shield Gear — one free hit absorption',
+      'Weak to elemental damage',
+    ],
+  },
+  mirror_shield: {
+    id: 'mirror_shield', name: 'Mirror Shield', type: 'defense', floor: [2,3],
+    isElite: false, isBoss: false,
+    desc: 'Reflects 50% of collision damage back to attacker.',
+    stats: { maxRpm: 100, decayMult: 0.75, speedMult: 0.6, dmgMult: 0.5, mass: 1.3 },
+    ai: 'fortress', archetype: 'Survivor',
+    parts: { ar: 'ar_smooth', wd: 'wd_heavy', sg: 'sg_shield', bb: 'bb_rubber' },
+    spin: 'right',
+    weakTo: 'endure',
+    reward: { goldMin: 50, goldMax: 70 },
+    intelPool: [
+      'Enemy type: Defense',
+      'Reflects 50% collision damage — avoid direct hits',
+      'Use sustained elemental damage instead',
+      'Weak to poison/burn effects',
+    ],
+  },
+  magnet_core: {
+    id: 'magnet_core', name: 'Magnet Core', type: 'defense', floor: [2,3],
+    isElite: false, isBoss: false,
+    desc: 'Moves on a fixed magnetic track, pulls your top toward it.',
+    stats: { maxRpm: 100, decayMult: 0.7, speedMult: 0.7, dmgMult: 0.9, mass: 1.2 },
+    ai: 'magnet', archetype: 'Survivor',
+    parts: { ar: 'ar_magnet', wd: 'wd_magnetic', sg: 'sg_standard_r', bb: 'bb_magnet' },
+    spin: 'right',
+    weakTo: 'magnet_immune',
+    reward: { goldMin: 50, goldMax: 70 },
+    intelPool: [
+      'Enemy type: Defense',
+      'Uses Magnet Base — moves on fixed track',
+      'Pulls your top toward it with Magnet Ring',
+      'Magnetic Disk counters the pull effect',
+    ],
+  },
+
+  // === ENDURE TYPE ===
+  endurer: {
+    id: 'endurer', name: 'Endurer', type: 'endure', floor: [1,2,3],
+    isElite: false, isBoss: false,
+    desc: 'Stays still, RPM decays extremely slowly. Waits for you to stop first.',
+    stats: { maxRpm: 100, decayMult: 0.4, speedMult: 0.3, dmgMult: 0.7, mass: 1.0 },
+    ai: 'endurer', archetype: 'Trapper',
+    parts: { ar: 'ar_smooth', wd: 'wd_balance', sg: 'sg_standard_r', bb: 'bb_sharp' },
+    spin: 'right',
+    weakTo: 'attack',
+    reward: { goldMin: 40, goldMax: 60 },
+    intelPool: [
+      'Enemy type: Endure',
+      'Extremely slow RPM decay — will outlast you',
+      'Uses Balance Disk — minimal decay',
+      'Must attack aggressively to win',
+    ],
+  },
+  miasma: {
+    id: 'miasma', name: 'Miasma', type: 'endure', floor: [2,3],
+    isElite: false, isBoss: false,
+    desc: 'Leaves poison trails. The arena becomes increasingly dangerous.',
+    stats: { maxRpm: 100, decayMult: 0.8, speedMult: 0.6, dmgMult: 0.8, mass: 1.0 },
+    ai: 'endurer', archetype: 'Trapper',
+    parts: { ar: 'ar_venom', wd: 'wd_balance', sg: 'sg_resonance', bb: 'bb_rubber' },
+    spin: 'left',
+    weakTo: 'attack',
+    reward: { goldMin: 50, goldMax: 70 },
+    intelPool: [
+      'Enemy type: Endure',
+      'Leaves poison trails — avoid its path',
+      'Left-spin rotation',
+      'Uses Venom Ring — poison stacks on collision',
+      'Kill quickly before arena fills with poison',
+    ],
+  },
+  leech: {
+    id: 'leech', name: 'Leech', type: 'endure', floor: [2,3],
+    isElite: false, isBoss: false,
+    desc: 'Drains RPM from attacker on each collision.',
+    stats: { maxRpm: 100, decayMult: 0.6, speedMult: 0.5, dmgMult: 0.6, mass: 1.0 },
+    ai: 'endurer', archetype: 'Trapper',
+    parts: { ar: 'ar_smooth', wd: 'wd_balance', sg: 'sg_turbo', bb: 'bb_sharp' },
+    spin: 'right',
+    weakTo: 'attack',
+    reward: { goldMin: 50, goldMax: 70 },
+    intelPool: [
+      'Enemy type: Endure',
+      'Drains your RPM on each collision',
+      'Avoid frequent collisions — use elemental damage',
+      'Uses Turbo Gear — recovers RPM on hits',
+    ],
+  },
+
+  // === ELITE ENEMIES ===
+  inferno_rusher: {
+    id: 'inferno_rusher', name: 'Inferno Rusher', type: 'attack', floor: [2,3],
+    isElite: true, isBoss: false,
+    desc: 'Elite Rusher. Leaves large fire zones after each collision.',
+    stats: { maxRpm: 120, decayMult: 1.0, speedMult: 1.4, dmgMult: 1.4, mass: 1.1 },
+    ai: 'rusher', archetype: 'Aggressor',
+    parts: { ar: 'ar_flame', wd: 'wd_light', sg: 'sg_turbo', bb: 'bb_flat_ex' },
+    spin: 'right',
+    weakTo: 'defense',
+    reward: { goldMin: 80, goldMax: 120 },
+    intelPool: [
+      'ELITE — Attack type',
+      'Leaves large fire zones on collision',
+      'Uses Flame Ring + Flat EX base',
+      'Turbo Gear: recovers RPM on hits',
+      'Avoid fire zones — sustained burn damage',
+    ],
+  },
+  frost_fortress: {
+    id: 'frost_fortress', name: 'Frost Fortress', type: 'defense', floor: [2,3],
+    isElite: true, isBoss: false,
+    desc: 'Elite Fortress. Releases frost explosion when hit, slowing attacker.',
+    stats: { maxRpm: 120, decayMult: 0.6, speedMult: 0.5, dmgMult: 0.9, mass: 1.6 },
+    ai: 'fortress', archetype: 'Survivor',
+    parts: { ar: 'ar_frost', wd: 'wd_heavy', sg: 'sg_shield', bb: 'bb_sharp_ex' },
+    spin: 'right',
+    weakTo: 'endure',
+    reward: { goldMin: 80, goldMax: 120 },
+    intelPool: [
+      'ELITE — Defense type',
+      'Releases frost explosion when hit — slows you',
+      'Uses Sharp EX — very slow RPM decay',
+      'Shield Gear: one free hit absorption',
+      'Use poison/burn to bypass physical defense',
+    ],
+  },
+  eternal_endurer: {
+    id: 'eternal_endurer', name: 'Eternal Endurer', type: 'endure', floor: [3],
+    isElite: true, isBoss: false,
+    desc: 'Elite Endurer. Auto-recovers to 40% RPM once when below 20%.',
+    stats: { maxRpm: 120, decayMult: 0.35, speedMult: 0.3, dmgMult: 0.7, mass: 1.1 },
+    ai: 'endurer', archetype: 'Trapper',
+    parts: { ar: 'ar_smooth', wd: 'wd_balance', sg: 'sg_resonance', bb: 'bb_sharp_ex' },
+    spin: 'right',
+    weakTo: 'attack',
+    reward: { goldMin: 90, goldMax: 130 },
+    intelPool: [
+      'ELITE — Endure type',
+      'Auto-recovers to 40% RPM once when below 20%',
+      'Extremely slow RPM decay',
+      'Must deal burst damage to overcome recovery',
+    ],
+  },
+
+  // === BOSS ===
+  chaos_champion: {
+    id: 'chaos_champion', name: 'Chaos Champion', type: 'boss', floor: [4],
+    isElite: false, isBoss: true,
+    desc: 'Three-phase boss. Changes behavior at 60% and 30% RPM.',
+    stats: { maxRpm: 150, decayMult: 0.8, speedMult: 1.2, dmgMult: 1.3, mass: 1.3 },
+    ai: 'boss', archetype: 'Aggressor',
+    parts: { ar: 'ar_flame', wd: 'wd_heavy', sg: 'sg_burst', bb: 'bb_flat_ex' },
+    spin: 'right',
+    weakTo: null,
+    phases: [
+      { rpmThreshold: 0.6, ai: 'rusher', desc: 'Phase 1 (100-60%): Aggressive charging' },
+      { rpmThreshold: 0.3, ai: 'fortress', desc: 'Phase 2 (60-30%): Defensive counter' },
+      { rpmThreshold: 0.0, ai: 'endurer', desc: 'Phase 3 (30-0%): Poison stall' },
+    ],
+    reward: { goldMin: 150, goldMax: 200 },
+    intelPool: [
+      'BOSS — Chaos Champion',
+      'Three-phase battle: Attack → Defense → Endure',
+      'Phase 1: High-speed charging (100-60%)',
+      'Phase 2: Defensive counter-attack (60-30%)',
+      'Phase 3: Poison stall tactics (30-0%)',
+      'Adapt your strategy for each phase',
+    ],
+  },
+};
+
+// Helper: get enemies for a floor
+function getEnemiesForFloor(floor, isElite, isBoss) {
+  return Object.values(ENEMIES_DB).filter(e => {
+    if (isBoss) return e.isBoss;
+    if (isElite) return e.isElite && e.floor.includes(floor);
+    return !e.isElite && !e.isBoss && e.floor.includes(floor);
+  });
+}
+
+// Helper: pick random intel from enemy
+function getEnemyIntel(enemy, count) {
+  const pool = [...enemy.intelPool];
+  const result = [];
+  const n = Math.min(count, pool.length);
+  for (let i = 0; i < n; i++) {
+    const idx = Math.floor(Math.random() * pool.length);
+    result.push(pool.splice(idx, 1)[0]);
+  }
+  return result;
+}
+
+// ---- EVENTS DATABASE ----
+const EVENTS_DB = [
+  {
+    id: 'scrap_merchant',
+    icon: '🔧',
+    title: 'Scrap Merchant',
+    desc: 'A shady merchant offers to upgrade one of your parts for a price. The upgrade is... unpredictable.',
+    choices: [
+      {
+        text: 'Pay 60G to upgrade a random part',
+        hint: 'Risk: part may become worse',
+        cost: 60,
+        effect: (G) => {
+          if (G.gold < 60) return { success: false, msg: 'Not enough gold!' };
+          G.gold -= 60;
+          // Upgrade a random equipped part to next rarity (simplified)
+          const slots = ['ar','wd','sg','bb'];
+          const equipped = slots.filter(s => G.loadout[s]);
+          if (equipped.length === 0) return { success: false, msg: 'No parts equipped!' };
+          const slot = equipped[Math.floor(Math.random() * equipped.length)];
+          const part = G.loadout[slot];
+          const rarityUp = { common: 'rare', rare: 'epic', epic: 'legendary', legendary: 'legendary' };
+          G.loadout[slot] = { ...part, rarity: rarityUp[part.rarity], price: Math.floor(part.price * 1.5) };
+          return { success: true, msg: `Your ${part.name} was upgraded to ${rarityUp[part.rarity]}!` };
+        },
+      },
+      {
+        text: 'Decline',
+        hint: 'Nothing happens',
+        cost: 0,
+        effect: () => ({ success: true, msg: 'You walk away.' }),
+      },
+    ],
+  },
+  {
+    id: 'ancient_arena',
+    icon: '🏟️',
+    title: 'Ancient Arena',
+    desc: 'You find an ancient training arena. A ghost challenges you to a test of endurance.',
+    choices: [
+      {
+        text: 'Accept the challenge (risk 1 HP for 100G)',
+        hint: 'Win: +100G. Lose: -1 HP',
+        cost: 0,
+        effect: (G) => {
+          const win = Math.random() > 0.4; // 60% win chance
+          if (win) {
+            G.gold += 100;
+            G.runStats.goldCollected += 100;
+            return { success: true, msg: 'You won the challenge! +100G' };
+          } else {
+            G.hp = Math.max(0, G.hp - 1);
+            return { success: true, msg: 'You lost the challenge. -1 HP' };
+          }
+        },
+      },
+      {
+        text: 'Observe and learn (+1 Intel next battle)',
+        hint: 'Next battle shows 1 extra intel',
+        cost: 0,
+        effect: (G) => {
+          G._bonusIntel = (G._bonusIntel || 0) + 1;
+          return { success: true, msg: 'You gain insight. +1 Intel next battle.' };
+        },
+      },
+    ],
+  },
+  {
+    id: 'parts_cache',
+    icon: '📦',
+    title: 'Hidden Cache',
+    desc: 'You discover a hidden cache of parts left by a previous challenger.',
+    choices: [
+      {
+        text: 'Take the parts (add 2 random common parts)',
+        hint: 'Free parts, but may be junk',
+        cost: 0,
+        effect: (G) => {
+          const commonParts = Object.values(PARTS_DB).filter(p => p.rarity === 'common' && p.price > 0);
+          for (let i = 0; i < 2; i++) {
+            const p = commonParts[Math.floor(Math.random() * commonParts.length)];
+            G.inventory.push({ ...p });
+          }
+          return { success: true, msg: 'You found 2 common parts!' };
+        },
+      },
+      {
+        text: 'Leave it (gain 30G from selling location info)',
+        hint: 'Safe choice, small gold gain',
+        cost: 0,
+        effect: (G) => {
+          G.gold += 30;
+          G.runStats.goldCollected += 30;
+          return { success: true, msg: 'You sell the location info. +30G' };
+        },
+      },
+    ],
+  },
+  {
+    id: 'mysterious_forge',
+    icon: '⚒️',
+    title: 'Mysterious Forge',
+    desc: 'A glowing forge offers to fuse two of your parts into something new.',
+    choices: [
+      {
+        text: 'Sacrifice 2 inventory parts for a rare part',
+        hint: 'Need 2+ inventory parts',
+        cost: 0,
+        effect: (G) => {
+          if (G.inventory.length < 2) return { success: false, msg: 'Need at least 2 inventory parts!' };
+          G.inventory.splice(0, 2);
+          const rareParts = Object.values(PARTS_DB).filter(p => p.rarity === 'rare');
+          const reward = rareParts[Math.floor(Math.random() * rareParts.length)];
+          G.inventory.push({ ...reward });
+          return { success: true, msg: `Fusion complete! You got: ${reward.name}` };
+        },
+      },
+      {
+        text: 'Ignore the forge',
+        hint: 'Nothing happens',
+        cost: 0,
+        effect: () => ({ success: true, msg: 'The forge dims as you walk away.' }),
+      },
+    ],
+  },
+  {
+    id: 'cursed_blessing',
+    icon: '☯️',
+    title: 'Cursed Blessing',
+    desc: 'A strange energy field offers power at a cost.',
+    choices: [
+      {
+        text: 'Accept power (+20% damage, -1 HP)',
+        hint: 'Permanent buff this run, costs HP',
+        cost: 0,
+        effect: (G) => {
+          if (G.hp <= 1) return { success: false, msg: 'Too dangerous with only 1 HP!' };
+          G.hp -= 1;
+          G._globalDmgBonus = (G._globalDmgBonus || 1.0) * 1.2;
+          return { success: true, msg: 'Power surges through you. Damage +20%, -1 HP.' };
+        },
+      },
+      {
+        text: 'Resist the energy (+15G, nothing else)',
+        hint: 'Safe, small reward',
+        cost: 0,
+        effect: (G) => {
+          G.gold += 15;
+          G.runStats.goldCollected += 15;
+          return { success: true, msg: 'You resist the energy. +15G' };
+        },
+      },
+    ],
+  },
+];
+
+// Helper: get random event
+function getRandomEvent() {
+  return EVENTS_DB[Math.floor(Math.random() * EVENTS_DB.length)];
+}
+
+// ---- SHOP GENERATOR ----
+const RARITY_WEIGHTS = { common: 40, rare: 30, epic: 20, legendary: 10 };
+
+function generateShopItems(count = 5) {
+  const items = [];
+  const allParts = Object.values(PARTS_DB).filter(p => p.price > 0);
+  // Weighted random by rarity
+  const pool = [];
+  allParts.forEach(p => {
+    const w = RARITY_WEIGHTS[p.rarity] || 10;
+    for (let i = 0; i < w; i++) pool.push(p);
+  });
+  const used = new Set();
+  let attempts = 0;
+  while (items.length < count && attempts < 100) {
+    attempts++;
+    const p = pool[Math.floor(Math.random() * pool.length)];
+    if (!used.has(p.id)) {
+      used.add(p.id);
+      items.push({ ...p });
+    }
+  }
+  // Always add HP restore
+  items.push({
+    id: 'hp_restore', slot: 'consumable', name: 'HP Restore', rarity: 'common',
+    price: 50, sellPrice: 0,
+    desc: 'Restore 1 HP. Max HP is 3.',
+    effect: { restoreHp: 1 },
+  });
+  return items;
+}
+
+// ---- INTEL GENERATOR ----
+// ---- ENEMY PICKER ----
+function pickEnemy(floor, nodeType) {
+  const isBoss = nodeType === NodeType.BOSS;
+  const isElite = nodeType === NodeType.ELITE;
+  const candidates = getEnemiesForFloor(floor, isElite, isBoss);
+  if (candidates.length === 0) return ENEMIES_DB.rusher;
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+// ============================================================
+// PHASE 3 — MAP GENERATION + NODE SELECTION
+// ============================================================
+
+// ---- Map Data Structure ----
+// G.map = {
+//   floors: [ [node, node, node], [node, node, node], ... ],
+//   connections: [ {from:{f,n}, to:{f,n}}, ... ]
+// }
+// node = { type, typeLabel, icon, enemy, cleared, x, y, id }
+
+function generateMap() {
+  const floors = [];
+  const connections = [];
+
+  // Floor 1-3: 3 nodes each; Floor 4: 1 Boss node
+  const floorConfigs = [
+    { count: 3, floor: 1 },
+    { count: 3, floor: 2 },
+    { count: 3, floor: 3 },
+    { count: 1, floor: 4 },
+  ];
+
+  // Node type distribution per floor
+  function pickNodeType(floor, index, total) {
+    if (floor === 4) return NodeType.BOSS;
+    const roll = Math.random();
+    if (floor === 1) {
+      // Floor 1: mostly normal, one shop possible
+      if (total === 3 && index === 1 && Math.random() < 0.4) return NodeType.SHOP;
+      return NodeType.NORMAL;
+    }
+    if (roll < 0.55) return NodeType.NORMAL;
+    if (roll < 0.70) return NodeType.ELITE;
+    if (roll < 0.82) return NodeType.SHOP;
+    if (roll < 0.94) return NodeType.EVENT;
+    return NodeType.ELITE;
+  }
+
+  const nodeTypeLabel = {
+    [NodeType.NORMAL]: 'Battle',
+    [NodeType.ELITE]:  'Elite',
+    [NodeType.SHOP]:   'Shop',
+    [NodeType.EVENT]:  'Event',
+    [NodeType.BOSS]:   'BOSS',
+  };
+  const nodeTypeIcon = {
+    [NodeType.NORMAL]: '⚔️',
+    [NodeType.ELITE]:  '💀',
+    [NodeType.SHOP]:   '🏪',
+    [NodeType.EVENT]:  '❓',
+    [NodeType.BOSS]:   '👑',
+  };
+
+  // Canvas layout constants
+  const CW = 900, CH = 520;
+  const floorCount = floorConfigs.length;
+
+  floorConfigs.forEach((cfg, fi) => {
+    const floorNodes = [];
+    const y = CH - 60 - (fi / (floorCount - 1)) * (CH - 120);
+    for (let ni = 0; ni < cfg.count; ni++) {
+      const type = pickNodeType(cfg.floor, ni, cfg.count);
+      const xSpread = cfg.count === 1 ? 0 : (ni / (cfg.count - 1) - 0.5) * 600;
+      const x = CW / 2 + xSpread + (Math.random() - 0.5) * 40;
+      floorNodes.push({
+        id: `f${cfg.floor}n${ni}`,
+        floor: cfg.floor,
+        index: ni,
+        type,
+        typeLabel: nodeTypeLabel[type],
+        icon: nodeTypeIcon[type],
+        enemy: null, // assigned when entering
+        cleared: false,
+        x: Math.round(x),
+        y: Math.round(y),
+        reachable: fi === 0, // floor 1 nodes are reachable at start
+      });
+    }
+    floors.push(floorNodes);
+  });
+
+  // Generate connections: each node connects to 1-2 nodes on next floor
+  for (let fi = 0; fi < floors.length - 1; fi++) {
+    const fromFloor = floors[fi];
+    const toFloor = floors[fi + 1];
+    // Ensure every "to" node has at least one incoming connection
+    const connected = new Set();
+    fromFloor.forEach((fromNode, fni) => {
+      // Connect to closest node on next floor
+      let closest = 0;
+      let minDist = Infinity;
+      toFloor.forEach((toNode, tni) => {
+        const d = Math.abs(fromNode.x - toNode.x);
+        if (d < minDist) { minDist = d; closest = tni; }
+      });
+      connections.push({ from: { f: fi, n: fni }, to: { f: fi + 1, n: closest } });
+      connected.add(closest);
+      // 40% chance to also connect to an adjacent node
+      if (toFloor.length > 1 && Math.random() < 0.4) {
+        const alt = (closest + 1) % toFloor.length;
+        connections.push({ from: { f: fi, n: fni }, to: { f: fi + 1, n: alt } });
+        connected.add(alt);
+      }
+    });
+    // Ensure all toFloor nodes are reachable
+    toFloor.forEach((toNode, tni) => {
+      if (!connected.has(tni)) {
+        const randomFrom = Math.floor(Math.random() * fromFloor.length);
+        connections.push({ from: { f: fi, n: randomFrom }, to: { f: fi + 1, n: tni } });
+      }
+    });
+  }
+
+  G.map = { floors, connections };
+  G.floor = 1;
+  G.nodeIndex = 0;
+  updateStatusBar();
+}
+
+// ---- Map Canvas Rendering ----
+function renderMap() {
+  const canvas = document.getElementById('map-canvas');
+  if (!canvas || !G.map) return;
+  const CW = canvas.parentElement.clientWidth || 900;
+  const CH = canvas.parentElement.clientHeight || 520;
+  canvas.width = CW;
+  canvas.height = CH;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, CW, CH);
+
+  const { floors, connections } = G.map;
+
+  // Draw connections
+  connections.forEach(conn => {
+    const fromNode = floors[conn.from.f][conn.from.n];
+    const toNode   = floors[conn.to.f][conn.to.n];
+    const isActive = fromNode.cleared || fromNode.reachable;
+    ctx.beginPath();
+    ctx.moveTo(fromNode.x, fromNode.y);
+    ctx.lineTo(toNode.x, toNode.y);
+    ctx.strokeStyle = isActive ? '#2a2a6a' : '#1a1a3a';
+    ctx.lineWidth = isActive ? 2 : 1;
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  });
+
+  // Draw nodes
+  floors.forEach(floorNodes => {
+    floorNodes.forEach(node => {
+      const r = 22;
+      const isCurrentFloor = node.floor === G.floor;
+      const isReachable = node.reachable && !node.cleared;
+      const isCleared = node.cleared;
+
+      // Node circle
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
+      if (isCleared) {
+        ctx.fillStyle = '#0d1a0d';
+        ctx.strokeStyle = '#1a4a1a';
+      } else if (isReachable) {
+        ctx.fillStyle = '#0d0d2a';
+        ctx.strokeStyle = nodeColor(node.type);
+      } else {
+        ctx.fillStyle = '#0a0a14';
+        ctx.strokeStyle = '#1a1a2a';
+      }
+      ctx.lineWidth = isReachable ? 2.5 : 1.5;
+      ctx.fill();
+      ctx.stroke();
+
+      // Glow for reachable
+      if (isReachable) {
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, r + 4, 0, Math.PI * 2);
+        ctx.strokeStyle = nodeColor(node.type) + '44';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+
+      // Icon
+      ctx.font = '16px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.globalAlpha = isCleared ? 0.3 : (isReachable ? 1.0 : 0.4);
+      ctx.fillText(node.icon, node.x, node.y - 2);
+      ctx.globalAlpha = 1;
+
+      // Label
+      ctx.font = '10px Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = isReachable ? '#8888cc' : '#333355';
+      ctx.fillText(node.typeLabel, node.x, node.y + r + 12);
+
+      // Cleared checkmark
+      if (isCleared) {
+        ctx.font = '12px serif';
+        ctx.fillStyle = '#22aa44';
+        ctx.fillText('✓', node.x + r - 4, node.y - r + 4);
+      }
+    });
+  });
+
+  // Floor labels on left
+  floors.forEach((floorNodes, fi) => {
+    const y = floorNodes[0].y;
+    ctx.font = '11px Courier New';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#333366';
+    ctx.fillText(`FL.${fi + 1}`, 8, y + 4);
+  });
+}
+
+function nodeColor(type) {
+  switch (type) {
+    case NodeType.NORMAL: return '#4444aa';
+    case NodeType.ELITE:  return '#aa2244';
+    case NodeType.SHOP:   return '#aaaa22';
+    case NodeType.EVENT:  return '#22aaaa';
+    case NodeType.BOSS:   return '#ff4444';
+    default: return '#4444aa';
+  }
+}
+
+// ---- Map Click Handler ----
+function initMapCanvas() {
+  const canvas = document.getElementById('map-canvas');
+  if (!canvas) return;
+  canvas.addEventListener('click', onMapClick);
+  canvas.addEventListener('mousemove', onMapHover);
+}
+
+function onMapClick(e) {
+  if (!G.map) return;
+  const canvas = e.currentTarget;
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+  const node = getNodeAt(mx, my);
+  if (!node) return;
+  if (!node.reachable || node.cleared) return;
+
+  enterNode(node);
+}
+
+function onMapHover(e) {
+  if (!G.map) return;
+  const canvas = e.currentTarget;
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+  const node = getNodeAt(mx, my);
+  canvas.style.cursor = (node && node.reachable && !node.cleared) ? 'pointer' : 'default';
+}
+
+function getNodeAt(mx, my) {
+  if (!G.map) return null;
+  for (const floorNodes of G.map.floors) {
+    for (const node of floorNodes) {
+      const dx = mx - node.x, dy = my - node.y;
+      if (dx * dx + dy * dy <= 22 * 22) return node;
+    }
+  }
+  return null;
+}
+
+// ---- Enter Node ----
+function enterNode(node) {
+  G.currentNode = node;
+  G.floor = node.floor;
+  updateStatusBar();
+
+  if (node.type === NodeType.SHOP) {
+    showScreen('SHOP');
+    renderShop();
+    return;
+  }
+  if (node.type === NodeType.EVENT) {
+    const ev = EVENTS_DB[Math.floor(Math.random() * EVENTS_DB.length)];
+    showEventScreen(ev);
+    return;
+  }
+  // NORMAL / ELITE / BOSS → Prep phase
+  node.enemy = pickEnemy(node.floor, node.type);
+  showScreen('PREP');
+  renderPrep();
+}
+
+// ---- Mark Node Cleared & Unlock Next ----
+function clearCurrentNode() {
+  if (!G.currentNode) return;
+  G.currentNode.cleared = true;
+
+  const { floors, connections } = G.map;
+  const fi = G.currentNode.floor - 1;
+  const ni = G.currentNode.index;
+
+  // Unlock connected nodes on next floor
+  connections.forEach(conn => {
+    if (conn.from.f === fi && conn.from.n === ni) {
+      const nextNode = floors[conn.to.f][conn.to.n];
+      nextNode.reachable = true;
+    }
+  });
+
+  // Check if all nodes on current floor cleared → advance floor indicator
+  const allCleared = floors[fi].every(n => n.cleared);
+  if (allCleared && fi + 1 < floors.length) {
+    G.floor = fi + 2;
+  }
+}
+
+// ---- Return to Map ----
+function returnToMap() {
+  showScreen('MAP');
+  renderMap();
+}
+
+// ---- Show Map Screen (patch) ----
+{
+  const _origShowScreen = showScreen;
+  // Patch: auto-render map when switching to MAP screen
+  showScreen = function(name) {
+    _origShowScreen(name);
+    if (name === 'MAP') {
+      setTimeout(renderMap, 50);
+    }
+  };
+}
+
+// ---- Prep Screen Render ----
+function renderPrep() {
+  const node = G.currentNode;
+  if (!node) return;
+
+  // Intel
+  const intelList = document.getElementById('intel-list');
+  const enemy = node.enemy;
+  const intel = generateIntel(enemy);
+  intelList.innerHTML = '';
+  intel.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'intel-item';
+    div.innerHTML = `<span class="intel-icon">🔍</span><span>${item}</span>`;
+    intelList.appendChild(div);
+  });
+
+  // Enemy preview
+  const ep = document.getElementById('enemy-preview');
+  ep.innerHTML = `${enemy.icon || '🌀'} <strong>${enemy.name}</strong><br>
+    <span style="font-size:11px;color:#8888aa;">${enemy.archetype} — Floor ${node.floor}</span>`;
+
+  // Part slots
+  renderPartSlots();
+
+  // Inventory
+  renderInventory();
+}
+
+function renderPartSlots() {
+  const slotsEl = document.getElementById('part-slots');
+  slotsEl.innerHTML = '';
+  const slotDefs = [
+    { key: 'ar', label: 'Attack Ring' },
+    { key: 'wd', label: 'Weight Disk' },
+    { key: 'sg', label: 'Spin Gear' },
+    { key: 'bb', label: 'Blade Base' },
+  ];
+  slotDefs.forEach(({ key, label }) => {
+    const part = G.loadout[key];
+    const div = document.createElement('div');
+    div.className = 'part-slot';
+    div.innerHTML = `
+      <span class="slot-label">${label}</span>
+      <span class="slot-content ${part ? '' : 'empty'}">${part ? part.name : '— empty —'}</span>
+      ${part ? `<span class="slot-rarity rarity-${part.rarity}">${part.rarity}</span>` : ''}
+    `;
+    if (part) {
+      div.addEventListener('mouseenter', e => showTooltip(e, part.name, part.slot.toUpperCase(), part.desc));
+      div.addEventListener('mouseleave', hideTooltip);
+    }
+    div.addEventListener('click', () => openPartSelectModal(key));
+    slotsEl.appendChild(div);
+  });
+}
+
+function renderInventory() {
+  const invEl = document.getElementById('inventory-list');
+  invEl.innerHTML = '';
+  if (G.inventory.length === 0) {
+    invEl.innerHTML = '<div style="color:#333355;font-size:13px;font-style:italic;">No parts in inventory</div>';
+    return;
+  }
+  G.inventory.forEach((part, idx) => {
+    const div = document.createElement('div');
+    div.className = 'part-select-item';
+    div.innerHTML = `
+      <span class="psi-name rarity-${part.rarity}">${part.name}</span>
+      <span class="psi-desc">${part.slot.toUpperCase()}</span>
+      <button class="btn-danger" style="padding:4px 8px;font-size:11px;" onclick="sellPart(${idx})">Sell ${part.sellPrice}G</button>
+    `;
+    div.addEventListener('mouseenter', e => showTooltip(e, part.name, part.slot.toUpperCase(), part.desc));
+    div.addEventListener('mouseleave', hideTooltip);
+    invEl.appendChild(div);
+  });
+}
+
+function openPartSelectModal(slotKey) {
+  const compatible = G.inventory.filter(p => p.slot === slotKey);
+  if (compatible.length === 0) {
+    showModal('No Parts', `<p style="color:#8888aa;">No compatible parts in inventory for this slot.</p>`,
+      [{ label: 'OK', cls: 'btn-secondary', onClick: () => {} }]);
+    return;
+  }
+  let html = `<div id="part-select-list">`;
+  compatible.forEach((part, idx) => {
+    html += `<div class="part-select-item" onclick="equipPart('${slotKey}', ${G.inventory.indexOf(part)})">
+      <span class="psi-name rarity-${part.rarity}">${part.name}</span>
+      <span class="psi-desc">${part.desc.substring(0, 50)}...</span>
+    </div>`;
+  });
+  html += '</div>';
+  // Option to unequip
+  html += `<div style="margin-top:10px;">
+    <button class="btn-secondary" onclick="unequipPart('${slotKey}');hideModal();" style="font-size:12px;">Unequip</button>
+  </div>`;
+  showModal(`Select ${slotKey.toUpperCase()} Part`, html,
+    [{ label: 'Cancel', cls: 'btn-secondary', onClick: () => {} }]);
+}
+
+function equipPart(slotKey, invIdx) {
+  const part = G.inventory[invIdx];
+  if (!part) return;
+  // If something already equipped, put it back in inventory
+  if (G.loadout[slotKey]) {
+    G.inventory.push(G.loadout[slotKey]);
+  }
+  G.loadout[slotKey] = { ...part };
+  G.inventory.splice(invIdx, 1);
+  hideModal();
+  renderPartSlots();
+  renderInventory();
+}
+
+function unequipPart(slotKey) {
+  if (G.loadout[slotKey]) {
+    G.inventory.push(G.loadout[slotKey]);
+    G.loadout[slotKey] = null;
+  }
+  renderPartSlots();
+  renderInventory();
+}
+
+function sellPart(invIdx) {
+  const part = G.inventory[invIdx];
+  if (!part) return;
+  G.gold += part.sellPrice;
+  G.inventory.splice(invIdx, 1);
+  updateStatusBar();
+  renderInventory();
+}
+
+// ---- Shop Screen Render ----
+function renderShop() {
+  const shopGrid = document.getElementById('shop-grid');
+  shopGrid.innerHTML = '';
+  const items = generateShopItems();
+  G._shopItems = items;
+
+  items.forEach((item, idx) => {
+    const canAfford = G.gold >= item.price;
+    const div = document.createElement('div');
+    div.className = 'shop-item' + (canAfford ? '' : ' cant-afford');
+    div.innerHTML = `
+      <div class="item-rarity-badge badge-${item.rarity}">${item.rarity}</div>
+      <div class="item-name">${item.name}</div>
+      <div class="item-type">${item.slot ? item.slot.toUpperCase() : 'CONSUMABLE'}</div>
+      <div class="item-desc">${item.desc}</div>
+      <div class="item-price">💰 ${item.price}G</div>
+    `;
+    div.addEventListener('mouseenter', e => showTooltip(e, item.name, item.slot || 'consumable', item.desc));
+    div.addEventListener('mouseleave', hideTooltip);
+    if (canAfford) {
+      div.addEventListener('click', () => buyShopItem(idx));
+    }
+    shopGrid.appendChild(div);
+  });
+
+  // Update refresh button
+  const refreshBtn = document.getElementById('btn-shop-refresh');
+  refreshBtn.textContent = `🔄 Refresh (30G)`;
+  refreshBtn.disabled = G.gold < 30;
+}
+
+function buyShopItem(idx) {
+  const item = G._shopItems[idx];
+  if (!item || G.gold < item.price) return;
+  G.gold -= item.price;
+  updateStatusBar();
+
+  if (item.effect && item.effect.restoreHp) {
+    G.hp = Math.min(G.maxHp, G.hp + item.effect.restoreHp);
+    updateStatusBar();
+    showModal('HP Restored', `<p style="color:#44ff88;">Restored ${item.effect.restoreHp} HP!</p>`,
+      [{ label: 'OK', cls: 'btn-secondary', onClick: () => {} }]);
+  } else {
+    G.inventory.push({ ...item });
+    showModal('Purchased!', `<p style="color:#ccccff;"><strong>${item.name}</strong> added to inventory.</p>`,
+      [{ label: 'OK', cls: 'btn-secondary', onClick: () => {} }]);
+  }
+  // Remove from shop
+  G._shopItems.splice(idx, 1);
+  renderShop();
+}
+
+document.getElementById('btn-shop-refresh').addEventListener('click', () => {
+  if (G.gold < 30) return;
+  G.gold -= 30;
+  updateStatusBar();
+  renderShop();
+});
+
+// Override shop back button to handle context
+document.getElementById('btn-shop-back').removeEventListener('click', () => showScreen('PREP'));
+document.getElementById('btn-shop-back').addEventListener('click', () => {
+  if (G.currentNode && G.currentNode.type === NodeType.SHOP) {
+    // Shop node: mark cleared and return to map
+    clearCurrentNode();
+    returnToMap();
+  } else {
+    showScreen('PREP');
+    renderPrep();
+  }
+});
+
+// ---- Event Screen ----
+function showEventScreen(ev) {
+  document.getElementById('event-icon').textContent = ev.icon;
+  document.getElementById('event-title').textContent = ev.name;
+  document.getElementById('event-desc').textContent = ev.desc;
+  const choicesEl = document.getElementById('event-choices');
+  choicesEl.innerHTML = '';
+  ev.choices.forEach(choice => {
+    const div = document.createElement('div');
+    div.className = 'event-choice';
+    div.innerHTML = `<div class="choice-text">${choice.text}</div><div class="choice-hint">${choice.hint}</div>`;
+    div.addEventListener('click', () => resolveEventChoice(choice));
+    choicesEl.appendChild(div);
+  });
+  showScreen('EVENT');
+}
+
+function resolveEventChoice(choice) {
+  const result = choice.resolve(G);
+  updateStatusBar();
+  // Show result then return to map
+  showModal('Result', `<p style="color:#ccccff;">${result}</p>`, [
+    { label: 'Continue', cls: 'btn-primary', onClick: () => {
+      clearCurrentNode();
+      returnToMap();
+    }}
+  ]);
+}
+
+// ---- Init Map Canvas ----
+initMapCanvas();
+
+// ============================================================
+// PHASE 4 — ARENA PHYSICS ENGINE
+// ============================================================
+
+// ---- Arena Constants ----
+const ARENA = {
+  cx: 300, cy: 260,      // arena center
+  radius: 220,           // bowl inner radius
+  wallBounceDamp: 0.72,  // velocity damped on wall bounce
+  friction: 0.0018,      // per-frame RPM decay base
+  collisionDist: 28,     // distance for top-to-top collision
+  fps: 60,
+};
+
+// ---- Top State ----
+// G.battle = {
+//   player: TopBody, enemy: TopBody,
+//   running: bool, frameId: int,
+//   phase: 'launch'|'battle'|'end'
+// }
+
+function createTopBody(isPlayer, rpm, launchAngle, launchPower, spinDir) {
+  const rad = (launchAngle * Math.PI) / 180;
+  const speed = launchPower * 4.5;
+  return {
+    isPlayer,
+    x: isPlayer ? ARENA.cx - 80 : ARENA.cx + 80,
+    y: isPlayer ? ARENA.cy + 60 : ARENA.cy - 60,
+    vx: Math.cos(rad) * speed,
+    vy: Math.sin(rad) * speed,
+    rpm,
+    maxRpm: rpm,
+    spin: 0,          // visual spin angle (degrees)
+    spinSpeed: rpm / 60,
+    radius: 18,
+    trail: [],        // last N positions for trail effect
+    hitFlash: 0,      // frames of hit flash remaining
+    wobble: 0,        // wobble amplitude (increases as rpm drops)
+    wobbleAngle: 0,
+    spinDir: spinDir || 'right',  // 'right' | 'left' — spin direction for clash mechanics
+  };
+}
+
+// ---- Physics Step ----
+function physicsStep(top, dt) {
+  // Wobble increases as RPM drops — calibrated: linear from 0 at full RPM to 12 at 0 RPM
+  const rpmRatioW = top.rpm / top.maxRpm;
+  top.wobble = Math.max(0, (1 - rpmRatioW) * 12);
+  top.wobbleAngle += 0.08;
+
+  // Apply velocity
+  top.x += top.vx * dt * 60;
+  top.y += top.vy * dt * 60;
+
+  // Wall collision (circular bowl)
+  const dx = top.x - ARENA.cx;
+  const dy = top.y - ARENA.cy;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const maxDist = ARENA.radius - top.radius;
+  if (dist > maxDist) {
+    const nx = dx / dist, ny = dy / dist;
+    const outwardSpeed = top.vx * nx + top.vy * ny;
+    // Ring Out: if hit wall with high outward speed AND low RPM ratio, fly out
+    const rpmRatio = top.rpm / (top.maxRpm || 1);
+    if (outwardSpeed > 2.5 && rpmRatio < 0.45) {
+      // Mark ring out — battleLoop will catch this
+      top.ringOut = true;
+      // Keep moving outward for visual effect
+      top.x += top.vx * 0.016 * 60;
+      top.y += top.vy * 0.016 * 60;
+    } else {
+      // Normal wall bounce
+      const dot = top.vx * nx + top.vy * ny;
+      top.vx = (top.vx - 2 * dot * nx) * ARENA.wallBounceDamp;
+      top.vy = (top.vy - 2 * dot * ny) * ARENA.wallBounceDamp;
+      // Push back inside
+      top.x = ARENA.cx + nx * maxDist;
+      top.y = ARENA.cy + ny * maxDist;
+      // Wall bounce costs RPM
+      top.rpm = Math.max(0, top.rpm - 80);
+    }
+  }
+
+  // Friction decay
+  const decayRate = getDecayRate(top.isPlayer);
+  top.rpm = Math.max(0, top.rpm - decayRate);
+
+  // Visual spin
+  top.spin += top.spinSpeed * (top.rpm / top.maxRpm);
+  top.spinSpeed = top.rpm / 60;
+
+  // Trail
+  top.trail.push({ x: top.x, y: top.y });
+  if (top.trail.length > 18) top.trail.shift();
+
+  // Hit flash countdown
+  if (top.hitFlash > 0) top.hitFlash--;
+}
+
+function getDecayRate(isPlayer) {
+  // Base decay, modified by parts
+  let rate = ARENA.friction * 60; // ~0.108 per frame at 60fps
+  if (isPlayer) {
+    const sg = G.loadout.sg;
+    if (sg && sg.effect && sg.effect.decayMult) rate *= sg.effect.decayMult;
+    const bb = G.loadout.bb;
+    if (bb && bb.effect && bb.effect.decayMult) rate *= bb.effect.decayMult;
+  } else {
+    const enemy = G.currentNode && G.currentNode.enemy;
+    if (enemy) rate *= (enemy.decayMult || 1.0);
+  }
+  return rate;
+}
+
+// ---- Top-to-Top Collision ----
+function checkTopCollision(p, e) {
+  const dx = p.x - e.x, dy = p.y - e.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist < ARENA.collisionDist) {
+    // Exchange momentum weighted by RPM
+    const totalRpm = p.rpm + e.rpm + 1;
+    const pRatio = p.rpm / totalRpm;
+    const eRatio = e.rpm / totalRpm;
+
+    const nx = dx / (dist || 1), ny = dy / (dist || 1);
+    const relVx = p.vx - e.vx, relVy = p.vy - e.vy;
+    const impact = relVx * nx + relVy * ny;
+
+    if (impact < 0) { // approaching
+      // RPM phase knockback multiplier
+      const eRpmRatio = e.rpm / (e.maxRpm || 1);
+      let knockMult = 1.0;
+      if (eRpmRatio < 0.25) knockMult = 1.5;       // critical phase
+      else if (eRpmRatio < 0.5) knockMult = 1.2;   // danger phase
+
+      // Spin direction clash modifier
+      // Opposite spin (left vs right) = violent knockback
+      // Same spin = friction slow, extra RPM drain
+      const oppositeSpins = (p.spinDir || 'right') !== (e.spinDir || 'right');
+      let spinKnockMult = 1.0;
+      let spinRpmDrainMult = 1.0;
+      if (oppositeSpins) {
+        spinKnockMult = 1.5;    // violent knockback — Ring Out chance up
+        spinRpmDrainMult = 0.8; // less RPM drain (energy goes to knockback)
+      } else {
+        spinKnockMult = 0.7;    // less knockback
+        spinRpmDrainMult = 1.4; // more RPM friction drain (same-spin grinding)
+      }
+
+      const impulse = impact * 1.4;
+      p.vx -= impulse * nx * eRatio * spinKnockMult;
+      p.vy -= impulse * ny * eRatio * spinKnockMult;
+      e.vx += impulse * nx * pRatio * knockMult * spinKnockMult;
+      e.vy += impulse * ny * pRatio * knockMult * spinKnockMult;
+
+      // RPM damage based on AR part + spin direction modifier
+      const arDmg = getARDamage();
+      const enemyArDmg = getEnemyARDamage();
+      p.rpm = Math.max(0, p.rpm - enemyArDmg * spinRpmDrainMult);
+      e.rpm = Math.max(0, e.rpm - arDmg * spinRpmDrainMult);
+
+      p.hitFlash = 8;
+      e.hitFlash = 8;
+
+      // Separate tops
+      const overlap = ARENA.collisionDist - dist;
+      p.x += nx * overlap * 0.5;
+      p.y += ny * overlap * 0.5;
+      e.x -= nx * overlap * 0.5;
+      e.y -= ny * overlap * 0.5;
+
+      return true;
+    }
+  }
+  return false;
+}
+
+function getARDamage() {
+  const ar = G.loadout.ar;
+  if (ar && ar.effect && ar.effect.rpmDmg) return ar.effect.rpmDmg;
+  return 120; // default
+}
+
+function getEnemyARDamage() {
+  const enemy = G.currentNode && G.currentNode.enemy;
+  if (enemy) return enemy.arDmg || 100;
+  return 100;
+}
+
+// ---- Arena Canvas Rendering ----
+let _arenaCanvas = null;
+let _arenaCtx = null;
+
+function initArenaCanvas() {
+  _arenaCanvas = document.getElementById('arena-canvas');
+  if (!_arenaCanvas) return;
+  _arenaCtx = _arenaCanvas.getContext('2d');
+  _arenaCanvas.width = 600;
+  _arenaCanvas.height = 520;
+}
+
+function renderArena() {
+  if (!_arenaCtx || !G.battle) return;
+  const ctx = _arenaCtx;
+  const W = _arenaCanvas.width, H = _arenaCanvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // ---- Bowl background ----
+  const grad = ctx.createRadialGradient(ARENA.cx, ARENA.cy, 0, ARENA.cx, ARENA.cy, ARENA.radius);
+  grad.addColorStop(0, '#0a0a1e');
+  grad.addColorStop(0.7, '#080818');
+  grad.addColorStop(1, '#050510');
+  ctx.beginPath();
+  ctx.arc(ARENA.cx, ARENA.cy, ARENA.radius, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Bowl rim
+  ctx.beginPath();
+  ctx.arc(ARENA.cx, ARENA.cy, ARENA.radius, 0, Math.PI * 2);
+  ctx.strokeStyle = '#1a1a4a';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Inner ring decoration
+  ctx.beginPath();
+  ctx.arc(ARENA.cx, ARENA.cy, ARENA.radius * 0.6, 0, Math.PI * 2);
+  ctx.strokeStyle = '#0d0d2a';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 8]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Center cross
+  ctx.strokeStyle = '#0d0d2a';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(ARENA.cx - 20, ARENA.cy); ctx.lineTo(ARENA.cx + 20, ARENA.cy);
+  ctx.moveTo(ARENA.cx, ARENA.cy - 20); ctx.lineTo(ARENA.cx, ARENA.cy + 20);
+  ctx.stroke();
+
+  if (!G.battle.running && G.battle.phase === 'launch') return;
+
+  const { player, enemy } = G.battle;
+
+  // ---- Draw trails ----
+  drawTrail(ctx, player.trail, '#3344ff');
+  drawTrail(ctx, enemy.trail, '#ff3344');
+
+  // ---- Draw tops ----
+  drawTop(ctx, player, '#4466ff', '#88aaff');
+  drawTop(ctx, enemy, '#ff4444', '#ff8888');
+
+  // ---- RPM bars overlay ----
+  drawRpmBar(ctx, player, 20, H - 40, 180, '#4466ff');
+  drawRpmBar(ctx, enemy, W - 200, H - 40, 180, '#ff4444');
+}
+
+function drawTrail(ctx, trail, color) {
+  if (trail.length < 2) return;
+  for (let i = 1; i < trail.length; i++) {
+    const alpha = (i / trail.length) * 0.35;
+    ctx.beginPath();
+    ctx.moveTo(trail[i - 1].x, trail[i - 1].y);
+    ctx.lineTo(trail[i].x, trail[i].y);
+    ctx.strokeStyle = color + Math.floor(alpha * 255).toString(16).padStart(2, '0');
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+}
+
+function drawTop(ctx, top, colorMain, colorAccent) {
+  const wobX = Math.sin(top.wobbleAngle) * top.wobble;
+  const wobY = Math.cos(top.wobbleAngle * 1.3) * top.wobble * 0.6;
+  const cx = top.x + wobX, cy = top.y + wobY;
+  const r = top.radius;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate((top.spin * Math.PI) / 180);
+
+  // Hit flash
+  if (top.hitFlash > 0) {
+    ctx.shadowColor = '#ffffff';
+    ctx.shadowBlur = 20;
+  } else {
+    ctx.shadowColor = colorMain;
+    ctx.shadowBlur = 8 + (top.rpm / top.maxRpm) * 8;
+  }
+
+  // Body
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  const rpmRatio = top.rpm / top.maxRpm;
+  // RPM < 25%: override colors to warning red
+  const isCritical = rpmRatio < 0.25;
+  const effectiveMain   = isCritical ? '#ff2222' : colorMain;
+  const effectiveAccent = isCritical ? '#ff6666' : colorAccent;
+  const bodyGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+  bodyGrad.addColorStop(0, effectiveAccent + 'cc');
+  bodyGrad.addColorStop(1, effectiveMain + '88');
+  ctx.fillStyle = top.hitFlash > 0 ? '#ffffff88' : bodyGrad;
+  ctx.fill();
+
+  // Rim
+  ctx.strokeStyle = top.hitFlash > 0 ? '#ffffff' : effectiveAccent;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Spin blades (3 lines)
+  ctx.strokeStyle = colorAccent + 'aa';
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(a) * r * 0.85, Math.sin(a) * r * 0.85);
+    ctx.stroke();
+  }
+
+  // Center dot
+  ctx.beginPath();
+  ctx.arc(0, 0, 3, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+
+  ctx.restore();
+
+  // RPM label above top
+  ctx.font = 'bold 11px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = colorAccent;
+  ctx.fillText(Math.round(top.rpm) + ' RPM', cx, cy - r - 8);
+}
+
+function drawRpmBar(ctx, top, x, y, w, color) {
+  const ratio = top.rpm / top.maxRpm;
+  const label = top.isPlayer ? 'YOU' : 'ENEMY';
+  ctx.font = '10px Courier New';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = color;
+  ctx.fillText(`${label}: ${Math.round(top.rpm)}/${top.maxRpm}`, x, y - 6);
+  // Background
+  ctx.fillStyle = '#111122';
+  ctx.fillRect(x, y, w, 8);
+  // Fill
+  const barColor = ratio > 0.5 ? color : (ratio > 0.25 ? '#ffaa00' : '#ff3333');
+  ctx.fillStyle = barColor;
+  ctx.fillRect(x, y, w * ratio, 8);
+  // Border
+  ctx.strokeStyle = color + '44';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, w, 8);
+}
+
+// ---- Battle Loop ----
+let _lastTime = 0;
+
+function startBattleLoop() {
+  if (!G.battle) return;
+  G.battle.running = true;
+  G.battle.phase = 'battle';
+  _lastTime = performance.now();
+  requestAnimationFrame(battleLoop);
+}
+
+function battleLoop(now) {
+  if (!G.battle || !G.battle.running) return;
+  const dt = Math.min((now - _lastTime) / 1000, 0.05);
+  _lastTime = now;
+
+  const { player, enemy } = G.battle;
+
+  // Tick intervention cooldowns each frame
+  if (typeof tickInterventionCooldowns === 'function') tickInterventionCooldowns();
+
+  // Physics
+  physicsStep(player, dt);
+  physicsStep(enemy, dt);
+  checkTopCollision(player, enemy);
+
+  // Enemy AI
+  applyEnemyAI(enemy, player, dt);
+
+  // Render
+  renderArena();
+  updateBattleHUD();
+
+  // Battle timer countdown
+  G.battle.timeLeft -= dt;
+  if (G.battle.timeLeft <= 0) {
+    endBattleTimeout();
+    return;
+  }
+
+  // Win/loss check — Ring Out
+  if (player.ringOut) {
+    endBattle(false, 'ringout');
+    return;
+  }
+  if (enemy.ringOut) {
+    endBattle(true, 'ringout');
+    return;
+  }
+  // Win/loss check — Burst (RPM depleted)
+  if (player.rpm <= 0) {
+    endBattle(false, 'burst');
+    return;
+  }
+  if (enemy.rpm <= 0) {
+    endBattle(true, 'burst');
+    return;
+  }
+
+  G.battle.frameId = requestAnimationFrame(battleLoop);
+}
+
+function stopBattleLoop() {
+  if (G.battle && G.battle.frameId) {
+    cancelAnimationFrame(G.battle.frameId);
+    G.battle.running = false;
+  }
+}
+
+// ---- Enemy AI ----
+function applyEnemyAI(enemy, player, dt) {
+  if (!G.currentNode || !G.currentNode.enemy) return;
+  const enemyData = G.currentNode.enemy;
+  const archetype = enemyData.archetype || 'Aggressor';
+
+  // Boss three-phase behavior switching
+  if (enemyData.ai === 'boss' && enemyData.phases) {
+    const rpmPct = enemy.rpm / enemy.maxRpm;
+    // Determine current phase (phases are ordered from high to low threshold)
+    let currentPhaseAI = 'rusher';
+    let currentPhaseIndex = 0;
+    for (let i = 0; i < enemyData.phases.length; i++) {
+      if (rpmPct <= enemyData.phases[i].rpmThreshold) {
+        currentPhaseAI = enemyData.phases[i].ai;
+        currentPhaseIndex = i;
+      }
+    }
+    // Phase transition announcement
+    if (G.battle.bossPhase === undefined) G.battle.bossPhase = 0;
+    if (currentPhaseIndex !== G.battle.bossPhase) {
+      G.battle.bossPhase = currentPhaseIndex;
+      const phaseNames = ['', 'PHASE 2', 'PHASE 3'];
+      const phaseColors = ['', '#ff8800', '#ff2244'];
+      if (currentPhaseIndex > 0) {
+        showBattleAnnouncement(
+          `⚡ CHAOS CHAMPION — ${phaseNames[currentPhaseIndex]}`,
+          phaseColors[currentPhaseIndex] || '#ff4444'
+        );
+        // Phase 3: apply poison aura (RPM drain)
+        if (currentPhaseIndex === 2) {
+          G.battle.bossPoison = true;
+        }
+      }
+    }
+    // Apply poison in phase 3: drain player RPM over time
+    if (G.battle.bossPoison) {
+      player.rpm -= 0.08 * dt * 60;
+    }
+    // Delegate to the resolved AI archetype
+    applyAIArchetype(currentPhaseAI, enemy, player, dt);
+    return;
+  }
+
+  // Normal enemy: delegate by archetype
+  applyAIArchetype(enemyData.ai || archetype.toLowerCase(), enemy, player, dt);
+}
+
+// ---- AI Archetype Executor ----
+function applyAIArchetype(aiType, enemy, player, dt) {
+  switch (aiType) {
+    case 'rusher':
+    case 'Aggressor': {
+      // Rush toward player
+      const dx = player.x - enemy.x, dy = player.y - enemy.y;
+      const d = Math.sqrt(dx * dx + dy * dy) || 1;
+      enemy.vx += (dx / d) * 0.12;
+      enemy.vy += (dy / d) * 0.12;
+      // Cap speed
+      const spd = Math.sqrt(enemy.vx * enemy.vx + enemy.vy * enemy.vy);
+      if (spd > 3.5) { enemy.vx = (enemy.vx / spd) * 3.5; enemy.vy = (enemy.vy / spd) * 3.5; }
+      break;
+    }
+    case 'Survivor': {
+      // Orbit center, avoid player
+      const dx = enemy.x - ARENA.cx, dy = enemy.y - ARENA.cy;
+      const d = Math.sqrt(dx * dx + dy * dy) || 1;
+      // Tangential force
+      enemy.vx += (-dy / d) * 0.08;
+      enemy.vy += (dx / d) * 0.08;
+      const spd = Math.sqrt(enemy.vx * enemy.vx + enemy.vy * enemy.vy);
+      if (spd > 2.8) { enemy.vx = (enemy.vx / spd) * 2.8; enemy.vy = (enemy.vy / spd) * 2.8; }
+      break;
+    }
+    case 'Trapper': {
+      // Move to wall then bounce toward player
+      const dx = ARENA.cx - enemy.x, dy = ARENA.cy - enemy.y;
+      const d = Math.sqrt(dx * dx + dy * dy) || 1;
+      if (d < ARENA.radius * 0.5) {
+        // Near center, rush outward
+        enemy.vx -= (dx / d) * 0.1;
+        enemy.vy -= (dy / d) * 0.1;
+      } else {
+        // Near wall, rush player
+        const pdx = player.x - enemy.x, pdy = player.y - enemy.y;
+        const pd = Math.sqrt(pdx * pdx + pdy * pdy) || 1;
+        enemy.vx += (pdx / pd) * 0.15;
+        enemy.vy += (pdy / pd) * 0.15;
+      }
+      const spd = Math.sqrt(enemy.vx * enemy.vx + enemy.vy * enemy.vy);
+      if (spd > 4.0) { enemy.vx = (enemy.vx / spd) * 4.0; enemy.vy = (enemy.vy / spd) * 4.0; }
+      break;
+    }
+    case 'fortress': {
+      // Phase 2 boss: defensive orbit + counter-attack when player is close
+      const dx = enemy.x - ARENA.cx, dy = enemy.y - ARENA.cy;
+      const d = Math.sqrt(dx * dx + dy * dy) || 1;
+      // Orbit center tightly
+      enemy.vx += (-dy / d) * 0.06;
+      enemy.vy += (dx / d) * 0.06;
+      // If player is very close, burst outward
+      const pdx = enemy.x - player.x, pdy = enemy.y - player.y;
+      const pd = Math.sqrt(pdx * pdx + pdy * pdy) || 1;
+      if (pd < 40) {
+        enemy.vx += (pdx / pd) * 0.25;
+        enemy.vy += (pdy / pd) * 0.25;
+      }
+      const spd = Math.sqrt(enemy.vx * enemy.vx + enemy.vy * enemy.vy);
+      if (spd > 2.5) { enemy.vx = (enemy.vx / spd) * 2.5; enemy.vy = (enemy.vy / spd) * 2.5; }
+      break;
+    }
+    case 'endurer': {
+      // Phase 3 boss: slow spiral outward, drain player RPM via poison aura
+      const dx = ARENA.cx - enemy.x, dy = ARENA.cy - enemy.y;
+      const d = Math.sqrt(dx * dx + dy * dy) || 1;
+      // Slow drift away from center
+      enemy.vx -= (dx / d) * 0.04;
+      enemy.vy -= (dy / d) * 0.04;
+      // Slight tangential spin
+      enemy.vx += (-dy / d) * 0.03;
+      enemy.vy += (dx / d) * 0.03;
+      const spd = Math.sqrt(enemy.vx * enemy.vx + enemy.vy * enemy.vy);
+      if (spd > 1.8) { enemy.vx = (enemy.vx / spd) * 1.8; enemy.vy = (enemy.vy / spd) * 1.8; }
+      break;
+    }
+  }
+}
+
+// ---- Battle Announcement Overlay ----
+function showBattleAnnouncement(text, color) {
+  color = color || '#ffcc44';
+  // Remove existing announcement
+  const existing = document.getElementById('battle-announcement');
+  if (existing) existing.remove();
+
+  const el = document.createElement('div');
+  el.id = 'battle-announcement';
+  el.style.cssText = `
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-60%);
+    background:rgba(0,0,0,0.82); border:2px solid ${color};
+    color:${color}; font-family:'Courier New',monospace; font-size:18px;
+    font-weight:bold; padding:10px 24px; border-radius:6px;
+    text-align:center; pointer-events:none; z-index:999;
+    animation: announceFade 2.2s ease-out forwards;
+  `;
+  el.textContent = text;
+
+  // Inject keyframe if not present
+  if (!document.getElementById('announce-style')) {
+    const s = document.createElement('style');
+    s.id = 'announce-style';
+    s.textContent = `@keyframes announceFade {
+      0%   { opacity:0; transform:translate(-50%,-70%) scale(0.85); }
+      15%  { opacity:1; transform:translate(-50%,-60%) scale(1.05); }
+      70%  { opacity:1; transform:translate(-50%,-60%) scale(1); }
+      100% { opacity:0; transform:translate(-50%,-55%) scale(0.95); }
+    }`;
+    document.head.appendChild(s);
+  }
+
+  const arenaWrap = document.getElementById('arena-wrap') || document.getElementById('battle-screen');
+  if (arenaWrap) {
+    arenaWrap.style.position = arenaWrap.style.position || 'relative';
+    arenaWrap.appendChild(el);
+  }
+  setTimeout(() => { if (el.parentNode) el.remove(); }, 2200);
+}
+
+// ---- Battle HUD Update ----
+function updateBattleHUD() {
+  if (!G.battle) return;
+  const { player, enemy } = G.battle;
+  const pEl = document.getElementById('player-rpm');
+  const eEl = document.getElementById('enemy-rpm');
+  const pBar = document.getElementById('player-rpm-bar');
+  const eBar = document.getElementById('enemy-rpm-bar');
+  if (pEl) pEl.textContent = Math.round(player.rpm);
+  if (eEl) eEl.textContent = Math.round(enemy.rpm);
+  if (pBar) pBar.style.width = (player.rpm / player.maxRpm * 100).toFixed(1) + '%';
+  if (eBar) eBar.style.width = (enemy.rpm / enemy.maxRpm * 100).toFixed(1) + '%';
+
+  // Update battle timer
+  const timerEl = document.getElementById('battle-timer');
+  if (timerEl && G.battle.timeLeft !== undefined) {
+    const t = Math.max(0, Math.ceil(G.battle.timeLeft));
+    const mm = Math.floor(t / 60);
+    const ss = t % 60;
+    timerEl.textContent = mm + ':' + String(ss).padStart(2, '0');
+    if (t <= 30) {
+      timerEl.style.color = '#ff4444';
+      timerEl.style.animation = 'timerFlash 0.6s ease-in-out infinite';
+    } else {
+      timerEl.style.color = '#aaaacc';
+      timerEl.style.animation = '';
+    }
+  }
+}
+
+// ---- Timeout Draw ----
+function endBattleTimeout() {
+  stopBattleLoop();
+  G.battle.running = false;
+  G.battle.phase = 'end';
+
+  // Both lose 1 HP
+  G.hp = Math.max(0, G.hp - 1);
+  updateStatusBar();
+
+  // Canvas overlay
+  renderArena();
+  if (_arenaCtx) {
+    const ctx = _arenaCtx;
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.fillRect(0, 0, _arenaCanvas.width, _arenaCanvas.height);
+    ctx.font = 'bold 32px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffcc44';
+    ctx.fillText('TIME OUT', ARENA.cx, ARENA.cy - 16);
+    ctx.font = '18px Courier New';
+    ctx.fillStyle = '#aaaacc';
+    ctx.fillText('DRAW — Both tops still spinning', ARENA.cx, ARENA.cy + 20);
+  }
+
+  setTimeout(() => {
+    clearCurrentNode();
+    if (G.hp <= 0) {
+      showGameOver();
+      return;
+    }
+    showModal('TIME OUT — DRAW',
+      `<div style="color:#ffcc44;font-size:18px;margin-bottom:12px;">⏱ TIME OUT</div>
+      <p style="color:#ccccff;">The battle ended in a draw. Both tops survived.</p>
+      <p style="color:#ff8888;">Lost <strong>1 HP</strong>. Remaining: ${G.hp}/${G.maxHp}</p>`,
+      [{ label: 'Return to Map', cls: 'btn-secondary', onClick: () => returnToMap() }]
+    );
+  }, 1400);
+}
+
+// ---- End Battle ----
+function endBattle(playerWon, winType) {
+  stopBattleLoop();
+  G.battle.running = false;
+  G.battle.phase = 'end';
+  G.battle.winType = winType || (playerWon ? 'survival' : 'burst');
+
+  // Determine display text based on win type
+  let resultTitle, resultSub;
+  if (playerWon) {
+    if (winType === 'ringout') {
+      resultTitle = 'RING OUT!';
+      resultSub = 'Enemy launched out of the arena!';
+    } else {
+      resultTitle = 'BURST WIN!';
+      resultSub = 'Enemy top stopped spinning!';
+    }
+  } else {
+    if (winType === 'ringout') {
+      resultTitle = 'RING OUT...';
+      resultSub = 'Your top flew out of the arena!';
+    } else {
+      resultTitle = 'BURST LOSS...';
+      resultSub = 'Your top stopped spinning...';
+    }
+  }
+
+  // Final render with result overlay
+  renderArena();
+  if (_arenaCtx) {
+    const ctx = _arenaCtx;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(0, 0, _arenaCanvas.width, _arenaCanvas.height);
+    ctx.font = 'bold 36px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = playerWon ? '#44ff88' : '#ff4444';
+    ctx.fillText(resultTitle, ARENA.cx, ARENA.cy - 10);
+    ctx.font = '16px Courier New';
+    ctx.fillStyle = '#8888aa';
+    ctx.fillText(resultSub, ARENA.cx, ARENA.cy + 24);
+  }
+
+  // Show result after short delay
+  setTimeout(() => showBattleResult(playerWon, winType), 1200);
+}
+
+function showBattleResult(playerWon, winType) {
+  const isBossNode = G.currentNode && G.currentNode.type === NodeType.BOSS;
+
+  if (playerWon) {
+    // Win type label & gold bonus
+    let winLabel, goldBonus;
+    if (winType === 'ringout') {
+      winLabel  = '🏟️ RING OUT!';
+      goldBonus = Math.round((30 + G.floor * 15) * 0.20); // +20%
+    } else if (winType === 'burst') {
+      winLabel  = '💥 BURST WIN!';
+      goldBonus = Math.round((30 + G.floor * 15) * 0.50); // +50%
+    } else {
+      winLabel  = '✅ SURVIVAL WIN';
+      goldBonus = 0;
+    }
+
+    const baseGold   = 30 + G.floor * 15 + Math.floor(Math.random() * 20);
+    const goldReward = baseGold + goldBonus;
+    G.gold += goldReward;
+    updateStatusBar();
+    clearCurrentNode();
+
+    // Part reward — burst always gives one, others 70% chance
+    const alwaysReward = winType === 'burst';
+    const rewardPart   = (alwaysReward || Math.random() < 0.7) ? getRewardPart() : null;
+
+    let html = `<div style="color:#44ff88;font-size:20px;font-weight:bold;margin-bottom:10px;">${winLabel}</div>`;
+    if (isBossNode) {
+      html += `<div style="color:#ffcc44;font-size:14px;margin-bottom:10px;">⭐ BOSS DEFEATED ⭐</div>`;
+    }
+    html += `<p style="color:#ccccff;">Earned <strong style="color:#ffcc44;">${goldReward}G</strong>`;
+    if (goldBonus > 0) html += ` <span style="color:#ffaa44;font-size:12px;">(+${goldBonus}G ${winType} bonus)</span>`;
+    html += `</p>`;
+    if (rewardPart) {
+      html += `<p style="color:#ccccff;margin-top:8px;">Part reward: <strong class="rarity-${rewardPart.rarity}">${rewardPart.name}</strong></p>
+      <p style="font-size:12px;color:#8888aa;">${rewardPart.desc}</p>`;
+    }
+    // Boss: extra rare part guaranteed
+    let bossExtraPart = null;
+    if (isBossNode) {
+      bossExtraPart = getRewardPart(true); // force rare+
+      if (bossExtraPart) {
+        html += `<p style="color:#ffcc44;margin-top:6px;">🎁 Boss Bonus: <strong class="rarity-${bossExtraPart.rarity}">${bossExtraPart.name}</strong></p>
+        <p style="font-size:12px;color:#8888aa;">${bossExtraPart.desc}</p>`;
+      }
+    }
+
+    const modalTitle = isBossNode ? '⭐ BOSS CLEARED!' : 'Battle Won!';
+    showModal(modalTitle, html, [
+      { label: 'Take Part', cls: 'btn-primary', onClick: () => {
+        if (rewardPart)    G.inventory.push({ ...rewardPart });
+        if (bossExtraPart) G.inventory.push({ ...bossExtraPart });
+        returnToMap();
+      }},
+      { label: 'Skip', cls: 'btn-secondary', onClick: () => returnToMap() },
+    ]);
+  } else {
+    // Lose HP
+    G.hp = Math.max(0, G.hp - 1);
+    updateStatusBar();
+    if (G.hp <= 0) {
+      showGameOver();
+      return;
+    }
+    const loseLabel = winType === 'ringout' ? '🏟️ RING OUT...' : '💀 DEFEAT';
+    showModal('Defeat', `<div style="color:#ff4444;font-size:18px;margin-bottom:12px;">${loseLabel}</div>
+    <p style="color:#ccccff;">Lost <strong style="color:#ff4444;">1 HP</strong>. Remaining: ${G.hp}/${G.maxHp}</p>`,
+    [{ label: 'Return to Map', cls: 'btn-secondary', onClick: () => returnToMap() }]);
+  }
+}
+
+function getRewardPart(forceRare = false) {
+  const allParts = Object.values(PARTS_DB);
+  let rarityPool;
+  if (forceRare) {
+    // Boss bonus: always uncommon or rare
+    rarityPool = ['uncommon', 'rare'];
+  } else {
+    rarityPool = G.floor >= 3 ? ['common','uncommon','rare'] :
+                 G.floor >= 2 ? ['common','uncommon'] : ['common'];
+  }
+  const pool = allParts.filter(p => rarityPool.includes(p.rarity));
+  if (pool.length === 0) return allParts[Math.floor(Math.random() * allParts.length)];
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function showGameOver() {
+  showModal('GAME OVER', `<div style="color:#ff4444;font-size:22px;margin-bottom:12px;">💀 YOUR TOP HAS FALLEN</div>
+  <p style="color:#8888aa;">All HP lost. The arena claims another challenger.</p>`,
+  [{ label: 'Return to Title', cls: 'btn-danger', onClick: () => {
+    G.battle = null;
+    G.map = null;
+    showScreen('TITLE');
+  }}]);
+}
+
+// ---- Init Arena ----
+initArenaCanvas();
+
+// ---- Init Map Canvas ----
+initMapCanvas();
+
+// ============================================================
+// PHASE 5 — LAUNCH SYSTEM (Angle Selector + Power Timing Bar)
+// ============================================================
+
+// ---- Launch State ----
+// G.launch = {
+//   step: 'angle' | 'power' | 'done',
+//   angle: 0-360,
+//   power: 0-100,
+//   arrowAngle: 0,   // rotating arrow angle
+//   arrowSpeed: 1.8, // degrees per frame
+//   barPhase: 0,     // sine wave phase
+//   barSpeed: 0.04,  // sine wave speed
+//   barValue: 0,     // current 0-1 value
+//   locked: false,
+// }
+
+let _launchCanvas = null;
+let _launchCtx = null;
+let _launchAnimId = null;
+
+function initLaunchCanvas() {
+  _launchCanvas = document.getElementById('launch-canvas');
+  if (!_launchCanvas) return;
+  _launchCtx = _launchCanvas.getContext('2d');
+  _launchCanvas.width = 320;
+  _launchCanvas.height = 320;
+  _launchCanvas.addEventListener('click', onLaunchCanvasClick);
+}
+
+// ---- Start Launch Sequence ----
+function startLaunchSequence() {
+  G.launch = {
+    step: 'angle',
+    angle: 0,
+    power: 0,
+    arrowAngle: 0,
+    arrowSpeed: 2.2,
+    barPhase: 0,
+    barSpeed: 0.045,
+    barValue: 0,
+    locked: false,
+  };
+
+  // Show launch screen
+  showScreen('LAUNCH');
+  updateLaunchUI();
+  if (_launchAnimId) cancelAnimationFrame(_launchAnimId);
+  _launchAnimId = requestAnimationFrame(launchAnimLoop);
+}
+
+// ---- Launch Animation Loop ----
+function launchAnimLoop() {
+  if (!G.launch || G.launch.step === 'done') return;
+
+  if (G.launch.step === 'angle') {
+    G.launch.arrowAngle = (G.launch.arrowAngle + G.launch.arrowSpeed) % 360;
+  } else if (G.launch.step === 'power') {
+    G.launch.barPhase += G.launch.barSpeed;
+    G.launch.barValue = (Math.sin(G.launch.barPhase) + 1) / 2; // 0~1
+  }
+
+  renderLaunchCanvas();
+  _launchAnimId = requestAnimationFrame(launchAnimLoop);
+}
+
+// ---- Canvas Click Handler ----
+function onLaunchCanvasClick() {
+  if (!G.launch || G.launch.locked) return;
+
+  if (G.launch.step === 'angle') {
+    // Lock angle
+    G.launch.angle = G.launch.arrowAngle;
+    G.launch.step = 'power';
+    updateLaunchUI();
+  } else if (G.launch.step === 'power') {
+    // Lock power
+    G.launch.power = Math.round(G.launch.barValue * 100);
+    G.launch.step = 'done';
+    G.launch.locked = true;
+    cancelAnimationFrame(_launchAnimId);
+    renderLaunchCanvas();
+    updateLaunchUI();
+
+    // Brief pause then launch
+    setTimeout(() => executeLaunch(), 600);
+  }
+}
+
+// ---- Render Launch Canvas ----
+function renderLaunchCanvas() {
+  if (!_launchCtx || !G.launch) return;
+  const ctx = _launchCtx;
+  const W = _launchCanvas.width, H = _launchCanvas.height;
+  const cx = W / 2, cy = H / 2 - 20;
+  ctx.clearRect(0, 0, W, H);
+
+  if (G.launch.step === 'angle' || (G.launch.step === 'power' && G.launch.angle !== undefined)) {
+    drawAngleDial(ctx, cx, cy, G.launch.arrowAngle, G.launch.step !== 'angle' ? G.launch.angle : null);
+  }
+
+  if (G.launch.step === 'power' || G.launch.step === 'done') {
+    drawPowerBar(ctx, 20, H - 60, W - 40, 28, G.launch.barValue, G.launch.step === 'done' ? G.launch.power / 100 : null);
+  }
+}
+
+// ---- Draw Angle Dial ----
+function drawAngleDial(ctx, cx, cy, arrowAngle, lockedAngle) {
+  const R = 110;
+
+  // Outer ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.strokeStyle = '#1a1a4a';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Tick marks every 30°
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    const inner = i % 3 === 0 ? R - 14 : R - 8;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
+    ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R);
+    ctx.strokeStyle = i % 3 === 0 ? '#3333aa' : '#1a1a3a';
+    ctx.lineWidth = i % 3 === 0 ? 2 : 1;
+    ctx.stroke();
+  }
+
+  // Degree labels
+  ctx.font = '10px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ['0°', '90°', '180°', '270°'].forEach((label, i) => {
+    const a = (i / 4) * Math.PI * 2 - Math.PI / 2;
+    ctx.fillStyle = '#333366';
+    ctx.fillText(label, cx + Math.cos(a) * (R - 22), cy + Math.sin(a) * (R - 22));
+  });
+
+  // Center circle
+  ctx.beginPath();
+  ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+  ctx.fillStyle = '#0d0d2a';
+  ctx.fill();
+  ctx.strokeStyle = '#2222aa';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Locked angle indicator (green)
+  if (lockedAngle !== null) {
+    const la = (lockedAngle - 90) * Math.PI / 180;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(la) * (R - 10), cy + Math.sin(la) * (R - 10));
+    ctx.strokeStyle = '#44ff88';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    // Locked label
+    ctx.font = 'bold 12px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#44ff88';
+    ctx.fillText(`${Math.round(lockedAngle)}°`, cx, cy + R + 18);
+  }
+
+  // Rotating arrow
+  const a = (arrowAngle - 90) * Math.PI / 180;
+  const arrowLen = R - 15;
+  const ax = cx + Math.cos(a) * arrowLen;
+  const ay = cy + Math.sin(a) * arrowLen;
+
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(ax, ay);
+  ctx.strokeStyle = lockedAngle !== null ? '#2244aa' : '#4466ff';
+  ctx.lineWidth = lockedAngle !== null ? 1.5 : 2.5;
+  ctx.stroke();
+
+  // Arrowhead
+  const headLen = 10;
+  const headAngle = 0.4;
+  ctx.beginPath();
+  ctx.moveTo(ax, ay);
+  ctx.lineTo(ax - headLen * Math.cos(a - headAngle), ay - headLen * Math.sin(a - headAngle));
+  ctx.lineTo(ax - headLen * Math.cos(a + headAngle), ay - headLen * Math.sin(a + headAngle));
+  ctx.closePath();
+  ctx.fillStyle = lockedAngle !== null ? '#2244aa' : '#4466ff';
+  ctx.fill();
+
+  // Glow dot at tip
+  if (lockedAngle === null) {
+    ctx.beginPath();
+    ctx.arc(ax, ay, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#88aaff';
+    ctx.fill();
+  }
+
+  // Step label
+  if (lockedAngle === null) {
+    ctx.font = '13px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#6666cc';
+    ctx.fillText('CLICK TO LOCK ANGLE', cx, cy + R + 18);
+  }
+}
+
+// ---- Draw Power Bar ----
+function drawPowerBar(ctx, x, y, w, h, value, lockedValue) {
+  const displayVal = lockedValue !== null ? lockedValue : value;
+
+  // Background
+  ctx.fillStyle = '#080818';
+  ctx.fillRect(x, y, w, h);
+
+  // Sine wave fill
+  const barW = w * displayVal;
+  const barColor = displayVal > 0.75 ? '#ff4444' :
+                   displayVal > 0.5  ? '#ffaa00' :
+                   displayVal > 0.25 ? '#44ff88' : '#4466ff';
+  ctx.fillStyle = barColor;
+  ctx.fillRect(x, y, barW, h);
+
+  // Sine wave overlay
+  if (lockedValue === null) {
+    ctx.beginPath();
+    ctx.moveTo(x, y + h / 2);
+    for (let i = 0; i <= w; i++) {
+      const phase = (i / w) * Math.PI * 4 + (G.launch ? G.launch.barPhase * 3 : 0);
+      const yOff = Math.sin(phase) * (h * 0.3);
+      ctx.lineTo(x + i, y + h / 2 + yOff);
+    }
+    ctx.strokeStyle = '#ffffff33';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // Border
+  ctx.strokeStyle = lockedValue !== null ? barColor : '#2222aa';
+  ctx.lineWidth = lockedValue !== null ? 2 : 1.5;
+  ctx.strokeRect(x, y, w, h);
+
+  // Sweet spot zone (60-80% = green zone)
+  const sweetX1 = x + w * 0.6, sweetX2 = x + w * 0.8;
+  ctx.strokeStyle = '#44ff8844';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.strokeRect(sweetX1, y - 2, sweetX2 - sweetX1, h + 4);
+  ctx.setLineDash([]);
+
+  // Labels
+  ctx.font = '10px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#333366';
+  ctx.fillText('SWEET', (sweetX1 + sweetX2) / 2, y - 6);
+
+  ctx.font = 'bold 13px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = lockedValue !== null ? barColor : '#8888cc';
+  ctx.fillText(
+    lockedValue !== null ? `POWER: ${Math.round(lockedValue * 100)}%` : 'CLICK TO LOCK POWER',
+    x + w / 2, y + h + 16
+  );
+}
+
+// ---- Update Launch UI Text ----
+function updateLaunchUI() {
+  if (!G.launch) return;
+  const stepEl = document.getElementById('launch-step');
+  const hintEl = document.getElementById('launch-hint');
+  if (!stepEl || !hintEl) return;
+
+  if (G.launch.step === 'angle') {
+    stepEl.textContent = 'STEP 1 — SET ANGLE';
+    hintEl.textContent = 'Watch the rotating arrow. Click when it points your desired direction.';
+  } else if (G.launch.step === 'power') {
+    stepEl.textContent = 'STEP 2 — SET POWER';
+    hintEl.textContent = 'The bar oscillates. Click in the green zone (60-80%) for best results!';
+  } else {
+    stepEl.textContent = 'LAUNCHING...';
+    hintEl.textContent = `Angle: ${Math.round(G.launch.angle)}° | Power: ${G.launch.power}%`;
+  }
+}
+
+// ---- Execute Launch → Enter Battle ----
+function executeLaunch() {
+  if (!G.launch || !G.currentNode || !G.currentNode.enemy) return;
+
+  const enemy = G.currentNode.enemy;
+  const playerRpm = calcLaunchRpm(G.launch.power);
+  const enemyRpm  = enemy.baseRpm || 3000;
+
+  // Enemy launch angle: aimed roughly at player start pos
+  const enemyAngle = 180 + (Math.random() - 0.5) * 60;
+  const enemyPower = 50 + Math.random() * 40;
+
+  // Determine player spin direction from SG part
+  const playerSg = G.loadout.sg;
+  const playerSpinDir = (playerSg && playerSg.effect && playerSg.effect.spin) ? playerSg.effect.spin : 'right';
+  // Determine enemy spin direction from enemy data
+  const enemySpinDir = enemy.spin || 'right';
+
+  G.battle = {
+    player: createTopBody(true,  playerRpm, G.launch.angle, G.launch.power / 100, playerSpinDir),
+    enemy:  createTopBody(false, enemyRpm,  enemyAngle,     enemyPower / 100,      enemySpinDir),
+    running: false,
+    phase: 'launch',
+    frameId: null,
+    timeLeft: 180,   // 3-minute battle timer
+    victoryType: 'survival', // 'survival' | 'ringout' | 'burst'
+  };
+
+  showScreen('BATTLE');
+  initArenaCanvas();
+  renderArena();
+  updateBattleHUD();
+
+  // Short countdown then start
+  let count = 3;
+  const countEl = document.getElementById('battle-countdown');
+  if (countEl) countEl.style.display = 'block';
+
+  const tick = setInterval(() => {
+    if (countEl) countEl.textContent = count > 0 ? count : 'GO!';
+    if (count <= 0) {
+      clearInterval(tick);
+      if (countEl) setTimeout(() => { countEl.style.display = 'none'; }, 400);
+      startBattleLoop();
+    }
+    count--;
+  }, 700);
+}
+
+function calcLaunchRpm(power) {
+  // Base RPM from WD part
+  const wd = G.loadout.wd;
+  const baseRpm = wd && wd.effect && wd.effect.baseRpm ? wd.effect.baseRpm : 3000;
+  // Power multiplier: 0.5x at 0%, 1.0x at 60%, 1.2x at 100%
+  const mult = 0.5 + (power / 100) * 0.7;
+  return Math.round(baseRpm * mult);
+}
+
+// ---- Wire up Prep → Launch button ----
+document.getElementById('btn-start-battle').addEventListener('click', () => {
+  initLaunchCanvas();
+  startLaunchSequence();
+});
+
+// ---- Wire up Launch Fire button (click) ----
+document.getElementById('btn-launch-fire').addEventListener('click', () => {
+  onLaunchCanvasClick();
+});
+
+// ---- Wire up Space key for launch ----
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' && G.state === 'LAUNCH') {
+    e.preventDefault();
+    onLaunchCanvasClick();
+  }
+});
+
+// ============================================================
+// PHASE 6 — PLAYER INTERVENTION + PART EFFECTS + FULL WIRING
+// ============================================================
+
+// ---- Intervention State ----
+// G.intervention = {
+//   thrustCooldown: 0,   // frames remaining
+//   brakeCooldown: 0,
+//   activateCooldown: 0,
+//   thrustCharges: 3,
+//   brakeCharges: 3,
+//   activateUsed: false,
+// }
+
+function initIntervention() {
+  G.intervention = {
+    thrustCooldown: 0,
+    brakeCooldown: 0,
+    activateCooldown: 0,
+    thrustCharges: 3,
+    brakeCharges: 3,
+    activateUsed: false,
+  };
+}
+
+// ---- Thrust: push player top toward enemy ----
+function doThrust() {
+  if (!G.battle || !G.battle.running) return;
+  const iv = G.intervention;
+  if (iv.thrustCharges <= 0 || iv.thrustCooldown > 0) return;
+
+  const p = G.battle.player, e = G.battle.enemy;
+  const dx = e.x - p.x, dy = e.y - p.y;
+  const d = Math.sqrt(dx * dx + dy * dy) || 1;
+  const force = 4.5;
+  p.vx += (dx / d) * force;
+  p.vy += (dy / d) * force;
+
+  iv.thrustCharges--;
+  iv.thrustCooldown = 90; // 1.5s at 60fps
+  updateInterventionHUD();
+  showInterventionFeedback('⚡ THRUST!', '#4466ff');
+}
+
+// ---- Brake: slow player top, gain RPM ----
+function doBrake() {
+  if (!G.battle || !G.battle.running) return;
+  const iv = G.intervention;
+  if (iv.brakeCharges <= 0 || iv.brakeCooldown > 0) return;
+
+  const p = G.battle.player;
+  p.vx *= 0.2;
+  p.vy *= 0.2;
+  // Braking recovers some RPM (stabilize)
+  const rpmGain = 150;
+  p.rpm = Math.min(p.maxRpm, p.rpm + rpmGain);
+
+  iv.brakeCharges--;
+  iv.brakeCooldown = 120; // 2s
+  updateInterventionHUD();
+  showInterventionFeedback('🛑 BRAKE! +' + rpmGain + ' RPM', '#44ff88');
+}
+
+// ---- Activate: trigger equipped part special effect ----
+function doActivate() {
+  if (!G.battle || !G.battle.running) return;
+  const iv = G.intervention;
+  if (iv.activateUsed || iv.activateCooldown > 0) return;
+
+  // Find first part with an activatable effect
+  const slots = ['ar', 'wd', 'sg', 'bb'];
+  let activated = false;
+  for (const slot of slots) {
+    const part = G.loadout[slot];
+    if (part && part.effect && part.effect.activate) {
+      const result = part.effect.activate(G.battle.player, G.battle.enemy, G);
+      showInterventionFeedback(`✨ ${part.name}: ${result}`, '#ffcc44');
+      activated = true;
+      break;
+    }
+  }
+  if (!activated) {
+    showInterventionFeedback('No activatable part equipped!', '#888888');
+    return;
+  }
+
+  iv.activateUsed = true;
+  iv.activateCooldown = 180;
+  updateInterventionHUD();
+}
+
+// ---- Cooldown tick (called each battle frame) ----
+function tickInterventionCooldowns() {
+  if (!G.intervention) return;
+  const iv = G.intervention;
+  if (iv.thrustCooldown > 0) iv.thrustCooldown--;
+  if (iv.brakeCooldown > 0) iv.brakeCooldown--;
+  if (iv.activateCooldown > 0) iv.activateCooldown--;
+  updateInterventionHUD();
+}
+
+// ---- Update Intervention HUD ----
+function updateInterventionHUD() {
+  const iv = G.intervention;
+  if (!iv) return;
+
+  const thrustBtn = document.getElementById('btn-thrust');
+  const brakeBtn  = document.getElementById('btn-brake');
+  const activBtn  = document.getElementById('btn-activate');
+
+  if (thrustBtn) {
+    const ready = iv.thrustCharges > 0 && iv.thrustCooldown === 0;
+    thrustBtn.disabled = !ready || !G.battle || !G.battle.running;
+    thrustBtn.textContent = `⚡ Thrust (${iv.thrustCharges})${iv.thrustCooldown > 0 ? ' ' + Math.ceil(iv.thrustCooldown/60) + 's' : ''}`;
+    thrustBtn.className = ready ? 'btn-primary' : 'btn-secondary';
+  }
+  if (brakeBtn) {
+    const ready = iv.brakeCharges > 0 && iv.brakeCooldown === 0;
+    brakeBtn.disabled = !ready || !G.battle || !G.battle.running;
+    brakeBtn.textContent = `🛑 Brake (${iv.brakeCharges})${iv.brakeCooldown > 0 ? ' ' + Math.ceil(iv.brakeCooldown/60) + 's' : ''}`;
+    brakeBtn.className = ready ? 'btn-secondary' : 'btn-secondary';
+  }
+  if (activBtn) {
+    const ready = !iv.activateUsed && iv.activateCooldown === 0;
+    activBtn.disabled = !ready || !G.battle || !G.battle.running;
+    activBtn.textContent = `✨ Activate${iv.activateCooldown > 0 ? ' ' + Math.ceil(iv.activateCooldown/60) + 's' : ''}`;
+    activBtn.className = ready ? 'btn-primary' : 'btn-secondary';
+  }
+}
+
+// ---- Intervention Feedback Flash ----
+let _feedbackTimeout = null;
+function showInterventionFeedback(msg, color) {
+  const el = document.getElementById('intervention-feedback');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = color;
+  el.style.opacity = '1';
+  if (_feedbackTimeout) clearTimeout(_feedbackTimeout);
+  _feedbackTimeout = setTimeout(() => { el.style.opacity = '0'; }, 1500);
+}
+
+// ---- Patch battleLoop to tick cooldowns ----
+// Patch startBattleLoop to init intervention
+{
+  const _origStartBattleLoop = startBattleLoop;
+  startBattleLoop = function() {
+    initIntervention();
+    updateInterventionHUD();
+    _origStartBattleLoop();
+  };
+}
+
+// Patch physicsStep to tick cooldowns (called each frame for player)
+// ---- Wire Intervention Buttons ----
+document.getElementById('btn-thrust').addEventListener('click', doThrust);
+document.getElementById('btn-brake').addEventListener('click', doBrake);
+document.getElementById('btn-activate').addEventListener('click', doActivate);
+
+// ---- Part Effect: Activate implementations ----
+// Patch PARTS_DB entries with activate functions
+(function patchPartActivations() {
+  // Tri-Wing AR: burst RPM damage on next hit
+  if (PARTS_DB.tri_wing_ar) {
+    PARTS_DB.tri_wing_ar.effect.activate = (player, enemy, G) => {
+      player._burstDmg = 400;
+      return 'Next hit deals +400 RPM damage!';
+    };
+  }
+  // Rubber tip BB: absorb next hit
+  if (PARTS_DB.rubber_tip) {
+    PARTS_DB.rubber_tip.effect.activate = (player, enemy, G) => {
+      player._absorbNext = true;
+      return 'Next collision absorbed!';
+    };
+  }
+  // Gyro SG: RPM recovery burst
+  if (PARTS_DB.gyro_sg) {
+    PARTS_DB.gyro_sg.effect.activate = (player, enemy, G) => {
+      const gain = 300;
+      player.rpm = Math.min(player.maxRpm, player.rpm + gain);
+      return `+${gain} RPM recovered!`;
+    };
+  }
+  // Heavy WD: slam — push enemy to wall
+  if (PARTS_DB.heavy_wd) {
+    PARTS_DB.heavy_wd.effect.activate = (player, enemy, G) => {
+      const dx = enemy.x - ARENA.cx, dy = enemy.y - ARENA.cy;
+      const d = Math.sqrt(dx * dx + dy * dy) || 1;
+      enemy.vx = (dx / d) * 8;
+      enemy.vy = (dy / d) * 8;
+      return 'Enemy slammed to wall!';
+    };
+  }
+})();
+
+// ---- Patch collision to handle burst damage & absorb ----
+{
+  const _origCheckTopCollision = checkTopCollision;
+  checkTopCollision = function(p, e) {
+    const hit = _origCheckTopCollision(p, e);
+    if (hit) {
+      // Burst damage
+      if (p._burstDmg) {
+        e.rpm = Math.max(0, e.rpm - p._burstDmg);
+        showInterventionFeedback(`💥 BURST HIT! -${p._burstDmg} RPM`, '#ff4444');
+        p._burstDmg = 0;
+      }
+      // Absorb
+      if (p._absorbNext) {
+        p.rpm = Math.min(p.maxRpm, p.rpm + 200);
+        showInterventionFeedback('🛡️ HIT ABSORBED! +200 RPM', '#44ff88');
+        p._absorbNext = false;
+      }
+    }
+    return hit;
+  };
+}
+
+// ---- Element Status Effect System (Task 8) ----
+
+/**
+ * StatusEffect structure:
+ * { type: 'fire'|'ice'|'poison', intensity: number, framesLeft: number,
+ *   particleColor: string, stacks?: number }
+ */
+
+// Apply element effect to a target top when collision occurs
+function applyElementEffect(attacker, target) {
+  const arId = G.loadout && G.loadout.ar;
+  const arPart = arId ? PARTS_DB[arId] : null;
+  if (!arPart || !arPart.element) return;
+
+  // Duration bonus from sg_resonance
+  const sgId = G.loadout && G.loadout.sg;
+  const sgPart = sgId ? PARTS_DB[sgId] : null;
+  const durationMult = (sgPart && sgPart.effect && sgPart.effect.elementDurationBonus)
+    ? sgPart.effect.elementDurationBonus : 1.0;
+
+  const BASE_FPS = 60;
+
+  if (!target.statusEffects) target.statusEffects = [];
+
+  switch (arPart.element) {
+    case 'fire': {
+      // Burn zone: 3s duration, 5 RPM/s damage
+      const dur = Math.round(3 * BASE_FPS * durationMult);
+      // Remove existing fire effect and replace
+      target.statusEffects = target.statusEffects.filter(e => e.type !== 'fire');
+      target.statusEffects.push({
+        type: 'fire', intensity: 5, framesLeft: dur,
+        particleColor: '#ff6622', stacks: 1
+      });
+      showInterventionFeedback('🔥 BURN!', '#ff6622');
+      break;
+    }
+    case 'ice': {
+      // Slow: -30% speed for 3s
+      const dur = Math.round(3 * BASE_FPS * durationMult);
+      target.statusEffects = target.statusEffects.filter(e => e.type !== 'ice');
+      target.statusEffects.push({
+        type: 'ice', intensity: 0.3, framesLeft: dur,
+        particleColor: '#44ddff', stacks: 1
+      });
+      showInterventionFeedback('❄️ FROZEN!', '#44ddff');
+      break;
+    }
+    case 'poison': {
+      // Venom stacks: each stack = 2 RPM/s extra decay
+      const dur = Math.round(4 * BASE_FPS * durationMult);
+      const existing = target.statusEffects.find(e => e.type === 'poison');
+      if (existing) {
+        existing.stacks = Math.min((existing.stacks || 1) + 1, 5);
+        existing.framesLeft = Math.max(existing.framesLeft, dur);
+        showInterventionFeedback(`☠️ VENOM x${existing.stacks}!`, '#88ff44');
+      } else {
+        target.statusEffects.push({
+          type: 'poison', intensity: 2, framesLeft: dur,
+          particleColor: '#88ff44', stacks: 1
+        });
+        showInterventionFeedback('☠️ VENOM!', '#88ff44');
+      }
+      break;
+    }
+    case 'thunder': {
+      // Thunder: instant RPM burst damage + brief stun (speed=0 for 0.5s)
+      const dur = Math.round(0.5 * BASE_FPS * durationMult);
+      target.rpm = Math.max(0, target.rpm - 150);
+      target.statusEffects = target.statusEffects.filter(e => e.type !== 'thunder');
+      target.statusEffects.push({
+        type: 'thunder', intensity: 0, framesLeft: dur,
+        particleColor: '#ffff44', stacks: 1
+      });
+      showInterventionFeedback('⚡ SHOCKED!', '#ffff44');
+      break;
+    }
+    case 'magnet': {
+      // Magnet: pull target toward center for 2s
+      const dur = Math.round(2 * BASE_FPS * durationMult);
+      target.statusEffects = target.statusEffects.filter(e => e.type !== 'magnet');
+      target.statusEffects.push({
+        type: 'magnet', intensity: 80, framesLeft: dur,
+        particleColor: '#cc44ff', stacks: 1
+      });
+      showInterventionFeedback('🧲 MAGNETIZED!', '#cc44ff');
+      break;
+    }
+  }
+}
+
+// Tick all status effects on a top each frame (dt in seconds)
+function tickStatusEffects(top, dt) {
+  if (!top.statusEffects || top.statusEffects.length === 0) return;
+
+  for (let i = top.statusEffects.length - 1; i >= 0; i--) {
+    const eff = top.statusEffects[i];
+    eff.framesLeft--;
+
+    switch (eff.type) {
+      case 'fire':
+        // Continuous RPM damage
+        top.rpm = Math.max(0, top.rpm - eff.intensity * dt);
+        break;
+      case 'ice':
+        // Speed reduction applied in physicsStep via top.speedMult
+        top._iceSlow = eff.intensity;
+        break;
+      case 'poison':
+        // Stack-based RPM decay
+        top.rpm = Math.max(0, top.rpm - eff.intensity * (eff.stacks || 1) * dt);
+        break;
+      case 'thunder':
+        // Stun: zero velocity
+        top.vx = 0;
+        top.vy = 0;
+        break;
+      case 'magnet':
+        // Pull toward arena center
+        const dx = ARENA.cx - top.x;
+        const dy = ARENA.cy - top.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        top.vx += (dx / dist) * eff.intensity * dt;
+        top.vy += (dy / dist) * eff.intensity * dt;
+        break;
+    }
+
+    if (eff.framesLeft <= 0) {
+      // Clean up lingering modifiers
+      if (eff.type === 'ice') top._iceSlow = 0;
+      top.statusEffects.splice(i, 1);
+    }
+  }
+}
+
+// Draw element particles for a top on canvas
+function drawElementParticles(ctx, top) {
+  if (!top.statusEffects || top.statusEffects.length === 0) return;
+  const now = performance.now();
+
+  for (const eff of top.statusEffects) {
+    const color = eff.particleColor;
+    const count = eff.type === 'poison' ? (eff.stacks || 1) * 3 : 5;
+
+    for (let i = 0; i < count; i++) {
+      // Deterministic pseudo-random offset based on time + index
+      const angle = ((now * 0.003 + i * (Math.PI * 2 / count)) % (Math.PI * 2));
+      const radius = top.radius + 4 + Math.sin(now * 0.005 + i) * 4;
+      const px = top.x + Math.cos(angle) * radius;
+      const py = top.y + Math.sin(angle) * radius;
+      const alpha = 0.4 + Math.sin(now * 0.008 + i) * 0.3;
+      const size = eff.type === 'fire' ? 3 + Math.sin(now * 0.01 + i) * 2
+                 : eff.type === 'ice'  ? 2
+                 : 2.5;
+
+      ctx.beginPath();
+      ctx.arc(px, py, size, 0, Math.PI * 2);
+      ctx.fillStyle = color + Math.floor(alpha * 255).toString(16).padStart(2, '0');
+      ctx.fill();
+    }
+
+    // Fire: draw small burn zone circle
+    if (eff.type === 'fire') {
+      ctx.beginPath();
+      ctx.arc(top.x, top.y, top.radius + 10, 0, Math.PI * 2);
+      ctx.strokeStyle = '#ff662244';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  }
+}
+
+// Patch checkTopCollision to trigger element effects
+{
+  const _origCheckTopCollisionElem = checkTopCollision;
+  checkTopCollision = function(p, e) {
+    const hit = _origCheckTopCollisionElem(p, e);
+    if (hit) {
+      // Apply element effect from player's AR to enemy
+      applyElementEffect(p, e);
+    }
+    return hit;
+  };
+}
+
+// Patch battleLoop to tick status effects and draw particles each frame
+{
+  const _origBattleLoopElem = battleLoop;
+  battleLoop = function(now) {
+    // Tick status effects before physics
+    if (G.battle && G.battle.running) {
+      const dt = Math.min((performance.now() - (_lastTime || performance.now())) / 1000, 0.05);
+      if (G.battle.player) tickStatusEffects(G.battle.player, dt);
+      if (G.battle.enemy)  tickStatusEffects(G.battle.enemy,  dt);
+      // Apply ice slow to speed
+      if (G.battle.player) {
+        G.battle.player._speedMult = 1 - (G.battle.player._iceSlow || 0);
+      }
+      if (G.battle.enemy) {
+        G.battle.enemy._speedMult = 1 - (G.battle.enemy._iceSlow || 0);
+      }
+    }
+    return _origBattleLoopElem(now);
+  };
+}
+
+// Patch renderArena to draw element particles after tops are drawn
+{
+  const _origRenderArenaElem = renderArena;
+  renderArena = function() {
+    _origRenderArenaElem();
+    if (!G.battle || !G.battle.running) return;
+    const canvas = document.getElementById('battle-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const { player, enemy } = G.battle;
+    if (player) drawElementParticles(ctx, player);
+    if (enemy)  drawElementParticles(ctx, enemy);
+  };
+}
+
+// Patch physicsStep to apply _speedMult from ice slow
+{
+  const _origPhysicsStepElem = physicsStep;
+  physicsStep = function(top, dt) {
+    _origPhysicsStepElem(top, dt);
+    // Apply speed multiplier after physics (ice slow)
+    if (top._speedMult !== undefined && top._speedMult < 1) {
+      top.vx *= top._speedMult;
+      top.vy *= top._speedMult;
+    }
+  };
+}
+
+// ---- Full Game Flow Wiring ----
+
+// Title → New Game → Base Selection
+document.getElementById('btn-new-game').addEventListener('click', () => {
+  // Reset global state
+  G.hp = G.maxHp;
+  G.gold = 100;
+  G.floor = 1;
+  G.inventory = [];
+  G.loadout = { ar: null, wd: null, sg: null, bb: null };
+  G.map = null;
+  G.currentNode = null;
+  G.battle = null;
+  G.launch = null;
+  updateStatusBar();
+  showBaseSelection();
+});
+
+// Title → Continue (if map exists)
+document.getElementById('btn-continue').addEventListener('click', () => {
+  if (G.map) {
+    returnToMap();
+  } else {
+    showModal('No Save', '<p style="color:#8888aa;">No active run found. Start a new game!</p>',
+      [{ label: 'OK', cls: 'btn-secondary', onClick: () => {} }]);
+  }
+});
+
+// Prep → Back to Map
+document.getElementById('btn-prep-back').addEventListener('click', () => {
+  returnToMap();
+});
+
+// Battle screen: patch endBattle to also reset intervention HUD
+{
+  const _origEndBattle = endBattle;
+  endBattle = function(playerWon, winType) {
+    if (G.intervention) {
+      const thrustBtn = document.getElementById('btn-thrust');
+      const brakeBtn  = document.getElementById('btn-brake');
+      const activBtn  = document.getElementById('btn-activate');
+      if (thrustBtn) thrustBtn.disabled = true;
+      if (brakeBtn)  brakeBtn.disabled  = true;
+      if (activBtn)  activBtn.disabled  = true;
+    }
+    _origEndBattle(playerWon, winType);
+  };
+}
+
+// ---- Intel Generation (used in renderPrep) ----
+function generateIntel(enemy) {
+  if (!enemy) return ['No intel available.'];
+  const lines = [];
+  lines.push(`Archetype: ${enemy.archetype}`);
+  lines.push(`Base RPM: ~${enemy.baseRpm || 3000}`);
+  if (enemy.decayMult < 1.0) lines.push(`Slow decay — will outlast you in a war of attrition`);
+  if (enemy.decayMult > 1.0) lines.push(`Fast decay — aggressive early pressure`);
+  if (enemy.arDmg > 130) lines.push(`High attack power — avoid direct collisions`);
+  if (enemy.arDmg < 80)  lines.push(`Low attack power — safe to trade hits`);
+  if (enemy.archetype === 'Aggressor') lines.push(`Will rush you relentlessly`);
+  if (enemy.archetype === 'Survivor')  lines.push(`Will orbit and outlast — apply pressure early`);
+  if (enemy.archetype === 'Trapper')   lines.push(`Uses wall bounces — stay near center`);
+  return lines.slice(0, 4);
+}
+
+// ---- Keyboard Shortcuts for Battle ----
+document.addEventListener('keydown', e => {
+  if (!G.battle || !G.battle.running) return;
+  if (e.key === 'q' || e.key === 'Q') doThrust();
+  if (e.key === 'w' || e.key === 'W') doBrake();
+  if (e.key === 'e' || e.key === 'E') doActivate();
+});
+
+// tickInterventionCooldowns is now called directly inside battleLoop above — no patch needed
+
+// ============================================================
+// PHASE 7 — VISUAL POLISH + TUTORIAL + FULL FLOW FIXES
+// ============================================================
+
+// ---- Dynamic CSS Injection (visual polish) ----
+(function injectPolishCSS() {
+  const style = document.createElement('style');
+  style.textContent = `
+    /* Intervention feedback */
+    #intervention-feedback {
+      position: absolute;
+      top: 12px; left: 50%; transform: translateX(-50%);
+      font: bold 15px 'Courier New';
+      color: #44ff88;
+      text-shadow: 0 0 10px currentColor;
+      pointer-events: none;
+      transition: opacity 0.4s;
+      z-index: 20;
+      white-space: nowrap;
+    }
+
+    /* Battle countdown overlay */
+    #battle-countdown {
+      position: absolute;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+      font: bold 64px 'Courier New';
+      color: #ffffff;
+      text-shadow: 0 0 30px #4466ff, 0 0 60px #4466ff;
+      pointer-events: none;
+      z-index: 30;
+      display: none;
+    }
+
+    /* Arena wrapper */
+    #arena-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    /* Launch canvas wrapper */
+    #launch-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    /* Part select item hover */
+    .part-select-item:hover {
+      background: #1a1a3a !important;
+      border-color: #4444aa !important;
+      cursor: pointer;
+    }
+
+    /* Shop item hover */
+    .shop-item:hover:not(.cant-afford) {
+      border-color: #6666cc !important;
+      background: #0d0d2a !important;
+      transform: translateY(-2px);
+      transition: all 0.15s;
+    }
+
+    /* Event choice hover */
+    .event-choice:hover {
+      background: #0d0d2a !important;
+      border-color: #4444aa !important;
+      cursor: pointer;
+    }
+
+    /* Map canvas cursor */
+    #map-canvas { display: block; }
+
+    /* Reward card hover */
+    .reward-card:hover {
+      border-color: #6666cc !important;
+      background: #0d0d2a !important;
+      transform: translateY(-2px);
+      transition: all 0.15s;
+    }
+
+    /* Rarity colors */
+    .rarity-common   { color: #aaaaaa; }
+    .rarity-uncommon { color: #44ff88; }
+    .rarity-rare     { color: #4488ff; }
+    .rarity-epic     { color: #aa44ff; }
+    .rarity-legendary{ color: #ffaa00; }
+
+    /* Badge colors */
+    .badge-common    { background: #333333; color: #aaaaaa; }
+    .badge-uncommon  { background: #1a3a2a; color: #44ff88; }
+    .badge-rare      { background: #1a2a3a; color: #4488ff; }
+    .badge-epic      { background: #2a1a3a; color: #aa44ff; }
+    .badge-legendary { background: #3a2a00; color: #ffaa00; }
+
+    /* Slot label */
+    .slot-label { color: #444466; font-size: 11px; min-width: 90px; }
+    .slot-content { color: #ccccff; font-size: 13px; flex: 1; }
+    .slot-content.empty { color: #333355; font-style: italic; }
+    .slot-rarity { font-size: 10px; padding: 2px 6px; border-radius: 3px; }
+
+    /* Intel item */
+    .intel-item { display: flex; gap: 8px; align-items: flex-start;
+      padding: 6px 0; border-bottom: 1px solid #0d0d2a; font-size: 13px; color: #8888cc; }
+    .intel-icon { font-size: 14px; }
+
+    /* Part slot */
+    .part-slot { display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; background: #080818; border: 1px solid #1a1a3a;
+      border-radius: 4px; cursor: pointer; transition: border-color 0.15s; }
+    .part-slot:hover { border-color: #3333aa; }
+
+    /* PSI */
+    .psi-name { font-size: 13px; font-weight: bold; }
+    .psi-desc { font-size: 11px; color: #555577; flex: 1; }
+
+    /* Item rarity badge */
+    .item-rarity-badge { display: inline-block; font-size: 10px;
+      padding: 2px 6px; border-radius: 3px; margin-bottom: 4px; }
+    .item-name  { font-size: 14px; font-weight: bold; color: #ccccff; margin-bottom: 4px; }
+    .item-type  { font-size: 10px; color: #555577; margin-bottom: 6px; }
+    .item-desc  { font-size: 12px; color: #8888aa; margin-bottom: 8px; }
+    .item-price { font-size: 13px; color: #ffcc44; font-weight: bold; }
+    .cant-afford { opacity: 0.4; cursor: not-allowed !important; }
+
+    /* Choice */
+    .choice-text { font-size: 14px; color: #ccccff; margin-bottom: 4px; }
+    .choice-hint { font-size: 11px; color: #555577; }
+
+    /* Reward card */
+    .reward-card { background: #080818; border: 1px solid #1a1a3a;
+      border-radius: 6px; padding: 14px; min-width: 160px; }
+    .reward-name { font-size: 14px; font-weight: bold; color: #ccccff; margin-bottom: 4px; }
+    .reward-type { font-size: 10px; color: #555577; margin-bottom: 8px; }
+    .reward-desc { font-size: 12px; color: #8888aa; }
+
+    /* Btn danger */
+    .btn-danger { background: #3a0a0a; border: 1px solid #aa2222;
+      color: #ff6666; padding: 8px 16px; border-radius: 4px;
+      font-family: 'Courier New'; cursor: pointer; transition: all 0.15s; }
+    .btn-danger:hover { background: #5a1a1a; border-color: #ff4444; }
+
+    /* Animated glow pulse on title */
+    @keyframes glowPulse {
+      0%, 100% { text-shadow: 0 0 20px #4466ff, 0 0 40px #4466ff; }
+      50%       { text-shadow: 0 0 40px #88aaff, 0 0 80px #4466ff; }
+    }
+    .title-glow { animation: glowPulse 2.5s ease-in-out infinite; }
+
+    /* Scanline overlay */
+    .scanlines::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px
+      );
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Floor indicator */
+    #floor-indicator {
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .floor-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #1a1a3a; border: 1px solid #2a2a5a;
+      transition: all 0.3s;
+    }
+    .floor-dot.active   { background: #4466ff; border-color: #88aaff; box-shadow: 0 0 6px #4466ff; }
+    .floor-dot.cleared  { background: #22aa44; border-color: #44ff88; }
+    .floor-dot.boss     { background: #aa2244; border-color: #ff4466; }
+  `;
+  document.head.appendChild(style);
+})();
+
+// ---- Tutorial System ----
+const TUTORIAL_STEPS = [
+  {
+    title: '🌀 Welcome to Spinning Top Arena!',
+    body: `You are a <strong>Beyblade-style top</strong> fighter climbing a 4-floor tower.<br><br>
+    Each floor has nodes to visit: <strong>⚔️ Battles</strong>, <strong>💀 Elites</strong>, <strong>🏪 Shops</strong>, and <strong>❓ Events</strong>.`,
+  },
+  {
+    title: '🗺️ The Map',
+    body: `Click any <strong>glowing node</strong> to enter it.<br><br>
+    Clearing a node unlocks connected nodes on the next floor. Reach Floor 4 to face the <strong>👑 BOSS</strong>.`,
+  },
+  {
+    title: '⚙️ Prepare Your Top',
+    body: `Before each battle, equip parts from your inventory:<br>
+    <strong>AR</strong> (Attack Ring) — collision damage<br>
+    <strong>WD</strong> (Weight Disk) — base RPM<br>
+    <strong>SG</strong> (Spin Gear) — decay rate<br>
+    <strong>BB</strong> (Blade Base) — special traits`,
+  },
+  {
+    title: '🚀 The Launch',
+    body: `<strong>Step 1:</strong> Click to lock your launch angle (watch the rotating arrow).<br><br>
+    <strong>Step 2:</strong> Click to lock power — aim for the <strong>green zone (60-80%)</strong> for best RPM!`,
+  },
+  {
+    title: '⚡ Battle Controls',
+    body: `During battle you have 3 interventions:<br>
+    <strong>Q / ⚡ Thrust</strong> — rush toward enemy<br>
+    <strong>W / 🛑 Brake</strong> — slow down + recover RPM<br>
+    <strong>E / ✨ Activate</strong> — trigger your part's special ability<br><br>
+    The top with <strong>0 RPM</strong> loses!`,
+  },
+];
+
+let _tutorialStep = 0;
+
+function showTutorial() {
+  _tutorialStep = 0;
+  showTutorialStep();
+}
+
+function showTutorialStep() {
+  const step = TUTORIAL_STEPS[_tutorialStep];
+  const isLast = _tutorialStep === TUTORIAL_STEPS.length - 1;
+  showModal(
+    `Tutorial (${_tutorialStep + 1}/${TUTORIAL_STEPS.length}) — ${step.title}`,
+    `<div style="line-height:1.7;color:#ccccff;">${step.body}</div>`,
+    [
+      ...(isLast ? [] : [{ label: 'Next →', cls: 'btn-primary', onClick: () => {
+        _tutorialStep++;
+        showTutorialStep();
+      }}]),
+      { label: isLast ? 'Start Playing!' : 'Skip', cls: isLast ? 'btn-primary' : 'btn-secondary', onClick: () => {
+        hideModal();
+      }},
+    ]
+  );
+}
+
+// ---- Wire Tutorial Button ----
+const tutorialBtn = document.getElementById('btn-tutorial');
+if (tutorialBtn) tutorialBtn.addEventListener('click', showTutorial);
+
+// ---- Floor Indicator (status bar enhancement) ----
+function renderFloorIndicator() {
+  const el = document.getElementById('floor-indicator');
+  if (!el) return;
+  el.innerHTML = '';
+  for (let i = 1; i <= 4; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'floor-dot';
+    if (i === 4) dot.classList.add('boss');
+    if (i < G.floor) dot.classList.add('cleared');
+    else if (i === G.floor) dot.classList.add('active');
+    el.appendChild(dot);
+  }
+}
+
+// Patch updateStatusBar to also render floor indicator
+{
+  const _origUpdateStatusBar = updateStatusBar;
+  updateStatusBar = function() {
+    _origUpdateStatusBar();
+    renderFloorIndicator();
+  };
+}
+
+// ---- Title Screen Polish ----
+(function polishTitleScreen() {
+  const titleEl = document.querySelector('#screen-TITLE h1');
+  if (titleEl) titleEl.classList.add('title-glow');
+  const titleScreen = document.getElementById('screen-TITLE');
+  if (titleScreen) titleScreen.classList.add('scanlines');
+})();
+
+// ---- Map Screen: add floor indicator to header ----
+(function patchMapHeader() {
+  const mapHeader = document.querySelector('#screen-MAP .screen-header');
+  if (mapHeader && !document.getElementById('floor-indicator')) {
+    const fi = document.createElement('div');
+    fi.id = 'floor-indicator';
+    fi.style.cssText = 'display:inline-flex;align-items:center;gap:6px;';
+    mapHeader.appendChild(fi);
+  }
+})();
+
+// ---- Battle Screen: ensure arena wrapper exists ----
+(function patchBattleScreen() {
+  const arenaCanvas = document.getElementById('arena-canvas');
+  if (arenaCanvas && arenaCanvas.parentElement.id !== 'arena-wrapper') {
+    const wrapper = document.createElement('div');
+    wrapper.id = 'arena-wrapper';
+    arenaCanvas.parentNode.insertBefore(wrapper, arenaCanvas);
+    wrapper.appendChild(arenaCanvas);
+
+    // Add countdown overlay
+    if (!document.getElementById('battle-countdown')) {
+      const cd = document.createElement('div');
+      cd.id = 'battle-countdown';
+      cd.style.display = 'none';
+      wrapper.appendChild(cd);
+    }
+
+    // Add intervention feedback
+    if (!document.getElementById('intervention-feedback')) {
+      const fb = document.createElement('div');
+      fb.id = 'intervention-feedback';
+      fb.style.opacity = '0';
+      wrapper.appendChild(fb);
+    }
+  }
+})();
+
+// ---- Launch Screen: ensure launch wrapper exists ----
+(function patchLaunchScreen() {
+  const launchCanvas = document.getElementById('launch-canvas');
+  if (launchCanvas && launchCanvas.parentElement.id !== 'launch-wrapper') {
+    const wrapper = document.createElement('div');
+    wrapper.id = 'launch-wrapper';
+    launchCanvas.parentNode.insertBefore(wrapper, launchCanvas);
+    wrapper.appendChild(launchCanvas);
+  }
+})();
+
+// ---- Auto-show tutorial on first new game ----
+{
+  const _origShowBaseSelection = showBaseSelection;
+  showBaseSelection = function() {
+    if (!localStorage.getItem('st_tutorial_done')) {
+      localStorage.setItem('st_tutorial_done', '1');
+      showTutorial();
+      // After tutorial closes, show base selection
+      const _origHideModal = hideModal;
+      hideModal = function() {
+        _origHideModal();
+        // Restore hideModal
+        hideModal = _origHideModal;
+        _origShowBaseSelection();
+      };
+    } else {
+      _origShowBaseSelection();
+    }
+  };
+}
+
+// ---- Patch renderMap to also update floor indicator ----
+{
+  const _origRenderMap = renderMap;
+  renderMap = function() {
+    _origRenderMap();
+    renderFloorIndicator();
+  };
+}
+
+// ---- Ensure Continue button visibility ----
+(function updateContinueBtn() {
+  const btn = document.getElementById('btn-continue');
+  if (btn) {
+    btn.style.opacity = G.map ? '1' : '0.4';
+  }
+})();
+
+// ---- Final Init ----
+updateStatusBar();
+console.log('[SpinningTop] Phase 1 loaded — State machine ready.');
+console.log('[SpinningTop] Phase 2 loaded — Data layer ready.');
+console.log('[SpinningTop] Phase 3 loaded — Map generation ready.');
+console.log('[SpinningTop] Phase 4 loaded — Arena physics engine ready.');
+console.log('[SpinningTop] Phase 5 loaded — Launch system ready.');
+console.log('[SpinningTop] Phase 6 loaded — Intervention + full wiring ready.');
+console.log('[SpinningTop] Phase 7 loaded — Visual polish + tutorial ready.');
+console.log('[SpinningTop] ✅ ALL PHASES COMPLETE — Game ready to play!');
+console.log('[SpinningTop] Parts DB:', Object.keys(PARTS_DB).length, 'parts');
+console.log('[SpinningTop] Enemies DB:', Object.keys(ENEMIES_DB).length, 'enemies');
+console.log('[SpinningTop] Events DB:', EVENTS_DB.length, 'events');
+</script>
+</body>
+</html>
