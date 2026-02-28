@@ -46,8 +46,8 @@
   --border:         rgba(0,229,255,0.10);
   --border-mid:     rgba(0,229,255,0.22);
   --border-bright:  rgba(0,229,255,0.45);
-  --slot-size:      64px;
-  --inv-slot-size:  56px;
+  --slot-size:      40px;
+  --inv-slot-size:  44px;
   --slot-gap:       2px;
 }
 
@@ -94,7 +94,7 @@ body::after {
 /* ── Main Panel ── */
 .star-chart-panel {
   width: 980px;
-  height: 620px;
+  height: 700px;
   background: var(--bg-panel);
   border: 1px solid var(--border-bright);
   border-radius: 3px;
@@ -192,28 +192,30 @@ body::after {
 }
 .header-close:hover { border-color: var(--red); color: var(--red); background: rgba(239,68,68,0.08); }
 
-/* ── Loadout Section (upper ~45%) ── */
+/* ── Loadout Section (upper ~50%) ── */
 .loadout-section {
-  flex-shrink: 0;
-  padding: 8px 12px 6px;
+  flex: 1;
+  min-height: 0;
+  padding: 4px 10px 4px;
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: stretch;
+  overflow: hidden;
 }
 
 /* Left: Gatling switcher column */
 .gatling-col {
-  width: 64px;
+  width: 56px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   background: rgba(0,229,255,0.03);
   border: 1px solid var(--border);
   border-radius: 3px;
-  padding: 8px 4px;
+  padding: 6px 4px;
 }
 
 .gatling-btn {
@@ -373,12 +375,13 @@ body::after {
   background: var(--bg-track);
   border: 1px solid var(--border-mid);
   border-radius: 3px;
-  padding: 8px 12px;
+  padding: 4px 8px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 3px;
   transform-origin: center center;
   transition: transform 0.05s, opacity 0.05s;
+  overflow: hidden;
 }
 
 /* Gatling rotation animation */
@@ -416,8 +419,8 @@ body::after {
 .lc-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding-bottom: 5px;
+  gap: 6px;
+  padding-bottom: 3px;
   border-bottom: 1px solid var(--border);
 }
 .lc-icon { font-size: 14px; color: var(--cyan); }
@@ -438,12 +441,15 @@ body::after {
 /* Track rows inside loadout card */
 .track-block {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 4px 0;
+  align-items: stretch;
+  gap: 6px;
+  padding: 2px 0;
   border-radius: 2px;
   transition: background 0.2s, box-shadow 0.2s;
   cursor: default;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 .track-block:hover {
   background: rgba(0,229,255,0.04);
@@ -451,41 +457,42 @@ body::after {
 }
 
 .track-block-label {
-  width: 80px;
+  width: 64px;
   flex-shrink: 0;
-  padding-top: 4px;
+  padding-top: 2px;
 }
 .tb-name {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: bold;
   letter-spacing: 0.1em;
   color: var(--text-cyan);
   text-transform: uppercase;
 }
 .tb-bind {
-  font-size: 9px;
+  font-size: 8px;
   color: var(--text-dim);
   margin-top: 1px;
 }
 
-/* Multi-row track layout */
+/* Multi-row track layout — 2×2 grid: row1=SAIL+SAT, row2=PRISM+CORE */
 .track-rows {
   display: flex;
-  flex-direction: row;
+  flex-wrap: wrap;
   gap: 2px;
   flex: 1;
   align-items: stretch;
 }
 
-/* Each type column: SAIL | PRISM | CORE | SAT */
+/* Each type column: 2 per row (SAIL+SAT / PRISM+CORE) */
 .track-col {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 3px;
-  flex: 1;
+  gap: 2px;
+  flex: 1 1 calc(50% - 2px);
+  max-width: calc(50% - 1px);
   min-width: 0;
-  padding: 4px 6px;
+  padding: 2px 4px;
   border-radius: 2px;
   border: 1px solid transparent;
   transition: border-color 0.15s, background 0.15s;
@@ -494,8 +501,8 @@ body::after {
   background: rgba(255,255,255,0.02);
 }
 
-/* Vertical separator between columns */
-.track-col + .track-col {
+/* Vertical separator between columns (2×2 wrap: only right column of each row) */
+.track-col:nth-child(even) {
   border-left: 1px solid var(--border);
 }
 
@@ -625,7 +632,7 @@ body::after {
 
 .slot.empty::after {
   content: '+';
-  font-size: 20px;
+  font-size: 16px;
   color: rgba(255,255,255,0.10);
   font-weight: 200;
 }
@@ -649,7 +656,7 @@ body::after {
 }
 
 .slot-icon {
-  font-size: 24px;
+  font-size: 20px;
   line-height: 1;
   user-select: none;
   position: relative;
@@ -689,7 +696,7 @@ body::after {
   flex-shrink: 0;
 }
 
-/* ── Inventory Section (lower ~55%) ── */
+/* ── Inventory Section (lower ~50%) ── */
 .inventory-section {
   flex: 1;
   display: flex;
@@ -766,7 +773,7 @@ body::after {
 .inventory-area {
   flex: 1;
   overflow-y: auto;
-  padding: 6px 12px 8px;
+  padding: 8px 12px 10px;
   scrollbar-width: thin;
   scrollbar-color: rgba(0,229,255,0.2) transparent;
 }
@@ -1043,7 +1050,7 @@ body::after {
           <span class="lc-subtitle">LOADOUT #<span id="lc-card-num">1</span></span>
         </div>
 
-        <!-- PRIMARY track: 4 columns SAIL | PRISM | CORE | SAT -->
+        <!-- PRIMARY track: 2×2 grid — row1: SAIL+SAT, row2: PRISM+CORE -->
         <div class="track-block" id="track-primary" data-track="primary">
           <div class="track-block-label">
             <div class="tb-name">PRIMARY</div>
@@ -1054,6 +1061,10 @@ body::after {
               <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAIL</span></div>
               <div class="track-slots-grid" id="primary-slots-sail"></div>
             </div>
+            <div class="track-col trl-sat">
+              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAT</span></div>
+              <div class="track-slots-grid" id="primary-slots-sat"></div>
+            </div>
             <div class="track-col trl-prism">
               <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">PRISM</span></div>
               <div class="track-slots-grid" id="primary-slots-prism"></div>
@@ -1062,14 +1073,10 @@ body::after {
               <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">CORE</span></div>
               <div class="track-slots-grid" id="primary-slots-core"></div>
             </div>
-            <div class="track-col trl-sat">
-              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAT</span></div>
-              <div class="track-slots-grid" id="primary-slots-sat"></div>
-            </div>
           </div>
         </div>
 
-        <!-- SECONDARY track: 4 columns SAIL | PRISM | CORE | SAT -->
+        <!-- SECONDARY track: 2×2 grid — row1: SAIL+SAT, row2: PRISM+CORE -->
         <div class="track-block" id="track-secondary" data-track="secondary">
           <div class="track-block-label">
             <div class="tb-name">SECONDARY</div>
@@ -1080,6 +1087,10 @@ body::after {
               <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAIL</span></div>
               <div class="track-slots-grid" id="secondary-slots-sail"></div>
             </div>
+            <div class="track-col trl-sat">
+              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAT</span></div>
+              <div class="track-slots-grid" id="secondary-slots-sat"></div>
+            </div>
             <div class="track-col trl-prism">
               <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">PRISM</span></div>
               <div class="track-slots-grid" id="secondary-slots-prism"></div>
@@ -1087,10 +1098,6 @@ body::after {
             <div class="track-col trl-core">
               <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">CORE</span></div>
               <div class="track-slots-grid" id="secondary-slots-core"></div>
-            </div>
-            <div class="track-col trl-sat">
-              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAT</span></div>
-              <div class="track-slots-grid" id="secondary-slots-sat"></div>
             </div>
           </div>
         </div>
@@ -1201,10 +1208,10 @@ const state = {
         core:  [{ type:'core',  itemId:'c1' }],
       },
       secondary: {
-        sail:  [{ type:'sail',  itemId:null }],
-        prism: [{ type:'prism', itemId:'p3' }, { type:'prism', itemId:null }],
-        core:  [{ type:'core',  itemId:'c2' }],
+        sail:  [{ type:'sail',  itemId:null }, { type:'sail',  itemId:null }],
         sat:   [{ type:'sat',   itemId:null }],
+        prism: [{ type:'prism', itemId:'p3' }, { type:'prism', itemId:null }, { type:'prism', itemId:null }],
+        core:  [{ type:'core',  itemId:'c2' }],
       },
     },
     {
@@ -1216,10 +1223,10 @@ const state = {
         core:  [{ type:'core',  itemId:'c3' }],
       },
       secondary: {
-        sail:  [{ type:'sail',  itemId:null }],
-        prism: [{ type:'prism', itemId:null }, { type:'prism', itemId:null }],
-        core:  [{ type:'core',  itemId:null }],
+        sail:  [{ type:'sail',  itemId:null }, { type:'sail',  itemId:null }],
         sat:   [{ type:'sat',   itemId:null }],
+        prism: [{ type:'prism', itemId:null }, { type:'prism', itemId:null }, { type:'prism', itemId:null }],
+        core:  [{ type:'core',  itemId:null }],
       },
     },
     {
@@ -1231,10 +1238,10 @@ const state = {
         core:  [{ type:'core',  itemId:'c4' }],
       },
       secondary: {
-        sail:  [{ type:'sail',  itemId:null }],
-        prism: [{ type:'prism', itemId:'p3' }, { type:'prism', itemId:null }],
-        core:  [{ type:'core',  itemId:'c5' }],
+        sail:  [{ type:'sail',  itemId:null }, { type:'sail',  itemId:null }],
         sat:   [{ type:'sat',   itemId:'sat1' }],
+        prism: [{ type:'prism', itemId:'p3' }, { type:'prism', itemId:null }, { type:'prism', itemId:null }],
+        core:  [{ type:'core',  itemId:'c5' }],
       },
     },
   ],
@@ -1322,11 +1329,11 @@ function renderAllTracks() {
   renderSlotRow('primary',   'sat',   lo.primary.sat   || []);
   renderSlotRow('primary',   'prism', lo.primary.prism || []);
   renderSlotRow('primary',   'core',  lo.primary.core  || []);
-  // SECONDARY: single row = sail + prism + core + sat
+  // SECONDARY: same layout as primary = sail + sat + prism + core
   renderSlotRow('secondary', 'sail',  lo.secondary.sail  || []);
+  renderSlotRow('secondary', 'sat',   lo.secondary.sat   || []);
   renderSlotRow('secondary', 'prism', lo.secondary.prism || []);
   renderSlotRow('secondary', 'core',  lo.secondary.core  || []);
-  renderSlotRow('secondary', 'sat',   lo.secondary.sat   || []);
   updateStatusBar();
 }
 

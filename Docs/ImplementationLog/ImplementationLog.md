@@ -5831,62 +5831,121 @@ svg.addEventListener('dragover', (e) => { e.preventDefault(); });
 
 ---
 
-## Bug Fix: GameObjectPool MissingReferenceException on Destroyed Pooled Instance — 2026-02-27 16:15
+## Bug 修复：GameObjectPool 已销毁池化实例引发 MissingReferenceException — 2026-02-27 16:15
 
-### Modified Files
+### 修改文件：
 - `Assets/Scripts/Core/Pool/GameObjectPool.cs`
 - `Assets/Scripts/SpaceLife/SpaceLifeManager.cs`
 
-### Summary
-Fixed `MissingReferenceException` in `GameObjectPool.Get()` when a pooled instance had been destroyed externally (e.g. scene unload while PoolManager persists via DontDestroyOnLoad). Also added defensive null check in `SpaceLifeManager.ReturnPlayerToPool()` to prevent returning destroyed objects back to the pool.
+### 内容简述：
+修复了 `GameObjectPool.Get()` 中当池化实例被外部销毁时（如场景卸载而 PoolManager 因 DontDestroyOnLoad 仍存活）抛出 `MissingReferenceException` 的问题。同时在 `SpaceLifeManager.ReturnPlayerToPool()` 中添加了防御性空检查，防止将已销毁对象归还对象池。
 
-### Purpose
-Prevent crash when entering SpaceLife mode after pool instances have been externally destroyed.
+### 目的：
+防止对象池实例被外部销毁后进入 SpaceLife 模式时崩溃。
 
-### Technical Approach
-1. **`GameObjectPool.Get()`**: After retrieving instance from internal `ObjectPool<GameObject>`, added Unity null check (`instance == null`). If the underlying GameObject was destroyed, re-creates a fresh instance via `CreateInstance()` before positioning and activating.
-2. **`SpaceLifeManager.ReturnPlayerToPool()`**: Added secondary Unity null check before calling `_playerPool.Return()` or `Destroy()`, guarding against the case where `_currentPlayer` reference is non-null in C# but the Unity object has been destroyed (early return only checks C# null, not Unity destroyed state).
-
----
-
-## UI Prototype: Star Chart UI v2 — 2026-02-27 16:43
-
-### Modified Files
-- `Docs/StarChartUIPrototype.html`
-
-### Summary
-Rewrote the Star Chart UI HTML prototype to align with `StarChartUIDesign.md`. Major structural and interaction changes applied.
-
-### Purpose
-Provide an accurate, interactive browser prototype for UI discussion and iteration before implementing in Unity `UICanvasBuilder.cs`.
-
-### Technical Approach
-1. **Layout restructure**: Left column = Gatling switcher (▲/▼ + loadout name + counter). Right = single Loadout Card containing both PRIMARY and SECONDARY tracks stacked vertically (matches design doc §一).
-2. **Gatling rotation animation**: CSS `perspective rotateX` keyframes — `rotate-out-up/down` (280ms) + `rotate-in-down/up` (320ms) simulate barrel-rotation feel. Mechanical shake on `loadout-section` after switch.
-3. **Track slot structure**: Each track is a single flat row of mixed CORE+PRISM slots (type label shown on empty slots). Slot type enforced on equip with shake feedback on mismatch.
-4. **Inventory**: 56×56px slots, 2px gap, flex-wrap — matches design doc紧凑背包布局 spec. 10–12 columns at 980px panel width.
-5. **Hover highlight**: Track blocks highlight with `inset 2px 0 0 cyan` border + background tint on `mouseenter`.
-6. **Scanline + scan beam**: Static scanline overlay + animated moving beam (`scanBeam` keyframe, 4s loop).
-7. **Equipped slot breathing glow**: `slotBreath` keyframe on `::before` pseudo-element for equipped slots.
-8. **Keyboard shortcuts**: Q/E + PageUp/PageDown for loadout switch; Esc to clear selection.
-9. **Action buttons**: SAVE CONFIG / RENAME (prompt) / DELETE (with guard for last loadout).
-10. **Tooltip**: 150ms delay, follows mouse, smart edge-avoidance, shows equipped location tag.
+### 技术方案：
+1. **`GameObjectPool.Get()`**：从内部 `ObjectPool<GameObject>` 取出实例后，添加 Unity 空检查（`instance == null`）。若底层 GameObject 已被销毁，则通过 `CreateInstance()` 重新创建新实例后再定位并激活。
+2. **`SpaceLifeManager.ReturnPlayerToPool()`**：在调用 `_playerPool.Return()` 或 `Destroy()` 前添加二次 Unity 空检查，防范 `_currentPlayer` 在 C# 层非空但 Unity 对象已被销毁的情况（原有的 early return 仅检查 C# null，不检测 Unity 销毁状态）。
 
 ---
 
-## UI Prototype: Star Chart UI v2.1 — Track Multi-Row & Type Colors — 2026-02-27 16:53
+## UI 原型：星图 UI v2 — 2026-02-27 16:43
 
-### Modified Files
+### 修改文件：
 - `Docs/StarChartUIPrototype.html`
 
-### Summary
-Updated HTML prototype: PRIMARY track now has two rows; all slot types have distinct color identities; inventory filter order matches left-to-right type order (SAIL→PRISM→CORE→SAT).
+### 内容简述：
+重写星图 UI HTML 原型，使其与 `StarChartUIDesign.md` 对齐。应用了大量结构与交互变更。
 
-### Changes
-1. **PRIMARY track → 2 rows**: Row 0 = SAIL slots + SAT slots (left→right). Row 1 = PRISM slots + CORE slots (left→right). SECONDARY track remains single row (SAIL→PRISM→CORE→SAT).
-2. **Type color system**: Added CSS variables `--col-sail` (#34d399 green), `--col-prism` (#a78bfa purple), `--col-core` (#60a5fa blue), `--col-sat` (#fbbf24 yellow) with dim/glow variants. Each slot type has its own background, border, hover glow.
-3. **Row category labels**: Each slot group has a colored dot + type name label (`trl-sail/prism/core/sat` classes) so the user can immediately identify which row is which type.
-4. **Slot type label colors**: `.slot-type-label` now inherits the type accent color instead of a flat dim white.
-5. **Filter button colors**: Each filter button (SAILS/PRISMS/CORES/SATS) has its type accent color; active state uses colored background + border.
-6. **Filter order**: Changed from ALL/CORES/PRISMS/SAILS/SATS → ALL/SAILS/PRISMS/CORES/SATS (left-to-right matches track layout).
-7. **Data structure**: Loadout slots restructured from flat array to `{ sail:[], sat:[], prism:[], core:[] }` per track. `renderTrack` replaced with `renderSlotRow(trackName, rowType, slots)`. `allSlots()` helper flattens for equip/unequip logic.
+### 目的：
+提供一个精确的、可交互的浏览器原型，用于 UI 讨论和迭代，之后再在 Unity `UICanvasBuilder.cs` 中实现。
+
+### 技术方案：
+1. **布局重构**：左列 = 加特林切换器（▲/▼ + 配装名 + 计数器）。右侧 = 单个配装卡片，包含 PRIMARY 和 SECONDARY 两条轨道纵向堆叠（匹配设计文档 §一）。
+2. **加特林旋转动画**：CSS `perspective rotateX` 关键帧 — `rotate-out-up/down`（280ms）+ `rotate-in-down/up`（320ms）模拟转管手感。切换后 `loadout-section` 附带机械抖动。
+3. **轨道槽位结构**：每条轨道为单行平铺混合 CORE+PRISM 槽位（空槽显示类型标签）。装备时强制匹配槽位类型，不匹配则抖动反馈。
+4. **背包**：56×56px 槽位，2px 间距，flex-wrap — 匹配设计文档紧凑背包布局规格。980px 面板宽度下可容纳 10–12 列。
+5. **悬停高亮**：轨道块 `mouseenter` 时以 `inset 2px 0 0 cyan` 边框 + 背景色调高亮。
+6. **扫描线 + 扫描光束**：静态扫描线叠加层 + 动画移动光束（`scanBeam` 关键帧，4秒循环）。
+7. **已装备槽位呼吸光效**：已装备槽位的 `::before` 伪元素上使用 `slotBreath` 关键帧动画。
+8. **键盘快捷键**：Q/E + PageUp/PageDown 切换配装；Esc 清除选中。
+9. **操作按钮**：保存配置 / 重命名（prompt）/ 删除（最后一个配装有保护机制）。
+10. **工具提示**：150ms 延迟，跟随鼠标，智能边缘避让，显示已装备位置标签。
+
+---
+
+## UI 原型：星图 UI v2.1 — 轨道多行布局 & 类型配色 — 2026-02-27 16:53
+
+### 修改文件：
+- `Docs/StarChartUIPrototype.html`
+
+### 内容简述：
+更新 HTML 原型：PRIMARY 轨道改为双行布局；所有槽位类型拥有独立配色标识；背包筛选按钮顺序与轨道从左到右的类型顺序一致（SAIL→PRISM→CORE→SAT）。
+
+### 变更细节：
+1. **PRIMARY 轨道 → 双行**：第 0 行 = SAIL 槽位 + SAT 槽位（从左到右）。第 1 行 = PRISM 槽位 + CORE 槽位（从左到右）。SECONDARY 轨道保持单行（SAIL→PRISM→CORE→SAT）。
+2. **类型配色系统**：新增 CSS 变量 `--col-sail`（#34d399 绿）、`--col-prism`（#a78bfa 紫）、`--col-core`（#60a5fa 蓝）、`--col-sat`（#fbbf24 黄），含暗色/发光变体。每种槽位类型拥有独立的背景、边框和悬停发光效果。
+3. **行类别标签**：每组槽位带有彩色圆点 + 类型名称标签（`trl-sail/prism/core/sat` 类），便于用户即时识别所属类型。
+4. **槽位类型标签颜色**：`.slot-type-label` 现继承对应类型的强调色，不再使用统一的暗白色。
+5. **筛选按钮颜色**：每个筛选按钮（SAILS/PRISMS/CORES/SATS）使用对应类型强调色；激活态使用彩色背景 + 边框。
+6. **筛选顺序**：从 ALL/CORES/PRISMS/SAILS/SATS → ALL/SAILS/PRISMS/CORES/SATS（从左到右与轨道布局一致）。
+7. **数据结构**：装配槽位从扁平数组重构为 `{ sail:[], sat:[], prism:[], core:[] }` 每轨道。`renderTrack` 替换为 `renderSlotRow(trackName, rowType, slots)`。`allSlots()` 辅助函数用于展平装备/卸装逻辑。
+
+---
+
+## 星图 UI — Secondary Track 与 Primary 对齐 (2026-02-28 09:33)
+
+### 修改文件：
+- `Tools/StarChartUIPrototype.html`
+
+### 内容简述：
+使 SECONDARY 轨道的槽位数量和布局与 PRIMARY 轨道在所有 3 套配置中完全一致。
+
+### 目的：
+此前 SECONDARY 槽位较少（sail×1, prism×2, core×1, sat×1），而 PRIMARY 为（sail×2, sat×1, prism×3, core×1）。这种不一致使 SECONDARY 显得较弱且视觉不平衡。现在两条轨道共享相同的槽位结构。
+
+### 技术方案：
+1. **数据**：更新所有 3 套配置的 `secondary` 槽位数组，使其与 `primary` 数量一致：`sail×2, sat×1, prism×3, core×1`。已装备的物品在适用处予以保留。
+2. **渲染顺序**：将 `renderAllTracks()` 中 secondary 的调用顺序从 `sail→prism→core→sat` 改为 `sail→sat→prism→core`，与 primary 的渲染顺序一致。
+3. **数据键顺序**：Secondary 数据对象现与 primary 使用相同键顺序（`sail→sat→prism→core`），保持一致性。
+
+---
+
+## 星图 UI — 配装栏/背包布局再平衡 (2026-02-28 09:36)
+
+### 修改文件：
+- `Tools/StarChartUIPrototype.html`
+
+### 内容简述：
+缩小了配装栏区域，放大了背包面板。统一了配装栏与背包的槽位尺寸，使已装备部件与背包部件视觉大小一致。
+
+### 目的：
+此前配装栏槽位（64px）比背包槽位（56px）更大，造成视觉不一致。配装栏区域占用过多垂直空间，导致背包网格空间不足。用户要求缩小配装栏、放大背包，并统一部件尺寸。
+
+### 技术方案：
+1. **统一槽位尺寸**：`--slot-size` 和 `--inv-slot-size` 均设为 **52px**（分别从 64px 和 56px 调整）。
+2. **面板高度**：从 620px 增加到 **700px**，为背包提供更多垂直空间。
+3. **配装栏压缩**：缩小 loadout-section 内边距（8px→4px）、loadout-card 内边距（8px→4px）、间距（6px→3px）、track-block 间距（8px→6px，内边距 4px→2px）、track-block-label 宽度（80px→64px）、track-col 内边距（4px→2px，间距 3px→2px）、gatling-col 宽度（64px→56px）。
+4. **字体缩放**：轨道标签 `.tb-name` 10px→9px、`.tb-bind` 9px→8px、`.slot-icon` 24px→20px、空槽 '+' 20px→16px。
+5. **背包增强**：增大 `.inventory-area` 内边距（上 6px→8px，下 8px→10px），提供更多呼吸空间。
+
+---
+
+## 星图 UI — 配装栏/背包 50-50 布局 + 轨道双行排列 (2026-02-28 09:45)
+
+### 修改文件：
+- `Tools/StarChartUIPrototype.html`
+
+### 内容简述：
+将配装栏与背包面板改为 50/50 等分布局，每个 track 的 4 个类型列从单行排列改为 2×2 双行网格布局（第一行 SAIL+SAT，第二行 PRISM+CORE），同时进一步缩小配装栏槽位尺寸。
+
+### 目的：
+此前背包面板过大、配装栏与背包比例失调。用户要求两个区域 55 开（各占一半），并且希望每个 track 支持两行排列以更紧凑地展示 4 个类型列。
+
+### 技术方案：
+1. **50/50 等分布局**：`.loadout-section` 从 `flex-shrink:0`（自然高度）改为 `flex:1`，与 `.inventory-section`（同为 `flex:1`）实现等分。两者均添加 `min-height:0` 和 `overflow:hidden` 防止内容溢出。
+2. **轨道双行排列**：`.track-rows` 从 `flex-direction:row` 改为 `flex-wrap:wrap`，`.track-col` 设置 `flex:1 1 calc(50% - 2px)` + `max-width:calc(50% - 1px)`，使每行放置 2 个类型列。
+3. **HTML 列顺序调整**：PRIMARY 和 SECONDARY 的列顺序从 SAIL→PRISM→CORE→SAT 改为 SAIL→SAT→PRISM→CORE，确保 wrap 后第一行为 SAIL+SAT、第二行为 PRISM+CORE。
+4. **列分隔线修复**：`.track-col + .track-col` 选择器改为 `.track-col:nth-child(even)`，确保只有每行右侧列有左边框。
+5. **槽位尺寸缩小**：`--slot-size` 从 52px 缩小到 **40px**，`--inv-slot-size` 从 52px 缩小到 **44px**。
+6. **track-block 弹性填充**：添加 `flex:1` + `min-height:0` + `align-items:stretch`，使 PRIMARY 和 SECONDARY 在 loadout-card 内均匀分配高度。
