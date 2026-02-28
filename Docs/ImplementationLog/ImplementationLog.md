@@ -5970,3 +5970,21 @@ svg.addEventListener('dragover', (e) => { e.preventDefault(); });
    - `slideInFromAbove`：`translateY(-40%) → translateY(0)` + `opacity 0→1`（prev 进入）
 3. **CSS 类映射不变**：`.roll-out-forward` / `.roll-in-forward` / `.roll-out-backward` / `.roll-in-backward` 类名保留，JS 切换逻辑零改动。
 4. **时长微调**：动画时长从 0.28s 缩短至 0.26s，JS `DURATION` 常量同步调整为 260ms，使滑动更干脆。
+
+---
+
+## 星图 UI — Loadout 贴纸滑动动画增加深度缩放 (2026-02-28 10:02)
+
+### 修改文件：
+- `Tools/StarChartUIPrototype.html`
+
+### 内容简述：
+在 Loadout 切换的贴纸滑动动画中加入 `scale` 变换，退出时从 `scale(1)` 缩小到 `scale(0.88)`，进入时从 `scale(0.88)` 放大到 `scale(1)`，模拟贴纸沿擀面杖弧面滑动时向画面深处隐去/从深处浮现的透视感。位移幅度从 40% 微调至 35%，配合缩放达到更自然的视觉比例。
+
+### 目的：
+用户反馈纯位移+渐隐缺少"向画面深处隐去"的感觉，需要加入微缩放来模拟擀面杖弧面的透视纵深。
+
+### 技术方案：
+1. 四个 `@keyframes` 的 `transform` 属性从单纯 `translateY` 改为 `translateY + scale` 复合变换。
+2. 缩放比例 `0.88`：足够感知到纵深，又不至于过度夸张。
+3. 位移幅度从 `40%` 调整为 `35%`，因为缩放本身已提供额外的视觉退场效果，不需要过大位移。

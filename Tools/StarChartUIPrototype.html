@@ -918,31 +918,31 @@ body::after {
 
 /* ── Sticker-slide animation ──
    Loadout card = sticker on a rolling pin viewed from above.
-   "Next" (forward): current sticker slides UP + fades out,
-   new sticker slides in from BELOW + fades in.
-   "Prev" (backward): current sticker slides DOWN + fades out,
-   new sticker slides in from ABOVE + fades in.
+   As a sticker slides away it also recedes into depth (scale ↓ + fade),
+   and a new sticker approaches from depth (scale ↑ + fade in).
+   "Next" (forward): current slides UP & shrinks, new slides in from BELOW.
+   "Prev" (backward): current slides DOWN & shrinks, new slides in from ABOVE.
 */
 
 /* Slide current card OUT upward (next loadout) */
 @keyframes slideOutUp {
-  0%   { transform: translateY(0);     opacity: 1; }
-  100% { transform: translateY(-40%);  opacity: 0; }
+  0%   { transform: translateY(0)    scale(1);    opacity: 1; }
+  100% { transform: translateY(-35%) scale(0.88); opacity: 0; }
 }
 /* Slide new card IN from below (next loadout) */
 @keyframes slideInFromBelow {
-  0%   { transform: translateY(40%);   opacity: 0; }
-  100% { transform: translateY(0);     opacity: 1; }
+  0%   { transform: translateY(35%)  scale(0.88); opacity: 0; }
+  100% { transform: translateY(0)    scale(1);    opacity: 1; }
 }
 /* Slide current card OUT downward (prev loadout) */
 @keyframes slideOutDown {
-  0%   { transform: translateY(0);     opacity: 1; }
-  100% { transform: translateY(40%);   opacity: 0; }
+  0%   { transform: translateY(0)    scale(1);    opacity: 1; }
+  100% { transform: translateY(35%)  scale(0.88); opacity: 0; }
 }
 /* Slide new card IN from above (prev loadout) */
 @keyframes slideInFromAbove {
-  0%   { transform: translateY(-40%);  opacity: 0; }
-  100% { transform: translateY(0);     opacity: 1; }
+  0%   { transform: translateY(-35%) scale(0.88); opacity: 0; }
+  100% { transform: translateY(0)    scale(1);    opacity: 1; }
 }
 
 .loadout-card.roll-out-forward {
