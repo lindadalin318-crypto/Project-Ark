@@ -24,6 +24,9 @@ namespace ProjectArk.UI
         [Header("Drag & Drop")]
         [SerializeField] private DragDropManager _dragDropManager;
 
+        [Header("Status Bar")]
+        [SerializeField] private StatusBarView _statusBar;
+
         // TODO: 光帆/伴星专用槽位 (Batch 4 扩展)
 
         private StarChartController _controller;
@@ -222,22 +225,37 @@ namespace ProjectArk.UI
             {
                 case StarCoreSO core:
                     if (!_selectedTrack.EquipCore(core))
+                    {
                         Debug.LogWarning($"[StarChartPanel] 无法装备核心 '{core.DisplayName}'：空间不足");
+                        _statusBar?.ShowMessage($"NO SPACE: {core.DisplayName}", StarChartTheme.StatusError, 3f);
+                    }
                     else
+                    {
                         _selectedTrack.InitializePools();
+                        _statusBar?.ShowMessage($"EQUIPPED: {core.DisplayName}", StarChartTheme.StatusNormal, 3f);
+                    }
                     break;
 
                 case PrismSO prism:
                     if (!_selectedTrack.EquipPrism(prism))
+                    {
                         Debug.LogWarning($"[StarChartPanel] 无法装备棱镜 '{prism.DisplayName}'：空间不足");
+                        _statusBar?.ShowMessage($"NO SPACE: {prism.DisplayName}", StarChartTheme.StatusError, 3f);
+                    }
+                    else
+                    {
+                        _statusBar?.ShowMessage($"EQUIPPED: {prism.DisplayName}", StarChartTheme.StatusNormal, 3f);
+                    }
                     break;
 
                 case LightSailSO sail:
                     _controller.EquipLightSail(sail);
+                    _statusBar?.ShowMessage($"EQUIPPED: {sail.DisplayName}", StarChartTheme.StatusNormal, 3f);
                     break;
 
                 case SatelliteSO sat:
                     _controller.EquipSatellite(sat);
+                    _statusBar?.ShowMessage($"EQUIPPED: {sat.DisplayName}", StarChartTheme.StatusNormal, 3f);
                     break;
             }
         }
@@ -247,22 +265,25 @@ namespace ProjectArk.UI
             switch (item)
             {
                 case StarCoreSO core:
-                    // 尝试从两个轨道卸载
                     if (!_controller.PrimaryTrack.UnequipCore(core))
                         _controller.SecondaryTrack.UnequipCore(core);
+                    _statusBar?.ShowMessage($"UNEQUIPPED: {core.DisplayName}", StarChartTheme.StatusNormal, 3f);
                     break;
 
                 case PrismSO prism:
                     if (!_controller.PrimaryTrack.UnequipPrism(prism))
                         _controller.SecondaryTrack.UnequipPrism(prism);
+                    _statusBar?.ShowMessage($"UNEQUIPPED: {prism.DisplayName}", StarChartTheme.StatusNormal, 3f);
                     break;
 
                 case LightSailSO:
                     _controller.UnequipLightSail();
+                    _statusBar?.ShowMessage($"UNEQUIPPED: {item.DisplayName}", StarChartTheme.StatusNormal, 3f);
                     break;
 
                 case SatelliteSO sat:
                     _controller.UnequipSatellite(sat);
+                    _statusBar?.ShowMessage($"UNEQUIPPED: {sat.DisplayName}", StarChartTheme.StatusNormal, 3f);
                     break;
             }
         }

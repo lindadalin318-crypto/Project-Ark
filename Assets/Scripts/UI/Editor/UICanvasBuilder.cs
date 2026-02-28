@@ -90,10 +90,17 @@ namespace ProjectArk.UI.Editor
             Debug.Log("  ├─ HeatBarHUD (fill + flash + label wired)");
             Debug.Log("  ├─ HealthBarHUD (fill + damage flash + label wired)");
             Debug.Log("  ├─ StarChartPanel (+ UIParallaxEffect)");
-            Debug.Log("  │  ├─ PrimaryTrackView (3 prism + 3 core cells)");
-            Debug.Log("  │  ├─ SecondaryTrackView (3 prism + 3 core cells)");
-            Debug.Log("  │  ├─ InventoryView (filters + scroll grid)");
-            Debug.Log("  │  └─ ItemDetailView (icon + name + desc + stats + button)");
+            Debug.Log("  │  ├─ PanelBackground (StarChartTheme.BgDeep)");
+            Debug.Log("  │  ├─ CornerBrackets (4 L-shaped decorations)");
+            Debug.Log("  │  ├─ Header (STAR CHART title + status dot + close button)");
+            Debug.Log("  │  ├─ UpperSection (55%)");
+            Debug.Log("  │  │  ├─ PrimaryTrackView (PRISM label + 3 cells, CORE label + 3 cells)");
+            Debug.Log("  │  │  └─ SecondaryTrackView (PRISM label + 3 cells, CORE label + 3 cells)");
+            Debug.Log("  │  ├─ LowerSection (40%)");
+            Debug.Log("  │  │  ├─ InventoryView (filters + 64x64 grid)");
+            Debug.Log("  │  │  └─ ItemDetailView (icon + name + desc + stats + button)");
+            Debug.Log("  │  ├─ StatusBar (22px, StarChartTheme colors)");
+            Debug.Log("  │  └─ DragDropManager (ghost image)");
             Debug.Log("  ├─ UIManager (+ WeavingStateTransition)");
             Debug.Log("  └─ DoorTransitionController (FadeOverlay)");
             Debug.Log("");
@@ -260,38 +267,78 @@ namespace ProjectArk.UI.Editor
             var starChartPanel = panelGo.AddComponent<StarChartPanel>();
             panelGo.AddComponent<UIParallaxEffect>();
 
-            // Panel background
+            // ── Panel background (deep dark) ──
             var panelBg = CreateUIObject("PanelBackground", panelGo.transform);
             SetStretch(panelBg);
             var panelBgImg = panelBg.AddComponent<Image>();
-            panelBgImg.color = new Color(0.05f, 0.05f, 0.1f, 0.92f);
+            panelBgImg.color = StarChartTheme.BgDeep;
             panelBgImg.raycastTarget = true;
 
-            // ── PrimaryTrackView ──
-            var primaryTrackGo = CreateUIObject("PrimaryTrackView", panelGo.transform);
-            SetAnchors(primaryTrackGo, new Vector2(0.02f, 0.5f), new Vector2(0.48f, 0.95f));
+            // ── Corner bracket decorations (4 L-shaped corners) ──
+            BuildCornerBrackets(panelGo.transform);
+
+            // ── Header bar (top 6%) ──
+            var headerGo = CreateUIObject("Header", panelGo.transform);
+            SetAnchors(headerGo, new Vector2(0f, 0.94f), new Vector2(1f, 1f));
+            BuildHeader(headerGo.transform, starChartPanel);
+
+            // ── Divider line between header and content ──
+            var dividerH = CreateUIObject("DividerHorizontal", panelGo.transform);
+            SetAnchors(dividerH, new Vector2(0.01f, 0.935f), new Vector2(0.99f, 0.937f));
+            var dividerHImg = dividerH.AddComponent<Image>();
+            dividerHImg.color = StarChartTheme.Border;
+            dividerHImg.raycastTarget = false;
+
+            // ── Upper section (55%): dual track views ──
+            var upperSection = CreateUIObject("UpperSection", panelGo.transform);
+            SetAnchors(upperSection, new Vector2(0f, 0.38f), new Vector2(1f, 0.935f));
+
+            // Vertical divider between tracks
+            var dividerV = CreateUIObject("DividerVertical", upperSection.transform);
+            SetAnchors(dividerV, new Vector2(0.495f, 0f), new Vector2(0.505f, 1f));
+            var dividerVImg = dividerV.AddComponent<Image>();
+            dividerVImg.color = StarChartTheme.Border;
+            dividerVImg.raycastTarget = false;
+
+            // PrimaryTrackView (left half)
+            var primaryTrackGo = CreateUIObject("PrimaryTrackView", upperSection.transform);
+            SetAnchors(primaryTrackGo, new Vector2(0.01f, 0f), new Vector2(0.49f, 1f));
             var primaryTrack = BuildTrackView(primaryTrackGo, "PRIMARY");
 
-            // ── SecondaryTrackView ──
-            var secondaryTrackGo = CreateUIObject("SecondaryTrackView", panelGo.transform);
-            SetAnchors(secondaryTrackGo, new Vector2(0.52f, 0.5f), new Vector2(0.98f, 0.95f));
+            // SecondaryTrackView (right half)
+            var secondaryTrackGo = CreateUIObject("SecondaryTrackView", upperSection.transform);
+            SetAnchors(secondaryTrackGo, new Vector2(0.51f, 0f), new Vector2(0.99f, 1f));
             var secondaryTrack = BuildTrackView(secondaryTrackGo, "SECONDARY");
 
-            // ── InventoryView ──
-            var inventoryGo = CreateUIObject("InventoryView", panelGo.transform);
-            SetAnchors(inventoryGo, new Vector2(0.02f, 0.05f), new Vector2(0.58f, 0.48f));
+            // ── Divider between upper and lower ──
+            var dividerMid = CreateUIObject("DividerMid", panelGo.transform);
+            SetAnchors(dividerMid, new Vector2(0.01f, 0.378f), new Vector2(0.99f, 0.380f));
+            var dividerMidImg = dividerMid.AddComponent<Image>();
+            dividerMidImg.color = StarChartTheme.Border;
+            dividerMidImg.raycastTarget = false;
+
+            // ── Lower section (40%): inventory + detail ──
+            var lowerSection = CreateUIObject("LowerSection", panelGo.transform);
+            SetAnchors(lowerSection, new Vector2(0f, 0.04f), new Vector2(1f, 0.378f));
+
+            // InventoryView (left 60%)
+            var inventoryGo = CreateUIObject("InventoryView", lowerSection.transform);
+            SetAnchors(inventoryGo, new Vector2(0.01f, 0f), new Vector2(0.60f, 1f));
             var inventoryView = inventoryGo.AddComponent<InventoryView>();
 
             // Inventory background
             var invBg = CreateUIObject("InvBackground", inventoryGo.transform);
             SetStretch(invBg);
             var invBgImg = invBg.AddComponent<Image>();
-            invBgImg.color = new Color(0.08f, 0.08f, 0.12f, 0.9f);
+            invBgImg.color = new Color(0.07f, 0.09f, 0.12f, 0.90f);
 
             // Filter buttons bar
             var filterBar = CreateUIObject("FilterBar", inventoryGo.transform);
             SetAnchors(filterBar, new Vector2(0f, 0.88f), new Vector2(1f, 1f));
-            filterBar.AddComponent<HorizontalLayoutGroup>().spacing = 4;
+            var filterHLG = filterBar.AddComponent<HorizontalLayoutGroup>();
+            filterHLG.spacing = 4;
+            filterHLG.childForceExpandWidth = true;
+            filterHLG.childForceExpandHeight = true;
 
             var filterAll = CreateButton("FilterAll", filterBar.transform, "ALL");
             var filterCores = CreateButton("FilterCores", filterBar.transform, "CORES");
@@ -303,7 +350,7 @@ namespace ProjectArk.UI.Editor
             var scrollGo = CreateUIObject("ScrollArea", inventoryGo.transform);
             SetAnchors(scrollGo, new Vector2(0f, 0f), new Vector2(1f, 0.86f));
             var scrollRect = scrollGo.AddComponent<ScrollRect>();
-            scrollGo.AddComponent<Image>().color = Color.clear; // Mask needs image
+            scrollGo.AddComponent<Image>().color = Color.clear;
             scrollGo.AddComponent<Mask>().showMaskGraphic = false;
 
             var contentGo = CreateUIObject("ContentParent", scrollGo.transform);
@@ -314,9 +361,9 @@ namespace ProjectArk.UI.Editor
             contentRect.anchorMax = new Vector2(1f, 1f);
 
             var gridLayout = contentGo.AddComponent<GridLayoutGroup>();
-            gridLayout.cellSize = new Vector2(100, 120);
-            gridLayout.spacing = new Vector2(8, 8);
-            gridLayout.padding = new RectOffset(8, 8, 8, 8);
+            gridLayout.cellSize = new Vector2(64, 64);
+            gridLayout.spacing = new Vector2(6, 6);
+            gridLayout.padding = new RectOffset(6, 6, 6, 6);
             gridLayout.constraint = GridLayoutGroup.Constraint.Flexible;
 
             var contentSizeFitter = contentGo.AddComponent<ContentSizeFitter>();
@@ -334,22 +381,19 @@ namespace ProjectArk.UI.Editor
             WireField(inventoryView, "_filterSails", filterSails);
             WireField(inventoryView, "_filterSatellites", filterSats);
 
-            // ── ItemDetailView ──
-            var detailGo = CreateUIObject("ItemDetailView", panelGo.transform);
-            SetAnchors(detailGo, new Vector2(0.60f, 0.05f), new Vector2(0.98f, 0.48f));
+            // ItemDetailView (right 40%)
+            var detailGo = CreateUIObject("ItemDetailView", lowerSection.transform);
+            SetAnchors(detailGo, new Vector2(0.62f, 0f), new Vector2(0.99f, 1f));
             var itemDetailView = detailGo.AddComponent<ItemDetailView>();
 
-            // Detail content root (toggled by Clear/ShowItem)
             var detailContent = CreateUIObject("ContentRoot", detailGo.transform);
             SetStretch(detailContent);
 
-            // Detail background
             var detailBg = CreateUIObject("DetailBackground", detailContent.transform);
             SetStretch(detailBg);
             var detailBgImg = detailBg.AddComponent<Image>();
-            detailBgImg.color = new Color(0.1f, 0.1f, 0.15f, 0.9f);
+            detailBgImg.color = new Color(0.07f, 0.09f, 0.12f, 0.90f);
 
-            // Vertical layout for detail content
             var detailLayout = CreateUIObject("DetailLayout", detailContent.transform);
             SetAnchors(detailLayout, new Vector2(0.05f, 0.05f), new Vector2(0.95f, 0.95f));
             var vlg = detailLayout.AddComponent<VerticalLayoutGroup>();
@@ -358,7 +402,6 @@ namespace ProjectArk.UI.Editor
             vlg.childForceExpandWidth = true;
             vlg.childForceExpandHeight = false;
 
-            // Detail icon
             var detailIcon = CreateUIObject("Icon", detailLayout.transform);
             var detailIconImg = detailIcon.AddComponent<Image>();
             detailIconImg.color = Color.clear;
@@ -366,7 +409,6 @@ namespace ProjectArk.UI.Editor
             iconLE.preferredHeight = 64;
             iconLE.preferredWidth = 64;
 
-            // Detail name
             var detailName = CreateUIObject("NameText", detailLayout.transform);
             var detailNameTmp = detailName.AddComponent<TextMeshProUGUI>();
             detailNameTmp.text = "Item Name";
@@ -376,7 +418,6 @@ namespace ProjectArk.UI.Editor
             var nameLE = detailName.AddComponent<LayoutElement>();
             nameLE.preferredHeight = 30;
 
-            // Detail description
             var detailDesc = CreateUIObject("DescriptionText", detailLayout.transform);
             var detailDescTmp = detailDesc.AddComponent<TextMeshProUGUI>();
             detailDescTmp.text = "Item description goes here...";
@@ -385,21 +426,19 @@ namespace ProjectArk.UI.Editor
             var descLE = detailDesc.AddComponent<LayoutElement>();
             descLE.preferredHeight = 60;
 
-            // Detail stats
             var detailStats = CreateUIObject("StatsText", detailLayout.transform);
             var detailStatsTmp = detailStats.AddComponent<TextMeshProUGUI>();
             detailStatsTmp.text = "Stats...";
             detailStatsTmp.fontSize = 13;
-            detailStatsTmp.color = new Color(0.5f, 0.9f, 0.5f, 1f);
+            detailStatsTmp.color = StarChartTheme.SailColor;
             var statsLE = detailStats.AddComponent<LayoutElement>();
             statsLE.preferredHeight = 80;
             statsLE.flexibleHeight = 1;
 
-            // Action button (Equip/Unequip)
             var actionBtnGo = CreateUIObject("ActionButton", detailLayout.transform);
             var actionBtn = actionBtnGo.AddComponent<Button>();
             var actionBtnImg = actionBtnGo.AddComponent<Image>();
-            actionBtnImg.color = new Color(0.2f, 0.5f, 0.8f, 1f);
+            actionBtnImg.color = new Color(0f, StarChartTheme.Cyan.g * 0.4f, StarChartTheme.Cyan.b * 0.5f, 1f);
             var actionBtnLE = actionBtnGo.AddComponent<LayoutElement>();
             actionBtnLE.preferredHeight = 40;
 
@@ -413,7 +452,6 @@ namespace ProjectArk.UI.Editor
             actionLabelTmp.color = Color.white;
             actionLabelTmp.raycastTarget = false;
 
-            // Wire ItemDetailView fields
             WireField(itemDetailView, "_contentRoot", detailContent);
             WireField(itemDetailView, "_icon", detailIconImg);
             WireField(itemDetailView, "_nameText", detailNameTmp);
@@ -422,13 +460,53 @@ namespace ProjectArk.UI.Editor
             WireField(itemDetailView, "_actionButton", actionBtn);
             WireField(itemDetailView, "_actionButtonLabel", actionLabelTmp);
 
-            // Wire StarChartPanel fields
+            // ── Status Bar (bottom 4%) ──
+            var statusBarGo = CreateUIObject("StatusBar", panelGo.transform);
+            SetAnchors(statusBarGo, new Vector2(0f, 0f), new Vector2(1f, 0.038f));
+            var statusBarView = statusBarGo.AddComponent<StatusBarView>();
+
+            var statusBg = CreateUIObject("StatusBackground", statusBarGo.transform);
+            SetStretch(statusBg);
+            var statusBgImg = statusBg.AddComponent<Image>();
+            statusBgImg.color = new Color(0.04f, 0.05f, 0.07f, 0.95f);
+            statusBgImg.raycastTarget = false;
+
+            var statusLabel = CreateUIObject("StatusLabel", statusBarGo.transform);
+            SetAnchors(statusLabel, new Vector2(0.02f, 0f), new Vector2(0.98f, 1f));
+            var statusTmp = statusLabel.AddComponent<TextMeshProUGUI>();
+            statusTmp.text = "DRAG TO EQUIP  ·  CLICK TO INSPECT";
+            statusTmp.fontSize = 12;
+            statusTmp.alignment = TextAlignmentOptions.MidlineLeft;
+            statusTmp.color = StarChartTheme.StatusIdle;
+            statusTmp.raycastTarget = false;
+
+            WireField(statusBarView, "_label", statusTmp);
+
+            // ── DragDropManager ──
+            var dragDropGo = CreateUIObject("DragDropManager", panelGo.transform);
+            SetStretch(dragDropGo);
+            var dragDropMgr = dragDropGo.AddComponent<DragDropManager>();
+
+            // Ghost image for drag preview
+            var ghostGo = CreateUIObject("DragGhost", dragDropGo.transform);
+            SetAnchors(ghostGo, Vector2.zero, Vector2.zero);
+            ghostGo.GetComponent<RectTransform>().sizeDelta = new Vector2(80, 80);
+            var ghostImg = ghostGo.AddComponent<Image>();
+            ghostImg.color = new Color(1f, 1f, 1f, 0.7f);
+            ghostImg.raycastTarget = false;
+            ghostGo.SetActive(false);
+
+            WireField(dragDropMgr, "_ghostImage", ghostImg);
+
+            // ── Wire StarChartPanel fields ──
             WireField(starChartPanel, "_primaryTrackView", primaryTrack);
             WireField(starChartPanel, "_secondaryTrackView", secondaryTrack);
             WireField(starChartPanel, "_inventoryView", inventoryView);
             WireField(starChartPanel, "_itemDetailView", itemDetailView);
+            WireField(starChartPanel, "_dragDropManager", dragDropMgr);
+            WireField(starChartPanel, "_statusBar", statusBarView);
 
-            Debug.Log("[UICanvasBuilder] Created StarChartPanel (with tracks, inventory, detail)");
+            Debug.Log("[UICanvasBuilder] Created StarChartPanel (header + tracks + inventory + detail + statusbar)");
             return starChartPanel;
         }
 
@@ -497,6 +575,115 @@ namespace ProjectArk.UI.Editor
         // TrackView Builder
         // =====================================================================
 
+        /// <summary>
+        /// Build 4 L-shaped corner bracket decorations on the panel.
+        /// </summary>
+        private static void BuildCornerBrackets(Transform parent)
+        {
+            // Each bracket is a thin L-shape approximated by two overlapping Images
+            // We use a single Image per corner with a small fixed size
+            float size = 20f;
+            float thick = 2f;
+
+            // Bottom-Left
+            BuildBracket("BracketBL", parent, new Vector2(0f, 0f), new Vector2(0f, 0f), size, thick);
+            // Bottom-Right
+            BuildBracket("BracketBR", parent, new Vector2(1f, 0f), new Vector2(1f, 0f), size, thick);
+            // Top-Left
+            BuildBracket("BracketTL", parent, new Vector2(0f, 1f), new Vector2(0f, 1f), size, thick);
+            // Top-Right
+            BuildBracket("BracketTR", parent, new Vector2(1f, 1f), new Vector2(1f, 1f), size, thick);
+        }
+
+        private static void BuildBracket(string name, Transform parent,
+            Vector2 anchor, Vector2 pivot, float size, float thick)
+        {
+            var go = CreateUIObject(name, parent);
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = anchor;
+            rect.anchorMax = anchor;
+            rect.pivot = pivot;
+            rect.sizeDelta = new Vector2(size, size);
+            rect.anchoredPosition = Vector2.zero;
+
+            // Horizontal bar
+            var hBar = CreateUIObject("H", go.transform);
+            var hRect = hBar.GetComponent<RectTransform>();
+            hRect.anchorMin = new Vector2(0f, pivot.y > 0.5f ? 1f - thick / size : 0f);
+            hRect.anchorMax = new Vector2(1f, pivot.y > 0.5f ? 1f : thick / size);
+            hRect.offsetMin = Vector2.zero;
+            hRect.offsetMax = Vector2.zero;
+            var hImg = hBar.AddComponent<Image>();
+            hImg.color = StarChartTheme.CornerBracket;
+            hImg.raycastTarget = false;
+
+            // Vertical bar
+            var vBar = CreateUIObject("V", go.transform);
+            var vRect = vBar.GetComponent<RectTransform>();
+            vRect.anchorMin = new Vector2(pivot.x > 0.5f ? 1f - thick / size : 0f, 0f);
+            vRect.anchorMax = new Vector2(pivot.x > 0.5f ? 1f : thick / size, 1f);
+            vRect.offsetMin = Vector2.zero;
+            vRect.offsetMax = Vector2.zero;
+            var vImg = vBar.AddComponent<Image>();
+            vImg.color = StarChartTheme.CornerBracket;
+            vImg.raycastTarget = false;
+        }
+
+        /// <summary>
+        /// Build the header bar: title + status dot + close button.
+        /// </summary>
+        private static void BuildHeader(Transform parent, StarChartPanel panel)
+        {
+            // Background
+            var headerBg = CreateUIObject("HeaderBg", parent);
+            SetStretch(headerBg);
+            var headerBgImg = headerBg.AddComponent<Image>();
+            headerBgImg.color = new Color(0.04f, 0.06f, 0.09f, 0.95f);
+            headerBgImg.raycastTarget = false;
+
+            // Title: "STAR CHART"
+            var titleGo = CreateUIObject("Title", parent);
+            SetAnchors(titleGo, new Vector2(0.02f, 0f), new Vector2(0.5f, 1f));
+            var titleTmp = titleGo.AddComponent<TextMeshProUGUI>();
+            titleTmp.text = "STAR CHART";
+            titleTmp.fontSize = 20;
+            titleTmp.fontStyle = FontStyles.Bold;
+            titleTmp.color = StarChartTheme.Cyan;
+            titleTmp.alignment = TextAlignmentOptions.MidlineLeft;
+            titleTmp.raycastTarget = false;
+
+            // Status dot (green pulse indicator)
+            var dotGo = CreateUIObject("StatusDot", parent);
+            var dotRect = dotGo.GetComponent<RectTransform>();
+            dotRect.anchorMin = new Vector2(0.5f, 0.25f);
+            dotRect.anchorMax = new Vector2(0.5f, 0.75f);
+            dotRect.anchoredPosition = Vector2.zero;
+            dotRect.sizeDelta = new Vector2(8f, 0f);
+            var dotImg = dotGo.AddComponent<Image>();
+            dotImg.color = StarChartTheme.StatusGreen;
+            dotImg.raycastTarget = false;
+
+            // Close button [×]
+            var closeBtnGo = CreateUIObject("CloseButton", parent);
+            SetAnchors(closeBtnGo, new Vector2(0.94f, 0.1f), new Vector2(0.99f, 0.9f));
+            var closeBtnImg = closeBtnGo.AddComponent<Image>();
+            closeBtnImg.color = new Color(0.6f, 0.15f, 0.15f, 0.8f);
+            var closeBtn = closeBtnGo.AddComponent<Button>();
+            closeBtn.targetGraphic = closeBtnImg;
+
+            var closeLabelGo = CreateUIObject("CloseLabel", closeBtnGo.transform);
+            SetStretch(closeLabelGo);
+            var closeTmp = closeLabelGo.AddComponent<TextMeshProUGUI>();
+            closeTmp.text = "×";
+            closeTmp.fontSize = 18;
+            closeTmp.alignment = TextAlignmentOptions.Center;
+            closeTmp.color = Color.white;
+            closeTmp.raycastTarget = false;
+
+            // Wire close button to panel.Close()
+            closeBtn.onClick.AddListener(() => panel.Close());
+        }
+
         private static TrackView BuildTrackView(GameObject root, string label)
         {
             var trackView = root.AddComponent<TrackView>();
@@ -505,22 +692,23 @@ namespace ProjectArk.UI.Editor
             var trackBg = CreateUIObject("TrackBackground", root.transform);
             SetStretch(trackBg);
             var trackBgImg = trackBg.AddComponent<Image>();
-            trackBgImg.color = new Color(0.08f, 0.08f, 0.12f, 0.85f);
+            trackBgImg.color = new Color(0.06f, 0.08f, 0.11f, 0.85f);
 
-            // Track label
+            // Track label (PRIMARY / SECONDARY)
             var labelGo = CreateUIObject("TrackLabel", root.transform);
-            SetAnchors(labelGo, new Vector2(0.05f, 0.85f), new Vector2(0.6f, 0.98f));
+            SetAnchors(labelGo, new Vector2(0.03f, 0.88f), new Vector2(0.7f, 0.99f));
             var labelTmp = labelGo.AddComponent<TextMeshProUGUI>();
             labelTmp.text = label;
-            labelTmp.fontSize = 18;
+            labelTmp.fontSize = 14;
             labelTmp.fontStyle = FontStyles.Bold;
-            labelTmp.color = Color.white;
+            labelTmp.color = StarChartTheme.Cyan;
+            labelTmp.raycastTarget = false;
 
             // Selection border
             var borderGo = CreateUIObject("SelectionBorder", root.transform);
             SetStretch(borderGo);
             var borderImg = borderGo.AddComponent<Image>();
-            borderImg.color = new Color(0.3f, 0.3f, 0.4f, 0.5f);
+            borderImg.color = StarChartTheme.Border;
             borderImg.type = Image.Type.Sliced;
             borderImg.raycastTarget = false;
 
@@ -529,11 +717,20 @@ namespace ProjectArk.UI.Editor
             SetStretch(selectBtnGo);
             var selectBtn = selectBtnGo.AddComponent<Button>();
             var selectBtnImg = selectBtnGo.AddComponent<Image>();
-            selectBtnImg.color = Color.clear; // Invisible clickable area
+            selectBtnImg.color = Color.clear;
+
+            // PRISM type label
+            var prismLabelGo = CreateUIObject("PrismLabel", root.transform);
+            SetAnchors(prismLabelGo, new Vector2(0.03f, 0.55f), new Vector2(0.5f, 0.65f));
+            var prismLabelTmp = prismLabelGo.AddComponent<TextMeshProUGUI>();
+            prismLabelTmp.text = "PRISM";
+            prismLabelTmp.fontSize = 10;
+            prismLabelTmp.color = StarChartTheme.PrismColor;
+            prismLabelTmp.raycastTarget = false;
 
             // Prism cells row (upper)
             var prismRow = CreateUIObject("PrismRow", root.transform);
-            SetAnchors(prismRow, new Vector2(0.05f, 0.45f), new Vector2(0.95f, 0.82f));
+            SetAnchors(prismRow, new Vector2(0.03f, 0.42f), new Vector2(0.97f, 0.82f));
             var prismHLG = prismRow.AddComponent<HorizontalLayoutGroup>();
             prismHLG.spacing = 6;
             prismHLG.childForceExpandWidth = true;
@@ -541,12 +738,20 @@ namespace ProjectArk.UI.Editor
 
             var prismCells = new SlotCellView[3];
             for (int i = 0; i < 3; i++)
-                prismCells[i] = BuildSlotCell($"PrismCell_{i}", prismRow.transform,
-                    new Color(0.3f, 0.2f, 0.5f, 0.6f));
+                prismCells[i] = BuildSlotCell($"PrismCell_{i}", prismRow.transform);
+
+            // CORE type label
+            var coreLabelGo = CreateUIObject("CoreLabel", root.transform);
+            SetAnchors(coreLabelGo, new Vector2(0.03f, 0.12f), new Vector2(0.5f, 0.22f));
+            var coreLabelTmp = coreLabelGo.AddComponent<TextMeshProUGUI>();
+            coreLabelTmp.text = "CORE";
+            coreLabelTmp.fontSize = 10;
+            coreLabelTmp.color = StarChartTheme.CoreColor;
+            coreLabelTmp.raycastTarget = false;
 
             // Core cells row (lower)
             var coreRow = CreateUIObject("CoreRow", root.transform);
-            SetAnchors(coreRow, new Vector2(0.05f, 0.05f), new Vector2(0.95f, 0.42f));
+            SetAnchors(coreRow, new Vector2(0.03f, 0.02f), new Vector2(0.97f, 0.40f));
             var coreHLG = coreRow.AddComponent<HorizontalLayoutGroup>();
             coreHLG.spacing = 6;
             coreHLG.childForceExpandWidth = true;
@@ -554,11 +759,12 @@ namespace ProjectArk.UI.Editor
 
             var coreCells = new SlotCellView[3];
             for (int i = 0; i < 3; i++)
-                coreCells[i] = BuildSlotCell($"CoreCell_{i}", coreRow.transform,
-                    new Color(0.2f, 0.3f, 0.5f, 0.6f));
+                coreCells[i] = BuildSlotCell($"CoreCell_{i}", coreRow.transform);
 
             // Wire TrackView fields
             WireField(trackView, "_trackLabel", labelTmp);
+            WireField(trackView, "_prismLabel", prismLabelTmp);
+            WireField(trackView, "_coreLabel", coreLabelTmp);
             WireField(trackView, "_selectButton", selectBtn);
             WireField(trackView, "_selectionBorder", borderImg);
             WireArrayField(trackView, "_prismCells", prismCells);
@@ -571,7 +777,7 @@ namespace ProjectArk.UI.Editor
         // SlotCellView Builder
         // =====================================================================
 
-        private static SlotCellView BuildSlotCell(string name, Transform parent, Color bgColor)
+        private static SlotCellView BuildSlotCell(string name, Transform parent)
         {
             var cellGo = CreateUIObject(name, parent);
             var cellView = cellGo.AddComponent<SlotCellView>();
@@ -580,7 +786,7 @@ namespace ProjectArk.UI.Editor
             var bgGo = CreateUIObject("Background", cellGo.transform);
             SetStretch(bgGo);
             var bgImg = bgGo.AddComponent<Image>();
-            bgImg.color = bgColor;
+            bgImg.color = StarChartTheme.SlotEmpty;
 
             // Icon
             var iconGo = CreateUIObject("Icon", cellGo.transform);
@@ -590,15 +796,26 @@ namespace ProjectArk.UI.Editor
             iconImg.enabled = false;
             iconImg.raycastTarget = false;
 
+            // Placeholder '+' label
+            var placeholderGo = CreateUIObject("PlaceholderLabel", cellGo.transform);
+            SetStretch(placeholderGo);
+            var placeholderTmp = placeholderGo.AddComponent<TextMeshProUGUI>();
+            placeholderTmp.text = "+";
+            placeholderTmp.fontSize = 20;
+            placeholderTmp.alignment = TextAlignmentOptions.Center;
+            placeholderTmp.color = new Color(1f, 1f, 1f, 0.25f);
+            placeholderTmp.raycastTarget = false;
+
             // Button
             var btnImg = cellGo.AddComponent<Image>();
-            btnImg.color = Color.clear; // Invisible button backing
+            btnImg.color = Color.clear;
             var btn = cellGo.AddComponent<Button>();
 
             // Wire SlotCellView fields
             WireField(cellView, "_backgroundImage", bgImg);
             WireField(cellView, "_iconImage", iconImg);
             WireField(cellView, "_button", btn);
+            WireField(cellView, "_placeholderLabel", placeholderTmp);
 
             return cellView;
         }
@@ -628,6 +845,20 @@ namespace ProjectArk.UI.Editor
             rootRect.sizeDelta = new Vector2(100, 120);
             root.AddComponent<CanvasGroup>(); // Required by InventoryItemView for drag alpha control
             var itemView = root.AddComponent<InventoryItemView>();
+
+            // Type dot (top-left corner, colored circle)
+            var typeDotGo = CreateUIObjectStandalone("TypeDot", root.transform);
+            SetAnchors(typeDotGo, new Vector2(0f, 0.85f), new Vector2(0.25f, 1f));
+            var typeDotImg = typeDotGo.AddComponent<Image>();
+            typeDotImg.color = StarChartTheme.CoreColor; // default; overridden by Setup()
+            typeDotImg.raycastTarget = false;
+
+            // Equipped border (green tint overlay when equipped)
+            var equippedBorderGo = CreateUIObjectStandalone("EquippedBorder", root.transform);
+            SetStretch(equippedBorderGo);
+            var equippedBorderImg = equippedBorderGo.AddComponent<Image>();
+            equippedBorderImg.color = Color.clear; // hidden by default
+            equippedBorderImg.raycastTarget = false;
 
             // Selection border (background)
             var selBorder = CreateUIObjectStandalone("SelectionBorder", root.transform);
@@ -683,6 +914,8 @@ namespace ProjectArk.UI.Editor
             WireField(itemView, "_button", btn);
             WireField(itemView, "_equippedBadge", badgeImg);
             WireField(itemView, "_selectionBorder", selBorderImg);
+            WireField(itemView, "_typeDot", typeDotImg);
+            WireField(itemView, "_equippedBorder", equippedBorderImg);
 
             // Save as prefab
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, prefabPath);

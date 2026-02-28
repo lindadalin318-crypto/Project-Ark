@@ -61,6 +61,7 @@ namespace ProjectArk.UI
         {
             _inventory = inventory;
             _isEquippedCheck = isEquippedCheck;
+            UpdateFilterButtonStyles();
             Debug.Log($"[InventoryView] Bind called. inventory={inventory?.name ?? "NULL"}, ownedItems={inventory?.OwnedItems?.Count ?? -1}");
         }
 
@@ -68,7 +69,39 @@ namespace ProjectArk.UI
         public void SetFilter(StarChartItemType? type)
         {
             _activeFilter = type;
+            UpdateFilterButtonStyles();
             Refresh();
+        }
+
+        /// <summary> Update filter button visual states based on active filter. </summary>
+        private void UpdateFilterButtonStyles()
+        {
+            SetFilterButtonStyle(_filterAll,        null,                          _activeFilter == null);
+            SetFilterButtonStyle(_filterCores,      StarChartItemType.Core,        _activeFilter == StarChartItemType.Core);
+            SetFilterButtonStyle(_filterPrisms,     StarChartItemType.Prism,       _activeFilter == StarChartItemType.Prism);
+            SetFilterButtonStyle(_filterSails,      StarChartItemType.LightSail,   _activeFilter == StarChartItemType.LightSail);
+            SetFilterButtonStyle(_filterSatellites, StarChartItemType.Satellite,   _activeFilter == StarChartItemType.Satellite);
+        }
+
+        private static void SetFilterButtonStyle(Button btn, StarChartItemType? type, bool active)
+        {
+            if (btn == null) return;
+            var img = btn.GetComponent<Image>();
+            if (img == null) return;
+
+            if (active)
+            {
+                // Active: use type color (or cyan for ALL)
+                Color activeColor = type.HasValue
+                    ? StarChartTheme.GetTypeColor(type.Value)
+                    : StarChartTheme.Cyan;
+                img.color = new Color(activeColor.r, activeColor.g, activeColor.b, 0.35f);
+            }
+            else
+            {
+                // Inactive: dim background
+                img.color = new Color(0.12f, 0.14f, 0.18f, 0.85f);
+            }
         }
 
         /// <summary> Rebuild the inventory grid from current data and filter. </summary>

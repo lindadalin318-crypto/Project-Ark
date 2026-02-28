@@ -954,10 +954,372 @@ body::after {
 .loadout-card.roll-out-backward {
   animation: slideOutDown 0.26s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
-.loadout-card.roll-in-backward {
-  animation: slideInFromAbove 0.26s cubic-bezier(0, 0, 0.6, 1) forwards;
+/* ── Drag Ghost ── */
+#drag-ghost {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  width: 52px;
+  height: 52px;
+  border-radius: 3px;
+  background: rgba(11,17,32,0.92);
+  border: 2px solid var(--cyan);
+  box-shadow: 0 0 16px rgba(0,229,255,0.35), 0 4px 20px rgba(0,0,0,0.7);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  cursor: grabbing;
+  transition: border-color 0.08s, box-shadow 0.08s;
+  user-select: none;
 }
-</style>
+#drag-ghost.ghost-valid {
+  border-color: var(--green);
+  box-shadow: 0 0 16px rgba(34,197,94,0.45), 0 4px 20px rgba(0,0,0,0.7);
+}
+#drag-ghost.ghost-invalid {
+  border-color: var(--red);
+  box-shadow: 0 0 16px rgba(239,68,68,0.45), 0 4px 20px rgba(0,0,0,0.7);
+}
+#drag-ghost .ghost-icon { font-size: 22px; line-height: 1; }
+#drag-ghost .ghost-name {
+  font-size: 7px;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  margin-top: 2px;
+  text-align: center;
+  max-width: 48px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Drop target highlights ── */
+
+/* All matching slots glow softly while dragging */
+.slot.drop-candidate {
+  border-color: rgba(34,197,94,0.8) !important;
+  animation: candidatePulse 1.1s ease-in-out infinite !important;
+}
+@keyframes candidatePulse {
+  0%,100% {
+    background: rgba(34,197,94,0.06);
+    box-shadow: 0 0 10px rgba(34,197,94,0.3), inset 0 0 10px rgba(34,197,94,0.08);
+  }
+  50% {
+    background: rgba(34,197,94,0.22);
+    box-shadow: 0 0 22px rgba(34,197,94,0.65), inset 0 0 20px rgba(34,197,94,0.25);
+  }
+}
+
+/* Hovered slot upgrades to full valid highlight */
+.slot.drop-valid {
+  border-color: var(--green) !important;
+  box-shadow: 0 0 18px rgba(34,197,94,0.7), inset 0 0 12px rgba(34,197,94,0.2) !important;
+  transform: scale(1.1) !important;
+  animation: none !important;
+}
+.slot.drop-invalid {
+  border-color: var(--red) !important;
+  box-shadow: 0 0 10px rgba(239,68,68,0.4) !important;
+  animation: none !important;
+}
+
+/* Inventory area drop target */
+.inventory-area.drop-target-inv {
+  box-shadow: inset 0 0 0 2px rgba(34,197,94,0.4);
+  background: rgba(34,197,94,0.04);
+}
+
+/* Dragging source item in inventory — ghost placeholder */
+.inv-slot.dragging-source {
+  opacity: 0.35;
+  cursor: grabbing;
+}
+
+/* Slot being dragged from — show as empty */
+.slot.dragging-source {
+  opacity: 0.35;
+}
+
+/* ── Fly-back animation clone ── */
+.fly-clone {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9990;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: transform 350ms ease-in, opacity 350ms ease-in;
+  will-change: transform, opacity;
+}
+
+/* Landing bounce on inventory item */
+@keyframes landBounce {
+  0%   { transform: scale(1.2); }
+  60%  { transform: scale(0.95); }
+  100% { transform: scale(1.0); }
+}
+.inv-slot.land-bounce {
+  animation: landBounce 150ms cubic-bezier(0.2, 0, 0.4, 1) forwards;
+}
+
+/* ── Snap-in animation when item is placed ── */
+@keyframes snapIn {
+  0%   { transform: scale(1.18); }
+  60%  { transform: scale(0.96); }
+  100% { transform: scale(1.0); }
+}
+.slot.snap-in { animation: snapIn 0.18s cubic-bezier(0.2, 0, 0.4, 1) forwards; }
+
+/* ══════════════════════════════════════════════════════
+   GRID INVENTORY SYSTEM — New Styles
+   ══════════════════════════════════════════════════════ */
+
+/* ── Track 2×2 grid cells ── */
+.track-cell {
+  width: var(--slot-size);
+  height: var(--slot-size);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: background 0.1s, border-color 0.1s;
+  flex-shrink: 0;
+}
+.track-cell.sail-cell   { background: var(--col-sail-dim);  border: 1px solid rgba(52,211,153,0.18); }
+.track-cell.prism-cell  { background: var(--col-prism-dim); border: 1px solid rgba(167,139,250,0.18); }
+.track-cell.core-cell   { background: var(--col-core-dim);  border: 1px solid rgba(96,165,250,0.18); }
+.track-cell.sat-cell    { background: var(--col-sat-dim);   border: 1px solid rgba(251,191,36,0.18); }
+
+.track-cell.cell-empty .cell-plus {
+  font-size: 16px;
+  color: rgba(255,255,255,0.10);
+  font-weight: 200;
+  pointer-events: none;
+}
+.track-cell.cell-occupied {
+  opacity: 0.0;  /* hidden under overlay */
+}
+
+/* Preview highlights */
+.track-cell.preview-valid {
+  background: rgba(34,197,94,0.25) !important;
+  border-color: var(--green) !important;
+  box-shadow: 0 0 10px rgba(34,197,94,0.5), inset 0 0 8px rgba(34,197,94,0.2) !important;
+}
+.track-cell.preview-replace {
+  background: rgba(249,115,22,0.25) !important;
+  border-color: var(--orange) !important;
+  box-shadow: 0 0 10px rgba(249,115,22,0.5), inset 0 0 8px rgba(249,115,22,0.2) !important;
+}
+.track-cell.preview-invalid {
+  background: rgba(239,68,68,0.20) !important;
+  border-color: var(--red) !important;
+  box-shadow: 0 0 8px rgba(239,68,68,0.4) !important;
+}
+
+/* ── Candidate column glow while dragging ── */
+.track-col.drop-candidate-col {
+  border-color: rgba(34,197,94,0.5) !important;
+  animation: candidateColPulse 1.1s ease-in-out infinite !important;
+}
+@keyframes candidateColPulse {
+  0%,100% { background: rgba(34,197,94,0.04); box-shadow: inset 0 0 12px rgba(34,197,94,0.08); }
+  50%     { background: rgba(34,197,94,0.12); box-shadow: inset 0 0 20px rgba(34,197,94,0.20); }
+}
+
+/* ── Item Overlay ── */
+.item-overlay {
+  pointer-events: all;
+  transition: box-shadow 0.12s, transform 0.08s;
+}
+.item-overlay:hover {
+  transform: scale(1.04);
+  z-index: 20 !important;
+}
+.item-overlay:active { cursor: grabbing; }
+
+/* Overlay shape cells */
+.overlay-shape-cell {
+  border-radius: 2px;
+  opacity: 0.55;
+}
+.overlay-shape-cell-sail  { background: var(--col-sail-dim);  border: 1px solid rgba(52,211,153,0.35); }
+.overlay-shape-cell-prism { background: var(--col-prism-dim); border: 1px solid rgba(167,139,250,0.35); }
+.overlay-shape-cell-core  { background: var(--col-core-dim);  border: 1px solid rgba(96,165,250,0.35); }
+.overlay-shape-cell-sat   { background: var(--col-sat-dim);   border: 1px solid rgba(251,191,36,0.35); }
+
+.overlay-icon {
+  position: absolute;
+  font-size: 22px;
+  line-height: 1;
+  z-index: 2;
+  pointer-events: none;
+  filter: drop-shadow(0 0 4px rgba(0,0,0,0.8));
+}
+.overlay-name {
+  position: absolute;
+  bottom: 3px; left: 0; right: 0;
+  text-align: center;
+  font-size: 7px;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  z-index: 2;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 2px;
+}
+
+/* Type-colored overlay borders */
+.item-overlay-sail  { border: 2px solid rgba(52,211,153,0.7);  box-shadow: 0 0 10px rgba(52,211,153,0.25),  inset 0 0 8px rgba(52,211,153,0.08); }
+.item-overlay-prism { border: 2px solid rgba(167,139,250,0.7); box-shadow: 0 0 10px rgba(167,139,250,0.25), inset 0 0 8px rgba(167,139,250,0.08); }
+.item-overlay-core  { border: 2px solid rgba(96,165,250,0.7);  box-shadow: 0 0 10px rgba(96,165,250,0.25),  inset 0 0 8px rgba(96,165,250,0.08); }
+.item-overlay-sat   { border: 2px solid rgba(251,191,36,0.7);  box-shadow: 0 0 10px rgba(251,191,36,0.25),  inset 0 0 8px rgba(251,191,36,0.08); }
+
+/* Breathing glow on overlays */
+.item-overlay-sail::before, .item-overlay-prism::before,
+.item-overlay-core::before, .item-overlay-sat::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: 2px;
+  animation: slotBreath 2.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+.item-overlay-sail::before  { box-shadow: inset 0 0 12px rgba(52,211,153,0.15); }
+.item-overlay-prism::before { box-shadow: inset 0 0 12px rgba(167,139,250,0.15); }
+.item-overlay-core::before  { box-shadow: inset 0 0 12px rgba(96,165,250,0.15); }
+.item-overlay-sat::before   { box-shadow: inset 0 0 12px rgba(251,191,36,0.15); }
+
+/* ── Ghost shape grid ── */
+#drag-ghost {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  border-radius: 3px;
+  background: rgba(11,17,32,0.92);
+  border: 2px solid var(--cyan);
+  box-shadow: 0 0 16px rgba(0,229,255,0.35), 0 4px 20px rgba(0,0,0,0.7);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  cursor: grabbing;
+  transition: border-color 0.08s, box-shadow 0.08s;
+  user-select: none;
+  overflow: hidden;
+}
+#drag-ghost.ghost-valid {
+  border-color: var(--green);
+  box-shadow: 0 0 16px rgba(34,197,94,0.45), 0 4px 20px rgba(0,0,0,0.7);
+}
+#drag-ghost.ghost-replace {
+  border-color: var(--orange);
+  box-shadow: 0 0 16px rgba(249,115,22,0.45), 0 4px 20px rgba(0,0,0,0.7);
+}
+#drag-ghost.ghost-invalid {
+  border-color: var(--red);
+  box-shadow: 0 0 16px rgba(239,68,68,0.45), 0 4px 20px rgba(0,0,0,0.7);
+}
+
+.ghost-replace-hint {
+  position: absolute;
+  top: 2px; left: 0; right: 0;
+  text-align: center;
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  color: var(--orange);
+  z-index: 3;
+  pointer-events: none;
+  white-space: nowrap;
+  text-shadow: 0 0 6px rgba(249,115,22,0.8);
+}
+
+.ghost-shape-grid {
+  position: absolute; inset: 0;
+  display: grid;
+  gap: 2px;
+  padding: 3px;
+}
+.ghost-shape-active {
+  background: rgba(0,229,255,0.18);
+  border: 1px solid rgba(0,229,255,0.35);
+  border-radius: 2px;
+}
+.ghost-shape-empty { background: transparent; }
+
+.ghost-icon-wrap {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 2;
+  pointer-events: none;
+}
+.ghost-icon { font-size: 22px; line-height: 1; }
+.ghost-name {
+  font-size: 7px;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  margin-top: 2px;
+  text-align: center;
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Inventory 16-col grid items ── */
+.inv-slot {
+  width: auto;
+  height: auto;
+  flex-shrink: unset;
+  background: var(--bg-slot);
+
+/* Type-colored inventory borders */
+.inv-slot-sail  { border-color: rgba(52,211,153,0.18); }
+.inv-slot-prism { border-color: rgba(167,139,250,0.18); }
+.inv-slot-core  { border-color: rgba(96,165,250,0.18); }
+.inv-slot-sat   { border-color: rgba(251,191,36,0.18); }
+
+/* Shape preview inside inventory slot */
+.inv-shape-grid {
+  position: absolute; inset: 3px;
+  display: grid;
+  gap: 2px;
+  opacity: 0.35;
+  pointer-events: none;
+}
+.inv-shape-active-sail  { background: var(--col-sail);  border-radius: 1px; }
+.inv-shape-active-prism { background: var(--col-prism); border-radius: 1px; }
+.inv-shape-active-core  { background: var(--col-core);  border-radius: 1px; }
+.inv-shape-active-sat   { background: var(--col-sat);   border-radius: 1px; }
+.inv-shape-empty { background: transparent; }
+
+.inv-icon { font-size: 20px; line-height: 1; position: relative; z-index: 1; }
+.inv-name {
+  font-size: 7px;
+  color: var(--text-dim);
+  text-align: center;
+  margin-top: 2px;
+  padding: 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  position: relative; z-index: 1;
+}
+
+/* Inventory area drop target */
+.inventory-area.drop-target-inv {
+  box-shadow: inset 0 0 0 2px rgba(34,197,94,0.4);
+  background: rgba(34,197,94,0.04);
+}</style>
 </head>
 <body>
 
@@ -1095,7 +1457,7 @@ body::after {
   <div class="status-bar">
     <div class="st-item">EQUIPPED <b id="st-eq">0</b> / 10</div>
     <div class="st-item">INVENTORY <b id="st-inv">0</b> ITEMS</div>
-    <div class="st-hint">HOVER TO INSPECT · CLICK TO SELECT · CLICK SLOT TO EQUIP</div>
+    <div class="st-hint">HOVER TO INSPECT · DRAG ITEM TO SLOT · DRAG SLOT TO INVENTORY TO UNEQUIP</div>
   </div>
 
   <div class="notif" id="notif"></div>
@@ -1117,94 +1479,119 @@ body::after {
   <div class="tt-hint" id="tt-hint"></div>
 </div>
 
+<!-- ── Drag Ghost ── -->
+<div id="drag-ghost">
+  <div class="ghost-icon" id="ghost-icon"></div>
+  <div class="ghost-name" id="ghost-name"></div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════════
-// DATA
+// DATA — Grid Inventory & Shaped Items System
 // ═══════════════════════════════════════════════════════
+
+// shape: array of [col, row] offsets from anchor [0,0] (top-left)
+// Supported shapes:
+//   1×1: [[0,0]]
+//   1×2 (horizontal): [[0,0],[1,0]]
+//   2×1 (vertical):   [[0,0],[0,1]]
+//   L-shape (3 cells): [[0,0],[0,1],[1,1]]
+//   2×2 (full):        [[0,0],[1,0],[0,1],[1,1]]
 
 const ITEMS = [
   // CORES
-  { id:'c1', type:'core',  icon:'◎', name:'Matter Core',   short:'Matter',   desc:'"Standard-issue matter projector. Reliable, no frills."',                    stats:[{l:'Damage',d:'n',v:'+0%'},{l:'Fire Rate',d:'n',v:'+0%'},{l:'Piercing',d:'n',v:'0'}] },
-  { id:'c2', type:'core',  icon:'◎', name:'Echo Core',     short:'Echo',     desc:'"Resonance-based wave emitter. Hits multiple targets."',                      stats:[{l:'Damage',d:'-',v:'-15%'},{l:'AoE',d:'+',v:'+2'},{l:'Range',d:'+',v:'+30%'}] },
-  { id:'c3', type:'core',  icon:'◎', name:'Light Core',    short:'Laser',    desc:'"Focused photon beam. Continuous damage output."',                            stats:[{l:'DPS',d:'+',v:'+40%'},{l:'Fire Rate',d:'+',v:'∞'},{l:'Ammo',d:'-',v:'Heat'}] },
-  { id:'c4', type:'core',  icon:'◎', name:'Anomaly Core',  short:'Anomaly',  desc:'"Unstable boomerang trajectory. High risk, high reward."',                    stats:[{l:'Damage',d:'+',v:'+60%'},{l:'Returns',d:'+',v:'×1'},{l:'Speed',d:'-',v:'-20%'}] },
-  { id:'c5', type:'core',  icon:'◎', name:'Void Core',     short:'Void',     desc:'"Fires a slow-moving singularity that pulls enemies inward."',                stats:[{l:'Pull Radius',d:'+',v:'3m'},{l:'Damage',d:'+',v:'+20%'},{l:'Speed',d:'-',v:'-40%'}] },
+  { id:'c1', type:'core',  icon:'◎', name:'Matter Core',   short:'Matter',   shape:[[0,0]],               desc:'"Standard-issue matter projector. Reliable, no frills."',                    stats:[{l:'Damage',d:'n',v:'+0%'},{l:'Fire Rate',d:'n',v:'+0%'},{l:'Piercing',d:'n',v:'0'}] },
+  { id:'c2', type:'core',  icon:'◎', name:'Echo Core',     short:'Echo',     shape:[[0,0],[1,0]],          desc:'"Resonance-based wave emitter. Hits multiple targets."',                      stats:[{l:'Damage',d:'-',v:'-15%'},{l:'AoE',d:'+',v:'+2'},{l:'Range',d:'+',v:'+30%'}] },
+  { id:'c3', type:'core',  icon:'◎', name:'Light Core',    short:'Laser',    shape:[[0,0],[0,1]],          desc:'"Focused photon beam. Continuous damage output."',                            stats:[{l:'DPS',d:'+',v:'+40%'},{l:'Fire Rate',d:'+',v:'∞'},{l:'Ammo',d:'-',v:'Heat'}] },
+  { id:'c4', type:'core',  icon:'◎', name:'Anomaly Core',  short:'Anomaly',  shape:[[0,0],[0,1],[1,1]],    desc:'"Unstable boomerang trajectory. High risk, high reward."',                    stats:[{l:'Damage',d:'+',v:'+60%'},{l:'Returns',d:'+',v:'×1'},{l:'Speed',d:'-',v:'-20%'}] },
+  { id:'c5', type:'core',  icon:'◎', name:'Void Core',     short:'Void',     shape:[[0,0],[1,0],[0,1],[1,1]], desc:'"Fires a slow-moving singularity that pulls enemies inward."',             stats:[{l:'Pull Radius',d:'+',v:'3m'},{l:'Damage',d:'+',v:'+20%'},{l:'Speed',d:'-',v:'-40%'}] },
   // PRISMS
-  { id:'p1', type:'prism', icon:'◇', name:'Fractal Prism', short:'Twin',     desc:'"Splits the beam into twin parallel streams."',                               stats:[{l:'Projectiles',d:'+',v:'×2'},{l:'Damage',d:'-',v:'-20%'},{l:'Spread',d:'n',v:'8°'}] },
-  { id:'p2', type:'prism', icon:'◇', name:'Accel Prism',   short:'Accel',    desc:'"Accelerates projectile velocity over distance."',                            stats:[{l:'Speed',d:'+',v:'+50%'},{l:'Damage',d:'+',v:'+10%'},{l:'Range',d:'+',v:'+25%'}] },
-  { id:'p3', type:'prism', icon:'◇', name:'Frost Prism',   short:'Frost',    desc:'"Infuses projectiles with cryo energy. Slows on hit."',                      stats:[{l:'Slow',d:'+',v:'-30% spd'},{l:'Duration',d:'+',v:'1.5s'},{l:'Damage',d:'-',v:'-5%'}] },
-  { id:'p4', type:'prism', icon:'◇', name:'Burst Prism',   short:'Burst',    desc:'"Causes projectiles to explode on impact."',                                  stats:[{l:'AoE',d:'+',v:'1.5m'},{l:'Damage',d:'+',v:'+30%'},{l:'Ammo',d:'-',v:'-1/shot'}] },
-  { id:'p5', type:'prism', icon:'◇', name:'Chain Prism',   short:'Chain',    desc:'"Projectiles bounce between nearby enemies."',                                stats:[{l:'Bounces',d:'+',v:'+3'},{l:'Damage',d:'-',v:'-10%/bounce'}] },
+  { id:'p1', type:'prism', icon:'◇', name:'Fractal Prism', short:'Twin',     shape:[[0,0]],               desc:'"Splits the beam into twin parallel streams."',                               stats:[{l:'Projectiles',d:'+',v:'×2'},{l:'Damage',d:'-',v:'-20%'},{l:'Spread',d:'n',v:'8°'}] },
+  { id:'p2', type:'prism', icon:'◇', name:'Accel Prism',   short:'Accel',    shape:[[0,0],[1,0]],          desc:'"Accelerates projectile velocity over distance."',                            stats:[{l:'Speed',d:'+',v:'+50%'},{l:'Damage',d:'+',v:'+10%'},{l:'Range',d:'+',v:'+25%'}] },
+  { id:'p3', type:'prism', icon:'◇', name:'Frost Prism',   short:'Frost',    shape:[[0,0],[0,1]],          desc:'"Infuses projectiles with cryo energy. Slows on hit."',                      stats:[{l:'Slow',d:'+',v:'-30% spd'},{l:'Duration',d:'+',v:'1.5s'},{l:'Damage',d:'-',v:'-5%'}] },
+  { id:'p4', type:'prism', icon:'◇', name:'Burst Prism',   short:'Burst',    shape:[[0,0],[0,1],[1,1]],    desc:'"Causes projectiles to explode on impact."',                                  stats:[{l:'AoE',d:'+',v:'1.5m'},{l:'Damage',d:'+',v:'+30%'},{l:'Ammo',d:'-',v:'-1/shot'}] },
+  { id:'p5', type:'prism', icon:'◇', name:'Chain Prism',   short:'Chain',    shape:[[0,0],[1,0],[0,1],[1,1]], desc:'"Projectiles bounce between nearby enemies."',                             stats:[{l:'Bounces',d:'+',v:'+3'},{l:'Damage',d:'-',v:'-10%/bounce'}] },
   // SAILS
-  { id:'s1', type:'sail',  icon:'⛵', name:'Speed Sail',    short:'Speed',    desc:'"Converts velocity into bonus damage output."',                               stats:[{l:'Bonus DMG',d:'+',v:'up to +80%'},{l:'Threshold',d:'n',v:'8 m/s'}] },
-  { id:'s2', type:'sail',  icon:'⛵', name:'Drift Sail',    short:'Drift',    desc:'"Reduces turning drag, enabling tighter maneuvers."',                        stats:[{l:'Turn Speed',d:'+',v:'+25%'},{l:'Drift',d:'+',v:'+40%'}] },
+  { id:'s1', type:'sail',  icon:'⛵', name:'Speed Sail',    short:'Speed',    shape:[[0,0]],               desc:'"Converts velocity into bonus damage output."',                               stats:[{l:'Bonus DMG',d:'+',v:'up to +80%'},{l:'Threshold',d:'n',v:'8 m/s'}] },
+  { id:'s2', type:'sail',  icon:'⛵', name:'Drift Sail',    short:'Drift',    shape:[[0,0],[1,0]],          desc:'"Reduces turning drag, enabling tighter maneuvers."',                        stats:[{l:'Turn Speed',d:'+',v:'+25%'},{l:'Drift',d:'+',v:'+40%'}] },
   // SATS
-  { id:'sat1', type:'sat', icon:'🛸', name:'Orbit Sat A',   short:'Orbit-A',  desc:'"Orbiting satellite that fires in sync with primary weapon."',               stats:[{l:'Sync DMG',d:'+',v:'+15%'},{l:'Orbit Rad',d:'n',v:'2.5m'}] },
-  { id:'sat2', type:'sat', icon:'🛸', name:'Shield Sat',    short:'Shield',   desc:'"Generates a rotating energy shield that absorbs one hit."',                 stats:[{l:'Absorb',d:'+',v:'1 hit'},{l:'Cooldown',d:'n',v:'8s'}] },
+  { id:'sat1', type:'sat', icon:'🛸', name:'Orbit Sat A',   short:'Orbit-A',  shape:[[0,0]],               desc:'"Orbiting satellite that fires in sync with primary weapon."',               stats:[{l:'Sync DMG',d:'+',v:'+15%'},{l:'Orbit Rad',d:'n',v:'2.5m'}] },
+  { id:'sat2', type:'sat', icon:'🛸', name:'Shield Sat',    short:'Shield',   shape:[[0,0],[0,1]],          desc:'"Generates a rotating energy shield that absorbs one hit."',                 stats:[{l:'Absorb',d:'+',v:'1 hit'},{l:'Cooldown',d:'n',v:'8s'}] },
 ];
 
-// Each loadout: { name, primary: [slotObj,...], secondary: [slotObj,...] }
-// slotObj: { type:'core'|'prism', itemId: string|null }
-function makeSlots(coreCount, prismCount) {
-  const slots = [];
-  for (let i = 0; i < coreCount; i++)  slots.push({ type:'core',  itemId: null });
-  for (let i = 0; i < prismCount; i++) slots.push({ type:'prism', itemId: null });
-  return slots;
+// ── Shape helpers ──
+// Returns { cols, rows } bounding box of a shape
+function getShapeBounds(shape) {
+  let maxC = 0, maxR = 0;
+  for (const [c, r] of shape) { if (c > maxC) maxC = c; if (r > maxR) maxR = r; }
+  return { cols: maxC + 1, rows: maxR + 1 };
 }
 
-// Slot layout per track:
-// primary:   { sail:[...], sat:[...], prism:[...], core:[...] }
-// secondary: { sail:[...], prism:[...], core:[...], sat:[...] }
+// Returns true if shape placed at (anchorCol, anchorRow) exceeds 2×2 grid
+function shapeExceedsGrid(shape, anchorCol, anchorRow) {
+  for (const [dc, dr] of shape) {
+    if (anchorCol + dc > 1 || anchorRow + dr > 1) return true;
+    if (anchorCol + dc < 0 || anchorRow + dr < 0) return true;
+  }
+  return false;
+}
+
+// Make a fresh 2×2 grid (null = empty)
+function makeGrid() {
+  return [[null, null], [null, null]];
+}
+
+// Track data structure: { type, grid: [[null,null],[null,null]] }
+// grid[row][col] = itemId | null
+// Each loadout: { name, primary: { sail, prism, core, sat }, secondary: { ... } }
+// Each type key holds: { grid: 2×2 array }
+
+function makeTrackType() {
+  return { grid: makeGrid() };
+}
+
+function makeLoadout(name) {
+  return {
+    name,
+    primary:   { sail: makeTrackType(), prism: makeTrackType(), core: makeTrackType(), sat: makeTrackType() },
+    secondary: { sail: makeTrackType(), prism: makeTrackType(), core: makeTrackType(), sat: makeTrackType() },
+  };
+}
+
+// Pre-populate helper: place item at anchor in a track type grid
+function placeItem(trackTypeObj, itemId, anchorCol, anchorRow) {
+  const item = ITEMS.find(i => i.id === itemId);
+  if (!item) return;
+  for (const [dc, dr] of item.shape) {
+    trackTypeObj.grid[anchorRow + dr][anchorCol + dc] = itemId;
+  }
+}
+
+// Build initial loadouts
+const lo1 = makeLoadout('LOADOUT 1');
+placeItem(lo1.primary.sail,  's1',   0, 0);
+placeItem(lo1.primary.prism, 'p2',   0, 0);
+placeItem(lo1.primary.core,  'c2',   0, 0);  // 1×2 horizontal → [0,0],[1,0]
+placeItem(lo1.primary.sat,   'sat1', 0, 0);
+placeItem(lo1.secondary.prism,'p3',  0, 0);  // 2×1 vertical → [0,0],[0,1]
+placeItem(lo1.secondary.core, 'c1',  0, 0);
+
+const lo2 = makeLoadout('LOADOUT 2');
+placeItem(lo2.primary.sail,  's2',   0, 0);  // 1×2 horizontal
+placeItem(lo2.primary.prism, 'p1',   0, 0);
+placeItem(lo2.primary.core,  'c3',   0, 0);  // 2×1 vertical
+
+const lo3 = makeLoadout('LOADOUT 3');
+placeItem(lo3.primary.sail,  's1',   0, 0);
+placeItem(lo3.primary.prism, 'p4',   0, 0);  // L-shape
+placeItem(lo3.primary.core,  'c4',   0, 0);  // L-shape
+placeItem(lo3.primary.sat,   'sat2', 0, 0);  // 2×1 vertical
+placeItem(lo3.secondary.core,'c5',   0, 0);  // 2×2 full
+placeItem(lo3.secondary.sat, 'sat1', 0, 0);
+
 const state = {
-  loadouts: [
-    {
-      name: 'LOADOUT 1',
-      primary: {
-        sail:  [{ type:'sail',  itemId:'s1' }, { type:'sail',  itemId:null }],
-        sat:   [{ type:'sat',   itemId:'sat1' }],
-        prism: [{ type:'prism', itemId:'p1' }, { type:'prism', itemId:'p2' }, { type:'prism', itemId:null }],
-        core:  [{ type:'core',  itemId:'c1' }],
-      },
-      secondary: {
-        sail:  [{ type:'sail',  itemId:null }, { type:'sail',  itemId:null }],
-        sat:   [{ type:'sat',   itemId:null }],
-        prism: [{ type:'prism', itemId:'p3' }, { type:'prism', itemId:null }, { type:'prism', itemId:null }],
-        core:  [{ type:'core',  itemId:'c2' }],
-      },
-    },
-    {
-      name: 'LOADOUT 2',
-      primary: {
-        sail:  [{ type:'sail',  itemId:'s2' }, { type:'sail',  itemId:null }],
-        sat:   [{ type:'sat',   itemId:null }],
-        prism: [{ type:'prism', itemId:'p2' }, { type:'prism', itemId:null }, { type:'prism', itemId:null }],
-        core:  [{ type:'core',  itemId:'c3' }],
-      },
-      secondary: {
-        sail:  [{ type:'sail',  itemId:null }, { type:'sail',  itemId:null }],
-        sat:   [{ type:'sat',   itemId:null }],
-        prism: [{ type:'prism', itemId:null }, { type:'prism', itemId:null }, { type:'prism', itemId:null }],
-        core:  [{ type:'core',  itemId:null }],
-      },
-    },
-    {
-      name: 'LOADOUT 3',
-      primary: {
-        sail:  [{ type:'sail',  itemId:'s1' }, { type:'sail',  itemId:'s2' }],
-        sat:   [{ type:'sat',   itemId:'sat2' }],
-        prism: [{ type:'prism', itemId:'p4' }, { type:'prism', itemId:'p1' }, { type:'prism', itemId:null }],
-        core:  [{ type:'core',  itemId:'c4' }],
-      },
-      secondary: {
-        sail:  [{ type:'sail',  itemId:null }, { type:'sail',  itemId:null }],
-        sat:   [{ type:'sat',   itemId:'sat1' }],
-        prism: [{ type:'prism', itemId:'p3' }, { type:'prism', itemId:null }, { type:'prism', itemId:null }],
-        core:  [{ type:'core',  itemId:'c5' }],
-      },
-    },
-  ],
+  loadouts: [lo1, lo2, lo3],
   currentLoadout: 0,
-  selectedInvItem: null,
   activeFilter: 'all',
 };
 
@@ -1213,110 +1600,326 @@ const state = {
 // ═══════════════════════════════════════════════════════
 
 const getItem = id => ITEMS.find(i => i.id === id);
-
 function currentLoadout() { return state.loadouts[state.currentLoadout]; }
 
-function allSlots(lo) {
-  const rows = ['sail','sat','prism','core'];
+const TYPE_KEYS = ['sail', 'prism', 'core', 'sat'];
+const TRACK_KEYS = ['primary', 'secondary'];
+
+// Returns all { itemId, track, typeKey, anchorCol, anchorRow } for equipped items in a loadout
+function allEquippedEntries(lo) {
   const result = [];
-  for (const r of rows) {
-    if (lo.primary[r])   result.push(...lo.primary[r].map(s => ({...s, track:'primary',   row:r})));
-    if (lo.secondary[r]) result.push(...lo.secondary[r].map(s => ({...s, track:'secondary', row:r})));
+  for (const track of TRACK_KEYS) {
+    for (const typeKey of TYPE_KEYS) {
+      const tt = lo[track][typeKey];
+      if (!tt) continue;
+      const seen = new Set();
+      for (let r = 0; r < 2; r++) {
+        for (let c = 0; c < 2; c++) {
+          const id = tt.grid[r][c];
+          if (id && !seen.has(id)) {
+            seen.add(id);
+            // Find anchor (top-left cell of this item)
+            const item = getItem(id);
+            if (!item) continue;
+            // Anchor = smallest row then smallest col among occupied cells
+            let minR = 99, minC = 99;
+            for (let rr = 0; rr < 2; rr++) for (let cc = 0; cc < 2; cc++) {
+              if (tt.grid[rr][cc] === id) { if (rr < minR || (rr === minR && cc < minC)) { minR = rr; minC = cc; } }
+            }
+            result.push({ itemId: id, track, typeKey, anchorCol: minC, anchorRow: minR });
+          }
+        }
+      }
+    }
   }
   return result;
 }
 
 function isEquippedInCurrentLoadout(itemId) {
-  return allSlots(currentLoadout()).some(s => s.itemId === itemId);
+  return allEquippedEntries(currentLoadout()).some(e => e.itemId === itemId);
 }
 
 function getEquippedLocation(itemId) {
-  const lo = currentLoadout();
-  for (const r of ['sail','sat','prism','core']) {
-    const pi = (lo.primary[r]||[]).findIndex(s => s.itemId === itemId);
-    if (pi >= 0) return `PRIMARY · ${r.toUpperCase()} ${pi+1}`;
-    const si = (lo.secondary[r]||[]).findIndex(s => s.itemId === itemId);
-    if (si >= 0) return `SECONDARY · ${r.toUpperCase()} ${si+1}`;
-  }
-  return null;
+  const entry = allEquippedEntries(currentLoadout()).find(e => e.itemId === itemId);
+  if (!entry) return null;
+  return `${entry.track.toUpperCase()} · ${entry.typeKey.toUpperCase()} [${entry.anchorCol},${entry.anchorRow}]`;
 }
 
 function countEquipped() {
-  return allSlots(currentLoadout()).filter(s => s.itemId).length;
+  return allEquippedEntries(currentLoadout()).length;
+}
+
+// Clear all cells of an item from a track-type grid
+function clearItemFromGrid(tt, itemId) {
+  for (let r = 0; r < 2; r++) for (let c = 0; c < 2; c++) {
+    if (tt.grid[r][c] === itemId) tt.grid[r][c] = null;
+  }
+}
+
+// Write item shape into grid at anchor
+function writeItemToGrid(tt, item, anchorCol, anchorRow) {
+  for (const [dc, dr] of item.shape) {
+    tt.grid[anchorRow + dr][anchorCol + dc] = item.id;
+  }
+}
+
+// Check if placing item at anchor in tt is valid (no overlap except self, no OOB)
+function canPlace(tt, item, anchorCol, anchorRow, selfId) {
+  if (shapeExceedsGrid(item.shape, anchorCol, anchorRow)) return false;
+  for (const [dc, dr] of item.shape) {
+    const existing = tt.grid[anchorRow + dr][anchorCol + dc];
+    if (existing && existing !== selfId) return false;
+  }
+  return true;
 }
 
 // ═══════════════════════════════════════════════════════
 // RENDER
 // ═══════════════════════════════════════════════════════
 
-// Render a single type-row of slots into a container
-function renderSlotRow(trackName, rowType, slots) {
-  const containerId = `${trackName}-slots-${rowType}`;
+// Cell size and gap (must match CSS vars)
+const CELL_SIZE = 40;  // px — matches --slot-size
+const CELL_GAP  = 3;   // px
+
+// ── Task 2: Render a single 2×2 track-type grid ──
+function renderTrackTypeGrid(trackName, typeKey, tt) {
+  const containerId = `${trackName}-slots-${typeKey}`;
   const container = document.getElementById(containerId);
   if (!container) return;
+
+  // Set up as 2×2 CSS grid
   container.innerHTML = '';
+  container.style.display = 'grid';
+  container.style.gridTemplateColumns = 'repeat(2, var(--slot-size))';
+  container.style.gridTemplateRows    = 'repeat(2, var(--slot-size))';
+  container.style.gap = CELL_GAP + 'px';
+  container.style.position = 'relative';
 
-  slots.forEach((slot, idx) => {
-    const item = slot.itemId ? getItem(slot.itemId) : null;
-    const el = document.createElement('div');
-    el.className = `slot ${slot.type}-slot ${item ? 'equipped' : 'empty'}`;
-    el.dataset.track = trackName;
-    el.dataset.row   = rowType;
-    el.dataset.idx   = idx;
+  // Render 4 cells (row-major)
+  for (let r = 0; r < 2; r++) {
+    for (let c = 0; c < 2; c++) {
+      const cell = document.createElement('div');
+      cell.className = `track-cell ${typeKey}-cell`;
+      cell.dataset.track   = trackName;
+      cell.dataset.typeKey = typeKey;
+      cell.dataset.col     = c;
+      cell.dataset.row     = r;
 
-    if (item) {
-      el.innerHTML = `<span class="slot-icon">${item.icon}</span><div class="slot-dot"></div>`;
+      const occupant = tt.grid[r][c];
+      if (occupant) {
+        // Occupied — cell is hidden under overlay; show dim background
+        cell.classList.add('cell-occupied');
+      } else {
+        // Empty — show + placeholder
+        cell.classList.add('cell-empty');
+        cell.innerHTML = '<span class="cell-plus">+</span>';
+      }
+      container.appendChild(cell);
     }
-    const lbl = document.createElement('div');
-    lbl.className = 'slot-type-label';
-    lbl.textContent = slot.type.toUpperCase();
-    el.appendChild(lbl);
+  }
 
-    el.addEventListener('click', () => onSlotClick(trackName, rowType, idx));
-    el.addEventListener('mouseenter', e => item && showTooltip(e, item, true));
-    el.addEventListener('mousemove',  e => item && moveTooltip(e));
-    el.addEventListener('mouseleave', hideTooltip);
-    container.appendChild(el);
+  // ── Task 3: Render item overlays on top of cells ──
+  renderTrackTypeOverlays(trackName, typeKey, tt, container);
+}
+
+// ── Task 3: Render item overlays ──
+function renderTrackTypeOverlays(trackName, typeKey, tt, container) {
+  // Remove existing overlays
+  container.querySelectorAll('.item-overlay').forEach(el => el.remove());
+
+  // Find unique items in this grid
+  const seen = new Set();
+  for (let r = 0; r < 2; r++) {
+    for (let c = 0; c < 2; c++) {
+      const id = tt.grid[r][c];
+      if (id && !seen.has(id)) {
+        seen.add(id);
+        // Find anchor (min row, then min col)
+        let minR = 99, minC = 99;
+        for (let rr = 0; rr < 2; rr++) for (let cc = 0; cc < 2; cc++) {
+          if (tt.grid[rr][cc] === id) {
+            if (rr < minR || (rr === minR && cc < minC)) { minR = rr; minC = cc; }
+          }
+        }
+        renderItemOverlay(trackName, typeKey, id, minC, minR, container);
+      }
+    }
+  }
+}
+
+function renderItemOverlay(trackName, typeKey, itemId, anchorCol, anchorRow, container) {
+  const item = getItem(itemId);
+  if (!item) return;
+
+  const bounds = getShapeBounds(item.shape);
+  const w = bounds.cols * CELL_SIZE + (bounds.cols - 1) * CELL_GAP;
+  const h = bounds.rows * CELL_SIZE + (bounds.rows - 1) * CELL_GAP;
+
+  // Position: top-left of anchor cell
+  const left = anchorCol * (CELL_SIZE + CELL_GAP);
+  const top  = anchorRow * (CELL_SIZE + CELL_GAP);
+
+  const overlay = document.createElement('div');
+  overlay.className = `item-overlay item-overlay-${typeKey}`;
+  overlay.dataset.itemId    = itemId;
+  overlay.dataset.track     = trackName;
+  overlay.dataset.typeKey   = typeKey;
+  overlay.dataset.anchorCol = anchorCol;
+  overlay.dataset.anchorRow = anchorRow;
+  overlay.style.cssText = `
+    position: absolute;
+    left: ${left}px; top: ${top}px;
+    width: ${w}px; height: ${h}px;
+    z-index: 10;
+    border-radius: 3px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    cursor: grab;
+    user-select: none;
+    pointer-events: all;
+    overflow: hidden;
+  `;
+
+  // Shape cells inside overlay (visual only)
+  const shapeGrid = document.createElement('div');
+  shapeGrid.style.cssText = `
+    position: absolute; inset: 0;
+    display: grid;
+    grid-template-columns: repeat(${bounds.cols}, 1fr);
+    grid-template-rows: repeat(${bounds.rows}, 1fr);
+    gap: ${CELL_GAP}px;
+    padding: ${CELL_GAP}px;
+  `;
+  // Fill shape cells
+  const shapeSet = new Set(item.shape.map(([c,r]) => `${c},${r}`));
+  for (let r = 0; r < bounds.rows; r++) {
+    for (let c = 0; c < bounds.cols; c++) {
+      const sc = document.createElement('div');
+      if (shapeSet.has(`${c},${r}`)) {
+        sc.className = `overlay-shape-cell overlay-shape-cell-${typeKey}`;
+      } else {
+        sc.style.background = 'transparent';
+      }
+      shapeGrid.appendChild(sc);
+    }
+  }
+  overlay.appendChild(shapeGrid);
+
+  // Icon
+  const iconEl = document.createElement('div');
+  iconEl.className = 'overlay-icon';
+  iconEl.textContent = item.icon;
+  overlay.appendChild(iconEl);
+
+  // Name (only if tall enough)
+  if (h >= 60) {
+    const nameEl = document.createElement('div');
+    nameEl.className = 'overlay-name';
+    nameEl.textContent = item.short;
+    overlay.appendChild(nameEl);
+  }
+
+  // Tooltip on hover
+  overlay.addEventListener('mouseenter', e => {
+    if (!dragState.isDragging) showTooltip(e, item, true);
   });
+  overlay.addEventListener('mousemove', e => {
+    if (!dragState.isDragging) moveTooltip(e);
+  });
+  overlay.addEventListener('mouseleave', () => {
+    if (!dragState.isDragging) hideTooltip();
+  });
+
+  // Mousedown → start unequip drag (Task 8)
+  overlay.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = overlay.getBoundingClientRect();
+    dragState.startX      = e.clientX;
+    dragState.startY      = e.clientY;
+    // Keep grab point exactly where mouse clicked inside the overlay
+    dragState.grabOffsetX = e.clientX - rect.left;
+    dragState.grabOffsetY = e.clientY - rect.top;
+    dragState.pendingEl = overlay;
+    dragState.pendingItem = item;
+    dragState.pendingSource = {
+      sourceType: 'overlay',
+      item,
+      sourceSlotId: { track: trackName, typeKey, anchorCol, anchorRow },
+      sourceLoadoutIdx: state.currentLoadout,
+    };
+  });
+
+  container.appendChild(overlay);
+
+  return overlay;
 }
 
 function renderAllTracks() {
   const lo = currentLoadout();
-  // PRIMARY: row0 = sail + sat, row1 = prism + core
-  renderSlotRow('primary',   'sail',  lo.primary.sail  || []);
-  renderSlotRow('primary',   'sat',   lo.primary.sat   || []);
-  renderSlotRow('primary',   'prism', lo.primary.prism || []);
-  renderSlotRow('primary',   'core',  lo.primary.core  || []);
-  // SECONDARY: same layout as primary = sail + sat + prism + core
-  renderSlotRow('secondary', 'sail',  lo.secondary.sail  || []);
-  renderSlotRow('secondary', 'sat',   lo.secondary.sat   || []);
-  renderSlotRow('secondary', 'prism', lo.secondary.prism || []);
-  renderSlotRow('secondary', 'core',  lo.secondary.core  || []);
+  for (const track of TRACK_KEYS) {
+    for (const typeKey of TYPE_KEYS) {
+      renderTrackTypeGrid(track, typeKey, lo[track][typeKey]);
+    }
+  }
   updateStatusBar();
 }
 
+// ── Task 4: Render inventory as 16-col CSS Grid ──
 function renderInventory() {
   const grid = document.getElementById('invGrid');
   grid.innerHTML = '';
+
+  // 16-col CSS grid, auto rows
+  grid.style.display = 'grid';
+  grid.style.gridTemplateColumns = 'repeat(16, var(--inv-slot-size))';
+  grid.style.gridAutoRows = 'var(--inv-slot-size)';
+  grid.style.gap = '3px';
+
   const filter = state.activeFilter;
-  const visible = ITEMS.filter(i => filter === 'all' || i.type === filter);
+  const allVisible = ITEMS.filter(i => filter === 'all' || i.type === filter);
+  const visible = allVisible.filter(i => !isEquippedInCurrentLoadout(i.id));
+
+  if (visible.length === 0) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'grid-column: span 16; padding: 18px 0; text-align:center; font-size:10px; letter-spacing:0.14em; color:var(--text-dim); opacity:0.55;';
+    empty.textContent = allVisible.length === 0 ? 'NO ITEMS' : 'ALL ITEMS EQUIPPED';
+    grid.appendChild(empty);
+    document.getElementById('st-inv').textContent = 0;
+    return;
+  }
 
   visible.forEach(item => {
-    const equipped = isEquippedInCurrentLoadout(item.id);
-    const selected = state.selectedInvItem === item.id;
+    const bounds = getShapeBounds(item.shape);
     const el = document.createElement('div');
-    el.className = `inv-slot ${equipped ? 'is-equipped' : ''} ${selected ? 'selected' : ''}`;
+    el.className = `inv-slot inv-slot-${item.type}`;
     el.dataset.itemId = item.id;
+    el.style.gridColumn = `span ${bounds.cols}`;
+    el.style.gridRow    = `span ${bounds.rows}`;
+    el.style.cursor = 'grab';
+
+    // Shape preview inside inventory slot
+    const shapeSet = new Set(item.shape.map(([c,r]) => `${c},${r}`));
+    let shapeCells = '';
+    for (let r = 0; r < bounds.rows; r++) {
+      for (let c = 0; c < bounds.cols; c++) {
+        const active = shapeSet.has(`${c},${r}`);
+        shapeCells += `<div class="inv-shape-cell ${active ? 'inv-shape-active-' + item.type : 'inv-shape-empty'}"></div>`;
+      }
+    }
+
     el.innerHTML = `
       <div class="inv-type-dot dot-${item.type}"></div>
+      <div class="inv-shape-grid" style="grid-template-columns:repeat(${bounds.cols},1fr);grid-template-rows:repeat(${bounds.rows},1fr)">${shapeCells}</div>
       <div class="inv-icon">${item.icon}</div>
       <div class="inv-name">${item.short}</div>
-      ${equipped ? '<div class="inv-eq-badge">✓</div>' : ''}
     `;
-    el.addEventListener('click', () => onInvClick(item.id));
-    el.addEventListener('mouseenter', e => showTooltip(e, item, equipped));
-    el.addEventListener('mousemove',  e => moveTooltip(e));
-    el.addEventListener('mouseleave', hideTooltip);
+
+    bindInvItemDrag(el, item);
+    el.addEventListener('mouseenter', e => { if (!dragState.isDragging) showTooltip(e, item, false); });
+    el.addEventListener('mousemove',  e => { if (!dragState.isDragging) moveTooltip(e); });
+    el.addEventListener('mouseleave', () => { if (!dragState.isDragging) hideTooltip(); });
     grid.appendChild(el);
   });
 
@@ -1331,63 +1934,566 @@ function updateLoadoutHeader() {
   const lo = currentLoadout();
   const idx = state.currentLoadout;
   const total = state.loadouts.length;
-  document.getElementById('lc-name').textContent     = lo.name;
-  document.getElementById('lc-num').textContent      = `${idx+1} / ${total}`;
+  document.getElementById('lc-name').textContent      = lo.name;
+  document.getElementById('lc-num').textContent       = `${idx+1} / ${total}`;
   document.getElementById('lc-card-title').textContent = `${lo.name} CONFIGURATION`;
-  document.getElementById('lc-card-num').textContent  = idx + 1;
+  document.getElementById('lc-card-num').textContent   = idx + 1;
 }
 
 // ═══════════════════════════════════════════════════════
 // INTERACTIONS
 // ═══════════════════════════════════════════════════════
 
-function onInvClick(itemId) {
+// ── Loadout switching — sticker-slide animation ──
+
+// ═══════════════════════════════════════════════════════
+// FLY-BACK ANIMATION SYSTEM (Task 5)
+// ═══════════════════════════════════════════════════════
+
+// Track all active flight animations so we can skip them on new drag
+const activeFlightAnimations = [];
+
+// Skip all in-progress fly animations immediately
+function skipAllFlightAnimations() {
+  while (activeFlightAnimations.length > 0) {
+    const anim = activeFlightAnimations.pop();
+    if (anim.clone && anim.clone.parentNode) anim.clone.parentNode.removeChild(anim.clone);
+    if (anim.invEl) anim.invEl.style.opacity = '';
+    clearTimeout(anim.timer);
+  }
+}
+
+// Fly a single evicted item from its track position to its inventory slot
+function flyItemToInventory(itemId, sourceRect) {
+  if (!sourceRect) return;
+
   const item = getItem(itemId);
   if (!item) return;
 
-  if (isEquippedInCurrentLoadout(itemId)) {
-    // Unequip: find and clear
-    const lo = currentLoadout();
-    for (const r of ['sail','sat','prism','core']) {
-      for (const s of (lo.primary[r]||[]))   { if (s.itemId === itemId) { s.itemId = null; } }
-      for (const s of (lo.secondary[r]||[])) { if (s.itemId === itemId) { s.itemId = null; } }
-    }
-    state.selectedInvItem = null;
-    notify(`UNEQUIPPED: ${item.name}`);
-  } else {
-    state.selectedInvItem = (state.selectedInvItem === itemId) ? null : itemId;
-    if (state.selectedInvItem) notify(`SELECTED: ${item.name} — click a slot to equip`);
-  }
-  renderAllTracks();
-  renderInventory();
+  // Find the inventory slot DOM element for this item (rendered after renderInventory)
+  const invEl = document.querySelector(`.inv-slot[data-item-id="${itemId}"]`);
+  if (!invEl) return;
+
+  const targetRect = invEl.getBoundingClientRect();
+
+  // Hide the real inventory item during flight
+  invEl.style.opacity = '0';
+
+  // Create fly clone
+  const clone = document.createElement('div');
+  clone.className = 'fly-clone';
+  clone.style.left   = sourceRect.left + 'px';
+  clone.style.top    = sourceRect.top  + 'px';
+  clone.style.width  = sourceRect.width  + 'px';
+  clone.style.height = sourceRect.height + 'px';
+  clone.style.background = `var(--col-${item.type}-dim)`;
+  clone.style.border = `2px solid var(--col-${item.type})`;
+  clone.style.boxShadow = `0 0 12px var(--col-${item.type}-glow)`;
+  clone.innerHTML = `<span style="font-size:18px;line-height:1">${item.icon}</span>`;
+  document.body.appendChild(clone);
+
+  // Calculate transform to move from source to target
+  const dx = targetRect.left - sourceRect.left + (targetRect.width  - sourceRect.width)  / 2;
+  const dy = targetRect.top  - sourceRect.top  + (targetRect.height - sourceRect.height) / 2;
+  const scaleX = targetRect.width  / sourceRect.width;
+  const scaleY = targetRect.height / sourceRect.height;
+  const scale  = Math.min(scaleX, scaleY);
+
+  // Register animation entry
+  const animEntry = { clone, invEl, timer: null };
+  activeFlightAnimations.push(animEntry);
+
+  // Trigger animation on next frame (allow initial paint)
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      clone.style.transform = `translate(${dx}px, ${dy}px) scale(${scale})`;
+      clone.style.opacity   = '0';
+    });
+  });
+
+  // After animation ends: remove clone, show real item, play landing bounce
+  const timer = setTimeout(() => {
+    if (clone.parentNode) clone.parentNode.removeChild(clone);
+    invEl.style.opacity = '';
+
+    // Landing bounce
+    invEl.classList.remove('land-bounce');
+    void invEl.offsetWidth; // reflow
+    invEl.classList.add('land-bounce');
+    setTimeout(() => invEl.classList.remove('land-bounce'), 160);
+
+    // Remove from active list
+    const idx = activeFlightAnimations.indexOf(animEntry);
+    if (idx !== -1) activeFlightAnimations.splice(idx, 1);
+  }, 370); // 350ms transition + 20ms buffer
+
+  animEntry.timer = timer;
 }
 
-function onSlotClick(trackName, rowType, idx) {
-  const lo = currentLoadout();
-  const slot = lo[trackName][rowType][idx];
+// ═══════════════════════════════════════════════════════
+// DRAG & DROP SYSTEM (Tasks 5–9)
+// ═══════════════════════════════════════════════════════
 
-  if (state.selectedInvItem) {
-    const selItem = getItem(state.selectedInvItem);
-    if (selItem.type !== slot.type) {
-      notify(`⚠ ${selItem.name} is a ${selItem.type.toUpperCase()} — needs a ${slot.type.toUpperCase()} slot`);
-      document.getElementById('loadoutCard').classList.add('shake');
-      setTimeout(() => document.getElementById('loadoutCard').classList.remove('shake'), 300);
+// ── Drag State ──
+const dragState = {
+  isDragging:    false,
+  sourceType:    null,   // 'inventory' | 'overlay'
+  item:          null,   // item object
+  sourceSlotId:  null,   // { track, typeKey, anchorCol, anchorRow } if from overlay
+  sourceLoadout: null,
+  startX:        0,
+  startY:        0,
+  grabOffsetX:   0,      // mouse X relative to dragged element's left edge
+  grabOffsetY:   0,      // mouse Y relative to dragged element's top edge
+  pendingEl:     null,
+  pendingItem:   null,
+  pendingSource: null,
+  // Preview state
+  previewValid:  false,
+  previewTarget: null,   // { track, typeKey, anchorCol, anchorRow }
+};
+
+const ghost = document.getElementById('drag-ghost');
+const ghostIcon = document.getElementById('ghost-icon');
+const ghostName = document.getElementById('ghost-name');
+
+// ── Task 5: Shape-aware Ghost ──
+function showGhost(item) {
+  const bounds = getShapeBounds(item.shape);
+  const w = bounds.cols * CELL_SIZE + (bounds.cols - 1) * CELL_GAP;
+  const h = bounds.rows * CELL_SIZE + (bounds.rows - 1) * CELL_GAP;
+
+  ghost.style.width  = w + 'px';
+  ghost.style.height = h + 'px';
+
+  // Build shape grid inside ghost
+  const shapeSet = new Set(item.shape.map(([c,r]) => `${c},${r}`));
+  let cells = '';
+  for (let r = 0; r < bounds.rows; r++) {
+    for (let c = 0; c < bounds.cols; c++) {
+      const active = shapeSet.has(`${c},${r}`);
+      cells += `<div class="ghost-shape-cell ${active ? 'ghost-shape-active' : 'ghost-shape-empty'}"></div>`;
+    }
+  }
+
+  ghost.innerHTML = `
+    <div class="ghost-shape-grid" style="grid-template-columns:repeat(${bounds.cols},1fr);grid-template-rows:repeat(${bounds.rows},1fr)">${cells}</div>
+    <div class="ghost-icon-wrap"><span class="ghost-icon">${item.icon}</span><span class="ghost-name">${item.short}</span></div>
+  `;
+  ghost.style.display = 'flex';
+  ghost.className = '';
+}
+
+function hideGhost() {
+  ghost.style.display = 'none';
+  ghost.className = '';
+}
+
+function moveGhost(x, y) {
+  ghost.style.left = (x - dragState.grabOffsetX) + 'px';
+  ghost.style.top  = (y - dragState.grabOffsetY) + 'px';
+}
+
+// ── Candidate highlight: glow all matching type columns while dragging ──
+function highlightCandidateColumns(itemType) {
+  document.querySelectorAll(`.track-col.trl-${itemType}`).forEach(col => {
+    col.classList.add('drop-candidate-col');
+  });
+}
+
+function clearCandidateColumns() {
+  document.querySelectorAll('.drop-candidate-col').forEach(el => {
+    el.classList.remove('drop-candidate-col');
+  });
+}
+
+// ── Task 6: Preview highlight on cells ──
+function clearPreviewHighlights() {
+  document.querySelectorAll('.track-cell.preview-valid, .track-cell.preview-replace, .track-cell.preview-invalid').forEach(el => {
+    el.classList.remove('preview-valid', 'preview-replace', 'preview-invalid');
+  });
+  dragState.previewValid  = false;
+  dragState.previewTarget = null;
+}
+
+function applyPreview(trackName, typeKey, anchorCol, anchorRow) {
+  clearPreviewHighlights();
+  const lo = currentLoadout();
+  const tt = lo[trackName][typeKey];
+  const item = dragState.item;
+  const selfId = dragState.sourceType === 'overlay' ? item.id : null;
+
+  // Check out-of-bounds first (only hard rejection)
+  if (shapeExceedsGrid(item.shape, anchorCol, anchorRow)) {
+    // Mark all in-bounds cells as invalid
+    for (const [dc, dr] of item.shape) {
+      const c = anchorCol + dc;
+      const r = anchorRow + dr;
+      if (c < 0 || c > 1 || r < 0 || r > 1) continue;
+      const cellEl = document.querySelector(
+        `.track-cell[data-track="${trackName}"][data-type-key="${typeKey}"][data-col="${c}"][data-row="${r}"]`
+      );
+      if (cellEl) cellEl.classList.add('preview-invalid');
+    }
+    dragState.previewValid  = false;
+    dragState.previewTarget = null;
+    ghost.classList.remove('ghost-valid', 'ghost-replace', 'ghost-invalid');
+    ghost.classList.add('ghost-invalid');
+    updateGhostHint(0, true);
+    return;
+  }
+
+  // Count how many distinct items will be evicted (excluding self)
+  const evictedIds = new Set();
+  for (const [dc, dr] of item.shape) {
+    const existing = tt.grid[anchorRow + dr][anchorCol + dc];
+    if (existing && existing !== selfId) evictedIds.add(existing);
+  }
+
+  const hasReplace = evictedIds.size > 0;
+  const cls = hasReplace ? 'preview-replace' : 'preview-valid';
+
+  for (const [dc, dr] of item.shape) {
+    const c = anchorCol + dc;
+    const r = anchorRow + dr;
+    if (c < 0 || c > 1 || r < 0 || r > 1) continue;
+    const cellEl = document.querySelector(
+      `.track-cell[data-track="${trackName}"][data-type-key="${typeKey}"][data-col="${c}"][data-row="${r}"]`
+    );
+    if (cellEl) cellEl.classList.add(cls);
+  }
+
+  dragState.previewValid  = true;
+  dragState.previewTarget = { track: trackName, typeKey, anchorCol, anchorRow };
+
+  ghost.classList.remove('ghost-valid', 'ghost-replace', 'ghost-invalid');
+  ghost.classList.add(hasReplace ? 'ghost-replace' : 'ghost-valid');
+  updateGhostHint(evictedIds.size, false);
+}
+
+// ── Task 3: Update ghost replace hint text ──
+function updateGhostHint(replaceCount, isInvalid) {
+  // Remove existing hint
+  const existing = ghost.querySelector('.ghost-replace-hint');
+  if (existing) existing.remove();
+
+  if (isInvalid) return;
+  if (replaceCount > 0) {
+    const hint = document.createElement('div');
+    hint.className = 'ghost-replace-hint';
+    hint.textContent = `↺ 替换 ${replaceCount} 个部件`;
+    ghost.appendChild(hint);
+  }
+}
+
+function startDrag(sourceType, item, sourceSlotId, sourceLoadoutIdx) {
+  if (isAnimating) return;
+  // Skip any in-progress fly-back animations immediately
+  skipAllFlightAnimations();
+  dragState.isDragging    = true;
+  dragState.sourceType    = sourceType;
+  dragState.item          = item;
+  dragState.sourceSlotId  = sourceSlotId;
+  dragState.sourceLoadout = sourceLoadoutIdx;
+  document.body.style.cursor = 'grabbing';
+  showGhost(item);
+  highlightCandidateColumns(item.type);
+  hideTooltip();
+}
+
+function endDrag() {
+  dragState.isDragging    = false;
+  dragState.sourceType    = null;
+  dragState.item          = null;
+  dragState.sourceSlotId  = null;
+  dragState.sourceLoadout = null;
+  dragState.pendingEl     = null;
+  dragState.pendingItem   = null;
+  dragState.pendingSource = null;
+  dragState.previewValid  = false;
+  dragState.previewTarget = null;
+  document.body.style.cursor = '';
+  hideGhost();
+  clearPreviewHighlights();
+  clearCandidateColumns();
+  // Clear ghost hint
+  const existingHint = ghost.querySelector('.ghost-replace-hint');
+  if (existingHint) existingHint.remove();
+  document.querySelectorAll('.inv-slot.dragging-source').forEach(el => el.classList.remove('dragging-source'));
+  document.querySelector('.inventory-area')?.classList.remove('drop-target-inv');
+}
+
+// ── Task 9: cancelDrag — restore original state ──
+function cancelDrag() {
+  if (!dragState.isDragging && !dragState.pendingEl) { endDrag(); return; }
+
+  // If dragging from overlay, restore item to its original grid position
+  if (dragState.isDragging && dragState.sourceType === 'overlay' && dragState.sourceSlotId) {
+    const { track, typeKey, anchorCol, anchorRow } = dragState.sourceSlotId;
+    const lo = state.loadouts[dragState.sourceLoadout];
+    const tt = lo[track][typeKey];
+    writeItemToGrid(tt, dragState.item, anchorCol, anchorRow);
+    renderAllTracks();
+    renderInventory();
+  }
+  endDrag();
+  notify('DRAG CANCELLED');
+  // ── Task 6: Assert data/DOM sync after cancel ──
+  assertGridDomSync();
+}
+
+// ── Task 6: Assert grid data ↔ DOM overlay sync (dev guard) ──
+function assertGridDomSync() {
+  const lo = currentLoadout();
+  for (const track of TRACK_KEYS) {
+    for (const typeKey of TYPE_KEYS) {
+      const tt = lo[track][typeKey];
+      const containerId = `${track}-slots-${typeKey}`;
+      const container = document.getElementById(containerId);
+      if (!container) continue;
+
+      // Collect item IDs that should have overlays (from grid data)
+      const dataIds = new Set();
+      for (let r = 0; r < 2; r++) for (let c = 0; c < 2; c++) {
+        const id = tt.grid[r][c];
+        if (id) dataIds.add(id);
+      }
+
+      // Collect item IDs that actually have overlays in DOM
+      const domIds = new Set();
+      container.querySelectorAll('.item-overlay').forEach(el => domIds.add(el.dataset.itemId));
+
+      // Check for ghost occupancy (data has id but no overlay)
+      for (const id of dataIds) {
+        if (!domIds.has(id)) {
+          console.warn(`[StarChart] Ghost occupancy detected: ${id} in ${track}/${typeKey} has grid data but no overlay`);
+        }
+      }
+      // Check for ghost overlays (overlay exists but data has no id)
+      for (const id of domIds) {
+        if (!dataIds.has(id)) {
+          console.warn(`[StarChart] Ghost overlay detected: ${id} in ${track}/${typeKey} has overlay but no grid data`);
+        }
+      }
+    }
+  }
+}
+
+// ── Global mousemove ──
+window.addEventListener('mousemove', e => {
+  // Pre-threshold detection
+  if (dragState.pendingEl && !dragState.isDragging) {
+    const dx = e.clientX - dragState.startX;
+    const dy = e.clientY - dragState.startY;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+      const { sourceType, item, sourceSlotId, sourceLoadoutIdx } = dragState.pendingSource;
+      startDrag(sourceType, item, sourceSlotId, sourceLoadoutIdx);
+
+      if (sourceType === 'inventory') {
+        dragState.pendingEl.classList.add('dragging-source');
+      } else if (sourceType === 'overlay') {
+        // Pre-clear the grid so cells show as empty during drag
+        const { track, typeKey } = sourceSlotId;
+        const lo = state.loadouts[sourceLoadoutIdx];
+        clearItemFromGrid(lo[track][typeKey], item.id);
+        renderAllTracks();
+        renderInventory();
+      }
+      dragState.pendingEl = null;
+    }
+  }
+
+  if (!dragState.isDragging) return;
+  moveGhost(e.clientX, e.clientY);
+
+  // ── Task 6: Collision detection & preview ──
+  const target = document.elementFromPoint(e.clientX, e.clientY);
+  const cellEl = target?.closest('.track-cell');
+  const invArea = target?.closest('.inventory-area');
+
+  // Resolve track/typeKey from either a cell or an item-overlay sitting on top of cells
+  const overlayEl = target?.closest('.item-overlay');
+  const trackName = cellEl?.dataset.track   || overlayEl?.dataset.track;
+  const typeKey   = cellEl?.dataset.typeKey || overlayEl?.dataset.typeKey;
+
+  if (trackName && typeKey) {
+    // Only preview if type matches
+    if (typeKey === dragState.item.type) {
+      // Always anchor at [0,0] — all shapes in this 2×2 grid start from top-left
+      applyPreview(trackName, typeKey, 0, 0);
+    } else {
+      clearPreviewHighlights();
+      ghost.classList.remove('ghost-valid', 'ghost-replace', 'ghost-invalid');
+      ghost.classList.add('ghost-invalid');
+      updateGhostHint(0, true);
+    }
+  } else if (invArea && dragState.sourceType === 'overlay') {
+    clearPreviewHighlights();
+    invArea.classList.add('drop-target-inv');
+    ghost.classList.remove('ghost-invalid', 'ghost-replace');
+    ghost.classList.add('ghost-valid');
+    updateGhostHint(0, false);
+  } else {
+    clearPreviewHighlights();
+    document.querySelector('.inventory-area')?.classList.remove('drop-target-inv');
+    ghost.classList.remove('ghost-valid', 'ghost-replace', 'ghost-invalid');
+    updateGhostHint(0, false);
+  }
+});
+
+// ── Task 7: Global mouseup — resolve drop ──
+window.addEventListener('mouseup', e => {
+  if (!dragState.isDragging) {
+    if (dragState.pendingEl) {
+      dragState.pendingEl = null;
+      dragState.pendingItem = null;
+      dragState.pendingSource = null;
+    }
+    return;
+  }
+
+  const target = document.elementFromPoint(e.clientX, e.clientY);
+  const cellEl = target?.closest('.track-cell');
+  const overlayDropEl = target?.closest('.item-overlay');
+  const invArea = target?.closest('.inventory-area');
+
+  const dragItem = dragState.item;
+  const srcType  = dragState.sourceType;
+
+  // Accept drop if previewTarget is valid (set during mousemove), regardless of whether
+  // the mouse is over a cell or an item-overlay sitting on top of cells
+  if ((cellEl || overlayDropEl) && dragState.previewTarget) {
+    // ── Drop onto track grid (force-replace logic) ──
+    const { track, typeKey, anchorCol, anchorRow } = dragState.previewTarget;
+
+    // Reject if out of bounds (only hard rejection)
+    if (shapeExceedsGrid(dragItem.shape, anchorCol, anchorRow)) {
+      cancelDrag();
       return;
     }
-    slot.itemId = state.selectedInvItem;
-    notify(`EQUIPPED: ${selItem.name} → ${trackName.toUpperCase()} ${rowType.toUpperCase()} ${idx+1}`);
-    state.selectedInvItem = null;
-  } else if (slot.itemId) {
-    const item = getItem(slot.itemId);
-    slot.itemId = null;
-    notify(`UNEQUIPPED: ${item.name}`);
-  }
 
-  renderAllTracks();
-  renderInventory();
+    // Reject if type mismatch
+    if (typeKey !== dragItem.type) {
+      cancelDrag();
+      return;
+    }
+
+    const lo = currentLoadout();
+    const tt = lo[track][typeKey];
+
+    // ── Task 4: For same-track moves, the source grid was already pre-cleared in mousemove.
+    //    For cross-track moves from overlay, clear source now.
+    if (srcType === 'overlay' && dragState.sourceSlotId) {
+      const src = dragState.sourceSlotId;
+      // Only clear if different track/typeKey (same-track was pre-cleared in mousemove)
+      if (src.track !== track || src.typeKey !== typeKey) {
+        const srcLo = state.loadouts[dragState.sourceLoadout];
+        clearItemFromGrid(srcLo[src.track][src.typeKey], dragItem.id);
+      }
+    }
+
+    // ── Task 1: Collect evicted items (all items whose cells overlap with new item's shape)
+    //    Exclude self (in case of same-track move where grid was pre-cleared, self won't appear)
+    const evictedIds = new Set();
+    for (const [dc, dr] of dragItem.shape) {
+      const existing = tt.grid[anchorRow + dr][anchorCol + dc];
+      if (existing && existing !== dragItem.id) evictedIds.add(existing);
+    }
+
+    // ── Task 1.3: For each evicted multi-cell item, capture its overlay rect BEFORE clearing
+    //    (needed for fly animation in Task 5)
+    const evictedEntries = [];
+    for (const evId of evictedIds) {
+      // Find overlay element before we clear
+      const overlayEl = document.querySelector(
+        `.item-overlay[data-track="${track}"][data-type-key="${typeKey}"][data-item-id="${evId}"]`
+      );
+      const rect = overlayEl ? overlayEl.getBoundingClientRect() : null;
+      evictedEntries.push({ itemId: evId, rect });
+      // Clear ALL cells of this evicted item (including cells not covered by new item)
+      clearItemFromGrid(tt, evId);
+    }
+
+    // Write new item
+    writeItemToGrid(tt, dragItem, anchorCol, anchorRow);
+
+    // ── Task 2: Send evicted items back to inventory (they are no longer in any grid)
+    //    evictedIds items are already removed from grid; renderInventory will show them again.
+    const evictedNames = evictedEntries.map(e => getItem(e.itemId)?.short || e.itemId);
+
+    if (evictedEntries.length > 0) {
+      notify(`REPLACED: ${dragItem.name} ↔ ${evictedNames.join(', ')}`);
+    } else {
+      notify(`EQUIPPED: ${dragItem.name} → ${track.toUpperCase()} ${typeKey.toUpperCase()}`);
+    }
+
+    endDrag();
+    renderAllTracks();
+    renderInventory();
+
+    // ── Task 6: Assert data/DOM sync after successful replace ──
+    assertGridDomSync();
+
+    // ── Task 5: Trigger fly-back animations for evicted items ──
+    if (evictedEntries.length > 0) {
+      evictedEntries.forEach((entry, idx) => {
+        setTimeout(() => flyItemToInventory(entry.itemId, entry.rect), idx * 50);
+      });
+    }
+
+    // Snap-in animation on the overlay
+    const overlayEl = document.querySelector(
+      `.item-overlay[data-track="${track}"][data-type-key="${typeKey}"][data-item-id="${dragItem.id}"]`
+    );
+    if (overlayEl) {
+      overlayEl.style.animation = 'none';
+      void overlayEl.offsetWidth;
+      overlayEl.style.animation = 'snapIn 0.18s cubic-bezier(0.2,0,0.4,1) forwards';
+      setTimeout(() => { if (overlayEl) overlayEl.style.animation = ''; }, 200);
+    }
+
+  } else if (invArea && srcType === 'overlay') {
+    // ── Task 8: Drag from overlay → drop on inventory → unequip ──
+    // Grid was already pre-cleared in mousemove
+    notify(`UNEQUIPPED: ${dragItem.name}`);
+    endDrag();
+    renderAllTracks();
+    renderInventory();
+
+  } else {
+    // Invalid drop — cancel (restore)
+    cancelDrag();
+  }
+});
+
+// ── Inventory item mousedown ──
+function bindInvItemDrag(el, item) {
+  el.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const rect = el.getBoundingClientRect();
+    dragState.startX      = e.clientX;
+    dragState.startY      = e.clientY;
+    // Keep grab point exactly where mouse clicked inside the inventory slot
+    dragState.grabOffsetX = e.clientX - rect.left;
+    dragState.grabOffsetY = e.clientY - rect.top;
+    dragState.pendingEl = el;
+    dragState.pendingItem = item;
+    dragState.pendingSource = {
+      sourceType: 'inventory',
+      item,
+      sourceSlotId: null,
+      sourceLoadoutIdx: state.currentLoadout,
+    };
+  });
 }
 
-// ── Loadout switching — sticker-slide animation ──
+// ── Window blur: cancel drag ──
+window.addEventListener('blur', () => {
+  if (dragState.isDragging || dragState.pendingEl) cancelDrag();
+});
+
+
 // The loadout card is a sticker on a rolling pin viewed from above.
 // 'next' = slide up & fade out, new one slides in from below.
 // 'prev' = slide down & fade out, new one slides in from above.
@@ -1413,7 +2519,8 @@ function switchLoadout(direction) {
     state.currentLoadout = direction === 'next'
       ? (state.currentLoadout + 1) % total
       : (state.currentLoadout - 1 + total) % total;
-    state.selectedInvItem = null;
+    // Cancel any in-progress drag when switching loadout
+    if (dragState.isDragging) endDrag();
 
     updateLoadoutHeader();
     renderAllTracks();
@@ -1479,9 +2586,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'PageUp'   || e.key === 'q' || e.key === 'Q') switchLoadout('prev');
   if (e.key === 'PageDown' || e.key === 'e' || e.key === 'E') switchLoadout('next');
   if (e.key === 'Escape') {
-    state.selectedInvItem = null;
-    renderInventory();
-    notify('SELECTION CLEARED');
+    cancelDrag();
   }
 });
 
@@ -1524,12 +2629,10 @@ function showTooltip(e, item, equipped) {
     if (equipped) {
       const loc = getEquippedLocation(item.id);
       tagEl.innerHTML = `<div class="tt-eq-tag">✓ EQUIPPED · ${loc || ''}</div>`;
-      hintEl.textContent = 'Click to unequip';
+      hintEl.textContent = 'Drag to move or drag to inventory to unequip';
     } else {
       tagEl.innerHTML = '';
-      hintEl.textContent = state.selectedInvItem === item.id
-        ? 'Selected — click a track slot'
-        : 'Click to select';
+      hintEl.textContent = 'Drag to a slot to equip';
     }
 
     moveTooltip(e);

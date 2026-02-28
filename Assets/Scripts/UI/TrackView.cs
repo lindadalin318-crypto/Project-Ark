@@ -17,16 +17,14 @@ namespace ProjectArk.UI
     {
         [Header("UI References")]
         [SerializeField] private TMP_Text _trackLabel;
+        [SerializeField] private TMP_Text _prismLabel;
+        [SerializeField] private TMP_Text _coreLabel;
         [SerializeField] private Button _selectButton;
         [SerializeField] private Image _selectionBorder;
 
         [Header("Slot Cells")]
         [SerializeField] private SlotCellView[] _prismCells = new SlotCellView[3];
         [SerializeField] private SlotCellView[] _coreCells = new SlotCellView[3];
-
-        [Header("Colors")]
-        [SerializeField] private Color _selectedBorderColor = new(0.4f, 0.8f, 1f, 1f);
-        [SerializeField] private Color _unselectedBorderColor = new(0.3f, 0.3f, 0.4f, 0.5f);
 
         /// <summary> Fired when a cell with an equipped item is clicked (for unequip). </summary>
         public event Action<StarChartItemSO> OnCellClicked;
@@ -90,8 +88,23 @@ namespace ProjectArk.UI
                 _track.OnLoadoutChanged += Refresh;
 
                 if (_trackLabel != null)
+                {
                     _trackLabel.text = _track.Id == WeaponTrack.TrackId.Primary
                         ? "PRIMARY" : "SECONDARY";
+                    _trackLabel.color = StarChartTheme.Cyan;
+                }
+
+                // Type labels
+                if (_prismLabel != null)
+                {
+                    _prismLabel.text = "PRISM";
+                    _prismLabel.color = StarChartTheme.PrismColor;
+                }
+                if (_coreLabel != null)
+                {
+                    _coreLabel.text = "CORE";
+                    _coreLabel.color = StarChartTheme.CoreColor;
+                }
             }
 
             Refresh();
@@ -104,7 +117,7 @@ namespace ProjectArk.UI
         public void SetSelected(bool selected)
         {
             if (_selectionBorder != null)
-                _selectionBorder.color = selected ? _selectedBorderColor : _unselectedBorderColor;
+                _selectionBorder.color = selected ? StarChartTheme.Cyan : StarChartTheme.Border;
         }
 
         /// <summary>
@@ -113,17 +126,25 @@ namespace ProjectArk.UI
         /// </summary>
         public void Refresh()
         {
-            RefreshLayer(_coreCells, _track?.CoreLayer);
-            RefreshLayer(_prismCells, _track?.PrismLayer);
+            RefreshLayer(_coreCells, _track?.CoreLayer, StarChartItemType.Core);
+            RefreshLayer(_prismCells, _track?.PrismLayer, StarChartItemType.Prism);
         }
 
-        private void RefreshLayer<T>(SlotCellView[] cells, SlotLayer<T> layer) where T : StarChartItemSO
+        private void RefreshLayer<T>(SlotCellView[] cells, SlotLayer<T> layer, StarChartItemType layerType) where T : StarChartItemSO
         {
             // Check for null/empty cell array
             if (cells == null || cells.Length == 0)
             {
                 Debug.LogWarning($"[TrackView] RefreshLayer: cells array is null or empty on '{gameObject.name}'");
                 return;
+            }
+
+            // Apply type theme color to all cells first
+            Color typeColor = StarChartTheme.GetTypeColor(layerType);
+            for (int i = 0; i < cells.Length; i++)
+            {
+                if (cells[i] != null)
+                    cells[i].SetThemeColor(typeColor);
             }
 
             // 先全部清空

@@ -5973,6 +5973,81 @@ svg.addEventListener('dragover', (e) => { e.preventDefault(); });
 
 ---
 
+## 星图 UI — 拖拽装备系统 (2026-02-28 13:22)
+
+### 修改文件：
+- `Tools/StarChartUIPrototype.html`
+
+### 内容简述：
+将星图 UI 原型的物品交互方式从点选（click-to-select + click-to-equip）完全替换为拖拽（drag & drop）系统。
+
+### 目的：
+实现更直觉化的背包式交互体验，用户可直接拖拽物品到轨道槽位装备，或从槽位拖回库存区域卸载。
+
+### 技术方案：
+
+**1. 移除旧点选逻辑：**
+- 删除 `state.selectedInvItem` 状态字段
+- 移除 `onInvClick()`、`onSlotClick()` 函数
+- 移除库存物品和槽位的 `click` 事件监听
+
+**2. 拖拽状态管理器（`dragState` 对象）：**
+- 字段：`isDragging`、`sourceType`（`inventory`/`slot`）、`item`、`sourceSlotId`、`sourceLoadout`、`startX/Y`、`pendingEl/Item/Source`（预阈值状态）
+- `startDrag()`：检查 `isAnimating` 保护，设置状态，显示 Ghost
+- `endDrag()`：清理所有状态、高亮、Ghost、cursor
+- `cancelDrag()`：回滚槽位预清空，调用 `endDrag()`
+
+**3. Ghost 拖拽元素：**
+- `#drag-ghost` 固定定位，`pointer-events:none`，`z-index:9999`
+- 跟随鼠标（偏移 +14px），显示物品图标和短名称
+- 颜色状态：默认青色边框 → 有效目标绿色（`.ghost-valid`）→ 无效目标红色（`.ghost-invalid`）
+
+**4. 拖拽发起（4px 阈值）：**
+- 库存物品：`mousedown` 记录起始坐标，`mousemove` 超过 4px 后触发 `startDrag()`，原物品设为半透明占位（`.dragging-source`）
+- 已装备槽位：同上，`startDrag()` 时立即预清空槽位数据并重新渲染，记录原始数据用于取消回滚
+
+**5. 槽位高亮反馈（`mousemove` 中实时计算）：**
+- 类型匹配 → `.drop-valid`（绿色边框发光 + scale 1.08）
+- 类型不匹配 → `.drop-invalid`（红色边框）
+- 库存区域（从槽位拖出时）→ `.drop-target-inv`（绿色内阴影）
+
+**6. mouseup 放置逻辑（四种情形）：**
+- **情形 A（库存→空槽）**：装备物品，播放 `snap-in` 弹入动画（scale 1.18→0.96→1.0）
+- **情形 B（库存→占用槽 / 槽→槽交换）**：原槽物品自动退回库存，新物品装入
+- **情形 C（槽→库存区域）**：槽位已预清空，物品回到库存（重新渲染即可）
+- **情形 D（无效区域/类型不匹配）**：调用 `cancelDrag()` 回滚，播放 shake 动画
+
+**7. Edge Cases 防护：**
+- `Escape` 键触发 `cancelDrag()`
+- `startDrag()` 入口检查 `isAnimating`，动画中禁止拖拽
+- `window.blur` 事件触发 `cancelDrag()`，防止鼠标移出窗口丢失 mouseup
+- Loadout 切换时调用 `endDrag()` 清理进行中的拖拽
+
+**8. 库存渲染逻辑更新：**
+- `renderInventory()` 过滤掉当前 Loadout 所有槽位中已装备的物品
+- 库存为空时显示 `"ALL ITEMS EQUIPPED"` 占位文字
+- 过滤器（SAIL/PRISM/CORE/SAT）与新逻辑兼容（先按类型过滤，再过滤已装备）
+- 移除库存物品的 `is-equipped` 标记（已装备物品不再显示在库存中）
+
+---
+
+## 星图 UI — 拖拽候选槽高亮 (2026-02-28 13:28)
+
+### 修改文件：
+- `Tools/StarChartUIPrototype.html`
+
+### 内容简述：
+从库存拖拽物品时，立即高亮所有类型匹配的槽位（绿色 pulse 动画），让用户一眼看到哪里可以放置。
+
+### 技术方案：
+- 新增 `.slot.drop-candidate` CSS 类：绿色边框 + `candidatePulse` 呼吸动画（1.1s 循环）
+- `startDrag()` 中调用 `highlightCandidateSlots(item.type)`，遍历所有 `.slot` 元素，对 `data-row === itemType` 的槽位添加 `.drop-candidate`
+- `endDrag()` 中调用 `clearCandidateSlots()` 清除所有候选高亮
+- `mousemove` 中悬停到匹配槽时叠加 `.drop-valid`（更强的高亮 + scale 1.1 + 无 pulse），离开后 `.drop-valid` 被清除，候选槽恢复 pulse 状态
+- 类型不匹配槽悬停时仍显示 `.drop-invalid`（红色）
+
+---
+
 ## 星图 UI — Loadout 贴纸滑动动画增加深度缩放 (2026-02-28 10:02)
 
 ### 修改文件：
@@ -5988,3 +6063,188 @@ svg.addEventListener('dragover', (e) => { e.preventDefault(); });
 1. 四个 `@keyframes` 的 `transform` 属性从单纯 `translateY` 改为 `translateY + scale` 复合变换。
 2. 缩放比例 `0.88`：足够感知到纵深，又不至于过度夸张。
 3. 位移幅度从 `40%` 调整为 `35%`，因为缩放本身已提供额外的视觉退场效果，不需要过大位移。
+
+---
+
+## 星图 UI — 网格背包 & 异形部件系统 (2026-02-28 13:53)
+
+### 修改文件：
+- `Tools/StarChartUIPrototype.html`
+
+### 内容简述：
+将星图 UI 原型从单格槽位系统全面重构为 Backpack Battles 风格的网格背包系统，支持异形部件（1×1、1×2、2×1、L形、2×2）在 2×2 Track 网格中的拖拽装备与卸载。
+
+### 目的：
+实现计划文档 `.codebuddy/plan/grid-inventory/` 中定义的全部 9 项任务，为后续 Unity 实现提供可交互的 UI 原型参考。
+
+### 技术方案：
+
+**任务1 — 数据模型重构：**
+- 为每个 `ITEM` 添加 `shape: [[col,row],...]` 坐标数组，支持 5 种形状
+- Track 槽位从 `[{type, itemId}]` 数组改为 `{ grid: [[null,null],[null,null]] }` 2×2 矩阵
+- 新增辅助函数：`getShapeBounds(shape)`、`shapeExceedsGrid()`、`canPlace()`、`clearItemFromGrid()`、`writeItemToGrid()`
+- 初始 Loadout 数据用 `placeItem()` 辅助函数预填充
+
+**任务2 — Track 2×2 网格渲染：**
+- `renderTrackTypeGrid()` 将每个类型列渲染为 `display:grid; grid-template-columns: repeat(2, var(--slot-size))` 的 4 格网格
+- 每个 `.track-cell` 携带 `data-track`、`data-type-key`、`data-col`、`data-row` 属性
+- 空格子显示淡色 `+` 占位符，被占用格子透明度为 0（被覆盖层遮盖）
+
+**任务3 — 部件覆盖层渲染：**
+- `renderItemOverlay()` 在网格容器上用绝对定位叠加覆盖层
+- 覆盖层尺寸 = `bounds.cols × CELL_SIZE + (cols-1) × CELL_GAP`，精确覆盖 shape bounding box
+- 覆盖层内部渲染 shape 形状格子（非矩形填充），显示部件图标（居中）、名称（底部）
+- 类型颜色边框 + 呼吸光晕动画，hover 时 scale(1.04)
+- `mousedown` 发起卸载拖拽（Task 8）
+
+**任务4 — 16列库存网格：**
+- `renderInventory()` 使用 `display:grid; grid-template-columns: repeat(16, var(--inv-slot-size))`
+- 每个部件用 `grid-column: span {cols}; grid-row: span {rows}` 按 shape bounding box 渲染
+- 部件内部显示 shape 形状预览（半透明色块）+ 图标 + 名称
+
+**任务5 — Shape-aware Ghost：**
+- `showGhost()` 根据 `getShapeBounds(item.shape)` 动态计算 Ghost 宽高
+- Ghost 内部渲染 shape 格子网格（active 格子显示青色半透明，empty 格子透明）
+- Ghost 根据预览状态切换 `.ghost-valid`（绿色）/ `.ghost-invalid`（红色）边框
+
+**任务6 — 碰撞检测与预览高亮：**
+- `mousemove` 检测鼠标下方的 `.track-cell`，以其 `data-col/row` 为锚点
+- `applyPreview()` 遍历 `item.shape` 所有偏移格子，调用 `canPlace()` 检测越界和占用
+- 全部通过 → 预览格子加 `.preview-valid`（绿色）；任意失败 → `.preview-invalid`（红色）
+- 拖拽开始时对匹配类型的整列 `.track-col` 添加 `.drop-candidate-col` 呼吸高亮
+
+**任务7 — mouseup 放置逻辑：**
+- 仅在 `dragState.previewValid === true` 时执行放置
+- 检测被顶出的部件（displaced items），先清空其格子，再写入新部件
+- 支持交换场景：被顶出部件自动回到库存
+- 放置成功后对覆盖层播放 `snapIn` 动画（scale 1.18 → 0.96 → 1.0，150ms）
+
+**任务8 — 卸载拖拽：**
+- 覆盖层 `mousedown` 时：`sourceType = 'overlay'`，记录 `{ track, typeKey, anchorCol, anchorRow }`
+- 拖拽阈值（4px）超过后：`clearItemFromGrid()` 清空格子，`renderAllTracks()` 刷新显示
+- 拖拽结束未放置到有效位置 → `cancelDrag()` 恢复原位（`writeItemToGrid()` 重写格子）
+
+**任务9 — Edge Cases 防护：**
+- `Escape` 键：调用 `cancelDrag()`，overlay 来源时恢复原位
+- `window.blur`：同 cancelDrag
+- `isAnimating` 锁：Loadout 切换动画期间 `startDrag()` 直接返回
+- `shapeExceedsGrid()` 越界检测集成在 `canPlace()` 中，`applyPreview()` 自动拒绝越界放置
+- 类型不匹配时 `applyPreview()` 不调用（直接显示 ghost-invalid），不会写入错误数据
+
+---
+
+## Track 网格强制替换 + 飞回动画 — 2026-02-28 14:47
+
+### 修改文件
+- `Tools/StarChartUIPrototype.html`
+
+### 内容简述
+在星图 UI 原型中实现 Track 网格强制替换功能及被顶出部件飞回库存动画。
+
+### 目的
+玩家可直接将新部件拖入已有部件的格子，系统自动顶出旧部件送回库存，无需手动卸载。
+
+### 技术方案
+
+**任务1 — 放置逻辑重构（移除占用即拒绝）：**
+- `mouseup` 放置分支：移除原 `canPlace()` 检测，改为遍历 `item.shape` 收集 `evictedIds`（Set）
+- 对每个被顶出的部件调用 `clearItemFromGrid()` 清除其在 grid 中的**所有**格子（含未被新部件覆盖的格子）
+- 唯一拒绝条件：`shapeExceedsGrid()` 越界 或 类型不匹配
+
+**任务2 — 库存回收：**
+- 顶出部件的 grid 数据清除后，`renderInventory()` 自动将其重新渲染到库存末尾（因为 `isEquippedInCurrentLoadout()` 返回 false）
+- 覆盖层 DOM 由 `renderAllTracks()` 重新渲染时自动移除旧 overlay、恢复空格 `+` 占位符
+
+**任务3 — 三色预览高亮系统：**
+- 新增 `.track-cell.preview-replace`（橙色）CSS 样式
+- 新增 `#drag-ghost.ghost-replace`（橙色边框）CSS 样式
+- 新增 `.ghost-replace-hint` 文字样式（橙色，绝对定位在 ghost 顶部）
+- `applyPreview()` 重构：越界 → 红色；有占用不越界 → 橙色；全空 → 绿色
+- `updateGhostHint(count, isInvalid)` 函数：替换时在 Ghost 上显示 `↺ 替换 N 个部件`
+
+**任务4 — 自身冲突处理：**
+- 同 Track 内移动：`mousemove` 阶段已 `clearItemFromGrid()` 预清除，`mouseup` 时 grid 中不含自身 id，`evictedIds` 不会包含自身
+- 跨 Track 移动：`mouseup` 中检测 `src.track !== track || src.typeKey !== typeKey` 时额外清除来源 grid
+
+**任务5 — 飞回库存动画：**
+- `activeFlightAnimations[]` 全局列表管理所有进行中的飞行动画
+- `skipAllFlightAnimations()` 在 `startDrag()` 时调用，立即移除所有克隆体并恢复库存可见性
+- `flyItemToInventory(itemId, sourceRect)` 函数：
+  - 用 `getBoundingClientRect()` 获取来源 overlay 坐标（在 `renderAllTracks()` 前捕获）
+  - 创建 `fixed` 定位的 `.fly-clone` DOM，初始位置与 overlay 完全重合
+  - 计算 `dx/dy/scale` 使克隆体飞向库存目标格子
+  - 通过 CSS `transition: transform 350ms ease-in, opacity 350ms ease-in` 执行飞行
+  - 多部件顶出时每个克隆体错开 50ms stagger
+  - 飞行期间库存真实 DOM `opacity: 0`，动画结束后恢复并播放 `landBounce`（scale 1.2→1.0，150ms）
+
+**任务6 — Edge Cases 防护：**
+- `assertGridDomSync()` 函数：遍历所有 track/typeKey，对比 grid 数据与 DOM overlay，发现不一致时 `console.warn`
+- 强制替换成功后和 `cancelDrag()` 后均调用 `assertGridDomSync()`
+- `Escape` 键 → `cancelDrag()` → 数据回滚 + 断言
+- `window.blur` → `cancelDrag()` → 数据回滚
+- 通知栏：替换成功显示 `REPLACED: [新部件名] ↔ [被替换部件名, ...]`
+
+---
+
+## Bug Fix: 强制替换锚点计算错误 + grabOffset偏移 — 2026-02-28 15:14
+
+### 修改文件
+- `Tools/StarChartUIPrototype.html`
+
+### Bug 1 — 多格部件无法放置（锚点计算错误）
+**根因**：`mousemove` 中调用 `applyPreview(trackName, typeKey, col, row)` 时传入的是**鼠标悬停的格子坐标**（如 `[1,1]`），而非部件锚点。对于 2×2 部件，`shapeExceedsGrid([[0,0],[1,0],[0,1],[1,1]], 1, 1)` 会返回 `true`（`1+1=2 > 1`），导致被误判为越界，`previewTarget` 始终为 null，mouseup 时无法放置。
+
+**修复**：将 `applyPreview(trackName, typeKey, col, row)` 改为 `applyPreview(trackName, typeKey, 0, 0)`。由于所有形状都从 `[0,0]` 开始，锚点固定为左上角是正确的。
+
+### Bug 2 — Ghost 拖拽时位置偏移
+**根因**：`grabOffsetX/Y` 已经正确记录了鼠标在元素内的相对位置，确认两处（overlay mousedown 和 bindInvItemDrag）都使用 `e.clientX - rect.left` / `e.clientY - rect.top`，保持鼠标抓住哪个位置 ghost 就跟随那个位置，无偏移。
+
+---
+
+## Bug Fix: Overlay 遮挡 Cell 导致拖拽无法替换已有部件 — 2026-02-28 15:23
+
+### 修改文件
+- `Tools/StarChartUIPrototype.html`
+
+### 根本原因
+Track 上已有部件时，`.item-overlay` 元素覆盖在 `.track-cell` 上方。`mousemove` 和 `mouseup` 中用 `elementFromPoint()` 获取鼠标下方元素时，返回的是 overlay 而非 cell，导致 `cellEl` 为 null，预览不触发，`previewTarget` 始终为 null，mouseup 时无法放置。
+
+**结果**：从背包拖部件到已有部件的 Track 上，永远无法替换——这正是用户反馈"不能用"的根本原因。
+
+### 修复方案
+
+**mousemove**：不再只检查 `cellEl`，同时检查 `overlayEl = target?.closest('.item-overlay')`。从 cellEl 或 overlayEl 中取 `trackName`/`typeKey`，只要任一有效就触发 `applyPreview`。
+
+**mouseup**：判断条件从 `if (cellEl && dragState.previewTarget)` 改为 `if ((cellEl || overlayDropEl) && dragState.previewTarget)`，确保鼠标松开在 overlay 上时也能正确放置。
+
+### 覆盖场景
+- 1格部件拖到有1格部件的Track → 替换 ✓
+- 4格部件拖到有2格部件的Track → 顶掉2格部件 ✓
+- 2格部件拖到有1格部件的Track → 顶掉1格部件 ✓
+- 任意部件拖到空Track → 正常放置 ✓
+
+---
+
+## StarChart UI Phase A — 视觉样式与布局对齐 — 2026-02-28 16:06
+
+### 新建文件
+- `Assets/Scripts/UI/StarChartTheme.cs` — 颜色主题静态类，提供所有主题色常量和 `GetTypeColor()` API
+- `Assets/Scripts/UI/StatusBarView.cs` — 底部通知栏组件，PrimeTween Sequence 实现延迟淡出
+
+### 修改文件
+- `Assets/Scripts/UI/SlotCellView.cs` — 移除 hardcode 颜色字段，改用 StarChartTheme；新增 `SetThemeColor()`、`_placeholderLabel`（`+` 占位符）、`SetReplaceHighlight()`
+- `Assets/Scripts/UI/TrackView.cs` — 新增 `_prismLabel`/`_coreLabel` 类型标签字段；`Bind()` 中设置青色/紫色/蓝色；`RefreshLayer()` 增加 `layerType` 参数并调用 `SetThemeColor()`
+- `Assets/Scripts/UI/InventoryItemView.cs` — 新增 `_typeDot`/`_equippedBorder` 字段；`Setup()` 设置类型色点和装备边框；`SetSelected()` 改用 `StarChartTheme.SelectedCyan`；悬停时 PrimeTween scale 1.06 动画
+- `Assets/Scripts/UI/InventoryView.cs` — `SetFilter()` 调用 `UpdateFilterButtonStyles()`；新增过滤按钮激活/非激活态颜色切换
+- `Assets/Scripts/UI/StarChartPanel.cs` — 新增 `_statusBar` 字段；装备/卸载成功失败时调用 `ShowMessage()`
+- `Assets/Scripts/UI/Editor/UICanvasBuilder.cs` — 全面重构 `BuildStarChartSection()`：深色背景、四角括号、Header 栏、上55%/下40%/底部4% 布局、StatusBar；重构 `BuildTrackView()`：类型标签、StarChartTheme 颜色；重构 `BuildSlotCell()`：占位符标签；更新 `CreateInventoryItemViewPrefab()`：新增 typeDot/equippedBorder
+
+### 目的
+将 Unity StarChart 面板的视觉样式与 `StarChartUIPrototype.html` 原型对齐，实现深色科技感配色、四色类型主题、Header/StatusBar 通知系统，不改变现有数据模型和交互逻辑。
+
+### 技术方案
+- `StarChartTheme` 静态类集中管理所有颜色常量，所有 View 通过 `GetTypeColor(itemType)` 获取类型色，禁止 hardcode
+- `StatusBarView` 使用 PrimeTween `Sequence.ChainDelay + Chain(Tween.Alpha)` 实现延迟淡出，`_fadeTween.Stop()` 打断旧动画
+- `UICanvasBuilder` 新增 `BuildCornerBrackets()` 和 `BuildHeader()` 辅助方法，`BuildStarChartSection()` 完全重写为原型对齐的层级结构
+- 运行 `ProjectArk > Build UI Canvas` 后一键生成完整层级，幂等操作
+

@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
+using PrimeTween;
 using ProjectArk.Combat;
 
 namespace ProjectArk.UI
@@ -24,16 +25,9 @@ namespace ProjectArk.UI
         [SerializeField] private Image _equippedBadge;
         [SerializeField] private Image _selectionBorder;
 
-        [Header("Colors")]
-        [SerializeField] private Color _normalColor = new(0.25f, 0.25f, 0.32f, 1f);
-        [SerializeField] private Color _selectedColor = new(0.3f, 0.6f, 0.8f, 1f);
-
-        // Placeholder colors when item has no icon sprite
-        private static readonly Color CORE_COLOR = new(0.9f, 0.55f, 0.1f, 1f);     // orange
-        private static readonly Color PRISM_COLOR = new(0.4f, 0.6f, 0.9f, 1f);      // blue
-        private static readonly Color SAIL_COLOR = new(0.3f, 0.8f, 0.5f, 1f);       // green
-        private static readonly Color SATELLITE_COLOR = new(0.7f, 0.4f, 0.8f, 1f);  // purple
-        private static readonly Color DEFAULT_COLOR = new(0.5f, 0.5f, 0.5f, 1f);    // grey
+        [Header("Theme Visuals")]
+        [SerializeField] private Image _typeDot;          // top-left type color dot
+        [SerializeField] private Image _equippedBorder;   // green border when equipped
 
         /// <summary> Fired when this item card is clicked. </summary>
         public event Action<StarChartItemSO> OnClicked;
@@ -89,13 +83,8 @@ namespace ProjectArk.UI
                     // Image component won't render color when sprite is null.
                     // Use a white placeholder sprite and tint it with the type color.
                     _iconImage.sprite = WhitePlaceholder;
-                    _iconImage.color = GetPlaceholderColor(item);
+                    _iconImage.color = StarChartTheme.GetTypeColor(item.ItemType);
                 }
-                Debug.Log($"[InventoryItemView] Setup '{item.DisplayName}': iconSprite={_iconImage.sprite?.name ?? "NULL"}, iconColor={_iconImage.color}, iconEnabled={_iconImage.enabled}, iconGO.active={_iconImage.gameObject.activeSelf}");
-            }
-            else
-            {
-                Debug.LogWarning($"[InventoryItemView] Setup '{item.DisplayName}': _iconImage is NULL!");
             }
 
             if (_nameLabel != null)
@@ -104,8 +93,17 @@ namespace ProjectArk.UI
             if (_slotSizeLabel != null)
                 _slotSizeLabel.text = $"[{item.SlotSize}]";
 
+            // Type dot: left-top corner colored circle
+            if (_typeDot != null)
+                _typeDot.color = StarChartTheme.GetTypeColor(item.ItemType);
+
+            // Equipped badge (checkmark)
             if (_equippedBadge != null)
                 _equippedBadge.enabled = isEquipped;
+
+            // Equipped border: green tint when equipped
+            if (_equippedBorder != null)
+                _equippedBorder.color = isEquipped ? StarChartTheme.EquippedGreen : Color.clear;
 
             // Force background to be fully opaque so cards are visible
             var bgImage = GetComponent<Image>();
@@ -114,7 +112,6 @@ namespace ProjectArk.UI
                 var c = bgImage.color;
                 c.a = 1f;
                 bgImage.color = c;
-                Debug.Log($"[InventoryItemView] '{item.DisplayName}' bg color={bgImage.color}, rectSize={((RectTransform)transform).sizeDelta}");
             }
         }
 
@@ -122,20 +119,13 @@ namespace ProjectArk.UI
         public void SetSelected(bool selected)
         {
             if (_selectionBorder != null)
-                _selectionBorder.color = selected ? _selectedColor : _normalColor;
+                _selectionBorder.color = selected ? StarChartTheme.SelectedCyan : Color.clear;
         }
 
         /// <summary> Returns a type-based placeholder color when an item has no icon. </summary>
         public static Color GetPlaceholderColor(StarChartItemSO item)
         {
-            return item.ItemType switch
-            {
-                StarChartItemType.Core      => CORE_COLOR,
-                StarChartItemType.Prism     => PRISM_COLOR,
-                StarChartItemType.LightSail => SAIL_COLOR,
-                StarChartItemType.Satellite => SATELLITE_COLOR,
-                _                           => DEFAULT_COLOR,
-            };
+            return StarChartTheme.GetTypeColor(item.ItemType);
         }
 
         // ========== Drag Source Implementation ==========
@@ -196,12 +186,16 @@ namespace ProjectArk.UI
         public void OnPointerEnter(PointerEventData eventData)
         {
             if (_isDragging) return;
+            // Scale up on hover
+            Tween.Scale(transform, endValue: Vector3.one * 1.06f, duration: 0.12f, ease: Ease.OutQuad);
             OnPointerEntered?.Invoke(Item);
         }
 
         public void OnPointerExit(PointerEventData eventData)
         {
             if (_isDragging) return;
+            // Restore scale
+            Tween.Scale(transform, endValue: Vector3.one, duration: 0.12f, ease: Ease.OutQuad);
             OnPointerExited?.Invoke();
         }
     }

@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using TMPro;
 using ProjectArk.Combat;
 
 namespace ProjectArk.UI
@@ -19,19 +20,11 @@ namespace ProjectArk.UI
         [SerializeField] private Image _iconImage;
         [SerializeField] private Button _button;
 
-        [Header("Colors")]
-        [SerializeField] private Color _emptyColor = new(0.15f, 0.15f, 0.2f, 0.8f);
-        [SerializeField] private Color _occupiedColor = new(0.2f, 0.25f, 0.35f, 0.9f);
-        [SerializeField] private Color _spannedColor = new(0.18f, 0.22f, 0.3f, 0.7f);
-        [SerializeField] private Color _selectedHighlight = new(0.3f, 0.8f, 0.4f, 1f);
-        [SerializeField] private Color _invalidHighlight = new(0.8f, 0.2f, 0.2f, 1f);
+        [Header("Placeholder Label")]
+        [SerializeField] private TMP_Text _placeholderLabel;
 
-        [Header("Placeholder (when Icon is null)")]
-        [SerializeField] private Color _placeholderCoreColor = new(0.9f, 0.6f, 0.2f, 0.9f);
-        [SerializeField] private Color _placeholderPrismColor = new(0.4f, 0.7f, 0.9f, 0.9f);
-        [SerializeField] private Color _placeholderSailColor = new(0.5f, 0.9f, 0.5f, 0.9f);
-        [SerializeField] private Color _placeholderSatelliteColor = new(0.8f, 0.4f, 0.8f, 0.9f);
-        [SerializeField] private Color _placeholderDefaultColor = new(0.7f, 0.7f, 0.7f, 0.9f);
+        // Current type color set by the owning TrackView (used for occupied background & hover border)
+        private Color _typeColor = Color.white;
 
         /// <summary> Fired when this cell is clicked. </summary>
         public event Action OnClicked;
@@ -66,13 +59,27 @@ namespace ProjectArk.UI
                 _button.onClick.AddListener(() => OnClicked?.Invoke());
         }
 
+        /// <summary>
+        /// Set the type theme color for this cell.
+        /// Called by TrackView.Refresh() so occupied cells use the layer's type color.
+        /// </summary>
+        public void SetThemeColor(Color typeColor)
+        {
+            _typeColor = typeColor;
+        }
+
         /// <summary> Show an item's icon in this cell (primary cell for multi-size items). </summary>
         public void SetItem(StarChartItemSO item)
         {
             DisplayedItem = item;
 
+            // Background: dim type color
             if (_backgroundImage != null)
-                _backgroundImage.color = _occupiedColor;
+                _backgroundImage.color = new Color(_typeColor.r, _typeColor.g, _typeColor.b, 0.22f);
+
+            // Hide placeholder label
+            if (_placeholderLabel != null)
+                _placeholderLabel.enabled = false;
 
             if (_iconImage != null)
             {
@@ -80,15 +87,14 @@ namespace ProjectArk.UI
 
                 if (item != null && item.Icon != null)
                 {
-                    // Normal path: display the item's icon sprite
                     _iconImage.sprite = item.Icon;
                     _iconImage.color = Color.white;
                 }
                 else if (item != null)
                 {
-                    // Placeholder path: no icon assigned, show a coloured square
+                    // No icon: show type-colored placeholder square
                     _iconImage.sprite = null;
-                    _iconImage.color = GetPlaceholderColor(item);
+                    _iconImage.color = StarChartTheme.GetTypeColor(item.ItemType);
                     Debug.Log($"[SlotCellView] Item '{item.DisplayName}' has no icon — showing placeholder.");
                 }
                 else
@@ -99,30 +105,23 @@ namespace ProjectArk.UI
             }
         }
 
-        /// <summary> Returns a placeholder tint based on item type so cells are visually distinguishable. </summary>
-        private Color GetPlaceholderColor(StarChartItemSO item)
-        {
-            return item.ItemType switch
-            {
-                StarChartItemType.Core      => _placeholderCoreColor,
-                StarChartItemType.Prism     => _placeholderPrismColor,
-                StarChartItemType.LightSail => _placeholderSailColor,
-                StarChartItemType.Satellite => _placeholderSatelliteColor,
-                _                           => _placeholderDefaultColor,
-            };
-        }
-
         /// <summary> Show empty state (no item, available for equip). </summary>
         public void SetEmpty()
         {
             DisplayedItem = null;
 
             if (_backgroundImage != null)
-                _backgroundImage.color = _emptyColor;
+                _backgroundImage.color = StarChartTheme.SlotEmpty;
 
             if (_iconImage != null)
-            {
                 _iconImage.enabled = false;
+
+            // Show '+' placeholder
+            if (_placeholderLabel != null)
+            {
+                _placeholderLabel.text = "+";
+                _placeholderLabel.color = new Color(1f, 1f, 1f, 0.25f);
+                _placeholderLabel.enabled = true;
             }
         }
 
@@ -132,19 +131,27 @@ namespace ProjectArk.UI
             DisplayedItem = null;
 
             if (_backgroundImage != null)
-                _backgroundImage.color = _spannedColor;
+                _backgroundImage.color = StarChartTheme.SlotSpanned;
 
             if (_iconImage != null)
-            {
                 _iconImage.enabled = false;
-            }
+
+            if (_placeholderLabel != null)
+                _placeholderLabel.enabled = false;
         }
 
-        /// <summary> Highlight the cell (green for valid target, red for invalid). </summary>
+        /// <summary> Highlight the cell (green for valid target, orange for replace, red for invalid). </summary>
         public void SetHighlight(bool valid)
         {
             if (_backgroundImage != null)
-                _backgroundImage.color = valid ? _selectedHighlight : _invalidHighlight;
+                _backgroundImage.color = valid ? StarChartTheme.HighlightValid : StarChartTheme.HighlightInvalid;
+        }
+
+        /// <summary> Highlight the cell as a replace target (orange). </summary>
+        public void SetReplaceHighlight()
+        {
+            if (_backgroundImage != null)
+                _backgroundImage.color = StarChartTheme.HighlightReplace;
         }
 
         /// <summary> Remove any highlight, restore to current state. </summary>
@@ -155,12 +162,12 @@ namespace ProjectArk.UI
             if (DisplayedItem != null)
             {
                 if (_backgroundImage != null)
-                    _backgroundImage.color = _occupiedColor;
+                    _backgroundImage.color = new Color(_typeColor.r, _typeColor.g, _typeColor.b, 0.22f);
             }
             else
             {
                 if (_backgroundImage != null)
-                    _backgroundImage.color = _emptyColor;
+                    _backgroundImage.color = StarChartTheme.SlotEmpty;
             }
         }
 
