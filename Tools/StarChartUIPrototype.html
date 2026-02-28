@@ -384,36 +384,7 @@ body::after {
   overflow: hidden;
 }
 
-/* Gatling rotation animation */
-.loadout-card.rotate-out-up {
-  animation: rotateOutUp 0.3s ease-in forwards;
-}
-.loadout-card.rotate-in-down {
-  animation: rotateInDown 0.3s ease-out forwards;
-}
-.loadout-card.rotate-out-down {
-  animation: rotateOutDown 0.3s ease-in forwards;
-}
-.loadout-card.rotate-in-up {
-  animation: rotateInUp 0.3s ease-out forwards;
-}
-
-@keyframes rotateOutUp {
-  0%   { transform: perspective(900px) rotateX(0deg);    opacity: 1; }
-  100% { transform: perspective(900px) rotateX(-55deg);  opacity: 0; }
-}
-@keyframes rotateInDown {
-  0%   { transform: perspective(900px) rotateX(55deg);   opacity: 0; }
-  100% { transform: perspective(900px) rotateX(0deg);    opacity: 1; }
-}
-@keyframes rotateOutDown {
-  0%   { transform: perspective(900px) rotateX(0deg);    opacity: 1; }
-  100% { transform: perspective(900px) rotateX(55deg);   opacity: 0; }
-}
-@keyframes rotateInUp {
-  0%   { transform: perspective(900px) rotateX(-55deg);  opacity: 0; }
-  100% { transform: perspective(900px) rotateX(0deg);    opacity: 1; }
-}
+/* (Legacy rotation classes removed — replaced by sticker-slide below) */
 
 /* Loadout card header */
 .lc-header {
@@ -474,23 +445,22 @@ body::after {
   margin-top: 1px;
 }
 
-/* Multi-row track layout — 2×2 grid: row1=SAIL+SAT, row2=PRISM+CORE */
+/* Track layout — 4 columns left-to-right: SAIL | PRISM | CORE | SAT */
 .track-rows {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: row;
   gap: 2px;
   flex: 1;
   align-items: stretch;
 }
 
-/* Each type column: 2 per row (SAIL+SAT / PRISM+CORE) */
+/* Each type column: SAIL | PRISM | CORE | SAT */
 .track-col {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
-  flex: 1 1 calc(50% - 2px);
-  max-width: calc(50% - 1px);
+  flex: 1;
   min-width: 0;
   padding: 2px 4px;
   border-radius: 2px;
@@ -501,8 +471,8 @@ body::after {
   background: rgba(255,255,255,0.02);
 }
 
-/* Vertical separator between columns (2×2 wrap: only right column of each row) */
-.track-col:nth-child(even) {
+/* Vertical separator between columns */
+.track-col + .track-col {
   border-left: 1px solid var(--border);
 }
 
@@ -946,58 +916,46 @@ body::after {
 }
 .shake { animation: shake 0.25s ease; }
 
-/* ── Cylinder roll animation ──
-   Loadout card = sticker on a rolling pin.
-   Rolling forward (next): current sticker curls DOWN from top,
-   new sticker unrolls DOWN from above.
-   transform-origin at top edge for out, bottom edge for in.
+/* ── Sticker-slide animation ──
+   Loadout card = sticker on a rolling pin viewed from above.
+   "Next" (forward): current sticker slides UP + fades out,
+   new sticker slides in from BELOW + fades in.
+   "Prev" (backward): current sticker slides DOWN + fades out,
+   new sticker slides in from ABOVE + fades in.
 */
-.loadout-card-wrapper {
-  perspective: 1200px;
-  perspective-origin: 50% 50%;
-}
 
-/* Roll current card OUT — top edge anchored, bottom swings away (forward roll) */
-@keyframes cylinderRollOutForward {
-  0%   { transform: rotateX(0deg);    opacity: 1; }
-  100% { transform: rotateX(-90deg);  opacity: 0.2; }
+/* Slide current card OUT upward (next loadout) */
+@keyframes slideOutUp {
+  0%   { transform: translateY(0);     opacity: 1; }
+  100% { transform: translateY(-40%);  opacity: 0; }
 }
-/* Roll new card IN — bottom edge anchored, top swings down (forward roll) */
-@keyframes cylinderRollInForward {
-  0%   { transform: rotateX(90deg);   opacity: 0.2; }
-  100% { transform: rotateX(0deg);    opacity: 1; }
+/* Slide new card IN from below (next loadout) */
+@keyframes slideInFromBelow {
+  0%   { transform: translateY(40%);   opacity: 0; }
+  100% { transform: translateY(0);     opacity: 1; }
 }
-/* Roll current card OUT — bottom edge anchored, top swings away (backward roll) */
-@keyframes cylinderRollOutBackward {
-  0%   { transform: rotateX(0deg);    opacity: 1; }
-  100% { transform: rotateX(90deg);   opacity: 0.2; }
+/* Slide current card OUT downward (prev loadout) */
+@keyframes slideOutDown {
+  0%   { transform: translateY(0);     opacity: 1; }
+  100% { transform: translateY(40%);   opacity: 0; }
 }
-/* Roll new card IN — top edge anchored, bottom swings up (backward roll) */
-@keyframes cylinderRollInBackward {
-  0%   { transform: rotateX(-90deg);  opacity: 0.2; }
-  100% { transform: rotateX(0deg);    opacity: 1; }
-}
-
-.loadout-card {
-  transform-style: preserve-3d;
-  backface-visibility: hidden;
+/* Slide new card IN from above (prev loadout) */
+@keyframes slideInFromAbove {
+  0%   { transform: translateY(-40%);  opacity: 0; }
+  100% { transform: translateY(0);     opacity: 1; }
 }
 
 .loadout-card.roll-out-forward {
-  transform-origin: center top;
-  animation: cylinderRollOutForward 0.28s cubic-bezier(0.4, 0, 1, 1) forwards;
+  animation: slideOutUp 0.26s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 .loadout-card.roll-in-forward {
-  transform-origin: center bottom;
-  animation: cylinderRollInForward 0.28s cubic-bezier(0, 0, 0.6, 1) forwards;
+  animation: slideInFromBelow 0.26s cubic-bezier(0, 0, 0.6, 1) forwards;
 }
 .loadout-card.roll-out-backward {
-  transform-origin: center bottom;
-  animation: cylinderRollOutBackward 0.28s cubic-bezier(0.4, 0, 1, 1) forwards;
+  animation: slideOutDown 0.26s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 .loadout-card.roll-in-backward {
-  transform-origin: center top;
-  animation: cylinderRollInBackward 0.28s cubic-bezier(0, 0, 0.6, 1) forwards;
+  animation: slideInFromAbove 0.26s cubic-bezier(0, 0, 0.6, 1) forwards;
 }
 </style>
 </head>
@@ -1050,7 +1008,7 @@ body::after {
           <span class="lc-subtitle">LOADOUT #<span id="lc-card-num">1</span></span>
         </div>
 
-        <!-- PRIMARY track: 2×2 grid — row1: SAIL+SAT, row2: PRISM+CORE -->
+        <!-- PRIMARY track: 4 columns SAIL | PRISM | CORE | SAT -->
         <div class="track-block" id="track-primary" data-track="primary">
           <div class="track-block-label">
             <div class="tb-name">PRIMARY</div>
@@ -1061,10 +1019,6 @@ body::after {
               <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAIL</span></div>
               <div class="track-slots-grid" id="primary-slots-sail"></div>
             </div>
-            <div class="track-col trl-sat">
-              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAT</span></div>
-              <div class="track-slots-grid" id="primary-slots-sat"></div>
-            </div>
             <div class="track-col trl-prism">
               <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">PRISM</span></div>
               <div class="track-slots-grid" id="primary-slots-prism"></div>
@@ -1073,10 +1027,14 @@ body::after {
               <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">CORE</span></div>
               <div class="track-slots-grid" id="primary-slots-core"></div>
             </div>
+            <div class="track-col trl-sat">
+              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAT</span></div>
+              <div class="track-slots-grid" id="primary-slots-sat"></div>
+            </div>
           </div>
         </div>
 
-        <!-- SECONDARY track: 2×2 grid — row1: SAIL+SAT, row2: PRISM+CORE -->
+        <!-- SECONDARY track: 4 columns SAIL | PRISM | CORE | SAT -->
         <div class="track-block" id="track-secondary" data-track="secondary">
           <div class="track-block-label">
             <div class="tb-name">SECONDARY</div>
@@ -1087,10 +1045,6 @@ body::after {
               <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAIL</span></div>
               <div class="track-slots-grid" id="secondary-slots-sail"></div>
             </div>
-            <div class="track-col trl-sat">
-              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAT</span></div>
-              <div class="track-slots-grid" id="secondary-slots-sat"></div>
-            </div>
             <div class="track-col trl-prism">
               <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">PRISM</span></div>
               <div class="track-slots-grid" id="secondary-slots-prism"></div>
@@ -1098,6 +1052,10 @@ body::after {
             <div class="track-col trl-core">
               <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">CORE</span></div>
               <div class="track-slots-grid" id="secondary-slots-core"></div>
+            </div>
+            <div class="track-col trl-sat">
+              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAT</span></div>
+              <div class="track-slots-grid" id="secondary-slots-sat"></div>
             </div>
           </div>
         </div>
@@ -1429,10 +1387,10 @@ function onSlotClick(trackName, rowType, idx) {
   renderInventory();
 }
 
-// ── Loadout switching — cylinder roll animation ──
-// The loadout card is a sticker on a rolling pin.
-// 'next' = roll forward: current sticker curls down from top, new one unrolls from above.
-// 'prev' = roll backward: current sticker curls up from bottom, new one unrolls from below.
+// ── Loadout switching — sticker-slide animation ──
+// The loadout card is a sticker on a rolling pin viewed from above.
+// 'next' = slide up & fade out, new one slides in from below.
+// 'prev' = slide down & fade out, new one slides in from above.
 let isAnimating = false;
 
 function switchLoadout(direction) {
@@ -1442,7 +1400,7 @@ function switchLoadout(direction) {
   const card = document.getElementById('loadoutCard');
   const outClass = direction === 'next' ? 'roll-out-forward'  : 'roll-out-backward';
   const inClass  = direction === 'next' ? 'roll-in-forward'   : 'roll-in-backward';
-  const DURATION = 280; // ms — must match CSS animation duration
+  const DURATION = 260; // ms — must match CSS animation duration
 
   // Phase 1: roll current card out
   card.classList.remove('roll-out-forward','roll-out-backward','roll-in-forward','roll-in-backward');

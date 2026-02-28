@@ -5931,21 +5931,42 @@ svg.addEventListener('dragover', (e) => { e.preventDefault(); });
 
 ---
 
-## 星图 UI — 配装栏/背包 50-50 布局 + 轨道双行排列 (2026-02-28 09:45)
+## 星图 UI — 配装栏/背包 50-50 布局 + 槽位缩小 (2026-02-28 09:52)
 
 ### 修改文件：
 - `Tools/StarChartUIPrototype.html`
 
 ### 内容简述：
-将配装栏与背包面板改为 50/50 等分布局，每个 track 的 4 个类型列从单行排列改为 2×2 双行网格布局（第一行 SAIL+SAT，第二行 PRISM+CORE），同时进一步缩小配装栏槽位尺寸。
+将配装栏与背包面板改为 50/50 等分布局，缩小配装栏槽位尺寸。轨道列保持原有单行 4 列排列（SAIL → PRISM → CORE → SAT）。
 
 ### 目的：
-此前背包面板过大、配装栏与背包比例失调。用户要求两个区域 55 开（各占一半），并且希望每个 track 支持两行排列以更紧凑地展示 4 个类型列。
+此前背包面板过大、配装栏与背包比例失调。用户要求两个区域 55 开（各占一半）。
 
 ### 技术方案：
 1. **50/50 等分布局**：`.loadout-section` 从 `flex-shrink:0`（自然高度）改为 `flex:1`，与 `.inventory-section`（同为 `flex:1`）实现等分。两者均添加 `min-height:0` 和 `overflow:hidden` 防止内容溢出。
-2. **轨道双行排列**：`.track-rows` 从 `flex-direction:row` 改为 `flex-wrap:wrap`，`.track-col` 设置 `flex:1 1 calc(50% - 2px)` + `max-width:calc(50% - 1px)`，使每行放置 2 个类型列。
-3. **HTML 列顺序调整**：PRIMARY 和 SECONDARY 的列顺序从 SAIL→PRISM→CORE→SAT 改为 SAIL→SAT→PRISM→CORE，确保 wrap 后第一行为 SAIL+SAT、第二行为 PRISM+CORE。
-4. **列分隔线修复**：`.track-col + .track-col` 选择器改为 `.track-col:nth-child(even)`，确保只有每行右侧列有左边框。
-5. **槽位尺寸缩小**：`--slot-size` 从 52px 缩小到 **40px**，`--inv-slot-size` 从 52px 缩小到 **44px**。
-6. **track-block 弹性填充**：添加 `flex:1` + `min-height:0` + `align-items:stretch`，使 PRIMARY 和 SECONDARY 在 loadout-card 内均匀分配高度。
+2. **轨道列保持单行 4 列**：`.track-rows` 维持 `flex-direction:row`，`.track-col` 维持 `flex:1`，列顺序 SAIL → PRISM → CORE → SAT 不变。
+3. **槽位尺寸缩小**：`--slot-size` 从 52px 缩小到 **40px**，`--inv-slot-size` 从 52px 缩小到 **44px**。
+4. **track-block 弹性填充**：添加 `flex:1` + `min-height:0` + `align-items:stretch`，使 PRIMARY 和 SECONDARY 在 loadout-card 内均匀分配高度。
+
+---
+
+## 星图 UI — Loadout 切换动画改为贴纸滑动 (2026-02-28 09:57)
+
+### 修改文件：
+- `Tools/StarChartUIPrototype.html`
+
+### 内容简述：
+将 Loadout 切换动画从 3D rotateX 滚筒旋转效果改为 2D translateY + opacity 贴纸滑动效果。切换到下一个 loadout 时，当前卡片向上滑出并渐隐，新卡片从下方滑入并渐显；切换到上一个 loadout 时方向相反。
+
+### 目的：
+用户描述 Loadout 切换效果应仿佛从正上方俯视擀面杖上的贴纸滚动——贴纸向上/下位移并渐隐，另一张从对向出现。原 3D rotateX 效果偏"翻转"而非"贴纸滑动"，需替换为纯 2D 位移+透明度动画。
+
+### 技术方案：
+1. **移除旧 3D 动画**：删除 `cylinderRollOutForward/InForward/OutBackward/InBackward` 四个 `@keyframes`（基于 `rotateX`），以及 `perspective`、`transform-style:preserve-3d`、`backface-visibility:hidden` 等 3D 属性。同时移除更早期的 `rotateOutUp/InDown/OutDown/InUp` 四个旧动画。
+2. **新增贴纸滑动动画**：四个新 `@keyframes`：
+   - `slideOutUp`：`translateY(0) → translateY(-40%)` + `opacity 1→0`（next 退出）
+   - `slideInFromBelow`：`translateY(40%) → translateY(0)` + `opacity 0→1`（next 进入）
+   - `slideOutDown`：`translateY(0) → translateY(40%)` + `opacity 1→0`（prev 退出）
+   - `slideInFromAbove`：`translateY(-40%) → translateY(0)` + `opacity 0→1`（prev 进入）
+3. **CSS 类映射不变**：`.roll-out-forward` / `.roll-in-forward` / `.roll-out-backward` / `.roll-in-backward` 类名保留，JS 切换逻辑零改动。
+4. **时长微调**：动画时长从 0.28s 缩短至 0.26s，JS `DURATION` 常量同步调整为 260ms，使滑动更干脆。
