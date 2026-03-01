@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 143f1dafbce31a945aeb5deb517cd201, type: 3}
+  m_Name: ShebaSat_AutoTurret
+  m_EditorClassIdentifier: ProjectArk.Combat::ProjectArk.Combat.SatelliteSO
+  _displayName: Auto Turret
+  _description: 'Sheba Satellite 4005: Automatically fires at the nearest enemy every
+    1.5 seconds.'
+  _icon: {fileID: 0}
+  _slotSize: 1
+  _heatCost: 0
+  _triggerDescription: Nearest enemy within 15 units
+  _actionDescription: Fire one low-damage Matter projectile toward target
+  _internalCooldown: 1.5
+  _behaviorPrefab: {fileID: 225623359581044800, guid: eeb3eb2051630f34f806d14179451010, type: 3}

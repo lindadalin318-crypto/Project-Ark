@@ -42,11 +42,8 @@ namespace ProjectArk.UI
                 _nextButton.onClick.AddListener(OnNextClicked);
         }
 
-        private void Start()
-        {
-            // MVP: single Loadout — disable navigation
-            SetLoadoutCount(1);
-        }
+        // NOTE: SetLoadoutCount is called externally by StarChartPanel.Bind() with the correct count.
+        // Do NOT call SetLoadoutCount(1) here — it would override the multi-loadout setup.
 
         // =====================================================================
         // Public API

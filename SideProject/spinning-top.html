@@ -2179,15 +2179,27 @@ const ARENA = {
   radius: 220,           // bowl inner radius
   wallBounceDamp: 0.72,  // velocity damped on wall bounce
   friction: 0.0018,      // per-frame RPM decay base
-  collisionDist: 28,     // distance for top-to-top collision
+  collisionDist: 36,     // distance for top-to-top collision (= p.radius + e.radius, both radius=18)
   fps: 60,
   // ---- Physics parameters ----
-  linearDamping: 0.985,       // per-frame translational velocity damping (normal)
-  linearDampingLow: 0.97,     // per-frame damping when RPM < 30% (wobbling top)
-  bowlForce: 0.0008,          // centripetal acceleration coefficient (per px from center)
-  bowlForceDeadZone: 30,      // no centripetal force within this radius (px)
-  restitution: 0.85,          // collision elasticity (<=1 prevents energy gain)
-  magnusTangentRatio: 0.3,    // tangential impulse as fraction of normal impulse (Magnus)
+  linearDamping: 0.985,           // per-frame translational velocity damping (normal)
+  linearDampingLow: 0.97,         // per-frame damping when RPM < 30% (wobbling top)
+  bowlForce: 0.0015,              // centripetal acceleration linear coefficient (per px from center)
+  bowlForceQuadratic: 0.000003,   // centripetal acceleration quadratic coefficient (per px² from center)
+  bowlForceDeadZone: 30,          // no centripetal force within this radius (px)
+  restitution: 0.85,              // collision elasticity (<=1 prevents energy gain)
+  magnusTangentRatio: 0.3,        // tangential impulse as fraction of normal impulse (Magnus)
+  // ---- Visual parameters ----
+  perspectiveRatio: 0.65,         // ellipse Y-axis compression ratio for bowl perspective
+  contourCount: 4,                // number of concentric contour lines drawn on bowl
+  // ---- Orbit Resonance Break parameters (方案F) ----
+  orbitDetectFrames: 120,         // consecutive frames in orbit zone before triggering disruption (~2s)
+  get orbitDistanceMin() { return this.radius * 0.05; }, // lower bound of stable orbit distance (~11px)
+  get orbitDistanceMax() { return this.radius * 0.85; }, // upper bound of stable orbit distance (~187px)
+  orbitBreakImpulse: 0.45,        // velocity impulse magnitude applied toward opponent
+  orbitBreakCooldown: 180,        // cooldown frames after disruption before next can trigger (~3s)
+  // ---- Irregular deflection parameters (菱角效果) ----
+  irregularDeflectAngle: 20,      // max random deflection angle in degrees (±) applied after collision
 };
 
 // ---- Top State ----
@@ -2200,10 +2212,14 @@ const ARENA = {
 function createTopBody(isPlayer, rpm, launchAngle, launchPower, spinDir) {
   const rad = (launchAngle * Math.PI) / 180;
   const speed = launchPower * 4.5;
+  // Diagonal spawn: player starts at bottom-left edge, enemy at top-right edge
+  // Using 135°/315° diagonal (bottom-left = 225°, top-right = 45°)
+  const spawnDist = ARENA.radius * 0.75;
+  const spawnAngle = isPlayer ? (225 * Math.PI / 180) : (45 * Math.PI / 180);
   return {
     isPlayer,
-    x: isPlayer ? ARENA.cx - 80 : ARENA.cx + 80,
-    y: isPlayer ? ARENA.cy + 60 : ARENA.cy - 60,
+    x: ARENA.cx + Math.cos(spawnAngle) * spawnDist,
+    y: ARENA.cy + Math.sin(spawnAngle) * spawnDist,
     vx: Math.cos(rad) * speed,
     vy: Math.sin(rad) * speed,
     rpm,
@@ -2216,6 +2232,10 @@ function createTopBody(isPlayer, rpm, launchAngle, launchPower, spinDir) {
     wobble: 0,        // wobble amplitude (increases as rpm drops)
     wobbleAngle: 0,
     spinDir: spinDir || 'right',  // 'right' | 'left' — spin direction for clash mechanics
+    _collisionCooldown: 0,        // frames remaining before next RPM damage (方案B)
+    _dyingProtection: false,      // currently in dying protection window (方案A)
+    _dyingProtectionUsed: false,  // protection already consumed this battle (方案A)
+    _dyingProtectionStartTime: 0, // timestamp when protection started (方案A)
   };
 }
 
@@ -2282,17 +2302,45 @@ function physicsStep(top, dt) {
     const bdist = Math.sqrt(bx * bx + by * by);
     if (bdist > ARENA.bowlForceDeadZone) {
       const rpmRatio = top.rpm / (top.maxRpm || 1);
-      // Low-RPM tops slide toward center more easily
-      const forceMult = rpmRatio < 0.4 ? 1.5 : 1.0;
-      const acc = bdist * ARENA.bowlForce * forceMult;
+      // Low-RPM tops slide toward center more easily (1.8x vs 1.0x)
+      const forceMult = rpmRatio < 0.4 ? 1.8 : 1.0;
+      // Non-linear bowl gravity: linear term + quadratic term (steeper near rim)
+      const acc = (ARENA.bowlForce * bdist + ARENA.bowlForceQuadratic * bdist * bdist) * forceMult;
       top.vx -= (bx / bdist) * acc;
       top.vy -= (by / bdist) * acc;
     }
   }
 
-  // Friction decay
+  // Collision cooldown countdown (方案B)
+  if (top._collisionCooldown > 0) top._collisionCooldown--;
+
+  // Dying protection activation check (方案A)
+  const rpmRatioForProtection = top.rpm / (top.maxRpm || 1);
+  if (!top._dyingProtectionUsed && !top._dyingProtection && rpmRatioForProtection < 0.15 && top.rpm > 0) {
+    top._dyingProtection = true;
+    top._dyingProtectionUsed = true;
+    top._dyingProtectionStartTime = performance.now();
+    if (_battleLogger) {
+      _battleLogger.dyingProtectionCount++;
+      const who = top.isPlayer ? '玩家' : '敌人';
+      const pct = (rpmRatioForProtection * 100).toFixed(1);
+      console.log(`[BattleLog] 🛡️ 濒死保护启动 | ${who} | RPM: ${Math.round(top.rpm)} (${pct}%) | 保护时长: 4s`);
+    }
+  }
+  // Dying protection expiry check (方案A)
+  if (top._dyingProtection && (performance.now() - top._dyingProtectionStartTime) >= 4000) {
+    top._dyingProtection = false;
+    if (_battleLogger) {
+      const who = top.isPlayer ? '玩家' : '敌人';
+      const pct = ((top.rpm / (top.maxRpm || 1)) * 100).toFixed(1);
+      console.log(`[BattleLog] 🛡️ 濒死保护结束 | ${who} | RPM: ${Math.round(top.rpm)} (${pct}%)`);
+    }
+  }
+
+  // Friction decay — slowed during dying protection (方案A)
   const decayRate = getDecayRate(top.isPlayer);
-  top.rpm = Math.max(0, top.rpm - decayRate);
+  const effectiveDecay = top._dyingProtection ? decayRate * 0.3 : decayRate;
+  top.rpm = Math.max(0, top.rpm - effectiveDecay);
 
   // Visual spin
   top.spin += top.spinSpeed * (top.rpm / top.maxRpm);
@@ -2325,7 +2373,8 @@ function getDecayRate(isPlayer) {
 function checkTopCollision(p, e) {
   const dx = p.x - e.x, dy = p.y - e.y;
   const dist = Math.sqrt(dx * dx + dy * dy);
-  if (dist < ARENA.collisionDist) {
+  const collisionDist = (p.radius || 18) + (e.radius || 18); // dynamic: sum of both radii
+  if (dist < collisionDist) {
     const nx = dx / (dist || 1), ny = dy / (dist || 1);
     const relVx = p.vx - e.vx, relVy = p.vy - e.vy;
     const impact = relVx * nx + relVy * ny;
@@ -2364,47 +2413,106 @@ function checkTopCollision(p, e) {
       e.vx -= (normalJ / mE) * nx * knockMult;
       e.vy -= (normalJ / mE) * ny * knockMult;
 
-      // ---- Magnus tangential deflection (opposite spins only) ----
+      // ---- Magnus tangential deflection (opposite & same spins) ----
       // Tangent vector perpendicular to collision normal
       const tx = -ny, ty = nx;
       const pRpmRatio = p.rpm / (p.maxRpm || 1);
       const eRpmRatioM = e.rpm / (e.maxRpm || 1);
-      if (oppositeSpins) {
+      {
         // Magnus factor scales down when RPM is very low
         const pMagnus = pRpmRatio < 0.2 ? 0.3 : 1.0;
         const eMagnus = eRpmRatioM < 0.2 ? 0.3 : 1.0;
-        const tangentImpulse = Math.abs(normalJ) * ARENA.magnusTangentRatio;
         // Direction: spinDir 'right' → positive tangent, 'left' → negative tangent
         const pTangentSign = (p.spinDir === 'right') ? 1 : -1;
         const eTangentSign = (e.spinDir === 'right') ? 1 : -1;
-        p.vx += (tangentImpulse / mP) * tx * pTangentSign * pMagnus;
-        p.vy += (tangentImpulse / mP) * ty * pTangentSign * pMagnus;
-        e.vx -= (tangentImpulse / mE) * tx * eTangentSign * eMagnus;
-        e.vy -= (tangentImpulse / mE) * ty * eTangentSign * eMagnus;
+        if (oppositeSpins) {
+          // Opposite spin: full Magnus deflection (existing logic)
+          const tangentImpulse = Math.abs(normalJ) * ARENA.magnusTangentRatio;
+          p.vx += (tangentImpulse / mP) * tx * pTangentSign * pMagnus;
+          p.vy += (tangentImpulse / mP) * ty * pTangentSign * pMagnus;
+          e.vx -= (tangentImpulse / mE) * tx * eTangentSign * eMagnus;
+          e.vy -= (tangentImpulse / mE) * ty * eTangentSign * eMagnus;
+        } else {
+          // Same spin: reversed direction, 60% magnitude (任务4 — 同向自旋切向偏转)
+          const tangentImpulse = Math.abs(normalJ) * ARENA.magnusTangentRatio * 0.6;
+          p.vx += (tangentImpulse / mP) * tx * (-pTangentSign) * pMagnus;
+          p.vy += (tangentImpulse / mP) * ty * (-pTangentSign) * pMagnus;
+          e.vx -= (tangentImpulse / mE) * tx * (-eTangentSign) * eMagnus;
+          e.vy -= (tangentImpulse / mE) * ty * (-eTangentSign) * eMagnus;
+        }
       }
 
-      // RPM damage based on AR part + spin direction modifier
-      const arDmg = getARDamage();
-      const enemyArDmg = getEnemyARDamage();
-      p.rpm = Math.max(0, p.rpm - enemyArDmg * spinRpmDrainMult);
-      e.rpm = Math.max(0, e.rpm - arDmg * spinRpmDrainMult);
+      // ---- Collision cooldown check (方案B) ----
+      // Physical bounce always applies; RPM damage skipped during cooldown
+      const pOnCooldown = p._collisionCooldown > 0;
+      const eOnCooldown = e._collisionCooldown > 0;
+      const skipDamage = pOnCooldown || eOnCooldown;
+
+      if (skipDamage) {
+        // [BattleLog] Cooldown skip
+        if (_battleLogger) {
+          _battleLogger.collisionCount++;
+          _battleLogger.cooldownSkipCount = (_battleLogger.cooldownSkipCount || 0) + 1;
+          const elapsed = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
+          const remaining = Math.max(p._collisionCooldown, e._collisionCooldown);
+          console.log(`[BattleLog] 🔵 碰撞 [冷却中-跳过伤害] | 已用时: ${elapsed}s | 剩余冷却帧: ${remaining}`);
+        }
+      } else {
+        // Set cooldown for both tops (方案B: 30 frames ≈ 0.5s)
+        p._collisionCooldown = 30;
+        e._collisionCooldown = 30;
+
+        // RPM damage based on AR part + spin direction modifier
+        // Apply dying protection damage reduction (方案A: 40% damage during protection)
+        const arDmg = getARDamage();
+        const enemyArDmg = getEnemyARDamage();
+        const pDmgMult = p._dyingProtection ? 0.4 : 1.0;
+        const eDmgMult = e._dyingProtection ? 0.4 : 1.0;
+        p.rpm = Math.max(0, p.rpm - enemyArDmg * spinRpmDrainMult * pDmgMult);
+        e.rpm = Math.max(0, e.rpm - arDmg * spinRpmDrainMult * eDmgMult);
+
+        // [BattleLog] Collision event
+        if (_battleLogger) {
+          _battleLogger.collisionCount++;
+          if (!_battleLogger.firstCollisionTime) {
+            _battleLogger.firstCollisionTime = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(2);
+          }
+          const elapsed = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
+          const pProt = p._dyingProtection ? ' 🛡️' : '';
+          const eProt = e._dyingProtection ? ' 🛡️' : '';
+          console.log(`[BattleLog] 💥 碰撞 | 已用时: ${elapsed}s | 玩家RPM: ${Math.round(p.rpm)}${pProt} | 敌人RPM: ${Math.round(e.rpm)}${eProt} | 对向自旋: ${oppositeSpins}`);
+        }
+      }
+
+      // ---- Irregular deflection (菱角效果) ----
+      // Apply independent random angle deflection to each top's velocity vector
+      if (ARENA.irregularDeflectAngle > 0) {
+        const maxRad = ARENA.irregularDeflectAngle * Math.PI / 180;
+        // Player: random deflection in [-maxRad, +maxRad]
+        const pAngle = (Math.random() * 2 - 1) * maxRad;
+        const pCos = Math.cos(pAngle), pSin = Math.sin(pAngle);
+        const pVxNew = p.vx * pCos - p.vy * pSin;
+        const pVyNew = p.vx * pSin + p.vy * pCos;
+        p.vx = pVxNew;
+        p.vy = pVyNew;
+        // Enemy: independent random deflection
+        const eAngle = (Math.random() * 2 - 1) * maxRad;
+        const eCos = Math.cos(eAngle), eSin = Math.sin(eAngle);
+        const eVxNew = e.vx * eCos - e.vy * eSin;
+        const eVyNew = e.vx * eSin + e.vy * eCos;
+        e.vx = eVxNew;
+        e.vy = eVyNew;
+      }
 
       p.hitFlash = 8;
       e.hitFlash = 8;
 
       // Separate tops
-      const overlap = ARENA.collisionDist - dist;
+      const overlap = collisionDist - dist;
       p.x += nx * overlap * 0.5;
       p.y += ny * overlap * 0.5;
       e.x -= nx * overlap * 0.5;
       e.y -= ny * overlap * 0.5;
-
-      // [BattleLog] Collision event
-      if (_battleLogger) {
-        _battleLogger.collisionCount++;
-        const elapsed = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
-        console.log(`[BattleLog] 💥 碰撞 | 已用时: ${elapsed}s | 玩家RPM: ${Math.round(p.rpm)} | 敌人RPM: ${Math.round(e.rpm)} | 对向自旋: ${oppositeSpins}`);
-      }
 
       return true;
     }
@@ -2412,8 +2520,89 @@ function checkTopCollision(p, e) {
   return false;
 }
 
+// ---- Orbit Resonance Break (方案F) ----
+// Detects when both tops are circling each other in a stable orbit and applies
+// a mutual impulse toward each other to force a collision.
+function checkOrbitResonanceBreak(p, e) {
+  const battle = G.battle;
+  if (!battle) return;
+
+  // Tick cooldown counter
+  if (battle._orbitBreakCooldown > 0) {
+    battle._orbitBreakCooldown--;
+    // During cooldown, freeze stable frame counter (don't reset, don't accumulate)
+    return;
+  }
+
+  // Dying protection exemption (需求1.4 / 4.4): if either top is in dying protection, freeze counter
+  if (p._dyingProtection || e._dyingProtection) {
+    // Freeze: neither increment nor reset
+    return;
+  }
+
+  // Compute distance between the two tops
+  const dx = e.x - p.x;
+  const dy = e.y - p.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+
+  // Check if distance is within stable orbit zone
+  const dMin = ARENA.orbitDistanceMin;
+  const dMax = ARENA.orbitDistanceMax;
+
+  if (dist >= dMin && dist <= dMax) {
+    // Within orbit zone: accumulate stable frames
+    battle._orbitStableFrames++;
+  } else {
+    // Outside orbit zone: reset counter (collision or separation occurred)
+    battle._orbitStableFrames = 0;
+  }
+
+  // Trigger disruption when stable frame threshold is reached
+  if (battle._orbitStableFrames >= ARENA.orbitDetectFrames) {
+    // Compute unit vector from each top toward the other
+    const len = dist || 1;
+    const nxPtoE = dx / len;  // direction: player → enemy
+    const nyPtoE = dy / len;
+
+    // Apply mutual impulse toward each other (叠加在现有速度上，不替换)
+    const impulse = ARENA.orbitBreakImpulse;
+    p.vx += nxPtoE * impulse;
+    p.vy += nyPtoE * impulse;
+    e.vx -= nxPtoE * impulse;
+    e.vy -= nyPtoE * impulse;
+
+    // Speed cap: clamp to 1.5× normal max speed to prevent arena escape
+    const maxNormalSpeed = ARENA.radius * ARENA.bowlForce * 60 * 1.5; // heuristic max
+    const speedCapFactor = 1.5;
+    const pSpeed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+    const eSpeed = Math.sqrt(e.vx * e.vx + e.vy * e.vy);
+    // Estimate normal max speed from arena parameters (use a generous cap of 6.0 px/frame)
+    const hardCap = 6.0 * speedCapFactor;
+    if (pSpeed > hardCap) {
+      const scale = hardCap / pSpeed;
+      p.vx *= scale;
+      p.vy *= scale;
+    }
+    if (eSpeed > hardCap) {
+      const scale = hardCap / eSpeed;
+      e.vx *= scale;
+      e.vy *= scale;
+    }
+
+    // Update counters and set cooldown
+    battle._orbitBreakCount++;
+    battle._orbitStableFrames = 0;
+    battle._orbitBreakCooldown = ARENA.orbitBreakCooldown;
+
+    // [BattleLog] Orbit disruption event (需求2.4)
+    if (_battleLogger) {
+      const elapsed = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
+      console.log(`[BattleLog] 🌀 轨道扰动 | 已用时: ${elapsed}s | 双方距离: ${dist.toFixed(1)}px | 冲量: ${impulse} | 稳定帧数: ${ARENA.orbitDetectFrames}`);
+    }
+  }
+}
+
 function getARDamage() {
-  const ar = G.loadout.ar;
   if (ar && ar.effect && ar.effect.rpmDmg) return ar.effect.rpmDmg;
   return 120; // default
 }
@@ -2442,39 +2631,97 @@ function renderArena() {
   const W = _arenaCanvas.width, H = _arenaCanvas.height;
   ctx.clearRect(0, 0, W, H);
 
-  // ---- Bowl background ----
-  const grad = ctx.createRadialGradient(ARENA.cx, ARENA.cy, 0, ARENA.cx, ARENA.cy, ARENA.radius);
-  grad.addColorStop(0, '#0a0a1e');
-  grad.addColorStop(0.7, '#080818');
-  grad.addColorStop(1, '#050510');
+  const cx = ARENA.cx, cy = ARENA.cy;
+  const rx = ARENA.radius;                          // X radius (full)
+  const ry = ARENA.radius * ARENA.perspectiveRatio; // Y radius (compressed for perspective)
+
+  // ---- Bowl background: multi-layer ellipse gradient ----
+  // We draw concentric ellipses from edge to center, simulating bowl depth
+  ctx.save();
+  ctx.scale(1, ARENA.perspectiveRatio);
+  const scaledCy = cy / ARENA.perspectiveRatio;
+
+  // Radial gradient (circular in scaled space → elliptical in screen space)
+  const grad = ctx.createRadialGradient(cx, scaledCy, 0, cx, scaledCy, rx);
+  grad.addColorStop(0,    '#c8a87a');   // center: warm sandy highlight (bowl bottom)
+  grad.addColorStop(0.25, '#8a6a40');   // inner slope
+  grad.addColorStop(0.55, '#5a3e22');   // mid slope
+  grad.addColorStop(0.80, '#3a2a1a');   // outer slope
+  grad.addColorStop(1,    '#1e1408');   // rim edge: darkest
   ctx.beginPath();
-  ctx.arc(ARENA.cx, ARENA.cy, ARENA.radius, 0, Math.PI * 2);
+  ctx.arc(cx, scaledCy, rx, 0, Math.PI * 2);
   ctx.fillStyle = grad;
   ctx.fill();
+  ctx.restore();
 
-  // Bowl rim
+  // ---- Contour lines (concentric ellipses) ----
+  const contourCount = ARENA.contourCount;
+  for (let i = 1; i <= contourCount; i++) {
+    const t = i / (contourCount + 1);
+    const cr = rx * t;
+    const alpha = 0.18 + (1 - t) * 0.12; // inner lines slightly more visible
+    ctx.save();
+    ctx.scale(1, ARENA.perspectiveRatio);
+    ctx.beginPath();
+    ctx.arc(cx, cy / ARENA.perspectiveRatio, cr, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255, 230, 180, ${alpha})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // ---- Highlight arc (12 o'clock — top of bowl, catches light) ----
+  ctx.save();
+  ctx.scale(1, ARENA.perspectiveRatio);
   ctx.beginPath();
-  ctx.arc(ARENA.cx, ARENA.cy, ARENA.radius, 0, Math.PI * 2);
-  ctx.strokeStyle = '#1a1a4a';
+  ctx.arc(cx, cy / ARENA.perspectiveRatio, rx * 0.88, Math.PI * 1.15, Math.PI * 1.85);
+  ctx.strokeStyle = 'rgba(255, 240, 200, 0.35)';
+  ctx.lineWidth = 6;
+  ctx.stroke();
+  ctx.restore();
+
+  // ---- Shadow arc (6 o'clock — bottom of bowl, in shadow) ----
+  ctx.save();
+  ctx.scale(1, ARENA.perspectiveRatio);
+  ctx.beginPath();
+  ctx.arc(cx, cy / ARENA.perspectiveRatio, rx * 0.88, Math.PI * 0.15, Math.PI * 0.85);
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+  ctx.lineWidth = 8;
+  ctx.stroke();
+  ctx.restore();
+
+  // ---- Rim highlight (bowl edge — bright ellipse outline) ----
+  ctx.save();
+  ctx.scale(1, ARENA.perspectiveRatio);
+  ctx.beginPath();
+  ctx.arc(cx, cy / ARENA.perspectiveRatio, rx, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(220, 180, 120, 0.75)';
   ctx.lineWidth = 3;
   ctx.stroke();
+  ctx.restore();
 
-  // Inner ring decoration
+  // ---- Outer dark border (physical boundary indicator) ----
+  ctx.save();
+  ctx.scale(1, ARENA.perspectiveRatio);
   ctx.beginPath();
-  ctx.arc(ARENA.cx, ARENA.cy, ARENA.radius * 0.6, 0, Math.PI * 2);
-  ctx.strokeStyle = '#0d0d2a';
-  ctx.lineWidth = 1;
-  ctx.setLineDash([4, 8]);
+  ctx.arc(cx, cy / ARENA.perspectiveRatio, rx + 2, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(30, 20, 10, 0.9)';
+  ctx.lineWidth = 4;
   ctx.stroke();
-  ctx.setLineDash([]);
+  ctx.restore();
 
-  // Center cross
-  ctx.strokeStyle = '#0d0d2a';
+  // ---- Center marker ----
+  ctx.save();
+  ctx.scale(1, ARENA.perspectiveRatio);
+  ctx.strokeStyle = 'rgba(200, 168, 122, 0.25)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(ARENA.cx - 20, ARENA.cy); ctx.lineTo(ARENA.cx + 20, ARENA.cy);
-  ctx.moveTo(ARENA.cx, ARENA.cy - 20); ctx.lineTo(ARENA.cx, ARENA.cy + 20);
+  ctx.moveTo(cx - 16, cy / ARENA.perspectiveRatio);
+  ctx.lineTo(cx + 16, cy / ARENA.perspectiveRatio);
+  ctx.moveTo(cx, cy / ARENA.perspectiveRatio - 16);
+  ctx.lineTo(cx, cy / ARENA.perspectiveRatio + 16);
   ctx.stroke();
+  ctx.restore();
 
   if (!G.battle.running && G.battle.phase === 'launch') return;
 
@@ -2509,8 +2756,21 @@ function drawTrail(ctx, trail, color) {
 function drawTop(ctx, top, colorMain, colorAccent) {
   const wobX = Math.sin(top.wobbleAngle) * top.wobble;
   const wobY = Math.cos(top.wobbleAngle * 1.3) * top.wobble * 0.6;
-  const cx = top.x + wobX, cy = top.y + wobY;
-  const r = top.radius;
+  let cx = top.x + wobX, cy = top.y + wobY;
+  let r = top.radius;
+
+  // ---- Perspective mapping: tops near the rim appear higher and smaller ----
+  const dx = top.x - ARENA.cx;
+  const dy = top.y - ARENA.cy;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist > 30) {
+    // Y offset: tops on the rim appear shifted upward (bowl slope perspective)
+    const yOffset = dist * 0.15 * ARENA.perspectiveRatio;
+    cy -= yOffset;
+    // Scale: tops on the rim appear slightly smaller (depth cue)
+    const scale = Math.max(0.85, 1 - (dist / ARENA.radius) * 0.15);
+    r = r * scale;
+  }
 
   ctx.save();
   ctx.translate(cx, cy);
@@ -2600,6 +2860,9 @@ function _initBattleLogger() {
   _battleLogger = {
     startTimestamp: performance.now(),
     collisionCount: 0,
+    cooldownSkipCount: 0,       // collisions skipped due to cooldown (方案B)
+    dyingProtectionCount: 0,    // dying protection activations (方案A)
+    firstCollisionTime: null,   // timestamp of first damage-dealing collision
     thrustCount: 0,
     brakeCount: 0,
     activateCount: 0,
@@ -2652,6 +2915,9 @@ function battleLoop(now) {
   physicsStep(player, dt);
   physicsStep(enemy, dt);
   checkTopCollision(player, enemy);
+
+  // Orbit Resonance Break (方案F)
+  checkOrbitResonanceBreak(player, enemy);
 
   // Enemy AI
   applyEnemyAI(enemy, player, dt);
@@ -2923,10 +3189,17 @@ function endBattleTimeout() {
     console.log('结束方式: timeout');
     console.log(`玩家最终RPM: ${Math.round(p.rpm)} (${pRpmPct}%)`);
     console.log(`敌人最终RPM: ${Math.round(e.rpm)} (${eRpmPct}%)`);
-    console.log('总碰撞次数:', _battleLogger.collisionCount);
+    const tcTotal = _battleLogger.collisionCount;
+    const tcSkip = _battleLogger.cooldownSkipCount || 0;
+    const tcFirst = _battleLogger.firstCollisionTime != null ? _battleLogger.firstCollisionTime + 's' : '无';
+    const tcDying = _battleLogger.dyingProtectionCount || 0;
+    console.log(`总碰撞次数: ${tcTotal} (含冷却跳过: ${tcSkip} 次，实际伤害碰撞: ${tcTotal - tcSkip} 次)`);
+    console.log(`首次伤害碰撞时间: ${tcFirst}`);
+    console.log(`濒死保护触发次数: ${tcDying}`);
     console.log(`干预使用: 冲刺 x${_battleLogger.thrustCount} | 制动 x${_battleLogger.brakeCount} | 激活 x${_battleLogger.activateCount}`);
     const ec = _battleLogger.elementCounts;
     console.log(`元素触发: fire x${ec.fire} | ice x${ec.ice} | poison x${ec.poison} | thunder x${ec.thunder} | magnet x${ec.magnet}`);
+    console.log(`轨道扰动触发次数: ${G.battle._orbitBreakCount || 0}`);
     console.groupEnd();
   }
 
@@ -2985,15 +3258,20 @@ function endBattle(playerWon, winType) {
     console.log('结束方式:', endType);
     console.log(`玩家最终RPM: ${Math.round(p.rpm)} (${pRpmPct}%)`);
     console.log(`敌人最终RPM: ${Math.round(e.rpm)} (${eRpmPct}%)`);
-    console.log('总碰撞次数:', _battleLogger.collisionCount);
+    const totalCollisions = _battleLogger.collisionCount;
+    const cooldownSkips = _battleLogger.cooldownSkipCount || 0;
+    const firstHit = _battleLogger.firstCollisionTime != null ? _battleLogger.firstCollisionTime + 's' : '无';
+    console.log(`总碰撞次数: ${totalCollisions} (含冷却跳过: ${cooldownSkips} 次，实际伤害碰撞: ${totalCollisions - cooldownSkips} 次)`);
+    console.log(`首次伤害碰撞时间: ${firstHit}`);
+    console.log(`濒死保护触发次数: ${_battleLogger.dyingProtectionCount || 0}`);
     console.log(`干预使用: 冲刺 x${_battleLogger.thrustCount} | 制动 x${_battleLogger.brakeCount} | 激活 x${_battleLogger.activateCount}`);
     const ec = _battleLogger.elementCounts;
     console.log(`元素触发: fire x${ec.fire} | ice x${ec.ice} | poison x${ec.poison} | thunder x${ec.thunder} | magnet x${ec.magnet}`);
+    console.log(`轨道扰动触发次数: ${G.battle._orbitBreakCount || 0}`);
     console.groupEnd();
   }
 
-  // Determine display text based on win type
-  let resultTitle, resultSub;
+  // Determine display text  let resultTitle, resultSub;
   if (playerWon) {
     if (winType === 'ringout') {
       resultTitle = '出界！';
@@ -3445,6 +3723,10 @@ function executeLaunch() {
     frameId: null,
     timeLeft: 180,   // 3-minute battle timer
     victoryType: 'survival', // 'survival' | 'ringout' | 'burst'
+    // ---- Orbit Resonance Break state (方案F) ----
+    _orbitStableFrames: 0,   // consecutive frames both tops are in stable orbit zone
+    _orbitBreakCooldown: 0,  // cooldown frames remaining after last disruption
+    _orbitBreakCount: 0,     // total number of orbit disruptions triggered this battle
   };
 
   showScreen('BATTLE');

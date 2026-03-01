@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 04e05fd278fddc444afe130ceacc0f04, type: 3}
+  m_Name: ShebaCore_MachineGun
+  m_EditorClassIdentifier: ProjectArk.Combat::ProjectArk.Combat.StarCoreSO
+  _displayName: Machine Gun
+  _description: 'Sheba Core 1001: Rapid-fire physical rounds. Low heat, high volume.'
+  _icon: {fileID: 0}
+  _slotSize: 1
+  _heatCost: 4
+  _family: 0
+  _damageType: 0
+  _projectilePrefab: {fileID: 8117957797936672765, guid: 178be1a279c3747f2b519ac5a7db13cc, type: 3}
+  _fireRate: 10
+  _baseDamage: 6
+  _projectileSpeed: 22
+  _lifetime: 1.8
+  _spread: 3
+  _knockback: 0.5
+  _recoilForce: 0.3
+  _anomalyModifierPrefab: {fileID: 0}
+  _muzzleFlashPrefab: {fileID: 0}
+  _impactVFXPrefab: {fileID: 0}
+  _fireSound: {fileID: 0}
+  _fireSoundPitchVariance: 0.1

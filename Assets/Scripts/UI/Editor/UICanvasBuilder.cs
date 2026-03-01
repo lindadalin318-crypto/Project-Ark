@@ -107,10 +107,27 @@ namespace ProjectArk.UI.Editor
             Debug.Log("  ├─ UIManager (+ WeavingStateTransition)");
             Debug.Log("  └─ DoorTransitionController (FadeOverlay)");
             Debug.Log("");
+            // ── Step 7: Auto-wire _itemPrefab if InventoryItemView prefab already exists ──
+            const string itemPrefabPath = "Assets/_Prefabs/UI/InventoryItemView.prefab";
+            var existingItemPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(itemPrefabPath);
+            if (existingItemPrefab != null)
+            {
+                var sceneInventoryView = Object.FindAnyObjectByType<InventoryView>(FindObjectsInactive.Include);
+                if (sceneInventoryView != null)
+                {
+                    WireField(sceneInventoryView, "_itemPrefab", existingItemPrefab.GetComponent<InventoryItemView>());
+                    Debug.Log("[UICanvasBuilder] ✅ Auto-wired _itemPrefab on InventoryView");
+                }
+            }
+            else
+            {
+                Debug.Log("[UICanvasBuilder] ℹ️ InventoryItemView prefab not found — run 'ProjectArk/Create InventoryItemView Prefab' to create it");
+            }
+
             Debug.Log("[UICanvasBuilder] ⚠️ Manual steps remaining:");
             Debug.Log("  1. Assign _inputActions on UIManager if not auto-found");
             Debug.Log("  2. Assign _playerInventory on UIManager if not auto-found");
-            Debug.Log("  3. Create InventoryItemView prefab and assign to InventoryView._itemPrefab");
+            Debug.Log("  3. (Auto) InventoryItemView prefab wired if it existed — otherwise run Create InventoryItemView Prefab");
             Debug.Log("  4. Assign PostProcess Volume to WeavingStateTransition._postProcessVolume");
             Debug.Log("  5. Assign AudioSource to WeavingStateTransition._sfxSource");
         }
@@ -400,8 +417,13 @@ namespace ProjectArk.UI.Editor
             var scrollGo = CreateUIObject("ScrollArea", inventoryGo.transform);
             SetAnchors(scrollGo, new Vector2(0f, 0f), new Vector2(1f, 0.86f));
             var scrollRect = scrollGo.AddComponent<ScrollRect>();
-            scrollGo.AddComponent<Image>().color = Color.clear;
-            scrollGo.AddComponent<Mask>().showMaskGraphic = false;
+            // IMPORTANT: Mask requires Image.color.a > 0 to clip children correctly.
+            // uGUI Mask uses the Image alpha channel as the stencil mask — alpha=0 clips everything.
+            // Use alpha=1 with a fully transparent-looking color, and hide via showMaskGraphic=false.
+            var scrollMaskImg = scrollGo.AddComponent<Image>();
+            scrollMaskImg.color = new Color(0f, 0f, 0f, 1f); // alpha MUST be 1 for Mask to work
+            var scrollMask = scrollGo.AddComponent<Mask>();
+            scrollMask.showMaskGraphic = false; // hides the black background visually
 
             var contentGo = CreateUIObject("ContentParent", scrollGo.transform);
             SetStretch(contentGo);
@@ -887,6 +909,9 @@ namespace ProjectArk.UI.Editor
                 new Vector2(0.74f, 0f), new Vector2(0.99f, 1f),
                 "SAT",   StarChartTheme.SatColor,   trackView);
 
+            // Note: TypeColumn is a top-level class (TypeColumn.cs), not a nested class of TrackView.
+            // This ensures stable Unity GUID serialization across scene rebuilds.
+
             // ── Column dividers ──
             BuildColumnDivider("DivSailPrism", root.transform, 0.295f);
             BuildColumnDivider("DivPrismCore", root.transform, 0.515f);
@@ -908,7 +933,7 @@ namespace ProjectArk.UI.Editor
         /// Build a single TypeColumn: column header (label + dot) + 2×2 GridContainer (4 SlotCellViews).
         /// Returns the TypeColumn MonoBehaviour.
         /// </summary>
-        private static TrackView.TypeColumn BuildTypeColumn(
+        private static TypeColumn BuildTypeColumn(
             string name, Transform parent,
             Vector2 anchorMin, Vector2 anchorMax,
             string typeName, Color typeColor,
@@ -916,7 +941,7 @@ namespace ProjectArk.UI.Editor
         {
             var colGo = CreateUIObject(name, parent);
             SetAnchors(colGo, anchorMin, anchorMax);
-            var typeColumn = colGo.AddComponent<TrackView.TypeColumn>();
+            var typeColumn = colGo.AddComponent<TypeColumn>();
 
             // Column border (dim by default, brightens on hover)
             var borderGo = CreateUIObject("ColumnBorder", colGo.transform);

@@ -7100,6 +7100,228 @@ StarChart UI 布局与 HTML 原型不符，主要有两个问题：
 3. **SaveData.cs 扩展**：新增 `LoadoutSlotSaveData` 类；`StarChartSaveData` 添加 `List<LoadoutSlotSaveData> Loadouts` 字段，旧字段标记 `[Obsolete]` 保留用于迁移。
 4. **StarChartPanel 联动**：`SetLoadoutCount(1)` → `SetLoadoutCount(3)`；`HandleLoadoutChanged` 实现完整切换逻辑（SwitchLoadout → TrackView.Bind → UpdateTrackSelection → InventoryView.Refresh → UpdateStatusBar）；`IsItemEquipped` 注释更新为"只检查当前激活槽位"。
 
+---
+
+## Bug Fix: LoadoutSwitcher.Start() 覆盖多Loadout设置 — 2026-03-01 12:00
+
+### 修改文件
+- `Assets/Scripts/UI/LoadoutSwitcher.cs`
+
+### 内容简述
+移除 `LoadoutSwitcher.Start()` 中硬编码的 `SetLoadoutCount(1)` 调用。
+
+### 目的
+`Start()` 中的 `SetLoadoutCount(1)` 会在运行时覆盖 `StarChartPanel.Bind()` 中设置的 `SetLoadoutCount(3)`，导致 ▲/▼ 按钮被禁用，Loadout 切换功能失效。
+
+### 技术方案
+删除 `Start()` 方法体，改为注释说明 `SetLoadoutCount` 由外部 `StarChartPanel.Bind()` 调用。`UICanvasBuilder` 已正确 Wire 所有字段（`_loadoutSwitcher`、`_loadoutCard`、`_prevButton`、`_nextButton`、`_drumCounterLabel`），无需额外修改。
+
+---
+
+## Feature: 竞技盘碗形倾斜增强（视觉+物理） — 2026-03-01 12:00
+
+### 修改文件
+- `SideProject/spinning-top.html`
+
+### 内容简述
+从视觉和物理两个维度同步增强竞技盘的碗形倾斜表现：
+1. **ARENA 常量扩展**：新增 `bowlForceQuadratic`（0.000003）、`perspectiveRatio`（0.65）、`contourCount`（4），`bowlForce` 从 0.0008 提升至 0.0015。
+2. **碗形透视视觉渲染**：重写 `renderArena()`，使用 `ctx.scale(1, perspectiveRatio)` 将正圆压缩为椭圆；多层径向渐变（边缘深棕 `#1e1408` → 中心暖沙 `#c8a87a`）模拟碗壁光照；4 条同心椭圆等高线（半透明白色）表达坡度层次；12 点方向高光弧 + 6 点方向阴影弧强化立体感；亮色 rim highlight 描边模拟碗口厚度。
+3. **陀螺透视映射**：修改 `drawTop()`，距中心 > 30px 时对陀螺施加 Y 轴上移偏移（`dist * 0.15 * perspectiveRatio`）和尺寸缩放（最小 0.85x），模拟碗壁坡度的深度感。
+4. **非线性向心力**：修改 `physicsStep()` 向心力段，公式改为 `acc = (bowlForce * dist + bowlForceQuadratic * dist²) * forceMult`，低 RPM（< 40%）系数从 1.5 提升至 1.8，使陀螺在边缘受到更强的向中心拉力。
+
+### 目的
+让玩家从视觉上一眼看出竞技盘是朝中心倾斜的碗形，并确保物理上陀螺在无初速度时能明显向中心滑落，视觉与物理感知保持一致。
+
+### 技术方案
+- 视觉：利用 Canvas 2D `ctx.scale()` 变换实现椭圆绘制，避免引入 `ctx.ellipse()` 兼容性问题；所有椭圆绘制均在 `ctx.save()/restore()` 块内完成，不影响后续陀螺渲染坐标系。
+- 物理：`ARENA.radius`（220px）仍作为物理碰撞边界，视觉椭圆 `radiusX = ARENA.radius` 保持一致，仅 Y 轴压缩为视觉效果，不影响碰撞判定。
+- 透视映射仅影响渲染坐标，不修改 `top.x/top.y` 物理坐标，保证物理与视觉解耦。
+
+---
+
+## 战斗弧线增强 + 物理模拟完善 — 2026-03-01 12:30
+
+### 修改文件
+- `SideProject/spinning-top.html`
+
+### 内容简述
+实现「战斗弧线三件套」（方案D+B+A）及 Magnus 效应物理完善，共5项改动：
+
+1. **方案D：对角出发入场** — 修改 `startBattleLoop()` 中陀螺初始位置，玩家陀螺从左下角（225°方向，距中心 `ARENA.radius * 0.75`）出发，敌人陀螺从右上角（45°方向）对角出发；初始速度方向仍基于 `launchAngle/launchPower` 计算，仅起始坐标改变。
+
+2. **方案B：碰撞冷却帧** — 在陀螺状态对象新增 `_collisionCooldown` 字段；`physicsStep()` 每帧递减；`checkTopCollision()` 中冷却期内跳过 RPM 伤害计算，物理弹开正常执行；冷却时长 30 帧（≈0.5s）。
+
+3. **方案A：濒死保护期** — 新增 `_dyingProtection`、`_dyingProtectionUsed`、`_dyingProtectionStartTime` 字段；`physicsStep()` 每帧检测 `rpm/maxRpm < 0.15`，首次触发时激活保护期；保护期内 RPM 自然衰减降至 30%，碰撞伤害降至 40%；4 秒后自动结束，每场每陀螺只触发一次。
+
+4. **Magnus 效应完善（任务4）** — 在 `checkTopCollision()` 的切向冲量计算段补充同向自旋分支：同向自旋施加方向取反、幅度为 `magnusTangentRatio * 0.6` 的切向冲量；对向自旋保持原有全量逻辑；RPM < 20% 时的 30% 衰减系数对两种情况均生效。
+
+5. **BattleLog 更新（任务5）** — 冷却跳过时输出 `[冷却中-跳过伤害]` 及剩余冷却帧；濒死保护激活/结束时输出陀螺身份、RPM 百分比；`endBattle` 和 `endBattleTimeout` 两处战斗结束摘要均补充：总碰撞次数（含冷却跳过）、首次伤害碰撞时间、濒死保护触发次数。
+
+### 目的
+解决战斗 1 秒内结束的体验问题，确保每场战斗有「开场 → 拉锯 → 收尾」三个可感知阶段；同时完善 Magnus 切向偏转物理，使同向/对向自旋产生明显不同的碰撞手感。
+
+### 技术方案
+- 冷却帧采用每陀螺独立计数器，冷却期内物理弹开仍执行（防穿模），仅跳过 RPM 伤害，符合真实碰撞后弹开间隔的物理直觉。
+- 濒死保护通过 `_dyingProtectionUsed` 标记确保每场只触发一次，保护期结束后恢复正常衰减，不影响 Burst 结算逻辑。
+- Magnus 同向自旋切向冲量方向取反（`-pTangentSign`），幅度 60%，与对向自旋形成差异化手感，符合真实陀螺同向摩擦/对向弹射的物理规律。
+
+---
+
+## Feature: 示巴星 13 个星图部件完整实现 — 2026-03-01 12:20
+
+### 新建文件
+- `Assets/Scripts/Combat/Projectile/HomingModifier.cs` — 制导棱镜 IProjectileModifier 实现
+- `Assets/Scripts/Combat/Projectile/MinePlacerModifier.cs` — 布雷棱镜 IProjectileModifier 实现
+- `Assets/Scripts/Combat/StarChart/Satellite/AutoTurretBehavior.cs` — 自动机炮伴星 SatelliteBehavior 实现
+- `Assets/Scripts/Combat/Editor/ShebaAssetCreator.cs` — Editor 一键资产创建工具
+
+### 修改文件
+- `Assets/Scripts/Combat/Projectile/Projectile.cs` — 新增 `LifetimeRemaining` 可读写属性（供 MinePlacerModifier 延长生命周期）
+
+### 内容简述
+
+**HomingModifier**：继承 `IProjectileModifier`，在 `OnProjectileUpdate` 中每帧用 `Physics2D.OverlapCircleAll` 检测 45° 锥角内最近敌人，以 `_turnSpeed`（默认 180°/s）通过 `Vector2.MoveTowards` 平滑旋转子弹方向，同步更新 `Rigidbody2D.linearVelocity` 和 `transform.rotation`。
+
+**MinePlacerModifier**：继承 `IProjectileModifier`，在 `OnProjectileSpawned` 时将子弹速度归零（`Speed = 0`，`rb.linearVelocity = Vector2.zero`），并将 `Projectile.LifetimeRemaining` 乘以 3 倍延长存活时间。`OnProjectileUpdate` 每帧防漂移保持静止。
+
+**AutoTurretBehavior**：继承 `SatelliteBehavior`，`EvaluateTrigger` 检测 15 单位范围内是否有敌人，`Execute` 从飞船位置向最近敌人发射 Matter 家族低伤害子弹（通过 `PoolManager` 对象池）。`Initialize` 预热对象池，`Cleanup` 清空引用。
+
+**ShebaAssetCreator**：Editor 工具，菜单 `ProjectArk > Create Sheba Star Chart Assets`，幂等创建：
+- 3 个新 Modifier Prefab（Modifier_Homing、Modifier_MinePlacer、Sat_AutoTurret）
+- 4 个星核 SO（ShebaCore_MachineGun/FocusLaser/Shotgun/PulseWave）
+- 6 个棱镜 SO（ShebaP_TwinSplit/RapidFire/Bounce/Boomerang/Homing/MinePlacer）
+- 2 个光帆 SO（ShebaSail_Standard/Scout）
+- 1 个伴星 SO（ShebaSat_AutoTurret）
+- 自动追加所有新 SO 到 PlayerInventory.asset，Console 输出「Created X / Skipped Y」摘要
+
+### 目的
+完整实现示巴星关卡的 13 个星图部件，覆盖 4 种核心攻击风格（连发/激光/散弹/波纹）和 6 种棱镜机制（双生/连射/反弹/回旋/制导/布雷），以及斥候帆和自动机炮伴星。
+
+### 技术方案
+- HomingModifier 使用 `Vector2.MoveTowards` 而非直接赋值，保证平滑转向不产生跳变；LayerMask 显式声明，禁 `~0`。
+- MinePlacerModifier 通过新增的 `Projectile.LifetimeRemaining` 属性修改运行时副本，不触碰 SO 原始数据，遵循「运行时数据隔离」原则。
+- AutoTurretBehavior 遵循 SatelliteBehavior IF-THEN 模式，`EvaluateTrigger` 负责条件判断，`Execute` 负责执行，冷却由 SatelliteRunner 统一管理（1.5s）。
+- ShebaAssetCreator 复用 Batch5AssetCreator 的 `SetField` 模式（SerializedObject 反射写入私有字段），幂等检查用 `AssetDatabase.LoadAssetAtPath`，库存追加用 `FindAssets("t:X Sheba")` 过滤名称前缀。
+
+---
+
+## 轨道共振破坏系统（方案F） — 2026-03-01 13:40
+
+### 修改文件
+- `SideProject/spinning-top.html`
+
+### 内容简述
+在陀螺战斗游戏中实现「轨道共振破坏」机制：当双方陀螺连续 180 帧（约 3 秒）保持在竞技场半径 25%～65% 的稳定绕圈距离区间内时，系统自动对双方施加相向冲量（强度 0.22），强制打破稳定轨道，制造碰撞机会。
+
+### 目的
+解决战斗中双方陀螺长时间绕圈消耗、缺乏刺激碰撞的问题，形成「绕圈 → 系统扰动 → 相向冲撞 → 弹开 → 再次绕圈」的自然战斗节奏。
+
+### 技术方案
+1. **ARENA 常量扩展**：新增 5 个可调参数（`orbitDetectFrames`=180、`orbitDistanceMin`=radius×0.25、`orbitDistanceMax`=radius×0.65、`orbitBreakImpulse`=0.22、`orbitBreakCooldown`=300），其中距离参数使用 getter 动态读取 `this.radius`，支持运行时修改立即生效。
+2. **G.battle 状态扩展**：新增 `_orbitStableFrames`（稳定帧计数器）、`_orbitBreakCooldown`（冷却帧倒计时）、`_orbitBreakCount`（触发次数统计），战斗初始化时自动重置为 0。
+3. **checkOrbitResonanceBreak 函数**：独立函数，在 `battleLoop` 中 `checkTopCollision` 之后每帧调用。逻辑分层：① 冷却期直接 return；② 濒死保护期冻结计数器（不重置不累加）；③ 距离在区间内则累加稳定帧，否则重置；④ 达到阈值时施加相向冲量、限速（硬上限 9.0 px/frame）、重置计数器并进入冷却期。
+4. **BattleLog 集成**：扰动触发时输出 `🌀 轨道扰动` 日志（含时间/距离/冲量/稳定帧数）；战斗结束汇总区块（正常结束和超时结束两处）均追加「轨道扰动触发次数」统计行。
+
+---
+
+## Bug Fix: InventoryView._itemPrefab 为 null 导致星图部件不显示 - 2026-03-01 13:49
+
+### 修改文件
+- `Assets/Scenes/SampleScene.unity`（修复 InventoryView 组件序列化字段）
+
+### 内容简述
+星图面板底部 Inventory 区域完全空白，无法显示任何部件卡片，尽管 `INVENTORY 21 ITEMS` 状态栏显示数据已正确加载。
+
+### 根本原因
+`InventoryView` 组件的 `_itemPrefab` 字段在场景中序列化为 `{fileID: 0}`（null）。`Refresh()` 方法有守卫逻辑：`if (_inventory == null || _itemPrefab == null || _contentParent == null) return;`，导致静默跳过所有渲染，不实例化任何 `InventoryItemView` 卡片。
+
+### 技术方案
+直接编辑 `SampleScene.unity` 场景文件，将 `InventoryView` 组件的 `_itemPrefab` 字段从 `{fileID: 0}` 修复为 `InventoryItemView.prefab` 的正确引用（guid: `1761a57fd23df4a5bbbff1b7c05cd6f3`）。
+
+---
+
+## 战斗碰撞修复 + 不规则弹射系统 — 2026-03-01 16:30
+
+### 修改文件
+- `SideProject/spinning-top.html`
+
+### 内容简述
+修复了导致整场战斗零碰撞的两个根本性 Bug，并新增不规则弹射（菱角效果）系统，使战斗轨迹更多变刺激。
+
+### 根本原因
+1. **碰撞检测距离错误**：`collisionDist = 28px`，但两个陀螺 `radius = 18px`，相切距离应为 36px。28 < 36 导致陀螺互相穿透，永远不触发碰撞。
+2. **轨道扰动区间失效**：`orbitDistanceMin = 55px`（radius×0.25），但陀螺被向心力拉向中心后实际绕圈距离往往 < 55px，完全不在检测区间内，扰动从未触发。
+
+### 技术方案
+
+**修复1 — 碰撞检测距离**
+- `ARENA.collisionDist` 从 `28` 修正为 `36`（两个 radius=18 的陀螺相切距离）
+- `checkTopCollision()` 内部改为动态计算 `collisionDist = (p.radius || 18) + (e.radius || 18)`，支持不同半径陀螺
+- overlap 分离修正同步使用动态 `collisionDist` 变量
+
+**修复2 — 轨道扰动五项参数**
+- `orbitDistanceMin`：`radius * 0.25`（55px）→ `radius * 0.05`（11px），覆盖近距离绕圈
+- `orbitDistanceMax`：`radius * 0.65`（143px）→ `radius * 0.85`（187px），覆盖远距离绕圈
+- `orbitBreakImpulse`：`0.22` → `0.45`，冲量翻倍确保有效推开
+- `orbitDetectFrames`：`180`（3s）→ `120`（2s），更快响应僵局
+- `orbitBreakCooldown`：`300`（5s）→ `180`（3s），允许更频繁扰动
+
+**新增3 — 不规则弹射（菱角效果）**
+- `ARENA` 常量新增 `irregularDeflectAngle: 20`（度），方便调参
+- 在 `checkTopCollision()` 所有物理冲量计算完成后，对玩家和敌人各自独立生成 `±20°` 范围内的随机角度偏转
+- 使用旋转矩阵 `(cos θ, -sin θ / sin θ, cos θ)` 应用到速度向量 `(vx, vy)` 上
+- 不影响 RPM 伤害计算；`irregularDeflectAngle = 0` 时退化为原有理想弹性碰撞（向下兼容）
+- 冷却跳过碰撞时同样应用随机偏转（物理弹射不受冷却影响）
+
+---
+
+## Fix: TypeColumn 提取为独立类 + UICanvasBuilder 自动 wire _itemPrefab — 2026-03-01 16:51
+
+### 修改文件
+- **新建** `Assets/Scripts/UI/TypeColumn.cs`
+- **修改** `Assets/Scripts/UI/TrackView.cs`
+- **修改** `Assets/Scripts/UI/Editor/UICanvasBuilder.cs`
+
+### 问题描述
+1. `SailColumn / PrismColumn / CoreColumn / SatColumn` 在 Inspector 中显示 "the associated script cannot be loaded"
+2. `InventoryView._itemPrefab` 在 Build UI Canvas 后始终为 Missing
+
+### 根本原因
+1. `TypeColumn` 是 `TrackView` 的**内部类（nested class）**。Unity 对内部类 MonoBehaviour 的 GUID 序列化不稳定——当场景被重建时，fileID 哈希可能与已保存场景中的值不一致，导致脚本引用失效。
+2. `Build UI Canvas` 工具只创建 InventoryView 节点，但不 wire `_itemPrefab`；该字段只在 `Create InventoryItemView Prefab` 时才被赋值，两步操作之间没有联动。
+
+### 技术方案
+1. **提取 TypeColumn 为独立顶级类**：新建 `TypeColumn.cs`，将完整实现从 `TrackView` 内部类移出，保持 `ProjectArk.UI` namespace 不变。`TrackView.cs` 中删除内部类定义，保留对 `TypeColumn` 的字段引用（同 namespace 无需 using）。移除 `TrackView.cs` 中不再需要的 `using PrimeTween`。
+2. **UICanvasBuilder 改用独立 TypeColumn**：`BuildTypeColumn()` 方法签名和 `AddComponent<>` 从 `TrackView.TypeColumn` 改为 `TypeColumn`。
+3. **Build UI Canvas 自动 wire _itemPrefab**：在 `BuildUICanvas()` 末尾新增 Step 7，检查 `Assets/_Prefabs/UI/InventoryItemView.prefab` 是否存在，若存在则自动 wire 到场景中的 `InventoryView._itemPrefab`。
+
+### 操作指南
+- 删除旧 Canvas → 执行 `ProjectArk → Build UI Canvas` → 所有 TypeColumn 脚本引用正确，_itemPrefab 自动 wire（如果 prefab 已存在）
+- 若 prefab 不存在，先执行 `ProjectArk → Create InventoryItemView Prefab`，再执行 `Build UI Canvas`
+
+---
+
+## Bug Fix: ScrollArea Mask Image alpha=0 导致 Inventory 部件全部不可见 — 2026-03-01 18:51
+
+### 修改文件
+- `Assets/Scenes/SampleScene.unity`（修复 ScrollArea Image 组件 alpha 值）
+- `Assets/Scripts/UI/Editor/UICanvasBuilder.cs`（修复代码层，防止重建时复现）
+
+### 问题描述
+星图面板底部 Inventory 区域完全空白，数据已正确加载（`INVENTORY 21 ITEMS`），`_itemPrefab` 也已正确赋值，但仍然看不到任何部件卡片。
+
+### 根本原因
+`ScrollArea` 节点上的 `Mask` 组件依赖同节点的 `Image` 组件作为 stencil 遮罩。`UICanvasBuilder` 中使用了 `scrollGo.AddComponent<Image>().color = Color.clear`（alpha=0），而 **uGUI Mask 使用 Image 的 alpha 通道作为 stencil buffer**——alpha=0 意味着遮罩完全透明，导致 Mask 裁剪掉所有子内容（ContentParent 下的所有 InventoryItemView 卡片全部被裁掉，不渲染）。
+
+这是 CLAUDE.md 中记录的「常见陷阱第4项：uGUI Mask 裁剪失效（alpha=0）」。
+
+### 技术方案
+1. **场景文件直接修复**：将 `SampleScene.unity` 中 `ScrollArea` 的 `Image` 组件（fileID: 1947166889）的 `m_Color.a` 从 `0` 改为 `1`。`Mask.showMaskGraphic = false` 保持不变（视觉上不显示黑色背景，但 stencil 正常工作）。
+2. **UICanvasBuilder 代码修复**：将 `scrollGo.AddComponent<Image>().color = Color.clear` 改为显式设置 `alpha=1`，并添加注释说明原因，防止未来重建 Canvas 时复现。
+
+
+
 
 
 

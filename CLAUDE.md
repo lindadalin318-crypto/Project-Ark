@@ -318,6 +318,9 @@ Assets/
 | SO Prefab 字段返回共享实例 | GetComponent 从 Prefab 取组件，多实体共享同一引用 | 运行时用 AddComponent + JsonUtility 深拷贝创建独立实例 |
 | InputSystemUIInputModule 失效 | Action 字段未连线 | UIManager.Awake 中用代码自动配置 UI Action 引用 |
 | 子弹自碰撞 | 同 Layer 投射物互相触发 OnTriggerEnter2D | 碰撞矩阵关闭 PlayerProjectile 自碰撞 + 代码层 Layer 过滤 |
+| uGUI Mask 裁剪所有子内容 | `Color.clear`（alpha=0）作为 Mask Image 颜色，stencil buffer 全透明导致子节点全被裁剪 | Mask Image 颜色必须用 `new Color(1,1,1,1)` 或 alpha≥1/255；用 `showMaskGraphic=false` 隐藏视觉，而非 `Color.clear` |
+| Unity 内部类 MonoBehaviour GUID 不稳定 | nested class 的 fileID 由类名哈希计算，跨版本/文件移动后哈希失配，Inspector 显示"script cannot be loaded" | MonoBehaviour 必须是顶级类（一文件一类），禁止将 MonoBehaviour 写成其他类的内部类 |
+| 场景序列化 fileID 错误导致字段 Missing | 手写或复制场景文件时 fileID 填写错误（如填 `100100000` 而非实际 64 位 ID），运行时反序列化为 null，守卫代码静默跳过不报错 | 修改 `.unity`/`.prefab` 序列化文件时，fileID 必须从 Unity 生成的文件中复制，不可手写；null 守卫应配合 `Debug.LogError` 而非静默 return |
 
 ---
 

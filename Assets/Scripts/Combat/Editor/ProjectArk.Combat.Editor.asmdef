@@ -4,7 +4,8 @@
     "references": [
         "ProjectArk.Combat",
         "ProjectArk.Core",
-        "ProjectArk.Enemy"
+        "ProjectArk.Enemy",
+        "ProjectArk.UI"
     ],
     "includePlatforms": [
         "Editor"

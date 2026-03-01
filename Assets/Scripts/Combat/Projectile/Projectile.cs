@@ -53,6 +53,16 @@ namespace ProjectArk.Combat
         /// </summary>
         public bool ShouldDestroyOnHit { get; set; } = true;
 
+        /// <summary>
+        /// Remaining lifetime in seconds. Readable and writable by IProjectileModifier
+        /// implementations (e.g. MinePlacerModifier extends it at spawn time).
+        /// </summary>
+        public float LifetimeRemaining
+        {
+            get => _lifetimeTimer;
+            set => _lifetimeTimer = value;
+        }
+
         private void Awake()
         {
             _rigidbody = GetComponent<Rigidbody2D>();
