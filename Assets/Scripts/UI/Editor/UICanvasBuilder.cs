@@ -72,9 +72,20 @@ namespace ProjectArk.UI.Editor
             else
                 Debug.Log("[UICanvasBuilder] UIManager already exists, skipping");
 
-            // ── Step 5: Deactivate StarChartPanel (starts hidden) ──
+            // ── Step 5: Initialize StarChartPanel CanvasGroup (starts visually hidden, stays active) ──
+            // Do NOT call SetActive(false) here — that serializes inactive state into the scene,
+            // causing Awake() to be skipped on Play Mode entry and breaking the C-key toggle.
+            // Instead, initialize CanvasGroup to alpha=0 so it's invisible but Awake() runs normally.
             if (starChartPanel != null)
-                starChartPanel.gameObject.SetActive(false);
+            {
+                var panelCg = starChartPanel.GetComponent<CanvasGroup>();
+                if (panelCg == null)
+                    panelCg = starChartPanel.gameObject.AddComponent<CanvasGroup>();
+                panelCg.alpha = 0f;
+                panelCg.interactable = false;
+                panelCg.blocksRaycasts = false;
+                starChartPanel.gameObject.SetActive(true); // ensure active so Awake() runs on Play Mode entry
+            }
 
             // ── Step 6: DoorTransitionController + FadeOverlay ─────
             var doorTransition = canvasGo.GetComponentInChildren<DoorTransitionController>(true);
@@ -632,6 +643,147 @@ namespace ProjectArk.UI.Editor
             WireField(dragDropMgr, "_ghostView",   ghostView);
             WireField(dragDropMgr, "_rootCanvas",  canvasGo.GetComponent<Canvas>());
 
+            // ── ItemTooltipView (floating tooltip card, always active, alpha=0 when hidden) ──
+            var tooltipGo = CreateUIObject("ItemTooltipView", panelGo.transform);
+            // Fixed size tooltip card, anchored to top-left (position set at runtime)
+            var tooltipRect = tooltipGo.GetComponent<RectTransform>();
+            tooltipRect.anchorMin = new Vector2(0f, 1f);
+            tooltipRect.anchorMax = new Vector2(0f, 1f);
+            tooltipRect.pivot = new Vector2(0f, 1f);
+            tooltipRect.sizeDelta = new Vector2(220f, 180f);
+            tooltipRect.anchoredPosition = new Vector2(0f, 0f);
+            tooltipGo.AddComponent<CanvasGroup>(); // required by ItemTooltipView
+            var tooltipView = tooltipGo.AddComponent<ItemTooltipView>();
+
+            // Tooltip background
+            var tooltipBg = CreateUIObject("TooltipBackground", tooltipGo.transform);
+            SetStretch(tooltipBg);
+            var tooltipBgImg = tooltipBg.AddComponent<Image>();
+            tooltipBgImg.color = new Color(0.05f, 0.07f, 0.11f, 0.97f);
+            tooltipBgImg.raycastTarget = false;
+
+            // Tooltip border
+            var tooltipBorder = CreateUIObject("TooltipBorder", tooltipGo.transform);
+            SetStretch(tooltipBorder);
+            var tooltipBorderImg = tooltipBorder.AddComponent<Image>();
+            tooltipBorderImg.color = new Color(StarChartTheme.Border.r, StarChartTheme.Border.g, StarChartTheme.Border.b, 0.8f);
+            tooltipBorderImg.type = Image.Type.Sliced;
+            tooltipBorderImg.raycastTarget = false;
+
+            // Type badge background (colored strip at top)
+            var typeBadgeBg = CreateUIObject("TypeBadgeBackground", tooltipGo.transform);
+            SetAnchors(typeBadgeBg, new Vector2(0f, 0.82f), new Vector2(1f, 1f));
+            var typeBadgeBgImg = typeBadgeBg.AddComponent<Image>();
+            typeBadgeBgImg.color = new Color(0f, 0.85f, 1f, 0.12f);
+            typeBadgeBgImg.raycastTarget = false;
+
+            // Tooltip layout (vertical stack)
+            var tooltipLayout = CreateUIObject("TooltipLayout", tooltipGo.transform);
+            SetAnchors(tooltipLayout, new Vector2(0.04f, 0.04f), new Vector2(0.96f, 0.96f));
+            var tooltipVLG = tooltipLayout.AddComponent<VerticalLayoutGroup>();
+            tooltipVLG.spacing = 4;
+            tooltipVLG.childForceExpandWidth = true;
+            tooltipVLG.childForceExpandHeight = false;
+
+            // Icon + Name row
+            var iconNameRow = CreateUIObject("IconNameRow", tooltipLayout.transform);
+            var iconNameHLG = iconNameRow.AddComponent<HorizontalLayoutGroup>();
+            iconNameHLG.spacing = 6;
+            iconNameHLG.childForceExpandWidth = false;
+            iconNameHLG.childForceExpandHeight = true;
+            var iconNameLE = iconNameRow.AddComponent<LayoutElement>();
+            iconNameLE.preferredHeight = 36;
+
+            var tooltipIconGo = CreateUIObject("Icon", iconNameRow.transform);
+            var tooltipIconImg = tooltipIconGo.AddComponent<Image>();
+            tooltipIconImg.color = Color.clear;
+            tooltipIconImg.raycastTarget = false;
+            var tooltipIconLE = tooltipIconGo.AddComponent<LayoutElement>();
+            tooltipIconLE.preferredWidth = 32;
+            tooltipIconLE.preferredHeight = 32;
+
+            var nameTypeStack = CreateUIObject("NameTypeStack", iconNameRow.transform);
+            var nameTypeVLG = nameTypeStack.AddComponent<VerticalLayoutGroup>();
+            nameTypeVLG.spacing = 2;
+            nameTypeVLG.childForceExpandWidth = true;
+            nameTypeVLG.childForceExpandHeight = false;
+            var nameTypeLE = nameTypeStack.AddComponent<LayoutElement>();
+            nameTypeLE.flexibleWidth = 1;
+
+            var tooltipNameGo = CreateUIObject("NameText", nameTypeStack.transform);
+            var tooltipNameTmp = tooltipNameGo.AddComponent<TextMeshProUGUI>();
+            tooltipNameTmp.text = "Item Name";
+            tooltipNameTmp.fontSize = 14;
+            tooltipNameTmp.fontStyle = FontStyles.Bold;
+            tooltipNameTmp.color = Color.white;
+            tooltipNameTmp.raycastTarget = false;
+            var tooltipNameLE = tooltipNameGo.AddComponent<LayoutElement>();
+            tooltipNameLE.preferredHeight = 20;
+
+            var tooltipTypeGo = CreateUIObject("TypeText", nameTypeStack.transform);
+            var tooltipTypeTmp = tooltipTypeGo.AddComponent<TextMeshProUGUI>();
+            tooltipTypeTmp.text = "CORE";
+            tooltipTypeTmp.fontSize = 10;
+            tooltipTypeTmp.fontStyle = FontStyles.Bold;
+            tooltipTypeTmp.color = StarChartTheme.CoreColor;
+            tooltipTypeTmp.raycastTarget = false;
+            var tooltipTypeLE = tooltipTypeGo.AddComponent<LayoutElement>();
+            tooltipTypeLE.preferredHeight = 14;
+
+            // Stats text
+            var tooltipStatsGo = CreateUIObject("StatsText", tooltipLayout.transform);
+            var tooltipStatsTmp = tooltipStatsGo.AddComponent<TextMeshProUGUI>();
+            tooltipStatsTmp.text = "DAMAGE  ▲ 100";
+            tooltipStatsTmp.fontSize = 11;
+            tooltipStatsTmp.color = StarChartTheme.CyanDim;
+            tooltipStatsTmp.raycastTarget = false;
+            var tooltipStatsLE = tooltipStatsGo.AddComponent<LayoutElement>();
+            tooltipStatsLE.preferredHeight = 50;
+            tooltipStatsLE.flexibleHeight = 1;
+
+            // Description text
+            var tooltipDescGo = CreateUIObject("DescriptionText", tooltipLayout.transform);
+            var tooltipDescTmp = tooltipDescGo.AddComponent<TextMeshProUGUI>();
+            tooltipDescTmp.text = "Item description...";
+            tooltipDescTmp.fontSize = 10;
+            tooltipDescTmp.color = new Color(0.65f, 0.65f, 0.75f, 1f);
+            tooltipDescTmp.raycastTarget = false;
+            var tooltipDescLE = tooltipDescGo.AddComponent<LayoutElement>();
+            tooltipDescLE.preferredHeight = 30;
+
+            // Equipped status text
+            var tooltipEquippedGo = CreateUIObject("EquippedStatusText", tooltipLayout.transform);
+            var tooltipEquippedTmp = tooltipEquippedGo.AddComponent<TextMeshProUGUI>();
+            tooltipEquippedTmp.text = "✓ EQUIPPED · PRIMARY · CORE";
+            tooltipEquippedTmp.fontSize = 10;
+            tooltipEquippedTmp.fontStyle = FontStyles.Bold;
+            tooltipEquippedTmp.color = StarChartTheme.EquippedGreen;
+            tooltipEquippedTmp.raycastTarget = false;
+            var tooltipEquippedLE = tooltipEquippedGo.AddComponent<LayoutElement>();
+            tooltipEquippedLE.preferredHeight = 14;
+            tooltipEquippedGo.SetActive(false);
+
+            // Action hint text
+            var tooltipHintGo = CreateUIObject("ActionHintText", tooltipLayout.transform);
+            var tooltipHintTmp = tooltipHintGo.AddComponent<TextMeshProUGUI>();
+            tooltipHintTmp.text = "Drag to a slot to equip";
+            tooltipHintTmp.fontSize = 9;
+            tooltipHintTmp.color = StarChartTheme.CyanDim;
+            tooltipHintTmp.raycastTarget = false;
+            var tooltipHintLE = tooltipHintGo.AddComponent<LayoutElement>();
+            tooltipHintLE.preferredHeight = 12;
+
+            // Wire ItemTooltipView fields
+            WireField(tooltipView, "_iconImage",          tooltipIconImg);
+            WireField(tooltipView, "_nameText",           tooltipNameTmp);
+            WireField(tooltipView, "_typeText",           tooltipTypeTmp);
+            WireField(tooltipView, "_typeBadgeBackground", typeBadgeBgImg);
+            WireField(tooltipView, "_statsText",          tooltipStatsTmp);
+            WireField(tooltipView, "_descriptionText",    tooltipDescTmp);
+            WireField(tooltipView, "_equippedStatusText", tooltipEquippedTmp);
+            WireField(tooltipView, "_actionHintText",     tooltipHintTmp);
+            WireField(tooltipView, "_containerRect",      tooltipRect);
+
             // ── Panel CanvasGroup (for open/close animation) ──
             var panelCG = panelGo.AddComponent<CanvasGroup>();
             panelCG.alpha = 0f;
@@ -648,6 +800,7 @@ namespace ProjectArk.UI.Editor
             WireField(starChartPanel, "_panelCanvasGroup",   panelCG);
             WireField(starChartPanel, "_loadoutSwitcher",    loadoutSwitcher);
             WireField(starChartPanel, "_loadoutCard",        loadoutCardRect);
+            WireField(starChartPanel, "_tooltipView",        tooltipView);
 
             Debug.Log("[UICanvasBuilder] Created StarChartPanel (header + GatlingCol + LoadoutCard + inventory + detail + statusbar)");
             return starChartPanel;

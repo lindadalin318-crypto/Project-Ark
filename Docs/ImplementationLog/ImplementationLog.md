@@ -7320,6 +7320,115 @@ StarChart UI 布局与 HTML 原型不符，主要有两个问题：
 1. **场景文件直接修复**：将 `SampleScene.unity` 中 `ScrollArea` 的 `Image` 组件（fileID: 1947166889）的 `m_Color.a` 从 `0` 改为 `1`。`Mask.showMaskGraphic = false` 保持不变（视觉上不显示黑色背景，但 stencil 正常工作）。
 2. **UICanvasBuilder 代码修复**：将 `scrollGo.AddComponent<Image>().color = Color.clear` 改为显式设置 `alpha=1`，并添加注释说明原因，防止未来重建 Canvas 时复现。
 
+---
+
+## StarChartPanel 初始化修复 — C键首次无效 Bug (2026-03-01 19:30)
+
+### 修改文件
+- `Assets/Scripts/UI/StarChartPanel.cs`
+- `Assets/Scripts/UI/Editor/UICanvasBuilder.cs`
+
+### 问题描述
+每次删除场景 Canvas 并执行 `BuildUICanvas` 后，必须手动在 Hierarchy 中将 `StarChartPanel` 从 inactive 切换为 active，C 键才能正常打开星图面板。
+
+### 根本原因
+`UICanvasBuilder.BuildUICanvas()` Step 5 在 Editor 模式下调用 `starChartPanel.gameObject.SetActive(false)`，将 `inactive` 状态序列化进场景文件。进入 Play Mode 后 `Awake()` 不会被调用。当 C 键触发 `Open()` → `gameObject.SetActive(true)` 时，`Awake()` 才首次执行，而 `Awake()` 内部又调用了 `gameObject.SetActive(false)`，导致面板立刻被关闭，C 键永久失效。
+
+### 技术方案
+1. **`StarChartPanel.Awake()`**：移除 `gameObject.SetActive(false)`，改为仅初始化 CanvasGroup（alpha=0, interactable=false, blocksRaycasts=false）。新增 `private bool _isOpen = false` 字段追踪面板开关状态。
+2. **`StarChartPanel.IsOpen`**：从 `gameObject.activeSelf` 改为返回 `_isOpen` 字段，确保状态判断不依赖 GameObject active 状态。
+3. **`StarChartPanel.Open()`**：移除 `gameObject.SetActive(true)`，改为设置 `_isOpen = true`。
+4. **`StarChartPanel.Close()`**：移除 `ChainCallback` 和 else 分支中的 `gameObject.SetActive(false)`，改为设置 `_isOpen = false`。
+5. **`UICanvasBuilder` Step 5**：移除 `starChartPanel.gameObject.SetActive(false)`，改为获取 CanvasGroup 并设置 alpha=0, interactable=false, blocksRaycasts=false，确保 GameObject 始终保持 active。
+
+### 目的
+`StarChartPanel` 在场景中始终保持 active，`Awake()` 在场景加载时正常执行完毕，C 键无需任何手动操作即可立即使用。视觉隐藏完全依赖 CanvasGroup，不再依赖 `SetActive`。
+
+---
+
+## 陀螺碰撞弹开距离修复 2026-03-01 20:20
+
+### 修改文件
+- `SideProject/spinning-top.html`
+
+### 问题描述
+碰撞后陀螺持续粘连，3.5s 内发生 104 次碰撞（其中 82 次冷却跳过），战斗过快结束。
+
+### 根本原因
+1. **位置分离不足**：`overlap * 0.5` 分离后下一帧两陀螺仍重叠，立刻再次触发碰撞
+2. **弹性系数偏低**：`restitution: 0.85` 弹开速度不足，加上 `linearDamping` 衰减，陀螺很快又靠近
+3. **无最小分离速度保证**：冲量计算后未校验双方是否真正在分离
+
+### 技术方案
+1. **`restitution: 0.85 → 1.2`**：超弹性碰撞，确保弹开速度大于碰前接近速度
+2. **位置分离量 `overlap * 0.5 → (overlap + 2px) * 0.5`**：额外 2px 间隙，防止浮点误差导致下帧仍重叠
+3. **最小分离速度保证**：碰后检查双方沿法线方向的相对速度，若 `sepSpeed < 1.5`，则补充冲量确保最小分离速度
+
+### 目的
+确保每次碰撞后陀螺能真正弹开，减少粘连碰撞次数，使战斗时长恢复到合理范围（10s+）。
+
+---
+
+## StarChart Shape-Aware Drag Ghost & Tooltip System — 2026-03-01 20:35
+
+### 新建文件
+- `Assets/Scripts/UI/TooltipContentBuilder.cs` — 静态工具类，根据 StarChartItemSO 子类型生成属性行文本（Core/Prism/LightSail/Satellite + HeatCost）
+
+### 修改文件
+- `Assets/Scripts/UI/DragDrop/DragGhostView.cs` — 完全重写：新增 `SetShape(int slotSize)` 方法，动态调整 Ghost 高度并生成对应数量的半透明格子网格 Image；新增 `DropPreviewState` 枚举；`Show()` 自动调用 `SetShape()`；`SetDropState()` 更新边框颜色和替换提示
+- `Assets/Scripts/UI/DragDrop/DragDropManager.cs` — `BeginDrag()` 调用 `SetShape()`；`HighlightMatchingColumns()` 改用 `SetDropCandidate()` 呼吸脉冲；新增 `PlaySnapInAnimation()` snap-in 弹入动画（1.18→0.96→1.0）；拖拽开始/结束时通知 `ItemTooltipView.SetDragSuppressed()`
+- `Assets/Scripts/UI/TypeColumn.cs` — 新增 `SetDropPreview(DropPreviewState)` 列级预览高亮；新增 `SetDropCandidate(bool)` 呼吸脉冲候选高亮（PrimeTween Yoyo 循环）；`Initialize()` 注入 `OwnerColumn` 到每个 cell
+- `Assets/Scripts/UI/SlotCellView.cs` — 新增 `OwnerColumn` 属性；`OnPointerEnter()` 同步调用 `OwnerColumn.SetDropPreview()`；`ClearDropTargetNextFrame()` 恢复列预览为 None
+- `Assets/Scripts/UI/ItemTooltipView.cs` — 完全重写：UniTask 150ms 延迟显示；PrimeTween 淡入淡出；屏幕边界检测（超出右/下边界自动翻转）；拖拽期间屏蔽显示；`PopulateContent()` 填充图标/名称/类型/属性/描述/装备状态/操作提示
+- `Assets/Scripts/UI/TrackView.cs` — 新增 `OnCellPointerEntered(StarChartItemSO, string)` 和 `OnCellPointerExited` 事件；`InitColumn()` 订阅 SlotCellView hover 事件并转发；`HandleCellPointerEnter()` 构建 "PRIMARY · CORE" 格式的位置字符串
+- `Assets/Scripts/UI/StarChartPanel.cs` — 新增 `[SerializeField] ItemTooltipView _tooltipView`；新增 `ShowTooltip()`/`HideTooltip()`/`GetEquippedLocation()` 公共 API；`Bind()` 订阅 TrackView 和 InventoryView 的 hover 事件；`OnDestroy()` 取消订阅
+- `Assets/Scripts/UI/InventoryView.cs` — 新增 `OnItemPointerEntered`/`OnItemPointerExited` 事件；`Refresh()` 订阅每个 InventoryItemView 的 hover 事件；`ClearViews()` 取消订阅
+- `Assets/Scripts/UI/Editor/UICanvasBuilder.cs` — `BuildStarChartSection()` 新增 ItemTooltipView 完整 UI 层级构建（背景/边框/类型徽章/图标+名称行/属性文本/描述/装备状态/操作提示）；Wire `_tooltipView` 到 StarChartPanel
+
+### 内容简述
+实现了两大功能：
+1. **Shape-Aware 拖拽幽灵**：Ghost 根据 SlotSize 动态调整高度，生成 N 个半透明格子网格；拖拽开始时匹配类型的 TypeColumn 显示呼吸脉冲候选高亮；悬停时 Ghost 边框和列边框同步显示 Valid/Replace/Invalid 三色预览；放置成功后播放 snap-in 弹入动画（scale 1.18→0.96→1.0）
+2. **Tooltip 悬停详情卡**：150ms 延迟显示，PrimeTween 淡入淡出，屏幕边界自动翻转，拖拽期间屏蔽；属性内容按类型分别展示（Core 显示 DAMAGE/FIRE RATE/SPEED，Prism 显示 StatModifiers 列表，LightSail 显示条件+效果描述，Satellite 显示触发+动作+冷却）
+
+### 目的
+对齐 StarChartUIPrototype.html 原型的两大核心交互差距：异形部件拖拽系统和 Tooltip 悬停详情卡。
+
+### 技术方案
+- **DragGhostView.SetShape()**：动态销毁/重建 GhostCell_N Image 数组，每个 cell 使用 `anchorMin=(0,1), anchorMax=(1,1), pivot=(0.5,1)` 从顶部向下排列，高度 = N×cellHeight + (N-1)×cellGap
+- **TypeColumn.SetDropCandidate()**：PrimeTween `Tween.Color` Yoyo 循环（cycles=-1），dim→typeColor(0.6α)→dim，duration=0.7s
+- **ItemTooltipView**：`UniTask.Delay(150ms)` 替代 Coroutine；`CanvasGroup.alpha` 控制显隐（永不 SetActive(false)）；屏幕边界检测通过 `Screen.width/height` 与 tooltip 尺寸比较后翻转
+- **TooltipContentBuilder**：C# pattern matching `switch(item)` 分派到各子类型的 BuildXxxStats 方法，StringBuilder 拼接多行属性文本
+
+---
+
+## Bug Fix: ItemTooltipView 使用旧 Input API 导致异常 — 2026-03-01 21:11
+
+### 修改文件
+- `Assets/Scripts/UI/ItemTooltipView.cs`
+
+### 问题描述
+`PositionNearMouse()` 方法中使用了 `UnityEngine.Input.mousePosition`，项目已切换至 New Input System，导致运行时抛出 `InvalidOperationException`。
+
+### 修复方案
+- 添加 `using UnityEngine.InputSystem;`
+- 将 `Input.mousePosition` 替换为 `Mouse.current.position.ReadValue()`
+- 添加 `Mouse.current == null` 守卫，防止无鼠标设备时崩溃
+
+---
+
+## Tooltip 定位修复（坐标系不匹配）— 2026-03-01 21:18
+
+### 修改文件
+- `Assets/Scripts/UI/ItemTooltipView.cs`
+
+### 问题描述
+`PositionNearMouse()` 经历了两次错误修复：
+1. 第一次将 `rect.localPosition` 改为 `rect.anchoredPosition`，但 `ScreenPointToLocalPointInRectangle` 的参考矩形是根 Canvas，而 `anchoredPosition` 是相对于父节点的坐标，两者坐标系不一致导致位置偏移。
+2. 第二次改为用父节点作为参考矩形，但 `anchoredPosition` 还受 anchor 设置影响，tooltip 完全不可见。
+
+### 修复方案
+改用 `ScreenPointToWorldPointInRectangle` + `rect.position`（世界坐标），完全绕开 `anchoredPosition` 和 anchor/pivot 偏移的影响。无论 tooltip 嵌套多深、anchor 如何设置，世界坐标都能正确对应鼠标位置。
+
 
 
 

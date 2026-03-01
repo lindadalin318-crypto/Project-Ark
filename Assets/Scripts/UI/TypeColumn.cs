@@ -69,6 +69,7 @@ namespace ProjectArk.UI
                 _cells[i].SlotType = slotType;
                 _cells[i].CellIndex = i;
                 _cells[i].OwnerTrack = ownerTrack;
+                _cells[i].OwnerColumn = this;
                 _cells[i].SetThemeColor(typeColor);
             }
         }
@@ -108,6 +109,52 @@ namespace ProjectArk.UI
             if (_columnBorder != null)
                 _borderTween = Tween.Color(_columnBorder, endValue: _dimColor,
                     duration: 0.2f, ease: Ease.OutQuad, useUnscaledTime: true);
+        }
+
+        /// <summary>
+        /// Set the column border to reflect the current drop preview state.
+        /// Valid=green, Replace=orange, Invalid=red, None=restore candidate pulse.
+        /// </summary>
+        public void SetDropPreview(DropPreviewState state)
+        {
+            _borderTween.Stop();
+            if (_columnBorder == null) return;
+
+            Color borderColor = state switch
+            {
+                DropPreviewState.Valid   => StarChartTheme.HighlightValid,
+                DropPreviewState.Replace => StarChartTheme.HighlightReplace,
+                DropPreviewState.Invalid => StarChartTheme.HighlightInvalid,
+                _                        => _dimColor
+            };
+            _columnBorder.color = borderColor;
+        }
+
+        /// <summary>
+        /// Show or clear the "drop candidate" breathing pulse highlight.
+        /// Called when a drag begins/ends to indicate this column accepts the dragged type.
+        /// </summary>
+        public void SetDropCandidate(bool active)
+        {
+            _borderTween.Stop();
+            if (_columnBorder == null) return;
+
+            if (active)
+            {
+                // Breathing pulse: dim → typeColor → dim, looping
+                _borderTween = Tween.Color(_columnBorder,
+                    startValue: _dimColor,
+                    endValue: new Color(_typeColor.r, _typeColor.g, _typeColor.b, 0.6f),
+                    duration: 0.7f,
+                    ease: Ease.InOutSine,
+                    useUnscaledTime: true,
+                    cycles: -1,
+                    cycleMode: CycleMode.Yoyo);
+            }
+            else
+            {
+                _columnBorder.color = _dimColor;
+            }
         }
 
         /// <summary> Set highlight on a range of cells (for multi-size items). </summary>

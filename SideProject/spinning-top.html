@@ -2187,17 +2187,28 @@ const ARENA = {
   bowlForce: 0.0015,              // centripetal acceleration linear coefficient (per px from center)
   bowlForceQuadratic: 0.000003,   // centripetal acceleration quadratic coefficient (per px² from center)
   bowlForceDeadZone: 30,          // no centripetal force within this radius (px)
-  restitution: 0.85,              // collision elasticity (<=1 prevents energy gain)
+  restitution: 0.95,              // collision elasticity (0.9~1.1 = natural bounce, prevents energy gain)
   magnusTangentRatio: 0.3,        // tangential impulse as fraction of normal impulse (Magnus)
+  // ---- Relative-velocity damage scaling ----
+  relVelDmgMin: 0.5,              // relative speed below this → minimum damage multiplier
+  relVelDmgMax: 4.0,              // relative speed above this → maximum damage multiplier
+  relVelDmgMultMin: 0.4,          // damage multiplier at low relative speed (缠斗)
+  relVelDmgMultMax: 2.0,          // damage multiplier at high relative speed (冲撞)
+  relVelKnockMin: 0.6,            // knockback impulse scale at low relative speed
+  relVelKnockMax: 1.8,            // knockback impulse scale at high relative speed
+  minSepSpeed: 1.5,               // minimum separation speed after collision (px/frame)
   // ---- Visual parameters ----
   perspectiveRatio: 0.65,         // ellipse Y-axis compression ratio for bowl perspective
   contourCount: 4,                // number of concentric contour lines drawn on bowl
   // ---- Orbit Resonance Break parameters (方案F) ----
-  orbitDetectFrames: 120,         // consecutive frames in orbit zone before triggering disruption (~2s)
-  get orbitDistanceMin() { return this.radius * 0.05; }, // lower bound of stable orbit distance (~11px)
-  get orbitDistanceMax() { return this.radius * 0.85; }, // upper bound of stable orbit distance (~187px)
-  orbitBreakImpulse: 0.45,        // velocity impulse magnitude applied toward opponent
-  orbitBreakCooldown: 180,        // cooldown frames after disruption before next can trigger (~3s)
+  orbitDetectFrames: 90,          // consecutive frames in orbit zone before triggering disruption (~1.5s)
+  get orbitDistanceMin() { return this.collisionDist * 1.0; }, // lower bound: just above collision dist
+  get orbitDistanceMax() { return this.radius * 0.85; },       // upper bound of stable orbit distance
+  orbitBreakImpulse: 2.2,         // velocity impulse magnitude applied to break orbit
+  orbitBreakCooldown: 120,        // cooldown frames after disruption before next can trigger (~2s)
+  // ---- Adaptive orbit break cooldown by distance ----
+  orbitBreakCooldownFar: 60,      // cooldown when distance > collisionDist*3 (high frequency)
+  orbitBreakCooldownNear: 180,    // cooldown when distance <= collisionDist*1.5 (low frequency)
   // ---- Irregular deflection parameters (菱角效果) ----
   irregularDeflectAngle: 20,      // max random deflection angle in degrees (±) applied after collision
 };
@@ -2380,11 +2391,15 @@ function checkTopCollision(p, e) {
     const impact = relVx * nx + relVy * ny;
 
     if (impact < 0) { // approaching
-      // RPM phase knockback multiplier
-      const eRpmRatio = e.rpm / (e.maxRpm || 1);
-      let knockMult = 1.0;
-      if (eRpmRatio < 0.25) knockMult = 1.5;       // critical phase
-      else if (eRpmRatio < 0.5) knockMult = 1.2;   // danger phase
+      // ---- Relative speed for damage & knockback scaling ----
+      const relSpeed = Math.abs(impact); // relative speed along collision normal
+      // Map relSpeed → knockback multiplier [relVelKnockMin, relVelKnockMax]
+      const relVelT = Math.min(1, Math.max(0,
+        (relSpeed - ARENA.relVelDmgMin) / (ARENA.relVelDmgMax - ARENA.relVelDmgMin)
+      ));
+      const knockMult = ARENA.relVelKnockMin + relVelT * (ARENA.relVelKnockMax - ARENA.relVelKnockMin);
+      // Map relSpeed → damage multiplier [relVelDmgMultMin, relVelDmgMultMax]
+      const dmgMult = ARENA.relVelDmgMultMin + relVelT * (ARENA.relVelDmgMultMax - ARENA.relVelDmgMultMin);
 
       // Spin direction clash modifier
       // Opposite spin (left vs right) = violent knockback
@@ -2458,18 +2473,18 @@ function checkTopCollision(p, e) {
           console.log(`[BattleLog] 🔵 碰撞 [冷却中-跳过伤害] | 已用时: ${elapsed}s | 剩余冷却帧: ${remaining}`);
         }
       } else {
-        // Set cooldown for both tops (方案B: 30 frames ≈ 0.5s)
-        p._collisionCooldown = 30;
-        e._collisionCooldown = 30;
+        // Set cooldown for both tops (10 frames ≈ 0.17s — prevents same-contact double-count)
+        p._collisionCooldown = 10;
+        e._collisionCooldown = 10;
 
-        // RPM damage based on AR part + spin direction modifier
+        // RPM damage based on AR part + spin direction modifier + relative-velocity multiplier
         // Apply dying protection damage reduction (方案A: 40% damage during protection)
         const arDmg = getARDamage();
         const enemyArDmg = getEnemyARDamage();
         const pDmgMult = p._dyingProtection ? 0.4 : 1.0;
         const eDmgMult = e._dyingProtection ? 0.4 : 1.0;
-        p.rpm = Math.max(0, p.rpm - enemyArDmg * spinRpmDrainMult * pDmgMult);
-        e.rpm = Math.max(0, e.rpm - arDmg * spinRpmDrainMult * eDmgMult);
+        p.rpm = Math.max(0, p.rpm - enemyArDmg * spinRpmDrainMult * pDmgMult * dmgMult);
+        e.rpm = Math.max(0, e.rpm - arDmg * spinRpmDrainMult * eDmgMult * dmgMult);
 
         // [BattleLog] Collision event
         if (_battleLogger) {
@@ -2477,10 +2492,15 @@ function checkTopCollision(p, e) {
           if (!_battleLogger.firstCollisionTime) {
             _battleLogger.firstCollisionTime = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(2);
           }
+          // Update soft-control collision trackers (任务6)
+          if (G.battle) {
+            G.battle._lastCollisionTime = performance.now();
+            G.battle._firstCollisionHappened = true;
+          }
           const elapsed = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
           const pProt = p._dyingProtection ? ' 🛡️' : '';
           const eProt = e._dyingProtection ? ' 🛡️' : '';
-          console.log(`[BattleLog] 💥 碰撞 | 已用时: ${elapsed}s | 玩家RPM: ${Math.round(p.rpm)}${pProt} | 敌人RPM: ${Math.round(e.rpm)}${eProt} | 对向自旋: ${oppositeSpins}`);
+          console.log(`[BattleLog] 💥 碰撞 | 已用时: ${elapsed}s | 玩家RPM: ${Math.round(p.rpm)}${pProt} | 敌人RPM: ${Math.round(e.rpm)}${eProt} | 对向自旋: ${oppositeSpins} | 相对速度: ${relSpeed.toFixed(2)} | 伤害倍率: ${dmgMult.toFixed(2)}`);
         }
       }
 
@@ -2507,12 +2527,24 @@ function checkTopCollision(p, e) {
       p.hitFlash = 8;
       e.hitFlash = 8;
 
-      // Separate tops
-      const overlap = collisionDist - dist;
+      // Separate tops — full separation to prevent next-frame re-collision
+      const overlap = collisionDist - dist + 2; // +2px extra gap
       p.x += nx * overlap * 0.5;
       p.y += ny * overlap * 0.5;
       e.x -= nx * overlap * 0.5;
       e.y -= ny * overlap * 0.5;
+
+      // Minimum separation speed guarantee: ensure tops are moving apart at >= minSepSpeed
+      const minSepSpeed = ARENA.minSepSpeed;
+      const relVxAfter = p.vx - e.vx, relVyAfter = p.vy - e.vy;
+      const sepSpeed = relVxAfter * nx + relVyAfter * ny;
+      if (sepSpeed < minSepSpeed) {
+        const boost = (minSepSpeed - sepSpeed) * 0.5;
+        p.vx += nx * boost;
+        p.vy += ny * boost;
+        e.vx -= nx * boost;
+        e.vy -= ny * boost;
+      }
 
       return true;
     }
@@ -2559,51 +2591,165 @@ function checkOrbitResonanceBreak(p, e) {
 
   // Trigger disruption when stable frame threshold is reached
   if (battle._orbitStableFrames >= ARENA.orbitDetectFrames) {
-    // Compute unit vector from each top toward the other
-    const len = dist || 1;
-    const nxPtoE = dx / len;  // direction: player → enemy
-    const nyPtoE = dy / len;
-
-    // Apply mutual impulse toward each other (叠加在现有速度上，不替换)
+    // ---- Task 4: Direction-mixed impulse (60-70% toward + 30-40% random) ----
     const impulse = ARENA.orbitBreakImpulse;
-    p.vx += nxPtoE * impulse;
-    p.vy += nyPtoE * impulse;
-    e.vx -= nxPtoE * impulse;
-    e.vy -= nyPtoE * impulse;
+    const towardProb = 0.65; // 65% chance to push toward each other
+    const deflectMax = 45 * Math.PI / 180; // ±45° deflection on toward-impulse
 
-    // Speed cap: clamp to 1.5× normal max speed to prevent arena escape
-    const maxNormalSpeed = ARENA.radius * ARENA.bowlForce * 60 * 1.5; // heuristic max
-    const speedCapFactor = 1.5;
+    // Helper: compute impulse angle for one top
+    function computeImpulseAngle(fromX, fromY, toX, toY) {
+      if (Math.random() < towardProb) {
+        // Toward the other top, with ±45° random deflection
+        const baseAngle = Math.atan2(toY - fromY, toX - fromX);
+        const deflect = (Math.random() * 2 - 1) * deflectMax;
+        return baseAngle + deflect;
+      } else {
+        // Fully random direction
+        return Math.random() * Math.PI * 2;
+      }
+    }
+
+    const angleP = computeImpulseAngle(p.x, p.y, e.x, e.y);
+    const angleE = computeImpulseAngle(e.x, e.y, p.x, p.y);
+    const dirTypeP = Math.abs(angleP - Math.atan2(e.y - p.y, e.x - p.x)) < deflectMax + 0.01 ? '朝向' : '随机';
+    const dirTypeE = Math.abs(angleE - Math.atan2(p.y - e.y, p.x - e.x)) < deflectMax + 0.01 ? '朝向' : '随机';
+
+    p.vx += Math.cos(angleP) * impulse;
+    p.vy += Math.sin(angleP) * impulse;
+    e.vx += Math.cos(angleE) * impulse;
+    e.vy += Math.sin(angleE) * impulse;
+
+    // Speed cap: clamp to prevent arena escape
+    const hardCap = 9.0;
     const pSpeed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
     const eSpeed = Math.sqrt(e.vx * e.vx + e.vy * e.vy);
-    // Estimate normal max speed from arena parameters (use a generous cap of 6.0 px/frame)
-    const hardCap = 6.0 * speedCapFactor;
-    if (pSpeed > hardCap) {
-      const scale = hardCap / pSpeed;
-      p.vx *= scale;
-      p.vy *= scale;
-    }
-    if (eSpeed > hardCap) {
-      const scale = hardCap / eSpeed;
-      e.vx *= scale;
-      e.vy *= scale;
+    if (pSpeed > hardCap) { const s = hardCap / pSpeed; p.vx *= s; p.vy *= s; }
+    if (eSpeed > hardCap) { const s = hardCap / eSpeed; e.vx *= s; e.vy *= s; }
+
+    // ---- Task 5: Distance-adaptive cooldown ----
+    const collDist = ARENA.collisionDist;
+    let cooldown;
+    if (dist > collDist * 3) {
+      cooldown = ARENA.orbitBreakCooldownFar;   // far: high frequency
+    } else if (dist <= collDist * 1.5) {
+      cooldown = ARENA.orbitBreakCooldownNear;  // near: low frequency
+    } else {
+      cooldown = ARENA.orbitBreakCooldown;      // mid: normal
     }
 
     // Update counters and set cooldown
     battle._orbitBreakCount++;
-    battle._orbitStableFrames = 0;
-    battle._orbitBreakCooldown = ARENA.orbitBreakCooldown;
+    battle._orbitStableFrames = 0;  // reset stable frame counter (Task 5 bug fix)
+    battle._orbitBreakCooldown = cooldown;
 
-    // [BattleLog] Orbit disruption event (需求2.4)
+    // [BattleLog] Orbit disruption event (需求2.6)
     if (_battleLogger) {
       const elapsed = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
-      console.log(`[BattleLog] 🌀 轨道扰动 | 已用时: ${elapsed}s | 双方距离: ${dist.toFixed(1)}px | 冲量: ${impulse} | 稳定帧数: ${ARENA.orbitDetectFrames}`);
+      console.log(`[BattleLog] 🌀 轨道扰动 | 已用时: ${elapsed}s | 双方距离: ${dist.toFixed(1)}px | 冲量: ${impulse} | 方向P: ${dirTypeP} | 方向E: ${dirTypeE} | 冷却帧: ${cooldown}`);
+    }
+  }
+}
+
+// ---- Battle Duration Soft Control (任务6) ----
+// Checks three escalation conditions each frame and fires forced orbit disruptions as needed.
+function checkBattleDurationControl(p, e) {
+  if (!G.battle || !_battleLogger) return;
+
+  const now = performance.now();
+  const elapsed = (now - _battleLogger.startTimestamp) / 1000; // seconds since battle start
+  const battle = G.battle;
+
+  // Helper: fire a forced high-intensity toward-impulse disruption
+  function forcedDisruption(impulseScale, reason) {
+    const impulse = ARENA.orbitBreakImpulse * impulseScale;
+    const deflectMax = 30 * Math.PI / 180; // ±30° (tighter than normal ±45°, more reliable)
+
+    // Both tops pushed toward each other with slight deflection
+    const baseAngleP = Math.atan2(e.y - p.y, e.x - p.x);
+    const baseAngleE = Math.atan2(p.y - e.y, p.x - e.x);
+    const deflectP = (Math.random() * 2 - 1) * deflectMax;
+    const deflectE = (Math.random() * 2 - 1) * deflectMax;
+
+    p.vx += Math.cos(baseAngleP + deflectP) * impulse;
+    p.vy += Math.sin(baseAngleP + deflectP) * impulse;
+    e.vx += Math.cos(baseAngleE + deflectE) * impulse;
+    e.vy += Math.sin(baseAngleE + deflectE) * impulse;
+
+    // Speed cap
+    const hardCap = 9.0;
+    const pSpeed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+    const eSpeed = Math.sqrt(e.vx * e.vx + e.vy * e.vy);
+    if (pSpeed > hardCap) { const s = hardCap / pSpeed; p.vx *= s; p.vy *= s; }
+    if (eSpeed > hardCap) { const s = hardCap / eSpeed; e.vx *= s; e.vy *= s; }
+
+    // Reset orbit stable frames and set cooldown to prevent immediate re-trigger
+    battle._orbitStableFrames = 0;
+    battle._orbitBreakCooldown = ARENA.orbitBreakCooldown;
+    battle._orbitBreakCount++;
+
+    if (_battleLogger) _battleLogger.forcedDisruptionCount++;
+    const elapsedStr = elapsed.toFixed(1);
+    console.log(`[BattleLog] ⚡ 强制扰动 [${reason}] | 已用时: ${elapsedStr}s | 冲量倍率: ${impulseScale}x`);
+  }
+
+  // ---- Condition 1: No first collision within 5s → force high-intensity disruption ----
+  if (!battle._firstCollisionHappened && elapsed >= 5.0) {
+    // Only fire once: mark as happened to prevent repeated triggers
+    // We use _lastCollisionTime = now as a sentinel so this branch won't re-enter
+    battle._firstCollisionHappened = true; // treat forced disruption as "collision happened"
+    battle._lastCollisionTime = now;
+    forcedDisruption(2.0, '5s无首次碰撞');
+    return;
+  }
+
+  // ---- Condition 2: Any 8s gap without collision → force disruption to break stalemate ----
+  if (battle._firstCollisionHappened && battle._lastCollisionTime !== null) {
+    const sinceLastCollision = (now - battle._lastCollisionTime) / 1000;
+    if (sinceLastCollision >= 8.0) {
+      // Update timestamp immediately to prevent repeated triggers every frame
+      battle._lastCollisionTime = now;
+      forcedDisruption(1.5, '8s无碰撞');
+      return;
+    }
+  }
+
+  // ---- Condition 3: Battle > 45s → escalate disruption frequency and impulse ----
+  if (elapsed >= 45.0) {
+    // Escalation: reduce orbit detect frames and boost impulse progressively
+    // Every 10s past 45s, tighten the orbit detect threshold by 20 frames (min 30)
+    const extraSeconds = elapsed - 45.0;
+    const escalationSteps = Math.floor(extraSeconds / 10);
+    const baseDetectFrames = ARENA.orbitDetectFrames; // original threshold
+    const escalatedDetect = Math.max(30, baseDetectFrames - escalationSteps * 20);
+    // Temporarily override: if stable frames exceed escalated threshold, fire immediately
+    if (battle._orbitBreakCooldown <= 0 && battle._orbitStableFrames >= escalatedDetect) {
+      battle._orbitStableFrames = 0;
+      battle._orbitBreakCooldown = Math.max(30, ARENA.orbitBreakCooldown - escalationSteps * 10);
+      battle._orbitBreakCount++;
+      const impulseScale = 1.0 + escalationSteps * 0.3; // +30% per 10s past 45s
+      const impulse = ARENA.orbitBreakImpulse * Math.min(impulseScale, 2.5);
+      const deflectMax = 45 * Math.PI / 180;
+      const baseAngleP = Math.atan2(e.y - p.y, e.x - p.x);
+      const baseAngleE = Math.atan2(p.y - e.y, p.x - e.x);
+      p.vx += Math.cos(baseAngleP + (Math.random() * 2 - 1) * deflectMax) * impulse;
+      p.vy += Math.sin(baseAngleP + (Math.random() * 2 - 1) * deflectMax) * impulse;
+      e.vx += Math.cos(baseAngleE + (Math.random() * 2 - 1) * deflectMax) * impulse;
+      e.vy += Math.sin(baseAngleE + (Math.random() * 2 - 1) * deflectMax) * impulse;
+      const hardCap = 9.0;
+      const pSpeed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+      const eSpeed = Math.sqrt(e.vx * e.vx + e.vy * e.vy);
+      if (pSpeed > hardCap) { const s = hardCap / pSpeed; p.vx *= s; p.vy *= s; }
+      if (eSpeed > hardCap) { const s = hardCap / eSpeed; e.vx *= s; e.vy *= s; }
+      console.log(`[BattleLog] ⚡ 强制扰动 [45s升级] | 已用时: ${elapsed.toFixed(1)}s | 冲量倍率: ${impulseScale.toFixed(1)}x | 检测阈值: ${escalatedDetect}帧`);
     }
   }
 }
 
 function getARDamage() {
-  if (ar && ar.effect && ar.effect.rpmDmg) return ar.effect.rpmDmg;
+  const arObj = G.loadout && G.loadout.ar;
+  const arId = arObj ? (typeof arObj === 'string' ? arObj : arObj.id) : null;
+  const arPart = arId ? PARTS_DB[arId] : null;
+  if (arPart && arPart.effect && arPart.effect.rpmDmg) return arPart.effect.rpmDmg;
   return 120; // default
 }
 
@@ -2867,7 +3013,8 @@ function _initBattleLogger() {
     brakeCount: 0,
     activateCount: 0,
     elementCounts: { fire: 0, ice: 0, poison: 0, thunder: 0, magnet: 0 },
-    lastSnapshotTime: performance.now()
+    lastSnapshotTime: performance.now(),
+    forcedDisruptionCount: 0   // forced disruptions triggered by duration soft control (任务6)
   };
 }
 
@@ -2918,6 +3065,9 @@ function battleLoop(now) {
 
   // Orbit Resonance Break (方案F)
   checkOrbitResonanceBreak(player, enemy);
+
+  // ---- Battle Duration Soft Control (任务6) ----
+  checkBattleDurationControl(player, enemy);
 
   // Enemy AI
   applyEnemyAI(enemy, player, dt);
@@ -3199,7 +3349,7 @@ function endBattleTimeout() {
     console.log(`干预使用: 冲刺 x${_battleLogger.thrustCount} | 制动 x${_battleLogger.brakeCount} | 激活 x${_battleLogger.activateCount}`);
     const ec = _battleLogger.elementCounts;
     console.log(`元素触发: fire x${ec.fire} | ice x${ec.ice} | poison x${ec.poison} | thunder x${ec.thunder} | magnet x${ec.magnet}`);
-    console.log(`轨道扰动触发次数: ${G.battle._orbitBreakCount || 0}`);
+    console.log(`轨道扰动触发次数: ${G.battle._orbitBreakCount || 0} (含强制扰动: ${_battleLogger.forcedDisruptionCount || 0} 次)`);
     console.groupEnd();
   }
 
@@ -3267,7 +3417,7 @@ function endBattle(playerWon, winType) {
     console.log(`干预使用: 冲刺 x${_battleLogger.thrustCount} | 制动 x${_battleLogger.brakeCount} | 激活 x${_battleLogger.activateCount}`);
     const ec = _battleLogger.elementCounts;
     console.log(`元素触发: fire x${ec.fire} | ice x${ec.ice} | poison x${ec.poison} | thunder x${ec.thunder} | magnet x${ec.magnet}`);
-    console.log(`轨道扰动触发次数: ${G.battle._orbitBreakCount || 0}`);
+    console.log(`轨道扰动触发次数: ${G.battle._orbitBreakCount || 0} (含强制扰动: ${_battleLogger.forcedDisruptionCount || 0} 次)`);
     console.groupEnd();
   }
 
@@ -3727,6 +3877,9 @@ function executeLaunch() {
     _orbitStableFrames: 0,   // consecutive frames both tops are in stable orbit zone
     _orbitBreakCooldown: 0,  // cooldown frames remaining after last disruption
     _orbitBreakCount: 0,     // total number of orbit disruptions triggered this battle
+    // ---- Battle duration soft control (任务6) ----
+    _lastCollisionTime: null,   // performance.now() of last real damage collision
+    _firstCollisionHappened: false, // whether any real damage collision has occurred
   };
 
   showScreen('BATTLE');

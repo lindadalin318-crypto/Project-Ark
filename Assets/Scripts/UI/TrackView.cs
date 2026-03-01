@@ -38,6 +38,12 @@ namespace ProjectArk.UI
         /// <summary> Fired when a cell with an equipped item is clicked (for unequip). </summary>
         public event Action<StarChartItemSO> OnCellClicked;
 
+        /// <summary> Fired when the pointer enters a cell that has an equipped item. Params: item, location string. </summary>
+        public event Action<StarChartItemSO, string> OnCellPointerEntered;
+
+        /// <summary> Fired when the pointer exits a cell. </summary>
+        public event Action OnCellPointerExited;
+
         /// <summary> Fired when the track select button is clicked. </summary>
         public event Action<TrackView> OnTrackSelected;
 
@@ -66,13 +72,15 @@ namespace ProjectArk.UI
             if (col == null) return;
             col.Initialize(slotType, typeColor, this);
 
-            // Wire cell click events
+            // Wire cell click and hover events
             var cells = col.Cells;
             for (int i = 0; i < cells.Length; i++)
             {
                 if (cells[i] == null) continue;
                 var captured = cells[i];
                 captured.OnClicked += () => HandleCellClick(captured);
+                captured.OnPointerEntered += (item) => HandleCellPointerEnter(captured, item);
+                captured.OnPointerExited += HandleCellPointerExit;
             }
 
             // SAIL/SAT: inject space-check delegates
@@ -219,13 +227,34 @@ namespace ProjectArk.UI
         }
 
         // =====================================================================
-        // Cell click
+        // Cell click & hover
         // =====================================================================
 
         private void HandleCellClick(SlotCellView cell)
         {
             if (cell.DisplayedItem != null)
                 OnCellClicked?.Invoke(cell.DisplayedItem);
+        }
+
+        private void HandleCellPointerEnter(SlotCellView cell, StarChartItemSO item)
+        {
+            if (item == null) return;
+            string trackName = _track?.Id == WeaponTrack.TrackId.Primary ? "PRIMARY" : "SECONDARY";
+            string typeName = cell.SlotType switch
+            {
+                SlotType.Core      => "CORE",
+                SlotType.Prism     => "PRISM",
+                SlotType.LightSail => "SAIL",
+                SlotType.Satellite => "SAT",
+                _                  => string.Empty
+            };
+            string location = $"{trackName} · {typeName}";
+            OnCellPointerEntered?.Invoke(item, location);
+        }
+
+        private void HandleCellPointerExit()
+        {
+            OnCellPointerExited?.Invoke();
         }
 
         // =====================================================================

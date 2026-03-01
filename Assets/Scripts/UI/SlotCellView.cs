@@ -62,6 +62,9 @@ namespace ProjectArk.UI
         /// <summary> The TrackView that owns this cell. </summary>
         public TrackView OwnerTrack { get; set; }
 
+        /// <summary> The TypeColumn that owns this cell. Used for column-level drop preview. </summary>
+        public TypeColumn OwnerColumn { get; set; }
+
         /// <summary> True when this cell is displaying an item (not empty/spanned). </summary>
         public bool IsOccupied => DisplayedItem != null;
 
@@ -316,15 +319,22 @@ namespace ProjectArk.UI
                 mgr.DropTargetValid = valid || isReplace; // both valid and replace are "accept"
                 mgr.DropTargetIsReplace = isReplace;
 
-                // Update ghost drop state
+                // Determine preview state
+                DropPreviewState previewState;
                 if (!typeMatch)
-                    mgr.UpdateGhostDropState(DropPreviewState.Invalid);
+                    previewState = DropPreviewState.Invalid;
                 else if (isReplace)
-                    mgr.UpdateGhostDropState(DropPreviewState.Replace);
+                    previewState = DropPreviewState.Replace;
                 else if (valid)
-                    mgr.UpdateGhostDropState(DropPreviewState.Valid);
+                    previewState = DropPreviewState.Valid;
                 else
-                    mgr.UpdateGhostDropState(DropPreviewState.Invalid);
+                    previewState = DropPreviewState.Invalid;
+
+                // Update ghost drop state
+                mgr.UpdateGhostDropState(previewState);
+
+                // Update column-level drop preview highlight
+                OwnerColumn?.SetDropPreview(previewState);
 
                 // Highlight this cell and adjacent cells for SlotSize > 1
                 if (OwnerTrack != null)
@@ -390,6 +400,9 @@ namespace ProjectArk.UI
                 mgr.DropTargetValid = false;
                 mgr.DropTargetIsReplace = false;
                 mgr.UpdateGhostDropState(DropPreviewState.None);
+
+                // Restore column preview to None (candidate pulse will resume)
+                OwnerColumn?.SetDropPreview(DropPreviewState.None);
             }
         }
 

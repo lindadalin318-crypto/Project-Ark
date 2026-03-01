@@ -321,6 +321,7 @@ Assets/
 | uGUI Mask 裁剪所有子内容 | `Color.clear`（alpha=0）作为 Mask Image 颜色，stencil buffer 全透明导致子节点全被裁剪 | Mask Image 颜色必须用 `new Color(1,1,1,1)` 或 alpha≥1/255；用 `showMaskGraphic=false` 隐藏视觉，而非 `Color.clear` |
 | Unity 内部类 MonoBehaviour GUID 不稳定 | nested class 的 fileID 由类名哈希计算，跨版本/文件移动后哈希失配，Inspector 显示"script cannot be loaded" | MonoBehaviour 必须是顶级类（一文件一类），禁止将 MonoBehaviour 写成其他类的内部类 |
 | 场景序列化 fileID 错误导致字段 Missing | 手写或复制场景文件时 fileID 填写错误（如填 `100100000` 而非实际 64 位 ID），运行时反序列化为 null，守卫代码静默跳过不报错 | 修改 `.unity`/`.prefab` 序列化文件时，fileID 必须从 Unity 生成的文件中复制，不可手写；null 守卫应配合 `Debug.LogError` 而非静默 return |
+| **uGUI 面板禁止用 `SetActive` 控制显隐** | `SetActive(false)` 会推迟 `Awake()` 执行；Editor 工具脚本调用后 inactive 状态被序列化进场景；Play Mode 启动时面板已是 inactive，首次 `Open()` 触发 `SetActive(true)` 后 `Awake()` 才执行，若 `Awake()` 内有 `SetActive(false)` 则面板被瞬间关闭，三个副作用连锁 | **uGUI 面板统一用 `CanvasGroup`（alpha + interactable + blocksRaycasts）控制显隐，GameObject 始终保持 active**；`Awake()` 中只初始化 CanvasGroup 状态，禁止调用 `SetActive(false)` |
 
 ---
 

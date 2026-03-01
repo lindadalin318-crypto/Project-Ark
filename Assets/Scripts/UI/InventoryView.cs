@@ -29,6 +29,12 @@ namespace ProjectArk.UI
         /// <summary> Fired when a player clicks an item in the inventory. </summary>
         public event Action<StarChartItemSO> OnItemSelected;
 
+        /// <summary> Fired when the pointer enters an inventory item card. </summary>
+        public event Action<StarChartItemSO> OnItemPointerEntered;
+
+        /// <summary> Fired when the pointer exits an inventory item card. </summary>
+        public event Action OnItemPointerExited;
+
         private StarChartInventorySO _inventory;
         private StarChartItemType? _activeFilter;
         private readonly List<InventoryItemView> _itemViews = new();
@@ -114,6 +120,8 @@ namespace ProjectArk.UI
                 bool equipped = _isEquippedCheck?.Invoke(item) ?? false;
                 view.Setup(item, equipped);
                 view.OnClicked += HandleItemClicked;
+                view.OnPointerEntered += HandleItemPointerEntered;
+                view.OnPointerExited += HandleItemPointerExited;
                 view.gameObject.SetActive(true);
                 _itemViews.Add(view);
                 count++;
@@ -134,13 +142,27 @@ namespace ProjectArk.UI
             OnItemSelected?.Invoke(item);
         }
 
+        private void HandleItemPointerEntered(StarChartItemSO item)
+        {
+            OnItemPointerEntered?.Invoke(item);
+        }
+
+        private void HandleItemPointerExited()
+        {
+            OnItemPointerExited?.Invoke();
+        }
+
         private void ClearViews()
         {
             // Unsubscribe events from tracked views
             for (int i = 0; i < _itemViews.Count; i++)
             {
                 if (_itemViews[i] != null)
+                {
                     _itemViews[i].OnClicked -= HandleItemClicked;
+                    _itemViews[i].OnPointerEntered -= HandleItemPointerEntered;
+                    _itemViews[i].OnPointerExited -= HandleItemPointerExited;
+                }
             }
             _itemViews.Clear();
 

@@ -105,9 +105,15 @@ namespace ProjectArk.UI
             if (_sourceCanvasGroup != null)
                 _sourceCanvasGroup.alpha = 0.4f;
 
-            // Show ghost
+            // Show ghost with shape-aware sizing
             if (_ghostView != null)
+            {
                 _ghostView.Show(payload.Item);
+                _ghostView.SetShape(payload.Item.SlotSize);
+            }
+
+            // Suppress tooltip during drag
+            _panel?.GetComponentInChildren<ItemTooltipView>(true)?.SetDragSuppressed(true);
 
             // Highlight all TypeColumns that match the dragged item's type
             HighlightMatchingColumns(payload.Item, true);
@@ -198,6 +204,9 @@ namespace ProjectArk.UI
 
             _panel.RefreshAllViews();
             _panel.SelectAndShowItem(item);
+
+            // Play snap-in animation on the newly placed item's cell
+            PlaySnapInAnimation(item);
 
             // Trigger fly-back animations for evicted items
             TriggerFlyBackAnimations();
@@ -343,6 +352,40 @@ namespace ProjectArk.UI
         }
 
         /// <summary>
+        /// Play snap-in animation (scale 1.18 → 0.96 → 1.0) on the cell that now holds the dropped item.
+        /// Called after RefreshAllViews so the cell already shows the new item.
+        /// </summary>
+        private void PlaySnapInAnimation(StarChartItemSO item)
+        {
+            if (_panel == null || item == null) return;
+
+            // Find the SlotCellView that now displays this item
+            var trackViews = _panel.GetComponentsInChildren<TrackView>(true);
+            foreach (var tv in trackViews)
+            {
+                foreach (var cell in tv.GetAllCells())
+                {
+                    if (cell.DisplayedItem == item)
+                    {
+                        var rt = cell.GetComponent<RectTransform>();
+                        if (rt == null) continue;
+
+                        // snap-in: scale 1.18 → 0.96 → 1.0
+                        PrimeTween.Tween.Scale(rt, endValue: Vector3.one * 1.18f,
+                            duration: 0.06f, ease: PrimeTween.Ease.OutQuad, useUnscaledTime: true)
+                            .OnComplete(() =>
+                                PrimeTween.Tween.Scale(rt, endValue: Vector3.one * 0.96f,
+                                    duration: 0.05f, ease: PrimeTween.Ease.InQuad, useUnscaledTime: true)
+                                    .OnComplete(() =>
+                                        PrimeTween.Tween.Scale(rt, endValue: Vector3.one,
+                                            duration: 0.05f, ease: PrimeTween.Ease.OutBack, useUnscaledTime: true)));
+                        return; // Only animate the primary cell
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Trigger fly-back animations for all items evicted during the last forced replace.
         /// </summary>
         private void TriggerFlyBackAnimations()
@@ -396,6 +439,9 @@ namespace ProjectArk.UI
             if (CurrentPayload != null)
                 HighlightMatchingColumns(CurrentPayload.Item, false);
 
+            // Restore tooltip suppression
+            _panel?.GetComponentInChildren<ItemTooltipView>(true)?.SetDragSuppressed(false);
+
             IsDragging = false;
             CurrentPayload = null;
             DropTargetTrack = null;
@@ -406,7 +452,8 @@ namespace ProjectArk.UI
 
         /// <summary>
         /// Highlight (or clear) all TypeColumns in both TrackViews that match the given item's type.
-        /// Called on drag begin (highlight=true) and drag end/cancel (highlight=false).
+        /// On drag begin: shows breathing pulse candidate highlight.
+        /// On drag end/cancel: clears all candidate highlights.
         /// </summary>
         private void HighlightMatchingColumns(StarChartItemSO item, bool highlight)
         {
@@ -422,7 +469,7 @@ namespace ProjectArk.UI
                 _                           => SlotType.Core
             };
 
-            // Find all TrackViews in the panel and highlight/clear the matching column
+            // Find all TrackViews in the panel and set/clear candidate highlight
             var trackViews = _panel.GetComponentsInChildren<TrackView>(true);
             foreach (var tv in trackViews)
             {
@@ -430,9 +477,9 @@ namespace ProjectArk.UI
                 if (col == null) continue;
 
                 if (highlight)
-                    col.SetDropHighlight(true);
+                    col.SetDropCandidate(true);
                 else
-                    col.ClearDropHighlight();
+                    col.SetDropCandidate(false);
             }
         }
 

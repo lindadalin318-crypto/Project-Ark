@@ -29,6 +29,9 @@ namespace ProjectArk.UI
         [Header("Drag & Drop")]
         [SerializeField] private DragDropManager _dragDropManager;
 
+        [Header("Tooltip")]
+        [SerializeField] private ItemTooltipView _tooltipView;
+
         [Header("Status Bar")]
         [SerializeField] private StatusBarView _statusBar;
 
@@ -39,11 +42,76 @@ namespace ProjectArk.UI
         private StarChartInventorySO _inventory;
         private WeaponTrack _selectedTrack;
 
+        // Tracks whether the panel is logically open (replaces gameObject.activeSelf check)
+        private bool _isOpen = false;
+
         /// <summary> Exposes the status bar for DragDropManager to show messages. </summary>
         public StatusBarView StatusBar => _statusBar;
 
         /// <summary> Exposes the controller for DragDropManager SAIL/SAT operations. </summary>
         public StarChartController Controller => _controller;
+
+        // =====================================================================
+        // Tooltip API
+        // =====================================================================
+
+        /// <summary>
+        /// Show tooltip for the given item. Called by InventoryItemView and SlotCellView.
+        /// </summary>
+        public void ShowTooltip(StarChartItemSO item, bool isEquipped, string equippedLocation = "")
+        {
+            _tooltipView?.ShowTooltip(item, isEquipped, equippedLocation);
+        }
+
+        /// <summary> Hide the tooltip immediately. </summary>
+        public void HideTooltip()
+        {
+            _tooltipView?.HideTooltip();
+        }
+
+        /// <summary>
+        /// Build the equipped location string for a given item.
+        /// e.g. "PRIMARY · CORE" or "SECONDARY · PRISM".
+        /// </summary>
+        public string GetEquippedLocation(StarChartItemSO item)
+        {
+            if (_controller == null) return string.Empty;
+
+            string trackName = string.Empty;
+            string typeName = string.Empty;
+
+            switch (item)
+            {
+                case StarCoreSO core:
+                    typeName = "CORE";
+                    if (ListContains(_controller.PrimaryTrack.CoreLayer.Items, core))
+                        trackName = "PRIMARY";
+                    else if (ListContains(_controller.SecondaryTrack.CoreLayer.Items, core))
+                        trackName = "SECONDARY";
+                    break;
+
+                case PrismSO prism:
+                    typeName = "PRISM";
+                    if (ListContains(_controller.PrimaryTrack.PrismLayer.Items, prism))
+                        trackName = "PRIMARY";
+                    else if (ListContains(_controller.SecondaryTrack.PrismLayer.Items, prism))
+                        trackName = "SECONDARY";
+                    break;
+
+                case LightSailSO:
+                    typeName = "SAIL";
+                    trackName = "SHARED";
+                    break;
+
+                case SatelliteSO:
+                    typeName = "SAT";
+                    trackName = "SHARED";
+                    break;
+            }
+
+            if (string.IsNullOrEmpty(trackName)) return string.Empty;
+            return $"{trackName} · {typeName}";
+        }
 
         // Currently selected item in the detail panel
         private StarChartItemSO _selectedItem;
@@ -60,16 +128,16 @@ namespace ProjectArk.UI
 
         private void Awake()
         {
-            // Ensure panel starts fully hidden and non-interactive.
-            // UICanvasBuilder also calls SetActive(false) after building,
-            // but this Awake guard covers any scene-saved state.
+            // Ensure panel starts fully hidden and non-interactive via CanvasGroup.
+            // Do NOT call SetActive(false) here — that would prevent Awake from running
+            // on first Play Mode entry and break the C-key toggle.
             if (_panelCanvasGroup != null)
             {
                 _panelCanvasGroup.alpha = 0f;
                 _panelCanvasGroup.interactable = false;
                 _panelCanvasGroup.blocksRaycasts = false;
             }
-            gameObject.SetActive(false);
+            _isOpen = false;
         }
 
         // =====================================================================
@@ -88,6 +156,8 @@ namespace ProjectArk.UI
                 _primaryTrackView.Bind(controller.PrimaryTrack, controller);
                 _primaryTrackView.OnTrackSelected += HandleTrackSelected;
                 _primaryTrackView.OnCellClicked += HandleCellClicked;
+                _primaryTrackView.OnCellPointerEntered += HandleCellPointerEntered;
+                _primaryTrackView.OnCellPointerExited += HandleCellPointerExited;
             }
 
             if (_secondaryTrackView != null)
@@ -95,6 +165,8 @@ namespace ProjectArk.UI
                 _secondaryTrackView.Bind(controller.SecondaryTrack, controller);
                 _secondaryTrackView.OnTrackSelected += HandleTrackSelected;
                 _secondaryTrackView.OnCellClicked += HandleCellClicked;
+                _secondaryTrackView.OnCellPointerEntered += HandleCellPointerEntered;
+                _secondaryTrackView.OnCellPointerExited += HandleCellPointerExited;
             }
 
             // Bind Loadout switcher
@@ -122,6 +194,13 @@ namespace ProjectArk.UI
             // Initialize drag-and-drop manager
             if (_dragDropManager != null)
                 _dragDropManager.Bind(this, controller);
+
+            // Bind inventory item hover events to tooltip
+            if (_inventoryView != null)
+            {
+                _inventoryView.OnItemPointerEntered += HandleInventoryItemHover;
+                _inventoryView.OnItemPointerExited += HandleInventoryItemHoverExit;
+            }
         }
 
         // =====================================================================
@@ -131,7 +210,7 @@ namespace ProjectArk.UI
         /// <summary> Open the panel and refresh all views. </summary>
         public void Open()
         {
-            gameObject.SetActive(true);
+            _isOpen = true;
             _selectedItem = null;
             RefreshAll();
             OnOpened?.Invoke();
@@ -204,19 +283,19 @@ namespace ProjectArk.UI
 
                 seq.ChainCallback(() =>
                 {
-                    gameObject.SetActive(false);
+                    _isOpen = false;
                     OnClosed?.Invoke();
                 });
             }
             else
             {
-                gameObject.SetActive(false);
+                _isOpen = false;
                 OnClosed?.Invoke();
             }
         }
 
         /// <summary> Is the panel currently visible? </summary>
-        public bool IsOpen => gameObject.activeSelf;
+        public bool IsOpen => _isOpen;
 
         // =====================================================================
         // Refresh
@@ -291,6 +370,30 @@ namespace ProjectArk.UI
         // =====================================================================
         // Event handlers
         // =====================================================================
+
+        private void HandleCellPointerEntered(StarChartItemSO item, string location)
+        {
+            if (item == null) return;
+            ShowTooltip(item, true, location);
+        }
+
+        private void HandleCellPointerExited()
+        {
+            HideTooltip();
+        }
+
+        private void HandleInventoryItemHover(StarChartItemSO item)
+        {
+            if (item == null) return;
+            bool equipped = IsItemEquipped(item);
+            string location = equipped ? GetEquippedLocation(item) : string.Empty;
+            ShowTooltip(item, equipped, location);
+        }
+
+        private void HandleInventoryItemHoverExit()
+        {
+            HideTooltip();
+        }
 
         private void HandleLoadoutChanged(int index)
         {
@@ -475,16 +578,24 @@ namespace ProjectArk.UI
             {
                 _primaryTrackView.OnTrackSelected -= HandleTrackSelected;
                 _primaryTrackView.OnCellClicked -= HandleCellClicked;
+                _primaryTrackView.OnCellPointerEntered -= HandleCellPointerEntered;
+                _primaryTrackView.OnCellPointerExited -= HandleCellPointerExited;
             }
 
             if (_secondaryTrackView != null)
             {
                 _secondaryTrackView.OnTrackSelected -= HandleTrackSelected;
                 _secondaryTrackView.OnCellClicked -= HandleCellClicked;
+                _secondaryTrackView.OnCellPointerEntered -= HandleCellPointerEntered;
+                _secondaryTrackView.OnCellPointerExited -= HandleCellPointerExited;
             }
 
             if (_inventoryView != null)
+            {
                 _inventoryView.OnItemSelected -= HandleInventoryItemSelected;
+                _inventoryView.OnItemPointerEntered -= HandleInventoryItemHover;
+                _inventoryView.OnItemPointerExited -= HandleInventoryItemHoverExit;
+            }
 
             if (_itemDetailView != null)
                 _itemDetailView.OnActionClicked -= HandleActionClicked;
