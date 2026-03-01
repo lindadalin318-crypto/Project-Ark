@@ -75,7 +75,7 @@ namespace ProjectArk.UI
                 out var toLocal);
 
             // Animate: move + shrink + fade out over 350ms
-            var seq = Sequence.Create()
+            var seq = Sequence.Create(useUnscaledTime: true)
                 .Group(Tween.LocalPosition(cloneRect,
                     endValue: new Vector3(toLocal.x, toLocal.y, 0f),
                     duration: 0.35f, ease: Ease.InQuad, useUnscaledTime: true))

@@ -38,10 +38,25 @@ namespace ProjectArk.UI
 
         private void Awake()
         {
+            if (_inputActions == null)
+            {
+                Debug.LogError("[UIManager] _inputActions is null! Please assign ShipActions asset in Inspector.");
+                return;
+            }
+
             var shipMap = _inputActions.FindActionMap("Ship");
+            if (shipMap == null)
+            {
+                Debug.LogError("[UIManager] 'Ship' action map not found in InputActionAsset.");
+                return;
+            }
+
             _toggleStarChartAction = shipMap.FindAction("ToggleStarChart");
-            _fireAction = shipMap.FindAction("Fire");
-            _fireSecondaryAction = shipMap.FindAction("FireSecondary");
+            _fireAction            = shipMap.FindAction("Fire");
+            _fireSecondaryAction   = shipMap.FindAction("FireSecondary");
+
+            // Ship map must be enabled for keyboard/gamepad input to fire
+            shipMap.Enable();
 
             // Auto-configure InputSystemUIInputModule with UI action map references
             ConfigureUIInputModule();
@@ -95,10 +110,13 @@ namespace ProjectArk.UI
                 _healthBarHUD.Bind(shipHealth);
 
             // 绑定星图面板
+            // NOTE: Do NOT call SetActive(false) here — StarChartPanel.Awake() already
+            // hides itself. Calling SetActive(false) on a child of this Canvas could
+            // trigger UIManager.OnDisable(), which would unsubscribe _toggleStarChartAction
+            // and permanently break the C-key toggle.
             if (_starChartPanel != null && controller != null && _playerInventory != null)
             {
                 _starChartPanel.Bind(controller, _playerInventory);
-                _starChartPanel.gameObject.SetActive(false);
             }
             else if (controller == null)
             {
@@ -111,7 +129,9 @@ namespace ProjectArk.UI
         private void OnEnable()
         {
             if (_toggleStarChartAction != null)
+            {
                 _toggleStarChartAction.performed += OnToggleStarChartPerformed;
+            }
         }
 
         private void OnDisable()
@@ -127,7 +147,6 @@ namespace ProjectArk.UI
                 _starChartPanel?.Close();
                 Time.timeScale = 1f;
                 _fireAction?.Enable();
-                _fireSecondaryAction?.Enable();
             }
         }
 
@@ -153,14 +172,15 @@ namespace ProjectArk.UI
             _fireAction?.Disable();
             _fireSecondaryAction?.Disable();
 
-            // 暂停游戏
+            // Open panel BEFORE pausing — Tweens must be created while timeScale > 0
+            // (all panel tweens use useUnscaledTime:true so they animate correctly after pause).
+            _starChartPanel?.Open();
+
+            // Pause after panel is open.
             Time.timeScale = 0f;
 
             // Trigger enter-weaving visual/audio transition (runs on unscaled time).
             _weavingTransition?.EnterWeavingState();
-
-            // 打开面板
-            _starChartPanel?.Open();
         }
 
         private void ClosePanel()

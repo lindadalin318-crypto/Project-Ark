@@ -1,667 +1,4 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SpinningTop Roguelite</title>
-<style>
-  /* ===== RESET & BASE ===== */
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body {
-    width: 100%; height: 100%;
-    background: #0a0a0f;
-    color: #e0e0ff;
-    font-family: 'Courier New', Courier, monospace;
-    overflow: hidden;
-    user-select: none;
-  }
 
-  /* ===== MAIN CONTAINER ===== */
-  #app {
-    width: 1280px; height: 720px;
-    position: relative;
-    margin: 0 auto;
-    overflow: hidden;
-    background: #0d0d1a;
-    border: 1px solid #1a1a3a;
-  }
-  @media (max-width: 1280px) {
-    #app { transform-origin: top left; }
-  }
-
-  /* ===== GLOBAL STATUS BAR ===== */
-  #status-bar {
-    position: absolute; top: 0; left: 0; right: 0;
-    height: 48px;
-    background: linear-gradient(180deg, #0d0d2a 0%, #0a0a1a 100%);
-    border-bottom: 1px solid #2a2a5a;
-    display: flex; align-items: center; padding: 0 20px;
-    gap: 30px; z-index: 100;
-  }
-  #status-bar .stat-item {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 14px; color: #8888cc;
-  }
-  #status-bar .stat-item .label { color: #5555aa; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
-  #status-bar .stat-item .value { color: #ccccff; font-size: 16px; font-weight: bold; }
-  #hp-hearts { display: flex; gap: 4px; }
-  .heart { font-size: 18px; }
-  .heart.full { color: #ff4466; }
-  .heart.empty { color: #442233; }
-  #gold-value { color: #ffcc44; }
-  #floor-value { color: #44ccff; }
-
-  /* ===== SCREEN BASE ===== */
-  .screen {
-    position: absolute;
-    top: 48px; left: 0; right: 0; bottom: 0;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-  .screen.active { display: flex; }
-
-  /* ===== TITLE SCREEN ===== */
-  #screen-title {
-    background: radial-gradient(ellipse at center, #0d0d2a 0%, #050508 100%);
-  }
-  #screen-title .game-title {
-    font-size: 64px; font-weight: bold;
-    color: #fff;
-    text-shadow: 0 0 20px #6644ff, 0 0 40px #4422cc, 0 0 80px #2211aa;
-    letter-spacing: 4px;
-    margin-bottom: 8px;
-  }
-  #screen-title .game-subtitle {
-    font-size: 18px; color: #6655cc;
-    letter-spacing: 8px; text-transform: uppercase;
-    margin-bottom: 60px;
-  }
-  #screen-title .btn-start {
-    padding: 16px 60px; font-size: 20px;
-    background: linear-gradient(135deg, #3322aa, #6644ff);
-    border: 1px solid #8866ff;
-    color: #fff; cursor: pointer;
-    letter-spacing: 3px; text-transform: uppercase;
-    transition: all 0.2s;
-    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
-  }
-  #screen-title .btn-start:hover {
-    background: linear-gradient(135deg, #4433bb, #7755ff);
-    box-shadow: 0 0 20px #6644ff88;
-    transform: translateY(-2px);
-  }
-  .title-decoration {
-    position: absolute; width: 100%; height: 100%;
-    pointer-events: none; overflow: hidden;
-  }
-  .title-decoration canvas { width: 100%; height: 100%; }
-
-  /* ===== MAP SCREEN ===== */
-  #screen-map {
-    background: #0a0a14;
-    padding: 20px;
-  }
-  #screen-map h2 {
-    font-size: 22px; color: #8877ff;
-    letter-spacing: 3px; text-transform: uppercase;
-    margin-bottom: 20px;
-    text-shadow: 0 0 10px #6644ff66;
-  }
-  #map-container {
-    width: 900px; height: 520px;
-    background: #080812;
-    border: 1px solid #1a1a3a;
-    position: relative;
-    overflow: hidden;
-  }
-  #map-canvas { width: 100%; height: 100%; }
-
-  /* ===== PREP SCREEN ===== */
-  #screen-prep {
-    background: #0a0a14;
-    padding: 20px;
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 20px;
-  }
-  .prep-panel {
-    background: #0d0d20;
-    border: 1px solid #1a1a3a;
-    border-radius: 4px;
-    padding: 16px;
-  }
-  .prep-panel h3 {
-    font-size: 13px; color: #6655cc;
-    letter-spacing: 2px; text-transform: uppercase;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #1a1a3a;
-  }
-  #intel-panel { width: 280px; min-height: 300px; }
-  #loadout-panel { width: 340px; min-height: 400px; }
-  #inventory-panel { width: 280px; min-height: 400px; }
-  .intel-item {
-    display: flex; align-items: flex-start; gap: 8px;
-    padding: 8px; margin-bottom: 6px;
-    background: #0a0a1a; border: 1px solid #1a1a2a;
-    border-radius: 3px; font-size: 13px; color: #aaaadd;
-  }
-  .intel-item .intel-icon { font-size: 16px; flex-shrink: 0; }
-  .part-slot {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px; margin-bottom: 8px;
-    background: #080818; border: 1px solid #1a1a3a;
-    border-radius: 3px; cursor: pointer;
-    transition: border-color 0.2s;
-  }
-  .part-slot:hover { border-color: #4433aa; }
-  .part-slot .slot-label {
-    font-size: 10px; color: #5555aa;
-    text-transform: uppercase; letter-spacing: 1px;
-    width: 60px; flex-shrink: 0;
-  }
-  .part-slot .slot-content {
-    flex: 1; font-size: 13px; color: #ccccff;
-  }
-  .part-slot .slot-content.empty { color: #333355; font-style: italic; }
-  .part-slot .slot-rarity { font-size: 10px; }
-  .rarity-common { color: #888899; }
-  .rarity-rare { color: #4488ff; }
-  .rarity-epic { color: #aa44ff; }
-  .rarity-legendary { color: #ffaa00; }
-
-  /* ===== SHOP SCREEN ===== */
-  #screen-shop {
-    background: #0a0a14;
-    padding: 20px;
-    flex-direction: column;
-    align-items: center;
-  }
-  #screen-shop h2 {
-    font-size: 22px; color: #ffcc44;
-    letter-spacing: 3px; text-transform: uppercase;
-    margin-bottom: 20px;
-  }
-  #shop-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    width: 800px;
-    margin-bottom: 20px;
-  }
-  .shop-item {
-    background: #0d0d20; border: 1px solid #1a1a3a;
-    border-radius: 4px; padding: 14px;
-    cursor: pointer; transition: all 0.2s;
-    position: relative;
-  }
-  .shop-item:hover { border-color: #4433aa; background: #10102a; }
-  .shop-item.cant-afford { opacity: 0.5; cursor: not-allowed; }
-  .shop-item .item-name { font-size: 14px; color: #ccccff; margin-bottom: 4px; }
-  .shop-item .item-type { font-size: 11px; color: #5555aa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
-  .shop-item .item-desc { font-size: 12px; color: #8888aa; line-height: 1.4; margin-bottom: 8px; }
-  .shop-item .item-price { font-size: 14px; color: #ffcc44; font-weight: bold; }
-  .shop-item .item-rarity-badge {
-    position: absolute; top: 8px; right: 8px;
-    font-size: 10px; padding: 2px 6px;
-    border-radius: 2px; text-transform: uppercase; letter-spacing: 1px;
-  }
-  .badge-common { background: #222233; color: #888899; }
-  .badge-rare { background: #112244; color: #4488ff; }
-  .badge-epic { background: #220044; color: #aa44ff; }
-  .badge-legendary { background: #332200; color: #ffaa00; }
-  #shop-actions { display: flex; gap: 12px; }
-
-  /* ===== LAUNCH SCREEN ===== */
-  #screen-launch {
-    background: #080812;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-  }
-  #launch-canvas-wrap {
-    position: relative; width: 500px; height: 500px;
-  }
-  #launch-canvas { width: 100%; height: 100%; }
-  #power-gauge-wrap {
-    width: 500px; display: flex; flex-direction: column; align-items: center; gap: 8px;
-  }
-  #power-gauge-label { font-size: 13px; color: #8888cc; letter-spacing: 2px; text-transform: uppercase; }
-  #power-gauge-bar-bg {
-    width: 100%; height: 28px;
-    background: #0a0a1a; border: 1px solid #1a1a3a;
-    border-radius: 2px; overflow: hidden; position: relative;
-  }
-  #power-gauge-bar {
-    height: 100%; width: 0%;
-    background: linear-gradient(90deg, #2244aa, #4466ff);
-    transition: background 0.1s;
-  }
-  #power-gauge-bar.perfect { background: linear-gradient(90deg, #aa8800, #ffcc00); }
-  #power-gauge-bar.good { background: linear-gradient(90deg, #2244aa, #4466ff); }
-  #power-gauge-bar.normal { background: linear-gradient(90deg, #224422, #44aa44); }
-  #power-gauge-bar.miss { background: linear-gradient(90deg, #442222, #aa4444); }
-  #power-gauge-value { font-size: 20px; color: #ccccff; font-weight: bold; }
-
-  /* ===== BATTLE SCREEN ===== */
-  #screen-battle {
-    background: #080812;
-    flex-direction: row;
-    align-items: flex-start;
-    padding: 10px;
-    gap: 10px;
-  }
-  #battle-left { width: 200px; display: flex; flex-direction: column; gap: 10px; }
-  #battle-canvas-wrap { position: relative; flex: 1; height: 520px; }
-  #arena-canvas { width: 100%; height: 100%; }
-  #battle-right { width: 200px; display: flex; flex-direction: column; gap: 10px; }
-  .rpm-display {
-    background: #0d0d20; border: 1px solid #1a1a3a;
-    border-radius: 4px; padding: 12px;
-  }
-  .rpm-display .rpm-label { font-size: 11px; color: #5555aa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
-  .rpm-display .rpm-name { font-size: 13px; color: #ccccff; margin-bottom: 6px; }
-  .rpm-bar-bg { width: 100%; height: 12px; background: #0a0a1a; border-radius: 2px; overflow: hidden; }
-  .rpm-bar { height: 100%; border-radius: 2px; transition: width 0.1s; }
-  .rpm-bar.player { background: linear-gradient(90deg, #22aa44, #44ff88); }
-  .rpm-bar.enemy { background: linear-gradient(90deg, #aa2222, #ff4444); }
-  .rpm-value { font-size: 12px; color: #8888aa; margin-top: 4px; text-align: right; }
-  #intervention-panel {
-    background: #0d0d20; border: 1px solid #1a1a3a;
-    border-radius: 4px; padding: 12px;
-  }
-  #intervention-panel h4 { font-size: 11px; color: #5555aa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-  .btn-intervention {
-    width: 100%; padding: 8px; margin-bottom: 6px;
-    background: #0a0a1a; border: 1px solid #2a2a5a;
-    color: #8888cc; font-size: 12px; cursor: pointer;
-    border-radius: 2px; transition: all 0.2s;
-    font-family: inherit; text-align: left;
-  }
-  .btn-intervention:hover:not(:disabled) { border-color: #4433aa; color: #ccccff; background: #10102a; }
-  .btn-intervention:disabled { opacity: 0.4; cursor: not-allowed; }
-
-  /* ===== SETTLEMENT SCREEN ===== */
-  #screen-settlement {
-    background: #0a0a14;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-  }
-  #settlement-title { font-size: 36px; font-weight: bold; letter-spacing: 4px; }
-  #settlement-title.victory { color: #44ff88; text-shadow: 0 0 20px #22aa4488; }
-  #settlement-title.defeat { color: #ff4444; text-shadow: 0 0 20px #aa222288; }
-  #settlement-details {
-    background: #0d0d20; border: 1px solid #1a1a3a;
-    border-radius: 4px; padding: 20px; width: 500px;
-  }
-  .settlement-row {
-    display: flex; justify-content: space-between;
-    padding: 8px 0; border-bottom: 1px solid #1a1a2a;
-    font-size: 14px;
-  }
-  .settlement-row .s-label { color: #8888aa; }
-  .settlement-row .s-value { color: #ccccff; font-weight: bold; }
-  #reward-choices { display: flex; gap: 12px; margin-top: 10px; }
-  .reward-card {
-    width: 160px; padding: 14px;
-    background: #0d0d20; border: 1px solid #1a1a3a;
-    border-radius: 4px; cursor: pointer; transition: all 0.2s;
-    text-align: center;
-  }
-  .reward-card:hover { border-color: #4433aa; background: #10102a; transform: translateY(-3px); }
-  .reward-card .reward-name { font-size: 14px; color: #ccccff; margin-bottom: 6px; }
-  .reward-card .reward-type { font-size: 11px; color: #5555aa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-  .reward-card .reward-desc { font-size: 12px; color: #8888aa; line-height: 1.4; }
-
-  /* ===== EVENT SCREEN ===== */
-  #screen-event {
-    background: #0a0a14;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-  }
-  #event-icon { font-size: 64px; }
-  #event-title { font-size: 28px; color: #ccccff; letter-spacing: 2px; }
-  #event-desc {
-    width: 600px; text-align: center;
-    font-size: 15px; color: #8888aa; line-height: 1.6;
-  }
-  #event-choices { display: flex; gap: 16px; }
-  .event-choice {
-    padding: 14px 24px; min-width: 200px;
-    background: #0d0d20; border: 1px solid #1a1a3a;
-    border-radius: 4px; cursor: pointer; transition: all 0.2s;
-    text-align: center;
-  }
-  .event-choice:hover { border-color: #4433aa; background: #10102a; }
-  .event-choice .choice-text { font-size: 14px; color: #ccccff; margin-bottom: 6px; }
-  .event-choice .choice-hint { font-size: 12px; color: #6666aa; }
-
-  /* ===== RUN END SCREEN ===== */
-  #screen-runend {
-    background: radial-gradient(ellipse at center, #0d0d2a 0%, #050508 100%);
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
-  }
-  #runend-title { font-size: 48px; font-weight: bold; letter-spacing: 6px; }
-  #runend-title.win { color: #ffcc44; text-shadow: 0 0 30px #ffaa0088; }
-  #runend-title.lose { color: #ff4444; text-shadow: 0 0 30px #aa222288; }
-  #runend-stats {
-    background: #0d0d20; border: 1px solid #1a1a3a;
-    border-radius: 4px; padding: 20px; width: 500px;
-  }
-  #runend-stats h3 { font-size: 13px; color: #5555aa; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; }
-
-  /* ===== COMMON BUTTONS ===== */
-  .btn-primary {
-    padding: 12px 32px; font-size: 14px;
-    background: linear-gradient(135deg, #3322aa, #6644ff);
-    border: 1px solid #8866ff;
-    color: #fff; cursor: pointer;
-    letter-spacing: 2px; text-transform: uppercase;
-    transition: all 0.2s; font-family: inherit;
-    clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
-  }
-  .btn-primary:hover {
-    background: linear-gradient(135deg, #4433bb, #7755ff);
-    box-shadow: 0 0 15px #6644ff66;
-    transform: translateY(-1px);
-  }
-  .btn-secondary {
-    padding: 10px 24px; font-size: 13px;
-    background: #0d0d20; border: 1px solid #2a2a5a;
-    color: #8888cc; cursor: pointer;
-    letter-spacing: 1px; text-transform: uppercase;
-    transition: all 0.2s; font-family: inherit;
-  }
-  .btn-secondary:hover { border-color: #4433aa; color: #ccccff; background: #10102a; }
-  .btn-danger {
-    padding: 10px 24px; font-size: 13px;
-    background: #1a0808; border: 1px solid #5a2222;
-    color: #cc4444; cursor: pointer;
-    letter-spacing: 1px; text-transform: uppercase;
-    transition: all 0.2s; font-family: inherit;
-  }
-  .btn-danger:hover { border-color: #aa3333; color: #ff6666; background: #220a0a; }
-
-  /* ===== TOOLTIP ===== */
-  #tooltip {
-    position: absolute; z-index: 999;
-    background: #0d0d20; border: 1px solid #2a2a5a;
-    border-radius: 4px; padding: 10px 14px;
-    max-width: 240px; pointer-events: none;
-    display: none;
-  }
-  #tooltip .tt-name { font-size: 14px; color: #ccccff; margin-bottom: 4px; }
-  #tooltip .tt-type { font-size: 11px; color: #5555aa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
-  #tooltip .tt-desc { font-size: 12px; color: #8888aa; line-height: 1.4; }
-
-  /* ===== OVERLAY / MODAL ===== */
-  #overlay {
-    position: absolute; inset: 0; z-index: 200;
-    background: rgba(0,0,0,0.7);
-    display: none; align-items: center; justify-content: center;
-  }
-  #overlay.active { display: flex; }
-  #modal {
-    background: #0d0d20; border: 1px solid #2a2a5a;
-    border-radius: 4px; padding: 24px; min-width: 400px;
-    max-width: 600px;
-  }
-  #modal h3 { font-size: 18px; color: #ccccff; margin-bottom: 16px; }
-  #modal-content { margin-bottom: 20px; }
-  #modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
-
-  /* ===== PART SELECTION MODAL ===== */
-  #part-select-list { display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; }
-  .part-select-item {
-    display: flex; align-items: center; gap: 12px;
-    padding: 10px; background: #080818;
-    border: 1px solid #1a1a3a; border-radius: 3px;
-    cursor: pointer; transition: all 0.2s;
-  }
-  .part-select-item:hover { border-color: #4433aa; background: #0d0d28; }
-  .part-select-item .psi-name { font-size: 13px; color: #ccccff; flex: 1; }
-  .part-select-item .psi-desc { font-size: 11px; color: #6666aa; }
-  .part-select-item .psi-price { font-size: 12px; color: #ffcc44; }
-
-  /* ===== SCROLLBAR ===== */
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: #0a0a1a; }
-  ::-webkit-scrollbar-thumb { background: #2a2a5a; border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #4433aa; }
-
-  /* ===== ANIMATIONS ===== */
-  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-  @keyframes timerFlash { 0%, 100% { opacity: 1; text-shadow: 0 0 12px #ff4444; } 50% { opacity: 0.4; text-shadow: 0 0 4px #ff2222; } }
-  @keyframes glow {
-    0%, 100% { text-shadow: 0 0 20px #6644ff, 0 0 40px #4422cc; }
-    50% { text-shadow: 0 0 30px #8866ff, 0 0 60px #6644ff, 0 0 100px #4422cc; }
-  }
-  .anim-fadein { animation: fadeIn 0.3s ease; }
-  .anim-slideup { animation: slideUp 0.3s ease; }
-  .anim-pulse { animation: pulse 1.5s infinite; }
-  .anim-glow { animation: glow 2s infinite; }
-
-  /* ===== FLOOR INDICATOR ===== */
-  #floor-indicator {
-    display: flex; gap: 6px; align-items: center;
-  }
-  .floor-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: #1a1a3a; border: 1px solid #2a2a5a;
-    transition: all 0.3s;
-  }
-  .floor-dot.current { background: #6644ff; border-color: #8866ff; box-shadow: 0 0 6px #6644ff88; }
-  .floor-dot.done { background: #2a2a5a; border-color: #4433aa; }
-  .floor-dot.boss { background: #aa2222; border-color: #ff4444; }
-</style>
-</head>
-<body>
-<div id="app">
-  <!-- Global Status Bar -->
-  <div id="status-bar">
-    <div class="stat-item">
-    <span class="label">生命</span>
-      <div id="hp-hearts">
-        <span class="heart full">♥</span>
-        <span class="heart full">♥</span>
-        <span class="heart full">♥</span>
-      </div>
-    </div>
-    <div class="stat-item">
-      <span class="label">金币</span>
-      <span class="value" id="gold-value">0</span>
-      <span style="color:#ffcc44;font-size:14px;">G</span>
-    </div>
-    <div class="stat-item">
-      <span class="label">层数</span>
-      <span class="value" id="floor-value">—</span>
-    </div>
-    <div class="stat-item">
-      <span class="label">节点</span>
-      <span class="value" id="node-value">—</span>
-    </div>
-    <div id="floor-indicator">
-      <div class="floor-dot" id="fdot-1"></div>
-      <div class="floor-dot" id="fdot-2"></div>
-      <div class="floor-dot" id="fdot-3"></div>
-      <div class="floor-dot boss" id="fdot-4"></div>
-    </div>
-  </div>
-
-  <!-- Screen: Title -->
-  <div id="screen-title" class="screen active">
-    <div class="title-decoration"><canvas id="title-bg-canvas"></canvas></div>
-    <div class="game-title anim-glow">SPINNING TOP</div>
-    <div class="game-subtitle">Roguelite</div>
-    <div style="display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:8px;">
-      <button class="btn-start" id="btn-new-game">▶ 新游戏</button>
-      <button class="btn-secondary" id="btn-continue" style="font-size:13px;padding:8px 24px;">⟳ 继续游戏</button>
-      <button class="btn-secondary" id="btn-tutorial" style="font-size:12px;padding:6px 20px;">? 教程</button>
-    </div>
-    <div style="margin-top:16px;font-size:12px;color:#333355;letter-spacing:2px;">v0.1 MVP</div>
-  </div>
-
-  <!-- Screen: Map -->
-  <div id="screen-map" class="screen">
-    <h2>⬡ 节点地图</h2>
-    <div id="map-container">
-      <canvas id="map-canvas"></canvas>
-    </div>
-  </div>
-
-  <!-- Screen: Prep -->
-  <div id="screen-prep" class="screen" style="flex-direction:row;align-items:flex-start;padding:16px;gap:16px;justify-content:center;">
-    <div class="prep-panel" id="intel-panel">
-      <h3>🔍 情报</h3>
-      <div id="intel-list"></div>
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid #1a1a3a;">
-        <div style="font-size:11px;color:#5555aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">敌方</div>
-        <div id="enemy-preview" style="font-size:13px;color:#cc4444;"></div>
-      </div>
-    </div>
-    <div class="prep-panel" id="loadout-panel">
-      <h3>⚙ 配置</h3>
-      <div id="part-slots"></div>
-      <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn-primary" id="btn-start-battle">⚔ 出战！</button>
-        <button class="btn-secondary" id="btn-prep-shop">🏪 商店</button>
-        <button class="btn-secondary" id="btn-prep-back">← 地图</button>
-      </div>
-    </div>
-    <div class="prep-panel" id="inventory-panel">
-      <h3>📦 背包</h3>
-      <div id="inventory-list"></div>
-    </div>
-  </div>
-
-  <!-- Screen: Shop -->
-  <div id="screen-shop" class="screen">
-    <h2>🏪 商店</h2>
-    <div id="shop-grid"></div>
-    <div id="shop-actions">
-      <button class="btn-secondary" id="btn-shop-refresh">🔄 刷新 (30G)</button>
-      <button class="btn-secondary" id="btn-shop-back">← 返回</button>
-    </div>
-  </div>
-
-  <!-- Screen: Launch -->
-  <div id="screen-launch" class="screen">
-    <div style="font-size:14px;color:#8888cc;letter-spacing:3px;text-transform:uppercase;margin-bottom:4px;">发射阶段</div>
-    <div id="launch-step" style="font-size:16px;color:#ccccff;font-weight:bold;margin-bottom:4px;">第一步 — 设定角度</div>
-    <div id="launch-hint" style="font-size:12px;color:#6666aa;margin-bottom:8px;">观察旋转箭头，在指向目标方向时点击。</div>
-    <div id="launch-canvas-wrap">
-      <canvas id="launch-canvas" width="320" height="320"></canvas>
-    </div>
-    <div id="power-gauge-wrap">
-      <div id="power-gauge-label">Power — <span id="power-gauge-value">0%</span></div>
-      <div id="power-gauge-bar-bg">
-        <div id="power-gauge-bar"></div>
-      </div>
-      <div style="font-size:12px;color:#5555aa;margin-top:4px;">
-        <span style="color:#ffcc44;">90-100%</span> 完美 &nbsp;
-        <span style="color:#4466ff;">70-89%</span> 良好 &nbsp;
-        <span style="color:#44aa44;">40-69%</span> 普通 &nbsp;
-        <span style="color:#aa4444;">0-39%</span> 失误
-      </div>
-      <button class="btn-primary" id="btn-launch-fire" style="margin-top:8px;">按空格键 / 点击发射</button>
-    </div>
-  </div>
-
-  <!-- Screen: Battle -->
-  <div id="screen-battle" class="screen">
-    <div id="battle-left">
-      <div class="rpm-display">
-        <div class="rpm-label">⚡ 我的陀螺</div>
-        <div class="rpm-bar-bg"><div class="rpm-bar player" id="player-rpm-bar" style="width:100%"></div></div>
-        <div class="rpm-value"><span id="player-rpm">3000</span> RPM</div>
-      </div>
-      <div style="margin-top:12px;">
-        <div class="rpm-label" style="color:#cc4444;">💀 敌方</div>
-        <div class="rpm-bar-bg"><div class="rpm-bar enemy" id="enemy-rpm-bar" style="width:100%;background:#aa2244;"></div></div>
-        <div class="rpm-value" style="color:#ff6666;"><span id="enemy-rpm">3000</span> RPM</div>
-      </div>
-      <div id="intervention-panel" style="margin-top:16px;">
-        <div style="font-size:11px;color:#444466;letter-spacing:1px;margin-bottom:8px;">干预技能</div>
-        <button class="btn-intervention" id="btn-thrust">⚡ 冲刺 (3)</button>
-        <button class="btn-intervention" id="btn-brake">🛑 制动 (3)</button>
-        <button class="btn-intervention" id="btn-activate">✨ 激活</button>
-        <div style="font-size:10px;color:#333355;margin-top:6px;">Q / W / E</div>
-      </div>
-    </div>
-    <div id="battle-canvas-wrap" style="position:relative;">
-      <canvas id="arena-canvas" width="600" height="520"></canvas>
-      <div id="battle-countdown" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font:bold 64px Courier New;color:#fff;text-shadow:0 0 30px #4466ff;pointer-events:none;z-index:30;"></div>
-      <div id="battle-timer" style="position:absolute;top:8px;left:50%;transform:translateX(-50%);font:bold 20px Courier New;color:#aaaacc;text-shadow:0 0 8px #4466ff;pointer-events:none;z-index:20;letter-spacing:2px;">3:00</div>
-      <div id="intervention-feedback" style="position:absolute;top:12px;left:50%;transform:translateX(-50%);font:bold 15px Courier New;color:#44ff88;pointer-events:none;opacity:0;transition:opacity 0.4s;white-space:nowrap;z-index:20;"></div>
-    </div>
-    <div id="battle-right">
-      <div id="enemy-rpm-list"></div>
-    </div>
-  </div>
-
-  <!-- Screen: Settlement -->
-  <div id="screen-settlement" class="screen">
-    <div id="settlement-title" class="victory"></div>
-    <div id="settlement-details">
-      <div class="settlement-row"><span class="s-label">胜利类型</span><span class="s-value" id="s-victory-type">—</span></div>
-      <div class="settlement-row"><span class="s-label">获得金币</span><span class="s-value" id="s-gold-earned">—</span></div>
-      <div class="settlement-row"><span class="s-label">剩余转速</span><span class="s-value" id="s-rpm-remain">—</span></div>
-    </div>
-    <div style="font-size:13px;color:#8888aa;letter-spacing:2px;text-transform:uppercase;">选择奖励</div>
-    <div id="reward-choices"></div>
-    <button class="btn-secondary" id="btn-settlement-skip">跳过奖励 → 继续</button>
-  </div>
-
-  <!-- Screen: Event -->
-  <div id="screen-event" class="screen">
-    <div id="event-icon">❓</div>
-    <div id="event-title">神秘事件</div>
-    <div id="event-desc"></div>
-    <div id="event-choices"></div>
-  </div>
-
-  <!-- Screen: Run End -->
-  <div id="screen-runend" class="screen">
-    <div id="runend-title" class="win"></div>
-    <div style="font-size:14px;color:#8888aa;letter-spacing:3px;margin-bottom:8px;">本局结束</div>
-    <div id="runend-stats">
-      <h3>本局统计</h3>
-      <div class="settlement-row"><span class="s-label">通关层数</span><span class="s-value" id="re-floors">—</span></div>
-      <div class="settlement-row"><span class="s-label">击败敌人</span><span class="s-value" id="re-enemies">—</span></div>
-      <div class="settlement-row"><span class="s-label">获得金币</span><span class="s-value" id="re-gold">—</span></div>
-      <div class="settlement-row"><span class="s-label">完美发射</span><span class="s-value" id="re-perfect">—</span></div>
-      <div class="settlement-row"><span class="s-label">出界次数</span><span class="s-value" id="re-ringout">—</span></div>
-      <div class="settlement-row"><span class="s-label">爆裂次数</span><span class="s-value" id="re-burst">—</span></div>
-    </div>
-    <button class="btn-primary" id="btn-runend-restart">▶ 新的一局</button>
-  </div>
-
-  <!-- Tooltip -->
-  <div id="tooltip">
-    <div class="tt-name" id="tt-name"></div>
-    <div class="tt-type" id="tt-type"></div>
-    <div class="tt-desc" id="tt-desc"></div>
-  </div>
-
-  <!-- Overlay / Modal -->
-  <div id="overlay">
-    <div id="modal">
-      <h3 id="modal-title"></h3>
-      <div id="modal-content"></div>
-      <div id="modal-actions"></div>
-    </div>
-  </div>
-</div>
-
-<script>
 // ============================================================
 // GAME STATE MACHINE
 // ============================================================
@@ -859,10 +196,10 @@ function showBaseSelection() {
 
   const cardsHTML = bases.map(b => {
     const decayLabel = b.effect && b.effect.decayMult
-      ? `衰减 ×${b.effect.decayMult.toFixed(2)}`
+      ? `Decay ×${b.effect.decayMult.toFixed(2)}`
       : '';
     const styleLabel = b.effect && b.effect.moveStyle
-      ? `风格: ${b.effect.moveStyle}`
+      ? `Style: ${b.effect.moveStyle}`
       : '';
     return `<div class="base-choice-card" data-id="${b.id}" style="
       background:#0d0d20;border:2px solid #1a1a3a;border-radius:6px;
@@ -878,8 +215,8 @@ function showBaseSelection() {
   }).join('');
 
   showModal(
-    '选择你的底座',
-    `<p style="color:#8888aa;font-size:13px;margin-bottom:16px;">底座决定了你本局的核心策略，请慎重选择。</p>
+    'Choose Your Base',
+    `<p style="color:#8888aa;font-size:13px;margin-bottom:16px;">Your base determines your core strategy for this entire run. Choose wisely.</p>
     <div id="base-choices" style="display:flex;gap:12px;justify-content:center;">${cardsHTML}</div>`,
     []
   );
@@ -925,193 +262,193 @@ const PARTS_DB = {
 
   // === ATTACK RINGS (AR) ===
   ar_spike: {
-    id: 'ar_spike', slot: 'ar', name: '尖刺环', rarity: 'common',
+    id: 'ar_spike', slot: 'ar', name: 'Spike Ring', rarity: 'common',
     price: 80, sellPrice: 32,
-    desc: '碰撞伤害+30%，但攻击者也会受到反弹伤害。',
+    desc: 'Collision damage +30%, but attacker also takes rebound damage.',
     effect: { dmgMult: 1.3, selfDmgMult: 1.15 },
     element: null,
   },
   ar_smooth: {
-    id: 'ar_smooth', slot: 'ar', name: '光滑环', rarity: 'common',
+    id: 'ar_smooth', slot: 'ar', name: 'Smooth Ring', rarity: 'common',
     price: 60, sellPrice: 24,
-    desc: '被击中时减少20%的转速损失。',
+    desc: 'Reduces RPM loss when hit by 20%.',
     effect: { incomingDmgMult: 0.8 },
     element: null,
   },
   ar_saw: {
-    id: 'ar_saw', slot: 'ar', name: '锯齿环', rarity: 'common',
+    id: 'ar_saw', slot: 'ar', name: 'Saw Ring', rarity: 'common',
     price: 70, sellPrice: 28,
-    desc: '碰撞时施加流血效果：每秒损失2%转速，持续4秒。',
+    desc: 'On collision, applies a bleed: 2% RPM/s for 4s.',
     effect: { bleedDps: 0.02, bleedDuration: 4 },
     element: null,
   },
   ar_wide: {
-    id: 'ar_wide', slot: 'ar', name: '宽翼环', rarity: 'common',
+    id: 'ar_wide', slot: 'ar', name: 'Wide Wing', rarity: 'common',
     price: 75, sellPrice: 30,
-    desc: '碰撞范围+40%，但碰撞力度-10%。',
+    desc: 'Collision range +40%, but collision force -10%.',
     effect: { rangeBonus: 1.4, dmgMult: 0.9 },
     element: null,
   },
   ar_flame: {
-    id: 'ar_flame', slot: 'ar', name: '火焰环', rarity: 'rare',
+    id: 'ar_flame', slot: 'ar', name: 'Flame Ring', rarity: 'rare',
     price: 120, sellPrice: 48,
-    desc: '碰撞后留下燃烧区域：每秒损失3%转速，持续5秒。',
+    desc: 'Collision leaves a burning zone: 3% RPM/s for 5s.',
     effect: { burnDps: 0.03, burnDuration: 5 },
     element: 'fire',
   },
   ar_frost: {
-    id: 'ar_frost', slot: 'ar', name: '冰霜环', rarity: 'rare',
+    id: 'ar_frost', slot: 'ar', name: 'Frost Ring', rarity: 'rare',
     price: 120, sellPrice: 48,
-    desc: '碰撞使敌方速度降低30%，持续3秒。',
+    desc: 'Collision slows enemy speed by 30% for 3s.',
     effect: { slowMult: 0.7, slowDuration: 3 },
     element: 'ice',
   },
   ar_thunder: {
-    id: 'ar_thunder', slot: 'ar', name: '雷电环', rarity: 'rare',
+    id: 'ar_thunder', slot: 'ar', name: 'Thunder Ring', rarity: 'rare',
     price: 130, sellPrice: 52,
-    desc: '碰撞时向附近陀螺连锁闪电：造成+8%转速伤害。',
+    desc: 'Collision chains lightning to nearby tops: +8% RPM damage.',
     effect: { chainDmg: 0.08, chainRange: 120 },
     element: 'thunder',
   },
   ar_venom: {
-    id: 'ar_venom', slot: 'ar', name: '毒液环', rarity: 'rare',
+    id: 'ar_venom', slot: 'ar', name: 'Venom Ring', rarity: 'rare',
     price: 110, sellPrice: 44,
-    desc: '碰撞施加毒素层数：每层每秒损失1%转速。',
+    desc: 'Collision applies poison stacks: each stack = 1% RPM/s.',
     effect: { poisonDpsPerStack: 0.01, maxStacks: 5 },
     element: 'poison',
   },
   ar_magnet: {
-    id: 'ar_magnet', slot: 'ar', name: '磁力环', rarity: 'epic',
+    id: 'ar_magnet', slot: 'ar', name: 'Magnet Ring', rarity: 'epic',
     price: 140, sellPrice: 56,
-    desc: '碰撞后将敌方陀螺向你拉近，持续2秒。',
+    desc: 'After collision, pulls enemy top toward you for 2s.',
     effect: { pullDuration: 2, pullForce: 80 },
     element: 'magnet',
   },
 
   // === WEIGHT DISKS (WD) ===
   wd_heavy: {
-    id: 'wd_heavy', slot: 'wd', name: '重型盘', rarity: 'common',
+    id: 'wd_heavy', slot: 'wd', name: 'Heavy Disk', rarity: 'common',
     price: 90, sellPrice: 36,
-    desc: '碰撞力度+40%，击退抗性+50%，但速度-20%。',
+    desc: 'Collision force +40%, knockback resistance +50%, but speed -20%.',
     effect: { dmgMult: 1.4, knockbackResist: 0.5, speedMult: 0.8 },
   },
   wd_light: {
-    id: 'wd_light', slot: 'wd', name: '轻型盘', rarity: 'common',
+    id: 'wd_light', slot: 'wd', name: 'Light Disk', rarity: 'common',
     price: 70, sellPrice: 28,
-    desc: '速度+30%，转速衰减-10%，但击退距离+50%。',
+    desc: 'Speed +30%, RPM decay -10%, but knockback distance +50%.',
     effect: { speedMult: 1.3, decayMult: 0.9, knockbackMult: 1.5 },
   },
   wd_balance: {
-    id: 'wd_balance', slot: 'wd', name: '平衡盘', rarity: 'common',
+    id: 'wd_balance', slot: 'wd', name: 'Balance Disk', rarity: 'common',
     price: 80, sellPrice: 32,
-    desc: '无额外加成，但转速衰减最慢。',
+    desc: 'No bonuses, but slowest RPM decay of all disks.',
     effect: { decayMult: 0.75 },
   },
   wd_eccentric: {
-    id: 'wd_eccentric', slot: 'wd', name: '偏心盘', rarity: 'rare',
+    id: 'wd_eccentric', slot: 'wd', name: 'Eccentric Disk', rarity: 'rare',
     price: 85, sellPrice: 34,
-    desc: '移动轨迹不可预测，碰撞角度随机偏移±15°。',
+    desc: 'Movement is unpredictable. Collision angle randomized ±15°.',
     effect: { angleVariance: 15, unpredictable: true },
   },
   wd_magnetic: {
-    id: 'wd_magnetic', slot: 'wd', name: '磁性盘', rarity: 'rare',
+    id: 'wd_magnetic', slot: 'wd', name: 'Magnetic Disk', rarity: 'rare',
     price: 100, sellPrice: 40,
-    desc: '免疫磁力拉拽效果，克制磁力环敌人。',
+    desc: 'Immune to magnet pull effects. Counter-effect vs Magnet Ring enemies.',
     effect: { magnetImmune: true },
   },
 
   // === SPIN GEARS (SG) ===
   sg_standard_r: {
-    id: 'sg_standard_r', slot: 'sg', name: '标准齿轮(右)', rarity: 'common',
+    id: 'sg_standard_r', slot: 'sg', name: 'Standard Gear (R)', rarity: 'common',
     price: 50, sellPrice: 20,
-    desc: '右旋，无特殊效果。',
+    desc: 'Right-spin. No special effect.',
     effect: { spin: 'right' },
   },
   sg_standard_l: {
-    id: 'sg_standard_l', slot: 'sg', name: '标准齿轮(左)', rarity: 'common',
+    id: 'sg_standard_l', slot: 'sg', name: 'Standard Gear (L)', rarity: 'common',
     price: 50, sellPrice: 20,
-    desc: '左旋，与反向旋转陀螺碰撞时产生剧烈击退。',
+    desc: 'Left-spin. Opposite-spin collisions cause violent knockback.',
     effect: { spin: 'left' },
   },
   sg_turbo: {
-    id: 'sg_turbo', slot: 'sg', name: '涡轮齿轮', rarity: 'rare',
+    id: 'sg_turbo', slot: 'sg', name: 'Turbo Gear', rarity: 'rare',
     price: 100, sellPrice: 40,
-    desc: '每次碰撞后短暂恢复+8%转速。',
+    desc: 'After each collision, briefly recover +8% RPM.',
     effect: { onHitRpmRecover: 0.08 },
   },
   sg_shield: {
-    id: 'sg_shield', slot: 'sg', name: '护盾齿轮', rarity: 'rare',
+    id: 'sg_shield', slot: 'sg', name: 'Shield Gear', rarity: 'rare',
     price: 110, sellPrice: 44,
-    desc: '每场战斗一次，完全吸收一次碰撞伤害。',
+    desc: 'Once per battle, absorbs one collision completely.',
     effect: { shieldCharges: 1 },
   },
   sg_burst: {
-    id: 'sg_burst', slot: 'sg', name: '爆裂齿轮', rarity: 'epic',
+    id: 'sg_burst', slot: 'sg', name: 'Burst Gear', rarity: 'epic',
     price: 120, sellPrice: 48,
-    desc: '当转速低于30%时，碰撞伤害翻倍。',
+    desc: 'When RPM < 30%, collision damage doubles.',
     effect: { lowRpmDmgThreshold: 0.3, lowRpmDmgMult: 2.0 },
   },
   sg_resonance: {
-    id: 'sg_resonance', slot: 'sg', name: '共鸣齿轮', rarity: 'epic',
+    id: 'sg_resonance', slot: 'sg', name: 'Resonance Gear', rarity: 'epic',
     price: 130, sellPrice: 52,
-    desc: '与同属性攻击环搭配时，元素效果持续时间+50%。',
+    desc: 'Matching element AR: element effect duration +50%.',
     effect: { elementDurationBonus: 1.5 },
   },
 
   // === BLADE BASES (BB) ===
   bb_sharp: {
-    id: 'bb_sharp', slot: 'bb', name: '尖锐底座', rarity: 'common',
+    id: 'bb_sharp', slot: 'bb', name: 'Sharp Tip', rarity: 'common',
     price: 0, sellPrice: 0, // starter
-    desc: '保持在中心附近，转速衰减最慢，受击后快速恢复稳定性。',
+    desc: 'Stays near center. Slowest RPM decay. Recovers stability quickly after hits.',
     effect: { decayMult: 0.6, moveStyle: 'defense', centerRpmRegen: 0.02 },
     tipType: 'sharp',
   },
   bb_flat: {
-    id: 'bb_flat', slot: 'bb', name: '平底底座', rarity: 'common',
+    id: 'bb_flat', slot: 'bb', name: 'Flat Tip', rarity: 'common',
     price: 0, sellPrice: 0, // starter
-    desc: '移动范围广，碰撞频率高，碰撞后恢复+10%转速。',
+    desc: 'Wide movement, high collision frequency. Collision RPM recovery +10%.',
     effect: { decayMult: 1.0, moveStyle: 'attack', onHitRpmRecover: 0.05, dmgMult: 1.2 },
     tipType: 'flat',
   },
   bb_rubber: {
-    id: 'bb_rubber', slot: 'bb', name: '橡胶底座', rarity: 'common',
+    id: 'bb_rubber', slot: 'bb', name: 'Rubber Tip', rarity: 'common',
     price: 0, sellPrice: 0, // starter
-    desc: '强力抓地，击退距离-40%，中等转速衰减。',
+    desc: 'Strong grip. Knockback distance -40%. Medium RPM decay.',
     effect: { decayMult: 0.8, moveStyle: 'endure', knockbackResist: 0.4 },
     tipType: 'rubber',
   },
   bb_sharp_ex: {
-    id: 'bb_sharp_ex', slot: 'bb', name: '尖锐EX', rarity: 'rare',
+    id: 'bb_sharp_ex', slot: 'bb', name: 'Sharp EX', rarity: 'rare',
     price: 180, sellPrice: 72,
-    desc: '转速衰减-30%，在中心区域时获得防御加成。',
+    desc: 'RPM decay -30%. Defense bonus when in center zone.',
     effect: { decayMult: 0.42, moveStyle: 'defense', centerRpmRegen: 0.02, centerDefenseBonus: 0.2 },
     tipType: 'sharp',
   },
   bb_flat_ex: {
-    id: 'bb_flat_ex', slot: 'bb', name: '平底EX', rarity: 'rare',
+    id: 'bb_flat_ex', slot: 'bb', name: 'Flat EX', rarity: 'rare',
     price: 180, sellPrice: 72,
-    desc: '每次碰撞后速度短暂提升，便于连续攻击。',
+    desc: 'After each collision, speed briefly increases for chain attacks.',
     effect: { decayMult: 1.0, moveStyle: 'attack', onHitSpeedBoost: 1.3, onHitSpeedDuration: 1.5, dmgMult: 1.2 },
     tipType: 'flat',
   },
   bb_rubber_ex: {
-    id: 'bb_rubber_ex', slot: 'bb', name: '橡胶EX', rarity: 'rare',
+    id: 'bb_rubber_ex', slot: 'bb', name: 'Rubber EX', rarity: 'rare',
     price: 180, sellPrice: 72,
-    desc: '20%概率将碰撞伤害反弹给攻击者。',
+    desc: '20% chance to reflect collision damage back to attacker.',
     effect: { decayMult: 0.8, moveStyle: 'endure', knockbackResist: 0.4, reflectChance: 0.2 },
     tipType: 'rubber',
   },
   bb_magnet: {
-    id: 'bb_magnet', slot: 'bb', name: '磁力底座', rarity: 'epic',
+    id: 'bb_magnet', slot: 'bb', name: 'Magnet Base', rarity: 'epic',
     price: 220, sellPrice: 88,
-    desc: '沿磁力轨道移动，轨迹固定但几乎无法被击出界。',
+    desc: 'Moves along a magnetic track. Predictable but nearly impossible to knock out.',
     effect: { decayMult: 0.7, moveStyle: 'magnet', ringOutResist: 0.9 },
     tipType: 'magnet',
   },
   bb_burst: {
-    id: 'bb_burst', slot: 'bb', name: '爆裂底座', rarity: 'epic',
+    id: 'bb_burst', slot: 'bb', name: 'Burst Base', rarity: 'epic',
     price: 200, sellPrice: 80,
-    desc: '受击时25%概率触发受控爆裂：零件短暂分离，抵消伤害。',
+    desc: 'When hit, 25% chance to trigger controlled burst: parts briefly separate, negating damage.',
     effect: { decayMult: 0.85, moveStyle: 'endure', burstNegateChance: 0.25 },
     tipType: 'rubber',
   },
@@ -1132,9 +469,9 @@ const ENEMIES_DB = {
 
   // === ATTACK TYPE ===
   rusher: {
-    id: 'rusher', name: '冲锋者', type: 'attack', floor: [1,2,3],
+    id: 'rusher', name: 'Rusher', type: 'attack', floor: [1,2,3],
     isElite: false, isBoss: false,
-    desc: '以极高速度直冲你的陀螺。',
+    desc: 'Charges directly at your top at high speed.',
     stats: { maxRpm: 100, decayMult: 1.0, speedMult: 1.3, dmgMult: 1.2, mass: 1.0 },
     ai: 'rusher', archetype: 'Aggressor',
     parts: { ar: 'ar_spike', wd: 'wd_light', sg: 'sg_standard_r', bb: 'bb_flat' },
@@ -1142,17 +479,17 @@ const ENEMIES_DB = {
     weakTo: 'defense',
     reward: { goldMin: 40, goldMax: 60 },
     intelPool: [
-      '敌人类型：进攻型',
-      '使用尖刺环—碰撞伤害高',
-      '使用平底底座—移动范围广',
-      '弱点：防御流配置',
-      '右旋转向',
+      'Enemy type: Attack',
+      'Uses Spike Ring — high collision damage',
+      'Uses Flat Tip — wide movement range',
+      'Weak against defensive builds',
+      'Right-spin rotation',
     ],
   },
   cyclone: {
-    id: 'cyclone', name: '旋风', type: 'attack', floor: [2,3],
+    id: 'cyclone', name: 'Cyclone', type: 'attack', floor: [2,3],
     isElite: false, isBoss: false,
-    desc: '广范围扫荡攻击，覆盖大片区域。',
+    desc: 'Wide sweeping attacks, covers large area.',
     stats: { maxRpm: 100, decayMult: 1.1, speedMult: 1.1, dmgMult: 0.9, mass: 0.9 },
     ai: 'rusher', archetype: 'Aggressor',
     parts: { ar: 'ar_wide', wd: 'wd_light', sg: 'sg_standard_r', bb: 'bb_flat' },
@@ -1160,16 +497,16 @@ const ENEMIES_DB = {
     weakTo: 'defense',
     reward: { goldMin: 45, goldMax: 65 },
     intelPool: [
-      '敌人类型：进攻型',
-      '使用宽翼环—碰撞范围大',
-      '单次伤害低但覆盖范围广',
-      '右旋转向',
+      'Enemy type: Attack',
+      'Uses Wide Wing — large collision range',
+      'Low single-hit damage but wide coverage',
+      'Right-spin rotation',
     ],
   },
   buster: {
-    id: 'buster', name: '爆破者', type: 'attack', floor: [2,3],
+    id: 'buster', name: 'Buster', type: 'attack', floor: [2,3],
     isElite: false, isBoss: false,
-    desc: '转速降低时触发自爆。',
+    desc: 'Triggers a self-explosion when RPM drops low.',
     stats: { maxRpm: 100, decayMult: 1.2, speedMult: 1.0, dmgMult: 1.0, mass: 1.1 },
     ai: 'buster', archetype: 'Aggressor',
     parts: { ar: 'ar_spike', wd: 'wd_heavy', sg: 'sg_burst', bb: 'bb_burst' },
@@ -1177,18 +514,18 @@ const ENEMIES_DB = {
     weakTo: 'burst_kill',
     reward: { goldMin: 50, goldMax: 70 },
     intelPool: [
-      '敌人类型：进攻型',
-      '警告：转速低于25%时会爆炸',
-      '尽快击杀，防止其进入低转速状态',
-      '使用爆裂底座—可能抵消伤害',
+      'Enemy type: Attack',
+      'WARNING: Explodes when RPM < 25%',
+      'Kill quickly before it enters low RPM',
+      'Uses Burst Base — may negate hits',
     ],
   },
 
   // === DEFENSE TYPE ===
   fortress: {
-    id: 'fortress', name: '要塞', type: 'defense', floor: [1,2,3],
+    id: 'fortress', name: 'Fortress', type: 'defense', floor: [1,2,3],
     isElite: false, isBoss: false,
-    desc: '居中不动，将碰撞伤害反弹回去。',
+    desc: 'Stays in center, reflects collision damage back.',
     stats: { maxRpm: 100, decayMult: 0.7, speedMult: 0.5, dmgMult: 0.8, mass: 1.5 },
     ai: 'fortress', archetype: 'Survivor',
     parts: { ar: 'ar_smooth', wd: 'wd_heavy', sg: 'sg_shield', bb: 'bb_sharp' },
@@ -1196,17 +533,17 @@ const ENEMIES_DB = {
     weakTo: 'endure',
     reward: { goldMin: 40, goldMax: 60 },
     intelPool: [
-      '敌人类型：防御型',
-      '居中不动—难以击出界',
-      '使用光滑环—减少受到的伤害',
-      '使用护盾齿轮—免疫一次碰撞',
-      '弱点：元素伤害',
+      'Enemy type: Defense',
+      'Stays near center — hard to knock out',
+      'Uses Smooth Ring — reduces incoming damage',
+      'Uses Shield Gear — one free hit absorption',
+      'Weak to elemental damage',
     ],
   },
   mirror_shield: {
-    id: 'mirror_shield', name: '镜盾', type: 'defense', floor: [2,3],
+    id: 'mirror_shield', name: 'Mirror Shield', type: 'defense', floor: [2,3],
     isElite: false, isBoss: false,
-    desc: '将倅0%的碰撞伤害反弹给攻击者。',
+    desc: 'Reflects 50% of collision damage back to attacker.',
     stats: { maxRpm: 100, decayMult: 0.75, speedMult: 0.6, dmgMult: 0.5, mass: 1.3 },
     ai: 'fortress', archetype: 'Survivor',
     parts: { ar: 'ar_smooth', wd: 'wd_heavy', sg: 'sg_shield', bb: 'bb_rubber' },
@@ -1214,16 +551,16 @@ const ENEMIES_DB = {
     weakTo: 'endure',
     reward: { goldMin: 50, goldMax: 70 },
     intelPool: [
-      '敌人类型：防御型',
-      '反弹50%碰撞伤害—避免直接碰撞',
-      '改用持续元素伤害',
-      '弱点：毒素/燃烧效果',
+      'Enemy type: Defense',
+      'Reflects 50% collision damage — avoid direct hits',
+      'Use sustained elemental damage instead',
+      'Weak to poison/burn effects',
     ],
   },
   magnet_core: {
-    id: 'magnet_core', name: '磁力核心', type: 'defense', floor: [2,3],
+    id: 'magnet_core', name: 'Magnet Core', type: 'defense', floor: [2,3],
     isElite: false, isBoss: false,
-    desc: '沿固定磁力轨道移动，将你的陀螺吸引过来。',
+    desc: 'Moves on a fixed magnetic track, pulls your top toward it.',
     stats: { maxRpm: 100, decayMult: 0.7, speedMult: 0.7, dmgMult: 0.9, mass: 1.2 },
     ai: 'magnet', archetype: 'Survivor',
     parts: { ar: 'ar_magnet', wd: 'wd_magnetic', sg: 'sg_standard_r', bb: 'bb_magnet' },
@@ -1231,18 +568,18 @@ const ENEMIES_DB = {
     weakTo: 'magnet_immune',
     reward: { goldMin: 50, goldMax: 70 },
     intelPool: [
-      '敌人类型：防御型',
-      '使用磁力底座—沿固定轨道移动',
-      '使用磁力环将你的陀螺吸引过来',
-      '磁性盘可克制吸引效果',
+      'Enemy type: Defense',
+      'Uses Magnet Base — moves on fixed track',
+      'Pulls your top toward it with Magnet Ring',
+      'Magnetic Disk counters the pull effect',
     ],
   },
 
   // === ENDURE TYPE ===
   endurer: {
-    id: 'endurer', name: '持久者', type: 'endure', floor: [1,2,3],
+    id: 'endurer', name: 'Endurer', type: 'endure', floor: [1,2,3],
     isElite: false, isBoss: false,
-    desc: '静止不动，转速衰减极慢，等待你先停转。',
+    desc: 'Stays still, RPM decays extremely slowly. Waits for you to stop first.',
     stats: { maxRpm: 100, decayMult: 0.4, speedMult: 0.3, dmgMult: 0.7, mass: 1.0 },
     ai: 'endurer', archetype: 'Trapper',
     parts: { ar: 'ar_smooth', wd: 'wd_balance', sg: 'sg_standard_r', bb: 'bb_sharp' },
@@ -1250,16 +587,16 @@ const ENEMIES_DB = {
     weakTo: 'attack',
     reward: { goldMin: 40, goldMax: 60 },
     intelPool: [
-      '敌人类型：持久型',
-      '转速衰减极慢—会比你先撑下',
-      '使用平衡盘—衰减最小化',
-      '必须积极进攻才能获胜',
+      'Enemy type: Endure',
+      'Extremely slow RPM decay — will outlast you',
+      'Uses Balance Disk — minimal decay',
+      'Must attack aggressively to win',
     ],
   },
   miasma: {
-    id: 'miasma', name: '瘴气', type: 'endure', floor: [2,3],
+    id: 'miasma', name: 'Miasma', type: 'endure', floor: [2,3],
     isElite: false, isBoss: false,
-    desc: '留下毒素轨迹，竞技场变得越来越危险。',
+    desc: 'Leaves poison trails. The arena becomes increasingly dangerous.',
     stats: { maxRpm: 100, decayMult: 0.8, speedMult: 0.6, dmgMult: 0.8, mass: 1.0 },
     ai: 'endurer', archetype: 'Trapper',
     parts: { ar: 'ar_venom', wd: 'wd_balance', sg: 'sg_resonance', bb: 'bb_rubber' },
@@ -1267,17 +604,17 @@ const ENEMIES_DB = {
     weakTo: 'attack',
     reward: { goldMin: 50, goldMax: 70 },
     intelPool: [
-      '敌人类型：持久型',
-      '留下毒素轨迹—避开其路径',
-      '左旋转向',
-      '使用毒液环—碰撞叠加毒素层数',
-      '尽快击杀，防止场地被毒素充满',
+      'Enemy type: Endure',
+      'Leaves poison trails — avoid its path',
+      'Left-spin rotation',
+      'Uses Venom Ring — poison stacks on collision',
+      'Kill quickly before arena fills with poison',
     ],
   },
   leech: {
-    id: 'leech', name: '吸血鬼', type: 'endure', floor: [2,3],
+    id: 'leech', name: 'Leech', type: 'endure', floor: [2,3],
     isElite: false, isBoss: false,
-    desc: '每次碰撞时吸取攻击者的转速。',
+    desc: 'Drains RPM from attacker on each collision.',
     stats: { maxRpm: 100, decayMult: 0.6, speedMult: 0.5, dmgMult: 0.6, mass: 1.0 },
     ai: 'endurer', archetype: 'Trapper',
     parts: { ar: 'ar_smooth', wd: 'wd_balance', sg: 'sg_turbo', bb: 'bb_sharp' },
@@ -1285,18 +622,18 @@ const ENEMIES_DB = {
     weakTo: 'attack',
     reward: { goldMin: 50, goldMax: 70 },
     intelPool: [
-      '敌人类型：持久型',
-      '每次碰撞吸取你的转速',
-      '避免频繁碰撞—改用元素伤害',
-      '使用涡轮齿轮—受击后恢复转速',
+      'Enemy type: Endure',
+      'Drains your RPM on each collision',
+      'Avoid frequent collisions — use elemental damage',
+      'Uses Turbo Gear — recovers RPM on hits',
     ],
   },
 
   // === ELITE ENEMIES ===
   inferno_rusher: {
-    id: 'inferno_rusher', name: '炼狱冲锋者', type: 'attack', floor: [2,3],
+    id: 'inferno_rusher', name: 'Inferno Rusher', type: 'attack', floor: [2,3],
     isElite: true, isBoss: false,
-    desc: '精英冲锋者，每次碰撞后留下大片火焰区域。',
+    desc: 'Elite Rusher. Leaves large fire zones after each collision.',
     stats: { maxRpm: 120, decayMult: 1.0, speedMult: 1.4, dmgMult: 1.4, mass: 1.1 },
     ai: 'rusher', archetype: 'Aggressor',
     parts: { ar: 'ar_flame', wd: 'wd_light', sg: 'sg_turbo', bb: 'bb_flat_ex' },
@@ -1304,17 +641,17 @@ const ENEMIES_DB = {
     weakTo: 'defense',
     reward: { goldMin: 80, goldMax: 120 },
     intelPool: [
-      '精英—进攻型',
-      '碰撞后留下大片火焰区域',
-      '使用火焰环+平底EX底座',
-      '涡轮齿轮：受击后恢复转速',
-      '避开火焰区域—持续燃烧伤害',
+      'ELITE — Attack type',
+      'Leaves large fire zones on collision',
+      'Uses Flame Ring + Flat EX base',
+      'Turbo Gear: recovers RPM on hits',
+      'Avoid fire zones — sustained burn damage',
     ],
   },
   frost_fortress: {
-    id: 'frost_fortress', name: '冰霜要塞', type: 'defense', floor: [2,3],
+    id: 'frost_fortress', name: 'Frost Fortress', type: 'defense', floor: [2,3],
     isElite: true, isBoss: false,
-    desc: '精英要塞，受击时释放冰霜爆炸，使攻击者减速。',
+    desc: 'Elite Fortress. Releases frost explosion when hit, slowing attacker.',
     stats: { maxRpm: 120, decayMult: 0.6, speedMult: 0.5, dmgMult: 0.9, mass: 1.6 },
     ai: 'fortress', archetype: 'Survivor',
     parts: { ar: 'ar_frost', wd: 'wd_heavy', sg: 'sg_shield', bb: 'bb_sharp_ex' },
@@ -1322,17 +659,17 @@ const ENEMIES_DB = {
     weakTo: 'endure',
     reward: { goldMin: 80, goldMax: 120 },
     intelPool: [
-      '精英—防御型',
-      '受击时释放冰霜爆炸—使你减速',
-      '使用尖锐EX—转速衰减极慢',
-      '护盾齿轮：免疫一次碰撞',
-      '使用毒素/燃烧绕过物理防御',
+      'ELITE — Defense type',
+      'Releases frost explosion when hit — slows you',
+      'Uses Sharp EX — very slow RPM decay',
+      'Shield Gear: one free hit absorption',
+      'Use poison/burn to bypass physical defense',
     ],
   },
   eternal_endurer: {
-    id: 'eternal_endurer', name: '永恒持久者', type: 'endure', floor: [3],
+    id: 'eternal_endurer', name: 'Eternal Endurer', type: 'endure', floor: [3],
     isElite: true, isBoss: false,
-    desc: '精英持久者，转速低于20%时自动恢复至40%转速（仅一次）。',
+    desc: 'Elite Endurer. Auto-recovers to 40% RPM once when below 20%.',
     stats: { maxRpm: 120, decayMult: 0.35, speedMult: 0.3, dmgMult: 0.7, mass: 1.1 },
     ai: 'endurer', archetype: 'Trapper',
     parts: { ar: 'ar_smooth', wd: 'wd_balance', sg: 'sg_resonance', bb: 'bb_sharp_ex' },
@@ -1340,36 +677,36 @@ const ENEMIES_DB = {
     weakTo: 'attack',
     reward: { goldMin: 90, goldMax: 130 },
     intelPool: [
-      '精英—持久型',
-      '转速低于20%时自动恢复至40%（仅一次）',
-      '转速衰减极慢',
-      '必须爆发式伤害才能克服其恢复能力',
+      'ELITE — Endure type',
+      'Auto-recovers to 40% RPM once when below 20%',
+      'Extremely slow RPM decay',
+      'Must deal burst damage to overcome recovery',
     ],
   },
 
   // === BOSS ===
   chaos_champion: {
-    id: 'chaos_champion', name: '混沌冠军', type: 'boss', floor: [4],
+    id: 'chaos_champion', name: 'Chaos Champion', type: 'boss', floor: [4],
     isElite: false, isBoss: true,
-    desc: '三阶段首领，分别在转速60%和30%时改变行为。',
+    desc: 'Three-phase boss. Changes behavior at 60% and 30% RPM.',
     stats: { maxRpm: 150, decayMult: 0.8, speedMult: 1.2, dmgMult: 1.3, mass: 1.3 },
     ai: 'boss', archetype: 'Aggressor',
     parts: { ar: 'ar_flame', wd: 'wd_heavy', sg: 'sg_burst', bb: 'bb_flat_ex' },
     spin: 'right',
     weakTo: null,
     phases: [
-      { rpmThreshold: 0.6, ai: 'rusher', desc: '第一阶段 (100-60%)：猛烈冲锋' },
-      { rpmThreshold: 0.3, ai: 'fortress', desc: '第二阶段 (60-30%)：防御反击' },
-      { rpmThreshold: 0.0, ai: 'endurer', desc: '第三阶段 (30-0%)：毒素拖延' },
+      { rpmThreshold: 0.6, ai: 'rusher', desc: 'Phase 1 (100-60%): Aggressive charging' },
+      { rpmThreshold: 0.3, ai: 'fortress', desc: 'Phase 2 (60-30%): Defensive counter' },
+      { rpmThreshold: 0.0, ai: 'endurer', desc: 'Phase 3 (30-0%): Poison stall' },
     ],
     reward: { goldMin: 150, goldMax: 200 },
     intelPool: [
-      '首领—混沌冠军',
-      '三阶段战斗：进攻 → 防御 → 持久',
-      '第一阶段：高速冲锋 (100-60%)',
-      '第二阶段：防御反击 (60-30%)',
-      '第三阶段：毒素拖延战术 (30-0%)',
-      '针对每个阶段调整策略',
+      'BOSS — Chaos Champion',
+      'Three-phase battle: Attack → Defense → Endure',
+      'Phase 1: High-speed charging (100-60%)',
+      'Phase 2: Defensive counter-attack (60-30%)',
+      'Phase 3: Poison stall tactics (30-0%)',
+      'Adapt your strategy for each phase',
     ],
   },
 };
@@ -1400,65 +737,64 @@ const EVENTS_DB = [
   {
     id: 'scrap_merchant',
     icon: '🔧',
-    title: '废料商人',
-    desc: '一个神秘商人提出以一定价格升级你的某个零件。升级结果……难以预料。',
+    title: 'Scrap Merchant',
+    desc: 'A shady merchant offers to upgrade one of your parts for a price. The upgrade is... unpredictable.',
     choices: [
       {
-        text: '支付60G升级一个随机零件',
-        hint: '风险：零件可能变得更差',
+        text: 'Pay 60G to upgrade a random part',
+        hint: 'Risk: part may become worse',
         cost: 60,
         effect: (G) => {
-          if (G.gold < 60) return { success: false, msg: '金币不足！' };
+          if (G.gold < 60) return { success: false, msg: 'Not enough gold!' };
           G.gold -= 60;
           // Upgrade a random equipped part to next rarity (simplified)
           const slots = ['ar','wd','sg','bb'];
           const equipped = slots.filter(s => G.loadout[s]);
-          if (equipped.length === 0) return { success: false, msg: '没有装备任何零件！' };
+          if (equipped.length === 0) return { success: false, msg: 'No parts equipped!' };
           const slot = equipped[Math.floor(Math.random() * equipped.length)];
           const part = G.loadout[slot];
           const rarityUp = { common: 'rare', rare: 'epic', epic: 'legendary', legendary: 'legendary' };
-          const rarityNames = { common: '普通', rare: '稀有', epic: '史诗', legendary: '传说' };
           G.loadout[slot] = { ...part, rarity: rarityUp[part.rarity], price: Math.floor(part.price * 1.5) };
-          return { success: true, msg: `你的${part.name}已升级为${rarityNames[rarityUp[part.rarity]]}！` };
+          return { success: true, msg: `Your ${part.name} was upgraded to ${rarityUp[part.rarity]}!` };
         },
       },
       {
-        text: '拒绝',
-        hint: '什么都不会发生',
+        text: 'Decline',
+        hint: 'Nothing happens',
         cost: 0,
-        effect: () => ({ success: true, msg: '你转身离开了。' }),
+        effect: () => ({ success: true, msg: 'You walk away.' }),
       },
     ],
   },
   {
     id: 'ancient_arena',
     icon: '🏟️',
-    title: '古代竞技场',
-    desc: '你发现了一座古老的训练竞技场。一个幽灵向你发起耐力挑战。',
+    title: 'Ancient Arena',
+    desc: 'You find an ancient training arena. A ghost challenges you to a test of endurance.',
     choices: [
       {
-        text: '接受挑战（冒险失去1点生命，赢得100G）',
-        hint: '胜利：+100G。失败：-1 HP',
+        text: 'Accept the challenge (risk 1 HP for 100G)',
+        hint: 'Win: +100G. Lose: -1 HP',
         cost: 0,
         effect: (G) => {
           const win = Math.random() > 0.4; // 60% win chance
           if (win) {
             G.gold += 100;
             G.runStats.goldCollected += 100;
-            return { success: true, msg: '你赢得了挑战！+100G' };
+            return { success: true, msg: 'You won the challenge! +100G' };
           } else {
             G.hp = Math.max(0, G.hp - 1);
-            return { success: true, msg: '你输掉了挑战。-1 HP' };
+            return { success: true, msg: 'You lost the challenge. -1 HP' };
           }
         },
       },
       {
-        text: '旁观学习（下场战斗+1条情报）',
-        hint: '下场战斗额外显示1条情报',
+        text: 'Observe and learn (+1 Intel next battle)',
+        hint: 'Next battle shows 1 extra intel',
         cost: 0,
         effect: (G) => {
           G._bonusIntel = (G._bonusIntel || 0) + 1;
-          return { success: true, msg: '你获得了洞察。下场战斗+1条情报。' };
+          return { success: true, msg: 'You gain insight. +1 Intel next battle.' };
         },
       },
     ],
@@ -1466,12 +802,12 @@ const EVENTS_DB = [
   {
     id: 'parts_cache',
     icon: '📦',
-    title: '零件宝库',
-    desc: '你发现了一批前任挑战者遗留的隐藏零件。',
+    title: 'Hidden Cache',
+    desc: 'You discover a hidden cache of parts left by a previous challenger.',
     choices: [
       {
-        text: '取走零件（获得2个随机普通零件）',
-        hint: '免费零件，但可能是废品',
+        text: 'Take the parts (add 2 random common parts)',
+        hint: 'Free parts, but may be junk',
         cost: 0,
         effect: (G) => {
           const commonParts = Object.values(PARTS_DB).filter(p => p.rarity === 'common' && p.price > 0);
@@ -1479,17 +815,17 @@ const EVENTS_DB = [
             const p = commonParts[Math.floor(Math.random() * commonParts.length)];
             G.inventory.push({ ...p });
           }
-          return { success: true, msg: '你找到了2个普通零件！' };
+          return { success: true, msg: 'You found 2 common parts!' };
         },
       },
       {
-        text: '放弃（出售位置信息获得30G）',
-        hint: '安全选择，少量金币',
+        text: 'Leave it (gain 30G from selling location info)',
+        hint: 'Safe choice, small gold gain',
         cost: 0,
         effect: (G) => {
           G.gold += 30;
           G.runStats.goldCollected += 30;
-          return { success: true, msg: '你出售了位置信息。+30G' };
+          return { success: true, msg: 'You sell the location info. +30G' };
         },
       },
     ],
@@ -1497,55 +833,55 @@ const EVENTS_DB = [
   {
     id: 'mysterious_forge',
     icon: '⚒️',
-    title: '神秘熔炉',
-    desc: '一座发光的熔炉提出将你的两个零件融合成全新的东西。',
+    title: 'Mysterious Forge',
+    desc: 'A glowing forge offers to fuse two of your parts into something new.',
     choices: [
       {
-        text: '牺牲2个背包零件，换取1个稀有零件',
-        hint: '需要背包中有2个以上零件',
+        text: 'Sacrifice 2 inventory parts for a rare part',
+        hint: 'Need 2+ inventory parts',
         cost: 0,
         effect: (G) => {
-          if (G.inventory.length < 2) return { success: false, msg: '背包中至少需要2个零件！' };
+          if (G.inventory.length < 2) return { success: false, msg: 'Need at least 2 inventory parts!' };
           G.inventory.splice(0, 2);
           const rareParts = Object.values(PARTS_DB).filter(p => p.rarity === 'rare');
           const reward = rareParts[Math.floor(Math.random() * rareParts.length)];
           G.inventory.push({ ...reward });
-          return { success: true, msg: `融合完成！你获得了：${reward.name}` };
+          return { success: true, msg: `Fusion complete! You got: ${reward.name}` };
         },
       },
       {
-        text: '无视熔炉',
-        hint: '什么都不会发生',
+        text: 'Ignore the forge',
+        hint: 'Nothing happens',
         cost: 0,
-        effect: () => ({ success: true, msg: '熔炉随着你的离去渐渐熄灭。' }),
+        effect: () => ({ success: true, msg: 'The forge dims as you walk away.' }),
       },
     ],
   },
   {
     id: 'cursed_blessing',
     icon: '☯️',
-    title: '诅咒祝福',
-    desc: '一股奇异的能量场以代价换取力量。',
+    title: 'Cursed Blessing',
+    desc: 'A strange energy field offers power at a cost.',
     choices: [
       {
-        text: '接受力量（伤害+20%，-1 HP）',
-        hint: '本局永久增益，消耗生命',
+        text: 'Accept power (+20% damage, -1 HP)',
+        hint: 'Permanent buff this run, costs HP',
         cost: 0,
         effect: (G) => {
-          if (G.hp <= 1) return { success: false, msg: '只剩1点生命，太危险了！' };
+          if (G.hp <= 1) return { success: false, msg: 'Too dangerous with only 1 HP!' };
           G.hp -= 1;
           G._globalDmgBonus = (G._globalDmgBonus || 1.0) * 1.2;
-          return { success: true, msg: '力量涌入你的身体。伤害+20%，-1 HP。' };
+          return { success: true, msg: 'Power surges through you. Damage +20%, -1 HP.' };
         },
       },
       {
-        text: '抵抗能量（+15G，无其他效果）',
-        hint: '安全选择，少量奖励',
+        text: 'Resist the energy (+15G, nothing else)',
+        hint: 'Safe, small reward',
         cost: 0,
         effect: (G) => {
           G.gold += 15;
           G.runStats.goldCollected += 15;
-          return { success: true, msg: '你抵抗了能量。+15G' };
+          return { success: true, msg: 'You resist the energy. +15G' };
         },
       },
     ],
@@ -1581,9 +917,9 @@ function generateShopItems(count = 5) {
   }
   // Always add HP restore
   items.push({
-    id: 'hp_restore', slot: 'consumable', name: 'HP 恢复', rarity: 'common',
+    id: 'hp_restore', slot: 'consumable', name: 'HP Restore', rarity: 'common',
     price: 50, sellPrice: 0,
-    desc: '恢复 1 点生命。上限为 3。',
+    desc: 'Restore 1 HP. Max HP is 3.',
     effect: { restoreHp: 1 },
   });
   return items;
@@ -1639,11 +975,11 @@ function generateMap() {
   }
 
   const nodeTypeLabel = {
-    [NodeType.NORMAL]: '战斗',
-    [NodeType.ELITE]:  '精英',
-    [NodeType.SHOP]:   '商店',
-    [NodeType.EVENT]:  '事件',
-    [NodeType.BOSS]:   '首领',
+    [NodeType.NORMAL]: 'Battle',
+    [NodeType.ELITE]:  'Elite',
+    [NodeType.SHOP]:   'Shop',
+    [NodeType.EVENT]:  'Event',
+    [NodeType.BOSS]:   'BOSS',
   };
   const nodeTypeIcon = {
     [NodeType.NORMAL]: '⚔️',
@@ -1952,7 +1288,7 @@ function renderPrep() {
   // Enemy preview
   const ep = document.getElementById('enemy-preview');
   ep.innerHTML = `${enemy.icon || '🌀'} <strong>${enemy.name}</strong><br>
-    <span style="font-size:11px;color:#8888aa;">${enemy.archetype} — 第 ${node.floor} 层</span>`;
+    <span style="font-size:11px;color:#8888aa;">${enemy.archetype} — Floor ${node.floor}</span>`;
 
   // Part slots
   renderPartSlots();
@@ -1965,20 +1301,20 @@ function renderPartSlots() {
   const slotsEl = document.getElementById('part-slots');
   slotsEl.innerHTML = '';
   const slotDefs = [
-    { key: 'ar', label: '攻击环' },
-    { key: 'wd', label: '重量盘' },
-    { key: 'sg', label: '旋转齿轮' },
-    { key: 'bb', label: '刀刃底座' },
+    { key: 'ar', label: 'Attack Ring' },
+    { key: 'wd', label: 'Weight Disk' },
+    { key: 'sg', label: 'Spin Gear' },
+    { key: 'bb', label: 'Blade Base' },
   ];
   slotDefs.forEach(({ key, label }) => {
     const part = G.loadout[key];
-    const rarityMap = { common: '普通', rare: '稀有', epic: '史诗', legendary: '传说' };
     const div = document.createElement('div');
     div.className = 'part-slot';
     div.innerHTML = `
       <span class="slot-label">${label}</span>
-      <span class="slot-content ${part ? '' : 'empty'}">${part ? part.name : '— 空 —'}</span>
-      ${part ? `<span class="slot-rarity rarity-${part.rarity}">${rarityMap[part.rarity] || part.rarity}</span>` : ''}`;
+      <span class="slot-content ${part ? '' : 'empty'}">${part ? part.name : '— empty —'}</span>
+      ${part ? `<span class="slot-rarity rarity-${part.rarity}">${part.rarity}</span>` : ''}
+    `;
     if (part) {
       div.addEventListener('mouseenter', e => showTooltip(e, part.name, part.slot.toUpperCase(), part.desc));
       div.addEventListener('mouseleave', hideTooltip);
@@ -1992,7 +1328,7 @@ function renderInventory() {
   const invEl = document.getElementById('inventory-list');
   invEl.innerHTML = '';
   if (G.inventory.length === 0) {
-    invEl.innerHTML = '<div style="color:#333355;font-size:13px;font-style:italic;">背包中没有零件</div>';
+    invEl.innerHTML = '<div style="color:#333355;font-size:13px;font-style:italic;">No parts in inventory</div>';
     return;
   }
   G.inventory.forEach((part, idx) => {
@@ -2001,7 +1337,7 @@ function renderInventory() {
     div.innerHTML = `
       <span class="psi-name rarity-${part.rarity}">${part.name}</span>
       <span class="psi-desc">${part.slot.toUpperCase()}</span>
-      <button class="btn-danger" style="padding:4px 8px;font-size:11px;" onclick="sellPart(${idx})">出售 ${part.sellPrice}G</button>
+      <button class="btn-danger" style="padding:4px 8px;font-size:11px;" onclick="sellPart(${idx})">Sell ${part.sellPrice}G</button>
     `;
     div.addEventListener('mouseenter', e => showTooltip(e, part.name, part.slot.toUpperCase(), part.desc));
     div.addEventListener('mouseleave', hideTooltip);
@@ -2012,8 +1348,8 @@ function renderInventory() {
 function openPartSelectModal(slotKey) {
   const compatible = G.inventory.filter(p => p.slot === slotKey);
   if (compatible.length === 0) {
-    showModal('没有零件', `<p style="color:#8888aa;">背包中没有适合此槽位的零件。</p>`,
-      [{ label: '确定', cls: 'btn-secondary', onClick: () => {} }]);
+    showModal('No Parts', `<p style="color:#8888aa;">No compatible parts in inventory for this slot.</p>`,
+      [{ label: 'OK', cls: 'btn-secondary', onClick: () => {} }]);
     return;
   }
   let html = `<div id="part-select-list">`;
@@ -2026,10 +1362,10 @@ function openPartSelectModal(slotKey) {
   html += '</div>';
   // Option to unequip
   html += `<div style="margin-top:10px;">
-    <button class="btn-secondary" onclick="unequipPart('${slotKey}');hideModal();" style="font-size:12px;">卸下</button>
+    <button class="btn-secondary" onclick="unequipPart('${slotKey}');hideModal();" style="font-size:12px;">Unequip</button>
   </div>`;
-  showModal(`选择 ${slotKey.toUpperCase()} 零件`, html,
-    [{ label: '取消', cls: 'btn-secondary', onClick: () => {} }]);
+  showModal(`Select ${slotKey.toUpperCase()} Part`, html,
+    [{ label: 'Cancel', cls: 'btn-secondary', onClick: () => {} }]);
 }
 
 function equipPart(slotKey, invIdx) {
@@ -2075,11 +1411,10 @@ function renderShop() {
     const canAfford = G.gold >= item.price;
     const div = document.createElement('div');
     div.className = 'shop-item' + (canAfford ? '' : ' cant-afford');
-    const rarityMap = { common: '普通', rare: '稀有', epic: '史诗', legendary: '传说' };
     div.innerHTML = `
-      <div class="item-rarity-badge badge-${item.rarity}">${rarityMap[item.rarity] || item.rarity}</div>
+      <div class="item-rarity-badge badge-${item.rarity}">${item.rarity}</div>
       <div class="item-name">${item.name}</div>
-      <div class="item-type">${item.slot ? item.slot.toUpperCase() : '消耗品'}</div>
+      <div class="item-type">${item.slot ? item.slot.toUpperCase() : 'CONSUMABLE'}</div>
       <div class="item-desc">${item.desc}</div>
       <div class="item-price">💰 ${item.price}G</div>
     `;
@@ -2093,7 +1428,7 @@ function renderShop() {
 
   // Update refresh button
   const refreshBtn = document.getElementById('btn-shop-refresh');
-  refreshBtn.textContent = `🔄 刷新 (30G)`;
+  refreshBtn.textContent = `🔄 Refresh (30G)`;
   refreshBtn.disabled = G.gold < 30;
 }
 
@@ -2106,12 +1441,12 @@ function buyShopItem(idx) {
   if (item.effect && item.effect.restoreHp) {
     G.hp = Math.min(G.maxHp, G.hp + item.effect.restoreHp);
     updateStatusBar();
-    showModal('HP已恢复', `<p style="color:#44ff88;">恢复了 ${item.effect.restoreHp} HP！</p>`,
-      [{ label: '确定', cls: 'btn-secondary', onClick: () => {} }]);
+    showModal('HP Restored', `<p style="color:#44ff88;">Restored ${item.effect.restoreHp} HP!</p>`,
+      [{ label: 'OK', cls: 'btn-secondary', onClick: () => {} }]);
   } else {
     G.inventory.push({ ...item });
-    showModal('购买成功！', `<p style="color:#ccccff;"><strong>${item.name}</strong> 已加入背包。</p>`,
-      [{ label: '确定', cls: 'btn-secondary', onClick: () => {} }]);
+    showModal('Purchased!', `<p style="color:#ccccff;"><strong>${item.name}</strong> added to inventory.</p>`,
+      [{ label: 'OK', cls: 'btn-secondary', onClick: () => {} }]);
   }
   // Remove from shop
   G._shopItems.splice(idx, 1);
@@ -2140,7 +1475,7 @@ document.getElementById('btn-shop-back').addEventListener('click', () => {
 // ---- Event Screen ----
 function showEventScreen(ev) {
   document.getElementById('event-icon').textContent = ev.icon;
-  document.getElementById('event-title').textContent = ev.title;
+  document.getElementById('event-title').textContent = ev.name;
   document.getElementById('event-desc').textContent = ev.desc;
   const choicesEl = document.getElementById('event-choices');
   choicesEl.innerHTML = '';
@@ -2155,7 +1490,7 @@ function showEventScreen(ev) {
 }
 
 function resolveEventChoice(choice) {
-  const result = choice.effect(G);
+  const result = choice.resolve(G);
   updateStatusBar();
   // Show result then return to map
   showModal('Result', `<p style="color:#ccccff;">${result}</p>`, [
@@ -2181,13 +1516,6 @@ const ARENA = {
   friction: 0.0018,      // per-frame RPM decay base
   collisionDist: 28,     // distance for top-to-top collision
   fps: 60,
-  // ---- Physics parameters ----
-  linearDamping: 0.985,       // per-frame translational velocity damping (normal)
-  linearDampingLow: 0.97,     // per-frame damping when RPM < 30% (wobbling top)
-  bowlForce: 0.0008,          // centripetal acceleration coefficient (per px from center)
-  bowlForceDeadZone: 30,      // no centripetal force within this radius (px)
-  restitution: 0.85,          // collision elasticity (<=1 prevents energy gain)
-  magnusTangentRatio: 0.3,    // tangential impulse as fraction of normal impulse (Magnus)
 };
 
 // ---- Top State ----
@@ -2230,22 +1558,6 @@ function physicsStep(top, dt) {
   top.x += top.vx * dt * 60;
   top.y += top.vy * dt * 60;
 
-  // Translational velocity damping (simulates surface friction / air drag)
-  {
-    const rpmRatio = top.rpm / (top.maxRpm || 1);
-    // Low-RPM tops wobble and lose translational momentum faster
-    let damp = rpmRatio < 0.3 ? ARENA.linearDampingLow : ARENA.linearDamping;
-    // Apply part-based decayMult to translational damping as well
-    if (top.isPlayer) {
-      const sg = G.loadout.sg;
-      if (sg && sg.effect && sg.effect.decayMult) damp = 1 - (1 - damp) * sg.effect.decayMult;
-      const bb = G.loadout.bb;
-      if (bb && bb.effect && bb.effect.decayMult) damp = 1 - (1 - damp) * bb.effect.decayMult;
-    }
-    top.vx *= damp;
-    top.vy *= damp;
-  }
-
   // Wall collision (circular bowl)
   const dx = top.x - ARENA.cx;
   const dy = top.y - ARENA.cy;
@@ -2272,21 +1584,6 @@ function physicsStep(top, dt) {
       top.y = ARENA.cy + ny * maxDist;
       // Wall bounce costs RPM
       top.rpm = Math.max(0, top.rpm - 80);
-    }
-  }
-
-  // Bowl centripetal force — arena acts like a concave bowl
-  {
-    const bx = top.x - ARENA.cx;
-    const by = top.y - ARENA.cy;
-    const bdist = Math.sqrt(bx * bx + by * by);
-    if (bdist > ARENA.bowlForceDeadZone) {
-      const rpmRatio = top.rpm / (top.maxRpm || 1);
-      // Low-RPM tops slide toward center more easily
-      const forceMult = rpmRatio < 0.4 ? 1.5 : 1.0;
-      const acc = bdist * ARENA.bowlForce * forceMult;
-      top.vx -= (bx / bdist) * acc;
-      top.vy -= (by / bdist) * acc;
     }
   }
 
@@ -2326,6 +1623,11 @@ function checkTopCollision(p, e) {
   const dx = p.x - e.x, dy = p.y - e.y;
   const dist = Math.sqrt(dx * dx + dy * dy);
   if (dist < ARENA.collisionDist) {
+    // Exchange momentum weighted by RPM
+    const totalRpm = p.rpm + e.rpm + 1;
+    const pRatio = p.rpm / totalRpm;
+    const eRatio = e.rpm / totalRpm;
+
     const nx = dx / (dist || 1), ny = dy / (dist || 1);
     const relVx = p.vx - e.vx, relVy = p.vy - e.vy;
     const impact = relVx * nx + relVy * ny;
@@ -2341,47 +1643,21 @@ function checkTopCollision(p, e) {
       // Opposite spin (left vs right) = violent knockback
       // Same spin = friction slow, extra RPM drain
       const oppositeSpins = (p.spinDir || 'right') !== (e.spinDir || 'right');
+      let spinKnockMult = 1.0;
       let spinRpmDrainMult = 1.0;
       if (oppositeSpins) {
+        spinKnockMult = 1.5;    // violent knockback — Ring Out chance up
         spinRpmDrainMult = 0.8; // less RPM drain (energy goes to knockback)
       } else {
+        spinKnockMult = 0.7;    // less knockback
         spinRpmDrainMult = 1.4; // more RPM friction drain (same-spin grinding)
       }
 
-      // ---- Standard elastic collision (RPM as mass proxy) ----
-      // Using restitution coefficient to prevent energy gain
-      const mP = Math.max(p.rpm, 1);
-      const mE = Math.max(e.rpm, 1);
-      // Relative velocity along normal
-      const relVn = impact; // already computed as relV · n (negative = approaching)
-      // Elastic impulse scalar: J = -(1+e) * relVn / (1/mP + 1/mE)
-      const J = -(1 + ARENA.restitution) * relVn / (1 / mP + 1 / mE);
-      // Same-spin: reduce normal impulse (grinding, less bounce)
-      const normalJ = oppositeSpins ? J : J * 0.8;
-
-      p.vx += (normalJ / mP) * nx * knockMult;
-      p.vy += (normalJ / mP) * ny * knockMult;
-      e.vx -= (normalJ / mE) * nx * knockMult;
-      e.vy -= (normalJ / mE) * ny * knockMult;
-
-      // ---- Magnus tangential deflection (opposite spins only) ----
-      // Tangent vector perpendicular to collision normal
-      const tx = -ny, ty = nx;
-      const pRpmRatio = p.rpm / (p.maxRpm || 1);
-      const eRpmRatioM = e.rpm / (e.maxRpm || 1);
-      if (oppositeSpins) {
-        // Magnus factor scales down when RPM is very low
-        const pMagnus = pRpmRatio < 0.2 ? 0.3 : 1.0;
-        const eMagnus = eRpmRatioM < 0.2 ? 0.3 : 1.0;
-        const tangentImpulse = Math.abs(normalJ) * ARENA.magnusTangentRatio;
-        // Direction: spinDir 'right' → positive tangent, 'left' → negative tangent
-        const pTangentSign = (p.spinDir === 'right') ? 1 : -1;
-        const eTangentSign = (e.spinDir === 'right') ? 1 : -1;
-        p.vx += (tangentImpulse / mP) * tx * pTangentSign * pMagnus;
-        p.vy += (tangentImpulse / mP) * ty * pTangentSign * pMagnus;
-        e.vx -= (tangentImpulse / mE) * tx * eTangentSign * eMagnus;
-        e.vy -= (tangentImpulse / mE) * ty * eTangentSign * eMagnus;
-      }
+      const impulse = impact * 1.4;
+      p.vx -= impulse * nx * eRatio * spinKnockMult;
+      p.vy -= impulse * ny * eRatio * spinKnockMult;
+      e.vx += impulse * nx * pRatio * knockMult * spinKnockMult;
+      e.vy += impulse * ny * pRatio * knockMult * spinKnockMult;
 
       // RPM damage based on AR part + spin direction modifier
       const arDmg = getARDamage();
@@ -2398,13 +1674,6 @@ function checkTopCollision(p, e) {
       p.y += ny * overlap * 0.5;
       e.x -= nx * overlap * 0.5;
       e.y -= ny * overlap * 0.5;
-
-      // [BattleLog] Collision event
-      if (_battleLogger) {
-        _battleLogger.collisionCount++;
-        const elapsed = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
-        console.log(`[BattleLog] 💥 碰撞 | 已用时: ${elapsed}s | 玩家RPM: ${Math.round(p.rpm)} | 敌人RPM: ${Math.round(e.rpm)} | 对向自旋: ${oppositeSpins}`);
-      }
 
       return true;
     }
@@ -2593,48 +1862,11 @@ function drawRpmBar(ctx, top, x, y, w, color) {
 // ---- Battle Loop ----
 let _lastTime = 0;
 
-// ---- Battle Logger: data collector for combat analytics ----
-let _battleLogger = null;
-
-function _initBattleLogger() {
-  _battleLogger = {
-    startTimestamp: performance.now(),
-    collisionCount: 0,
-    thrustCount: 0,
-    brakeCount: 0,
-    activateCount: 0,
-    elementCounts: { fire: 0, ice: 0, poison: 0, thunder: 0, magnet: 0 },
-    lastSnapshotTime: performance.now()
-  };
-}
-
 function startBattleLoop() {
   if (!G.battle) return;
-  _initBattleLogger();
   G.battle.running = true;
   G.battle.phase = 'battle';
   _lastTime = performance.now();
-
-  // [BattleLog] Battle Start
-  if (_battleLogger) {
-    const p = G.battle.player, e = G.battle.enemy;
-    const enemyData = G.currentNode && G.currentNode.enemy ? G.currentNode.enemy : {};
-    const loadout = G.loadout || {};
-    const partNames = ['ar', 'wd', 'sg', 'bb'].map(slot => {
-      const part = loadout[slot];
-      if (!part) return `${slot.toUpperCase()}: (empty)`;
-      const name = typeof part === 'string' ? part : (part.name || part.id || slot);
-      return `${slot.toUpperCase()}: ${name}`;
-    });
-    console.group('[BattleLog] ⚔️ 战斗开始');
-    console.log('敌人:', enemyData.name || '未知', '| 原型:', enemyData.archetype || '未知');
-    console.log('玩家初始 RPM:', Math.round(p.rpm), '| 自旋方向:', p.spinDir || 'right');
-    console.log('敌人初始 RPM:', Math.round(e.rpm), '| 自旋方向:', e.spinDir || 'right');
-    console.log('玩家零件:', partNames.join('  '));
-    console.log('战斗计时器上限:', G.battle.timeLeft ? Math.round(G.battle.timeLeft) + 's' : '180s');
-    console.groupEnd();
-  }
-
   requestAnimationFrame(battleLoop);
 }
 
@@ -2659,17 +1891,6 @@ function battleLoop(now) {
   // Render
   renderArena();
   updateBattleHUD();
-
-  // [BattleLog] 5-second snapshot
-  if (_battleLogger && (performance.now() - _battleLogger.lastSnapshotTime) >= 5000) {
-    _battleLogger.lastSnapshotTime = performance.now();
-    const elapsed = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
-    const pRpmPct = ((player.rpm / (player.maxRpm || 1)) * 100).toFixed(1);
-    const eRpmPct = ((enemy.rpm / (enemy.maxRpm || 1)) * 100).toFixed(1);
-    const pEffects = (player.statusEffects || []).map(e => e.type).join(', ') || '无';
-    const eEffects = (enemy.statusEffects || []).map(e => e.type).join(', ') || '无';
-    console.log(`[BattleLog] 📊 快照 | 已用时: ${elapsed}s | 玩家RPM: ${Math.round(player.rpm)} (${pRpmPct}%) | 敌人RPM: ${Math.round(enemy.rpm)} (${eRpmPct}%) | 玩家状态: [${pEffects}] | 敌人状态: [${eEffects}]`);
-  }
 
   // Battle timer countdown
   G.battle.timeLeft -= dt;
@@ -2729,11 +1950,11 @@ function applyEnemyAI(enemy, player, dt) {
     if (G.battle.bossPhase === undefined) G.battle.bossPhase = 0;
     if (currentPhaseIndex !== G.battle.bossPhase) {
       G.battle.bossPhase = currentPhaseIndex;
-      const phaseNames = ['', '第二阶段', '第三阶段'];
+      const phaseNames = ['', 'PHASE 2', 'PHASE 3'];
       const phaseColors = ['', '#ff8800', '#ff2244'];
       if (currentPhaseIndex > 0) {
         showBattleAnnouncement(
-          `⚡ 混沌冠军 — ${phaseNames[currentPhaseIndex]}`,
+          `⚡ CHAOS CHAMPION — ${phaseNames[currentPhaseIndex]}`,
           phaseColors[currentPhaseIndex] || '#ff4444'
         );
         // Phase 3: apply poison aura (RPM drain)
@@ -2867,7 +2088,7 @@ function showBattleAnnouncement(text, color) {
     document.head.appendChild(s);
   }
 
-  const arenaWrap = document.getElementById('battle-canvas-wrap');
+  const arenaWrap = document.getElementById('arena-wrap') || document.getElementById('battle-screen');
   if (arenaWrap) {
     arenaWrap.style.position = arenaWrap.style.position || 'relative';
     arenaWrap.appendChild(el);
@@ -2911,25 +2132,6 @@ function endBattleTimeout() {
   G.battle.running = false;
   G.battle.phase = 'end';
 
-  // [BattleLog] Battle End Summary (timeout)
-  if (_battleLogger && G.battle) {
-    const totalTime = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
-    const p = G.battle.player, e = G.battle.enemy;
-    const pRpmPct = ((p.rpm / (p.maxRpm || 1)) * 100).toFixed(1);
-    const eRpmPct = ((e.rpm / (e.maxRpm || 1)) * 100).toFixed(1);
-    console.group('[BattleLog] 🏁 战斗结束');
-    console.log('战斗总时长:', totalTime + 's');
-    console.log('胜负结果: 平局');
-    console.log('结束方式: timeout');
-    console.log(`玩家最终RPM: ${Math.round(p.rpm)} (${pRpmPct}%)`);
-    console.log(`敌人最终RPM: ${Math.round(e.rpm)} (${eRpmPct}%)`);
-    console.log('总碰撞次数:', _battleLogger.collisionCount);
-    console.log(`干预使用: 冲刺 x${_battleLogger.thrustCount} | 制动 x${_battleLogger.brakeCount} | 激活 x${_battleLogger.activateCount}`);
-    const ec = _battleLogger.elementCounts;
-    console.log(`元素触发: fire x${ec.fire} | ice x${ec.ice} | poison x${ec.poison} | thunder x${ec.thunder} | magnet x${ec.magnet}`);
-    console.groupEnd();
-  }
-
   // Both lose 1 HP
   G.hp = Math.max(0, G.hp - 1);
   updateStatusBar();
@@ -2943,10 +2145,10 @@ function endBattleTimeout() {
     ctx.font = 'bold 32px Courier New';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ffcc44';
-    ctx.fillText('时间到', ARENA.cx, ARENA.cy - 16);
+    ctx.fillText('TIME OUT', ARENA.cx, ARENA.cy - 16);
     ctx.font = '18px Courier New';
     ctx.fillStyle = '#aaaacc';
-    ctx.fillText('平局 — 双方陀螺均存活', ARENA.cx, ARENA.cy + 20);
+    ctx.fillText('DRAW — Both tops still spinning', ARENA.cx, ARENA.cy + 20);
   }
 
   setTimeout(() => {
@@ -2955,11 +2157,11 @@ function endBattleTimeout() {
       showGameOver();
       return;
     }
-    showModal('时间到 — 平局',
-      `<div style="color:#ffcc44;font-size:18px;margin-bottom:12px;">⏱ 时间到</div>
-      <p style="color:#ccccff;">战斗以平局结束，双方陀螺均存活。</p>
-      <p style="color:#ff8888;">失去 <strong>1 HP</strong>。剩余：${G.hp}/${G.maxHp}</p>`,
-      [{ label: '返回地图', cls: 'btn-secondary', onClick: () => returnToMap() }]
+    showModal('TIME OUT — DRAW',
+      `<div style="color:#ffcc44;font-size:18px;margin-bottom:12px;">⏱ TIME OUT</div>
+      <p style="color:#ccccff;">The battle ended in a draw. Both tops survived.</p>
+      <p style="color:#ff8888;">Lost <strong>1 HP</strong>. Remaining: ${G.hp}/${G.maxHp}</p>`,
+      [{ label: 'Return to Map', cls: 'btn-secondary', onClick: () => returnToMap() }]
     );
   }, 1400);
 }
@@ -2971,47 +2173,23 @@ function endBattle(playerWon, winType) {
   G.battle.phase = 'end';
   G.battle.winType = winType || (playerWon ? 'survival' : 'burst');
 
-  // [BattleLog] Battle End Summary
-  if (_battleLogger && G.battle) {
-    const totalTime = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
-    const p = G.battle.player, e = G.battle.enemy;
-    const pRpmPct = ((p.rpm / (p.maxRpm || 1)) * 100).toFixed(1);
-    const eRpmPct = ((e.rpm / (e.maxRpm || 1)) * 100).toFixed(1);
-    const resultLabel = playerWon ? '玩家胜' : '玩家败';
-    const endType = winType || 'burst';
-    console.group('[BattleLog] 🏁 战斗结束');
-    console.log('战斗总时长:', totalTime + 's');
-    console.log('胜负结果:', resultLabel);
-    console.log('结束方式:', endType);
-    console.log(`玩家最终RPM: ${Math.round(p.rpm)} (${pRpmPct}%)`);
-    console.log(`敌人最终RPM: ${Math.round(e.rpm)} (${eRpmPct}%)`);
-    console.log('总碰撞次数:', _battleLogger.collisionCount);
-    console.log(`干预使用: 冲刺 x${_battleLogger.thrustCount} | 制动 x${_battleLogger.brakeCount} | 激活 x${_battleLogger.activateCount}`);
-    const ec = _battleLogger.elementCounts;
-    console.log(`元素触发: fire x${ec.fire} | ice x${ec.ice} | poison x${ec.poison} | thunder x${ec.thunder} | magnet x${ec.magnet}`);
-    console.groupEnd();
-  }
-
   // Determine display text based on win type
   let resultTitle, resultSub;
   if (playerWon) {
     if (winType === 'ringout') {
-      resultTitle = '出界！';
-      resultSub = '敌方陀螺飞出了竞技场！';
-    } else if (winType === 'burst') {
-      resultTitle = '爆裂胜利！';
-      resultSub = '敌方陀螺碎裂了！';
+      resultTitle = 'RING OUT!';
+      resultSub = 'Enemy launched out of the arena!';
     } else {
-      resultTitle = '胜利！';
-      resultSub = '敌方陀螺停止旋转！';
+      resultTitle = 'BURST WIN!';
+      resultSub = 'Enemy top stopped spinning!';
     }
   } else {
     if (winType === 'ringout') {
-      resultTitle = '出界…';
-      resultSub = '你的陀螺飞出了竞技场！';
+      resultTitle = 'RING OUT...';
+      resultSub = 'Your top flew out of the arena!';
     } else {
-      resultTitle = '失败…';
-      resultSub = '你的陀螺停止旋转了…';
+      resultTitle = 'BURST LOSS...';
+      resultSub = 'Your top stopped spinning...';
     }
   }
 
@@ -3041,13 +2219,13 @@ function showBattleResult(playerWon, winType) {
     // Win type label & gold bonus
     let winLabel, goldBonus;
     if (winType === 'ringout') {
-      winLabel  = '🏟️ 出界胜利！';
+      winLabel  = '🏟️ RING OUT!';
       goldBonus = Math.round((30 + G.floor * 15) * 0.20); // +20%
     } else if (winType === 'burst') {
-      winLabel  = '💥 爆裂胜利！';
+      winLabel  = '💥 BURST WIN!';
       goldBonus = Math.round((30 + G.floor * 15) * 0.50); // +50%
     } else {
-      winLabel  = '✅ 生存胜利';
+      winLabel  = '✅ SURVIVAL WIN';
       goldBonus = 0;
     }
 
@@ -3063,13 +2241,13 @@ function showBattleResult(playerWon, winType) {
 
     let html = `<div style="color:#44ff88;font-size:20px;font-weight:bold;margin-bottom:10px;">${winLabel}</div>`;
     if (isBossNode) {
-      html += `<div style="color:#ffcc44;font-size:14px;margin-bottom:10px;">⭐ 首领已击败 ⭐</div>`;
+      html += `<div style="color:#ffcc44;font-size:14px;margin-bottom:10px;">⭐ BOSS DEFEATED ⭐</div>`;
     }
-    html += `<p style="color:#ccccff;">获得 <strong style="color:#ffcc44;">${goldReward}G</strong>`;
-    if (goldBonus > 0) html += ` <span style="color:#ffaa44;font-size:12px;">(+${goldBonus}G ${winType === 'ringout' ? '出界' : '爆裂'}奖励)</span>`;
+    html += `<p style="color:#ccccff;">Earned <strong style="color:#ffcc44;">${goldReward}G</strong>`;
+    if (goldBonus > 0) html += ` <span style="color:#ffaa44;font-size:12px;">(+${goldBonus}G ${winType} bonus)</span>`;
     html += `</p>`;
     if (rewardPart) {
-      html += `<p style="color:#ccccff;margin-top:8px;">零件奖励：<strong class="rarity-${rewardPart.rarity}">${rewardPart.name}</strong></p>
+      html += `<p style="color:#ccccff;margin-top:8px;">Part reward: <strong class="rarity-${rewardPart.rarity}">${rewardPart.name}</strong></p>
       <p style="font-size:12px;color:#8888aa;">${rewardPart.desc}</p>`;
     }
     // Boss: extra rare part guaranteed
@@ -3077,19 +2255,19 @@ function showBattleResult(playerWon, winType) {
     if (isBossNode) {
       bossExtraPart = getRewardPart(true); // force rare+
       if (bossExtraPart) {
-        html += `<p style="color:#ffcc44;margin-top:6px;">🎁 首领奖励：<strong class="rarity-${bossExtraPart.rarity}">${bossExtraPart.name}</strong></p>
+        html += `<p style="color:#ffcc44;margin-top:6px;">🎁 Boss Bonus: <strong class="rarity-${bossExtraPart.rarity}">${bossExtraPart.name}</strong></p>
         <p style="font-size:12px;color:#8888aa;">${bossExtraPart.desc}</p>`;
       }
     }
 
-    const modalTitle = isBossNode ? '⭐ 首领已通关！' : '战斗胜利！';
+    const modalTitle = isBossNode ? '⭐ BOSS CLEARED!' : 'Battle Won!';
     showModal(modalTitle, html, [
-      { label: '收取零件', cls: 'btn-primary', onClick: () => {
+      { label: 'Take Part', cls: 'btn-primary', onClick: () => {
         if (rewardPart)    G.inventory.push({ ...rewardPart });
         if (bossExtraPart) G.inventory.push({ ...bossExtraPart });
         returnToMap();
       }},
-      { label: '跳过', cls: 'btn-secondary', onClick: () => returnToMap() },
+      { label: 'Skip', cls: 'btn-secondary', onClick: () => returnToMap() },
     ]);
   } else {
     // Lose HP
@@ -3099,22 +2277,22 @@ function showBattleResult(playerWon, winType) {
       showGameOver();
       return;
     }
-    const loseLabel = winType === 'ringout' ? '🏟️ 出界…' : '💀 失败';
-    showModal('战败', `<div style="color:#ff4444;font-size:18px;margin-bottom:12px;">${loseLabel}</div>
-    <p style="color:#ccccff;">失去 <strong style="color:#ff4444;">1 HP</strong>。剩余：${G.hp}/${G.maxHp}</p>`,
-    [{ label: '返回地图', cls: 'btn-secondary', onClick: () => returnToMap() }]);
+    const loseLabel = winType === 'ringout' ? '🏟️ RING OUT...' : '💀 DEFEAT';
+    showModal('Defeat', `<div style="color:#ff4444;font-size:18px;margin-bottom:12px;">${loseLabel}</div>
+    <p style="color:#ccccff;">Lost <strong style="color:#ff4444;">1 HP</strong>. Remaining: ${G.hp}/${G.maxHp}</p>`,
+    [{ label: 'Return to Map', cls: 'btn-secondary', onClick: () => returnToMap() }]);
   }
 }
 
 function getRewardPart(forceRare = false) {
-  const allParts = Object.values(PARTS_DB).filter(p => p.slot !== 'consumable');
+  const allParts = Object.values(PARTS_DB);
   let rarityPool;
   if (forceRare) {
-    // Boss bonus: always rare or epic
-    rarityPool = ['rare', 'epic'];
+    // Boss bonus: always uncommon or rare
+    rarityPool = ['uncommon', 'rare'];
   } else {
-    rarityPool = G.floor >= 3 ? ['common','rare','epic'] :
-                 G.floor >= 2 ? ['common','rare'] : ['common'];
+    rarityPool = G.floor >= 3 ? ['common','uncommon','rare'] :
+                 G.floor >= 2 ? ['common','uncommon'] : ['common'];
   }
   const pool = allParts.filter(p => rarityPool.includes(p.rarity));
   if (pool.length === 0) return allParts[Math.floor(Math.random() * allParts.length)];
@@ -3122,9 +2300,9 @@ function getRewardPart(forceRare = false) {
 }
 
 function showGameOver() {
-  showModal('游戏结束', `<div style="color:#ff4444;font-size:22px;margin-bottom:12px;">💀 你的陀螺已倒下</div>
-  <p style="color:#8888aa;">HP耗尽，竞技场又迎来了一位失败的挑战者。</p>`,
-  [{ label: '返回标题', cls: 'btn-danger', onClick: () => {
+  showModal('GAME OVER', `<div style="color:#ff4444;font-size:22px;margin-bottom:12px;">💀 YOUR TOP HAS FALLEN</div>
+  <p style="color:#8888aa;">All HP lost. The arena claims another challenger.</p>`,
+  [{ label: 'Return to Title', cls: 'btn-danger', onClick: () => {
     G.battle = null;
     G.map = null;
     showScreen('TITLE');
@@ -3408,14 +2586,14 @@ function updateLaunchUI() {
   if (!stepEl || !hintEl) return;
 
   if (G.launch.step === 'angle') {
-    stepEl.textContent = '第一步 — 设定角度';
-    hintEl.textContent = '观察旋转箭头，当它指向你想要的方向时点击。';
+    stepEl.textContent = 'STEP 1 — SET ANGLE';
+    hintEl.textContent = 'Watch the rotating arrow. Click when it points your desired direction.';
   } else if (G.launch.step === 'power') {
-    stepEl.textContent = '第二步 — 设定力度';
-    hintEl.textContent = '能量条来回摆动，在绿色区域（60-80%）点击效果最佳！';
+    stepEl.textContent = 'STEP 2 — SET POWER';
+    hintEl.textContent = 'The bar oscillates. Click in the green zone (60-80%) for best results!';
   } else {
-    stepEl.textContent = '发射中…';
-    hintEl.textContent = `角度：${Math.round(G.launch.angle)}° | 力度：${G.launch.power}%`;
+    stepEl.textContent = 'LAUNCHING...';
+    hintEl.textContent = `Angle: ${Math.round(G.launch.angle)}° | Power: ${G.launch.power}%`;
   }
 }
 
@@ -3537,13 +2715,7 @@ function doThrust() {
   iv.thrustCharges--;
   iv.thrustCooldown = 90; // 1.5s at 60fps
   updateInterventionHUD();
-  showInterventionFeedback('⚡ 冲刺！', '#4466ff');
-  // [BattleLog] Intervention: Thrust
-  if (_battleLogger) {
-    _battleLogger.thrustCount++;
-    const elapsed = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
-    console.log(`[BattleLog] ⚡ 干预: 冲刺 | 已用时: ${elapsed}s | 剩余次数: ${iv.thrustCharges}`);
-  }
+  showInterventionFeedback('⚡ THRUST!', '#4466ff');
 }
 
 // ---- Brake: slow player top, gain RPM ----
@@ -3562,13 +2734,7 @@ function doBrake() {
   iv.brakeCharges--;
   iv.brakeCooldown = 120; // 2s
   updateInterventionHUD();
-  showInterventionFeedback('🛑 制动！+' + rpmGain + ' RPM', '#44ff88');
-  // [BattleLog] Intervention: Brake
-  if (_battleLogger) {
-    _battleLogger.brakeCount++;
-    const elapsed = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
-    console.log(`[BattleLog] 🛑 干预: 制动 | 已用时: ${elapsed}s | RPM回复: +${rpmGain} | 剩余次数: ${iv.brakeCharges}`);
-  }
+  showInterventionFeedback('🛑 BRAKE! +' + rpmGain + ' RPM', '#44ff88');
 }
 
 // ---- Activate: trigger equipped part special effect ----
@@ -3590,29 +2756,13 @@ function doActivate() {
     }
   }
   if (!activated) {
-    showInterventionFeedback('没有可激活的零件！', '#888888');
+    showInterventionFeedback('No activatable part equipped!', '#888888');
     return;
   }
 
   iv.activateUsed = true;
   iv.activateCooldown = 180;
   updateInterventionHUD();
-  // [BattleLog] Intervention: Activate
-  if (_battleLogger) {
-    _battleLogger.activateCount++;
-    const elapsed = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
-    // Find the activated part name
-    const slots2 = ['ar', 'wd', 'sg', 'bb'];
-    let activatedPartName = '未知零件';
-    for (const slot of slots2) {
-      const part = G.loadout[slot];
-      if (part && part.effect && part.effect.activate) {
-        activatedPartName = typeof part === 'string' ? part : (part.name || part.id || slot);
-        break;
-      }
-    }
-    console.log(`[BattleLog] ✨ 干预: 激活 | 已用时: ${elapsed}s | 零件: ${activatedPartName}`);
-  }
 }
 
 // ---- Cooldown tick (called each battle frame) ----
@@ -3637,19 +2787,19 @@ function updateInterventionHUD() {
   if (thrustBtn) {
     const ready = iv.thrustCharges > 0 && iv.thrustCooldown === 0;
     thrustBtn.disabled = !ready || !G.battle || !G.battle.running;
-    thrustBtn.textContent = `⚡ 冲刺 (${iv.thrustCharges})${iv.thrustCooldown > 0 ? ' ' + Math.ceil(iv.thrustCooldown/60) + 's' : ''}`;
+    thrustBtn.textContent = `⚡ Thrust (${iv.thrustCharges})${iv.thrustCooldown > 0 ? ' ' + Math.ceil(iv.thrustCooldown/60) + 's' : ''}`;
     thrustBtn.className = ready ? 'btn-primary' : 'btn-secondary';
   }
   if (brakeBtn) {
     const ready = iv.brakeCharges > 0 && iv.brakeCooldown === 0;
     brakeBtn.disabled = !ready || !G.battle || !G.battle.running;
-    brakeBtn.textContent = `🛑 制动 (${iv.brakeCharges})${iv.brakeCooldown > 0 ? ' ' + Math.ceil(iv.brakeCooldown/60) + 's' : ''}`;
+    brakeBtn.textContent = `🛑 Brake (${iv.brakeCharges})${iv.brakeCooldown > 0 ? ' ' + Math.ceil(iv.brakeCooldown/60) + 's' : ''}`;
     brakeBtn.className = ready ? 'btn-secondary' : 'btn-secondary';
   }
   if (activBtn) {
     const ready = !iv.activateUsed && iv.activateCooldown === 0;
     activBtn.disabled = !ready || !G.battle || !G.battle.running;
-    activBtn.textContent = `✨ 激活${iv.activateCooldown > 0 ? ' ' + Math.ceil(iv.activateCooldown/60) + 's' : ''}`;
+    activBtn.textContent = `✨ Activate${iv.activateCooldown > 0 ? ' ' + Math.ceil(iv.activateCooldown/60) + 's' : ''}`;
     activBtn.className = ready ? 'btn-primary' : 'btn-secondary';
   }
 }
@@ -3690,14 +2840,14 @@ document.getElementById('btn-activate').addEventListener('click', doActivate);
   if (PARTS_DB.tri_wing_ar) {
     PARTS_DB.tri_wing_ar.effect.activate = (player, enemy, G) => {
       player._burstDmg = 400;
-      return '下次碰撞造成 +400 RPM 伤害！';
+      return 'Next hit deals +400 RPM damage!';
     };
   }
   // Rubber tip BB: absorb next hit
   if (PARTS_DB.rubber_tip) {
     PARTS_DB.rubber_tip.effect.activate = (player, enemy, G) => {
       player._absorbNext = true;
-      return '下次碰撞将被吸收！';
+      return 'Next collision absorbed!';
     };
   }
   // Gyro SG: RPM recovery burst
@@ -3705,7 +2855,7 @@ document.getElementById('btn-activate').addEventListener('click', doActivate);
     PARTS_DB.gyro_sg.effect.activate = (player, enemy, G) => {
       const gain = 300;
       player.rpm = Math.min(player.maxRpm, player.rpm + gain);
-      return `+${gain} RPM 已恢复！`;
+      return `+${gain} RPM recovered!`;
     };
   }
   // Heavy WD: slam — push enemy to wall
@@ -3715,7 +2865,7 @@ document.getElementById('btn-activate').addEventListener('click', doActivate);
       const d = Math.sqrt(dx * dx + dy * dy) || 1;
       enemy.vx = (dx / d) * 8;
       enemy.vy = (dy / d) * 8;
-      return '敌方被击飞至边界！';
+      return 'Enemy slammed to wall!';
     };
   }
 })();
@@ -3729,13 +2879,13 @@ document.getElementById('btn-activate').addEventListener('click', doActivate);
       // Burst damage
       if (p._burstDmg) {
         e.rpm = Math.max(0, e.rpm - p._burstDmg);
-        showInterventionFeedback(`💥 爆裂命中！-${p._burstDmg} RPM`, '#ff4444');
+        showInterventionFeedback(`💥 BURST HIT! -${p._burstDmg} RPM`, '#ff4444');
         p._burstDmg = 0;
       }
       // Absorb
       if (p._absorbNext) {
         p.rpm = Math.min(p.maxRpm, p.rpm + 200);
-        showInterventionFeedback('🛡️ 命中已吸收！+200 RPM', '#44ff88');
+        showInterventionFeedback('🛡️ HIT ABSORBED! +200 RPM', '#44ff88');
         p._absorbNext = false;
       }
     }
@@ -3753,14 +2903,12 @@ document.getElementById('btn-activate').addEventListener('click', doActivate);
 
 // Apply element effect to a target top when collision occurs
 function applyElementEffect(attacker, target) {
-  const arObj = G.loadout && G.loadout.ar;
-  const arId = arObj ? (typeof arObj === 'string' ? arObj : arObj.id) : null;
+  const arId = G.loadout && G.loadout.ar;
   const arPart = arId ? PARTS_DB[arId] : null;
   if (!arPart || !arPart.element) return;
 
   // Duration bonus from sg_resonance
-  const sgObj = G.loadout && G.loadout.sg;
-  const sgId = sgObj ? (typeof sgObj === 'string' ? sgObj : sgObj.id) : null;
+  const sgId = G.loadout && G.loadout.sg;
   const sgPart = sgId ? PARTS_DB[sgId] : null;
   const durationMult = (sgPart && sgPart.effect && sgPart.effect.elementDurationBonus)
     ? sgPart.effect.elementDurationBonus : 1.0;
@@ -3779,14 +2927,7 @@ function applyElementEffect(attacker, target) {
         type: 'fire', intensity: 5, framesLeft: dur,
         particleColor: '#ff6622', stacks: 1
       });
-showInterventionFeedback('🔥 燃烧！', '#ff6622');
-      // [BattleLog] Element effect
-      if (_battleLogger) {
-        _battleLogger.elementCounts.fire++;
-        const elapsed = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
-        const targetLabel = (target === G.battle.player) ? '玩家' : '敌人';
-        console.log(`[BattleLog] 🔮 元素状态 | 已用时: ${elapsed}s | 类型: fire | 目标: ${targetLabel} | 持续帧: ${dur}`);
-      }
+      showInterventionFeedback('🔥 BURN!', '#ff6622');
       break;
     }
     case 'ice': {
@@ -3797,14 +2938,7 @@ showInterventionFeedback('🔥 燃烧！', '#ff6622');
         type: 'ice', intensity: 0.3, framesLeft: dur,
         particleColor: '#44ddff', stacks: 1
       });
-showInterventionFeedback('❄️ 冻结！', '#44ddff');
-      // [BattleLog] Element effect
-      if (_battleLogger) {
-        _battleLogger.elementCounts.ice++;
-        const elapsed = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
-        const targetLabel = (target === G.battle.player) ? '玩家' : '敌人';
-        console.log(`[BattleLog] 🔮 元素状态 | 已用时: ${elapsed}s | 类型: ice | 目标: ${targetLabel} | 持续帧: ${dur}`);
-      }
+      showInterventionFeedback('❄️ FROZEN!', '#44ddff');
       break;
     }
     case 'poison': {
@@ -3814,27 +2948,13 @@ showInterventionFeedback('❄️ 冻结！', '#44ddff');
       if (existing) {
         existing.stacks = Math.min((existing.stacks || 1) + 1, 5);
         existing.framesLeft = Math.max(existing.framesLeft, dur);
-showInterventionFeedback(`☠️ 中毒 x${existing.stacks}！`, '#88ff44');
-        // [BattleLog] Element effect (stack up)
-        if (_battleLogger) {
-          _battleLogger.elementCounts.poison++;
-          const elapsed = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
-          const targetLabel = (target === G.battle.player) ? '玩家' : '敌人';
-          console.log(`[BattleLog] 🔮 元素状态 | 已用时: ${elapsed}s | 类型: poison | 目标: ${targetLabel} | 持续帧: ${existing.framesLeft} | 叠加层数: ${existing.stacks}`);
-        }
+        showInterventionFeedback(`☠️ VENOM x${existing.stacks}!`, '#88ff44');
       } else {
         target.statusEffects.push({
           type: 'poison', intensity: 2, framesLeft: dur,
           particleColor: '#88ff44', stacks: 1
         });
-showInterventionFeedback('☠️ 中毒！', '#88ff44');
-        // [BattleLog] Element effect (new)
-        if (_battleLogger) {
-          _battleLogger.elementCounts.poison++;
-          const elapsed = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
-          const targetLabel = (target === G.battle.player) ? '玩家' : '敌人';
-          console.log(`[BattleLog] 🔮 元素状态 | 已用时: ${elapsed}s | 类型: poison | 目标: ${targetLabel} | 持续帧: ${dur} | 叠加层数: 1`);
-        }
+        showInterventionFeedback('☠️ VENOM!', '#88ff44');
       }
       break;
     }
@@ -3847,14 +2967,7 @@ showInterventionFeedback('☠️ 中毒！', '#88ff44');
         type: 'thunder', intensity: 0, framesLeft: dur,
         particleColor: '#ffff44', stacks: 1
       });
-showInterventionFeedback('⚡ 麻痹！', '#ffff44');
-      // [BattleLog] Element effect
-      if (_battleLogger) {
-        _battleLogger.elementCounts.thunder++;
-        const elapsed = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
-        const targetLabel = (target === G.battle.player) ? '玩家' : '敌人';
-        console.log(`[BattleLog] 🔮 元素状态 | 已用时: ${elapsed}s | 类型: thunder | 目标: ${targetLabel} | 持续帧: ${dur}`);
-      }
+      showInterventionFeedback('⚡ SHOCKED!', '#ffff44');
       break;
     }
     case 'magnet': {
@@ -3865,14 +2978,7 @@ showInterventionFeedback('⚡ 麻痹！', '#ffff44');
         type: 'magnet', intensity: 80, framesLeft: dur,
         particleColor: '#cc44ff', stacks: 1
       });
-showInterventionFeedback('🧲 磁力！', '#cc44ff');
-      // [BattleLog] Element effect
-      if (_battleLogger) {
-        _battleLogger.elementCounts.magnet++;
-        const elapsed = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
-        const targetLabel = (target === G.battle.player) ? '玩家' : '敌人';
-        console.log(`[BattleLog] 🔮 元素状态 | 已用时: ${elapsed}s | 类型: magnet | 目标: ${targetLabel} | 持续帧: ${dur}`);
-      }
+      showInterventionFeedback('🧲 MAGNETIZED!', '#cc44ff');
       break;
     }
   }
@@ -3999,8 +3105,9 @@ function drawElementParticles(ctx, top) {
   renderArena = function() {
     _origRenderArenaElem();
     if (!G.battle || !G.battle.running) return;
-    if (!_arenaCanvas) return;
-    const ctx = _arenaCtx;
+    const canvas = document.getElementById('battle-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
     const { player, enemy } = G.battle;
     if (player) drawElementParticles(ctx, player);
     if (enemy)  drawElementParticles(ctx, enemy);
@@ -4043,7 +3150,7 @@ document.getElementById('btn-continue').addEventListener('click', () => {
   if (G.map) {
     returnToMap();
   } else {
-    showModal('无存档', '<p style="color:#8888aa;">没有进行中的游戏，请开始新游戏！</p>',
+    showModal('No Save', '<p style="color:#8888aa;">No active run found. Start a new game!</p>',
       [{ label: 'OK', cls: 'btn-secondary', onClick: () => {} }]);
   }
 });
@@ -4071,22 +3178,17 @@ document.getElementById('btn-prep-back').addEventListener('click', () => {
 
 // ---- Intel Generation (used in renderPrep) ----
 function generateIntel(enemy) {
-  if (!enemy) return ['暂无情报。'];
+  if (!enemy) return ['No intel available.'];
   const lines = [];
-  const st = enemy.stats || {};
-  const archetypeMap = { 'Aggressor': '进攻型', 'Survivor': '生存型', 'Trapper': '陷阱型' };
-  const archetypeLabel = archetypeMap[enemy.archetype] || enemy.archetype;
-  lines.push(`原型：${archetypeLabel}`);
-  lines.push(`基础转速：约 ${st.maxRpm != null ? Math.round(st.maxRpm * 30) : 3000} RPM`);
-  if (st.decayMult != null && st.decayMult < 1.0) lines.push(`衰减缓慢 — 持久战中将超越你`);
-  if (st.decayMult != null && st.decayMult > 1.0) lines.push(`衰减迅速 — 前期攻势凶猛`);
-  if (st.dmgMult != null && st.dmgMult > 1.2) lines.push(`攻击力强 — 避免正面碰撞`);
-  if (st.dmgMult != null && st.dmgMult < 0.8) lines.push(`攻击力弱 — 可以放心对撞`);
-  if (enemy.isElite) lines.push(`⚠ 精英敌人 — 属性强化`);
-  if (enemy.isBoss)  lines.push(`☠ 首领 — 做好万全准备`);
-  if (enemy.archetype === 'Aggressor') lines.push(`会不断向你冲锋`);
-  if (enemy.archetype === 'Survivor')  lines.push(`会绕圈消耗 — 尽早施压`);
-  if (enemy.archetype === 'Trapper')   lines.push(`利用边界反弹 — 保持在中心区域`);
+  lines.push(`Archetype: ${enemy.archetype}`);
+  lines.push(`Base RPM: ~${enemy.baseRpm || 3000}`);
+  if (enemy.decayMult < 1.0) lines.push(`Slow decay — will outlast you in a war of attrition`);
+  if (enemy.decayMult > 1.0) lines.push(`Fast decay — aggressive early pressure`);
+  if (enemy.arDmg > 130) lines.push(`High attack power — avoid direct collisions`);
+  if (enemy.arDmg < 80)  lines.push(`Low attack power — safe to trade hits`);
+  if (enemy.archetype === 'Aggressor') lines.push(`Will rush you relentlessly`);
+  if (enemy.archetype === 'Survivor')  lines.push(`Will orbit and outlast — apply pressure early`);
+  if (enemy.archetype === 'Trapper')   lines.push(`Uses wall bounces — stay near center`);
   return lines.slice(0, 4);
 }
 
@@ -4277,45 +3379,42 @@ document.addEventListener('keydown', e => {
 // ---- Tutorial System ----
 const TUTORIAL_STEPS = [
   {
-    title: '🌀 欢迎来到陀螺竞技场！',
-    body: `你是一名 <strong>战斗陀螺</strong> 斗士，正在攀登一座4层高塔。<br><br>
-    每层都有节点可以探索：<strong>⚔️ 战斗</strong>、<strong>💀 精英</strong>、<strong>🏪 商店</strong> 和 <strong>❓ 事件</strong>。`,
+    title: '🌀 Welcome to Spinning Top Arena!',
+    body: `You are a <strong>Beyblade-style top</strong> fighter climbing a 4-floor tower.<br><br>
+    Each floor has nodes to visit: <strong>⚔️ Battles</strong>, <strong>💀 Elites</strong>, <strong>🏪 Shops</strong>, and <strong>❓ Events</strong>.`,
   },
   {
-    title: '🗺️ 地图',
-    body: `点击任意 <strong>发光节点</strong> 进入。<br><br>
-    清除节点后将解锁下一层的相连节点。到达第4层即可挑战 <strong>👑 首领</strong>。`,
+    title: '🗺️ The Map',
+    body: `Click any <strong>glowing node</strong> to enter it.<br><br>
+    Clearing a node unlocks connected nodes on the next floor. Reach Floor 4 to face the <strong>👑 BOSS</strong>.`,
   },
   {
-    title: '⚙️ 配置你的陀螺',
-    body: `每次战斗前，从背包中装备零件：<br>
-    <strong>AR</strong>（攻击环）— 碰撞伤害<br>
-    <strong>WD</strong>（重量盘）— 基础转速<br>
-    <strong>SG</strong>（旋转齿轮）— 衰减速率<br>
-    <strong>BB</strong>（刀刃底座）— 特殊属性`,
+    title: '⚙️ Prepare Your Top',
+    body: `Before each battle, equip parts from your inventory:<br>
+    <strong>AR</strong> (Attack Ring) — collision damage<br>
+    <strong>WD</strong> (Weight Disk) — base RPM<br>
+    <strong>SG</strong> (Spin Gear) — decay rate<br>
+    <strong>BB</strong> (Blade Base) — special traits`,
   },
   {
-    title: '🚀 发射',
-    body: `<strong>第一步：</strong> 点击锁定发射角度（观察旋转箭头）。<br><br>
-    <strong>第二步：</strong> 点击锁定力度 — 瞄准 <strong>绿色区域（60-80%）</strong> 获得最佳转速！`,
+    title: '🚀 The Launch',
+    body: `<strong>Step 1:</strong> Click to lock your launch angle (watch the rotating arrow).<br><br>
+    <strong>Step 2:</strong> Click to lock power — aim for the <strong>green zone (60-80%)</strong> for best RPM!`,
   },
   {
-    title: '⚡ 战斗操作',
-    body: `战斗中你有3种干预技能：<br>
-    <strong>Q / ⚡ 冲刺</strong> — 向敌方冲去<br>
-    <strong>W / 🛑 制动</strong> — 减速 + 恢复转速<br>
-    <strong>E / ✨ 激活</strong> — 触发零件特殊能力<br><br>
-    <strong>转速归零</strong> 的一方落败！`,
+    title: '⚡ Battle Controls',
+    body: `During battle you have 3 interventions:<br>
+    <strong>Q / ⚡ Thrust</strong> — rush toward enemy<br>
+    <strong>W / 🛑 Brake</strong> — slow down + recover RPM<br>
+    <strong>E / ✨ Activate</strong> — trigger your part's special ability<br><br>
+    The top with <strong>0 RPM</strong> loses!`,
   },
 ];
 
 let _tutorialStep = 0;
 
-let _tutorialOnDone = null;
-
-function showTutorial(onDone) {
+function showTutorial() {
   _tutorialStep = 0;
-  _tutorialOnDone = onDone || null;
   showTutorialStep();
 }
 
@@ -4323,16 +3422,15 @@ function showTutorialStep() {
   const step = TUTORIAL_STEPS[_tutorialStep];
   const isLast = _tutorialStep === TUTORIAL_STEPS.length - 1;
   showModal(
-    `教程 (${_tutorialStep + 1}/${TUTORIAL_STEPS.length}) — ${step.title}`,
+    `Tutorial (${_tutorialStep + 1}/${TUTORIAL_STEPS.length}) — ${step.title}`,
     `<div style="line-height:1.7;color:#ccccff;">${step.body}</div>`,
     [
-      ...(isLast ? [] : [{ label: '下一步 →', cls: 'btn-primary', onClick: () => {
+      ...(isLast ? [] : [{ label: 'Next →', cls: 'btn-primary', onClick: () => {
         _tutorialStep++;
         showTutorialStep();
       }}]),
-      { label: isLast ? '开始游戏！' : '跳过', cls: isLast ? 'btn-primary' : 'btn-secondary', onClick: () => {
+      { label: isLast ? 'Start Playing!' : 'Skip', cls: isLast ? 'btn-primary' : 'btn-secondary', onClick: () => {
         hideModal();
-        if (_tutorialOnDone) { const cb = _tutorialOnDone; _tutorialOnDone = null; cb(); }
       }},
     ]
   );
@@ -4429,8 +3527,15 @@ function renderFloorIndicator() {
   showBaseSelection = function() {
     if (!localStorage.getItem('st_tutorial_done')) {
       localStorage.setItem('st_tutorial_done', '1');
-      // Pass _origShowBaseSelection as onDone so it only fires when tutorial ends
-      showTutorial(_origShowBaseSelection);
+      showTutorial();
+      // After tutorial closes, show base selection
+      const _origHideModal = hideModal;
+      hideModal = function() {
+        _origHideModal();
+        // Restore hideModal
+        hideModal = _origHideModal;
+        _origShowBaseSelection();
+      };
     } else {
       _origShowBaseSelection();
     }
@@ -4463,193 +3568,7 @@ console.log('[SpinningTop] Phase 4 loaded — Arena physics engine ready.');
 console.log('[SpinningTop] Phase 5 loaded — Launch system ready.');
 console.log('[SpinningTop] Phase 6 loaded — Intervention + full wiring ready.');
 console.log('[SpinningTop] Phase 7 loaded — Visual polish + tutorial ready.');
-
-// ============================================================
-// PHASE 8 — SETTLEMENT SCREEN + RUN-END SCREEN + STATS TRACKING
-// ============================================================
-
-// ---- Settlement Screen: fill & show ----
-function showSettlement(playerWon, winType, goldReward, rewardPart, bossExtraPart) {
-  const titleEl   = document.getElementById('settlement-title');
-  const typeEl    = document.getElementById('s-victory-type');
-  const goldEl    = document.getElementById('s-gold-earned');
-  const rpmEl     = document.getElementById('s-rpm-remain');
-  const choicesEl = document.getElementById('reward-choices');
-
-  // Title
-  if (playerWon) {
-    titleEl.className = 'victory';
-    if (winType === 'ringout')     titleEl.textContent = '🏟️ 出界！';
-    else if (winType === 'burst')  titleEl.textContent = '💥 爆裂胜利！';
-    else                           titleEl.textContent = '✅ 胜利';
-  } else {
-    titleEl.className = 'defeat';
-    titleEl.textContent = winType === 'ringout' ? '🏟️ 出界…' : '💀 失败';
-  }
-
-  // Stats
-  if (typeEl) typeEl.textContent = winType ? winType.toUpperCase() : '—';
-  if (goldEl) goldEl.textContent = goldReward != null ? `${goldReward}G` : '—';
-  if (rpmEl)  rpmEl.textContent  = G.battle ? `${Math.round(G.battle.playerRpm || 0)} RPM` : '—';
-
-  // Reward choices
-  if (choicesEl) {
-    choicesEl.innerHTML = '';
-    const parts = [rewardPart, bossExtraPart].filter(Boolean);
-    parts.forEach(part => {
-      const btn = document.createElement('button');
-      btn.className = `btn-primary rarity-${part.rarity}`;
-      btn.style.cssText = 'padding:10px 16px;font-size:13px;';
-      btn.innerHTML = `<strong>${part.name}</strong><br><span style="font-size:11px;color:#aaaacc;">${part.desc}</span>`;
-      btn.addEventListener('click', () => {
-        G.inventory.push({ ...part });
-        _afterSettlement();
-      });
-      choicesEl.appendChild(btn);
-    });
-  }
-
-  showScreen('SETTLEMENT');
-}
-
-// isBossNode is stored before clearCurrentNode() is called
-let _settlementIsBoss = false;
-function _afterSettlement() {
-  if (_settlementIsBoss && G.floor >= 4) {
-    showRunEnd(true);
-  } else {
-    returnToMap();
-  }
-}
-
-// ---- btn-settlement-skip event ----
-{
-  const skipBtn = document.getElementById('btn-settlement-skip');
-  if (skipBtn) {
-    skipBtn.addEventListener('click', () => _afterSettlement());
-  }
-}
-
-// ---- Run-End Screen: fill & show ----
-function showRunEnd(playerWon) {
-  const titleEl = document.getElementById('runend-title');
-  if (titleEl) {
-    titleEl.className = playerWon ? 'win' : 'lose';
-    titleEl.textContent = playerWon ? '🏆 冠军！' : '💀 落败';
-  }
-
-  const s = G.runStats;
-  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-  set('re-floors',   G.floor);
-  set('re-enemies',  s.enemiesDefeated);
-  set('re-gold',     G.gold + 'G');
-  set('re-perfect',  s.perfectLaunches);
-  set('re-ringout',  s.ringOuts);
-  set('re-burst',    s.bursts);
-
-  showScreen('RUN_END');
-}
-
-// ---- Patch showBattleResult to update runStats + use settlement screen ----
-{
-  const _origShowBattleResult = showBattleResult;
-  showBattleResult = function(playerWon, winType) {
-    const isBossNode = G.currentNode && G.currentNode.type === NodeType.BOSS;
-
-    if (playerWon) {
-      // Update runStats
-      G.runStats.enemiesDefeated++;
-      if (winType === 'ringout') G.runStats.ringOuts++;
-      if (winType === 'burst')   G.runStats.bursts++;
-
-      // Gold & reward calculation (same as original)
-      let goldBonus = 0;
-      if (winType === 'ringout')     goldBonus = Math.round((30 + G.floor * 15) * 0.20);
-      else if (winType === 'burst')  goldBonus = Math.round((30 + G.floor * 15) * 0.50);
-
-      const baseGold   = 30 + G.floor * 15 + Math.floor(Math.random() * 20);
-      const goldReward = baseGold + goldBonus;
-      G.gold += goldReward;
-      G.runStats.goldCollected += goldReward;
-      updateStatusBar();
-      clearCurrentNode();
-
-      const alwaysReward = winType === 'burst';
-      const rewardPart   = (alwaysReward || Math.random() < 0.7) ? getRewardPart() : null;
-      let bossExtraPart  = null;
-      if (isBossNode) bossExtraPart = getRewardPart(true);
-
-      // Store boss flag before clearCurrentNode() nullifies G.currentNode
-      _settlementIsBoss = isBossNode;
-
-      // Boss final floor → go to run-end after settlement
-      if (isBossNode && G.floor >= 4) {
-        showSettlement(true, winType, goldReward, rewardPart, bossExtraPart);
-      } else if (rewardPart || bossExtraPart) {
-        showSettlement(true, winType, goldReward, rewardPart, bossExtraPart);
-      } else {
-        // No reward — show quick modal then return to map
-        showModal('战斗胜利！',
-          `<div style="color:#44ff88;font-size:18px;margin-bottom:10px;">
-            ${winType === 'ringout' ? '🏟️ 出界！' : winType === 'burst' ? '💥 爆裂胜利！' : '✅ 胜利'}
-          </div>
-          <p style="color:#ccccff;">获得 <strong style="color:#ffcc44;">${goldReward}G</strong></p>`,
-          [{ label: '继续', cls: 'btn-primary', onClick: () => returnToMap() }]
-        );
-      }
-    } else {
-      // Defeat — delegate to original
-      _origShowBattleResult(playerWon, winType);
-    }
-  };
-}
-
-// ---- Patch perfect launch tracking ----
-{
-  const _origShowBattleScreen = showScreen;
-  // Track perfect launches via G.launchPower threshold
-  // (perfect = power bar stopped in green zone, i.e. launchPower >= 0.8)
-  const _origStartBattle = typeof startBattle !== 'undefined' ? startBattle : null;
-  if (_origStartBattle) {
-    startBattle = function() {
-      if (G.launchPower >= 0.8) G.runStats.perfectLaunches++;
-      _origStartBattle();
-    };
-  }
-}
-
-// ---- Reset runStats on new game ----
-{
-  const _origNewGame = typeof newGame !== 'undefined' ? newGame : null;
-  if (_origNewGame) {
-    newGame = function() {
-      G.runStats = { enemiesDefeated: 0, goldCollected: 0, perfectLaunches: 0, ringOuts: 0, bursts: 0 };
-      _origNewGame();
-    };
-  }
-  // Patch the existing btn-runend-restart handler to also reset runStats
-  // (original handler at line ~915 only calls showScreen('TITLE'))
-  // We replace it by removing old listener and adding a new one
-  const restartBtn = document.getElementById('btn-runend-restart');
-  if (restartBtn) {
-    // Clone node to remove all existing listeners
-    const newBtn = restartBtn.cloneNode(true);
-    restartBtn.parentNode.replaceChild(newBtn, restartBtn);
-    newBtn.addEventListener('click', () => {
-      G.runStats = { enemiesDefeated: 0, goldCollected: 0, perfectLaunches: 0, ringOuts: 0, bursts: 0 };
-      G.gold = 0; G.hp = G.maxHp; G.floor = 0;
-      showScreen('TITLE');
-    });
-  }
-}
-
-// Gold tracking is handled inside the showBattleResult patch above (goldReward variable)
-
-console.log('[SpinningTop] Phase 8 loaded — Settlement + Run-End screens ready.');
 console.log('[SpinningTop] ✅ ALL PHASES COMPLETE — Game ready to play!');
 console.log('[SpinningTop] Parts DB:', Object.keys(PARTS_DB).length, 'parts');
 console.log('[SpinningTop] Enemies DB:', Object.keys(ENEMIES_DB).length, 'enemies');
 console.log('[SpinningTop] Events DB:', EVENTS_DB.length, 'events');
-</script>
-</body>
-</html>

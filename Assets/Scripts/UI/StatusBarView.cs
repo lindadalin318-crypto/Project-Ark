@@ -40,7 +40,7 @@ namespace ProjectArk.UI
             var startColor = new Color(color.r, color.g, color.b, 0f);
             _label.color = startColor;
 
-            _animSequence = Sequence.Create()
+            _animSequence = Sequence.Create(useUnscaledTime: true)
                 .Chain(Tween.Color(_label, endValue: color, duration: 0.15f,
                     ease: Ease.OutQuad, useUnscaledTime: true))
                 .ChainDelay(duration)
@@ -56,6 +56,20 @@ namespace ProjectArk.UI
             _animSequence.Stop();
             _label.text = _idleText;
             _label.color = StarChartTheme.StatusIdle;
+        }
+
+        /// <summary>
+        /// Set text and color instantly with no animation.
+        /// Use this for persistent status text (e.g. equipped count) where
+        /// a fade-in / fade-out cycle is not desired and a zero-duration
+        /// tween would trigger a PrimeTween warning.
+        /// </summary>
+        public void SetText(string text, Color color)
+        {
+            if (_label == null) return;
+            _animSequence.Stop();
+            _label.text = text;
+            _label.color = color;
         }
 
         private void OnDestroy()

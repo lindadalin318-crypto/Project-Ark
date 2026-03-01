@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 using PrimeTween;
 using ProjectArk.Combat;
 
@@ -8,13 +9,18 @@ namespace ProjectArk.UI
 {
     /// <summary>
     /// Root controller for the Star Chart editing panel.
-    /// Orchestrates track views, inventory, detail panel, and equip/unequip logic.
+    /// Orchestrates Loadout card (PRIMARY + SECONDARY tracks), inventory, detail panel,
+    /// Loadout switcher, and equip/unequip logic.
     /// </summary>
     public class StarChartPanel : MonoBehaviour
     {
         [Header("Track Views")]
         [SerializeField] private TrackView _primaryTrackView;
         [SerializeField] private TrackView _secondaryTrackView;
+
+        [Header("Loadout")]
+        [SerializeField] private LoadoutSwitcher _loadoutSwitcher;
+        [SerializeField] private RectTransform _loadoutCard;
 
         [Header("Inventory & Detail")]
         [SerializeField] private InventoryView _inventoryView;
@@ -39,7 +45,7 @@ namespace ProjectArk.UI
         /// <summary> Exposes the controller for DragDropManager SAIL/SAT operations. </summary>
         public StarChartController Controller => _controller;
 
-        // 当前在详情面板中选中的物品
+        // Currently selected item in the detail panel
         private StarChartItemSO _selectedItem;
 
         /// <summary> Fired when panel opens. </summary>
@@ -48,13 +54,35 @@ namespace ProjectArk.UI
         /// <summary> Fired when panel closes. </summary>
         public event Action OnClosed;
 
+        // =====================================================================
+        // Lifecycle
+        // =====================================================================
+
+        private void Awake()
+        {
+            // Ensure panel starts fully hidden and non-interactive.
+            // UICanvasBuilder also calls SetActive(false) after building,
+            // but this Awake guard covers any scene-saved state.
+            if (_panelCanvasGroup != null)
+            {
+                _panelCanvasGroup.alpha = 0f;
+                _panelCanvasGroup.interactable = false;
+                _panelCanvasGroup.blocksRaycasts = false;
+            }
+            gameObject.SetActive(false);
+        }
+
+        // =====================================================================
+        // Initialization
+        // =====================================================================
+
         /// <summary> Bind to game systems. Call once during initialization. </summary>
         public void Bind(StarChartController controller, StarChartInventorySO inventory)
         {
             _controller = controller;
             _inventory = inventory;
 
-            // 绑定轨道视图
+            // Bind track views
             if (_primaryTrackView != null)
             {
                 _primaryTrackView.Bind(controller.PrimaryTrack, controller);
@@ -69,20 +97,25 @@ namespace ProjectArk.UI
                 _secondaryTrackView.OnCellClicked += HandleCellClicked;
             }
 
-            // 绑定库存
+            // Bind Loadout switcher
+            if (_loadoutSwitcher != null)
+            {
+                _loadoutSwitcher.SetLoadoutCount(3); // 3 independent loadout slots
+                _loadoutSwitcher.OnLoadoutChanged += HandleLoadoutChanged;
+            }
+
+            // Bind inventory
             if (_inventoryView != null)
             {
                 _inventoryView.Bind(inventory, IsItemEquipped);
                 _inventoryView.OnItemSelected += HandleInventoryItemSelected;
             }
 
-            // 绑定详情
+            // Bind detail panel
             if (_itemDetailView != null)
-            {
                 _itemDetailView.OnActionClicked += HandleActionClicked;
-            }
 
-            // 默认选中主轨道
+            // Default: select primary track
             _selectedTrack = controller.PrimaryTrack;
             UpdateTrackSelection();
 
@@ -90,6 +123,10 @@ namespace ProjectArk.UI
             if (_dragDropManager != null)
                 _dragDropManager.Bind(this, controller);
         }
+
+        // =====================================================================
+        // Open / Close
+        // =====================================================================
 
         /// <summary> Open the panel and refresh all views. </summary>
         public void Open()
@@ -99,22 +136,39 @@ namespace ProjectArk.UI
             RefreshAll();
             OnOpened?.Invoke();
 
-            // Panel open animation: scale 0.95 → 1.0 + alpha 0 → 1 (200ms OutQuad)
             if (_panelCanvasGroup != null)
             {
                 _panelCanvasGroup.interactable = false;
+                _panelCanvasGroup.blocksRaycasts = false;
                 _panelCanvasGroup.alpha = 0f;
                 var rt = GetComponent<RectTransform>();
                 if (rt != null) rt.localScale = Vector3.one * 0.95f;
 
-                Sequence.Create()
+                var seq = Sequence.Create(useUnscaledTime: true)
                     .Group(Tween.Alpha(_panelCanvasGroup, endValue: 1f,
-                        duration: 0.2f, ease: Ease.OutQuad, useUnscaledTime: true))
-                    .Group(rt != null
-                        ? Tween.Scale(rt, endValue: Vector3.one,
-                            duration: 0.2f, ease: Ease.OutQuad, useUnscaledTime: true)
-                        : Tween.Delay(0f))
-                    .ChainCallback(() => { if (_panelCanvasGroup != null) _panelCanvasGroup.interactable = true; });
+                        duration: 0.2f, ease: Ease.OutQuad, useUnscaledTime: true));
+
+                if (rt != null)
+                    seq.Group(Tween.Scale(rt, endValue: Vector3.one,
+                        duration: 0.2f, ease: Ease.OutQuad, useUnscaledTime: true));
+
+                // Loadout card slide-in from below
+                if (_loadoutCard != null)
+                {
+                    _loadoutCard.anchoredPosition = new Vector2(
+                        _loadoutCard.anchoredPosition.x, -40f);
+                    seq.Group(Tween.UIAnchoredPositionY(_loadoutCard, endValue: 0f,
+                        duration: 0.25f, ease: Ease.OutCubic, useUnscaledTime: true));
+                }
+
+                seq.ChainCallback(() =>
+                {
+                    if (_panelCanvasGroup != null)
+                    {
+                        _panelCanvasGroup.interactable = true;
+                        _panelCanvasGroup.blocksRaycasts = true;
+                    }
+                });
             }
         }
 
@@ -130,21 +184,29 @@ namespace ProjectArk.UI
             // Panel close animation: scale 1.0 → 0.95 + alpha 1 → 0 (150ms InQuad)
             if (_panelCanvasGroup != null)
             {
+                // Immediately block raycasts so invisible panel can't intercept input
                 _panelCanvasGroup.interactable = false;
+                _panelCanvasGroup.blocksRaycasts = false;
                 var rt = GetComponent<RectTransform>();
 
-                Sequence.Create()
+                var seq = Sequence.Create(useUnscaledTime: true)
                     .Group(Tween.Alpha(_panelCanvasGroup, endValue: 0f,
-                        duration: 0.15f, ease: Ease.InQuad, useUnscaledTime: true))
-                    .Group(rt != null
-                        ? Tween.Scale(rt, endValue: Vector3.one * 0.95f,
-                            duration: 0.15f, ease: Ease.InQuad, useUnscaledTime: true)
-                        : Tween.Delay(0f))
-                    .ChainCallback(() =>
-                    {
-                        gameObject.SetActive(false);
-                        OnClosed?.Invoke();
-                    });
+                        duration: 0.15f, ease: Ease.InQuad, useUnscaledTime: true));
+
+                if (rt != null)
+                    seq.Group(Tween.Scale(rt, endValue: Vector3.one * 0.95f,
+                        duration: 0.15f, ease: Ease.InQuad, useUnscaledTime: true));
+
+                // Loadout card slide-out downward
+                if (_loadoutCard != null)
+                    seq.Group(Tween.UIAnchoredPositionY(_loadoutCard, endValue: -30f,
+                        duration: 0.15f, ease: Ease.InQuad, useUnscaledTime: true));
+
+                seq.ChainCallback(() =>
+                {
+                    gameObject.SetActive(false);
+                    OnClosed?.Invoke();
+                });
             }
             else
             {
@@ -156,11 +218,19 @@ namespace ProjectArk.UI
         /// <summary> Is the panel currently visible? </summary>
         public bool IsOpen => gameObject.activeSelf;
 
+        // =====================================================================
+        // Refresh
+        // =====================================================================
+
         private void RefreshAll()
         {
+            // Refresh both tracks via the current Loadout
             _primaryTrackView?.Refresh();
             _secondaryTrackView?.Refresh();
             _inventoryView?.Refresh();
+
+            // Update status bar equipped count
+            UpdateStatusBar();
 
             if (_itemDetailView != null)
             {
@@ -190,6 +260,61 @@ namespace ProjectArk.UI
             _itemDetailView?.ShowItem(item, equipped);
         }
 
+        private void UpdateStatusBar()
+        {
+            if (_statusBar == null || _controller == null) return;
+
+            int equipped = CountEquipped();
+            int inventoryCount = _inventory != null ? _inventory.OwnedItems.Count : 0;
+            // Use ShowIdle-style instant update (no animation) to avoid
+            // PrimeTween "duration <= 0" warning that was caused by duration: 0f.
+            _statusBar.SetText(
+                $"EQUIPPED {equipped}/10  ·  INVENTORY {inventoryCount} ITEMS  ·  DRAG TO EQUIP  ·  CLICK TO INSPECT",
+                StarChartTheme.StatusNormal);
+        }
+
+        private int CountEquipped()
+        {
+            int count = 0;
+            if (_controller == null) return count;
+
+            count += _controller.PrimaryTrack.CoreLayer.Items.Count;
+            count += _controller.PrimaryTrack.PrismLayer.Items.Count;
+            count += _controller.SecondaryTrack.CoreLayer.Items.Count;
+            count += _controller.SecondaryTrack.PrismLayer.Items.Count;
+            if (_controller.GetEquippedLightSail() != null) count++;
+            var sats = _controller.GetEquippedSatellites();
+            if (sats != null) count += sats.Count;
+            return count;
+        }
+
+        // =====================================================================
+        // Event handlers
+        // =====================================================================
+
+        private void HandleLoadoutChanged(int index)
+        {
+            if (_controller == null) return;
+
+            // Switch the active loadout slot in the controller
+            _controller.SwitchLoadout(index);
+
+            // Re-bind track views to the new slot's tracks
+            if (_primaryTrackView != null)
+                _primaryTrackView.Bind(_controller.PrimaryTrack, _controller);
+
+            if (_secondaryTrackView != null)
+                _secondaryTrackView.Bind(_controller.SecondaryTrack, _controller);
+
+            // Update selected track reference to the new primary track
+            _selectedTrack = _controller.PrimaryTrack;
+            UpdateTrackSelection();
+
+            // Refresh inventory equipped marks and status bar
+            _inventoryView?.Refresh();
+            UpdateStatusBar();
+        }
+
         private void HandleTrackSelected(TrackView trackView)
         {
             _selectedTrack = trackView.Track;
@@ -212,7 +337,6 @@ namespace ProjectArk.UI
 
         private void HandleCellClicked(StarChartItemSO item)
         {
-            // 点击已装备的格子 → 在详情面板显示（已装备状态）
             _selectedItem = item;
             _itemDetailView?.ShowItem(item, true);
         }
@@ -229,6 +353,10 @@ namespace ProjectArk.UI
             RefreshAll();
         }
 
+        // =====================================================================
+        // Equip / Unequip
+        // =====================================================================
+
         private void EquipItem(StarChartItemSO item)
         {
             if (_selectedTrack == null) return;
@@ -238,7 +366,7 @@ namespace ProjectArk.UI
                 case StarCoreSO core:
                     if (!_selectedTrack.EquipCore(core))
                     {
-                        Debug.LogWarning($"[StarChartPanel] 无法装备核心 '{core.DisplayName}'：空间不足");
+                        Debug.LogWarning($"[StarChartPanel] Cannot equip core '{core.DisplayName}': no space");
                         _statusBar?.ShowMessage($"NO SPACE: {core.DisplayName}", StarChartTheme.StatusError, 3f);
                     }
                     else
@@ -251,7 +379,7 @@ namespace ProjectArk.UI
                 case PrismSO prism:
                     if (!_selectedTrack.EquipPrism(prism))
                     {
-                        Debug.LogWarning($"[StarChartPanel] 无法装备棱镜 '{prism.DisplayName}'：空间不足");
+                        Debug.LogWarning($"[StarChartPanel] Cannot equip prism '{prism.DisplayName}': no space");
                         _statusBar?.ShowMessage($"NO SPACE: {prism.DisplayName}", StarChartTheme.StatusError, 3f);
                     }
                     else
@@ -300,7 +428,11 @@ namespace ProjectArk.UI
             }
         }
 
-        /// <summary> Check if an item is currently equipped in any track/slot. </summary>
+        // =====================================================================
+        // Helpers
+        // =====================================================================
+
+        /// <summary> Check if an item is currently equipped in the active loadout slot. </summary>
         private bool IsItemEquipped(StarChartItemSO item)
         {
             if (_controller == null) return false;
@@ -321,12 +453,8 @@ namespace ProjectArk.UI
                 case SatelliteSO sat:
                     var satellites = _controller.GetEquippedSatellites();
                     if (satellites != null)
-                    {
                         for (int i = 0; i < satellites.Count; i++)
-                        {
                             if (satellites[i] == sat) return true;
-                        }
-                    }
                     return false;
 
                 default:
@@ -334,13 +462,10 @@ namespace ProjectArk.UI
             }
         }
 
-        /// <summary> Helper: IReadOnlyList does not have Contains, so we iterate manually. </summary>
         private static bool ListContains<T>(System.Collections.Generic.IReadOnlyList<T> list, T target)
         {
             for (int i = 0; i < list.Count; i++)
-            {
                 if (ReferenceEquals(list[i], target)) return true;
-            }
             return false;
         }
 
@@ -363,6 +488,9 @@ namespace ProjectArk.UI
 
             if (_itemDetailView != null)
                 _itemDetailView.OnActionClicked -= HandleActionClicked;
+
+            if (_loadoutSwitcher != null)
+                _loadoutSwitcher.OnLoadoutChanged -= HandleLoadoutChanged;
         }
     }
 }

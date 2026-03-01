@@ -78,6 +78,12 @@ namespace ProjectArk.UI
         // PrimeTween handle for flash animation
         private Sequence _flashSequence;
 
+        // PrimeTween handle for hover pulse animation
+        private Tween _pulseTween;
+
+        // Whether this cell is currently showing an overlay (multi-cell item)
+        private bool _isOverlayCell;
+
         private void Awake()
         {
             if (_button != null)
@@ -93,6 +99,55 @@ namespace ProjectArk.UI
             _typeColor = typeColor;
         }
 
+        /// <summary>
+        /// Set this cell as part of an Item Overlay (multi-cell item).
+        /// The primary cell (index 0) shows the icon; secondary cells show a tinted background only.
+        /// </summary>
+        /// <param name="item">The item occupying this cell.</param>
+        /// <param name="isPrimary">True if this is the first (icon-bearing) cell of the overlay.</param>
+        public void SetOverlay(StarChartItemSO item, bool isPrimary)
+        {
+            _isOverlayCell = true;
+            DisplayedItem = item;
+
+            Color targetBg = new Color(_typeColor.r, _typeColor.g, _typeColor.b, isPrimary ? 0.35f : 0.22f);
+
+            _flashSequence.Stop();
+            if (_backgroundImage != null)
+            {
+                _backgroundImage.color = Color.white;
+                _flashSequence = Sequence.Create(useUnscaledTime: true)
+                    .Chain(Tween.Color(_backgroundImage, endValue: targetBg, duration: 0.15f,
+                        ease: Ease.OutQuad, useUnscaledTime: true));
+            }
+
+            if (_placeholderLabel != null)
+                _placeholderLabel.enabled = false;
+
+            if (_iconImage != null)
+            {
+                if (isPrimary)
+                {
+                    _iconImage.enabled = true;
+                    if (item != null && item.Icon != null)
+                    {
+                        _iconImage.sprite = item.Icon;
+                        _iconImage.color = Color.white;
+                    }
+                    else if (item != null)
+                    {
+                        _iconImage.sprite = null;
+                        _iconImage.color = StarChartTheme.GetTypeColor(item.ItemType);
+                    }
+                }
+                else
+                {
+                    // Secondary overlay cell: no icon, just tinted background
+                    _iconImage.enabled = false;
+                }
+            }
+        }
+
         /// <summary> Show an item's icon in this cell (primary cell for multi-size items). </summary>
         public void SetItem(StarChartItemSO item)
         {
@@ -106,7 +161,7 @@ namespace ProjectArk.UI
             if (_backgroundImage != null)
             {
                 _backgroundImage.color = Color.white;
-                _flashSequence = Sequence.Create()
+                _flashSequence = Sequence.Create(useUnscaledTime: true)
                     .Chain(Tween.Color(_backgroundImage, endValue: targetBg, duration: 0.15f,
                         ease: Ease.OutQuad, useUnscaledTime: true));
             }
@@ -141,6 +196,7 @@ namespace ProjectArk.UI
         /// <summary> Show empty state (no item, available for equip). </summary>
         public void SetEmpty()
         {
+            _isOverlayCell = false;
             DisplayedItem = null;
 
             // Phase C: fade to empty color
@@ -166,6 +222,7 @@ namespace ProjectArk.UI
         /// <summary> Show as occupied by a multi-size item (no icon, tinted background). </summary>
         public void SetSpannedBy(StarChartItemSO item)
         {
+            _isOverlayCell = false;
             DisplayedItem = null;
 
             if (_backgroundImage != null)
@@ -216,6 +273,13 @@ namespace ProjectArk.UI
             var mgr = DragDropManager.Instance;
             if (mgr != null && mgr.IsDragging)
             {
+                // Drag hover: play scale pulse animation
+                _pulseTween.Stop();
+                var rt = GetComponent<RectTransform>();
+                if (rt != null)
+                    _pulseTween = Tween.Scale(rt, startValue: Vector3.one,
+                        endValue: Vector3.one * 1.05f, duration: 0.1f,
+                        ease: Ease.OutQuad, useUnscaledTime: true);
                 var payload = mgr.CurrentPayload;
                 if (payload == null) return;
 
@@ -288,6 +352,13 @@ namespace ProjectArk.UI
             var mgr = DragDropManager.Instance;
             if (mgr != null && mgr.IsDragging)
             {
+                // Restore scale
+                _pulseTween.Stop();
+                var rt = GetComponent<RectTransform>();
+                if (rt != null)
+                    _pulseTween = Tween.Scale(rt, endValue: Vector3.one,
+                        duration: 0.1f, ease: Ease.OutQuad, useUnscaledTime: true);
+
                 // Clear highlights immediately
                 if (OwnerTrack != null)
                     OwnerTrack.ClearAllHighlights();
@@ -395,6 +466,7 @@ namespace ProjectArk.UI
         private void OnDestroy()
         {
             _flashSequence.Stop();
+            _pulseTween.Stop();
         }
     }
 }

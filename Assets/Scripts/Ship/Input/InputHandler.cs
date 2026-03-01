@@ -73,8 +73,6 @@ namespace ProjectArk.Ship
 
         private void Awake()
         {
-            Debug.Log("[InputHandler] Awake called");
-            
             ServiceLocator.Register(this);
 
             if (_inputActions == null)
@@ -105,8 +103,6 @@ namespace ProjectArk.Ship
             _interactAction = shipMap.FindAction("Interact");
             _dashAction = shipMap.FindAction("Dash");
             _toggleSpaceLifeAction = shipMap.FindAction("ToggleSpaceLife");
-            
-            Debug.Log($"[InputHandler] Actions found - Move: {_moveAction != null}, ToggleSpaceLife: {_toggleSpaceLifeAction != null}");
         }
 
         private void OnDestroy()
@@ -116,8 +112,6 @@ namespace ProjectArk.Ship
 
         private void OnEnable()
         {
-            Debug.Log("[InputHandler] OnEnable called");
-            
             if (_inputActions == null)
             {
                 Debug.LogError("[InputHandler] Cannot enable - _inputActions is null!");
@@ -126,7 +120,6 @@ namespace ProjectArk.Ship
             
             var shipMap = _inputActions.FindActionMap("Ship");
             shipMap.Enable();
-            Debug.Log($"[InputHandler] Ship ActionMap enabled: {shipMap.enabled}");
 
             // 监听 performed 事件来自动检测设备切换
             _aimPositionAction.performed += OnMouseAimPerformed;
@@ -147,21 +140,28 @@ namespace ProjectArk.Ship
             if (_toggleSpaceLifeAction != null)
             {
                 _toggleSpaceLifeAction.performed += OnToggleSpaceLifeActionPerformed;
-                Debug.Log("[InputHandler] ToggleSpaceLife callback registered");
             }
         }
 
         private void OnDisable()
         {
-            _aimPositionAction.performed -= OnMouseAimPerformed;
-            _aimStickAction.performed -= OnGamepadAimPerformed;
+            if (_inputActions == null) return;
 
-            _fireAction.performed -= OnFirePerformed;
-            _fireAction.canceled -= OnFireCanceled;
+            if (_aimPositionAction != null) _aimPositionAction.performed -= OnMouseAimPerformed;
+            if (_aimStickAction != null)    _aimStickAction.performed    -= OnGamepadAimPerformed;
+
+            if (_fireAction != null)
+            {
+                _fireAction.performed -= OnFirePerformed;
+                _fireAction.canceled  -= OnFireCanceled;
+            }
             IsFireHeld = false;
 
-            _fireSecondaryAction.performed -= OnSecondaryFirePerformed;
-            _fireSecondaryAction.canceled -= OnSecondaryFireCanceled;
+            if (_fireSecondaryAction != null)
+            {
+                _fireSecondaryAction.performed -= OnSecondaryFirePerformed;
+                _fireSecondaryAction.canceled  -= OnSecondaryFireCanceled;
+            }
             IsSecondaryFireHeld = false;
 
             if (_interactAction != null)
@@ -173,8 +173,10 @@ namespace ProjectArk.Ship
             if (_toggleSpaceLifeAction != null)
                 _toggleSpaceLifeAction.performed -= OnToggleSpaceLifeActionPerformed;
 
+            // Disable Ship ActionMap when InputHandler is disabled.
+            // UIManager will re-enable it via its own shipMap.Enable() when needed.
             var shipMap = _inputActions.FindActionMap("Ship");
-            shipMap.Disable();
+            shipMap?.Disable();
         }
 
         private void Update()
@@ -283,7 +285,6 @@ namespace ProjectArk.Ship
 
         private void OnToggleSpaceLifeActionPerformed(InputAction.CallbackContext ctx)
         {
-            Debug.Log("[InputHandler] ToggleSpaceLife action PERFORMED! Invoking event...");
             OnToggleSpaceLifePerformed?.Invoke();
         }
     }

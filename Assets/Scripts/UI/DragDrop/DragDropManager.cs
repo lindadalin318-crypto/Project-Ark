@@ -108,6 +108,9 @@ namespace ProjectArk.UI
             // Show ghost
             if (_ghostView != null)
                 _ghostView.Show(payload.Item);
+
+            // Highlight all TypeColumns that match the dragged item's type
+            HighlightMatchingColumns(payload.Item, true);
         }
 
         /// <summary>
@@ -389,12 +392,48 @@ namespace ProjectArk.UI
             if (_ghostView != null)
                 _ghostView.Hide();
 
+            // Clear all TypeColumn highlights
+            if (CurrentPayload != null)
+                HighlightMatchingColumns(CurrentPayload.Item, false);
+
             IsDragging = false;
             CurrentPayload = null;
             DropTargetTrack = null;
             DropTargetValid = false;
             DropTargetIsReplace = false;
             DropTargetIsCoreLayer = false;
+        }
+
+        /// <summary>
+        /// Highlight (or clear) all TypeColumns in both TrackViews that match the given item's type.
+        /// Called on drag begin (highlight=true) and drag end/cancel (highlight=false).
+        /// </summary>
+        private void HighlightMatchingColumns(StarChartItemSO item, bool highlight)
+        {
+            if (_panel == null || item == null) return;
+
+            // Determine the matching SlotType
+            SlotType matchType = item.ItemType switch
+            {
+                StarChartItemType.Core      => SlotType.Core,
+                StarChartItemType.Prism     => SlotType.Prism,
+                StarChartItemType.LightSail => SlotType.LightSail,
+                StarChartItemType.Satellite => SlotType.Satellite,
+                _                           => SlotType.Core
+            };
+
+            // Find all TrackViews in the panel and highlight/clear the matching column
+            var trackViews = _panel.GetComponentsInChildren<TrackView>(true);
+            foreach (var tv in trackViews)
+            {
+                var col = tv.GetColumn(matchType);
+                if (col == null) continue;
+
+                if (highlight)
+                    col.SetDropHighlight(true);
+                else
+                    col.ClearDropHighlight();
+            }
         }
 
         private void OnDestroy()

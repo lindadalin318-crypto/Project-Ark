@@ -10,14 +10,20 @@ namespace ProjectArk.UI
     public static class StarChartTheme
     {
         // ── Background & Structure ──────────────────────────────────────────────
-        /// <summary> Deep background: #0d1117, alpha 0.95 </summary>
+        /// <summary> Deep background: #0b1120 </summary>
+        public static readonly Color BgPanel = new Color(0.043f, 0.067f, 0.125f, 0.97f);
+
+        /// <summary> Track area background: #0f1828 </summary>
+        public static readonly Color BgTrack = new Color(0.059f, 0.094f, 0.157f, 0.92f);
+
+        /// <summary> Deep background: #0d1117, alpha 0.95 (legacy alias) </summary>
         public static readonly Color BgDeep = new Color(0.051f, 0.067f, 0.090f, 0.95f);
 
         /// <summary> Panel border / divider line: dim white </summary>
         public static readonly Color Border = new Color(1f, 1f, 1f, 0.12f);
 
-        /// <summary> Corner bracket decoration: white, low alpha </summary>
-        public static readonly Color CornerBracket = new Color(1f, 1f, 1f, 0.25f);
+        /// <summary> Corner bracket decoration: cyan #22d3ee, 2px L-shape </summary>
+        public static readonly Color CornerBracket = new Color(0.133f, 0.827f, 0.933f, 0.85f);
 
         // ── Accent ─────────────────────────────────────────────────────────────
         /// <summary> Primary accent cyan: #00e5ff </summary>

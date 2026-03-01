@@ -31,11 +31,36 @@ namespace ProjectArk.Core.Save
 
     /// <summary>
     /// Star Chart loadout serialization.
+    /// Supports multi-slot format (Loadouts list) with backward-compatible legacy fields.
     /// </summary>
     [Serializable]
     public class StarChartSaveData
     {
+        /// <summary> Multi-slot loadout data (new format, 3 slots). </summary>
+        public List<LoadoutSlotSaveData> Loadouts = new();
+
+        // --- Legacy single-slot fields (kept for migration from old saves) ---
+
+        [Obsolete("Use Loadouts list instead. Kept for save migration only.")]
         public TrackSaveData PrimaryTrack = new();
+
+        [Obsolete("Use Loadouts list instead. Kept for save migration only.")]
+        public TrackSaveData SecondaryTrack = new();
+
+        [Obsolete("Use Loadouts list instead. Kept for save migration only.")]
+        public string LightSailID;
+
+        [Obsolete("Use Loadouts list instead. Kept for save migration only.")]
+        public List<string> SatelliteIDs = new();
+    }
+
+    /// <summary>
+    /// Serialization data for a single loadout slot.
+    /// </summary>
+    [Serializable]
+    public class LoadoutSlotSaveData
+    {
+        public TrackSaveData PrimaryTrack   = new();
         public TrackSaveData SecondaryTrack = new();
         public string LightSailID;
         public List<string> SatelliteIDs = new();

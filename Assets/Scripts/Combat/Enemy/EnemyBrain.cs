@@ -84,6 +84,9 @@ namespace ProjectArk.Combat.Enemy
             // Don't tick the FSM if dead
             if (!_entity.IsAlive) return;
 
+            // Guard: state machine may not be initialized if BuildStateMachine() failed
+            if (_stateMachine == null) return;
+
             // Check for incoming threats (dodge/block interrupts)
             CheckThreatResponse();
 
