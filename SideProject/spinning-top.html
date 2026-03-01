@@ -2211,7 +2211,55 @@ const ARENA = {
   orbitBreakCooldownNear: 180,    // cooldown when distance <= collisionDist*1.5 (low frequency)
   // ---- Irregular deflection parameters (菱角效果) ----
   irregularDeflectAngle: 20,      // max random deflection angle in degrees (±) applied after collision
+  // ---- Highlight Moment (Bullet Time + Camera Zoom) parameters ----
+  highlightCooldown: 4.0,         // seconds of cooldown after each highlight moment
+  highlightSlowScale: 0.2,        // timeScale during slow-motion (0.2 = 20% speed)
+  highlightSlowInDuration: 0.15,  // seconds to ease timeScale from 1.0 → 0.2
+  highlightSlowOutDuration: 0.2,  // seconds to ease timeScale from 0.2 → 1.0
+  highlightSlowHoldDuration: 0.6, // seconds to hold slow-motion (real time)
+  highlightTriggerDistance: 80,   // px — max distance between tops to allow trigger
+  highlightPendingWaitMax: 3.0,   // seconds to wait for tops to close distance before skipping
+  highlightDmgThreshold: 0.10,    // damage ≥ enemy RPM × this ratio triggers highlight
+  highlightZoomTargetRatio: 0.75, // tops span should fill this fraction of canvas width
 };
+
+// ---- Highlight Moment State ----
+// Manages Bullet Time + Camera Zoom effect state
+const highlightState = {
+  active: false,              // currently playing highlight effect
+  phase: 'idle',              // 'idle' | 'slowIn' | 'hold' | 'slowOut'
+  phaseTimer: 0,              // real-time elapsed in current phase (seconds)
+  cooldownTimer: 0,           // remaining cooldown (real seconds)
+  timeScale: 1.0,             // current time scale (applied to physics dt)
+  cameraZoom: 1.0,            // current camera zoom
+  cameraOffsetX: 0,           // camera translate offset X
+  cameraOffsetY: 0,           // camera translate offset Y
+  targetZoom: 1.0,            // target zoom for interpolation
+  targetOffsetX: 0,           // target offset X for interpolation
+  targetOffsetY: 0,           // target offset Y for interpolation
+  scheduledTimes: [],         // pre-allocated trigger times for guaranteed highlights
+  pendingIndex: -1,           // index of next scheduled time to watch
+  pendingWaitTimer: 0,        // how long we've been waiting for tops to close distance
+  highlightCount: 0,          // total highlights triggered this battle
+};
+
+function resetHighlightState() {
+  highlightState.active = false;
+  highlightState.phase = 'idle';
+  highlightState.phaseTimer = 0;
+  highlightState.cooldownTimer = 0;
+  highlightState.timeScale = 1.0;
+  highlightState.cameraZoom = 1.0;
+  highlightState.cameraOffsetX = 0;
+  highlightState.cameraOffsetY = 0;
+  highlightState.targetZoom = 1.0;
+  highlightState.targetOffsetX = 0;
+  highlightState.targetOffsetY = 0;
+  highlightState.scheduledTimes = [];
+  highlightState.pendingIndex = -1;
+  highlightState.pendingWaitTimer = 0;
+  highlightState.highlightCount = 0;
+}
 
 // ---- Top State ----
 // G.battle = {
@@ -2483,8 +2531,16 @@ function checkTopCollision(p, e) {
         const enemyArDmg = getEnemyARDamage();
         const pDmgMult = p._dyingProtection ? 0.4 : 1.0;
         const eDmgMult = e._dyingProtection ? 0.4 : 1.0;
+        const eDmgDealt = arDmg * spinRpmDrainMult * eDmgMult * dmgMult; // damage dealt to enemy
         p.rpm = Math.max(0, p.rpm - enemyArDmg * spinRpmDrainMult * pDmgMult * dmgMult);
-        e.rpm = Math.max(0, e.rpm - arDmg * spinRpmDrainMult * eDmgMult * dmgMult);
+        e.rpm = Math.max(0, e.rpm - eDmgDealt);
+
+        // ---- Highlight Moment: damage-based trigger (任务3) ----
+        // Trigger if damage dealt to enemy >= 10% of enemy's current RPM (before damage)
+        const ePrevRpm = e.rpm + eDmgDealt; // enemy RPM before this hit
+        if (eDmgDealt >= ePrevRpm * ARENA.highlightDmgThreshold) {
+          triggerHighlight(p, e);
+        }
 
         // [BattleLog] Collision event
         if (_battleLogger) {
@@ -2652,6 +2708,159 @@ function checkOrbitResonanceBreak(p, e) {
 
 // ---- Battle Duration Soft Control (任务6) ----
 // Checks three escalation conditions each frame and fires forced orbit disruptions as needed.
+// ---- Highlight Moment: Schedule guaranteed trigger times ----
+function scheduleHighlightTimes(battleDuration) {
+  // Generate 2~3 trigger times, one each in early/mid/late thirds
+  const count = Math.random() < 0.5 ? 2 : 3;
+  const times = [];
+  // Early: 15%~33% of battle duration
+  times.push(battleDuration * (0.15 + Math.random() * 0.18));
+  // Mid: 40%~60%
+  times.push(battleDuration * (0.40 + Math.random() * 0.20));
+  // Late: 67%~85%
+  if (count === 3) {
+    times.push(battleDuration * (0.67 + Math.random() * 0.18));
+  }
+  times.sort((a, b) => a - b);
+  highlightState.scheduledTimes = times;
+  highlightState.pendingIndex = 0;
+  highlightState.pendingWaitTimer = 0;
+}
+
+// ---- Highlight Moment: Trigger the effect ----
+function triggerHighlight(p, e) {
+  if (highlightState.active) return;
+  if (highlightState.cooldownTimer > 0) return;
+
+  highlightState.active = true;
+  highlightState.phase = 'slowIn';
+  highlightState.phaseTimer = 0;
+  highlightState.highlightCount++;
+
+  // Compute camera target: center between the two tops
+  const midX = (p.x + e.x) * 0.5;
+  const midY = (p.y + e.y) * 0.5;
+  const W = _arenaCanvas ? _arenaCanvas.width : 600;
+  const H = _arenaCanvas ? _arenaCanvas.height : 520;
+
+  // Compute zoom: make the span between tops fill ~75% of canvas width
+  const span = Math.sqrt((p.x - e.x) ** 2 + (p.y - e.y) ** 2) + (p.radius + e.radius) * 2;
+  const targetZoom = Math.min(3.5, Math.max(1.5, (W * ARENA.highlightZoomTargetRatio) / Math.max(span, 60)));
+
+  // Offset: translate so midpoint is at canvas center
+  highlightState.targetZoom = targetZoom;
+  highlightState.targetOffsetX = W * 0.5 - midX * targetZoom;
+  highlightState.targetOffsetY = H * 0.5 - midY * targetZoom;
+
+  if (_battleLogger) {
+    const elapsed = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
+    console.log(`[BattleLog] ✨ 高光时刻触发 | 已用时: ${elapsed}s | 第${highlightState.highlightCount}次 | 目标缩放: ${targetZoom.toFixed(2)}`);
+  }
+}
+
+// ---- Highlight Moment: Per-frame update (called from battleLoop) ----
+// realDt: real elapsed seconds (unscaled)
+function updateHighlightMoment(realDt, p, e) {
+  // Tick cooldown
+  if (highlightState.cooldownTimer > 0) {
+    highlightState.cooldownTimer = Math.max(0, highlightState.cooldownTimer - realDt);
+  }
+
+  if (!highlightState.active) {
+    // ---- Check scheduled (guaranteed) triggers ----
+    if (highlightState.pendingIndex >= 0 &&
+        highlightState.pendingIndex < highlightState.scheduledTimes.length &&
+        G.battle && highlightState.cooldownTimer <= 0) {
+      const targetTime = highlightState.scheduledTimes[highlightState.pendingIndex];
+      const elapsed = (performance.now() - _battleLogger.startTimestamp) / 1000;
+      if (elapsed >= targetTime) {
+        // Check distance
+        const dx = p.x - e.x, dy = p.y - e.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist <= ARENA.highlightTriggerDistance) {
+          triggerHighlight(p, e);
+          highlightState.pendingIndex++;
+          highlightState.pendingWaitTimer = 0;
+        } else {
+          // Wait for tops to close in
+          highlightState.pendingWaitTimer += realDt;
+          if (highlightState.pendingWaitTimer >= ARENA.highlightPendingWaitMax) {
+            // Timeout: skip this scheduled trigger
+            highlightState.pendingIndex++;
+            highlightState.pendingWaitTimer = 0;
+            if (_battleLogger) {
+              const e2 = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
+              console.log(`[BattleLog] ⏭️ 高光时刻超时跳过 | 已用时: ${e2}s | 距离: ${dist.toFixed(1)}px`);
+            }
+          }
+        }
+      }
+    }
+    return;
+  }
+
+  // ---- Active: update phase ----
+  highlightState.phaseTimer += realDt;
+
+  if (highlightState.phase === 'slowIn') {
+    const t = Math.min(1, highlightState.phaseTimer / ARENA.highlightSlowInDuration);
+    highlightState.timeScale = 1.0 - (1.0 - ARENA.highlightSlowScale) * t;
+    // Camera zoom in
+    highlightState.cameraZoom = 1.0 + (highlightState.targetZoom - 1.0) * t;
+    // Update camera target to track current midpoint
+    _updateHighlightCameraTarget(p, e);
+    highlightState.cameraOffsetX = highlightState.targetOffsetX * t;
+    highlightState.cameraOffsetY = highlightState.targetOffsetY * t;
+    if (t >= 1) {
+      highlightState.phase = 'hold';
+      highlightState.phaseTimer = 0;
+    }
+  } else if (highlightState.phase === 'hold') {
+    highlightState.timeScale = ARENA.highlightSlowScale;
+    // Continuously track midpoint during hold
+    _updateHighlightCameraTarget(p, e);
+    highlightState.cameraZoom = highlightState.targetZoom;
+    highlightState.cameraOffsetX = highlightState.targetOffsetX;
+    highlightState.cameraOffsetY = highlightState.targetOffsetY;
+    if (highlightState.phaseTimer >= ARENA.highlightSlowHoldDuration) {
+      highlightState.phase = 'slowOut';
+      highlightState.phaseTimer = 0;
+    }
+  } else if (highlightState.phase === 'slowOut') {
+    const t = Math.min(1, highlightState.phaseTimer / ARENA.highlightSlowOutDuration);
+    highlightState.timeScale = ARENA.highlightSlowScale + (1.0 - ARENA.highlightSlowScale) * t;
+    // Camera zoom out
+    highlightState.cameraZoom = highlightState.targetZoom - (highlightState.targetZoom - 1.0) * t;
+    highlightState.cameraOffsetX = highlightState.targetOffsetX * (1 - t);
+    highlightState.cameraOffsetY = highlightState.targetOffsetY * (1 - t);
+    if (t >= 1) {
+      // Effect complete
+      highlightState.active = false;
+      highlightState.phase = 'idle';
+      highlightState.timeScale = 1.0;
+      highlightState.cameraZoom = 1.0;
+      highlightState.cameraOffsetX = 0;
+      highlightState.cameraOffsetY = 0;
+      highlightState.cooldownTimer = ARENA.highlightCooldown;
+      if (_battleLogger) {
+        const elapsed = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
+        console.log(`[BattleLog] ✨ 高光时刻结束 | 已用时: ${elapsed}s | 进入冷却: ${ARENA.highlightCooldown}s`);
+      }
+    }
+  }
+}
+
+// Update camera target to track current midpoint between tops
+function _updateHighlightCameraTarget(p, e) {
+  const midX = (p.x + e.x) * 0.5;
+  const midY = (p.y + e.y) * 0.5;
+  const W = _arenaCanvas ? _arenaCanvas.width : 600;
+  const H = _arenaCanvas ? _arenaCanvas.height : 520;
+  const zoom = highlightState.targetZoom;
+  highlightState.targetOffsetX = W * 0.5 - midX * zoom;
+  highlightState.targetOffsetY = H * 0.5 - midY * zoom;
+}
+
 function checkBattleDurationControl(p, e) {
   if (!G.battle || !_battleLogger) return;
 
@@ -2777,6 +2986,17 @@ function renderArena() {
   const W = _arenaCanvas.width, H = _arenaCanvas.height;
   ctx.clearRect(0, 0, W, H);
 
+  // ---- Camera Zoom (Highlight Moment) ----
+  const camZoom = highlightState.cameraZoom;
+  const camOX = highlightState.cameraOffsetX;
+  const camOY = highlightState.cameraOffsetY;
+  const hasCameraEffect = camZoom !== 1.0 || camOX !== 0 || camOY !== 0;
+  if (hasCameraEffect) {
+    ctx.save();
+    ctx.translate(camOX, camOY);
+    ctx.scale(camZoom, camZoom);
+  }
+
   const cx = ARENA.cx, cy = ARENA.cy;
   const rx = ARENA.radius;                          // X radius (full)
   const ry = ARENA.radius * ARENA.perspectiveRatio; // Y radius (compressed for perspective)
@@ -2881,9 +3101,24 @@ function renderArena() {
   drawTop(ctx, player, '#4466ff', '#88aaff');
   drawTop(ctx, enemy, '#ff4444', '#ff8888');
 
-  // ---- RPM bars overlay ----
+  // ---- Restore camera transform before drawing HUD ----
+  if (hasCameraEffect) {
+    ctx.restore();
+  }
+
+  // ---- RPM bars overlay (HUD — not affected by camera zoom) ----
   drawRpmBar(ctx, player, 20, H - 40, 180, '#4466ff');
   drawRpmBar(ctx, enemy, W - 200, H - 40, 180, '#ff4444');
+
+  // ---- Highlight vignette overlay ----
+  if (highlightState.active) {
+    const vigAlpha = (1 - highlightState.timeScale) * 0.35; // stronger vignette at slower speed
+    const vig = ctx.createRadialGradient(W * 0.5, H * 0.5, H * 0.2, W * 0.5, H * 0.5, H * 0.75);
+    vig.addColorStop(0, `rgba(0,0,0,0)`);
+    vig.addColorStop(1, `rgba(0,0,0,${vigAlpha.toFixed(2)})`);
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, W, H);
+  }
 }
 
 function drawTrail(ctx, trail, color) {
@@ -3025,6 +3260,11 @@ function startBattleLoop() {
   G.battle.phase = 'battle';
   _lastTime = performance.now();
 
+  // ---- Reset and schedule Highlight Moment (任务6) ----
+  resetHighlightState();
+  const battleDuration = G.battle.timeLeft || 180;
+  scheduleHighlightTimes(battleDuration);
+
   // [BattleLog] Battle Start
   if (_battleLogger) {
     const p = G.battle.player, e = G.battle.enemy;
@@ -3050,10 +3290,16 @@ function startBattleLoop() {
 
 function battleLoop(now) {
   if (!G.battle || !G.battle.running) return;
-  const dt = Math.min((now - _lastTime) / 1000, 0.05);
+  const realDt = Math.min((now - _lastTime) / 1000, 0.05); // real elapsed time (unscaled)
   _lastTime = now;
 
   const { player, enemy } = G.battle;
+
+  // ---- Highlight Moment: update state first (uses real time) ----
+  updateHighlightMoment(realDt, player, enemy);
+
+  // Apply timeScale to physics dt
+  const dt = realDt * highlightState.timeScale;
 
   // Tick intervention cooldowns each frame
   if (typeof tickInterventionCooldowns === 'function') tickInterventionCooldowns();
@@ -3063,8 +3309,10 @@ function battleLoop(now) {
   physicsStep(enemy, dt);
   checkTopCollision(player, enemy);
 
-  // Orbit Resonance Break (方案F)
-  checkOrbitResonanceBreak(player, enemy);
+  // Orbit Resonance Break (方案F) — skipped during highlight
+  if (!highlightState.active) {
+    checkOrbitResonanceBreak(player, enemy);
+  }
 
   // ---- Battle Duration Soft Control (任务6) ----
   checkBattleDurationControl(player, enemy);
@@ -3087,8 +3335,8 @@ function battleLoop(now) {
     console.log(`[BattleLog] 📊 快照 | 已用时: ${elapsed}s | 玩家RPM: ${Math.round(player.rpm)} (${pRpmPct}%) | 敌人RPM: ${Math.round(enemy.rpm)} (${eRpmPct}%) | 玩家状态: [${pEffects}] | 敌人状态: [${eEffects}]`);
   }
 
-  // Battle timer countdown
-  G.battle.timeLeft -= dt;
+  // Battle timer countdown (use real dt to avoid timer freeze during slow-mo)
+  G.battle.timeLeft -= realDt;
   if (G.battle.timeLeft <= 0) {
     endBattleTimeout();
     return;
@@ -3350,6 +3598,7 @@ function endBattleTimeout() {
     const ec = _battleLogger.elementCounts;
     console.log(`元素触发: fire x${ec.fire} | ice x${ec.ice} | poison x${ec.poison} | thunder x${ec.thunder} | magnet x${ec.magnet}`);
     console.log(`轨道扰动触发次数: ${G.battle._orbitBreakCount || 0} (含强制扰动: ${_battleLogger.forcedDisruptionCount || 0} 次)`);
+    console.log(`高光时刻触发次数: ${highlightState.highlightCount || 0}`);
     console.groupEnd();
   }
 
@@ -3394,6 +3643,15 @@ function endBattle(playerWon, winType) {
   G.battle.phase = 'end';
   G.battle.winType = winType || (playerWon ? 'survival' : 'burst');
 
+  // ---- Force reset Highlight Moment state (任务6) ----
+  highlightState.active = false;
+  highlightState.phase = 'idle';
+  highlightState.timeScale = 1.0;
+  highlightState.cameraZoom = 1.0;
+  highlightState.cameraOffsetX = 0;
+  highlightState.cameraOffsetY = 0;
+  highlightState.cooldownTimer = 0;
+
   // [BattleLog] Battle End Summary
   if (_battleLogger && G.battle) {
     const totalTime = ((performance.now() - _battleLogger.startTimestamp) / 1000).toFixed(1);
@@ -3412,15 +3670,16 @@ function endBattle(playerWon, winType) {
     const cooldownSkips = _battleLogger.cooldownSkipCount || 0;
     const firstHit = _battleLogger.firstCollisionTime != null ? _battleLogger.firstCollisionTime + 's' : '无';
     console.log(`总碰撞次数: ${totalCollisions} (含冷却跳过: ${cooldownSkips} 次，实际伤害碰撞: ${totalCollisions - cooldownSkips} 次)`);
-    console.log(`首次伤害碰撞时间: ${firstHit}`);
     console.log(`濒死保护触发次数: ${_battleLogger.dyingProtectionCount || 0}`);
     console.log(`干预使用: 冲刺 x${_battleLogger.thrustCount} | 制动 x${_battleLogger.brakeCount} | 激活 x${_battleLogger.activateCount}`);
     const ec = _battleLogger.elementCounts;
     console.log(`元素触发: fire x${ec.fire} | ice x${ec.ice} | poison x${ec.poison} | thunder x${ec.thunder} | magnet x${ec.magnet}`);
     console.log(`轨道扰动触发次数: ${G.battle._orbitBreakCount || 0} (含强制扰动: ${_battleLogger.forcedDisruptionCount || 0} 次)`);
+    console.log(`高光时刻触发次数: ${highlightState.highlightCount || 0}`);
     console.groupEnd();
   }
 
+  // Determine display text
   // Determine display text  let resultTitle, resultSub;
   if (playerWon) {
     if (winType === 'ringout') {

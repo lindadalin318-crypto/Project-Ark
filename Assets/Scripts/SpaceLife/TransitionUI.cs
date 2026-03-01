@@ -1,4 +1,3 @@
-using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using PrimeTween;
@@ -8,16 +7,15 @@ using UnityEngine.UI;
 
 namespace ProjectArk.SpaceLife
 {
+    /// <summary>
+    /// Handles full-screen fade-to-black transitions.
+    /// Intentionally kept minimal: only fade in/out, no typewriter text.
+    /// </summary>
     public class TransitionUI : MonoBehaviour
     {
         [Header("Fade")]
         [SerializeField] private Image _fadeOverlay;
-        [SerializeField] private float _fadeDuration = 0.3f;
-
-        [Header("Text")]
-        [SerializeField] private Text _centerText;
-        [SerializeField] private float _typewriterSpeed = 0.05f;
-        [SerializeField] private float _textDisplayDuration = 1.5f;
+        [SerializeField] private float _fadeDuration = 0.15f;
 
         private CancellationTokenSource _transitionCts;
 
@@ -30,106 +28,42 @@ namespace ProjectArk.SpaceLife
                 _fadeOverlay.gameObject.SetActive(true);
                 SetFadeAlpha(0f);
             }
-
-            if (_centerText != null)
-            {
-                _centerText.gameObject.SetActive(false);
-            }
         }
 
-        public async UniTask PlayEnterTransitionAsync(string text = "进入飞船...")
-        {
-            CancelTransition();
-            _transitionCts = new CancellationTokenSource();
-
-            try
-            {
-                await PlayTransitionAsync(text, _transitionCts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-        }
-
-        public async UniTask PlayExitTransitionAsync(string text = "准备出击")
-        {
-            CancelTransition();
-            _transitionCts = new CancellationTokenSource();
-
-            try
-            {
-                await PlayTransitionAsync(text, _transitionCts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-        }
-
-        private async UniTask PlayTransitionAsync(string text, CancellationToken ct)
-        {
-            if (_centerText != null)
-            {
-                _centerText.gameObject.SetActive(true);
-                _centerText.text = "";
-                await TypeTextAsync(text, ct);
-                await UniTask.Delay(System.TimeSpan.FromSeconds(_textDisplayDuration), cancellationToken: ct);
-                _centerText.gameObject.SetActive(false);
-            }
-
-            if (_fadeOverlay != null)
-            {
-                await FadeOutAsync(_fadeDuration, ct);
-                await FadeInAsync(_fadeDuration, ct);
-            }
-        }
-
-        private async UniTask TypeTextAsync(string text, CancellationToken ct)
-        {
-            if (_centerText == null) return;
-
-            _centerText.text = "";
-
-            foreach (char c in text)
-            {
-                if (ct.IsCancellationRequested) return;
-
-                _centerText.text += c;
-                await UniTask.Delay(System.TimeSpan.FromSeconds(_typewriterSpeed), cancellationToken: ct);
-            }
-        }
-
-        public async UniTask FadeInAsync(float duration, CancellationToken ct = default)
+        /// <summary>Fades screen to black (alpha 0 → 1).</summary>
+        public async UniTask FadeOutAsync(CancellationToken ct = default)
         {
             if (_fadeOverlay == null) return;
 
             float startAlpha = _fadeOverlay.color.a;
-            var tween = Tween.Custom(startAlpha, 0f, duration, useUnscaledTime: true,
+            var tween = Tween.Custom(startAlpha, 1f, _fadeDuration, useUnscaledTime: true,
                 onValueChange: v => SetFadeAlpha(v), ease: Ease.Linear);
 
             try
             {
                 await tween.ToUniTask(cancellationToken: ct);
             }
-            catch (OperationCanceledException)
+            catch (System.OperationCanceledException)
             {
                 if (tween.isAlive) tween.Stop();
                 throw;
             }
         }
 
-        public async UniTask FadeOutAsync(float duration, CancellationToken ct = default)
+        /// <summary>Fades screen from black back to clear (alpha 1 → 0).</summary>
+        public async UniTask FadeInAsync(CancellationToken ct = default)
         {
             if (_fadeOverlay == null) return;
 
             float startAlpha = _fadeOverlay.color.a;
-            var tween = Tween.Custom(startAlpha, 1f, duration, useUnscaledTime: true,
+            var tween = Tween.Custom(startAlpha, 0f, _fadeDuration, useUnscaledTime: true,
                 onValueChange: v => SetFadeAlpha(v), ease: Ease.Linear);
 
             try
             {
                 await tween.ToUniTask(cancellationToken: ct);
             }
-            catch (OperationCanceledException)
+            catch (System.OperationCanceledException)
             {
                 if (tween.isAlive) tween.Stop();
                 throw;
@@ -139,13 +73,12 @@ namespace ProjectArk.SpaceLife
         private void SetFadeAlpha(float alpha)
         {
             if (_fadeOverlay == null) return;
-
             var color = _fadeOverlay.color;
             color.a = alpha;
             _fadeOverlay.color = color;
         }
 
-        private void CancelTransition()
+        private void OnDestroy()
         {
             if (_transitionCts != null)
             {
@@ -153,11 +86,6 @@ namespace ProjectArk.SpaceLife
                 _transitionCts.Dispose();
                 _transitionCts = null;
             }
-        }
-
-        private void OnDestroy()
-        {
-            CancelTransition();
             ServiceLocator.Unregister(this);
         }
     }

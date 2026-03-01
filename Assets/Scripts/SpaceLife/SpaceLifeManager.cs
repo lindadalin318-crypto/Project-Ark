@@ -23,10 +23,6 @@ namespace ProjectArk.SpaceLife
         [SerializeField] private AudioClip _enterSpaceLifeSFX;
         [SerializeField] private AudioClip _exitSpaceLifeSFX;
 
-        [Header("Transition")]
-        [SerializeField] private string _enterText = "进入飞船...";
-        [SerializeField] private string _exitText = "准备出击";
-
         [Header("State")]
         [SerializeField] private bool _isInSpaceLifeMode;
 
@@ -145,11 +141,13 @@ namespace ProjectArk.SpaceLife
 
             try
             {
-                if (_transitionUI != null)
-                {
-                    await _transitionUI.PlayEnterTransitionAsync(_enterText);
-                }
+                var ct = _transitionCts.Token;
 
+                // Phase 1: Fade to black
+                if (_transitionUI != null)
+                    await _transitionUI.FadeOutAsync(ct);
+
+                // Phase 2: Switch scene state
                 _isInSpaceLifeMode = true;
 
                 if (_mainCamera != null)
@@ -168,20 +166,18 @@ namespace ProjectArk.SpaceLife
                 }
 
                 if (_shipInputHandler != null)
-                {
                     _shipInputHandler.enabled = false;
-                }
 
                 if (_spaceLifeInputHandler != null)
-                {
                     _spaceLifeInputHandler.enabled = true;
-                }
 
                 SpawnPlayer();
-
                 PlaySFX(_enterSpaceLifeSFX);
-
                 OnEnterSpaceLife?.Invoke();
+
+                // Phase 3: Fade from black
+                if (_transitionUI != null)
+                    await _transitionUI.FadeInAsync(ct);
 
                 Debug.Log("[SpaceLifeManager] Entered Space Life mode!");
             }
@@ -209,15 +205,16 @@ namespace ProjectArk.SpaceLife
 
             try
             {
-                if (_transitionUI != null)
-                {
-                    await _transitionUI.PlayExitTransitionAsync(_exitText);
-                }
+                var ct = _transitionCts.Token;
 
+                // Phase 1: Fade to black
+                if (_transitionUI != null)
+                    await _transitionUI.FadeOutAsync(ct);
+
+                // Phase 2: Switch scene state
                 _isInSpaceLifeMode = false;
 
                 PlaySFX(_exitSpaceLifeSFX);
-
                 DestroyPlayer();
 
                 if (_spaceLifeCamera != null)
@@ -230,21 +227,19 @@ namespace ProjectArk.SpaceLife
                     _mainCamera.gameObject.SetActive(true);
 
                 if (_shipRoot != null)
-                {
                     _shipRoot.SetActive(_shipWasActive);
-                }
 
                 if (_shipInputHandler != null)
-                {
                     _shipInputHandler.enabled = true;
-                }
 
                 if (_spaceLifeInputHandler != null)
-                {
                     _spaceLifeInputHandler.enabled = false;
-                }
 
                 OnExitSpaceLife?.Invoke();
+
+                // Phase 3: Fade from black
+                if (_transitionUI != null)
+                    await _transitionUI.FadeInAsync(ct);
 
                 Debug.Log("[SpaceLifeManager] Exited Space Life mode!");
             }

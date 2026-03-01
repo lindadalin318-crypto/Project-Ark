@@ -445,12 +445,12 @@ namespace ProjectArk.UI.Editor
 
             var gridLayout = contentGo.AddComponent<GridLayoutGroup>();
             // HTML prototype: --inv-slot-size: 44px, --slot-gap: 2px, flex-wrap grid
-            // Full-width InventoryView ~960px, (44+2)*12 = 552px fits comfortably
-            gridLayout.cellSize = new Vector2(44, 44);
+            // Enlarged to 80x80 to match Track slot size; 8 columns, (80+2)*8+12 = 668px
+            gridLayout.cellSize = new Vector2(80, 80);
             gridLayout.spacing = new Vector2(2, 2);
             gridLayout.padding = new RectOffset(6, 6, 6, 6);
             gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            gridLayout.constraintCount = 12; // 12 columns, (44+2)*12+12 = 564px
+            gridLayout.constraintCount = 8; // 8 columns, (80+2)*8+12 = 668px
 
             var contentSizeFitter = contentGo.AddComponent<ContentSizeFitter>();
             contentSizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
@@ -650,7 +650,7 @@ namespace ProjectArk.UI.Editor
             tooltipRect.anchorMin = new Vector2(0f, 1f);
             tooltipRect.anchorMax = new Vector2(0f, 1f);
             tooltipRect.pivot = new Vector2(0f, 1f);
-            tooltipRect.sizeDelta = new Vector2(220f, 180f);
+            tooltipRect.sizeDelta = new Vector2(280f, 230f);
             tooltipRect.anchoredPosition = new Vector2(0f, 0f);
             tooltipGo.AddComponent<CanvasGroup>(); // required by ItemTooltipView
             var tooltipView = tooltipGo.AddComponent<ItemTooltipView>();
@@ -659,14 +659,14 @@ namespace ProjectArk.UI.Editor
             var tooltipBg = CreateUIObject("TooltipBackground", tooltipGo.transform);
             SetStretch(tooltipBg);
             var tooltipBgImg = tooltipBg.AddComponent<Image>();
-            tooltipBgImg.color = new Color(0.05f, 0.07f, 0.11f, 0.97f);
+            tooltipBgImg.color = new Color(0.04f, 0.07f, 0.14f, 0.97f);
             tooltipBgImg.raycastTarget = false;
 
             // Tooltip border
             var tooltipBorder = CreateUIObject("TooltipBorder", tooltipGo.transform);
             SetStretch(tooltipBorder);
             var tooltipBorderImg = tooltipBorder.AddComponent<Image>();
-            tooltipBorderImg.color = new Color(StarChartTheme.Border.r, StarChartTheme.Border.g, StarChartTheme.Border.b, 0.8f);
+            tooltipBorderImg.color = new Color(0.2f, 0.6f, 1f, 0.85f);
             tooltipBorderImg.type = Image.Type.Sliced;
             tooltipBorderImg.raycastTarget = false;
 
@@ -674,7 +674,7 @@ namespace ProjectArk.UI.Editor
             var typeBadgeBg = CreateUIObject("TypeBadgeBackground", tooltipGo.transform);
             SetAnchors(typeBadgeBg, new Vector2(0f, 0.82f), new Vector2(1f, 1f));
             var typeBadgeBgImg = typeBadgeBg.AddComponent<Image>();
-            typeBadgeBgImg.color = new Color(0f, 0.85f, 1f, 0.12f);
+            typeBadgeBgImg.color = new Color(0f, 0.5f, 1f, 0.15f);
             typeBadgeBgImg.raycastTarget = false;
 
             // Tooltip layout (vertical stack)
@@ -713,7 +713,7 @@ namespace ProjectArk.UI.Editor
             var tooltipNameGo = CreateUIObject("NameText", nameTypeStack.transform);
             var tooltipNameTmp = tooltipNameGo.AddComponent<TextMeshProUGUI>();
             tooltipNameTmp.text = "Item Name";
-            tooltipNameTmp.fontSize = 14;
+            tooltipNameTmp.fontSize = 17;
             tooltipNameTmp.fontStyle = FontStyles.Bold;
             tooltipNameTmp.color = Color.white;
             tooltipNameTmp.raycastTarget = false;
@@ -723,7 +723,7 @@ namespace ProjectArk.UI.Editor
             var tooltipTypeGo = CreateUIObject("TypeText", nameTypeStack.transform);
             var tooltipTypeTmp = tooltipTypeGo.AddComponent<TextMeshProUGUI>();
             tooltipTypeTmp.text = "CORE";
-            tooltipTypeTmp.fontSize = 10;
+            tooltipTypeTmp.fontSize = 12;
             tooltipTypeTmp.fontStyle = FontStyles.Bold;
             tooltipTypeTmp.color = StarChartTheme.CoreColor;
             tooltipTypeTmp.raycastTarget = false;
@@ -734,7 +734,7 @@ namespace ProjectArk.UI.Editor
             var tooltipStatsGo = CreateUIObject("StatsText", tooltipLayout.transform);
             var tooltipStatsTmp = tooltipStatsGo.AddComponent<TextMeshProUGUI>();
             tooltipStatsTmp.text = "DAMAGE  ▲ 100";
-            tooltipStatsTmp.fontSize = 11;
+            tooltipStatsTmp.fontSize = 13;
             tooltipStatsTmp.color = StarChartTheme.CyanDim;
             tooltipStatsTmp.raycastTarget = false;
             var tooltipStatsLE = tooltipStatsGo.AddComponent<LayoutElement>();
@@ -745,7 +745,7 @@ namespace ProjectArk.UI.Editor
             var tooltipDescGo = CreateUIObject("DescriptionText", tooltipLayout.transform);
             var tooltipDescTmp = tooltipDescGo.AddComponent<TextMeshProUGUI>();
             tooltipDescTmp.text = "Item description...";
-            tooltipDescTmp.fontSize = 10;
+            tooltipDescTmp.fontSize = 12;
             tooltipDescTmp.color = new Color(0.65f, 0.65f, 0.75f, 1f);
             tooltipDescTmp.raycastTarget = false;
             var tooltipDescLE = tooltipDescGo.AddComponent<LayoutElement>();
@@ -755,7 +755,7 @@ namespace ProjectArk.UI.Editor
             var tooltipEquippedGo = CreateUIObject("EquippedStatusText", tooltipLayout.transform);
             var tooltipEquippedTmp = tooltipEquippedGo.AddComponent<TextMeshProUGUI>();
             tooltipEquippedTmp.text = "✓ EQUIPPED · PRIMARY · CORE";
-            tooltipEquippedTmp.fontSize = 10;
+            tooltipEquippedTmp.fontSize = 12;
             tooltipEquippedTmp.fontStyle = FontStyles.Bold;
             tooltipEquippedTmp.color = StarChartTheme.EquippedGreen;
             tooltipEquippedTmp.raycastTarget = false;
@@ -767,7 +767,7 @@ namespace ProjectArk.UI.Editor
             var tooltipHintGo = CreateUIObject("ActionHintText", tooltipLayout.transform);
             var tooltipHintTmp = tooltipHintGo.AddComponent<TextMeshProUGUI>();
             tooltipHintTmp.text = "Drag to a slot to equip";
-            tooltipHintTmp.fontSize = 9;
+            tooltipHintTmp.fontSize = 11;
             tooltipHintTmp.color = StarChartTheme.CyanDim;
             tooltipHintTmp.raycastTarget = false;
             var tooltipHintLE = tooltipHintGo.AddComponent<LayoutElement>();
@@ -1138,7 +1138,7 @@ namespace ProjectArk.UI.Editor
             var gridGo = CreateUIObject("GridContainer", colGo.transform);
             SetAnchors(gridGo, new Vector2(0.04f, 0.02f), new Vector2(0.96f, 0.84f));
             var gridLayout = gridGo.AddComponent<GridLayoutGroup>();
-            gridLayout.cellSize = new Vector2(40, 40);
+            gridLayout.cellSize = new Vector2(80, 80);
             gridLayout.spacing = new Vector2(2, 2);
             gridLayout.padding = new RectOffset(2, 2, 2, 2);
             gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
@@ -1393,8 +1393,8 @@ namespace ProjectArk.UI.Editor
 
             var root = new GameObject("InventoryItemView");
             var rootRect = root.AddComponent<RectTransform>();
-            // Match GridLayoutGroup cellSize: 44x44 (HTML prototype: --inv-slot-size: 44px)
-            rootRect.sizeDelta = new Vector2(44, 44);
+            // Match GridLayoutGroup cellSize: 80x80 (enlarged from 44x44 to match Track slot size)
+            rootRect.sizeDelta = new Vector2(80, 80);
             root.AddComponent<CanvasGroup>(); // Required by InventoryItemView for drag alpha control
             var itemView = root.AddComponent<InventoryItemView>();
 

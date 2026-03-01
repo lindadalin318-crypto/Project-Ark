@@ -33,8 +33,8 @@ namespace ProjectArk.UI
         [SerializeField] private float _showDelay = 0.15f;
         [SerializeField] private Vector2 _offset = new Vector2(14f, -14f);
         [SerializeField] private float _fadeDuration = 0.08f;
-        [SerializeField] private float _tooltipWidth = 220f;
-        [SerializeField] private float _tooltipHeight = 180f;
+        [SerializeField] private float _tooltipWidth = 280f;
+        [SerializeField] private float _tooltipHeight = 230f;
 
         private CanvasGroup _canvasGroup;
         private Canvas _rootCanvas;

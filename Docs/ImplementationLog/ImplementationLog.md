@@ -7429,6 +7429,131 @@ StarChart UI 布局与 HTML 原型不符，主要有两个问题：
 ### 修复方案
 改用 `ScreenPointToWorldPointInRectangle` + `rect.position`（世界坐标），完全绕开 `anchoredPosition` 和 anchor/pivot 偏移的影响。无论 tooltip 嵌套多深、anchor 如何设置，世界坐标都能正确对应鼠标位置。
 
+---
+
+## SpaceLife 过渡动画优化 — 2026-03-01 23:21
+
+### 修改文件
+- `Assets/Scripts/SpaceLife/TransitionUI.cs`
+- `Assets/Scripts/SpaceLife/SpaceLifeManager.cs`
+
+### 内容简述
+将按 Tab 进入/退出 SpaceLife 的过渡动画从"打字机文字 + 长等待"重构为"快速淡黑→切换→淡出"三段式结构，总时长约 300ms，与按 C 打开星图的手感对齐。
+
+### 目的
+消除拖泥带水的打字机动画（原约 3-4 秒），提升操作响应感。
+
+### 技术方案
+**TransitionUI.cs**：
+- 移除 `_centerText`、`_typewriterSpeed`、`_textDisplayDuration` 字段
+- 移除 `TypeTextAsync`、`PlayEnterTransitionAsync`、`PlayExitTransitionAsync`、`PlayTransitionAsync` 方法
+- `_fadeDuration` 默认值从 0.3f 改为 0.15f
+- `FadeOutAsync`/`FadeInAsync` 签名简化为无 `duration` 参数，使用内部 `_fadeDuration`，`useUnscaledTime: true`
+
+**SpaceLifeManager.cs**：
+- 移除 `_enterText`/`_exitText` Inspector 字段
+- `EnterSpaceLifeAsync`/`ExitSpaceLifeAsync` 改为三段式：`FadeOutAsync` → 场景切换（摄像机/根节点/InputHandler 切换）→ `FadeInAsync`
+- 场景切换操作夹在两段动画之间，避免视觉撕裂
+- 保留 `_isTransitioning` 保护逻辑防止重复触发
+
+## StarChart Tooltip 视觉优化 — 2026-03-01 23:30
+
+### 修改文件
+- `Assets/Scripts/UI/Editor/UICanvasBuilder.cs`
+- `Assets/Scripts/UI/ItemTooltipView.cs`
+
+### 内容简述
+放大 StarChart Tooltip 整体尺寸与所有文字字号，并将背景色从白色改为科技感深蓝色风格。
+
+### 目的
+提升星图 Tooltip 的可读性与视觉质感，使其与游戏整体科技感 UI 风格一致。
+
+### 技术方案
+**UICanvasBuilder.cs**：
+- `tooltipRect.sizeDelta`：`(220, 180)` → `(280, 230)`
+- `TooltipBackground` 背景色：`(0.05, 0.07, 0.11, 0.97)` → `(0.04, 0.07, 0.14, 0.97)`（更深的科技蓝）
+- `TooltipBorder` 边框色：StarChartTheme.Border → `(0.2, 0.6, 1.0, 0.85)`（亮蓝色边框）
+- `TypeBadgeBackground` 背景色：`(0, 0.85, 1, 0.12)` → `(0, 0.5, 1, 0.15)`
+- `NameText` 字号：14 → 17
+- `TypeText` 字号：10 → 12
+- `StatsText` 字号：11 → 13
+- `DescriptionText` 字号：10 → 12
+- `EquippedStatusText` 字号：10 → 12
+- `ActionHintText` 字号：9 → 11
+
+**ItemTooltipView.cs**：
+- `_tooltipWidth` 默认值：220f → 280f
+- `_tooltipHeight` 默认值：180f → 230f（与新尺寸同步，确保边界检测正确）
+
+---
+
+## 战斗高光时刻（Bullet Time + 镜头聚焦）— 2026-03-01 23:37
+
+### 修改文件
+- `SideProject/spinning-top.html`
+
+### 内容简述
+在陀螺对战游戏中实现"高光时刻"效果：两陀螺即将碰撞前触发时间减速（Bullet Time）+ 镜头推近聚焦，增强战斗戏剧性。
+
+### 目的
+提升战斗画面表现力，在关键碰撞时刻给玩家强烈的视觉冲击感。
+
+### 技术方案
+
+**参数配置（ARENA 常量新增）**：
+- `highlightCooldown: 4.0s`、`highlightSlowScale: 0.2`、`highlightSlowInDuration: 0.15s`
+- `highlightSlowHoldDuration: 0.6s`、`highlightSlowOutDuration: 0.2s`
+- `highlightTriggerDistance: 80px`、`highlightPendingWaitMax: 3.0s`
+- `highlightDmgThreshold: 0.10`（伤害 ≥ 敌方当前 RPM × 10% 触发）
+- `highlightZoomTargetRatio: 0.75`（两陀螺占屏幕宽度 75%）
+
+**状态管理（highlightState 全局对象）**：
+- 包含 `active`、`phase`（idle/slowIn/hold/slowOut）、`timeScale`、`cameraZoom`、`cameraOffsetX/Y`、`scheduledTimes[]`、`pendingIndex`、`cooldownTimer` 等字段
+- `resetHighlightState()` 在每局战斗开始时重置全部状态
+
+**保底触发（scheduleHighlightTimes）**：
+- 战斗开始时随机生成 2～3 个触发时间点，分别落在前期（15%～33%）、中期（40%～60%）、后期（67%～85%）
+- 每帧在 `updateHighlightMoment()` 中检测是否到达时间点，到达后检查距离 ≤ 80px 则触发，否则等待最多 3 秒后跳过
+
+**伤害触发**：
+- 在 `checkTopCollision()` 碰撞伤害计算后，判断 `eDmgDealt >= ePrevRpm * 0.10` 则调用 `triggerHighlight()`
+
+**Bullet Time（updateHighlightMoment）**：
+- slowIn 阶段（0.15s）：timeScale 从 1.0 线性插值到 0.2
+- hold 阶段（0.6s）：保持 timeScale = 0.2，实时跟踪两陀螺中心点
+- slowOut 阶段（0.2s）：timeScale 从 0.2 线性插值回 1.0，结束后进入 4s 冷却
+- `battleLoop` 中 `dt = realDt * highlightState.timeScale`，战斗计时器使用 `realDt` 避免冻结
+
+**镜头聚焦（renderArena）**：
+- 高光时刻期间在 `renderArena()` 开头应用 `ctx.translate(camOX, camOY) + ctx.scale(camZoom, camZoom)`
+- RPM bars（HUD）在 `ctx.restore()` 之后绘制，不受缩放影响
+- 额外添加暗角（vignette）叠加层，强度随 timeScale 降低而增强
+
+**边界保护**：
+- `endBattle()` 开头强制重置所有高光状态（timeScale=1, zoom=1, offset=0）
+- 高光 `active` 期间跳过轨道扰动逻辑（`if (!highlightState.active)` 守卫）
+- 战斗结束日志新增"高光时刻触发次数"统计
+
+---
+
+## Slot 尺寸放大（Track + Inventory 统一放大至 80×80）— 2026-03-01 23:44
+
+### 修改文件
+- `Assets/Scripts/UI/Editor/UICanvasBuilder.cs`
+
+### 内容简述
+将星图面板中 Track 装备槽与背包 Inventory 槽的尺寸统一放大一倍，并保持两者一致。
+
+### 目的
+原有 slot 尺寸（40×40 / 44×44）偏小，图标内容难以辨认；放大后视觉更清晰，两区域尺寸统一，提升整体 UI 一致性。
+
+### 技术方案
+1. **Track Slot**：`TypeColumn` 内 `GridContainer` 的 `GridLayoutGroup.cellSize` 从 `(40, 40)` 改为 `(80, 80)`；`constraintCount = 2`（2×2 布局）保持不变；锚点比例代码未触碰。
+2. **Inventory Slot**：`InventoryView` 的 `GridLayoutGroup.cellSize` 从 `(44, 44)` 改为 `(80, 80)`；`constraintCount` 从 `12` 改为 `8`（防止内容溢出，新宽度 (80+2)×8+12 = 668px）；`spacing (2, 2)` 与 `padding (6, 6, 6, 6)` 保持不变。
+3. **InventoryItemView Prefab**：根节点 `sizeDelta` 从 `(44, 44)` 改为 `(80, 80)`，与 `GridLayoutGroup.cellSize` 保持同步；内部子元素（图标、名称标签、类型点）均使用相对锚点，无需额外调整。
+
+
+
 
 
 
