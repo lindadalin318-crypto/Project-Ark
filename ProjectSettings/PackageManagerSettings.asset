@@ -41,7 +41,42 @@ MonoBehaviour:
     m_Compliance:
       m_Status: 0
       m_Violations: []
-  m_UserSelectedRegistryName: npm
+  - m_Id: scoped:project:package.openupm.com
+    m_Name: package.openupm.com
+    m_Url: https://package.openupm.com
+    m_Scopes:
+    - com.ivanmurzak
+    - org.nuget
+    - org.nuget.microsoft.aspnetcore.connections.abstractions
+    - org.nuget.microsoft.aspnetcore.http.connections.client
+    - org.nuget.microsoft.aspnetcore.http.connections.common
+    - org.nuget.microsoft.aspnetcore.signalr.client
+    - org.nuget.microsoft.aspnetcore.signalr.client.core
+    - org.nuget.microsoft.aspnetcore.signalr.common
+    - org.nuget.microsoft.aspnetcore.signalr.protocols.json
+    - org.nuget.microsoft.bcl.asyncinterfaces
+    - org.nuget.microsoft.bcl.memory
+    - org.nuget.microsoft.bcl.timeprovider
+    - org.nuget.microsoft.extensions.caching.abstractions
+    - org.nuget.microsoft.extensions.dependencyinjection
+    - org.nuget.microsoft.extensions.dependencyinjection.abstractions
+    - org.nuget.microsoft.extensions.hosting
+    - org.nuget.microsoft.extensions.hosting.abstractions
+    - org.nuget.microsoft.extensions.logging
+    - org.nuget.microsoft.extensions.logging.abstractions
+    - org.nuget.microsoft.extensions.options
+    - org.nuget.microsoft.extensions.primitives
+    - org.nuget.r3
+    - org.nuget.system.io.pipelines
+    - org.nuget.system.text.json
+    - org.nuget.system.threading.channels
+    m_IsDefault: 0
+    m_Capabilities: 0
+    m_ConfigSource: 4
+    m_Compliance:
+      m_Status: 0
+      m_Violations: []
+  m_UserSelectedRegistryName: package.openupm.com
   m_UserAddingNewScopedRegistry: 0
   m_RegistryInfoDraft:
     m_Modified: 0

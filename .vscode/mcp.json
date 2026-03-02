@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "unity-mcp": {
+      "command": "unity-mcp-server",
+      "env": {
+        "MCP_PLUGIN_CLIENT_TRANSPORT": "stdio",
+        "MCP_PLUGIN_PORT": "8080",
+        "MCP_PLUGIN_CLIENT_TIMEOUT": "10000"
+      }
+    }
+  }
+}
