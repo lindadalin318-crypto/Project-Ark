@@ -1,6 +1,6 @@
 {
-  "servers": {
-    "unity-mcp": {
+  "mcpServers": {
+    "ai-game-developer": {
       "type": "http",
       "url": "http://localhost:52644"
     }
