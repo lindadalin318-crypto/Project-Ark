@@ -70,9 +70,7 @@ namespace ProjectArk.UI
             _controller = controller;
 
             if (_ghostView != null)
-            {
                 _ghostView.Hide();
-            }
 
             // Cache inventory rect for fly-back target
             if (_panel != null)
@@ -105,12 +103,9 @@ namespace ProjectArk.UI
             if (_sourceCanvasGroup != null)
                 _sourceCanvasGroup.alpha = 0.4f;
 
-            // Show ghost with shape-aware sizing
+            // Show ghost
             if (_ghostView != null)
-            {
                 _ghostView.Show(payload.Item);
-                _ghostView.SetShape(payload.Item.SlotSize);
-            }
 
             // Suppress tooltip during drag
             _panel?.GetComponentInChildren<ItemTooltipView>(true)?.SetDragSuppressed(true);

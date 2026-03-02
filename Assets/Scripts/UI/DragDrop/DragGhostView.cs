@@ -60,12 +60,18 @@ namespace ProjectArk.UI
 
             if (_canvasGroup != null)
             {
+                // CLAUDE.md 第11条：uGUI面板禁止用SetActive控制显隐
+                // 始终保持 active，用 alpha=0 + blocksRaycasts=false 隐藏
+                _canvasGroup.alpha = 0f;
                 _canvasGroup.blocksRaycasts = false;
                 _canvasGroup.interactable = false;
             }
 
             if (_rectTransform != null)
+            {
                 _rectTransform.sizeDelta = _ghostSize;
+                _rectTransform.localScale = Vector3.one;
+            }
 
             // Initialize border and hint
             if (_borderImage != null)
@@ -77,7 +83,8 @@ namespace ProjectArk.UI
             if (_nameLabel != null)
                 _nameLabel.gameObject.SetActive(false);
 
-            gameObject.SetActive(false);
+            // NOTE: 绝不调用 gameObject.SetActive(false)！
+            // Ghost GameObject 始终保持 active，由 CanvasGroup.alpha 控制可见性
         }
 
         /// <summary>
@@ -140,7 +147,12 @@ namespace ProjectArk.UI
         {
             if (item == null) return;
 
-            gameObject.SetActive(true);
+            // Stop any in-flight hide tween
+            _scaleTween.Stop();
+
+            // Reset to clean state before showing
+            if (_rectTransform != null)
+                _rectTransform.localScale = Vector3.one;
 
             // Apply shape based on SlotSize
             SetShape(item.SlotSize);
@@ -168,13 +180,15 @@ namespace ProjectArk.UI
             }
 
             if (_canvasGroup != null)
+            {
                 _canvasGroup.alpha = _ghostAlpha;
+                _canvasGroup.blocksRaycasts = false; // Ghost 不拦截射线
+            }
 
             // Reset drop state
             SetDropState(DropPreviewState.None);
 
             // Pop-in animation: scale 0.8 → 1.0
-            _scaleTween.Stop();
             if (_rectTransform != null)
             {
                 _rectTransform.localScale = Vector3.one * 0.8f;
@@ -232,7 +246,8 @@ namespace ProjectArk.UI
         /// <summary> Hide the ghost with a shrink animation. </summary>
         public void Hide()
         {
-            if (!gameObject.activeSelf) return;
+            // 用 alpha 判断是否已经隐藏，避免重复触发
+            if (_canvasGroup == null || _canvasGroup.alpha <= 0f) return;
 
             _scaleTween.Stop();
 
@@ -242,14 +257,20 @@ namespace ProjectArk.UI
                     duration: 0.08f, ease: Ease.InQuad, useUnscaledTime: true)
                     .OnComplete(() =>
                     {
-                        gameObject.SetActive(false);
+                        // 用 alpha=0 隐藏，绝不调用 SetActive(false)
+                        if (_canvasGroup != null)
+                            _canvasGroup.alpha = 0f;
+                        // 重置 scale，为下次 Show() 准备干净状态
+                        if (_rectTransform != null)
+                            _rectTransform.localScale = Vector3.one;
                         if (_nameLabel != null)
                             _nameLabel.gameObject.SetActive(false);
                     });
             }
             else
             {
-                gameObject.SetActive(false);
+                if (_canvasGroup != null)
+                    _canvasGroup.alpha = 0f;
             }
         }
 
