@@ -15,7 +15,8 @@ MonoBehaviour:
   _displayName: Pulse Wave
   _description: 'Sheba Core 1018: Expanding ring of force. Hits all nearby enemies.'
   _icon: {fileID: 0}
-  _slotSize: 1
+  _slotSize: 4
+  _shape: 4
   _heatCost: 8
   _family: 2
   _damageType: 0

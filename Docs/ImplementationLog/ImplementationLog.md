@@ -7635,3 +7635,193 @@ MCP 诊断发现 Ghost 在 Play Mode 启动后 `localScale=(0,0,0)`，这是 `Hi
 
 ### 技术
 无代码变更，纯文档更新。
+
+---
+
+## StarChart UI 完善 — 对齐 HTML 原型（需求1/2/3/4/7/8/9）— 2026-03-03 14:40
+
+### 新建文件
+- `Assets/Scripts/Combat/StarChart/ItemShapeHelper.cs` — 2D 形状坐标工具类
+
+### 修改文件
+- `Assets/Scripts/Combat/StarChart/StarChartEnums.cs` — 新增 `ItemShape` 枚举（5种形状）和 `InventoryFilter` 枚举
+- `Assets/Scripts/Combat/StarChart/StarChartItemSO.cs` — 新增 `[SerializeField] ItemShape _shape` 字段及 `Shape` 属性
+- `Assets/Scripts/Combat/StarChart/SlotLayer.cs` — 完全重构为 2D 矩阵网格，新增 `CanPlace`/`TryPlace`/`Remove`/`GetAt`/`GetAnchor` API
+- `Assets/Scripts/UI/TrackView.cs` — `RefreshColumn` 改为 2D 矩阵遍历，新增 `SetShapeHighlight` 和 `FindFirstAnchor` 方法
+- `Assets/Scripts/UI/DragDrop/DragGhostView.cs` — 新增 `SetShape(ItemShape)` 重载，`SetDropState` 新增 `evictCount` 参数，边框颜色改用 PrimeTween 过渡，替换提示文字改为 `↺ 替换 N 个部件`
+- `Assets/Scripts/UI/DragDrop/DragDropManager.cs` — `UpdateGhostDropState` 新增 `evictCount` 参数；拖拽 Slot 时显示卸装提示
+- `Assets/Scripts/UI/SlotCellView.cs` — `UpdateGhostDropState` 调用传入 `evictCount`
+- `Assets/Scripts/UI/InventoryItemView.cs` — 新增 `BuildShapePreview(ItemShape)` 生成半透明格子预览
+- `Assets/Scripts/UI/LoadoutSwitcher.cs` — 完全重写：Drum Counter 翻牌动画；PlaySlideAnimation 并行 Scale 纵深；RENAME/DELETE/SAVE CONFIG 三个管理按钮
+- `Assets/Scripts/UI/StatusBarView.cs` — 完整提示文字；新增 `ShowPersistent` 和 `RestoreDefault` 方法
+
+### 内容简述
+对齐 StarChartUIPrototype.html 原型，完成 7 项差距修复：异形部件 2D Shape 系统、Loadout 管理 UI、Drum Counter 翻牌动画、Loadout Card Scale 纵深感、拖拽预览高亮三态、库存过滤器顺序规范化、状态栏文字补全。
+
+### 目的
+让 StarChart UI 在功能完整性和视觉表现上全面对齐 HTML 原型，提升策略深度与操作手感。
+
+### 技术方案
+- `ItemShapeHelper.GetCells(ItemShape)` 返回预分配的 `Vector2Int[]` 偏移数组，零 GC
+- `SlotLayer<T>` 内部 `T[GRID_ROWS, GRID_COLS]` 二维数组 + `Dictionary<T, Vector2Int>` 锚点缓存
+- `DragGhostView.RebuildShapeGrid` 按 bounding box 动态生成格子 GameObject
+- `LoadoutSwitcher.PlayDrumFlip` 使用 `Sequence.Group` 并行驱动前后两层 `LocalEulerAngles`
+- 所有补间使用 `useUnscaledTime: true`，兼容暂停状态
+- 遵循 CLAUDE.md：CanvasGroup 控制显隐，禁止 `SetActive(false)`；PrimeTween 替代手写 Lerp
+
+---
+
+## StarChart UI 完善 — Code Review 修复 2026-03-03 15:10
+
+### 修改文件
+- `Assets/Scripts/UI/DragDrop/DragGhostView.cs`
+- `Assets/Scripts/UI/LoadoutSwitcher.cs`
+- `Assets/Scripts/UI/StatusBarView.cs`
+- `Assets/Scripts/Combat/StarChart/ItemShapeHelper.cs`
+- `Assets/Scripts/UI/TrackView.cs`
+
+### 内容简述
+对 StarChart UI 完善模块进行 Code Review 后，修复了 2 个 Major 问题、3 个 Minor 问题和 1 个 Info 问题：
+
+**Major-1 修复（DragGhostView.cs）**：`_replaceHintLabel` 和 `_nameLabel` 原先使用 `gameObject.SetActive(false/true)` 控制显隐，违反 CLAUDE.md 第11条。改为在 `Awake` 中为两个 TMP_Text 各自获取/添加 `CanvasGroup`，通过 `alpha = 0/1` 控制可见性，`blocksRaycasts = false` 防止遮挡交互。
+
+**Major-2 修复（LoadoutSwitcher.cs）**：`ConfirmRename` 同时订阅了 `onSubmit` 和 `onDeselect`，按下 Enter 时两者同时触发导致双调用（事件触发两次、SaveManager 写入两次）。添加 `_isConfirmingRename` bool 防重入 flag，第二次调用直接 return。
+
+**Minor-5 修复（StatusBarView.cs）**：`ShowIdle()` 直接将 `_idleText` 赋给 `_label.text`，导致玩家看到 `"EQUIPPED {0}/10 · INVENTORY {1} ITEMS · ..."` 原始占位符字符串。添加 `_equippedCount`/`_inventoryCount` 字段和 `SetCounts(int, int)` 公共方法，`ShowIdle()` 改为 `string.Format(_idleText, _equippedCount, _inventoryCount)`。
+
+**Minor-3 修复（ItemShapeHelper.cs）**：`GetAbsoluteCells` 每次调用都 `new List<Vector2Int>`，在拖拽 hover 热路径上产生 GC 压力。添加接受 `List<Vector2Int> result` 输出参数的重载，调用方可复用缓存列表，原有重载保留向后兼容。
+
+**Minor-4 修复（TrackView.cs）**：`SetShapeHighlight` 中使用 `SlotLayer<StarChartItemSO>.GRID_COLS` 访问常量，泛型类型参数与常量无关，语义混淆。提取为 `const int gridCols = SlotLayer<StarChartItemSO>.GRID_COLS` 局部常量，并添加注释说明。
+
+**Info-2 修复（LoadoutSwitcher.cs）**：`OnDestroy` 原先只停止 PrimeTween 序列，未取消 Button 的 `onClick` 和 InputField 的 `onSubmit`/`onDeselect` 监听器。补充 `RemoveAllListeners()` 调用，符合 CLAUDE.md 架构原则（事件卫生）。
+
+### 目的
+消除 Code Review 发现的规范违规和功能性 bug，提升代码健壮性和可维护性。
+
+### 技术方案
+- CanvasGroup 替代 SetActive：在 Awake 中 `GetComponent<CanvasGroup>() ?? AddComponent<CanvasGroup>()`，alpha 控制显隐
+- 防重入 flag：`_isConfirmingRename` bool，进入时置 true，退出时置 false
+- string.Format 填充占位符：`SetCounts` 更新计数，`ShowIdle` 格式化输出
+- GC 友好重载：`GetAbsoluteCells(shape, col, row, List<Vector2Int> result)` 原地填充
+- 局部常量消歧：`const int gridCols = SlotLayer<StarChartItemSO>.GRID_COLS`
+
+---
+
+## UICanvasBuilder 补全 LoadoutSwitcher 连线 — 2026-03-03 15:30
+
+### 修改文件
+- `Assets/Scripts/UI/Editor/UICanvasBuilder.cs`
+
+### 内容简述
+`BuildGatlingCol` 中的 DrumCounter 重构为双层翻牌结构，新增 RENAME/DELETE/SAVE 三个管理按钮、LoadoutNameLabel、RenameInputField，并补全所有新 SerializeField 的 WireField 连线。同时在 BuildStarChartSection 末尾补充 `LoadoutSwitcher._statusBar` 的跨引用连线。
+
+### 目的
+UICanvasBuilder 一键重建后，LoadoutSwitcher 的所有字段均自动连线，无需手动在 Inspector 中拖拽。
+
+### 技术方案
+- DrumCounter 拆分为 DrumContainer（RectTransform，用于 PrimeTween LocalEulerAngles 翻转）+ DrumFront + DrumBack 两个 TMP_Text 子层
+- RenameInputField 初始 CanvasGroup.alpha=0，符合 CLAUDE.md 第11条（禁止 SetActive）
+- DELETE 按钮背景色红色调，SAVE 按钮背景色绿色调，视觉区分危险/安全操作
+- `_statusBar` 在 BuildStarChartSection 末尾统一连线，避免 BuildGatlingCol 内部依赖 statusBarView 变量作用域问题
+
+---
+
+## StarChart 部件异形格子配置 — 2026-03-03 15:35
+
+### 修改文件
+- `Assets/_Data/StarChart/Cores/ShebaCore_MachineGun.asset`
+- `Assets/_Data/StarChart/Cores/ShebaCore_Shotgun.asset`
+- `Assets/_Data/StarChart/Cores/EchoCore_BasicWave.asset`
+- `Assets/_Data/StarChart/Cores/ShebaCore_PulseWave.asset`
+- `Assets/_Data/StarChart/Prisms/FractalPrism_TwinSplit.asset`
+- `Assets/_Data/StarChart/Prisms/ShebaP_Homing.asset`
+- `Assets/_Data/StarChart/Prisms/ShebaP_MinePlacer.asset`
+
+### 内容简述
+将 7 个原本全为 Shape1x1 的部件改为异形，以便测试 SlotLayer 2D 网格放置逻辑。
+
+### 目的
+所有部件均为 1×1 时，SlotLayer 的多格占用、碰撞检测、L形/2×2 放置路径永远不会被触发，无法验收 StarChart UI 完善模块的核心功能。
+
+### 技术方案
+基于 DPS 数值演算（BaseDamage × FireRate）和语义合理性，按"格子越多=越强/越特殊"原则分配形状：
+
+| 部件 | 形状 | 格数 | 理由 |
+|------|------|------|------|
+| ShebaCore_MachineGun | Shape1x2H | 2 | 高频连射(DPS=60)，枪管横向延伸 |
+| ShebaCore_Shotgun | ShapeL | 3 | 散弹近战爆发(spread=30°)，结构复杂 |
+| EchoCore_BasicWave | Shape2x1V | 2 | AOE穿墙波(DPS=30)，纵向扩散 |
+| ShebaCore_PulseWave | Shape2x2 | 4 | 超强击退AOE(knockback=2.5)，最强控场 |
+| FractalPrism_TwinSplit | Shape1x2H | 2 | +2弹数分裂，横向光路分叉 |
+| ShebaP_Homing | Shape2x1V | 2 | 追踪导引需要额外传感器空间 |
+| ShebaP_MinePlacer | ShapeL | 3 | 地雷部署机构，结构最复杂 |
+
+`_shape` 字段直接写入 .asset 序列化文件（整数枚举值：Shape1x2H=1, Shape2x1V=2, ShapeL=3, Shape2x2=4），同步更新 `_slotSize` 保持 legacy 兼容。
+
+---
+
+## Remove Diagnostic Debug.Log from ItemTooltipView — 2026-03-03 17:07
+
+### Modified Files
+- `Assets/Scripts/UI/ItemTooltipView.cs`
+
+### Summary
+Removed 4 diagnostic `Debug.Log`/`Debug.LogWarning` calls from the `PositionNearMouse()` method that were firing every frame via `Update()`, severely polluting the Console and degrading editor performance.
+
+### Purpose
+Eliminate per-frame log spam that made Console unusable and caused performance overhead in the editor.
+
+### Technical Approach
+Straight deletion of 4 log statements (2× `Debug.Log`, 2× `Debug.LogWarning`) in `PositionNearMouse()`. Replaced with silent comments where appropriate. No behavioral changes to tooltip positioning logic.
+
+---
+
+## Fix ReplaceHint MissingComponentException in DragGhostView — 2026-03-03 17:12
+
+### Modified Files
+- `Assets/Scripts/UI/DragDrop/DragGhostView.cs`
+
+### Scene Changes
+- `ReplaceHint` GameObject: added `CanvasGroup` component, set `activeSelf = true` (was false)
+
+### Summary
+Fixed `MissingComponentException` thrown in `DragGhostView.Awake()` at line 91 when attempting to set `CanvasGroup.alpha` on the `ReplaceHint` child GameObject.
+
+### Purpose
+Eliminate runtime exception that prevented DragGhost from initializing properly.
+
+### Technical Approach
+1. **Root cause**: `ReplaceHint` GameObject had no `CanvasGroup` component and was `SetActive(false)`. The code's `AddComponent<CanvasGroup>()` fallback failed on the inactive object, producing a `MissingComponentException`.
+2. **Scene fix**: Added `CanvasGroup` component to `ReplaceHint` directly in the scene, and set `activeSelf = true` with `CanvasGroup.alpha = 0` (following CLAUDE.md Rule #11: never use SetActive for UI visibility).
+3. **Code fix**: Added null guard around `_replaceHintCg` usage in `Awake()` with `Debug.LogError` fallback to prevent silent failures in the future.
+
+---
+
+## Shaped Inventory Grid — Backpack displays item shapes like HTML prototype — 2026-03-03 17:16
+
+### Modified Files
+- `Assets/Scripts/UI/InventoryView.cs`
+- `Assets/Scripts/UI/InventoryItemView.cs`
+
+### Summary
+Backpack inventory now displays shaped items (1×2H, 2×1V, L-shape, 2×2) at their actual multi-cell size, matching the HTML prototype's CSS Grid `grid-column: span N / grid-row: span N` behavior. Previously all items appeared as uniform 1×1 squares regardless of their shape.
+
+### Purpose
+User reported that inventory items all appeared 1×1 even though the drag ghost already showed correct shapes. The backpack grid needed to visually differentiate shaped items like the HTML prototype does.
+
+### Technical Approach
+
+**InventoryView.cs — Custom row-priority packing layout:**
+1. Replaced dependency on Unity's `GridLayoutGroup` (which forces uniform cellSize) with a custom packing algorithm.
+2. New serialized fields: `_gridColumns` (8), `_cellSize` (80), `_cellGap` (2), `_gridPadding` (6) — matching existing GridLayoutGroup settings.
+3. In `Refresh()`: disables `GridLayoutGroup` and `ContentSizeFitter` at runtime, then manually positions each item using a 2D boolean occupancy grid.
+4. `TryFindPosition()`: scans row-by-row, column-by-column to find the first available slot that fits the item's bounding box (row-priority packing, same as CSS Grid auto-flow).
+5. Each `InventoryItemView`'s `RectTransform.sizeDelta` is set to `(spanCols × cellSize + gaps, spanRows × cellSize + gaps)`.
+6. Content height is calculated from the highest occupied row and applied to the content RectTransform for correct ScrollRect behavior.
+
+**InventoryItemView.cs — Enhanced shape preview:**
+1. `BuildShapePreview()` now renders the full bounding box grid (not just active cells) for multi-cell shapes.
+2. Active cells use type-colored tint (via `StarChartTheme.GetTypeColor()`) at 25% alpha — matching HTML's `.inv-shape-active-{type}` classes.
+3. Empty cells in the bounding box (e.g. bottom-right of L-shape) are transparent, clearly showing the non-rectangular shape.
+4. 1×1 items skip shape preview entirely (no visual difference from full-cell fill).
+5. Added `System.Collections.Generic` import for `HashSet<Vector2Int>` used in active cell lookup.

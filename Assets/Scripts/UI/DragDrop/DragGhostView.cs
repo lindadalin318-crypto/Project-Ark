@@ -44,10 +44,16 @@ namespace ProjectArk.UI
         private CanvasGroup _canvasGroup;
         private Canvas _parentCanvas;
         private Tween _scaleTween;
+        private Tween _borderColorTween;
+
+        // CanvasGroup wrappers for label visibility (CLAUDE.md 第11条：禁止 SetActive)
+        private CanvasGroup _replaceHintCg;
+        private CanvasGroup _nameLabelCg;
 
         // Dynamically created cell grid images
         private Image[] _cellImages;
         private int _currentSlotSize = 1;
+        private ItemShape _currentShape = ItemShape.Shape1x1;
 
         // Cyan cell color matching SlotCellView style
         private static readonly Color CellActiveColor = new Color(0f, 0.85f, 1f, 0.18f);
@@ -77,18 +83,38 @@ namespace ProjectArk.UI
             if (_borderImage != null)
                 _borderImage.color = Color.clear;
 
+            // CLAUDE.md 第11条：uGUI面板禁止用SetActive控制显隐，统一用CanvasGroup
             if (_replaceHintLabel != null)
-                _replaceHintLabel.gameObject.SetActive(false);
+            {
+                _replaceHintCg = _replaceHintLabel.GetComponent<CanvasGroup>()
+                    ?? _replaceHintLabel.gameObject.AddComponent<CanvasGroup>();
+                if (_replaceHintCg != null)
+                {
+                    _replaceHintCg.alpha = 0f;
+                    _replaceHintCg.blocksRaycasts = false;
+                    _replaceHintCg.interactable = false;
+                }
+                else
+                {
+                    Debug.LogError($"[DragGhostView] Failed to get/add CanvasGroup on ReplaceHint '{_replaceHintLabel.gameObject.name}'", _replaceHintLabel.gameObject);
+                }
+            }
 
             if (_nameLabel != null)
-                _nameLabel.gameObject.SetActive(false);
+            {
+                _nameLabelCg = _nameLabel.GetComponent<CanvasGroup>()
+                    ?? _nameLabel.gameObject.AddComponent<CanvasGroup>();
+                _nameLabelCg.alpha = 0f;
+                _nameLabelCg.blocksRaycasts = false;
+                _nameLabelCg.interactable = false;
+            }
 
             // NOTE: 绝不调用 gameObject.SetActive(false)！
             // Ghost GameObject 始终保持 active，由 CanvasGroup.alpha 控制可见性
         }
 
         /// <summary>
-        /// Adjust the ghost shape to match the item's SlotSize.
+        /// Adjust the ghost shape to match the item's SlotSize (legacy 1D).
         /// Dynamically creates/updates cell grid images.
         /// </summary>
         public void SetShape(int slotSize)
@@ -105,6 +131,27 @@ namespace ProjectArk.UI
 
             // Rebuild cell grid images
             RebuildCellGrid(slotSize, width, newHeight);
+        }
+
+        /// <summary>
+        /// Adjust the ghost shape to match the item's 2D ItemShape.
+        /// Resizes the ghost to the shape's bounding box and rebuilds the cell grid.
+        /// </summary>
+        public void SetShape(ItemShape shape)
+        {
+            _currentShape = shape;
+            var bounds = ItemShapeHelper.GetBounds(shape);
+            int cols = bounds.x;
+            int rows = bounds.y;
+            _currentSlotSize = rows; // legacy compat
+
+            float newWidth  = cols * _ghostSize.x + (cols - 1) * _cellGap;
+            float newHeight = rows * _cellHeight  + (rows - 1) * _cellGap;
+
+            if (_rectTransform != null)
+                _rectTransform.sizeDelta = new Vector2(newWidth, newHeight);
+
+            RebuildShapeGrid(shape, newWidth, newHeight);
         }
 
         private void RebuildCellGrid(int slotSize, float width, float totalHeight)
@@ -142,6 +189,45 @@ namespace ProjectArk.UI
             }
         }
 
+        private void RebuildShapeGrid(ItemShape shape, float totalWidth, float totalHeight)
+        {
+            // Destroy old cell images
+            if (_cellImages != null)
+            {
+                foreach (var img in _cellImages)
+                    if (img != null) Destroy(img.gameObject);
+            }
+
+            var cells = ItemShapeHelper.GetCells(shape);
+            var bounds = ItemShapeHelper.GetBounds(shape);
+            _cellImages = new Image[cells.Count];
+
+            float cellW = (totalWidth  - (bounds.x - 1) * _cellGap) / bounds.x;
+            float cellH = (totalHeight - (bounds.y - 1) * _cellGap) / bounds.y;
+
+            for (int i = 0; i < cells.Count; i++)
+            {
+                var offset = cells[i];
+                var cellGo = new GameObject($"GhostCell_{offset.x}_{offset.y}", typeof(RectTransform), typeof(Image));
+                cellGo.transform.SetParent(transform, false);
+                cellGo.transform.SetAsFirstSibling();
+
+                var cellRect = cellGo.GetComponent<RectTransform>();
+                cellRect.anchorMin = Vector2.zero;
+                cellRect.anchorMax = Vector2.zero;
+                cellRect.pivot = new Vector2(0f, 1f);
+
+                float xPos =  offset.x * (cellW + _cellGap);
+                float yPos = -offset.y * (cellH + _cellGap);
+                cellRect.anchoredPosition = new Vector2(xPos, yPos);
+                cellRect.sizeDelta = new Vector2(cellW, cellH);
+
+                var cellImg = cellGo.GetComponent<Image>();
+                cellImg.color = CellActiveColor;
+                _cellImages[i] = cellImg;
+            }
+        }
+
         /// <summary> Show the ghost with the item's icon or placeholder color. </summary>
         public void Show(StarChartItemSO item)
         {
@@ -154,8 +240,8 @@ namespace ProjectArk.UI
             if (_rectTransform != null)
                 _rectTransform.localScale = Vector3.one;
 
-            // Apply shape based on SlotSize
-            SetShape(item.SlotSize);
+            // Apply shape based on ItemShape (2D)
+            SetShape(item.Shape);
 
             if (_iconImage != null)
             {
@@ -172,11 +258,11 @@ namespace ProjectArk.UI
                 }
             }
 
-            // Show name label
-            if (_nameLabel != null)
+            // Show name label via CanvasGroup (CLAUDE.md 第11条)
+            if (_nameLabel != null && _nameLabelCg != null)
             {
                 _nameLabel.text = item.DisplayName;
-                _nameLabel.gameObject.SetActive(true);
+                _nameLabelCg.alpha = 1f;
             }
 
             if (_canvasGroup != null)
@@ -199,8 +285,9 @@ namespace ProjectArk.UI
 
         /// <summary>
         /// Update the ghost's border color and replace hint based on drop preview state.
+        /// Uses PrimeTween for smooth color transition (≤80ms).
         /// </summary>
-        public void SetDropState(DropPreviewState state)
+        public void SetDropState(DropPreviewState state, int evictCount = 0)
         {
             Color borderColor = state switch
             {
@@ -211,14 +298,22 @@ namespace ProjectArk.UI
             };
 
             if (_borderImage != null)
-                _borderImage.color = borderColor;
+            {
+                _borderColorTween.Stop();
+                _borderColorTween = Tween.Color(_borderImage, endValue: borderColor,
+                    duration: 0.08f, ease: Ease.OutQuad, useUnscaledTime: true);
+            }
 
-            if (_replaceHintLabel != null)
+            // 用 CanvasGroup.alpha 控制 replaceHintLabel 显隐（CLAUDE.md 第11条）
+            if (_replaceHintLabel != null && _replaceHintCg != null)
             {
                 bool showHint = state == DropPreviewState.Replace;
-                _replaceHintLabel.gameObject.SetActive(showHint);
+                _replaceHintCg.alpha = showHint ? 1f : 0f;
                 if (showHint)
-                    _replaceHintLabel.text = $"↺ REPLACE {_currentSlotSize}";
+                {
+                    int n = evictCount > 0 ? evictCount : _currentSlotSize;
+                    _replaceHintLabel.text = $"↺ 替换 {n} 个部件";
+                }
             }
         }
 
@@ -257,14 +352,15 @@ namespace ProjectArk.UI
                     duration: 0.08f, ease: Ease.InQuad, useUnscaledTime: true)
                     .OnComplete(() =>
                     {
-                        // 用 alpha=0 隐藏，绝不调用 SetActive(false)
+                        // 用 alpha=0 隐藏，绝不调用 SetActive(false)（CLAUDE.md 第11条）
                         if (_canvasGroup != null)
                             _canvasGroup.alpha = 0f;
                         // 重置 scale，为下次 Show() 准备干净状态
                         if (_rectTransform != null)
                             _rectTransform.localScale = Vector3.one;
-                        if (_nameLabel != null)
-                            _nameLabel.gameObject.SetActive(false);
+                        // 隐藏 name label via CanvasGroup
+                        if (_nameLabelCg != null)
+                            _nameLabelCg.alpha = 0f;
                     });
             }
             else

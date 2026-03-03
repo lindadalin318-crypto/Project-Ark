@@ -805,6 +805,9 @@ namespace ProjectArk.UI.Editor
             WireField(starChartPanel, "_loadoutCard",        loadoutCardRect);
             WireField(starChartPanel, "_tooltipView",        tooltipView);
 
+            // Wire LoadoutSwitcher._statusBar (cross-reference: needs StatusBarView for drag hints)
+            WireField(loadoutSwitcher, "_statusBar", statusBarView);
+
             Debug.Log("[UICanvasBuilder] Created StarChartPanel (header + GatlingCol + LoadoutCard + inventory + detail + statusbar)");
             return starChartPanel;
         }
@@ -1208,7 +1211,7 @@ namespace ProjectArk.UI.Editor
             btnUpTmp.color = StarChartTheme.CyanDim;
             btnUpTmp.raycastTarget = false;
 
-            // DrumCounter
+            // ── DrumCounter (dual-layer flip animation: _drumContainer + _drumFront + _drumBack) ──
             var drumGo = CreateUIObject("DrumCounter", root.transform);
             var drumLE = drumGo.AddComponent<LayoutElement>();
             drumLE.preferredHeight = 40;
@@ -1216,15 +1219,134 @@ namespace ProjectArk.UI.Editor
             var drumBg = drumGo.AddComponent<Image>();
             drumBg.color = new Color(0.06f, 0.09f, 0.15f, 0.95f);
 
-            // Text must be on a child object because Image and TMP both inherit from Graphic
-            var drumLabel = CreateUIObject("Label", drumGo.transform);
-            SetStretch(drumLabel);
-            var drumTmp = drumLabel.AddComponent<TextMeshProUGUI>();
-            drumTmp.text = "LOADOUT #1\n<size=70%>1/1</size>";
-            drumTmp.fontSize = 9;
-            drumTmp.alignment = TextAlignmentOptions.Center;
-            drumTmp.color = StarChartTheme.Cyan;
-            drumTmp.raycastTarget = false;
+            // _drumContainer: child RectTransform that gets rotated during flip
+            var drumContainerGo = CreateUIObject("DrumContainer", drumGo.transform);
+            SetStretch(drumContainerGo);
+            var drumContainerRect = drumContainerGo.GetComponent<RectTransform>();
+
+            // _drumFront: currently visible number layer
+            var drumFrontGo = CreateUIObject("DrumFront", drumContainerGo.transform);
+            SetStretch(drumFrontGo);
+            var drumFrontTmp = drumFrontGo.AddComponent<TextMeshProUGUI>();
+            drumFrontTmp.text = "1/1";
+            drumFrontTmp.fontSize = 11;
+            drumFrontTmp.fontStyle = FontStyles.Bold;
+            drumFrontTmp.alignment = TextAlignmentOptions.Center;
+            drumFrontTmp.color = StarChartTheme.Cyan;
+            drumFrontTmp.raycastTarget = false;
+
+            // _drumBack: incoming number layer (starts invisible, rotated 90° behind)
+            var drumBackGo = CreateUIObject("DrumBack", drumContainerGo.transform);
+            SetStretch(drumBackGo);
+            var drumBackTmp = drumBackGo.AddComponent<TextMeshProUGUI>();
+            drumBackTmp.text = "1/1";
+            drumBackTmp.fontSize = 11;
+            drumBackTmp.fontStyle = FontStyles.Bold;
+            drumBackTmp.alignment = TextAlignmentOptions.Center;
+            drumBackTmp.color = StarChartTheme.Cyan;
+            drumBackTmp.raycastTarget = false;
+            // Start rotated 90° so it's hidden behind the front layer
+            drumBackGo.GetComponent<RectTransform>().localEulerAngles = new Vector3(90f, 0f, 0f);
+
+            // ── Loadout name label (shown in GatlingCol below drum) ──
+            var loadoutNameGo = CreateUIObject("LoadoutNameLabel", root.transform);
+            var loadoutNameLE = loadoutNameGo.AddComponent<LayoutElement>();
+            loadoutNameLE.preferredHeight = 14;
+            loadoutNameLE.flexibleWidth = 1;
+            var loadoutNameTmp = loadoutNameGo.AddComponent<TextMeshProUGUI>();
+            loadoutNameTmp.text = "ALPHA";
+            loadoutNameTmp.fontSize = 7;
+            loadoutNameTmp.fontStyle = FontStyles.Bold;
+            loadoutNameTmp.alignment = TextAlignmentOptions.Center;
+            loadoutNameTmp.color = StarChartTheme.Cyan;
+            loadoutNameTmp.characterSpacing = 1;
+            loadoutNameTmp.raycastTarget = false;
+
+            // ── Inline rename InputField (hidden by default via CanvasGroup) ──
+            var renameInputGo = CreateUIObject("RenameInputField", root.transform);
+            var renameInputLE = renameInputGo.AddComponent<LayoutElement>();
+            renameInputLE.preferredHeight = 18;
+            renameInputLE.flexibleWidth = 1;
+            var renameInputBg = renameInputGo.AddComponent<Image>();
+            renameInputBg.color = new Color(0.05f, 0.08f, 0.14f, 0.95f);
+            var renameInputField = renameInputGo.AddComponent<TMP_InputField>();
+            // InputField requires a text area child
+            var renameTextAreaGo = CreateUIObject("Text Area", renameInputGo.transform);
+            SetStretch(renameTextAreaGo);
+            var renameTextAreaMask = renameTextAreaGo.AddComponent<RectMask2D>();
+            var renameTextGo = CreateUIObject("Text", renameTextAreaGo.transform);
+            SetStretch(renameTextGo);
+            var renameTextTmp = renameTextGo.AddComponent<TextMeshProUGUI>();
+            renameTextTmp.fontSize = 8;
+            renameTextTmp.color = StarChartTheme.Cyan;
+            renameTextTmp.alignment = TextAlignmentOptions.Center;
+            renameInputField.textViewport = renameTextAreaGo.GetComponent<RectTransform>();
+            renameInputField.textComponent = renameTextTmp;
+            renameInputField.characterLimit = 12;
+            // Hide by default via CanvasGroup (CLAUDE.md 第11条)
+            var renameInputCg = renameInputGo.AddComponent<CanvasGroup>();
+            renameInputCg.alpha = 0f;
+            renameInputCg.interactable = false;
+            renameInputCg.blocksRaycasts = false;
+
+            // ── Management buttons: RENAME / DELETE / SAVE CONFIG ──
+            // Each is a small button stacked vertically in the GatlingCol
+            var renameBtnGo = CreateUIObject("BtnRename", root.transform);
+            var renameBtnImg = renameBtnGo.AddComponent<Image>();
+            renameBtnImg.color = new Color(0.08f, 0.14f, 0.22f, 0.9f);
+            var renameBtn = renameBtnGo.AddComponent<Button>();
+            renameBtn.targetGraphic = renameBtnImg;
+            var renameBtnLE = renameBtnGo.AddComponent<LayoutElement>();
+            renameBtnLE.preferredHeight = 16;
+            renameBtnLE.flexibleWidth = 1;
+            var renameBtnLabel = CreateUIObject("Label", renameBtnGo.transform);
+            SetStretch(renameBtnLabel);
+            var renameBtnTmp = renameBtnLabel.AddComponent<TextMeshProUGUI>();
+            renameBtnTmp.text = "RENAME";
+            renameBtnTmp.fontSize = 6;
+            renameBtnTmp.fontStyle = FontStyles.Bold;
+            renameBtnTmp.alignment = TextAlignmentOptions.Center;
+            renameBtnTmp.color = StarChartTheme.CyanDim;
+            renameBtnTmp.characterSpacing = 1;
+            renameBtnTmp.raycastTarget = false;
+
+            var deleteBtnGo = CreateUIObject("BtnDelete", root.transform);
+            var deleteBtnImg = deleteBtnGo.AddComponent<Image>();
+            deleteBtnImg.color = new Color(0.14f, 0.06f, 0.06f, 0.9f);
+            var deleteBtn = deleteBtnGo.AddComponent<Button>();
+            deleteBtn.targetGraphic = deleteBtnImg;
+            var deleteBtnLE = deleteBtnGo.AddComponent<LayoutElement>();
+            deleteBtnLE.preferredHeight = 16;
+            deleteBtnLE.flexibleWidth = 1;
+            var deleteBtnLabel = CreateUIObject("Label", deleteBtnGo.transform);
+            SetStretch(deleteBtnLabel);
+            var deleteBtnTmp = deleteBtnLabel.AddComponent<TextMeshProUGUI>();
+            deleteBtnTmp.text = "DELETE";
+            deleteBtnTmp.fontSize = 6;
+            deleteBtnTmp.fontStyle = FontStyles.Bold;
+            deleteBtnTmp.alignment = TextAlignmentOptions.Center;
+            deleteBtnTmp.color = new Color(1f, 0.4f, 0.4f, 0.8f);
+            deleteBtnTmp.characterSpacing = 1;
+            deleteBtnTmp.raycastTarget = false;
+
+            var saveBtnGo = CreateUIObject("BtnSave", root.transform);
+            var saveBtnImg = saveBtnGo.AddComponent<Image>();
+            saveBtnImg.color = new Color(0.06f, 0.14f, 0.10f, 0.9f);
+            var saveBtn = saveBtnGo.AddComponent<Button>();
+            saveBtn.targetGraphic = saveBtnImg;
+            var saveBtnLE = saveBtnGo.AddComponent<LayoutElement>();
+            saveBtnLE.preferredHeight = 16;
+            saveBtnLE.flexibleWidth = 1;
+            var saveBtnLabel = CreateUIObject("Label", saveBtnGo.transform);
+            SetStretch(saveBtnLabel);
+            var saveBtnTmp = saveBtnLabel.AddComponent<TextMeshProUGUI>();
+            saveBtnTmp.text = "SAVE";
+            saveBtnTmp.fontSize = 6;
+            saveBtnTmp.fontStyle = FontStyles.Bold;
+            saveBtnTmp.alignment = TextAlignmentOptions.Center;
+            saveBtnTmp.color = new Color(0.4f, 1f, 0.6f, 0.8f);
+            saveBtnTmp.characterSpacing = 1;
+            saveBtnTmp.raycastTarget = false;
 
             // ▼ Down button
             var btnDownGo = CreateUIObject("BtnDown", root.transform);
@@ -1259,10 +1381,18 @@ namespace ProjectArk.UI.Editor
             loadoutLabelTmp.characterSpacing = 2;
             loadoutLabelTmp.raycastTarget = false;
 
-            // Wire LoadoutSwitcher fields
-            WireField(loadoutSwitcher, "_prevButton",       btnUp);
-            WireField(loadoutSwitcher, "_nextButton",       btnDown);
-            WireField(loadoutSwitcher, "_drumCounterLabel", drumTmp);
+            // ── Wire all LoadoutSwitcher SerializeField fields ──
+            WireField(loadoutSwitcher, "_prevButton",        btnUp);
+            WireField(loadoutSwitcher, "_nextButton",        btnDown);
+            WireField(loadoutSwitcher, "_drumContainer",     drumContainerRect);
+            WireField(loadoutSwitcher, "_drumFront",         drumFrontTmp);
+            WireField(loadoutSwitcher, "_drumBack",          drumBackTmp);
+            WireField(loadoutSwitcher, "_renameButton",      renameBtn);
+            WireField(loadoutSwitcher, "_deleteButton",      deleteBtn);
+            WireField(loadoutSwitcher, "_saveButton",        saveBtn);
+            WireField(loadoutSwitcher, "_renameInputField",  renameInputField);
+            WireField(loadoutSwitcher, "_loadoutNameLabel",  loadoutNameTmp);
+            // _statusBar is wired later at the StarChartPanel level (see BuildStarChartSection)
 
             return loadoutSwitcher;
         }

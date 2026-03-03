@@ -16,7 +16,8 @@ MonoBehaviour:
   _description: Expanding ring of force. Hits all nearby enemies, passes through
     walls.
   _icon: {fileID: 0}
-  _slotSize: 1
+  _slotSize: 2
+  _shape: 2
   _heatCost: 12
   _family: 2
   _projectilePrefab: {fileID: 728660272858488736, guid: 0e28c641f718246c99fb0dc2ee8079c7, type: 3}

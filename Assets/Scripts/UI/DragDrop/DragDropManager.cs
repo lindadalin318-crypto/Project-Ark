@@ -110,6 +110,10 @@ namespace ProjectArk.UI
             // Suppress tooltip during drag
             _panel?.GetComponentInChildren<ItemTooltipView>(true)?.SetDragSuppressed(true);
 
+            // Show unequip hint when dragging from an equipped slot
+            if (payload.Source == DragSource.Slot)
+                _panel?.StatusBar?.ShowPersistent("DRAG TO INVENTORY TO UNEQUIP", StarChartTheme.HighlightReplace);
+
             // Highlight all TypeColumns that match the dragged item's type
             HighlightMatchingColumns(payload.Item, true);
         }
@@ -127,9 +131,11 @@ namespace ProjectArk.UI
         /// Update the ghost's drop preview state (border color + replace hint).
         /// Called by SlotCellView.OnPointerEnter / OnPointerExit.
         /// </summary>
-        public void UpdateGhostDropState(DropPreviewState state)
+        /// <param name="state">The new drop preview state.</param>
+        /// <param name="evictCount">Number of items that would be evicted (shown in replace hint).</param>
+        public void UpdateGhostDropState(DropPreviewState state, int evictCount = 0)
         {
-            _ghostView?.SetDropState(state);
+            _ghostView?.SetDropState(state, evictCount);
         }
 
         /// <summary>
@@ -433,6 +439,9 @@ namespace ProjectArk.UI
             // Clear all TypeColumn highlights
             if (CurrentPayload != null)
                 HighlightMatchingColumns(CurrentPayload.Item, false);
+
+            // Restore status bar (clear persistent drag hint)
+            _panel?.StatusBar?.RestoreDefault();
 
             // Restore tooltip suppression
             _panel?.GetComponentInChildren<ItemTooltipView>(true)?.SetDragSuppressed(false);

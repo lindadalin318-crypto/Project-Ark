@@ -331,7 +331,7 @@ namespace ProjectArk.UI
                     previewState = DropPreviewState.Invalid;
 
                 // Update ghost drop state
-                mgr.UpdateGhostDropState(previewState);
+                mgr.UpdateGhostDropState(previewState, isReplace ? 1 : 0);
 
                 // Update column-level drop preview highlight
                 OwnerColumn?.SetDropPreview(previewState);

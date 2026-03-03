@@ -16,8 +16,8 @@ MonoBehaviour:
   _description: "Sheba Prism 2024: Projectiles steer toward the nearest enemy within
     a 45\xB0 cone."
   _icon: {fileID: 0}
-  _slotSize: 1
+  _slotSize: 2
+  _shape: 2
   _heatCost: 0
-  _family: 2
   _statModifiers: []
   _projectileModifierPrefab: {fileID: 1053707209229464170, guid: 4d498a9842fe0cc4699dc2df81aa82b6, type: 3}

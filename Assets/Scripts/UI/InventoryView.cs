@@ -11,6 +11,8 @@ namespace ProjectArk.UI
     /// Scrollable inventory grid with type filter tabs.
     /// Instantiates <see cref="InventoryItemView"/> cards from a
     /// <see cref="StarChartInventorySO"/> data source.
+    /// Uses a custom row-priority packing layout that supports shaped items
+    /// spanning multiple grid cells (similar to the HTML prototype's CSS Grid approach).
     /// Also serves as a drop target for unequipping items dragged from slots.
     /// </summary>
     public class InventoryView : MonoBehaviour, IDropHandler
@@ -25,6 +27,16 @@ namespace ProjectArk.UI
         [SerializeField] private Button _filterPrisms;
         [SerializeField] private Button _filterSails;
         [SerializeField] private Button _filterSatellites;
+
+        [Header("Grid Layout")]
+        [Tooltip("Number of columns in the inventory grid.")]
+        [SerializeField] private int _gridColumns = 8;
+        [Tooltip("Size of each grid cell in pixels.")]
+        [SerializeField] private float _cellSize = 80f;
+        [Tooltip("Gap between cells in pixels.")]
+        [SerializeField] private float _cellGap = 2f;
+        [Tooltip("Padding around the grid in pixels.")]
+        [SerializeField] private float _gridPadding = 6f;
 
         /// <summary> Fired when a player clicks an item in the inventory. </summary>
         public event Action<StarChartItemSO> OnItemSelected;
@@ -41,6 +53,10 @@ namespace ProjectArk.UI
 
         // 外部注入的装备检查函数
         private Func<StarChartItemSO, bool> _isEquippedCheck;
+
+        // Row-priority packing occupancy grid (dynamically grows rows)
+        private bool[,] _occupancy;
+        private int _occupancyRows;
 
         private void Awake()
         {
@@ -111,11 +127,27 @@ namespace ProjectArk.UI
             if (_inventory == null || _itemPrefab == null || _contentParent == null)
                 return;
 
-            int count = 0;
+            // Disable GridLayoutGroup and ContentSizeFitter if present — we do our own layout
+            var gridLayout = _contentParent.GetComponent<GridLayoutGroup>();
+            if (gridLayout != null) gridLayout.enabled = false;
+            var sizeFitter = _contentParent.GetComponent<ContentSizeFitter>();
+            if (sizeFitter != null) sizeFitter.enabled = false;
+
+            // Collect items
+            var items = new List<StarChartItemSO>();
             foreach (var item in _inventory.GetByType(_activeFilter))
             {
-                if (item == null) continue;
+                if (item != null)
+                    items.Add(item);
+            }
 
+            // Initialize occupancy grid
+            _occupancyRows = 4; // start with 4 rows, grow as needed
+            _occupancy = new bool[_gridColumns, _occupancyRows];
+
+            // Instantiate and place items
+            foreach (var item in items)
+            {
                 var view = Instantiate(_itemPrefab, _contentParent);
                 bool equipped = _isEquippedCheck?.Invoke(item) ?? false;
                 view.Setup(item, equipped);
@@ -124,17 +156,135 @@ namespace ProjectArk.UI
                 view.OnPointerExited += HandleItemPointerExited;
                 view.gameObject.SetActive(true);
                 _itemViews.Add(view);
-                count++;
+
+                // Calculate item bounds from shape
+                var bounds = ItemShapeHelper.GetBounds(item.Shape);
+                int spanCols = bounds.x;
+                int spanRows = bounds.y;
+
+                // Find first available position (row-priority packing)
+                if (TryFindPosition(spanCols, spanRows, out int placeCol, out int placeRow))
+                {
+                    // Mark cells as occupied
+                    MarkOccupied(placeCol, placeRow, spanCols, spanRows);
+
+                    // Size the item view to span the correct number of cells
+                    var rt = view.GetComponent<RectTransform>();
+                    float width = spanCols * _cellSize + (spanCols - 1) * _cellGap;
+                    float height = spanRows * _cellSize + (spanRows - 1) * _cellGap;
+                    rt.sizeDelta = new Vector2(width, height);
+
+                    // Position: top-left anchoring within content parent
+                    rt.anchorMin = new Vector2(0f, 1f);
+                    rt.anchorMax = new Vector2(0f, 1f);
+                    rt.pivot = new Vector2(0f, 1f);
+                    float x = _gridPadding + placeCol * (_cellSize + _cellGap);
+                    float y = -(_gridPadding + placeRow * (_cellSize + _cellGap));
+                    rt.anchoredPosition = new Vector2(x, y);
+                }
             }
-            // Force layout rebuild immediately — GridLayoutGroup + ContentSizeFitter
-            // won't auto-update when timeScale == 0
-            if (_contentParent is RectTransform rt)
+
+            // Update content height for ScrollRect
+            if (_contentParent is RectTransform contentRect)
             {
-                LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+                int usedRows = GetMaxOccupiedRow() + 1;
+                float totalHeight = _gridPadding * 2 + usedRows * _cellSize + Mathf.Max(0, usedRows - 1) * _cellGap;
+                contentRect.sizeDelta = new Vector2(contentRect.sizeDelta.x, totalHeight);
+            }
+
+            // Force layout rebuild for ScrollRect
+            if (_contentParent is RectTransform rt2)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(rt2);
                 Canvas.ForceUpdateCanvases();
             }
+        }
 
+        /// <summary>
+        /// Find the first available position in the occupancy grid for an item of the given size.
+        /// Scans row-by-row, column-by-column (top-left priority).
+        /// </summary>
+        private bool TryFindPosition(int spanCols, int spanRows, out int col, out int row)
+        {
+            for (int r = 0; r < 100; r++) // safety limit
+            {
+                // Ensure occupancy grid has enough rows
+                EnsureOccupancyRows(r + spanRows);
 
+                for (int c = 0; c <= _gridColumns - spanCols; c++)
+                {
+                    if (CanPlace(c, r, spanCols, spanRows))
+                    {
+                        col = c;
+                        row = r;
+                        return true;
+                    }
+                }
+            }
+
+            col = 0;
+            row = 0;
+            return false;
+        }
+
+        /// <summary> Check if a rectangular region is fully unoccupied. </summary>
+        private bool CanPlace(int col, int row, int spanCols, int spanRows)
+        {
+            for (int r = row; r < row + spanRows; r++)
+            {
+                for (int c = col; c < col + spanCols; c++)
+                {
+                    if (_occupancy[c, r])
+                        return false;
+                }
+            }
+            return true;
+        }
+
+        /// <summary> Mark a rectangular region as occupied. </summary>
+        private void MarkOccupied(int col, int row, int spanCols, int spanRows)
+        {
+            for (int r = row; r < row + spanRows; r++)
+            {
+                for (int c = col; c < col + spanCols; c++)
+                {
+                    _occupancy[c, r] = true;
+                }
+            }
+        }
+
+        /// <summary> Grow the occupancy grid if needed. </summary>
+        private void EnsureOccupancyRows(int minRows)
+        {
+            if (minRows <= _occupancyRows) return;
+
+            int newRows = Mathf.Max(minRows, _occupancyRows * 2);
+            var newGrid = new bool[_gridColumns, newRows];
+            for (int c = 0; c < _gridColumns; c++)
+            {
+                for (int r = 0; r < _occupancyRows; r++)
+                    newGrid[c, r] = _occupancy[c, r];
+            }
+            _occupancy = newGrid;
+            _occupancyRows = newRows;
+        }
+
+        /// <summary> Get the highest row index that has any occupied cell. </summary>
+        private int GetMaxOccupiedRow()
+        {
+            int maxRow = 0;
+            for (int r = 0; r < _occupancyRows; r++)
+            {
+                for (int c = 0; c < _gridColumns; c++)
+                {
+                    if (_occupancy[c, r])
+                    {
+                        maxRow = r;
+                        break;
+                    }
+                }
+            }
+            return maxRow;
         }
 
         private void HandleItemClicked(StarChartItemSO item)

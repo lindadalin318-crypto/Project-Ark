@@ -15,7 +15,8 @@ MonoBehaviour:
   _displayName: Machine Gun
   _description: 'Sheba Core 1001: Rapid-fire physical rounds. Low heat, high volume.'
   _icon: {fileID: 0}
-  _slotSize: 1
+  _slotSize: 2
+  _shape: 1
   _heatCost: 4
   _family: 0
   _damageType: 0

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -28,6 +29,10 @@ namespace ProjectArk.UI
         [Header("Theme Visuals")]
         [SerializeField] private Image _typeDot;          // top-left type color dot
         [SerializeField] private Image _equippedBorder;   // green border when equipped
+
+        // Dynamically created shape preview cells
+        private Image[] _shapePreviewCells;
+        private static readonly Color ShapePreviewColor = new Color(1f, 1f, 1f, 0.18f);
 
         /// <summary> Fired when this item card is clicked. </summary>
         public event Action<StarChartItemSO> OnClicked;
@@ -96,6 +101,9 @@ namespace ProjectArk.UI
             // Type dot: left-top corner colored circle
             if (_typeDot != null)
                 _typeDot.color = StarChartTheme.GetTypeColor(item.ItemType);
+
+            // Shape preview: overlay semi-transparent grid cells
+            BuildShapePreview(item.Shape);
 
             // Equipped badge (checkmark)
             if (_equippedBadge != null)
@@ -203,6 +211,87 @@ namespace ProjectArk.UI
             // Restore scale
             Tween.Scale(transform, endValue: Vector3.one, duration: 0.12f, ease: Ease.OutQuad, useUnscaledTime: true);
             OnPointerExited?.Invoke();
+        }
+
+        // ========== Shape Preview ==========
+
+        /// <summary>
+        /// Builds a semi-transparent grid overlay showing the item's 2D shape.
+        /// For multi-cell shapes, renders the full bounding box grid with
+        /// active cells colored by item type and empty cells transparent.
+        /// Matches the HTML prototype's .inv-shape-grid behavior.
+        /// </summary>
+        private void BuildShapePreview(ItemShape shape)
+        {
+            // Destroy old preview cells
+            if (_shapePreviewCells != null)
+            {
+                foreach (var img in _shapePreviewCells)
+                    if (img != null) Destroy(img.gameObject);
+            }
+
+            var cells = ItemShapeHelper.GetCells(shape);
+            var bounds = ItemShapeHelper.GetBounds(shape);
+
+            // Skip shape preview for 1x1 items — they fill the entire card anyway
+            if (bounds.x <= 1 && bounds.y <= 1)
+            {
+                _shapePreviewCells = null;
+                return;
+            }
+
+            // Build a lookup set for active cells
+            var activeCellSet = new HashSet<Vector2Int>();
+            foreach (var c in cells) activeCellSet.Add(c);
+
+            // Type-based color for active cells (HTML: opacity 0.35 on the shape-grid)
+            Color typeColor = Item != null ? StarChartTheme.GetTypeColor(Item.ItemType) : Color.white;
+            Color activeColor = new Color(typeColor.r, typeColor.g, typeColor.b, 0.25f);
+            Color emptyColor = Color.clear;
+
+            // Create cells for the entire bounding box
+            int totalCells = bounds.x * bounds.y;
+            _shapePreviewCells = new Image[totalCells];
+
+            float cellW = 1f / bounds.x;
+            float cellH = 1f / bounds.y;
+            int idx = 0;
+
+            for (int row = 0; row < bounds.y; row++)
+            {
+                for (int col = 0; col < bounds.x; col++)
+                {
+                    bool isActive = activeCellSet.Contains(new Vector2Int(col, row));
+
+                    var cellGo = new GameObject($"ShapeCell_{col}_{row}", typeof(RectTransform), typeof(Image));
+                    cellGo.transform.SetParent(transform, false);
+                    cellGo.transform.SetAsFirstSibling(); // behind icon
+
+                    var cellRect = cellGo.GetComponent<RectTransform>();
+                    float xMin = col * cellW;
+                    float yMax = 1f - row * cellH;
+                    cellRect.anchorMin = new Vector2(xMin, yMax - cellH);
+                    cellRect.anchorMax = new Vector2(xMin + cellW, yMax);
+                    // Add small padding (2px equivalent) for cell gap effect
+                    cellRect.offsetMin = new Vector2(1f, 1f);
+                    cellRect.offsetMax = new Vector2(-1f, -1f);
+
+                    var cellImg = cellGo.GetComponent<Image>();
+                    cellImg.color = isActive ? activeColor : emptyColor;
+                    cellImg.raycastTarget = false;
+                    _shapePreviewCells[idx++] = cellImg;
+                }
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (_shapePreviewCells != null)
+            {
+                foreach (var img in _shapePreviewCells)
+                    if (img != null && img.gameObject != null)
+                        Destroy(img.gameObject);
+            }
         }
     }
 }

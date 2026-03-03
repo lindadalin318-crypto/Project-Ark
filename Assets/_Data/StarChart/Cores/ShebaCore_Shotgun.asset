@@ -16,7 +16,8 @@ MonoBehaviour:
   _description: 'Sheba Core 1002: Wide-spread shotgun burst. Devastating at close
     range.'
   _icon: {fileID: 0}
-  _slotSize: 1
+  _slotSize: 3
+  _shape: 3
   _heatCost: 12
   _family: 0
   _damageType: 0

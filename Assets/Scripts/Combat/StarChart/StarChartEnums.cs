@@ -47,4 +47,40 @@ namespace ProjectArk.Combat
         ProjectileSize,
         HeatCost
     }
+
+    /// <summary>
+    /// 2D shape of a Star Chart item on the track grid.
+    /// Each shape defines which cells (col, row) it occupies relative to its anchor cell.
+    /// Grid coordinate system: col increases right, row increases down (0=top, 1=bottom).
+    /// </summary>
+    public enum ItemShape
+    {
+        /// <summary> 1×1 — occupies a single cell. </summary>
+        Shape1x1,
+
+        /// <summary> 1×2 horizontal — occupies 2 columns in the same row. </summary>
+        Shape1x2H,
+
+        /// <summary> 2×1 vertical — occupies 2 rows in the same column. </summary>
+        Shape2x1V,
+
+        /// <summary> L-shape — occupies (0,0),(1,0),(0,1). </summary>
+        ShapeL,
+
+        /// <summary> 2×2 — occupies a full 2×2 block. </summary>
+        Shape2x2
+    }
+
+    /// <summary>
+    /// Filter category for the inventory panel.
+    /// Order here defines the canonical left-to-right button order.
+    /// </summary>
+    public enum InventoryFilter
+    {
+        All,
+        LightSail,
+        Prism,
+        Core,
+        Satellite
+    }
 }

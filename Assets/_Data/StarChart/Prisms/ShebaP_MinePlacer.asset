@@ -16,7 +16,8 @@ MonoBehaviour:
   _description: 'Sheba Prism 2067: Projectiles stop in place and linger as proximity
     mines.'
   _icon: {fileID: 0}
-  _slotSize: 1
+  _slotSize: 3
+  _shape: 3
   _heatCost: 0
   _family: 0
   _statModifiers: []

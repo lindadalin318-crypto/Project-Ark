@@ -159,25 +159,31 @@ namespace ProjectArk.UI
 
             if (layer == null) return;
 
-            int cellIndex = 0;
-            var items = layer.Items;
-
-            for (int i = 0; i < items.Count; i++)
+            // 2D matrix traversal: iterate grid[row, col]
+            // TypeColumn cells are laid out as: index = row * GRID_COLS + col
+            for (int r = 0; r < SlotLayer<T>.GRID_ROWS; r++)
             {
-                var item = items[i];
-                int size = item.SlotSize;
-
-                if (cellIndex < cells.Length && cells[cellIndex] != null)
-                    cells[cellIndex].SetItem(item);
-
-                for (int s = 1; s < size; s++)
+                for (int c = 0; c < SlotLayer<T>.GRID_COLS; c++)
                 {
-                    int spanIndex = cellIndex + s;
-                    if (spanIndex < cells.Length && cells[spanIndex] != null)
-                        cells[spanIndex].SetSpannedBy(item);
-                }
+                    var item = layer.GetAt(c, r);
+                    int cellIndex = r * SlotLayer<T>.GRID_COLS + c;
+                    if (cellIndex >= cells.Length || cells[cellIndex] == null) continue;
 
-                cellIndex += size;
+                    if (item == null)
+                    {
+                        // Already set to empty above; skip
+                        continue;
+                    }
+
+                    // Determine if this is the anchor cell for this item
+                    var anchor = layer.GetAnchor(item as T);
+                    bool isAnchor = anchor.x == c && anchor.y == r;
+
+                    if (isAnchor)
+                        cells[cellIndex].SetOverlay(item, isPrimary: true);
+                    else
+                        cells[cellIndex].SetOverlay(item, isPrimary: false);
+                }
             }
         }
 
@@ -270,14 +276,39 @@ namespace ProjectArk.UI
 
         /// <summary>
         /// Check whether this track's layer has enough space for the given item.
-        /// Supports Core, Prism, LightSail, and Satellite types.
+        /// Uses CanPlace to scan all possible anchor positions.
         /// </summary>
         public bool HasSpaceForItem(StarChartItemSO item, bool isCoreLayer)
         {
             if (_track == null) return false;
-            return isCoreLayer
-                ? _track.CoreLayer.FreeSpace >= item.SlotSize
-                : _track.PrismLayer.FreeSpace >= item.SlotSize;
+            if (isCoreLayer)
+                return FindFirstAnchor(_track.CoreLayer, item, out _);
+            else
+                return FindFirstAnchor(_track.PrismLayer, item, out _);
+        }
+
+        /// <summary>
+        /// Find the first valid anchor position for the item in the given layer.
+        /// Returns true if found, and sets anchor to the (col, row) position.
+        /// </summary>
+        public bool FindFirstAnchor<T>(SlotLayer<T> layer, StarChartItemSO item, out Vector2Int anchor)
+            where T : StarChartItemSO
+        {
+            anchor = new Vector2Int(-1, -1);
+            if (layer == null || item == null) return false;
+            for (int r = 0; r < SlotLayer<T>.GRID_ROWS; r++)
+            {
+                for (int c = 0; c < SlotLayer<T>.GRID_COLS; c++)
+                {
+                    var (canPlace, evictList) = layer.CanPlace(item as T, c, r);
+                    if (canPlace && (evictList == null || evictList.Count == 0))
+                    {
+                        anchor = new Vector2Int(c, r);
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         private bool HasSpaceForSail(StarChartItemSO item)
@@ -301,6 +332,45 @@ namespace ProjectArk.UI
         {
             var col = isCoreLayer ? _coreColumn : _prismColumn;
             col?.SetCellHighlight(startIndex, count, valid, isReplace);
+        }
+
+        /// <summary>
+        /// Highlight all cells covered by the given shape placed at (anchorCol, anchorRow)
+        /// in the specified column (Core or Prism layer).
+        /// </summary>
+        public void SetShapeHighlight(int anchorCol, int anchorRow, ItemShape shape, DropPreviewState state, bool isCoreLayer)
+        {
+            var col = isCoreLayer ? _coreColumn : _prismColumn;
+            if (col == null) return;
+            var cells = col.Cells;
+
+            // Use a local constant to avoid misleading generic type parameter on GRID_COLS
+            // (GRID_COLS is a constant independent of the type argument)
+            const int gridCols = SlotLayer<StarChartItemSO>.GRID_COLS;
+
+            foreach (var offset in ItemShapeHelper.GetCells(shape))
+            {
+                int c = anchorCol + offset.x;
+                int r = anchorRow + offset.y;
+                int cellIndex = r * gridCols + c;
+                if (cellIndex < 0 || cellIndex >= cells.Length || cells[cellIndex] == null) continue;
+
+                switch (state)
+                {
+                    case DropPreviewState.Valid:
+                        cells[cellIndex].SetHighlight(true);
+                        break;
+                    case DropPreviewState.Replace:
+                        cells[cellIndex].SetReplaceHighlight();
+                        break;
+                    case DropPreviewState.Invalid:
+                        cells[cellIndex].SetHighlight(false);
+                        break;
+                    default:
+                        cells[cellIndex].ClearHighlight();
+                        break;
+                }
+            }
         }
 
         /// <summary>

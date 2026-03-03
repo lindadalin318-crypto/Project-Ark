@@ -202,12 +202,6 @@ namespace ProjectArk.UI
             x = Mathf.Clamp(x, 0f, Screen.width - w);
             y = Mathf.Clamp(y, h, Screen.height);
 
-            // --- DIAGNOSTIC: log once per show ---
-            Debug.Log($"[Tooltip] mousePos={mousePos} targetScreen=({x},{y}) " +
-                      $"rect={rect.name} rootCanvas={(_rootCanvas != null ? _rootCanvas.name : "NULL")} " +
-                      $"renderMode={(_rootCanvas != null ? _rootCanvas.renderMode.ToString() : "N/A")} " +
-                      $"Screen={Screen.width}x{Screen.height}");
-
             // Convert screen position to world position and apply directly.
             // Using world position bypasses anchor/pivot offsets entirely,
             // so the tooltip always tracks the mouse regardless of nesting depth.
@@ -221,18 +215,16 @@ namespace ProjectArk.UI
                     RectTransformUtility.ScreenPointToWorldPointInRectangle(
                         canvasRect, new Vector2(x, y), cam, out var worldPoint))
                 {
-                    Debug.Log($"[Tooltip] worldPoint={worldPoint} rect.position before={rect.position}");
                     rect.position = worldPoint;
-                    Debug.Log($"[Tooltip] rect.position after={rect.position}");
                 }
                 else
                 {
-                    Debug.LogWarning($"[Tooltip] ScreenPointToWorldPointInRectangle FAILED. canvasRect={canvasRect}");
+                    // ScreenPointToWorldPointInRectangle failed — silently ignore
                 }
             }
             else
             {
-                Debug.LogWarning("[Tooltip] _rootCanvas is NULL, using raw screen coords fallback");
+                // _rootCanvas is null — fallback to raw screen coords
                 rect.position = new Vector3(x, y, 0f);
             }
         }
