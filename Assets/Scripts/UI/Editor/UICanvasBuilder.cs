@@ -635,7 +635,10 @@ namespace ProjectArk.UI.Editor
             replaceHintTmp.raycastTarget = false;
             replaceHintGo.SetActive(false);
 
-            ghostGo.SetActive(false);
+            // Do NOT call ghostGo.SetActive(false) here.
+            // DragGhostView uses CanvasGroup.alpha=0 to hide itself in Awake.
+            // Calling SetActive(false) would defer Awake execution, causing the
+            // first Show() to trigger Awake which immediately hides the ghost again.
 
             WireField(ghostView, "_iconImage",        ghostIconImg);
             WireField(ghostView, "_borderImage",      ghostBorderImg);

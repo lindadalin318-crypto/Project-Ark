@@ -321,7 +321,7 @@ Assets/
 | uGUI Mask 裁剪所有子内容 | `Color.clear`（alpha=0）作为 Mask Image 颜色，stencil buffer 全透明导致子节点全被裁剪 | Mask Image 颜色必须用 `new Color(1,1,1,1)` 或 alpha≥1/255；用 `showMaskGraphic=false` 隐藏视觉，而非 `Color.clear` |
 | Unity 内部类 MonoBehaviour GUID 不稳定 | nested class 的 fileID 由类名哈希计算，跨版本/文件移动后哈希失配，Inspector 显示"script cannot be loaded" | MonoBehaviour 必须是顶级类（一文件一类），禁止将 MonoBehaviour 写成其他类的内部类 |
 | 场景序列化 fileID 错误导致字段 Missing | 手写或复制场景文件时 fileID 填写错误（如填 `100100000` 而非实际 64 位 ID），运行时反序列化为 null，守卫代码静默跳过不报错 | 修改 `.unity`/`.prefab` 序列化文件时，fileID 必须从 Unity 生成的文件中复制，不可手写；null 守卫应配合 `Debug.LogError` 而非静默 return |
-| **uGUI 面板禁止用 `SetActive` 控制显隐** | `SetActive(false)` 会推迟 `Awake()` 执行；Editor 工具脚本调用后 inactive 状态被序列化进场景；Play Mode 启动时面板已是 inactive，首次 `Open()` 触发 `SetActive(true)` 后 `Awake()` 才执行，若 `Awake()` 内有 `SetActive(false)` 则面板被瞬间关闭，三个副作用连锁 | **uGUI 面板统一用 `CanvasGroup`（alpha + interactable + blocksRaycasts）控制显隐，GameObject 始终保持 active**；`Awake()` 中只初始化 CanvasGroup 状态，禁止调用 `SetActive(false)` |
+| **uGUI 面板禁止用 `SetActive` 控制显隐** | `SetActive(false)` 会推迟 `Awake()` 执行；Editor 工具脚本调用后 inactive 状态被序列化进场景；Play Mode 启动时面板已是 inactive，首次 `Open()` 触发 `SetActive(true)` 后 `Awake()` 才执行，若 `Awake()` 内有 `SetActive(false)` 则面板被瞬间关闭，三个副作用连锁。**额外陷阱**：即使代码层已修复（不再调用 `SetActive(false)`），历史遗留的序列化状态（`.unity` 场景文件中 `m_IsActive: 0`）仍会持续生效，导致 `Awake` 永远被推迟——代码看起来完全正确但就是不工作，排查时极难发现 | **uGUI 面板统一用 `CanvasGroup`（alpha + interactable + blocksRaycasts）控制显隐，GameObject 始终保持 active**；`Awake()` 中只初始化 CanvasGroup 状态，禁止调用 `SetActive(false)`；**修复后还需在 Unity Editor 中手动将面板 GameObject 的 active 勾选框打开并保存场景**，否则序列化的 inactive 状态不会消失 |
 
 ---
 
@@ -353,6 +353,125 @@ Assets/
 ├─ 操作 >10 步或批量重复 → 写 Editor 自动化脚本
 └─ 需要新建 .meta 文件 → 禁止，交给 Unity 自动生成
 ```
+
+---
+
+## Unity MCP 工具使用指南
+
+Unity MCP 将 Unity Editor 的操作能力直接接入 AI 对话，**打通了"代码修改 → 编辑器验证"之间的断层**。以前 AI 只能写代码、用户去 Editor 里验证；现在 AI 可以直接读取运行时状态、截图、执行代码来闭环验证。
+
+### 能力边界总览
+
+| 工具类别 | 工具名 | 能做什么 |
+|----------|--------|----------|
+| **Console** | `console-get-logs` | 读取 Unity Console 日志（可按类型/时间过滤） |
+| **场景** | `scene-get-data` | 获取场景根 GameObject 列表及层级 |
+| | `scene-list-opened` | 列出当前打开的所有场景 |
+| | `scene-open / save / create` | 打开/保存/新建场景 |
+| **GameObject** | `gameobject-find` | 按名称/路径/instanceID 查找 GameObject |
+| | `gameobject-component-get` | 读取组件的所有字段和属性值 |
+| | `gameobject-component-modify` | 修改组件字段值 |
+| | `gameobject-modify` | 修改 GameObject 自身属性（名称/active/tag/layer） |
+| | `gameobject-create / destroy / duplicate` | 创建/销毁/复制 GameObject |
+| **资产** | `assets-find` | 在 AssetDatabase 中搜索资产 |
+| | `assets-get-data / modify` | 读取/修改 SO、Material 等资产字段 |
+| | `assets-prefab-open / close / save` | 进入/退出/保存 Prefab 编辑模式 |
+| | `assets-material-create` | 创建 Material 资产 |
+| **脚本** | `script-read` | 读取脚本文件内容 |
+| | `script-update-or-create` | 创建或更新脚本文件（含编译验证） |
+| | `script-execute` | 用 Roslyn 动态执行一次性 C# 代码片段 |
+| | `script-delete` | 删除脚本文件 |
+| **截图** | `screenshot-game-view` | 截取 Game View 当前画面 |
+| | `screenshot-scene-view` | 截取 Scene View 当前画面 |
+| | `screenshot-camera` | 从指定摄像机截图 |
+| **编辑器状态** | `editor-application-get-state` | 获取 Play/Pause/Compile 状态 |
+| | `editor-application-set-state` | 控制 Play Mode 启动/停止/暂停 |
+| **反射** | `reflection-method-find` | 在所有程序集中查找方法（含 private） |
+| | `reflection-method-call` | 调用任意方法（含 private，可指定参数） |
+| **包管理** | `package-list / search / add / remove` | 管理 UPM 包 |
+| **测试** | `tests-run` | 运行 EditMode / PlayMode 单元测试 |
+
+### 推荐使用场景（Project Ark 专项）
+
+#### 1. Bug 排查第一步：先读 Console，再猜原因
+
+```
+遇到"代码看起来对但行为不对"→ 先 console-get-logs → 再决定改哪里
+```
+
+避免盲目加 Debug.Log、进 Play Mode、截图给 AI 的低效回路。可按 `logTypeFilter: "Error"` 过滤只看错误。
+
+#### 2. 场景序列化验证（对应常见陷阱第11条）
+
+`SetActive` 遗留的 inactive 状态、CanvasGroup alpha 值、Missing 引用——这类问题代码层完全看不出来。
+
+```
+gameobject-find → gameobject-component-get (includeFields: true)
+→ 直接读取 m_IsActive / alpha / 引用字段的实际值
+```
+
+**特别适用**：当前"场景配置与验证阶段"，验证 WorldClock/AmbienceController 等管理器的引用是否正确挂载。
+
+#### 3. 运行时数据污染检查（对应架构原则第6条）
+
+Play Mode 下直接读取 SO 字段，确认运行时数值未被写回资产：
+
+```
+editor-application-get-state → 确认 isPlaying: true
+→ assets-find (SO 资产) → assets-get-data → 对比字段值
+```
+
+#### 4. 对象池回收状态验证（对应架构原则第5条）
+
+回收后逐字段确认重置是否完整，不需要手动加 Debug.Log：
+
+```
+Play Mode 中触发回收 → gameobject-component-get → 检查所有运行时字段是否归零
+```
+
+#### 5. 一次性批量检查：用 `script-execute` 替代临时脚本
+
+不创建文件、不污染代码库，直接执行 C# 片段：
+
+```csharp
+// 示例：批量检查场景中所有 CanvasGroup 的 alpha 值
+public class Script {
+    public static object Main() {
+        var groups = UnityEngine.Object.FindObjectsByType<UnityEngine.CanvasGroup>(
+            UnityEngine.FindObjectsSortMode.None);
+        var result = new System.Text.StringBuilder();
+        foreach (var g in groups)
+            result.AppendLine($"{g.gameObject.name}: alpha={g.alpha}");
+        return result.ToString();
+    }
+}
+```
+
+**适用场景**：批量数据检查、一次性迁移、验证某个 Layer 的 GameObject 数量等。
+
+#### 6. UI / 视觉效果验证
+
+直接截 Game View，在对话中看到实际效果，替代"你截图给我看"的流程：
+
+```
+screenshot-game-view → AI 直接分析画面 → 给出修改建议
+```
+
+**适用场景**：StarChart Panel 拖拽 ghost 效果、HeatBar 动画、VFX 视觉 bug。
+
+#### 7. 运行单元测试验证架构正确性
+
+```
+tests-run (testMode: "EditMode") → 快速验证 DamageCalculator / HeatSystem / StateMachine
+```
+
+### 使用原则
+
+1. **代码修改后优先用 MCP 验证**，而非让用户手动截图或描述现象
+2. **Play Mode 操作前必须确认状态**：先 `editor-application-get-state`，确认 `isPlaying` 再读运行时数据
+3. **`script-execute` 是临时的**：执行的代码不会保存到项目，适合一次性验证，不适合持久逻辑
+4. **`reflection-method-call` 慎用**：可以调用 private 方法，但会绕过正常访问控制，仅用于调试
+5. **截图验证 UI 时先进 Play Mode**：Scene View 截图看不到运行时 UI 状态，Game View 才是真实表现
 
 ---
 

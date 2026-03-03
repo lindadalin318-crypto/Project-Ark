@@ -7566,3 +7566,72 @@ StarChart UI 布局与 HTML 原型不符，主要有两个问题：
 
 
 
+
+---
+
+## Bug Fix: StarChart 拖拽第一次无效（DragGhostView Awake 自我关闭三连锁）— 2026-03-02 16:45
+
+### 修改文件
+- `Assets/Scripts/UI/DragDrop/DragGhostView.cs`
+- `Assets/Scripts/UI/Editor/UICanvasBuilder.cs`
+
+### 根本原因
+`DragGhostView.Awake()` 末尾调用了 `gameObject.SetActive(false)`，而 `UICanvasBuilder` 在构建时也调用了 `ghostGo.SetActive(false)`。
+
+这触发了 CLAUDE.md 常见陷阱第11条的经典三连锁：
+1. `UICanvasBuilder` 调用 `ghostGo.SetActive(false)` → Ghost 处于 inactive，Awake 被推迟
+2. 第一次拖拽时 `DragGhostView.Show()` 调用 `gameObject.SetActive(true)` → **此时 Awake 才第一次执行**
+3. `Awake()` 末尾调用 `gameObject.SetActive(false)` → **Ghost 立刻被关掉**
+4. 结果：第一次拖拽 Ghost 不可见，拖拽无响应；第二次拖拽 Awake 已执行完毕，正常工作
+
+### 修复方案
+- **`DragGhostView.cs`**：`Awake()` 末尾改为 `_canvasGroup.alpha = 0f` 隐藏 Ghost，不再调用 `SetActive(false)`；`Show()` 改为 `_canvasGroup.alpha = _ghostAlpha` 显示；`Hide()` 改为动画结束后 `_canvasGroup.alpha = 0f` + 重置 scale，不再调用 `SetActive(false)`；可见性检查从 `activeSelf` 改为 `_canvasGroup.alpha <= 0f`
+- **`UICanvasBuilder.cs`**：移除 `ghostGo.SetActive(false)` 调用，Ghost GameObject 始终保持 active，由 CanvasGroup.alpha 控制显隐
+
+### 验收标准
+- 第一次拖拽库存部件时 Ghost 立即出现并跟随鼠标 ✓
+- 拖拽结束后 Ghost 正常消失 ✓
+- 多次拖拽行为一致 ✓
+
+---
+
+## Bug Fix: DragGhostView 第一次拖拽 Ghost 不显示（localScale=0 持久化）— 2026-03-02 17:25
+
+### 修改文件
+- `Assets/Scripts/UI/DragDrop/DragGhostView.cs`
+
+### 根本原因（通过 Unity MCP 运行时诊断确认）
+MCP 诊断发现 Ghost 在 Play Mode 启动后 `localScale=(0,0,0)`，这是 `Hide()` 动画的遗留状态：
+
+1. `Bind()` 调用 `Hide()` 时，Ghost 是 active 的（Awake 刚执行完，SetActive(false) 还没来得及执行）
+2. `Hide()` 启动缩小到 `Vector3.zero` 的 tween，`OnComplete` 调用 `SetActive(false)`
+3. `localScale=(0,0,0)` 被持久化到 Ghost 上
+4. 第一次 `Show()` 时：`_scaleTween.Stop()` 停止 tween → PrimeTween 的 Stop() 可能触发 OnComplete → `SetActive(false)` 再次执行 → Ghost 被关掉
+
+### 修复方案
+两处修改：
+1. **`Show()` 里**：把 `_scaleTween.Stop()` 移到 `SetActive(true)` 之前，并在 `SetActive(true)` 之前先重置 `localScale = Vector3.one`，确保 Ghost 从干净状态开始
+2. **`Hide()` 的 `OnComplete` 里**：在 `SetActive(false)` 后加 `localScale = Vector3.one` 重置，防止 scale=0 状态持久化到下次 Show()
+
+### 验收标准（MCP 运行时验证）
+- Show() 后：activeSelf=True, localScale=(0.8,0.8,0.8), alpha=0.70 ✅
+- 第一次拖拽 Ghost 正常出现 ✅
+
+---
+
+## CLAUDE.md 更新：Unity MCP 工具使用指南 — 2026-03-02 17:22
+
+### 修改文件
+- `CLAUDE.md`
+
+### 内容
+在"Unity 编辑器操作边界"章节后新增独立章节"Unity MCP 工具使用指南"，包含：
+1. **能力边界总览表**：覆盖全部 MCP 工具（Console / 场景 / GameObject / 资产 / 脚本 / 截图 / 编辑器状态 / 反射 / 包管理 / 测试）
+2. **Project Ark 专项推荐场景 7 条**：Bug 排查、场景序列化验证、运行时数据污染检查、对象池回收验证、一次性批量检查（script-execute）、UI 视觉验证、单元测试
+3. **使用原则 5 条**：Play Mode 前确认状态、script-execute 临时性、reflection 慎用等
+
+### 目的
+将 Unity MCP 的使用规范固化进项目开发规范，让 AI 在后续开发中能主动利用 MCP 闭环验证，减少"写代码 → 用户手动验证 → 截图反馈"的低效回路。
+
+### 技术
+无代码变更，纯文档更新。
