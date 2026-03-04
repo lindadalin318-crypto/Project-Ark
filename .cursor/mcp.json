@@ -1,7 +1,9 @@
 {
   "mcpServers": {
-    "unityMCP": {
-      "url": "http://localhost:8080/mcp"
+    "ai-game-developer": {
+      "command": "C:/Users/seanyyao/.dotnet/tools/unity-mcp-server.exe",
+      "args": ["port=50980", "client-transport=stdio"],
+      "type": "stdio"
     }
   }
 }
