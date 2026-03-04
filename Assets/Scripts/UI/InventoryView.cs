@@ -50,6 +50,7 @@ namespace ProjectArk.UI
         private StarChartInventorySO _inventory;
         private StarChartItemType? _activeFilter;
         private readonly List<InventoryItemView> _itemViews = new();
+        private readonly List<InventoryItemView> _pooledViews = new();
 
         // 外部注入的装备检查函数
         private Func<StarChartItemSO, bool> _isEquippedCheck;
@@ -141,14 +142,14 @@ namespace ProjectArk.UI
                     items.Add(item);
             }
 
-            // Initialize occupancy grid
-            _occupancyRows = 4; // start with 4 rows, grow as needed
+            // Initialize occupancy grid (C1: shape-cell based, not bounding-box based)
+            _occupancyRows = 4;
             _occupancy = new bool[_gridColumns, _occupancyRows];
 
             // Instantiate and place items
             foreach (var item in items)
             {
-                var view = Instantiate(_itemPrefab, _contentParent);
+                var view = GetOrCreateView();
                 bool equipped = _isEquippedCheck?.Invoke(item) ?? false;
                 view.Setup(item, equipped);
                 view.OnClicked += HandleItemClicked;
@@ -157,21 +158,18 @@ namespace ProjectArk.UI
                 view.gameObject.SetActive(true);
                 _itemViews.Add(view);
 
-                // Calculate item bounds from shape
-                var bounds = ItemShapeHelper.GetBounds(item.Shape);
-                int spanCols = bounds.x;
-                int spanRows = bounds.y;
-
-                // Find first available position (row-priority packing)
-                if (TryFindPosition(spanCols, spanRows, out int placeCol, out int placeRow))
+                // C1: Find anchor using shape cells (not bounding box) for packing
+                if (TryFindAnchorForShape(item.Shape, out int placeCol, out int placeRow))
                 {
-                    // Mark cells as occupied
-                    MarkOccupied(placeCol, placeRow, spanCols, spanRows);
+                    // C1: Mark only the actual shape cells as occupied (not the full bounding box)
+                    MarkOccupiedByShape(item.Shape, placeCol, placeRow);
 
-                    // Size the item view to span the correct number of cells
+                    // Visual sizing: bounding box so card is easy to interact with,
+                    // but the card background is transparent — only active cells are colored.
+                    var bounds = ItemShapeHelper.GetBounds(item.Shape);
                     var rt = view.GetComponent<RectTransform>();
-                    float width = spanCols * _cellSize + (spanCols - 1) * _cellGap;
-                    float height = spanRows * _cellSize + (spanRows - 1) * _cellGap;
+                    float width  = bounds.x * _cellSize + (bounds.x - 1) * _cellGap;
+                    float height = bounds.y * _cellSize + (bounds.y - 1) * _cellGap;
                     rt.sizeDelta = new Vector2(width, height);
 
                     // Position: top-left anchoring within content parent
@@ -201,19 +199,23 @@ namespace ProjectArk.UI
         }
 
         /// <summary>
-        /// Find the first available position in the occupancy grid for an item of the given size.
-        /// Scans row-by-row, column-by-column (top-left priority).
+        /// C1: Find the first anchor position where the given shape fits in the occupancy grid.
+        /// Only the shape's actual cells are checked — not the full bounding box.
+        /// Scans row-by-row, column-by-column (top-left priority, matching HTML prototype behavior).
         /// </summary>
-        private bool TryFindPosition(int spanCols, int spanRows, out int col, out int row)
+        private bool TryFindAnchorForShape(ItemShape shape, out int col, out int row)
         {
+            var bounds = ItemShapeHelper.GetBounds(shape);
+
             for (int r = 0; r < 100; r++) // safety limit
             {
-                // Ensure occupancy grid has enough rows
-                EnsureOccupancyRows(r + spanRows);
+                // Ensure occupancy grid has enough rows for the bounding box
+                EnsureOccupancyRows(r + bounds.y);
 
-                for (int c = 0; c <= _gridColumns - spanCols; c++)
+                // Limit col scan so shape bounding box doesn't exceed grid width
+                for (int c = 0; c <= _gridColumns - bounds.x; c++)
                 {
-                    if (CanPlace(c, r, spanCols, spanRows))
+                    if (CanPlaceShape(shape, c, r))
                     {
                         col = c;
                         row = r;
@@ -227,29 +229,37 @@ namespace ProjectArk.UI
             return false;
         }
 
-        /// <summary> Check if a rectangular region is fully unoccupied. </summary>
-        private bool CanPlace(int col, int row, int spanCols, int spanRows)
+        /// <summary>
+        /// C1: Check if all shape cells, placed at the given anchor, are unoccupied.
+        /// Uses GetCells() — the single source of truth — not the bounding box.
+        /// </summary>
+        private bool CanPlaceShape(ItemShape shape, int anchorCol, int anchorRow)
         {
-            for (int r = row; r < row + spanRows; r++)
+            foreach (var offset in ItemShapeHelper.GetCells(shape))
             {
-                for (int c = col; c < col + spanCols; c++)
-                {
-                    if (_occupancy[c, r])
-                        return false;
-                }
+                int c = anchorCol + offset.x;
+                int r = anchorRow + offset.y;
+                // Bounds check
+                if (c < 0 || c >= _gridColumns || r < 0 || r >= _occupancyRows)
+                    return false;
+                if (_occupancy[c, r])
+                    return false;
             }
             return true;
         }
 
-        /// <summary> Mark a rectangular region as occupied. </summary>
-        private void MarkOccupied(int col, int row, int spanCols, int spanRows)
+        /// <summary>
+        /// C1: Mark only the actual shape cells as occupied (not the bounding box).
+        /// This is what allows non-rectangular shapes to pack efficiently.
+        /// </summary>
+        private void MarkOccupiedByShape(ItemShape shape, int anchorCol, int anchorRow)
         {
-            for (int r = row; r < row + spanRows; r++)
+            foreach (var offset in ItemShapeHelper.GetCells(shape))
             {
-                for (int c = col; c < col + spanCols; c++)
-                {
+                int c = anchorCol + offset.x;
+                int r = anchorRow + offset.y;
+                if (c >= 0 && c < _gridColumns && r >= 0 && r < _occupancyRows)
                     _occupancy[c, r] = true;
-                }
             }
         }
 
@@ -304,7 +314,7 @@ namespace ProjectArk.UI
 
         private void ClearViews()
         {
-            // Unsubscribe events from tracked views
+            // Return active views to pool
             for (int i = 0; i < _itemViews.Count; i++)
             {
                 if (_itemViews[i] != null)
@@ -312,22 +322,47 @@ namespace ProjectArk.UI
                     _itemViews[i].OnClicked -= HandleItemClicked;
                     _itemViews[i].OnPointerEntered -= HandleItemPointerEntered;
                     _itemViews[i].OnPointerExited -= HandleItemPointerExited;
+                    _itemViews[i].transform.localScale = Vector3.one;
+                    _itemViews[i].gameObject.SetActive(false);
+                    _pooledViews.Add(_itemViews[i]);
                 }
             }
             _itemViews.Clear();
-
-            // DestroyImmediate all children to avoid ghost objects
-            // (Destroy is deferred and unreliable when timeScale == 0)
-            if (_contentParent != null)
-            {
-                for (int i = _contentParent.childCount - 1; i >= 0; i--)
-                    DestroyImmediate(_contentParent.GetChild(i).gameObject);
-            }
         }
 
         private void OnDestroy()
         {
             ClearViews();
+            for (int i = 0; i < _pooledViews.Count; i++)
+            {
+                if (_pooledViews[i] != null)
+                    Destroy(_pooledViews[i].gameObject);
+            }
+            _pooledViews.Clear();
+        }
+
+        private InventoryItemView GetOrCreateView()
+        {
+            InventoryItemView view = null;
+
+            if (_pooledViews.Count > 0)
+            {
+                int last = _pooledViews.Count - 1;
+                view = _pooledViews[last];
+                _pooledViews.RemoveAt(last);
+                if (view != null)
+                {
+                    view.transform.SetParent(_contentParent, false);
+                    view.transform.SetAsLastSibling();
+                    view.transform.localScale = Vector3.one;
+                    view.gameObject.SetActive(true);
+                }
+            }
+
+            if (view == null)
+                view = Instantiate(_itemPrefab, _contentParent);
+
+            return view;
         }
 
         // ========== Drop Target for Unequip (Slot → Inventory) ==========

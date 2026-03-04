@@ -27,7 +27,7 @@ namespace ProjectArk.UI
     /// </summary>
     public class SlotCellView : MonoBehaviour,
         IDropHandler, IPointerEnterHandler, IPointerExitHandler,
-        IBeginDragHandler, IDragHandler, IEndDragHandler
+        IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerMoveHandler
     {
         [SerializeField] private Image _backgroundImage;
         [SerializeField] private Image _iconImage;
@@ -73,9 +73,6 @@ namespace ProjectArk.UI
         /// in this cell's layer. Used for SAIL/SAT types that don't use SlotLayer.
         /// </summary>
         public Func<StarChartItemSO, bool> HasSpaceForItem { get; set; }
-
-        // Tracks whether this cell is currently showing a valid drag highlight
-        private bool _isHighlightedValid;
         private bool _isDragSource;
 
         // PrimeTween handle for flash animation
@@ -255,8 +252,6 @@ namespace ProjectArk.UI
         /// <summary> Remove any highlight, restore to current state. </summary>
         public void ClearHighlight()
         {
-            _isHighlightedValid = false;
-
             if (DisplayedItem != null)
             {
                 if (_backgroundImage != null)
@@ -286,108 +281,38 @@ namespace ProjectArk.UI
                 var payload = mgr.CurrentPayload;
                 if (payload == null) return;
 
-                // Type matching: check if dragged item type matches this slot type
-                bool typeMatch = IsTypeMatch(payload.Item);
-
-                // Space check
-                bool hasSpace = false;
-                if (typeMatch)
-                {
-                    if (HasSpaceForItem != null)
-                    {
-                        // SAIL/SAT: use injected delegate
-                        hasSpace = HasSpaceForItem(payload.Item);
-                    }
-                    else if (OwnerTrack != null)
-                    {
-                        // Core/Prism: use TrackView.HasSpaceForItem
-                        hasSpace = OwnerTrack.HasSpaceForItem(payload.Item, SlotType == SlotType.Core);
-                    }
-                }
-
-                // Determine highlight state
-                bool occupied = IsOccupied;
-                bool valid = typeMatch && hasSpace;
-                bool isReplace = typeMatch && !hasSpace && occupied;
-
-                _isHighlightedValid = valid || isReplace;
+                bool accepted = ComputeDropValidity(payload, out bool isReplace, out Vector2Int anchor, out DropPreviewState previewState);
 
                 // Store drop target info in the manager
                 mgr.DropTargetTrack = OwnerTrack?.Track;
                 mgr.DropTargetIsCoreLayer = SlotType == SlotType.Core;
                 mgr.DropTargetSlotType = SlotType;
-                mgr.DropTargetValid = valid || isReplace; // both valid and replace are "accept"
+                mgr.DropTargetValid = accepted;
                 mgr.DropTargetIsReplace = isReplace;
+                mgr.DropTargetAnchorCol = anchor.x;
+                mgr.DropTargetAnchorRow = anchor.y;
 
-                // Determine preview state
-                DropPreviewState previewState;
-                if (!typeMatch)
-                    previewState = DropPreviewState.Invalid;
-                else if (isReplace)
-                    previewState = DropPreviewState.Replace;
-                else if (valid)
-                    previewState = DropPreviewState.Valid;
-                else
-                    previewState = DropPreviewState.Invalid;
-
-                // Update ghost drop state
+                // Update ghost and column preview
                 mgr.UpdateGhostDropState(previewState, isReplace ? 1 : 0);
-
-                // Update column-level drop preview highlight
                 OwnerColumn?.SetDropPreview(previewState);
 
-                // Highlight cells matching the item's 2D shape
-                if (OwnerTrack != null)
+                // Highlight cells
+                if (OwnerTrack != null && (SlotType == SlotType.Core || SlotType == SlotType.Prism))
                 {
-                    if (SlotType == SlotType.Core || SlotType == SlotType.Prism)
+                    if (accepted)
                     {
-                        // Convert linear CellIndex to (col, row) in the 2×2 grid
-                        // Layout: [0]=top-left, [1]=top-right, [2]=bottom-left, [3]=bottom-right
-                        // i.e. col = CellIndex % GRID_COLS, row = CellIndex / GRID_COLS
-                        const int gridCols = SlotLayer<StarChartItemSO>.GRID_COLS;
-                        const int gridRows = SlotLayer<StarChartItemSO>.GRID_ROWS;
-                        int hoverCol = CellIndex % gridCols;
-                        int hoverRow = CellIndex / gridCols;
-
-                        // Requirement 2: reverse-enumerate candidate anchors to find the best
-                        // valid anchor for the shape given the hovered cell.
-                        bool anchorFound = ItemShapeHelper.FindBestAnchor(
-                            payload.Item.Shape,
-                            hoverCol, hoverRow,
-                            gridCols, gridRows,
-                            out Vector2Int bestAnchor);
-
-                        if (!anchorFound)
-                        {
-                            // No valid anchor — mark as invalid
-                            mgr.DropTargetValid = false;
-                            mgr.DropTargetIsReplace = false;
-                            mgr.UpdateGhostDropState(DropPreviewState.Invalid);
-                            OwnerColumn?.SetDropPreview(DropPreviewState.Invalid);
-                            // Highlight only the hovered cell as invalid
-                            SetHighlight(false);
-                        }
-                        else
-                        {
-                            // Store the resolved anchor so EndDrag can use it
-                            mgr.DropTargetAnchorCol = bestAnchor.x;
-                            mgr.DropTargetAnchorRow = bestAnchor.y;
-
-                            DropPreviewState previewStateForShape = isReplace
-                                ? DropPreviewState.Replace
-                                : (valid ? DropPreviewState.Valid : DropPreviewState.Invalid);
-
-                            OwnerTrack.SetShapeHighlight(bestAnchor.x, bestAnchor.y,
-                                payload.Item.Shape, previewStateForShape,
-                                SlotType == SlotType.Core);
-                        }
+                        OwnerTrack.SetShapeHighlight(anchor.x, anchor.y,
+                            payload.Item.Shape, previewState, SlotType == SlotType.Core);
                     }
                     else
-                        ApplySingleHighlight(valid, isReplace);
+                    {
+                        // No valid anchor for this hover point, mark hovered cell invalid.
+                        SetHighlight(false);
+                    }
                 }
                 else
                 {
-                    ApplySingleHighlight(valid, isReplace);
+                    ApplySingleHighlight(accepted && !isReplace, isReplace);
                 }
             }
             else
@@ -416,8 +341,6 @@ namespace ProjectArk.UI
                 else
                     ClearHighlight();
 
-                _isHighlightedValid = false;
-
                 // Delay one frame before clearing DropTargetTrack:
                 // if the pointer moved to another cell in the same TrackView,
                 // OnPointerEnter on the new cell will re-set DropTargetTrack before
@@ -428,6 +351,12 @@ namespace ProjectArk.UI
             {
                 OnPointerExited?.Invoke();
             }
+        }
+
+        public void OnPointerMove(PointerEventData eventData)
+        {
+            if (DragDropManager.Instance?.IsDragging == true) return;
+            DragDropManager.Instance?.TooltipView?.UpdatePosition();
         }
 
         private IEnumerator ClearDropTargetNextFrame(DragDropManager mgr, WeaponTrack trackAtExit)
@@ -452,8 +381,17 @@ namespace ProjectArk.UI
             var mgr = DragDropManager.Instance;
             if (mgr == null || !mgr.IsDragging) return;
 
-            if (_isHighlightedValid)
+            // Double-check at drop time to avoid stale pointer-enter cache.
+            bool accepted = ComputeDropValidity(mgr.CurrentPayload, out bool isReplace, out Vector2Int anchor, out _);
+            if (accepted)
             {
+                mgr.DropTargetTrack = OwnerTrack?.Track;
+                mgr.DropTargetIsCoreLayer = SlotType == SlotType.Core;
+                mgr.DropTargetSlotType = SlotType;
+                mgr.DropTargetIsReplace = isReplace;
+                mgr.DropTargetValid = true;
+                mgr.DropTargetAnchorCol = anchor.x;
+                mgr.DropTargetAnchorRow = anchor.y;
                 mgr.EndDrag(true);
             }
         }
@@ -515,6 +453,83 @@ namespace ProjectArk.UI
                 SetReplaceHighlight();
             else
                 SetHighlight(valid);
+        }
+
+        /// <summary>
+        /// Compute current drop validity from live state (type, space, replace, anchor resolution).
+        /// </summary>
+        private bool ComputeDropValidity(
+            DragPayload payload,
+            out bool isReplace,
+            out Vector2Int anchor,
+            out DropPreviewState previewState)
+        {
+            isReplace = false;
+            anchor = Vector2Int.zero;
+            previewState = DropPreviewState.Invalid;
+
+            if (payload?.Item == null)
+                return false;
+
+            bool typeMatch = IsTypeMatch(payload.Item);
+            if (!typeMatch)
+                return false;
+
+            bool hasSpace = false;
+            if (HasSpaceForItem != null)
+            {
+                // SAIL/SAT: use injected delegate
+                hasSpace = HasSpaceForItem(payload.Item);
+            }
+            else if (OwnerTrack != null)
+            {
+                // CORE/PRISM: use TrackView.HasSpaceForItem
+                hasSpace = OwnerTrack.HasSpaceForItem(payload.Item, SlotType == SlotType.Core);
+            }
+
+            bool valid = typeMatch && hasSpace;
+            isReplace = typeMatch && !hasSpace && IsOccupied;
+
+            // For CORE/PRISM, resolve shape anchor against hovered cell.
+            if (OwnerTrack != null && (SlotType == SlotType.Core || SlotType == SlotType.Prism))
+            {
+                const int gridCols = SlotLayer<StarChartItemSO>.GRID_COLS;
+                const int gridRows = SlotLayer<StarChartItemSO>.GRID_ROWS;
+                int hoverCol = CellIndex % gridCols;
+                int hoverRow = CellIndex / gridCols;
+
+                bool anchorFound = ItemShapeHelper.FindBestAnchor(
+                    payload.Item.Shape,
+                    hoverCol,
+                    hoverRow,
+                    gridCols,
+                    gridRows,
+                    out Vector2Int bestAnchor);
+
+                if (!anchorFound)
+                {
+                    isReplace = false;
+                    previewState = DropPreviewState.Invalid;
+                    return false;
+                }
+
+                anchor = bestAnchor;
+            }
+
+            if (isReplace)
+            {
+                previewState = DropPreviewState.Replace;
+                return true;
+            }
+
+            if (valid)
+            {
+                previewState = DropPreviewState.Valid;
+                return true;
+            }
+
+            previewState = DropPreviewState.Invalid;
+            return false;
         }
 
         private void OnDestroy()

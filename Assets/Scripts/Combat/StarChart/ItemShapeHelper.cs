@@ -1,11 +1,24 @@
 using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 
 namespace ProjectArk.Combat
 {
     /// <summary>
-    /// Static helper for <see cref="ItemShape"/> geometry queries.
-    /// Grid coordinate system: col increases right, row increases down (0 = top row, 1 = bottom row).
+    /// C1 — Single source of truth for all shape geometry queries.
+    ///
+    /// Shape Contract (C1-C4):
+    ///   C1 Single Truth  — <see cref="GetCells"/> is the only authoritative cell list.
+    ///                       <see cref="GetBounds"/> is for bounding-box sizing only.
+    ///                       No module may infer occupancy from slotSize or area.
+    ///   C2 Consistent    — Inventory packing, Track placement, Drop preview, and Ghost
+    ///                       all use GetCells() for occupancy.
+    ///   C3 Visual Holes  — Only active cells are colored; empty bounding-box positions
+    ///                       stay transparent in every UI state.
+    ///   C4 Extensible    — To add a new shape: add enum value + entry in GetCells() and
+    ///                       GetBounds(). No other code changes required.
+    ///
+    /// Grid coordinate system: col increases right, row increases down (0 = top row).
     /// All offsets are relative to the anchor cell (col=0, row=0).
     /// </summary>
     public static class ItemShapeHelper
@@ -19,8 +32,9 @@ namespace ProjectArk.Combat
         private static readonly Vector2Int[] Cells2x2      = { new(0, 0), new(1, 0), new(0, 1), new(1, 1) };
 
         /// <summary>
-        /// Returns the list of (col, row) offsets occupied by the given shape,
+        /// C1: Returns the list of (col, row) offsets occupied by the given shape,
         /// relative to the anchor cell at (0, 0).
+        /// This is the SINGLE SOURCE OF TRUTH for all occupancy queries.
         /// </summary>
         public static IReadOnlyList<Vector2Int> GetCells(ItemShape shape)
         {
@@ -32,12 +46,27 @@ namespace ProjectArk.Combat
                 ItemShape.ShapeL       => CellsL,
                 ItemShape.ShapeLMirror => CellsLMirror,
                 ItemShape.Shape2x2     => Cells2x2,
-                _                      => Cells1x1
+                // C4: Fallback for unknown shapes — logs a warning in development builds.
+                // When adding a new ItemShape value, add a case here AND in GetBounds().
+                _ => FallbackCells(shape)
             };
         }
 
         /// <summary>
+        /// C4: Fallback for unregistered shapes. Returns 1x1 and warns the developer.
+        /// This guard ensures new shapes added to the enum are immediately surfaced.
+        /// </summary>
+        private static IReadOnlyList<Vector2Int> FallbackCells(ItemShape shape)
+        {
+            Debug.LogWarning(
+                $"[ItemShapeHelper] C4 Guard: Shape '{shape}' has no registered cell layout. " +
+                "Add it to GetCells() and GetBounds() in ItemShapeHelper.cs. Falling back to 1×1.");
+            return Cells1x1;
+        }
+
+        /// <summary>
         /// Returns the bounding box (cols wide, rows tall) of the given shape.
+        /// Use for sizing visual containers only — NOT for occupancy checks (use GetCells instead).
         /// </summary>
         public static Vector2Int GetBounds(ItemShape shape)
         {
@@ -75,6 +104,56 @@ namespace ProjectArk.Combat
             result.Clear();
             foreach (var offset in GetCells(shape))
                 result.Add(new Vector2Int(anchorCol + offset.x, anchorRow + offset.y));
+        }
+
+        /// <summary>
+        /// C4 Self-check: validates that every <see cref="ItemShape"/> enum value has a registered
+        /// cell layout with cells that fit within GetBounds().
+        /// Call this from a development-only Editor test or unit test to catch missing shapes early.
+        /// Returns a report string (empty if all shapes pass).
+        /// </summary>
+        public static string ValidateAllShapes()
+        {
+            var sb = new StringBuilder();
+            var allShapes = (ItemShape[])System.Enum.GetValues(typeof(ItemShape));
+
+            foreach (var shape in allShapes)
+            {
+                var cells  = GetCells(shape);
+                var bounds = GetBounds(shape);
+
+                if (cells == null || cells.Count == 0)
+                {
+                    sb.AppendLine($"FAIL [{shape}]: GetCells() returned null or empty.");
+                    continue;
+                }
+
+                // Every cell must be within [0, bounds)
+                foreach (var cell in cells)
+                {
+                    if (cell.x < 0 || cell.x >= bounds.x || cell.y < 0 || cell.y >= bounds.y)
+                    {
+                        sb.AppendLine(
+                            $"FAIL [{shape}]: cell ({cell.x},{cell.y}) is outside bounds {bounds}.");
+                    }
+                }
+
+                // Bounds must be derived from actual max extents (not under-reported)
+                int maxCol = 0, maxRow = 0;
+                foreach (var cell in cells)
+                {
+                    if (cell.x > maxCol) maxCol = cell.x;
+                    if (cell.y > maxRow) maxRow = cell.y;
+                }
+                if (bounds.x < maxCol + 1 || bounds.y < maxRow + 1)
+                {
+                    sb.AppendLine(
+                        $"FAIL [{shape}]: GetBounds() {bounds} is smaller than actual extents " +
+                        $"({maxCol + 1}×{maxRow + 1}).");
+                }
+            }
+
+            return sb.ToString();
         }
 
         /// <summary>

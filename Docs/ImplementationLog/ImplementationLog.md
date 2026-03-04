@@ -7911,3 +7911,101 @@ User reported that inventory items all appeared 1×1 even though the drag ghost 
 - 新增形状只需在 `ItemShapeHelper.GetCells` 添加 case，锚点推算和覆盖层渲染无需修改。
 - `ItemOverlayView` 通过代码创建（`new GameObject + AddComponent`），Setup 中动态创建 border/icon 子对象，无需 prefab。
 
+---
+
+## Universal Shape Contract（全量形状一致性）— 2026-02-23 (今日)
+
+**新建文件：**
+- `Assets/Scripts/Combat/Editor/ShapeContractValidator.cs` — C4 护栏：Editor 菜单工具，一键验证所有 ItemShape
+
+**修改文件：**
+- `Assets/Scripts/Combat/StarChart/ItemShapeHelper.cs`
+- `Assets/Scripts/UI/InventoryView.cs`
+- `Assets/Scripts/UI/InventoryItemView.cs`
+
+**内容：**
+建立并落地 Universal Shape Contract（C1–C4），解决背包/Track/Ghost 形状显示不一致问题（如 L 形部件在背包中显示为 2x2 方块）。
+
+**C1 单一真源**
+- `ItemShapeHelper.GetCells()` 是所有占位查询的唯一依据。
+- `GetBounds()` 仅用于外框尺寸显示，不参与占位判定。
+- `GetCells()` 的 `default` 分支改为调用 `FallbackCells()`，在运行时对未注册 shape 打印 `LogWarning`（C4 护栏前置）。
+
+**C2 一致占位（背包 shape-cell 改造）**
+- `InventoryView.TryFindPosition/CanPlace/MarkOccupied` 全部替换为 `TryFindAnchorForShape/CanPlaceShape/MarkOccupiedByShape`。
+- 新方法均遍历 `ItemShapeHelper.GetCells()` 而非矩形边界框，L 形仅占 3 格，不再挤占第 4 个空格。
+- 排序策略（行优先、左上优先）保持不变，避免背包卡片位置体验漂移。
+
+**C3 视觉洞位可读（InventoryItemView 透明底）**
+- 移除 `Setup()` 中 `bgImage.color = alpha 1` 的强制不透明赋值，改为 `Color.clear`。
+- 所有视觉着色仅来自 `BuildShapePreview()` 动态生成的 shape-cell Images。
+- L 形的空洞位置现在为真正透明，而不是被卡片背景色填满。
+- `_equippedBorder`（stretch Image）改为保持 `Color.clear`，装备状态改由 `BuildShapePreview` 在 active cells 上混合 equippedGreen 颜色（`_isEquipped` 标志）。
+- `BuildShapePreview` 现在对所有形状（包括 1×1）生成 shape-cell，active 0.35 opacity，empty Color.clear。
+- 新增 `RefreshShapeColors()` 公开方法，支持运行时更新装备色而无需重建 cell 列表。
+
+**C4 可扩展护栏**
+- `ItemShapeHelper.ValidateAllShapes()` — 遍历所有 `ItemShape` 枚举值，验证 cells 非空、cells 在 bounds 范围内、bounds 不小于实际 max cell extents，返回文字报告。
+- `ShapeContractValidator.cs`（Editor-only）— `ProjectArk > Validate Shape Contract` 菜单，调用 `ValidateAllShapes()`，结果以 `DisplayDialog + Debug.Log/LogError` 双路输出。
+- 新增 shape 时：只需在 `GetCells()` + `GetBounds()` 各加一个 case，运行一次菜单验证，其余 UI/拖拽逻辑无需修改（C4）。
+
+**验收标准回归：**
+1. L 形部件在背包中占 3 格（不再挤占第 4 格），视觉上第 4 角透明。✓
+2. 所有非矩形形状（ShapeL、ShapeLMirror）的 empty cells 视觉上可辨识为洞位。✓
+3. Track overlay / Ghost 已通过 `ItemShapeHelper.GetCells` 正确渲染（现有逻辑，回归验证）。✓
+4. `ProjectArk > Validate Shape Contract` 对所有当前 6 个形状报告 PASS。✓
+5. 新增 ItemShape 枚举值后未更新 GetCells，运行时 console 出现 LogWarning（C4 前置护栏）。✓
+
+**技术：**
+- Shape-cell 背包占位（替代矩形 bounding-box 占位）
+- C# HashSet<Vector2Int> active-cell 快查
+- 透明卡片底 + 动态 Image 子节点着色（完全 shape-driven 视觉）
+- Editor MenuItem + `System.Text.StringBuilder` 自检报告
+
+---
+
+## DragDrop 架构改进（广播注册 + 双重验证 + Tooltip PointerMove + Inventory 对象池）— 2026-03-04 23:45
+
+**修改文件：**
+- `Assets/Scripts/UI/DragDrop/DragDropManager.cs`
+- `Assets/Scripts/UI/TypeColumn.cs`
+- `Assets/Scripts/UI/SlotCellView.cs`
+- `Assets/Scripts/UI/ItemTooltipView.cs`
+- `Assets/Scripts/UI/InventoryItemView.cs`
+- `Assets/Scripts/UI/InventoryView.cs`
+
+**内容：**
+按 `WkecWulin_DragDrop_Analysis` 的可借鉴设计，对 Project Ark 拖拽系统做了 4 项架构级修复与优化：
+
+1. **BeginDrag 广播注册机制（去硬编码）**
+   - `DragDropManager` 新增 `_registeredColumns` 与 `RegisterColumn/UnregisterColumn`。
+   - `BeginDrag/CleanUp` 改为广播 `BroadcastDragBegin/BroadcastDragEnd`，由每个 `TypeColumn` 自行判断是否高亮。
+   - `TypeColumn` 新增 `OnEnable/Start/OnDisable` 注册生命周期，以及 `OnDragBeginBroadcast/OnDragEndBroadcast`。
+   - 删除 `DragDropManager.HighlightMatchingColumns()`，不再每次拖拽都 `GetComponentsInChildren` + switch 硬编码。
+
+2. **OnDrop 双重验证（消除过期缓存）**
+   - `SlotCellView` 提取 `ComputeDropValidity()`，统一封装类型匹配、空间检查、替换判定、形状锚点推算。
+   - `OnDrop` 改为再次实时校验，而不是依赖 `OnPointerEnter` 阶段的缓存状态。
+   - 移除 `_isHighlightedValid` 相关逻辑，降低拖拽过程中状态变化导致的误判风险。
+
+3. **Tooltip 改为 PointerMove 驱动（去每帧 Update）**
+   - `ItemTooltipView` 删除 `Update()`，新增 `UpdatePosition()`。
+   - `InventoryItemView`、`SlotCellView` 实现 `IPointerMoveHandler`，仅在指针移动时刷新 tooltip 位置。
+   - `DragDropManager.Bind` 缓存 `TooltipView`，统一提供给拖拽相关视图访问。
+
+4. **InventoryView 对象池化（替代 DestroyImmediate 全量重建）**
+   - 新增 `_pooledViews`，`Refresh` 改为 `GetOrCreateView()` 复用卡片。
+   - `ClearViews` 改为解绑事件并回收到池中（`SetActive(false)`），不再 `DestroyImmediate` 全销毁。
+   - `OnDestroy` 时统一销毁池内对象，减少频繁刷新导致的 GC 和 EventSystem 抖动。
+
+**目的：**
+- 提升拖拽系统的可扩展性（新列类型不再改 manager 核心逻辑）。
+- 提升拖放判定稳定性（避免 hover 缓存过期造成的误触发）。
+- 降低 UI 每帧开销与刷新抖动（tooltip 与 inventory 视图均改为事件驱动/对象复用）。
+
+**技术：**
+- 事件广播 + 自判断（注册表模式）。
+- Drop 双重验证（Begin/Drop 两阶段一致性保障）。
+- PointerMove 驱动 UI 更新（替代 Update 常驻轮询）。
+- 轻量对象池复用（减少销毁/重建成本）。
+

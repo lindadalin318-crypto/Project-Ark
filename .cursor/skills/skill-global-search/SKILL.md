@@ -112,6 +112,8 @@ web_search #4 (Skill搜): "site:github.com SKILL.md {关键词}"
 
 **前置条件：** `PHASE_3_GITHUB_SEARCH = ✓`
 
+**必须执行的操作：**
+
 从阶段 3 的搜索结果中，选择 TOP 1-3 个高价值 GitHub 仓库，执行 `web_fetch`：
 
 ```
@@ -126,18 +128,28 @@ web_fetch:
 3. 包含 `SKILL.md` 的独立 skill 仓库
 4. 与用户关键词高度相关的专业仓库
 
-**判断是否为 Skill 的标准：**
+**⛔ 必须判断并分类：**
 
 ```
-✅ 是 Skill（满足任一条件）：
-   - 仓库包含 SKILL.md 文件
-   - 仓库路径包含 .cursor/skills/ 或 skills/ 目录结构
-   - 仓库在 skills.sh 索引中（来自 CLI 搜索结果）
-   - README 明确说明是 "Claude Code Skill" 或 "Agent Skill"
+┌────────────────────────────────────────────────────────────────────┐
+│ 判断是否为 Skill 的标准：                                          │
+│                                                                    │
+│ ✅ 是 Skill（满足任一条件）：                                      │
+│    - 仓库包含 SKILL.md 文件                                        │
+│    - 仓库路径包含 .claude/skills/ 或 skills/ 目录结构              │
+│    - 仓库在 skills.sh 索引中（来自 CLI 搜索结果）                  │
+│    - README 明确说明是 "Claude Code Skill" 或 "Agent Skill"        │
+│                                                                    │
+│ ⚠️ 非 Skill（普通开源项目）：                                      │
+│    - 不满足上述条件的仓库                                          │
+│    - 但可能与用户需求高度相关，适合封装成 Skill                    │
+└────────────────────────────────────────────────────────────────────┘
+```
 
-⚠️ 非 Skill（普通开源项目）：
-   - 不满足上述条件的仓库
-   - 但可能与用户需求高度相关，适合封装成 Skill
+**分类存储结果：**
+```
+skill_list = []      # 存放真正的 Skill
+project_list = []    # 存放普通开源项目
 ```
 
 **完成条件：**
@@ -151,7 +163,10 @@ web_fetch:
 
 ## 阶段 5：输出结果（强制三分区格式）
 
-**前置条件：** `PHASE_2_CLI_SEARCH = ✓` 且 `PHASE_3_GITHUB_SEARCH = ✓` 且 `PHASE_4_DEEP_FETCH = ✓`
+**前置条件：** 以下全部为 ✓
+- `PHASE_2_CLI_SEARCH = ✓`
+- `PHASE_3_GITHUB_SEARCH = ✓`  
+- `PHASE_4_DEEP_FETCH = ✓`
 
 **强制输出格式（必须包含三个分区）：**
 
@@ -182,12 +197,16 @@ web_fetch:
 |---|-----|---------|-----|---------|
 | 3 | {owner/repo} | ⭐ {数量} | {描述} | 该项目可作为封装 skill 的基础，建议使用 skill-creator 进行封装 |
 
+<!-- 如果无相关项目，必须写：-->
+<!-- _无相关开源项目_ -->
+
 ---
 
 💡 提示：带 ✅ 的是真正的 Skill，可直接安装；带 ⚠️ 的是普通项目，如需使用需自行封装成 Skill。
 ```
 
 **输出前强制校验（必须全部通过）：**
+
 ```
 □ 输出包含 "## 📦 来自 skills.sh" 分区？ → 必须有
 □ 输出包含 "## ✅ GitHub 上的 Skill" 分区？ → 必须有
@@ -221,7 +240,7 @@ web_fetch:
 
 ```
 web_search #1: "skills.sh {英文关键词} skill"
-web_search #2: "github cursor code skill {英文关键词}"
+web_search #2: "github claude code skill {英文关键词}"
 web_search #3: "github awesome-{关键词} list"
 ```
 
@@ -233,10 +252,10 @@ web_search #3: "github awesome-{关键词} list"
 
 ### 确认安装位置
 
-**默认安装到 Cursor 项目：**
+**默认安装到 CodeBuddy：**
 ```
 即将安装 {skill-name} 到：
-  → {project_path}/.cursor/skills/{skill-name}/
+  → {project_path}/.codebuddy/skills/{skill-name}/
 
 确认安装？(y/n)
 ```
@@ -244,38 +263,38 @@ web_search #3: "github awesome-{关键词} list"
 **多平台安装（仅当用户明确要求时）：**
 ```
 检测到您想安装到多个平台，将安装到：
-  → .cursor/skills/
   → .codebuddy/skills/
+  → .claude/skills/
   → 其他平台...
 
 确认？(y/n)
 ```
 
-### 执行安装（默认：仅 Cursor）
+### 执行安装（默认：仅 CodeBuddy）
 
-**推荐方式 - 手动 git clone（直接安装到 .cursor/skills/）：**
+**推荐方式 - 手动 git clone（直接安装到 .codebuddy/skills/）：**
 ```bash
 # 克隆到临时目录
 git clone --depth 1 https://github.com/{owner}/{repo}.git /tmp/{repo}
 
 # 创建 skill 目录
-mkdir -p .cursor/skills/{skill-name}
+mkdir -p .codebuddy/skills/{skill-name}
 
 # 复制文件（检查 SKILL.md 位置）
 if [ -f /tmp/{repo}/SKILL.md ]; then
-  cp /tmp/{repo}/SKILL.md .cursor/skills/{skill-name}/
+  cp /tmp/{repo}/SKILL.md .codebuddy/skills/{skill-name}/
 elif [ -f /tmp/{repo}/dist/skills/{skill-name}/SKILL.md ]; then
-  cp -r /tmp/{repo}/dist/skills/{skill-name}/* .cursor/skills/{skill-name}/
+  cp -r /tmp/{repo}/dist/skills/{skill-name}/* .codebuddy/skills/{skill-name}/
 elif [ -f /tmp/{repo}/skills/{skill-name}/SKILL.md ]; then
-  cp -r /tmp/{repo}/skills/{skill-name}/* .cursor/skills/{skill-name}/
-elif [ -f /tmp/{repo}/.cursor/skills/{skill-name}/SKILL.md ]; then
-  cp -r /tmp/{repo}/.cursor/skills/{skill-name}/* .cursor/skills/{skill-name}/
+  cp -r /tmp/{repo}/skills/{skill-name}/* .codebuddy/skills/{skill-name}/
+elif [ -f /tmp/{repo}/.claude/skills/{skill-name}/SKILL.md ]; then
+  cp -r /tmp/{repo}/.claude/skills/{skill-name}/* .codebuddy/skills/{skill-name}/
 fi
 
 # 复制附加文件
-cp -r /tmp/{repo}/scripts .cursor/skills/{skill-name}/ 2>/dev/null
-cp -r /tmp/{repo}/data .cursor/skills/{skill-name}/ 2>/dev/null
-cp -r /tmp/{repo}/references .cursor/skills/{skill-name}/ 2>/dev/null
+cp -r /tmp/{repo}/scripts .codebuddy/skills/{skill-name}/ 2>/dev/null
+cp -r /tmp/{repo}/data .codebuddy/skills/{skill-name}/ 2>/dev/null
+cp -r /tmp/{repo}/references .codebuddy/skills/{skill-name}/ 2>/dev/null
 
 # 清理
 rm -rf /tmp/{repo}
@@ -287,25 +306,26 @@ rm -rf /tmp/{repo}
 npx skills add {owner/repo} -y
 
 # 如需转换为实际文件（移除 symlink）
-if [ -L .cursor/skills/{skill-name} ]; then
-  target=$(readlink .cursor/skills/{skill-name})
-  rm .cursor/skills/{skill-name}
-  cp -r "$target" .cursor/skills/{skill-name}
+if [ -L .codebuddy/skills/{skill-name} ]; then
+  target=$(readlink .codebuddy/skills/{skill-name})
+  rm .codebuddy/skills/{skill-name}
+  cp -r "$target" .codebuddy/skills/{skill-name}
+  # 清理其他平台的 symlink 和 .agents 目录
   rm -rf .agents
 fi
 ```
 
 ### 验证安装
 ```bash
-ls -la .cursor/skills/{skill-name}/
-cat .cursor/skills/{skill-name}/SKILL.md | head -10
+ls -la .codebuddy/skills/{skill-name}/
+cat .codebuddy/skills/{skill-name}/SKILL.md | head -10
 ```
 
 ---
 
 ## 快速参考
 
-### 推荐安装方式（手动 git clone → 仅 Cursor）
+### 推荐安装方式（手动 git clone → 仅 CodeBuddy）
 
 ```bash
 # 1. 克隆仓库
@@ -313,7 +333,7 @@ git clone --depth 1 https://github.com/{owner}/{repo}.git /tmp/{repo}
 
 # 2. 查找 SKILL.md 位置并复制
 find /tmp/{repo} -name "SKILL.md"  # 先查找位置
-cp -r /tmp/{repo}/dist/skills/{skill-name} .cursor/skills/  # 根据实际路径调整
+cp -r /tmp/{repo}/dist/skills/{skill-name} .codebuddy/skills/  # 根据实际路径调整
 
 # 3. 清理
 rm -rf /tmp/{repo}
@@ -338,7 +358,7 @@ rm -rf /tmp/{repo}
 | 无搜索结果 | 尝试英文关键词、更宽泛的词、相关工具名 |
 | 安装失败 | 检查网络；尝试手动 git clone |
 | Skill 不工作 | 重启 IDE；检查路径是否正确 |
-| SKILL.md 位置错误 | 检查仓库结构，可能在 `dist/skills/`、`skills/` 或 `.cursor/skills/` 子目录中 |
+| SKILL.md 位置错误 | 检查仓库结构，可能在 `dist/skills/`、`skills/` 或 `.claude/skills/` 子目录中 |
 | symlink 问题 | 使用手动 git clone 方式替代 npx skills add |
 
 ---

@@ -55,10 +55,12 @@ namespace ProjectArk.UI
         /// Populated by EvictBlockingItems, consumed by FlyBackAnimator.
         /// </summary>
         public List<(StarChartItemSO item, WeaponTrack track)> EvictedItems { get; } = new();
+        public ItemTooltipView TooltipView { get; private set; }
 
         private StarChartPanel _panel;
         private StarChartController _controller;
         private RectTransform _inventoryRect; // target for fly-back animations
+        private readonly List<TypeColumn> _registeredColumns = new();
 
         // Source InventoryItemView — used to restore alpha on cancel/end
         private CanvasGroup _sourceCanvasGroup;
@@ -90,7 +92,32 @@ namespace ProjectArk.UI
                 var invView = _panel.GetComponentInChildren<InventoryView>(true);
                 if (invView != null)
                     _inventoryRect = invView.GetComponent<RectTransform>();
+                TooltipView = _panel.GetComponentInChildren<ItemTooltipView>(true);
+
+                // Fallback registration pass in case some columns were enabled before manager Awake.
+                var columns = _panel.GetComponentsInChildren<TypeColumn>(true);
+                foreach (var col in columns)
+                    RegisterColumn(col);
             }
+        }
+
+        /// <summary>
+        /// Register a type column to receive drag begin/end broadcasts.
+        /// </summary>
+        public void RegisterColumn(TypeColumn column)
+        {
+            if (column == null) return;
+            if (_registeredColumns.Contains(column)) return;
+            _registeredColumns.Add(column);
+        }
+
+        /// <summary>
+        /// Unregister a type column from drag broadcasts.
+        /// </summary>
+        public void UnregisterColumn(TypeColumn column)
+        {
+            if (column == null) return;
+            _registeredColumns.Remove(column);
         }
 
         /// <summary>
@@ -126,8 +153,7 @@ namespace ProjectArk.UI
             if (payload.Source == DragSource.Slot)
                 _panel?.StatusBar?.ShowPersistent("DRAG TO INVENTORY TO UNEQUIP", StarChartTheme.HighlightReplace);
 
-            // Highlight all TypeColumns that match the dragged item's type
-            HighlightMatchingColumns(payload.Item, true);
+            BroadcastDragBegin(payload.Item);
         }
 
         /// <summary>
@@ -452,9 +478,7 @@ namespace ProjectArk.UI
             if (_ghostView != null)
                 _ghostView.Hide();
 
-            // Clear all TypeColumn highlights
-            if (CurrentPayload != null)
-                HighlightMatchingColumns(CurrentPayload.Item, false);
+            BroadcastDragEnd();
 
             // Restore status bar (clear persistent drag hint)
             _panel?.StatusBar?.RestoreDefault();
@@ -473,36 +497,22 @@ namespace ProjectArk.UI
         }
 
         /// <summary>
-        /// Highlight (or clear) all TypeColumns in both TrackViews that match the given item's type.
-        /// On drag begin: shows breathing pulse candidate highlight.
-        /// On drag end/cancel: clears all candidate highlights.
+        /// Broadcast drag begin to all registered columns so each column can self-evaluate.
         /// </summary>
-        private void HighlightMatchingColumns(StarChartItemSO item, bool highlight)
+        private void BroadcastDragBegin(StarChartItemSO item)
         {
-            if (_panel == null || item == null) return;
+            if (item == null) return;
+            foreach (var column in _registeredColumns)
+                column?.OnDragBeginBroadcast(item);
+        }
 
-            // Determine the matching SlotType
-            SlotType matchType = item.ItemType switch
-            {
-                StarChartItemType.Core      => SlotType.Core,
-                StarChartItemType.Prism     => SlotType.Prism,
-                StarChartItemType.LightSail => SlotType.LightSail,
-                StarChartItemType.Satellite => SlotType.Satellite,
-                _                           => SlotType.Core
-            };
-
-            // Find all TrackViews in the panel and set/clear candidate highlight
-            var trackViews = _panel.GetComponentsInChildren<TrackView>(true);
-            foreach (var tv in trackViews)
-            {
-                var col = tv.GetColumn(matchType);
-                if (col == null) continue;
-
-                if (highlight)
-                    col.SetDropCandidate(true);
-                else
-                    col.SetDropCandidate(false);
-            }
+        /// <summary>
+        /// Broadcast drag end to clear candidate highlights on all registered columns.
+        /// </summary>
+        private void BroadcastDragEnd()
+        {
+            foreach (var column in _registeredColumns)
+                column?.OnDragEndBroadcast();
         }
 
         private void OnDestroy()

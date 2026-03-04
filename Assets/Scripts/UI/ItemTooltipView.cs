@@ -170,7 +170,10 @@ namespace ProjectArk.UI
             }
         }
 
-        private void Update()
+        /// <summary>
+        /// Refresh tooltip screen position. Intended to be called from pointer move events.
+        /// </summary>
+        public void UpdatePosition()
         {
             if (_isVisible)
                 PositionNearMouse();

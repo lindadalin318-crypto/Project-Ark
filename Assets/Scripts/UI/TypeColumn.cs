@@ -89,6 +89,22 @@ namespace ProjectArk.UI
             }
         }
 
+        private void OnEnable()
+        {
+            DragDropManager.Instance?.RegisterColumn(this);
+        }
+
+        private void Start()
+        {
+            // Late safety registration in case this column enabled before manager Awake.
+            DragDropManager.Instance?.RegisterColumn(this);
+        }
+
+        private void OnDisable()
+        {
+            DragDropManager.Instance?.UnregisterColumn(this);
+        }
+
         // ── Hover border animation ──────────────────────────────────────
 
         public void OnPointerEnter(PointerEventData eventData)
@@ -172,6 +188,33 @@ namespace ProjectArk.UI
             }
         }
 
+        /// <summary>
+        /// Receive drag-begin broadcast from DragDropManager and self-evaluate type match.
+        /// </summary>
+        public void OnDragBeginBroadcast(StarChartItemSO item)
+        {
+            if (item == null) return;
+
+            bool matches = item.ItemType switch
+            {
+                StarChartItemType.Core      => _slotType == SlotType.Core,
+                StarChartItemType.Prism     => _slotType == SlotType.Prism,
+                StarChartItemType.LightSail => _slotType == SlotType.LightSail,
+                StarChartItemType.Satellite => _slotType == SlotType.Satellite,
+                _                           => false
+            };
+
+            SetDropCandidate(matches);
+        }
+
+        /// <summary>
+        /// Receive drag-end broadcast from DragDropManager.
+        /// </summary>
+        public void OnDragEndBroadcast()
+        {
+            SetDropCandidate(false);
+        }
+
         /// <summary> Set highlight on a range of cells (for multi-size items). </summary>
         public void SetCellHighlight(int startIndex, int count, bool valid, bool isReplace = false)
         {
@@ -194,6 +237,7 @@ namespace ProjectArk.UI
 
         private void OnDestroy()
         {
+            DragDropManager.Instance?.UnregisterColumn(this);
             _borderTween.Stop();
         }
     }

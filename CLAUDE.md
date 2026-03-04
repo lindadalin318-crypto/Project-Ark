@@ -358,67 +358,88 @@ Assets/
 
 ## Unity MCP 工具使用指南
 
-Unity MCP 将 Unity Editor 的操作能力直接接入 AI 对话，**打通了"代码修改 → 编辑器验证"之间的断层**。以前 AI 只能写代码、用户去 Editor 里验证；现在 AI 可以直接读取运行时状态、截图、执行代码来闭环验证。
+Unity MCP（CoplayDev 版，`com.coplaydev.unity-mcp`）将 Unity Editor 的操作能力直接接入 AI 对话，**打通了"代码修改 → 编辑器验证"之间的断层**。以前 AI 只能写代码、用户去 Editor 里验证；现在 AI 可以直接读取运行时状态、截图、执行代码来闭环验证。
 
 ### 能力边界总览
 
 | 工具类别 | 工具名 | 能做什么 |
 |----------|--------|----------|
-| **Console** | `console-get-logs` | 读取 Unity Console 日志（可按类型/时间过滤） |
-| **场景** | `scene-get-data` | 获取场景根 GameObject 列表及层级 |
-| | `scene-list-opened` | 列出当前打开的所有场景 |
-| | `scene-open / save / create` | 打开/保存/新建场景 |
-| **GameObject** | `gameobject-find` | 按名称/路径/instanceID 查找 GameObject |
-| | `gameobject-component-get` | 读取组件的所有字段和属性值 |
-| | `gameobject-component-modify` | 修改组件字段值 |
-| | `gameobject-modify` | 修改 GameObject 自身属性（名称/active/tag/layer） |
-| | `gameobject-create / destroy / duplicate` | 创建/销毁/复制 GameObject |
-| **资产** | `assets-find` | 在 AssetDatabase 中搜索资产 |
-| | `assets-get-data / modify` | 读取/修改 SO、Material 等资产字段 |
-| | `assets-prefab-open / close / save` | 进入/退出/保存 Prefab 编辑模式 |
-| | `assets-material-create` | 创建 Material 资产 |
-| **脚本** | `script-read` | 读取脚本文件内容 |
-| | `script-update-or-create` | 创建或更新脚本文件（含编译验证） |
-| | `script-execute` | 用 Roslyn 动态执行一次性 C# 代码片段 |
-| | `script-delete` | 删除脚本文件 |
-| **截图** | `screenshot-game-view` | 截取 Game View 当前画面 |
-| | `screenshot-scene-view` | 截取 Scene View 当前画面 |
-| | `screenshot-camera` | 从指定摄像机截图 |
-| **编辑器状态** | `editor-application-get-state` | 获取 Play/Pause/Compile 状态 |
-| | `editor-application-set-state` | 控制 Play Mode 启动/停止/暂停 |
-| **反射** | `reflection-method-find` | 在所有程序集中查找方法（含 private） |
-| | `reflection-method-call` | 调用任意方法（含 private，可指定参数） |
-| **包管理** | `package-list / search / add / remove` | 管理 UPM 包 |
-| **测试** | `tests-run` | 运行 EditMode / PlayMode 单元测试 |
+| **Console** | `read_console` | 读取/清除 Unity Console 日志（分页，可按类型过滤） |
+| **场景** | `manage_scene` | 场景 CRUD（create/load/save）、获取层级 `get_hierarchy`（分页）、截图 `screenshot`、查询构建设置 |
+| **GameObject** | `find_gameobjects` | 按名称/tag/layer/组件类型/路径搜索，返回 instanceID 列表 |
+| | `manage_gameobject` | 创建/修改/删除/复制/相对移动 GameObject |
+| | `manage_components` | 添加/删除/设置组件属性（`add / remove / set_property`） |
+| **资产** | `manage_asset` | 资产搜索、创建、修改、删除、导入（支持分页，`generate_preview=false` 避免大载荷） |
+| | `manage_scriptable_object` | 通过序列化路径创建和修改 ScriptableObject 资产 |
+| | `manage_material` | 创建 Material、修改 Shader 属性/颜色、指定给 Renderer |
+| | `manage_prefabs` | Prefab 无 UI 编辑（`get_info / get_hierarchy / create_from_gameobject / modify_contents`）；支持批量创建子 GO 和设置组件属性 |
+| | `manage_texture` | 程序化生成纹理（实色/棋盘/条纹/渐变/噪声等图案） |
+| | `manage_shader` | Shader 脚本的 CRUD（create/read/update/delete） |
+| **脚本** | `create_script` | 在指定路径新建 C# 脚本 |
+| | `manage_script` | 读取脚本内容（`read`），或兼容旧版 create/delete |
+| | `apply_text_edits` | 按精确行列坐标替换脚本中的文本片段 |
+| | `script_apply_edits` | 结构化 C# 编辑：替换/插入/删除整个方法，或按锚点 anchor 做模式匹配替换（更安全） |
+| | `validate_script` | 对 C# 脚本执行静态诊断，返回错误/警告列表 |
+| | `delete_script` | 删除 C# 脚本文件 |
+| | `find_in_file` | 在文件中用正则搜索，返回行号和摘录 |
+| | `get_sha` | 获取脚本的 SHA256 和元数据（不返回文件内容，省 token） |
+| **动画** | `manage_animation` | Animator 控制（play/crossfade/set 参数）、创建 AnimatorController/State/Transition、创建带关键帧曲线的 AnimationClip |
+| **VFX** | `manage_vfx` | 管理 ParticleSystem / VisualEffect / LineRenderer / TrailRenderer |
+| **编辑器** | `manage_editor` | Play/Pause/Stop、设置 active tool、添加/删除 Tag 和 Layer；读取 telemetry 状态 |
+| | `execute_menu_item` | 执行任意 Unity 菜单项（需先读 `menu_items` 资源确认路径） |
+| | `refresh_unity` | 刷新 AssetDatabase，可选等待脚本编译完成 |
+| **测试** | `run_tests` | 异步启动 EditMode/PlayMode 单元测试，返回 `job_id` |
+| | `get_test_job` | 轮询异步测试任务进度和结果 |
+| **批量执行** | `batch_execute` | 将多条 MCP 命令打包为一次调用，延迟/token 降低 10-100x；默认上限 25 条，最大 100 条 |
+| **实例管理** | `set_active_instance` | 多 Unity 实例时指定目标实例（Name@hash 或端口号） |
+| **自定义工具** | `execute_custom_tool` | 执行项目注册的自定义 MCP 工具（见 `custom_tools` 资源） |
+
+**Resources（只读状态读取，用 `FetchMcpResource` 访问）：**
+
+| 资源 | 说明 |
+|------|------|
+| `mcpforunity://editor_state` | 编辑器当前状态（isPlaying/isPaused/isCompiling 等） |
+| `mcpforunity://project_info` | 项目名称、Unity 版本、平台等基本信息 |
+| `mcpforunity://project_tags` | 项目所有 Tag 列表 |
+| `mcpforunity://project_layers` | 项目所有 Layer 列表 |
+| `mcpforunity://instances` | 当前连接的所有 Unity 实例列表 |
+| `mcpforunity://menu_items` | 所有可执行的菜单项路径 |
+| `mcpforunity://editor_selection` | 当前 Editor 选中的对象 |
+| `mcpforunity://editor_state` | 编辑器活跃工具等状态 |
+| `mcpforunity://get_tests` | 项目测试列表 |
+| `mcpforunity://custom-tools` | 项目注册的自定义工具列表（每次任务前先查） |
+| `mcpforunity://scene/gameobject/{id}` | 指定 instanceID 的 GameObject 完整数据 |
+| `mcpforunity://scene/gameobject/{id}/components` | 指定 GO 的所有组件列表 |
 
 ### 推荐使用场景（Project Ark 专项）
 
 #### 1. Bug 排查第一步：先读 Console，再猜原因
 
 ```
-遇到"代码看起来对但行为不对"→ 先 console-get-logs → 再决定改哪里
+遇到"代码看起来对但行为不对"→ 先 read_console → 再决定改哪里
 ```
 
-避免盲目加 Debug.Log、进 Play Mode、截图给 AI 的低效回路。可按 `logTypeFilter: "Error"` 过滤只看错误。
+避免盲目加 Debug.Log 的低效回路。可用 `page_size` 控制返回条数，用 `cursor` 分页。
 
-#### 2. 场景序列化验证（对应常见陷阱第11条）
+#### 2. 场景序列化验证（对应常见陷阱）
 
-`SetActive` 遗留的 inactive 状态、CanvasGroup alpha 值、Missing 引用——这类问题代码层完全看不出来。
+`SetActive` 遗留的 inactive 状态、CanvasGroup alpha 值、Missing 引用——代码层完全看不出来：
 
 ```
-gameobject-find → gameobject-component-get (includeFields: true)
+find_gameobjects (by name) → 获取 instanceID
+→ FetchMcpResource mcpforunity://scene/gameobject/{id}/components
 → 直接读取 m_IsActive / alpha / 引用字段的实际值
 ```
 
-**特别适用**：当前"场景配置与验证阶段"，验证 WorldClock/AmbienceController 等管理器的引用是否正确挂载。
+**特别适用**：当前"场景配置与验证阶段"，验证 WorldClock/AmbienceController 等管理器引用是否正确挂载。
 
 #### 3. 运行时数据污染检查（对应架构原则第6条）
 
 Play Mode 下直接读取 SO 字段，确认运行时数值未被写回资产：
 
 ```
-editor-application-get-state → 确认 isPlaying: true
-→ assets-find (SO 资产) → assets-get-data → 对比字段值
+FetchMcpResource mcpforunity://editor_state → 确认 isPlaying: true
+→ manage_asset (action=search, SO 资产) → manage_scriptable_object 读取字段值 → 对比
 ```
 
 #### 4. 对象池回收状态验证（对应架构原则第5条）
@@ -426,52 +447,62 @@ editor-application-get-state → 确认 isPlaying: true
 回收后逐字段确认重置是否完整，不需要手动加 Debug.Log：
 
 ```
-Play Mode 中触发回收 → gameobject-component-get → 检查所有运行时字段是否归零
+Play Mode 中触发回收 → find_gameobjects → FetchMcpResource .../components
+→ 检查所有运行时字段是否归零
 ```
 
-#### 5. 一次性批量检查：用 `script-execute` 替代临时脚本
+#### 5. 批量场景操作：用 `batch_execute` 大幅提速
 
-不创建文件、不污染代码库，直接执行 C# 片段：
-
-```csharp
-// 示例：批量检查场景中所有 CanvasGroup 的 alpha 值
-public class Script {
-    public static object Main() {
-        var groups = UnityEngine.Object.FindObjectsByType<UnityEngine.CanvasGroup>(
-            UnityEngine.FindObjectsSortMode.None);
-        var result = new System.Text.StringBuilder();
-        foreach (var g in groups)
-            result.AppendLine($"{g.gameObject.name}: alpha={g.alpha}");
-        return result.ToString();
-    }
-}
-```
-
-**适用场景**：批量数据检查、一次性迁移、验证某个 Layer 的 GameObject 数量等。
-
-#### 6. UI / 视觉效果验证
-
-直接截 Game View，在对话中看到实际效果，替代"你截图给我看"的流程：
+同时创建多个 GameObject、批量设置组件属性时，优先用 `batch_execute`：
 
 ```
-screenshot-game-view → AI 直接分析画面 → 给出修改建议
+batch_execute [
+  manage_gameobject(create, "EnemyA"),
+  manage_gameobject(create, "EnemyB"),
+  manage_components(add, Rigidbody2D, "EnemyA"),
+  manage_components(add, Rigidbody2D, "EnemyB")
+]
+```
+
+比逐个调用节省 4 倍延迟和 token 消耗。
+
+#### 6. 结构化脚本编辑：优先 `script_apply_edits`
+
+修改已有脚本时，优先用 `script_apply_edits`（方法级操作，不易破坏括号平衡）：
+
+```
+script_apply_edits → replace_method / insert_method / anchor_replace
+→ validate_script → refresh_unity → read_console 确认无编译错误
+```
+
+精确小范围改动（行列已知）用 `apply_text_edits`；`find_in_file` 先定位再改。
+
+#### 7. 场景截图验证 UI 视觉效果
+
+直接截 Game View，替代"你截图给我看"的流程：
+
+```
+manage_scene (action=screenshot) → AI 直接分析画面 → 给出修改建议
 ```
 
 **适用场景**：StarChart Panel 拖拽 ghost 效果、HeatBar 动画、VFX 视觉 bug。
 
-#### 7. 运行单元测试验证架构正确性
+#### 8. 运行单元测试验证架构正确性
 
 ```
-tests-run (testMode: "EditMode") → 快速验证 DamageCalculator / HeatSystem / StateMachine
+run_tests (testMode: "EditMode") → 获取 job_id
+→ get_test_job (轮询) → 快速验证 DamageCalculator / HeatSystem / StateMachine
 ```
 
 ### 使用原则
 
-1. **代码修改后优先用 MCP 验证**，而非让用户手动截图或描述现象
-2. **Play Mode 操作前必须确认状态**：先 `editor-application-get-state`，确认 `isPlaying` 再读运行时数据
-3. **`script-execute` 是临时的**：执行的代码不会保存到项目，适合一次性验证，不适合持久逻辑
-4. **`reflection-method-call` 慎用**：可以调用 private 方法，但会绕过正常访问控制，仅用于调试
-5. **截图验证 UI 时先进 Play Mode**：Scene View 截图看不到运行时 UI 状态，Game View 才是真实表现
+1. **每次任务开始前**先查 `mcpforunity://custom-tools` 资源，确认是否有项目专属工具可用
+2. **读状态用 Resources，改状态用 Tools**：`editor_state`、`project_info`、`project_tags` 等只读信息走 `FetchMcpResource`，不要用 tool 去查
+3. **代码修改后标准验证流**：`script_apply_edits` → `validate_script` → `refresh_unity (wait=true)` → `read_console` 确认无编译错误
+4. **Play Mode 操作前必须确认状态**：先 `FetchMcpResource editor_state`，确认 `isPlaying: true` 再读运行时数据
+5. **批量操作必用 `batch_execute`**：创建/修改多个对象时，单次 batch 比逐个调用省 10-100x 开销
+6. **大文件查询必须分页**：`manage_scene(get_hierarchy)` 用 `page_size=50` + `cursor`；`manage_asset(search)` 用 `page_size=25`；`manage_gameobject(get_components)` 先 `include_properties=false` 再按需展开
+7. **截图验证 UI 时先进 Play Mode**：Scene View 截图看不到运行时 UI 状态，`manage_scene(screenshot)` 才是真实表现
 
 ---
 

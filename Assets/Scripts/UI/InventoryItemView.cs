@@ -17,7 +17,7 @@ namespace ProjectArk.UI
     [RequireComponent(typeof(CanvasGroup))]
     public class InventoryItemView : MonoBehaviour, 
         IBeginDragHandler, IDragHandler, IEndDragHandler,
-        IPointerEnterHandler, IPointerExitHandler
+        IPointerEnterHandler, IPointerExitHandler, IPointerMoveHandler
     {
         [SerializeField] private Image _iconImage;
         [SerializeField] private TMP_Text _nameLabel;
@@ -32,7 +32,7 @@ namespace ProjectArk.UI
 
         // Dynamically created shape preview cells
         private Image[] _shapePreviewCells;
-        private static readonly Color ShapePreviewColor = new Color(1f, 1f, 1f, 0.18f);
+        private bool _isEquipped;
 
         /// <summary> Fired when this item card is clicked. </summary>
         public event Action<StarChartItemSO> OnClicked;
@@ -75,6 +75,7 @@ namespace ProjectArk.UI
         public void Setup(StarChartItemSO item, bool isEquipped)
         {
             Item = item;
+            _isEquipped = isEquipped;
 
             if (_iconImage != null)
             {
@@ -102,28 +103,30 @@ namespace ProjectArk.UI
             if (_typeDot != null)
                 _typeDot.color = StarChartTheme.GetTypeColor(item.ItemType);
 
-            // Shape preview: overlay semi-transparent grid cells
+            // C2/C3: Shape preview renders only active cells — equipped state baked in
             BuildShapePreview(item.Shape);
 
-            // Equipped badge (checkmark)
+            // Equipped badge (checkmark icon)
             if (_equippedBadge != null)
                 _equippedBadge.enabled = isEquipped;
 
-            // Equipped border: green tint when equipped
+            // C3: _equippedBorder is a stretch Image — keep it clear to avoid leaking into
+            // empty cells of non-rectangular shapes. The equipped tint is handled per-cell
+            // inside BuildShapePreview via the _isEquipped flag.
             if (_equippedBorder != null)
-                _equippedBorder.color = isEquipped ? StarChartTheme.EquippedGreen : Color.clear;
+                _equippedBorder.color = Color.clear;
 
-            // Force background to be fully opaque so cards are visible
+            // C3: Card root Image must stay transparent — all visual color is per shape-cell.
             var bgImage = GetComponent<Image>();
             if (bgImage != null)
-            {
-                var c = bgImage.color;
-                c.a = 1f;
-                bgImage.color = c;
-            }
+                bgImage.color = Color.clear;
         }
 
-        /// <summary> Visual selection state (highlighted border). </summary>
+        /// <summary>
+        /// C3: Visual selection state — affects only the border overlay, never fills empty cells.
+        /// The selection border must be a child Image sized to the bounding box,
+        /// not the root Image component (which stays Color.clear for shape transparency).
+        /// </summary>
         public void SetSelected(bool selected)
         {
             if (_selectionBorder != null)
@@ -131,6 +134,47 @@ namespace ProjectArk.UI
                 Color targetColor = selected ? StarChartTheme.SelectedCyan : Color.clear;
                 Tween.Color(_selectionBorder, endValue: targetColor,
                     duration: 0.1f, ease: Ease.OutQuad, useUnscaledTime: true);
+            }
+        }
+
+        /// <summary>
+        /// C3: Refresh the active cell colors — e.g., when equip state changes.
+        /// Only active cells receive color; empty cells stay transparent.
+        /// </summary>
+        public void RefreshShapeColors()
+        {
+            if (Item == null || _shapePreviewCells == null) return;
+
+            var cells = ItemShapeHelper.GetCells(Item.Shape);
+            var bounds = ItemShapeHelper.GetBounds(Item.Shape);
+
+            var activeCellSet = new HashSet<Vector2Int>();
+            foreach (var c in cells) activeCellSet.Add(c);
+
+            Color typeColor = StarChartTheme.GetTypeColor(Item.ItemType);
+            Color activeColor;
+            if (_isEquipped)
+            {
+                Color equippedGreen = StarChartTheme.EquippedGreen;
+                Color blended = Color.Lerp(typeColor, equippedGreen, 0.4f);
+                activeColor = new Color(blended.r, blended.g, blended.b, 0.45f);
+            }
+            else
+            {
+                activeColor = new Color(typeColor.r, typeColor.g, typeColor.b, 0.35f);
+            }
+
+            int idx = 0;
+            for (int row = 0; row < bounds.y; row++)
+            {
+                for (int col = 0; col < bounds.x; col++)
+                {
+                    if (idx >= _shapePreviewCells.Length) break;
+                    bool isActive = activeCellSet.Contains(new Vector2Int(col, row));
+                    if (_shapePreviewCells[idx] != null)
+                        _shapePreviewCells[idx].color = isActive ? activeColor : Color.clear;
+                    idx++;
+                }
             }
         }
 
@@ -213,13 +257,20 @@ namespace ProjectArk.UI
             OnPointerExited?.Invoke();
         }
 
+        public void OnPointerMove(PointerEventData eventData)
+        {
+            if (_isDragging) return;
+            DragDropManager.Instance?.TooltipView?.UpdatePosition();
+        }
+
         // ========== Shape Preview ==========
 
         /// <summary>
-        /// Builds a semi-transparent grid overlay showing the item's 2D shape.
-        /// For multi-cell shapes, renders the full bounding box grid with
-        /// active cells colored by item type and empty cells transparent.
-        /// Matches the HTML prototype's .inv-shape-grid behavior.
+        /// C2/C3: Builds the shape background layer for the inventory card.
+        /// Renders ONLY the active cells (from ItemShapeHelper.GetCells) with type color.
+        /// Empty cells in the bounding box remain Color.clear (true holes, not filled squares).
+        /// This matches the HTML prototype's .inv-shape-grid: active cells colored, empty transparent.
+        /// Applies to ALL shapes including 1x1 (since the card background Image is now Color.clear).
         /// </summary>
         private void BuildShapePreview(ItemShape shape)
         {
@@ -228,28 +279,37 @@ namespace ProjectArk.UI
             {
                 foreach (var img in _shapePreviewCells)
                     if (img != null) Destroy(img.gameObject);
+                _shapePreviewCells = null;
             }
 
             var cells = ItemShapeHelper.GetCells(shape);
             var bounds = ItemShapeHelper.GetBounds(shape);
 
-            // Skip shape preview for 1x1 items — they fill the entire card anyway
-            if (bounds.x <= 1 && bounds.y <= 1)
-            {
-                _shapePreviewCells = null;
-                return;
-            }
-
-            // Build a lookup set for active cells
+            // Build a lookup set for active cells (C1: single source of truth)
             var activeCellSet = new HashSet<Vector2Int>();
             foreach (var c in cells) activeCellSet.Add(c);
 
-            // Type-based color for active cells (HTML: opacity 0.35 on the shape-grid)
+            // C3: active-cell color — type color at 0.35 opacity (matching HTML prototype)
+            // Equipped items get a green-tinted mix to indicate equip status,
+            // applied only to active cells (never to empty holes).
             Color typeColor = Item != null ? StarChartTheme.GetTypeColor(Item.ItemType) : Color.white;
-            Color activeColor = new Color(typeColor.r, typeColor.g, typeColor.b, 0.25f);
+            Color activeColor;
+            if (_isEquipped)
+            {
+                // Blend type color toward equipped green for a subtle equipped indicator
+                Color equippedGreen = StarChartTheme.EquippedGreen;
+                Color blended = Color.Lerp(typeColor, equippedGreen, 0.4f);
+                activeColor = new Color(blended.r, blended.g, blended.b, 0.45f);
+            }
+            else
+            {
+                activeColor = new Color(typeColor.r, typeColor.g, typeColor.b, 0.35f);
+            }
+            // C3: empty cells stay fully transparent — they are genuine holes
             Color emptyColor = Color.clear;
 
-            // Create cells for the entire bounding box
+            // Create one cell image per bounding-box position.
+            // Active cells get colored, empty cells stay transparent.
             int totalCells = bounds.x * bounds.y;
             _shapePreviewCells = new Image[totalCells];
 
@@ -265,18 +325,19 @@ namespace ProjectArk.UI
 
                     var cellGo = new GameObject($"ShapeCell_{col}_{row}", typeof(RectTransform), typeof(Image));
                     cellGo.transform.SetParent(transform, false);
-                    cellGo.transform.SetAsFirstSibling(); // behind icon
+                    cellGo.transform.SetAsFirstSibling(); // behind icon and labels
 
                     var cellRect = cellGo.GetComponent<RectTransform>();
                     float xMin = col * cellW;
                     float yMax = 1f - row * cellH;
                     cellRect.anchorMin = new Vector2(xMin, yMax - cellH);
                     cellRect.anchorMax = new Vector2(xMin + cellW, yMax);
-                    // Add small padding (2px equivalent) for cell gap effect
+                    // 1px inset padding for cell-gap visual separation
                     cellRect.offsetMin = new Vector2(1f, 1f);
                     cellRect.offsetMax = new Vector2(-1f, -1f);
 
                     var cellImg = cellGo.GetComponent<Image>();
+                    // C3: only active cells are colored — empty cells are transparent holes
                     cellImg.color = isActive ? activeColor : emptyColor;
                     cellImg.raycastTarget = false;
                     _shapePreviewCells[idx++] = cellImg;

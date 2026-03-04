@@ -18,7 +18,7 @@ Production patterns for Unity's Data-Oriented Technology Stack (DOTS) including 
 
 ## Do not use this skill when
 
-- The task is unrelated to Unity ECS patterns
+- The task is unrelated to unity ecs patterns
 - You need a different domain or tool outside this scope
 
 ## Instructions
@@ -26,3 +26,8 @@ Production patterns for Unity's Data-Oriented Technology Stack (DOTS) including 
 - Clarify goals, constraints, and required inputs.
 - Apply relevant best practices and validate outcomes.
 - Provide actionable steps and verification.
+- If detailed examples are required, open `resources/implementation-playbook.md`.
+
+## Resources
+
+- `resources/implementation-playbook.md` for detailed patterns and examples.
