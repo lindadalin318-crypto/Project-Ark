@@ -345,15 +345,42 @@ namespace ProjectArk.UI
                         // Layout: [0]=top-left, [1]=top-right, [2]=bottom-left, [3]=bottom-right
                         // i.e. col = CellIndex % GRID_COLS, row = CellIndex / GRID_COLS
                         const int gridCols = SlotLayer<StarChartItemSO>.GRID_COLS;
-                        int anchorCol = CellIndex % gridCols;
-                        int anchorRow = CellIndex / gridCols;
+                        const int gridRows = SlotLayer<StarChartItemSO>.GRID_ROWS;
+                        int hoverCol = CellIndex % gridCols;
+                        int hoverRow = CellIndex / gridCols;
 
-                        DropPreviewState previewStateForShape = isReplace
-                            ? DropPreviewState.Replace
-                            : (valid ? DropPreviewState.Valid : DropPreviewState.Invalid);
+                        // Requirement 2: reverse-enumerate candidate anchors to find the best
+                        // valid anchor for the shape given the hovered cell.
+                        bool anchorFound = ItemShapeHelper.FindBestAnchor(
+                            payload.Item.Shape,
+                            hoverCol, hoverRow,
+                            gridCols, gridRows,
+                            out Vector2Int bestAnchor);
 
-                        OwnerTrack.SetShapeHighlight(anchorCol, anchorRow, payload.Item.Shape,
-                            previewStateForShape, SlotType == SlotType.Core);
+                        if (!anchorFound)
+                        {
+                            // No valid anchor — mark as invalid
+                            mgr.DropTargetValid = false;
+                            mgr.DropTargetIsReplace = false;
+                            mgr.UpdateGhostDropState(DropPreviewState.Invalid);
+                            OwnerColumn?.SetDropPreview(DropPreviewState.Invalid);
+                            // Highlight only the hovered cell as invalid
+                            SetHighlight(false);
+                        }
+                        else
+                        {
+                            // Store the resolved anchor so EndDrag can use it
+                            mgr.DropTargetAnchorCol = bestAnchor.x;
+                            mgr.DropTargetAnchorRow = bestAnchor.y;
+
+                            DropPreviewState previewStateForShape = isReplace
+                                ? DropPreviewState.Replace
+                                : (valid ? DropPreviewState.Valid : DropPreviewState.Invalid);
+
+                            OwnerTrack.SetShapeHighlight(bestAnchor.x, bestAnchor.y,
+                                payload.Item.Shape, previewStateForShape,
+                                SlotType == SlotType.Core);
+                        }
                     }
                     else
                         ApplySingleHighlight(valid, isReplace);

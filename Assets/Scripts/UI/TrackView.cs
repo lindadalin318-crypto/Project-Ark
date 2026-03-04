@@ -53,12 +53,41 @@ namespace ProjectArk.UI
         // Ordered array for iteration convenience
         private TypeColumn[] _columns;
 
+        // Active overlay views — destroyed and recreated on each Refresh
+        private readonly List<ItemOverlayView> _activeOverlays = new();
+
+        // Cell size and gap used for overlay positioning (must match UICanvasBuilder values)
+        // These are read from the first cell's RectTransform at runtime.
+        private float _cellSize = 56f;
+        private float _cellGap  = 4f;
+
         private void Awake()
         {
             if (_selectButton != null)
                 _selectButton.onClick.AddListener(() => OnTrackSelected?.Invoke(this));
 
             _columns = new[] { _sailColumn, _prismColumn, _coreColumn, _satColumn };
+
+            // Detect cell size from the first available cell's RectTransform
+            foreach (var col in new[] { _coreColumn, _prismColumn, _sailColumn, _satColumn })
+            {
+                if (col?.Cells == null) continue;
+                var firstCell = col.Cells.Length > 0 ? col.Cells[0] : null;
+                if (firstCell == null) continue;
+                var rt = firstCell.GetComponent<RectTransform>();
+                if (rt != null)
+                {
+                    _cellSize = rt.sizeDelta.x;
+                    // Gap = distance between cell[0] and cell[1] minus cellSize
+                    if (col.Cells.Length > 1 && col.Cells[1] != null)
+                    {
+                        var rt1 = col.Cells[1].GetComponent<RectTransform>();
+                        if (rt1 != null)
+                            _cellGap = Mathf.Abs(rt1.anchoredPosition.x - rt.anchoredPosition.x) - _cellSize;
+                    }
+                    break;
+                }
+            }
 
             // Initialize each column
             InitColumn(_sailColumn,  SlotType.LightSail, StarChartTheme.SailColor);
@@ -144,6 +173,37 @@ namespace ProjectArk.UI
         }
 
         // =====================================================================
+        // Overlay event forwarding (called by ItemOverlayView)
+        // =====================================================================
+
+        /// <summary> Called by ItemOverlayView when the pointer enters an overlay. </summary>
+        internal void RaiseOverlayCellPointerEntered(StarChartItemSO item, SlotType slotType)
+        {
+            string trackName = _track?.Id == WeaponTrack.TrackId.Primary ? "PRIMARY" : "SECONDARY";
+            string typeName = slotType switch
+            {
+                SlotType.Core      => "CORE",
+                SlotType.Prism     => "PRISM",
+                SlotType.LightSail => "SAIL",
+                SlotType.Satellite => "SAT",
+                _                  => string.Empty
+            };
+            OnCellPointerEntered?.Invoke(item, $"{trackName} · {typeName}");
+        }
+
+        /// <summary> Called by ItemOverlayView when the pointer exits an overlay. </summary>
+        internal void RaiseOverlayCellPointerExited()
+        {
+            OnCellPointerExited?.Invoke();
+        }
+
+        /// <summary> Called by ItemOverlayView when an overlay is clicked. </summary>
+        internal void RaiseOverlayCellClicked(StarChartItemSO item)
+        {
+            OnCellClicked?.Invoke(item);
+        }
+
+        // =====================================================================
         // Refresh helpers
         // =====================================================================
 
@@ -153,36 +213,72 @@ namespace ProjectArk.UI
             if (col == null) return;
             var cells = col.Cells;
 
-            // Reset all cells to empty
+            // Reset all cells to empty (cells remain as drop targets)
             foreach (var cell in cells)
                 cell?.SetEmpty();
 
+            // Destroy previous overlays for this column
+            DestroyOverlaysForColumn(col);
+
             if (layer == null) return;
 
-            // 2D matrix traversal: iterate grid[row, col]
-            // TypeColumn cells are laid out as: index = row * GRID_COLS + col
+            // Track which items have already had their overlay created
+            var processedItems = new HashSet<T>();
+
             for (int r = 0; r < SlotLayer<T>.GRID_ROWS; r++)
             {
                 for (int c = 0; c < SlotLayer<T>.GRID_COLS; c++)
                 {
                     var item = layer.GetAt(c, r);
+                    if (item == null) continue;
+
+                    // Mark the underlying cell as occupied (hide '+' placeholder)
                     int cellIndex = r * SlotLayer<T>.GRID_COLS + c;
-                    if (cellIndex >= cells.Length || cells[cellIndex] == null) continue;
+                    if (cellIndex < cells.Length && cells[cellIndex] != null)
+                        cells[cellIndex].SetOverlay(item, isPrimary: false); // hide placeholder, no icon
 
-                    if (item == null)
-                    {
-                        // Already set to empty above; skip
-                        continue;
-                    }
+                    // Only create one overlay per item (at its anchor)
+                    if (processedItems.Contains(item)) continue;
+                    processedItems.Add(item);
 
-                    // Determine if this is the anchor cell for this item
                     var anchor = layer.GetAnchor(item as T);
-                    bool isAnchor = anchor.x == c && anchor.y == r;
+                    if (anchor.x < 0) continue; // item not found in layer
 
-                    if (isAnchor)
-                        cells[cellIndex].SetOverlay(item, isPrimary: true);
-                    else
-                        cells[cellIndex].SetOverlay(item, isPrimary: false);
+                    // Create ItemOverlayView
+                    var overlayGo = new GameObject($"Overlay_{item.DisplayName}",
+                        typeof(RectTransform));
+                    var overlayView = overlayGo.AddComponent<ItemOverlayView>();
+
+                    // Parent to the grid container (same parent as the cells)
+                    var gridContainer = col.GridContainer;
+                    overlayGo.transform.SetParent(gridContainer, false);
+                    overlayGo.transform.SetAsLastSibling(); // render on top of cells
+
+                    overlayView.Setup(
+                        item,
+                        col.SlotType,
+                        this,
+                        anchor.x, anchor.y,
+                        _cellSize, _cellGap);
+
+                    _activeOverlays.Add(overlayView);
+                }
+            }
+        }
+
+        /// <summary> Destroy all active overlays belonging to the given column. </summary>
+        private void DestroyOverlaysForColumn(TypeColumn col)
+        {
+            if (col == null) return;
+            var gridContainer = col.GridContainer;
+            for (int i = _activeOverlays.Count - 1; i >= 0; i--)
+            {
+                var ov = _activeOverlays[i];
+                if (ov == null) { _activeOverlays.RemoveAt(i); continue; }
+                if (ov.transform.parent == gridContainer)
+                {
+                    Destroy(ov.gameObject);
+                    _activeOverlays.RemoveAt(i);
                 }
             }
         }

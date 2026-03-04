@@ -39,6 +39,18 @@ namespace ProjectArk.UI
         public bool DropTargetIsReplace { get; set; }
 
         /// <summary>
+        /// The resolved anchor column for the current drop target (computed by FindBestAnchor).
+        /// Valid only when DropTargetValid is true and DropTargetSlotType is Core or Prism.
+        /// </summary>
+        public int DropTargetAnchorCol { get; set; }
+
+        /// <summary>
+        /// The resolved anchor row for the current drop target (computed by FindBestAnchor).
+        /// Valid only when DropTargetValid is true and DropTargetSlotType is Core or Prism.
+        /// </summary>
+        public int DropTargetAnchorRow { get; set; }
+
+        /// <summary>
         /// Items evicted during the last forced replace operation.
         /// Populated by EvictBlockingItems, consumed by FlyBackAnimator.
         /// </summary>
@@ -233,14 +245,18 @@ namespace ProjectArk.UI
 
         private void EquipToTrack(StarChartItemSO item, WeaponTrack track)
         {
+            // Use the anchor resolved by FindBestAnchor (set in SlotCellView.OnPointerEnter)
+            int anchorCol = DropTargetAnchorCol;
+            int anchorRow = DropTargetAnchorRow;
+
             switch (item)
             {
                 case StarCoreSO core:
-                    if (!track.EquipCore(core))
+                    if (!track.EquipCore(core, anchorCol, anchorRow))
                     {
                         // Force replace: evict blocking items, then retry
                         EvictBlockingItems(item, track, isCoreLayer: true);
-                        if (track.EquipCore(core))
+                        if (track.EquipCore(core, anchorCol, anchorRow))
                         {
                             track.InitializePools();
                             ShowReplaceMessage(item);
@@ -257,10 +273,10 @@ namespace ProjectArk.UI
                     break;
 
                 case PrismSO prism:
-                    if (!track.EquipPrism(prism))
+                    if (!track.EquipPrism(prism, anchorCol, anchorRow))
                     {
                         EvictBlockingItems(item, track, isCoreLayer: false);
-                        if (!track.EquipPrism(prism))
+                        if (!track.EquipPrism(prism, anchorCol, anchorRow))
                         {
                             Debug.LogWarning($"[DragDropManager] Still failed to equip prism '{prism.DisplayName}' after eviction");
                         }
@@ -452,6 +468,8 @@ namespace ProjectArk.UI
             DropTargetValid = false;
             DropTargetIsReplace = false;
             DropTargetIsCoreLayer = false;
+            DropTargetAnchorCol = 0;
+            DropTargetAnchorRow = 0;
         }
 
         /// <summary>

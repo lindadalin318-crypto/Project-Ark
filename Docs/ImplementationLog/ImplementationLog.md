@@ -7862,3 +7862,52 @@ User reported that inventory items all appeared 1×1 even though the drag ghost 
 
 **技术：**
 `SlotLayer.GRID_COLS=3`，TypeColumn cells 按 row-major 排列（cellIndex = row * 3 + col），与 RefreshColumn 的计算方式一致。
+
+---
+
+## Feature: StarChart Track 显示修复 — 完整形状覆盖层 + 智能锚点推算 (2026-03-04 16:39)
+
+**新建文件：**
+- `Assets/Scripts/UI/ItemOverlayView.cs`
+
+**修改文件：**
+- `Assets/Scripts/Combat/StarChart/StarChartEnums.cs`
+- `Assets/Scripts/Combat/StarChart/ItemShapeHelper.cs`
+- `Assets/Scripts/Combat/StarChart/WeaponTrack.cs`
+- `Assets/Scripts/UI/TypeColumn.cs`
+- `Assets/Scripts/UI/TrackView.cs`
+- `Assets/Scripts/UI/SlotCellView.cs`
+- `Assets/Scripts/UI/DragDrop/DragDropManager.cs`
+
+**需求 1：Track 上已装备部件以完整形状覆盖层展示**
+
+问题：已装备的异形部件在 Track 上每个格子独立着色，无法直观看出部件整体轮廓，且颜色与背包不一致。
+
+方案：
+1. 新建 `ItemOverlayView` 组件，由 `TrackView.RefreshColumn` 在每次刷新时动态创建，覆盖在 TypeColumn 的 GridContainer 上方。
+2. `ItemOverlayView.Setup` 根据形状偏移列表动态计算 bounding box，在 bounding box 内为每个格子创建 Image 子对象：occupied 格子显示类型颜色，empty 格子透明。
+3. 在锚点格居中显示部件图标（`item.Icon`）。
+4. `TypeColumn` 新增 `GridContainer` 属性（返回 cells[0] 的父 RectTransform）。
+5. `TrackView` 新增 `_activeOverlays` 列表，每次 `RefreshColumn` 时先销毁旧 overlays，再创建新的。
+6. `TrackView.Awake` 中从第一个可用格子的 RectTransform 自动检测 `_cellSize` 和 `_cellGap`。
+7. `ItemOverlayView` 实现完整事件接口，hover/click/drag 事件转发给底层 SlotCellView。
+
+**需求 2：拖拽放置时自动推算合法锚点**
+
+问题：系统以鼠标悬停格作为锚点，导致悬停在非左上角格时形状越界或位置错误。
+
+方案：
+1. `ItemShapeHelper.FindBestAnchor` — 反向枚举候选锚点算法：对形状每个 offset (dx,dy) 计算候选锚点 = (hoverCol-dx, hoverRow-dy)，验证边界，选 row 最小再 col 最小的（top-left 优先），候选集为空返回 false（Invalid）。
+2. `SlotCellView.OnPointerEnter` 调用 `FindBestAnchor`，结果存入 `DragDropManager.DropTargetAnchorCol/Row`。
+3. `DragDropManager.EquipToTrack` 改用 `DropTargetAnchorCol/Row` 调用带锚点的 `WeaponTrack.EquipCore/EquipPrism` 重载。
+4. `WeaponTrack` 新增带锚点参数的 `EquipCore/EquipPrism` 重载，调用 `SlotLayer.TryPlace`。
+
+**扩展：ShapeLMirror**
+- `StarChartEnums.ItemShape` 新增 `ShapeLMirror`（左上+左下+右下，缺右上）。
+- `ItemShapeHelper` 新增 `CellsLMirror = { (0,0), (0,1), (1,1) }`，`GetCells/GetBounds` switch 新增对应 case。
+
+**技术要点：**
+- 所有算法基于形状偏移列表动态计算，无硬编码。Grid 尺寸变化只需更新 `SlotLayer.GRID_COLS/GRID_ROWS` 常量。
+- 新增形状只需在 `ItemShapeHelper.GetCells` 添加 case，锚点推算和覆盖层渲染无需修改。
+- `ItemOverlayView` 通过代码创建（`new GameObject + AddComponent`），Setup 中动态创建 border/icon 子对象，无需 prefab。
+

@@ -33,6 +33,21 @@ namespace ProjectArk.UI
         /// <summary> All 4 cells in this column. </summary>
         public SlotCellView[] Cells => _cells;
 
+        /// <summary>
+        /// The RectTransform of the grid container that holds the 4 cells.
+        /// Used by TrackView to parent ItemOverlayView instances.
+        /// Returns the parent of cells[0], or this transform if cells[0] is null.
+        /// </summary>
+        public RectTransform GridContainer
+        {
+            get
+            {
+                if (_cells != null && _cells.Length > 0 && _cells[0] != null)
+                    return _cells[0].transform.parent as RectTransform;
+                return transform as RectTransform;
+            }
+        }
+
         /// <summary> Initialize column identity and colors. </summary>
         public void Initialize(SlotType slotType, Color typeColor, TrackView ownerTrack)
         {

@@ -64,8 +64,11 @@ namespace ProjectArk.Combat
         /// <summary> 2×1 vertical — occupies 2 rows in the same column. </summary>
         Shape2x1V,
 
-        /// <summary> L-shape — occupies (0,0),(1,0),(0,1). </summary>
+        /// <summary> L-shape — occupies (0,0),(1,0),(0,1). Missing bottom-right. </summary>
         ShapeL,
+
+        /// <summary> L-mirror shape — occupies (0,0),(0,1),(1,1). Missing top-right. </summary>
+        ShapeLMirror,
 
         /// <summary> 2×2 — occupies a full 2×2 block. </summary>
         Shape2x2

@@ -11,11 +11,12 @@ namespace ProjectArk.Combat
     public static class ItemShapeHelper
     {
         // Pre-allocated cell offset arrays per shape (col, row)
-        private static readonly Vector2Int[] Cells1x1  = { new(0, 0) };
-        private static readonly Vector2Int[] Cells1x2H = { new(0, 0), new(1, 0) };
-        private static readonly Vector2Int[] Cells2x1V = { new(0, 0), new(0, 1) };
-        private static readonly Vector2Int[] CellsL    = { new(0, 0), new(1, 0), new(0, 1) };
-        private static readonly Vector2Int[] Cells2x2  = { new(0, 0), new(1, 0), new(0, 1), new(1, 1) };
+        private static readonly Vector2Int[] Cells1x1      = { new(0, 0) };
+        private static readonly Vector2Int[] Cells1x2H     = { new(0, 0), new(1, 0) };
+        private static readonly Vector2Int[] Cells2x1V     = { new(0, 0), new(0, 1) };
+        private static readonly Vector2Int[] CellsL        = { new(0, 0), new(1, 0), new(0, 1) };
+        private static readonly Vector2Int[] CellsLMirror  = { new(0, 0), new(0, 1), new(1, 1) };
+        private static readonly Vector2Int[] Cells2x2      = { new(0, 0), new(1, 0), new(0, 1), new(1, 1) };
 
         /// <summary>
         /// Returns the list of (col, row) offsets occupied by the given shape,
@@ -25,12 +26,13 @@ namespace ProjectArk.Combat
         {
             return shape switch
             {
-                ItemShape.Shape1x1  => Cells1x1,
-                ItemShape.Shape1x2H => Cells1x2H,
-                ItemShape.Shape2x1V => Cells2x1V,
-                ItemShape.ShapeL    => CellsL,
-                ItemShape.Shape2x2  => Cells2x2,
-                _                   => Cells1x1
+                ItemShape.Shape1x1     => Cells1x1,
+                ItemShape.Shape1x2H    => Cells1x2H,
+                ItemShape.Shape2x1V    => Cells2x1V,
+                ItemShape.ShapeL       => CellsL,
+                ItemShape.ShapeLMirror => CellsLMirror,
+                ItemShape.Shape2x2     => Cells2x2,
+                _                      => Cells1x1
             };
         }
 
@@ -41,12 +43,13 @@ namespace ProjectArk.Combat
         {
             return shape switch
             {
-                ItemShape.Shape1x1  => new Vector2Int(1, 1),
-                ItemShape.Shape1x2H => new Vector2Int(2, 1),
-                ItemShape.Shape2x1V => new Vector2Int(1, 2),
-                ItemShape.ShapeL    => new Vector2Int(2, 2),
-                ItemShape.Shape2x2  => new Vector2Int(2, 2),
-                _                   => new Vector2Int(1, 1)
+                ItemShape.Shape1x1     => new Vector2Int(1, 1),
+                ItemShape.Shape1x2H    => new Vector2Int(2, 1),
+                ItemShape.Shape2x1V    => new Vector2Int(1, 2),
+                ItemShape.ShapeL       => new Vector2Int(2, 2),
+                ItemShape.ShapeLMirror => new Vector2Int(2, 2),
+                ItemShape.Shape2x2     => new Vector2Int(2, 2),
+                _                      => new Vector2Int(1, 1)
             };
         }
 
@@ -87,6 +90,59 @@ namespace ProjectArk.Combat
                     return false;
             }
             return true;
+        }
+
+        /// <summary>
+        /// Find the best anchor position for a shape given the cell the pointer is hovering over.
+        /// Enumerates all candidate anchors by reversing each shape offset:
+        ///   candidateAnchor = (hoverCol - dx, hoverRow - dy)
+        /// Validates each candidate against grid bounds, then picks the one with
+        /// the smallest row first, then smallest col (top-left preference).
+        /// Returns true if a valid anchor was found; false if all candidates are out of bounds.
+        /// </summary>
+        /// <param name="shape">The shape being placed.</param>
+        /// <param name="hoverCol">Column of the cell the pointer is currently over.</param>
+        /// <param name="hoverRow">Row of the cell the pointer is currently over.</param>
+        /// <param name="gridCols">Total columns in the grid.</param>
+        /// <param name="gridRows">Total rows in the grid.</param>
+        /// <param name="bestAnchor">Output: the best valid anchor (col, row), or (-1,-1) if none.</param>
+        public static bool FindBestAnchor(
+            ItemShape shape,
+            int hoverCol, int hoverRow,
+            int gridCols, int gridRows,
+            out Vector2Int bestAnchor)
+        {
+            bestAnchor = new Vector2Int(-1, -1);
+            var offsets = GetCells(shape);
+
+            // Collect all valid candidate anchors
+            // A candidate anchor is valid when the entire shape fits within the grid
+            int bestRow = int.MaxValue;
+            int bestCol = int.MaxValue;
+            bool found = false;
+
+            foreach (var offset in offsets)
+            {
+                int candidateCol = hoverCol - offset.x;
+                int candidateRow = hoverRow - offset.y;
+
+                if (FitsInGrid(shape, candidateCol, candidateRow, gridCols, gridRows))
+                {
+                    // Pick smallest row first, then smallest col (top-left preference)
+                    if (candidateRow < bestRow ||
+                        (candidateRow == bestRow && candidateCol < bestCol))
+                    {
+                        bestRow = candidateRow;
+                        bestCol = candidateCol;
+                        found = true;
+                    }
+                }
+            }
+
+            if (found)
+                bestAnchor = new Vector2Int(bestCol, bestRow);
+
+            return found;
         }
     }
 }

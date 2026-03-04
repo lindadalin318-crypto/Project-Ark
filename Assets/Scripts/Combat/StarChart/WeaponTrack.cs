@@ -81,6 +81,17 @@ namespace ProjectArk.Combat
             return ok;
         }
 
+        /// <summary>
+        /// Equip a star core at a specific anchor position.
+        /// Uses TryPlace which respects the exact anchor and evicts blocking items.
+        /// </summary>
+        public bool EquipCore(StarCoreSO core, int anchorCol, int anchorRow)
+        {
+            bool ok = _coreLayer.TryPlace(core, anchorCol, anchorRow);
+            if (ok) MarkDirty();
+            return ok;
+        }
+
         /// <summary> Remove a star core from the lower layer. </summary>
         public bool UnequipCore(StarCoreSO core)
         {
@@ -93,6 +104,17 @@ namespace ProjectArk.Combat
         public bool EquipPrism(PrismSO prism)
         {
             bool ok = _prismLayer.TryEquip(prism);
+            if (ok) MarkDirty();
+            return ok;
+        }
+
+        /// <summary>
+        /// Equip a prism at a specific anchor position.
+        /// Uses TryPlace which respects the exact anchor and evicts blocking items.
+        /// </summary>
+        public bool EquipPrism(PrismSO prism, int anchorCol, int anchorRow)
+        {
+            bool ok = _prismLayer.TryPlace(prism, anchorCol, anchorRow);
             if (ok) MarkDirty();
             return ok;
         }
