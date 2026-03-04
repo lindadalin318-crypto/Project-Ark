@@ -336,11 +336,25 @@ namespace ProjectArk.UI
                 // Update column-level drop preview highlight
                 OwnerColumn?.SetDropPreview(previewState);
 
-                // Highlight this cell and adjacent cells for SlotSize > 1
+                // Highlight cells matching the item's 2D shape
                 if (OwnerTrack != null)
                 {
                     if (SlotType == SlotType.Core || SlotType == SlotType.Prism)
-                        OwnerTrack.SetMultiCellHighlight(CellIndex, payload.Item.SlotSize, SlotType == SlotType.Core, valid, isReplace);
+                    {
+                        // Convert linear CellIndex to (col, row) in the 2×2 grid
+                        // Layout: [0]=top-left, [1]=top-right, [2]=bottom-left, [3]=bottom-right
+                        // i.e. col = CellIndex % GRID_COLS, row = CellIndex / GRID_COLS
+                        const int gridCols = SlotLayer<StarChartItemSO>.GRID_COLS;
+                        int anchorCol = CellIndex % gridCols;
+                        int anchorRow = CellIndex / gridCols;
+
+                        DropPreviewState previewStateForShape = isReplace
+                            ? DropPreviewState.Replace
+                            : (valid ? DropPreviewState.Valid : DropPreviewState.Invalid);
+
+                        OwnerTrack.SetShapeHighlight(anchorCol, anchorRow, payload.Item.Shape,
+                            previewStateForShape, SlotType == SlotType.Core);
+                    }
                     else
                         ApplySingleHighlight(valid, isReplace);
                 }

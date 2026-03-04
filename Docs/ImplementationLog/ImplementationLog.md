@@ -7825,3 +7825,40 @@ User reported that inventory items all appeared 1×1 even though the drag ghost 
 3. Empty cells in the bounding box (e.g. bottom-right of L-shape) are transparent, clearly showing the non-rectangular shape.
 4. 1×1 items skip shape preview entirely (no visual difference from full-cell fill).
 5. Added `System.Collections.Generic` import for `HashSet<Vector2Int>` used in active cell lookup.
+
+---
+
+## AI Skills 使用指南 — 添加到 CLAUDE.md (2026-03-03 22:25)
+
+**修改文件：**
+- `CLAUDE.md`
+
+**内容：**
+在 CLAUDE.md 的 "Unity MCP 工具使用指南" 和 "实用开发 Tips" 之间新增 "AI Skills 使用指南" 章节，包含：
+- 可用 Skills 完整列表及各自的触发场景说明（15 个 Skill）
+- 5 条使用原则
+- Project Ark 常见工作流与 Skills 的映射关系（新功能开发/Bug修复/架构重构/新星图部件/性能优化）
+
+**目的：**
+将 AI Skills 的使用规范正式写入项目规范文档，确保 AI 在合适场景下积极主动调用 Skills 提升任务执行质量。
+
+**技术：**
+文档化标准工作流映射。
+
+---
+
+## Fix: Track 拖拽预览形状不一致 (2026-03-03 22:27)
+
+**修改文件：**
+- `Assets/Scripts/UI/SlotCellView.cs`
+
+**根因：**
+`SlotCellView.OnPointerEnter` 调用的是旧的 `SetMultiCellHighlight(CellIndex, SlotSize, ...)` 方法，该方法从 CellIndex 开始**线性连续**高亮 SlotSize 个格子，完全不考虑 2D 形状。例如 Shape1x2H（横向2格）会错误地高亮同一列的两行，而不是同一行的两列。
+
+**修复：**
+将 `SetMultiCellHighlight` 替换为已有的 `SetShapeHighlight`：
+1. 将线性 `CellIndex` 转换为 2D 坐标：`anchorCol = CellIndex  0RID_COLS`，`anchorRow = CellIndex / GRID_COLS`
+2. 调用 `OwnerTrack.SetShapeHighlight(anchorCol, anchorRow, payload.Item.Shape, previewState, isCoreLayer)` 按实际 2D 形状高亮对应格子
+
+**技术：**
+`SlotLayer.GRID_COLS=3`，TypeColumn cells 按 row-major 排列（cellIndex = row * 3 + col），与 RefreshColumn 的计算方式一致。

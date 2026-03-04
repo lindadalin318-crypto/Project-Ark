@@ -475,6 +475,59 @@ tests-run (testMode: "EditMode") → 快速验证 DamageCalculator / HeatSystem 
 
 ---
 
+## AI Skills 使用指南
+
+Skills 是一组可动态加载的专业指令集，能显著提升特定任务的执行质量。**在合适的场景下应积极主动调用 Skills，不要只依赖基础工具。**
+
+### 可用 Skills 与触发场景
+
+| 场景 | 推荐 Skill | 何时触发 |
+|------|-----------|----------|
+| **架构设计与决策** | `architecture-designer` | 设计新系统架构、评审已有架构、做架构决策（如新增模块/重构解耦方案） |
+| **方案头脑风暴** | `simple-brainstorm` | 任何创意性或架构性工作之前——功能设计、组件创建、行为变更，先 brainstorm 再动手 |
+| **Unity 开发** | `unity-developer` | Unity 特有问题：渲染管线、Tilemap、动画状态机、物理配置、URP 设置、MonoBehaviour 生命周期等 |
+| **游戏开发通用** | `game-developer` | 游戏系统设计：ECS、对象池、AI 行为树/HFSM、弹幕系统、碰撞检测、性能优化等 |
+| **游戏开发路由** | `game-development` | 不确定用哪个游戏开发 Skill 时，用此路由自动分流 |
+| **新功能设计** | `feature-forge` | 定义新功能需求、拆分用户故事、编写验收标准（对应 Feature 开发工作流的第 1-3 步） |
+| **Bug 排查** | `debugging-wizard` | 遇到难以定位的 bug、分析错误堆栈、排查行为异常的根因 |
+| **代码审查** | `code-reviewer` | 完成较大改动后自查代码质量、检查是否违反架构原则、发现潜在问题 |
+| **C# 开发** | `csharp-developer` / `csharp-dotnet` | C# 语言层面问题：async/await 模式、LINQ 优化、泛型约束、.NET API 选型 |
+| **安全审计** | `secure-code-guardian` | 涉及存档加密、输入验证、反作弊等安全相关实现 |
+| **测试策略** | `test-master` | 编写单元测试、设计测试策略、构建测试自动化框架 |
+| **遗留系统分析** | `spec-miner` | 理解没有文档的旧代码、从实现中提取规格说明 |
+| **批判性审查** | `the-fool` | 质疑设计方案、做 pre-mortem 分析、红队审计，避免确认偏误 |
+| **提示工程** | `prompt-engineer` | 设计 LLM 提示词、优化模型表现、构建评估框架 |
+| **搜索更多 Skills** | `skill-global-search` | 需要当前列表中没有的能力时，从 80,000+ 技能库中搜索安装 |
+
+### 使用原则
+
+1. **先 Skill 后动手**：涉及架构决策或新功能设计时，先调用对应 Skill 获取专业指导，再开始编码
+2. **组合使用**：复杂任务可串联多个 Skill，例如 `simple-brainstorm` → `architecture-designer` → `unity-developer` → `code-reviewer`
+3. **自查闭环**：完成较大改动后，用 `code-reviewer` 做一轮自查，确保符合架构原则
+4. **Bug 优先**：遇到 bug 时，优先调用 `debugging-wizard` 而非盲目试错
+5. **不要滥用**：简单的单文件修改、明确的小 bug 修复不需要调用 Skill，避免过度流程化
+
+### Project Ark 常见工作流与 Skills 映射
+
+```
+新功能开发：
+  feature-forge → simple-brainstorm → architecture-designer → 编码 → code-reviewer
+
+Bug 修复：
+  debugging-wizard → 定位问题 → 修复 → code-reviewer
+
+架构重构：
+  simple-brainstorm → architecture-designer → the-fool (质疑方案) → 编码 → code-reviewer
+
+新星图部件：
+  game-developer → unity-developer → 编码 → code-reviewer
+
+性能优化：
+  game-developer → unity-developer → 分析 → 编码 → test-master (验证)
+```
+
+---
+
 ## 实用开发 Tips
 
 ### 快速编译检查项目错误
