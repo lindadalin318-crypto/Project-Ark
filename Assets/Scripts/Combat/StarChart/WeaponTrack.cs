@@ -127,6 +127,23 @@ namespace ProjectArk.Combat
             return ok;
         }
 
+        /// <summary>
+        /// Restores the unlocked column counts for both layers from save data.
+        /// Called during ImportTrack before re-equipping items.
+        /// </summary>
+        public void SetLayerCols(int coreCols, int prismCols)
+        {
+            // Clamp to valid range without UnityEngine.Mathf (WeaponTrack is pure C#)
+            int targetCore  = coreCols  < 1 ? 1 : coreCols  > SlotLayer<StarCoreSO>.MAX_COLS ? SlotLayer<StarCoreSO>.MAX_COLS : coreCols;
+            int targetPrism = prismCols < 1 ? 1 : prismCols > SlotLayer<PrismSO>.MAX_COLS    ? SlotLayer<PrismSO>.MAX_COLS    : prismCols;
+
+            // Unlock columns one by one until we reach the saved count
+            while (_coreLayer.Cols < targetCore)
+                _coreLayer.TryUnlockColumn();
+            while (_prismLayer.Cols < targetPrism)
+                _prismLayer.TryUnlockColumn();
+        }
+
         /// <summary> Clear all equipped items from both layers. </summary>
         public void ClearAll()
         {

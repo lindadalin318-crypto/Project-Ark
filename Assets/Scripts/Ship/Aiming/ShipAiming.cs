@@ -4,72 +4,123 @@ using UnityEngine;
 namespace ProjectArk.Ship
 {
     /// <summary>
-    /// Rotates the ship transform to face the aim target.
-    /// Reads aim data from InputHandler.
-    /// Uses MoveTowardsAngle for constant angular speed (not Slerp, which feels mushy).
+    /// 飞船旋转控制，完全对齐 Galactic Glitch 的 GGSteering 角加速度模型：
     ///
-    /// Convention: sprite "forward" = local +Y (up). Atan2 offset = -90°.
+    ///   旋转模型：
+    ///     - 玩家输入"想往哪转" → 计算目标角度和角度差
+    ///     - 用 angularAcceleration 逐帧修改 Rigidbody2D.angularVelocity
+    ///     - 角速度 clamp 到 maxRotationSpeed
+    ///     - 松开方向键后，angularDrag（在 ShipStatsSO 中配置）自然衰减转速
+    ///
+    ///   与旧 MoveTowardsAngle 模型的根本区别：
+    ///     - 旧模型：直接计算目标角度，每帧 step 推过去（无惯性）
+    ///     - 新模型：控制"角速度"，有加速和惯性，转向有重量感
+    ///
+    ///   输入映射（对应 GG 的 Twin-Stick 瞄准）：
+    ///     - 鼠标模式：船头朝向鼠标，根据角度差决定旋转方向和强度
+    ///     - 手柄模式：右摇杆直接决定目标朝向
+    ///
+    ///   注意：ProjectArk 是 Twin-Stick，朝向由瞄准方向（鼠标/右摇杆）决定，
+    ///         而非 GG 那样由左摇杆控制转向。这是刻意保留的差异。
     /// </summary>
+    [RequireComponent(typeof(Rigidbody2D))]
     [RequireComponent(typeof(InputHandler))]
     public class ShipAiming : MonoBehaviour
     {
         [SerializeField] private ShipStatsSO _stats;
 
-        /// <summary>
-        /// Fired when aim angle changes. Degrees, 0 = right, 90 = up (Unity 2D convention).
-        /// Subscribe for weapon firing direction, trail orientation, etc.
-        /// </summary>
+        // ══════════════════════════════════════════════════════════════
+        // Events
+        // ══════════════════════════════════════════════════════════════
+
+        /// <summary>瞄准角度改变时触发（degrees，0 = right，90 = up）。</summary>
         public event Action<float> OnAimAngleChanged;
 
-        /// <summary> Current facing direction as a normalized vector. </summary>
+        // ══════════════════════════════════════════════════════════════
+        // Public Properties
+        // ══════════════════════════════════════════════════════════════
+
+        /// <summary>当前船头朝向的归一化向量。</summary>
         public Vector2 FacingDirection { get; private set; } = Vector2.up;
 
-        /// <summary> Current Z rotation in degrees. </summary>
+        /// <summary>当前 Z 轴旋转角（degrees）。</summary>
         public float AimAngle { get; private set; }
 
+        // ══════════════════════════════════════════════════════════════
+        // Private State
+        // ══════════════════════════════════════════════════════════════
+
+        private Rigidbody2D _rb;
         private InputHandler _inputHandler;
+        private ShipMotor    _motor;
+
+        // ══════════════════════════════════════════════════════════════
+        // Lifecycle
+        // ══════════════════════════════════════════════════════════════
 
         private void Awake()
         {
+            _rb           = GetComponent<Rigidbody2D>();
             _inputHandler = GetComponent<InputHandler>();
+            _motor        = GetComponent<ShipMotor>();
         }
 
-        private void LateUpdate()
+        private void FixedUpdate()
         {
-            UpdateRotation();
+            UpdateAngularVelocity();
+            SyncFacingDirection();
         }
 
-        private void UpdateRotation()
+        // ══════════════════════════════════════════════════════════════
+        // Angular Velocity Steering  (GGSteering.RotateTowardsAimTarget)
+        // ══════════════════════════════════════════════════════════════
+
+        private void UpdateAngularVelocity()
         {
-            if (!_inputHandler.HasAimInput)
-                return;
+            if (!_inputHandler.HasAimInput) return;
 
             Vector2 aimDir = _inputHandler.AimDirection;
-            if (aimDir.sqrMagnitude < 0.001f)
-                return;
+            if (aimDir.sqrMagnitude < 0.001f) return;
 
-            // Atan2 返回 +X 方向为 0°。Sprite 朝上(+Y)，所以减 90° 对齐。
+            // 目标角度（sprite 朝上 = +Y，所以 atan2 减 90°）
             float targetAngle = Mathf.Atan2(aimDir.y, aimDir.x) * Mathf.Rad2Deg - 90f;
+            float currentAngle = transform.eulerAngles.z;
 
-            float newAngle;
-            if (Mathf.Approximately(_stats.RotationSpeed, 0f))
+            // 计算最短角度差（-180 ~ +180）
+            float angleDiff = Mathf.DeltaAngle(currentAngle, targetAngle);
+
+            // Boost 期间使用降低的角加速度（对应 GG IsBoostState.angularAcceleration=40 vs 正常 80）
+            bool isBoosting = _motor != null && _motor.IsBoosting;
+            float angularAccel = isBoosting ? _stats.BoostAngularAcceleration : _stats.AngularAcceleration;
+
+            // 用角度差的符号决定加速方向，角度差越大越猛（但 clamp 避免过冲）
+            // GGSteering 同款：靠近目标时自动减速（因为 angularDiff 会缩小）
+            float desiredAngularVelocity = Mathf.Clamp(
+                angleDiff * (angularAccel / _stats.MaxRotationSpeed),
+                -_stats.MaxRotationSpeed,
+                _stats.MaxRotationSpeed
+            );
+
+            // 以 angularAcceleration 向目标角速度靠近（平滑加速，不是瞬间到位）
+            float maxDelta = angularAccel * Time.fixedDeltaTime;
+            float newAngularVelocity = Mathf.MoveTowards(
+                _rb.angularVelocity,
+                desiredAngularVelocity,
+                maxDelta
+            );
+
+            _rb.angularVelocity = newAngularVelocity;
+        }
+
+        private void SyncFacingDirection()
+        {
+            float angle = transform.eulerAngles.z;
+            if (!Mathf.Approximately(angle, AimAngle))
             {
-                // 即时吸附
-                newAngle = targetAngle;
+                AimAngle = angle;
+                FacingDirection = transform.up;
+                OnAimAngleChanged?.Invoke(AimAngle);
             }
-            else
-            {
-                float currentAngle = transform.eulerAngles.z;
-                float maxStep = _stats.RotationSpeed * Time.deltaTime;
-                newAngle = Mathf.MoveTowardsAngle(currentAngle, targetAngle, maxStep);
-            }
-
-            transform.rotation = Quaternion.Euler(0f, 0f, newAngle);
-
-            AimAngle = newAngle;
-            FacingDirection = transform.up;
-
-            OnAimAngleChanged?.Invoke(AimAngle);
         }
     }
 }

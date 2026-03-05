@@ -4,19 +4,39 @@ using UnityEngine;
 namespace ProjectArk.Combat
 {
     /// <summary>
-    /// A 2D grid layer (GRID_ROWS × GRID_COLS) that holds Star Chart items.
+    /// A 2D grid layer (Rows × Cols) that holds Star Chart items.
     /// Each item occupies one or more cells according to its <see cref="ItemShape"/>.
+    /// Columns can be unlocked progressively (min 1 col = 2 cells, max 4 cols = 8 cells).
     /// Pure data class — not a MonoBehaviour.
     /// </summary>
     /// <typeparam name="T">StarCoreSO or PrismSO</typeparam>
     public class SlotLayer<T> where T : StarChartItemSO
     {
-        public const int GRID_COLS = 3;
-        public const int GRID_ROWS = 2;
-        public const int GRID_SIZE = GRID_COLS * GRID_ROWS;
+        // =====================================================================
+        // Constants
+        // =====================================================================
 
-        // grid[row, col] — null means empty
-        private readonly T[,] _grid = new T[GRID_ROWS, GRID_COLS];
+        /// <summary> Fixed row count — always 2. </summary>
+        public const int FIXED_ROWS = 2;
+
+        /// <summary> Maximum unlockable column count. </summary>
+        public const int MAX_COLS = 4;
+
+        // =====================================================================
+        // Dynamic capacity
+        // =====================================================================
+
+        /// <summary> Current number of rows (always 2). </summary>
+        public int Rows => FIXED_ROWS;
+
+        /// <summary> Current number of unlocked columns (1–4). </summary>
+        public int Cols { get; private set; }
+
+        /// <summary> Total number of cells (Rows × Cols). </summary>
+        public int Capacity => Rows * Cols;
+
+        // grid[row, col] — null means empty; sized to MAX_COLS to avoid reallocation
+        private readonly T[,] _grid = new T[FIXED_ROWS, MAX_COLS];
 
         // Anchor positions for each placed item (col, row of anchor cell)
         private readonly Dictionary<T, Vector2Int> _anchors = new();
@@ -40,14 +60,14 @@ namespace ProjectArk.Combat
             get
             {
                 int free = 0;
-                for (int r = 0; r < GRID_ROWS; r++)
-                    for (int c = 0; c < GRID_COLS; c++)
+                for (int r = 0; r < Rows; r++)
+                    for (int c = 0; c < Cols; c++)
                         if (_grid[r, c] == null) free++;
                 return free;
             }
         }
 
-        /// <summary> Legacy: total grid units currently in use (sum of SlotSize). </summary>
+        /// <summary> Total grid units currently in use (sum of SlotSize). </summary>
         public int UsedSpace
         {
             get
@@ -59,8 +79,37 @@ namespace ProjectArk.Combat
             }
         }
 
-        /// <summary> Legacy: remaining free grid units. </summary>
-        public int FreeSpace => GRID_COLS - UsedSpace;
+        /// <summary> Remaining free grid units (Capacity - UsedSpace). </summary>
+        public int FreeSpace => Capacity - UsedSpace;
+
+        // =====================================================================
+        // Constructor
+        // =====================================================================
+
+        /// <summary>
+        /// Creates a new SlotLayer with the given initial column count.
+        /// </summary>
+        /// <param name="initialCols">Starting column count (default 1 → 2 cells).</param>
+        public SlotLayer(int initialCols = 1)
+        {
+            Cols = Mathf.Clamp(initialCols, 1, MAX_COLS);
+        }
+
+        // =====================================================================
+        // Capacity unlock
+        // =====================================================================
+
+        /// <summary>
+        /// Attempts to unlock one additional column.
+        /// Returns true if successful; false if already at MAX_COLS.
+        /// Existing items are unaffected — the new column starts empty.
+        /// </summary>
+        public bool TryUnlockColumn()
+        {
+            if (Cols >= MAX_COLS) return false;
+            Cols++;
+            return true;
+        }
 
         // =====================================================================
         // Query API
@@ -93,7 +142,7 @@ namespace ProjectArk.Combat
         public (bool canPlace, List<T> evictList) CanPlace(T item, int anchorCol, int anchorRow)
         {
             var shape = item.Shape;
-            if (!ItemShapeHelper.FitsInGrid(shape, anchorCol, anchorRow, GRID_COLS, GRID_ROWS))
+            if (!ItemShapeHelper.FitsInGrid(shape, anchorCol, anchorRow, Cols, Rows))
                 return (false, null);
 
             var evictSet = new HashSet<T>();
@@ -181,8 +230,8 @@ namespace ProjectArk.Combat
         /// <summary> Removes all items and clears the grid. </summary>
         public void Clear()
         {
-            for (int r = 0; r < GRID_ROWS; r++)
-                for (int c = 0; c < GRID_COLS; c++)
+            for (int r = 0; r < Rows; r++)
+                for (int c = 0; c < Cols; c++)
                     _grid[r, c] = null;
             _anchors.Clear();
             _itemList.Clear();
@@ -198,9 +247,9 @@ namespace ProjectArk.Combat
         /// </summary>
         public bool TryEquip(T item)
         {
-            for (int r = 0; r < GRID_ROWS; r++)
+            for (int r = 0; r < Rows; r++)
             {
-                for (int c = 0; c < GRID_COLS; c++)
+                for (int c = 0; c < Cols; c++)
                 {
                     var (canPlace, evictList) = CanPlace(item, c, r);
                     if (canPlace && (evictList == null || evictList.Count == 0))
@@ -223,6 +272,6 @@ namespace ProjectArk.Combat
         // =====================================================================
 
         private bool InBounds(int col, int row)
-            => col >= 0 && col < GRID_COLS && row >= 0 && row < GRID_ROWS;
+            => col >= 0 && col < Cols && row >= 0 && row < Rows;
     }
 }

@@ -1,8 +1,6 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
-using TMPro;
 using PrimeTween;
 using ProjectArk.Combat;
 
@@ -87,18 +85,9 @@ namespace ProjectArk.UI
             _borderImage = borderGo.GetComponent<Image>();
             _borderImage.raycastTarget = false;
 
-            var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image));
-            iconGo.transform.SetParent(transform, false);
-            _iconImage = iconGo.GetComponent<Image>();
-
             Color typeColor = StarChartTheme.GetTypeColor(item.ItemType);
             var shape = item.Shape;
             var bounds = ItemShapeHelper.GetBounds(shape);
-            var cells = ItemShapeHelper.GetCells(shape);
-
-            // Build a lookup set for occupied cells (relative to anchor)
-            var occupiedSet = new HashSet<Vector2Int>();
-            foreach (var c in cells) occupiedSet.Add(c);
 
             // ── Position & size the overlay RectTransform ──────────────────
             var rt = GetComponent<RectTransform>();
@@ -115,38 +104,10 @@ namespace ProjectArk.UI
             rt.anchoredPosition = new Vector2(xPos, yPos);
             rt.sizeDelta = new Vector2(overlayW, overlayH);
 
-            // ── Build per-cell images ──────────────────────────────────────
-            int totalCells = bounds.x * bounds.y;
-            _cellImages = new Image[totalCells];
-
+            // ── Build per-cell images via ItemIconRenderer (Shape Layer) ──
             Color activeColor = new Color(typeColor.r, typeColor.g, typeColor.b, 0.55f);
-            Color emptyColor  = Color.clear;
-
-            for (int r = 0; r < bounds.y; r++)
-            {
-                for (int c = 0; c < bounds.x; c++)
-                {
-                    int idx = r * bounds.x + c;
-                    var cellGo = new GameObject($"OverlayCell_{c}_{r}",
-                        typeof(RectTransform), typeof(Image));
-                    cellGo.transform.SetParent(transform, false);
-
-                    var cellRt = cellGo.GetComponent<RectTransform>();
-                    cellRt.anchorMin = Vector2.zero;
-                    cellRt.anchorMax = Vector2.zero;
-                    cellRt.pivot = new Vector2(0f, 1f);
-                    cellRt.anchoredPosition = new Vector2(
-                         c * (cellSize + cellGap),
-                        -r * (cellSize + cellGap));
-                    cellRt.sizeDelta = new Vector2(cellSize, cellSize);
-
-                    var cellImg = cellGo.GetComponent<Image>();
-                    bool occupied = occupiedSet.Contains(new Vector2Int(c, r));
-                    cellImg.color = occupied ? activeColor : emptyColor;
-                    cellImg.raycastTarget = false; // overlay itself handles raycasts
-                    _cellImages[idx] = cellImg;
-                }
-            }
+            _cellImages = ItemIconRenderer.BuildShapeCellsAbsolute(
+                transform, shape, activeColor, cellSize, cellGap);
 
             // ── Border / glow image ────────────────────────────────────────
             if (_borderImage != null)
@@ -156,35 +117,11 @@ namespace ProjectArk.UI
                 _borderImage.raycastTarget = false;
             }
 
-            // ── Icon image (centered on anchor cell) ───────────────────────
-            if (_iconImage != null)
-            {
-                if (item.Icon != null)
-                {
-                    _iconImage.sprite = item.Icon;
-                    _iconImage.color = Color.white;
-                }
-                else
-                {
-                    _iconImage.sprite = null;
-                    _iconImage.color = typeColor;
-                }
-                _iconImage.raycastTarget = false;
-
-                // Center icon on the anchor cell (col=0, row=0 of the overlay)
-                var iconRt = _iconImage.GetComponent<RectTransform>();
-                if (iconRt != null)
-                {
-                    float iconSize = cellSize * 0.65f;
-                    iconRt.anchorMin = Vector2.zero;
-                    iconRt.anchorMax = Vector2.zero;
-                    iconRt.pivot = new Vector2(0.5f, 0.5f);
-                    iconRt.anchoredPosition = new Vector2(
-                        cellSize * 0.5f,
-                        -cellSize * 0.5f);
-                    iconRt.sizeDelta = new Vector2(iconSize, iconSize);
-                }
-            }
+            // ── Icon image via ItemIconRenderer (Icon Layer) ───────────────
+            // Fixed-size icon centered on anchor cell — NOT stretched to bounding box.
+            // This is the Backpack Monsters approach: Icon = identity, Shape = occupancy.
+            _iconImage = ItemIconRenderer.BuildIconOnAnchorCell(
+                transform, item, cellSize, iconSizePx: cellSize * 0.65f);
 
             // ── Snap-in entrance animation ─────────────────────────────────
             rt.localScale = Vector3.one * 0.85f;
@@ -264,7 +201,7 @@ namespace ProjectArk.UI
 
             _isDragSource = true;
             var payload = new DragPayload(_item, DragSource.Slot, _ownerTrack?.Track);
-            mgr.BeginDrag(payload);
+            mgr.BeginDrag(payload, eventData);
         }
 
         public void OnDrag(PointerEventData eventData)

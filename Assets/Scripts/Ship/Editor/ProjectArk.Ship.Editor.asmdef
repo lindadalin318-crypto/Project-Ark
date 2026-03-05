@@ -2,7 +2,8 @@
     "name": "ProjectArk.Ship.Editor",
     "rootNamespace": "ProjectArk.Ship.Editor",
     "references": [
-        "ProjectArk.Ship"
+        "ProjectArk.Ship",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [
         "Editor"

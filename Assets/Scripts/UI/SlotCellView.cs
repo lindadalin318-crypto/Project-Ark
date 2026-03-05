@@ -296,23 +296,35 @@ namespace ProjectArk.UI
                 mgr.UpdateGhostDropState(previewState, isReplace ? 1 : 0);
                 OwnerColumn?.SetDropPreview(previewState);
 
-                // Highlight cells
+                // Highlight cells via independent DragHighlightLayer (never pollutes _backgroundImage)
                 if (OwnerTrack != null && (SlotType == SlotType.Core || SlotType == SlotType.Prism))
                 {
+                    bool isCoreLayer = SlotType == SlotType.Core;
                     if (accepted)
                     {
                         OwnerTrack.SetShapeHighlight(anchor.x, anchor.y,
-                            payload.Item.Shape, previewState, SlotType == SlotType.Core);
+                            payload.Item.Shape, previewState, isCoreLayer);
                     }
                     else
                     {
-                        // No valid anchor for this hover point, mark hovered cell invalid.
-                        SetHighlight(false);
+                        // No valid anchor — show invalid highlight on the single hovered cell
+                        int gridCols = isCoreLayer
+                            ? (OwnerTrack.Track?.CoreLayer?.Cols  ?? SlotLayer<StarCoreSO>.MAX_COLS)
+                            : (OwnerTrack.Track?.PrismLayer?.Cols ?? SlotLayer<PrismSO>.MAX_COLS);
+                        int hoverCol = CellIndex % gridCols;
+                        int hoverRow = CellIndex / gridCols;
+                        OwnerTrack.SetShapeHighlight(hoverCol, hoverRow,
+                            ItemShape.Shape1x1, DropPreviewState.Invalid, isCoreLayer);
                     }
                 }
                 else
                 {
-                    ApplySingleHighlight(accepted && !isReplace, isReplace);
+                    // SAIL / SAT: single-cell highlight via DragHighlightLayer
+                    // SAIL/SAT columns are single-column, multi-row: col=0, row=CellIndex
+                    var singleState = isReplace ? DropPreviewState.Replace
+                                    : accepted  ? DropPreviewState.Valid
+                                                : DropPreviewState.Invalid;
+                    OwnerTrack?.SetSingleHighlight(SlotType, 0, CellIndex, singleState);
                 }
             }
             else
@@ -415,7 +427,7 @@ namespace ProjectArk.UI
 
             _isDragSource = true;
             var payload = new DragPayload(DisplayedItem, DragSource.Slot, OwnerTrack?.Track);
-            mgr.BeginDrag(payload);
+            mgr.BeginDrag(payload, eventData);
         }
 
         public void OnDrag(PointerEventData eventData)
@@ -493,8 +505,12 @@ namespace ProjectArk.UI
             // For CORE/PRISM, resolve shape anchor against hovered cell.
             if (OwnerTrack != null && (SlotType == SlotType.Core || SlotType == SlotType.Prism))
             {
-                const int gridCols = SlotLayer<StarChartItemSO>.GRID_COLS;
-                const int gridRows = SlotLayer<StarChartItemSO>.GRID_ROWS;
+                // Read dynamic column count from the active layer
+                bool isCoreLayer = SlotType == SlotType.Core;
+                int gridCols = isCoreLayer
+                    ? (OwnerTrack.Track?.CoreLayer?.Cols  ?? SlotLayer<StarCoreSO>.MAX_COLS)
+                    : (OwnerTrack.Track?.PrismLayer?.Cols ?? SlotLayer<PrismSO>.MAX_COLS);
+                int gridRows = SlotLayer<StarCoreSO>.FIXED_ROWS;
                 int hoverCol = CellIndex % gridCols;
                 int hoverRow = CellIndex / gridCols;
 

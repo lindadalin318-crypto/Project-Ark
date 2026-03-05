@@ -804,6 +804,10 @@ namespace ProjectArk.Combat
                     data.PrismIDs.Add(prisms[i].DisplayName);
             }
 
+            // Persist unlocked column counts for progressive capacity system
+            data.CoreLayerCols  = track.CoreLayer.Cols;
+            data.PrismLayerCols = track.PrismLayer.Cols;
+
             return data;
         }
 
@@ -811,6 +815,11 @@ namespace ProjectArk.Combat
                                          IStarChartItemResolver resolver)
         {
             if (data == null) return;
+
+            // Restore unlocked column counts (clamp to ≥1 for old saves where field defaults to 0)
+            int coreCols  = Mathf.Max(1, data.CoreLayerCols);
+            int prismCols = Mathf.Max(1, data.PrismLayerCols);
+            track.SetLayerCols(coreCols, prismCols);
 
             if (data.CoreIDs != null)
             {

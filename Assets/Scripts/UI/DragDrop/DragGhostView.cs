@@ -55,8 +55,11 @@ namespace ProjectArk.UI
         private int _currentSlotSize = 1;
         private ItemShape _currentShape = ItemShape.Shape1x1;
 
-        // Cyan cell color matching SlotCellView style
-        private static readonly Color CellActiveColor = new Color(0f, 0.85f, 1f, 0.18f);
+        // Dynamically created icon image (Icon Layer, managed by ItemIconRenderer)
+        private Image _iconImageDynamic;
+
+        // Cell color is determined per-item by StarChartTheme.GetTypeColorDim(item.ItemType)
+        // to match the exact color used in SlotCellView.SetItem() — no hardcoded color here.
 
         private void Awake()
         {
@@ -79,34 +82,49 @@ namespace ProjectArk.UI
                 _rectTransform.localScale = Vector3.one;
             }
 
-            // Initialize border and hint
-            if (_borderImage != null)
-                _borderImage.color = Color.clear;
+        // Initialize border and hint
+        if (_borderImage != null)
+            _borderImage.color = Color.clear;
+
+        // Hide legacy _iconImage permanently — Icon is now built dynamically by ItemIconRenderer.
+        // Use CanvasGroup (not color=clear) to guarantee it never renders regardless of sprite.
+        if (_iconImage != null)
+        {
+            var iconCg = _iconImage.GetComponent<CanvasGroup>();
+            if (iconCg == null) iconCg = _iconImage.gameObject.AddComponent<CanvasGroup>();
+            iconCg.alpha = 0f;
+            iconCg.blocksRaycasts = false;
+            iconCg.interactable = false;
+        }
 
             // CLAUDE.md 第11条：uGUI面板禁止用SetActive控制显隐，统一用CanvasGroup
+            // NOTE: 必须用显式 if 判断，不能用 ?? 运算符。
+            // Unity 的 UnityEngine.Object 重写了 == 运算符，但 C# 的 ?? 绕过了该重写，
+            // 导致 GetComponent 返回"假null"时 ?? 不执行右侧 AddComponent，引发 LogError。
             if (_replaceHintLabel != null)
             {
-                _replaceHintCg = _replaceHintLabel.GetComponent<CanvasGroup>()
-                    ?? _replaceHintLabel.gameObject.AddComponent<CanvasGroup>();
+                _replaceHintCg = _replaceHintLabel.GetComponent<CanvasGroup>();
+                if (_replaceHintCg == null)
+                    _replaceHintCg = _replaceHintLabel.gameObject.AddComponent<CanvasGroup>();
                 if (_replaceHintCg != null)
                 {
                     _replaceHintCg.alpha = 0f;
                     _replaceHintCg.blocksRaycasts = false;
                     _replaceHintCg.interactable = false;
                 }
-                else
-                {
-                    Debug.LogError($"[DragGhostView] Failed to get/add CanvasGroup on ReplaceHint '{_replaceHintLabel.gameObject.name}'", _replaceHintLabel.gameObject);
-                }
             }
 
             if (_nameLabel != null)
             {
-                _nameLabelCg = _nameLabel.GetComponent<CanvasGroup>()
-                    ?? _nameLabel.gameObject.AddComponent<CanvasGroup>();
-                _nameLabelCg.alpha = 0f;
-                _nameLabelCg.blocksRaycasts = false;
-                _nameLabelCg.interactable = false;
+                _nameLabelCg = _nameLabel.GetComponent<CanvasGroup>();
+                if (_nameLabelCg == null)
+                    _nameLabelCg = _nameLabel.gameObject.AddComponent<CanvasGroup>();
+                if (_nameLabelCg != null)
+                {
+                    _nameLabelCg.alpha = 0f;
+                    _nameLabelCg.blocksRaycasts = false;
+                    _nameLabelCg.interactable = false;
+                }
             }
 
             // NOTE: 绝不调用 gameObject.SetActive(false)！
@@ -137,7 +155,7 @@ namespace ProjectArk.UI
         /// Adjust the ghost shape to match the item's 2D ItemShape.
         /// Resizes the ghost to the shape's bounding box and rebuilds the cell grid.
         /// </summary>
-        public void SetShape(ItemShape shape)
+        public void SetShape(ItemShape shape, StarChartItemType itemType = StarChartItemType.Core)
         {
             _currentShape = shape;
             var bounds = ItemShapeHelper.GetBounds(shape);
@@ -151,7 +169,14 @@ namespace ProjectArk.UI
             if (_rectTransform != null)
                 _rectTransform.sizeDelta = new Vector2(newWidth, newHeight);
 
-            RebuildShapeGrid(shape, newWidth, newHeight);
+            // Use type-specific dim color (alpha=0.22) to match SlotCellView.SetItem() exactly.
+            // Ghost CanvasGroup.alpha handles overall transparency — cell color stays opaque.
+            Color cellColor = new Color(
+                StarChartTheme.GetTypeColor(itemType).r,
+                StarChartTheme.GetTypeColor(itemType).g,
+                StarChartTheme.GetTypeColor(itemType).b,
+                0.22f);
+            RebuildShapeGrid(shape, newWidth, newHeight, cellColor);
         }
 
         private void RebuildCellGrid(int slotSize, float width, float totalHeight)
@@ -184,12 +209,12 @@ namespace ProjectArk.UI
                 cellRect.sizeDelta = new Vector2(0f, _cellHeight);
 
                 var cellImg = cellGo.GetComponent<Image>();
-                cellImg.color = CellActiveColor;
+                cellImg.color = Color.white;
                 _cellImages[i] = cellImg;
             }
         }
 
-        private void RebuildShapeGrid(ItemShape shape, float totalWidth, float totalHeight)
+        private void RebuildShapeGrid(ItemShape shape, float totalWidth, float totalHeight, Color cellColor)
         {
             // Destroy old cell images
             if (_cellImages != null)
@@ -198,34 +223,9 @@ namespace ProjectArk.UI
                     if (img != null) Destroy(img.gameObject);
             }
 
-            var cells = ItemShapeHelper.GetCells(shape);
-            var bounds = ItemShapeHelper.GetBounds(shape);
-            _cellImages = new Image[cells.Count];
-
-            float cellW = (totalWidth  - (bounds.x - 1) * _cellGap) / bounds.x;
-            float cellH = (totalHeight - (bounds.y - 1) * _cellGap) / bounds.y;
-
-            for (int i = 0; i < cells.Count; i++)
-            {
-                var offset = cells[i];
-                var cellGo = new GameObject($"GhostCell_{offset.x}_{offset.y}", typeof(RectTransform), typeof(Image));
-                cellGo.transform.SetParent(transform, false);
-                cellGo.transform.SetAsFirstSibling();
-
-                var cellRect = cellGo.GetComponent<RectTransform>();
-                cellRect.anchorMin = Vector2.zero;
-                cellRect.anchorMax = Vector2.zero;
-                cellRect.pivot = new Vector2(0f, 1f);
-
-                float xPos =  offset.x * (cellW + _cellGap);
-                float yPos = -offset.y * (cellH + _cellGap);
-                cellRect.anchoredPosition = new Vector2(xPos, yPos);
-                cellRect.sizeDelta = new Vector2(cellW, cellH);
-
-                var cellImg = cellGo.GetComponent<Image>();
-                cellImg.color = CellActiveColor;
-                _cellImages[i] = cellImg;
-            }
+            // Build Shape Layer via ItemIconRenderer using the item's type color
+            _cellImages = ItemIconRenderer.BuildShapeCellsAbsolute(
+                transform, shape, cellColor, _ghostSize.x, _cellGap);
         }
 
         /// <summary> Show the ghost with the item's icon or placeholder color. </summary>
@@ -240,23 +240,28 @@ namespace ProjectArk.UI
             if (_rectTransform != null)
                 _rectTransform.localScale = Vector3.one;
 
-            // Apply shape based on ItemShape (2D)
-            SetShape(item.Shape);
+            // Apply shape based on ItemShape (2D), passing item type for correct cell color
+            SetShape(item.Shape, item.ItemType);
 
-            if (_iconImage != null)
+            // Icon Layer via ItemIconRenderer — fixed-size, placed at shape centroid
+            // in the same absolute pixel coordinate system as BuildShapeCellsAbsolute.
+            // Must use BuildIconAbsolute (not BuildIconCentered) because shape cells
+            // use anchorMin=zero + anchoredPosition, not normalized anchor fractions.
+            // Using BuildIconCentered here would cause Icon and Shape to appear at
+            // completely different positions (the "two objects" bug).
+            if (_iconImageDynamic != null)
             {
-                if (item.Icon != null)
-                {
-                    _iconImage.sprite = item.Icon;
-                    _iconImage.color = new Color(1f, 1f, 1f, _ghostAlpha);
-                }
-                else
-                {
-                    _iconImage.sprite = null;
-                    var baseColor = StarChartTheme.GetTypeColor(item.ItemType);
-                    _iconImage.color = new Color(baseColor.r, baseColor.g, baseColor.b, _ghostAlpha);
-                }
+                Destroy(_iconImageDynamic.gameObject);
+                _iconImageDynamic = null;
             }
+            _iconImageDynamic = ItemIconRenderer.BuildIconAbsolute(
+                transform, item, item.Shape,
+                cellSize:   _ghostSize.x,
+                cellGap:    _cellGap,
+                iconSizePx: _ghostSize.x * 0.55f,
+                alpha:      _ghostAlpha);
+
+            // _iconImage is permanently hidden via CanvasGroup in Awake — no action needed here.
 
             // Show name label via CanvasGroup (CLAUDE.md 第11条)
             if (_nameLabel != null && _nameLabelCg != null)
@@ -318,9 +323,48 @@ namespace ProjectArk.UI
         }
 
         /// <summary>
-        /// Move the ghost to follow the pointer position.
+        /// Compute the drag anchor offset: the delta from ghost center to the pointer,
+        /// in canvas local space. Call once after Show() in BeginDrag.
+        /// The offset is subtracted every frame in FollowPointer so the ghost stays
+        /// pinned under the exact pixel the user clicked.
         /// </summary>
-        public void FollowPointer(PointerEventData eventData)
+        public Vector2 ComputeDragOffset(PointerEventData eventData)
+        {
+            if (_rectTransform == null || _parentCanvas == null) return Vector2.zero;
+
+            var canvasRect = _parentCanvas.transform as RectTransform;
+            if (canvasRect == null) return Vector2.zero;
+
+            Camera cam = _parentCanvas.renderMode == RenderMode.ScreenSpaceOverlay
+                ? null
+                : _parentCanvas.worldCamera;
+
+            // Convert pointer screen position to canvas local space
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                    canvasRect, eventData.position, cam, out var pointerLocal))
+                return Vector2.zero;
+
+            // Convert the source object (pressPosition) to canvas local space
+            // to find where on the ghost the user actually clicked.
+            // pressPosition is the screen position of the initial press.
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                    canvasRect, eventData.pressPosition, cam, out var pressLocal))
+                return Vector2.zero;
+
+            // The ghost will be placed at pointerLocal each frame.
+            // We want the ghost's visual to appear as if the user grabbed it at pressLocal.
+            // Offset = pressLocal - pointerLocal (delta from current pointer to press point).
+            // This is subtracted from localPosition each frame, shifting the ghost so the
+            // press point stays under the cursor.
+            return pressLocal - pointerLocal;
+        }
+
+        /// <summary>
+        /// Move the ghost to follow the pointer position, applying the drag anchor offset.
+        /// </summary>
+        /// <param name="eventData">Current pointer event data.</param>
+        /// <param name="dragOffset">Offset computed by ComputeDragOffset at drag start.</param>
+        public void FollowPointer(PointerEventData eventData, Vector2 dragOffset = default)
         {
             if (_rectTransform == null || _parentCanvas == null) return;
 
@@ -334,7 +378,8 @@ namespace ProjectArk.UI
             if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
                     canvasRect, eventData.position, cam, out var localPoint))
             {
-                _rectTransform.localPosition = localPoint;
+                // Apply drag offset so the ghost stays pinned under the original click point
+                _rectTransform.localPosition = localPoint + dragOffset;
             }
         }
 
@@ -378,6 +423,8 @@ namespace ProjectArk.UI
                     if (img != null && img.gameObject != null)
                         Destroy(img.gameObject);
             }
+            if (_iconImageDynamic != null && _iconImageDynamic.gameObject != null)
+                Destroy(_iconImageDynamic.gameObject);
         }
     }
 }

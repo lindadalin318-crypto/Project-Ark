@@ -5,9 +5,20 @@ using UnityEngine;
 namespace ProjectArk.Ship
 {
     /// <summary>
-    /// Ship dash / dodge component. Listens to InputHandler.OnDashPressed,
-    /// executes a fixed-duration dash, manages cooldown, input buffering,
-    /// and optional invincibility frames.
+    /// 飞船闪避 Dash，完整对齐 Galactic Glitch Space 键机制（二进制分析确认）：
+    ///
+    ///   GG 真实流程（GameAssembly.dll 反汇编确认）：
+    ///     1. Space → OnDodge → Player.Dodge()：施加 dodgeForce=13 冲量 + ToStateForce(IsDodgeState)
+    ///        IsDodgeState: linearDrag=1.7, 持续 minTime=0.225s，无敌帧 0.15s
+    ///     2. Space 同时触发 BoosterBurnoutPower（AfterDodge power）→ Player.Boost()：
+    ///        设置 isUsingBoost=true + 施加 Boost 方向冲量
+    ///     3. Player.Update() 每帧检测 isUsingBoost → ToStateForce(IsBoostState=3)：
+    ///        IsBoostState: linearDrag=2.5, maxMoveSpeed=9, angularAccel=40
+    ///
+    ///   Project Ark 实现：
+    ///     - Space → ShipDash：冲量 + 无敌帧（对应步骤1）
+    ///     - ShipDash 完成后自动触发 ShipBoost.ForceActivate()（对应步骤2+3）
+    ///     - ShipBoost 独立键位（可选绑定）也支持单独触发
     /// </summary>
     [RequireComponent(typeof(ShipMotor))]
     [RequireComponent(typeof(InputHandler))]
@@ -19,36 +30,35 @@ namespace ProjectArk.Ship
         // Events
         // ══════════════════════════════════════════════════════════════
 
-        /// <summary> Fired when a dash begins. Provides dash direction. </summary>
+        /// <summary>Dash 开始时触发，携带冲刺方向。</summary>
         public event Action<Vector2> OnDashStarted;
 
-        /// <summary> Fired when a dash ends. </summary>
+        /// <summary>Dash 无敌帧结束时触发（可视为 Dash 的逻辑结束点）。</summary>
         public event Action OnDashEnded;
 
         // ══════════════════════════════════════════════════════════════
         // Public State
         // ══════════════════════════════════════════════════════════════
 
-        /// <summary> True while a dash is executing. </summary>
+        /// <summary>是否在无敌帧期间（可用于 VFX / 受伤判定）。</summary>
         public bool IsDashing { get; private set; }
 
-        /// <summary> Current dash direction (valid during dash). </summary>
+        /// <summary>当前 Dash 方向（Dash 期间有效）。</summary>
         public Vector2 DashDirection { get; private set; }
 
         // ══════════════════════════════════════════════════════════════
         // Private State
         // ══════════════════════════════════════════════════════════════
 
-        private ShipMotor _motor;
+        private ShipMotor   _motor;
         private InputHandler _inputHandler;
-        private ShipAiming _aiming;
-        private ShipHealth _health;
+        private ShipAiming  _aiming;
+        private ShipHealth  _health;
+        private ShipBoost   _boost; // Dash 结束后自动触发 Boost（GG 同款链式触发）
 
-        private readonly InputBuffer _inputBuffer = new();
-        private const string DASH_ACTION = "Dash";
-
-        private bool _isCoolingDown;
+        private bool  _isCoolingDown;
         private float _cooldownEndTime;
+        private bool  _buffered; // 简单单次缓冲（替代旧 InputBuffer）
 
         // ══════════════════════════════════════════════════════════════
         // Lifecycle
@@ -56,10 +66,11 @@ namespace ProjectArk.Ship
 
         private void Awake()
         {
-            _motor = GetComponent<ShipMotor>();
+            _motor        = GetComponent<ShipMotor>();
             _inputHandler = GetComponent<InputHandler>();
-            _aiming = GetComponent<ShipAiming>();
-            _health = GetComponent<ShipHealth>();
+            _aiming       = GetComponent<ShipAiming>();
+            _health       = GetComponent<ShipHealth>();
+            _boost        = GetComponent<ShipBoost>(); // 可选，无 ShipBoost 时退化为纯 Dash
         }
 
         private void OnEnable()
@@ -74,16 +85,16 @@ namespace ProjectArk.Ship
 
         private void Update()
         {
-            // Check if cooldown expired and there's a buffered dash input
-            if (_isCoolingDown && Time.time >= _cooldownEndTime)
-            {
-                _isCoolingDown = false;
+            if (!_isCoolingDown) return;
+            if (Time.time < _cooldownEndTime) return;
 
-                // Try to consume buffered dash
-                if (_inputBuffer.Consume(DASH_ACTION, _stats.DashBufferWindow))
-                {
-                    ExecuteDashAsync().Forget();
-                }
+            _isCoolingDown = false;
+
+            // 消费缓冲输入
+            if (_buffered)
+            {
+                _buffered = false;
+                TryExecuteDash();
             }
         }
 
@@ -93,21 +104,21 @@ namespace ProjectArk.Ship
 
         private void HandleDashInput()
         {
-            if (IsDashing)
-            {
-                // Already dashing — buffer the input for later
-                _inputBuffer.Record(DASH_ACTION);
-                return;
-            }
-
             if (_isCoolingDown)
             {
-                // On cooldown — buffer the input
-                _inputBuffer.Record(DASH_ACTION);
+                // 在缓冲窗口内按键 → 记录缓冲
+                float remainingCooldown = _cooldownEndTime - Time.time;
+                if (remainingCooldown <= _stats.DashBufferWindow)
+                    _buffered = true;
                 return;
             }
 
-            // Ready to dash
+            TryExecuteDash();
+        }
+
+        private void TryExecuteDash()
+        {
+            if (IsDashing) return;
             ExecuteDashAsync().Forget();
         }
 
@@ -117,70 +128,50 @@ namespace ProjectArk.Ship
 
         private async UniTaskVoid ExecuteDashAsync()
         {
-            if (IsDashing) return;
-
-            // ── 1. Determine dash direction ──
+            // ── 1. 确定冲刺方向（GG 同款：优先移动输入，无输入则船头方向）
             Vector2 moveInput = _inputHandler.MoveInput;
-            Vector2 dashDir;
-
-            if (moveInput.sqrMagnitude > 0.1f)
-            {
-                dashDir = moveInput.normalized;
-            }
-            else if (_aiming != null)
-            {
-                dashDir = _aiming.FacingDirection;
-            }
-            else
-            {
-                dashDir = transform.up; // Fallback
-            }
+            Vector2 dashDir = moveInput.sqrMagnitude > 0.1f
+                ? moveInput.normalized
+                : (_aiming != null ? _aiming.FacingDirection : (Vector2)transform.up);
 
             DashDirection = dashDir;
 
-            // ── 2. Start dash ──
+            // ── 2. 施加冲量（一次性，物理自然衰减）
+            _motor.AddExternalImpulse(dashDir * _stats.DashImpulse);
+
+            // ── 3. 标记 Dash 状态（用于 VFX / 无敌帧判断）
             IsDashing = true;
             _motor.IsDashing = true;
 
-            Vector2 dashVelocity = dashDir * _stats.DashSpeed;
-            _motor.SetVelocityOverride(dashVelocity);
-
-            // ── 3. I-Frames ──
-            bool hadIFrames = false;
+            // ── 4. 开启无敌帧
             if (_stats.DashIFrames && _health != null)
-            {
                 _health.SetInvulnerable(true);
-                hadIFrames = true;
-            }
 
-            // ── 4. Broadcast start event ──
+            // ── 5. 通知 VFX
             OnDashStarted?.Invoke(dashDir);
 
-            // ── 5. Wait for dash duration ──
-            int durationMs = Mathf.RoundToInt(_stats.DashDuration * 1000f);
-            await UniTask.Delay(durationMs, cancellationToken: destroyCancellationToken);
-
-            // ── 6. End dash — preserve exit momentum ──
-            _motor.ClearVelocityOverride();
-            _motor.IsDashing = false;
-            IsDashing = false;
-
-            // Apply exit momentum as impulse in dash direction
-            float exitSpeed = _stats.DashSpeed * _stats.DashExitSpeedRatio;
-            _motor.ApplyImpulse(dashDir * exitSpeed);
-
-            // ── 7. Disable dash i-frames (post-damage i-frames handled by ShipHealth) ──
-            if (hadIFrames && _health != null)
+            // ── 6. 等待无敌帧时长（冲量本身由物理处理，无需等速度降下来）
+            if (_stats.DashIFrameDuration > 0f)
             {
-                _health.SetInvulnerable(false);
+                int ms = Mathf.RoundToInt(_stats.DashIFrameDuration * 1000f);
+                await UniTask.Delay(ms, cancellationToken: destroyCancellationToken);
             }
 
-            // ── 8. Broadcast end event ──
+            // ── 7. 关闭无敌帧
+            if (_stats.DashIFrames && _health != null)
+                _health.SetInvulnerable(false);
+
+            IsDashing = false;
+            _motor.IsDashing = false;
             OnDashEnded?.Invoke();
 
-            // ── 9. Start cooldown ──
-            _isCoolingDown = true;
-            _cooldownEndTime = Time.time + _stats.DashCooldown;
+            // ── 8. 触发 Boost 状态（GG 真实机制：Dodge 结束后自动进入 IsBoostState）
+            //       对应 BoosterBurnoutPower.UsePower() 在 AfterDodge 时被调用
+            _boost?.ForceActivate();
+
+            // ── 9. 进入冷却
+            _isCoolingDown    = true;
+            _cooldownEndTime  = Time.time + _stats.DashCooldown;
         }
     }
 }

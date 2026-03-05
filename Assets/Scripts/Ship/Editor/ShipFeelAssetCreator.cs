@@ -75,32 +75,29 @@ namespace ProjectArk.Ship.Editor
             var so = ScriptableObject.CreateInstance<ShipStatsSO>();
             var serialized = new SerializedObject(so);
 
-            // Movement — Base
-            serialized.FindProperty("_moveSpeed").floatValue = 12f;
-            serialized.FindProperty("_acceleration").floatValue = 45f;
-            serialized.FindProperty("_deceleration").floatValue = 25f;
+            // Rotation (mass=1, twin-stick 世界方向移动 + 角加速度旋转)
+            serialized.FindProperty("_angularAcceleration").floatValue = 800f;
+            serialized.FindProperty("_maxRotationSpeed").floatValue = 360f;
+            serialized.FindProperty("_angularDrag").floatValue = 0f;
 
-            // Movement — Curves & Feel
-            SetAnimationCurve(serialized, "_accelerationCurve",
-                AnimationCurve.EaseInOut(0f, 0f, 1f, 1f));
-            SetAnimationCurve(serialized, "_decelerationCurve",
-                AnimationCurve.EaseInOut(0f, 0f, 1f, 1f));
-            serialized.FindProperty("_sharpTurnAngleThreshold").floatValue = 90f;
-            serialized.FindProperty("_sharpTurnSpeedPenalty").floatValue = 0.7f;
-            serialized.FindProperty("_initialBoostMultiplier").floatValue = 1.5f;
-            serialized.FindProperty("_initialBoostDuration").floatValue = 0.05f;
-            serialized.FindProperty("_minMoveSpeedThreshold").floatValue = 0.1f;
+            // Movement (mass=1: F=ma → 加速度=ForwardAcceleration)
+            serialized.FindProperty("_forwardAcceleration").floatValue = 20f;
+            serialized.FindProperty("_maxSpeed").floatValue = 8f;
+            serialized.FindProperty("_linearDrag").floatValue = 3f;
 
-            // Aiming
-            serialized.FindProperty("_rotationSpeed").floatValue = 720f;
+            // Boost (状态切换: GG IsBoostState 对齐)
+            serialized.FindProperty("_boostLinearDrag").floatValue = 2.5f;
+            serialized.FindProperty("_boostMaxSpeed").floatValue = 9f;
+            serialized.FindProperty("_boostAngularAcceleration").floatValue = 400f;
+            serialized.FindProperty("_boostDuration").floatValue = 0.2f;
+            serialized.FindProperty("_boostCooldown").floatValue = 1.0f;
+            serialized.FindProperty("_boostBufferWindow").floatValue = 0.15f;
 
-            // Dash
-            serialized.FindProperty("_dashSpeed").floatValue = 30f;
-            serialized.FindProperty("_dashDuration").floatValue = 0.15f;
-            serialized.FindProperty("_dashCooldown").floatValue = 0.3f;
+            // Dash (mass=1: impulse = 速度变化量)
+            serialized.FindProperty("_dashImpulse").floatValue = 12f;
+            serialized.FindProperty("_dashIFrameDuration").floatValue = 0.15f;
+            serialized.FindProperty("_dashCooldown").floatValue = 0.5f;
             serialized.FindProperty("_dashBufferWindow").floatValue = 0.15f;
-            serialized.FindProperty("_dashExitSpeedRatio").floatValue = 0.5f;
-            serialized.FindProperty("_dashIFrames").boolValue = true;
 
             // Survival
             serialized.FindProperty("_maxHP").floatValue = 100f;
@@ -129,34 +126,31 @@ namespace ProjectArk.Ship.Editor
         {
             var serialized = new SerializedObject(existing);
 
-            // Movement — Curves & Feel (new fields)
-            SetIfDefault(serialized, "_sharpTurnAngleThreshold", 90f);
-            SetIfDefault(serialized, "_sharpTurnSpeedPenalty", 0.7f);
-            SetIfDefault(serialized, "_initialBoostMultiplier", 1.5f);
-            SetIfDefault(serialized, "_initialBoostDuration", 0.05f);
-            SetIfDefault(serialized, "_minMoveSpeedThreshold", 0.1f);
+            // Rotation (mass=1)
+            SetIfDefault(serialized, "_angularAcceleration", 800f);
+            SetIfDefault(serialized, "_maxRotationSpeed", 360f);
+            // angularDrag 保持 0，不用 SetIfDefault（0 就是期望值）
 
-            // Ensure curves exist (they default to empty if asset was created before the field existed)
-            EnsureCurve(serialized, "_accelerationCurve",
-                AnimationCurve.EaseInOut(0f, 0f, 1f, 1f));
-            EnsureCurve(serialized, "_decelerationCurve",
-                AnimationCurve.EaseInOut(0f, 0f, 1f, 1f));
+            // Movement (mass=1)
+            SetIfDefault(serialized, "_forwardAcceleration", 20f);
+            SetIfDefault(serialized, "_maxSpeed", 8f);
+            SetIfDefault(serialized, "_linearDrag", 3f);
 
-            // Dash (all new)
-            SetIfDefault(serialized, "_dashSpeed", 30f);
-            SetIfDefault(serialized, "_dashDuration", 0.15f, 0.01f);
-            SetIfDefault(serialized, "_dashCooldown", 0.3f);
+            // Boost (状态切换模型)
+            SetIfDefault(serialized, "_boostLinearDrag", 2.5f);
+            SetIfDefault(serialized, "_boostMaxSpeed", 9f);
+            SetIfDefault(serialized, "_boostAngularAcceleration", 400f);
+            SetIfDefault(serialized, "_boostDuration", 0.2f);
+            SetIfDefault(serialized, "_boostCooldown", 1.0f);
+            SetIfDefault(serialized, "_boostBufferWindow", 0.15f);
+
+            // Dash (mass=1)
+            SetIfDefault(serialized, "_dashImpulse", 12f);
+            SetIfDefault(serialized, "_dashIFrameDuration", 0.15f);
+            SetIfDefault(serialized, "_dashCooldown", 0.5f);
             SetIfDefault(serialized, "_dashBufferWindow", 0.15f);
-            SetIfDefault(serialized, "_dashExitSpeedRatio", 0.5f);
 
-            // _dashIFrames: bool defaults to false; set to true if not yet touched
-            var dashIFramesProp = serialized.FindProperty("_dashIFrames");
-            if (dashIFramesProp != null && !dashIFramesProp.boolValue)
-            {
-                dashIFramesProp.boolValue = true;
-            }
-
-            // Hit Feedback (all new)
+            // Hit Feedback
             SetIfDefault(serialized, "_hitStopDuration", 0.05f);
             SetIfDefault(serialized, "_iFrameDuration", 1.0f);
             SetIfDefault(serialized, "_iFrameBlinkInterval", 0.1f, 0.01f);
@@ -234,31 +228,5 @@ namespace ProjectArk.Ship.Editor
             }
         }
 
-        /// <summary>
-        /// Sets an AnimationCurve property on a SerializedObject.
-        /// </summary>
-        private static void SetAnimationCurve(SerializedObject so, string propName,
-            AnimationCurve curve)
-        {
-            var prop = so.FindProperty(propName);
-            if (prop != null)
-            {
-                prop.animationCurveValue = curve;
-            }
-        }
-
-        /// <summary>
-        /// Ensures an AnimationCurve property has at least 2 keys.
-        /// If the curve is empty (0 keys), sets it to the provided default.
-        /// </summary>
-        private static void EnsureCurve(SerializedObject so, string propName,
-            AnimationCurve defaultCurve)
-        {
-            var prop = so.FindProperty(propName);
-            if (prop != null && prop.animationCurveValue.keys.Length < 2)
-            {
-                prop.animationCurveValue = defaultCurve;
-            }
-        }
     }
 }

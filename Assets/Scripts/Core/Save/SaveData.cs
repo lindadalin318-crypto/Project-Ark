@@ -67,7 +67,7 @@ namespace ProjectArk.Core.Save
     }
 
     /// <summary>
-    /// Single weapon track serialization (core + prism IDs).
+    /// Single weapon track serialization (core + prism IDs + unlocked column counts).
     /// </summary>
     [Serializable]
     public class TrackSaveData
@@ -77,6 +77,20 @@ namespace ProjectArk.Core.Save
 
         /// <summary> Equipped Prism unique IDs. </summary>
         public List<string> PrismIDs = new();
+
+        /// <summary>
+        /// Number of unlocked columns in the Core layer (1–4).
+        /// Default 1 = 2 cells (initial state). Old saves without this field
+        /// will deserialize to 0 via JsonUtility; callers must clamp to ≥ 1.
+        /// </summary>
+        public int CoreLayerCols = 1;
+
+        /// <summary>
+        /// Number of unlocked columns in the Prism layer (1–4).
+        /// Default 1 = 2 cells (initial state). Old saves without this field
+        /// will deserialize to 0 via JsonUtility; callers must clamp to ≥ 1.
+        /// </summary>
+        public int PrismLayerCols = 1;
     }
 
     /// <summary>

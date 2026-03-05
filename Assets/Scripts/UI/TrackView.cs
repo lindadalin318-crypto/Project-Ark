@@ -35,6 +35,16 @@ namespace ProjectArk.UI
         [SerializeField] private TypeColumn _coreColumn;
         [SerializeField] private TypeColumn _satColumn;
 
+        [Header("Debug: Slot Counts (0 = use save data)")]
+        [Tooltip("Override Core layer column count for debugging. 0 = use save data. Range 1-4.")]
+        [SerializeField] [Range(0, 4)] private int _debugCoreCols = 0;
+        [Tooltip("Override Prism layer column count for debugging. 0 = use save data. Range 1-4.")]
+        [SerializeField] [Range(0, 4)] private int _debugPrismCols = 0;
+        [Tooltip("Override Sail slot count for debugging. 0 = default (1 slot).")]
+        [SerializeField] [Range(0, 4)] private int _debugSailSlots = 0;
+        [Tooltip("Override Satellite slot count for debugging. 0 = default (4 slots).")]
+        [SerializeField] [Range(0, 4)] private int _debugSatSlots = 0;
+
         /// <summary> Fired when a cell with an equipped item is clicked (for unequip). </summary>
         public event Action<StarChartItemSO> OnCellClicked;
 
@@ -55,6 +65,12 @@ namespace ProjectArk.UI
 
         // Active overlay views — destroyed and recreated on each Refresh
         private readonly List<ItemOverlayView> _activeOverlays = new();
+
+        // Independent highlight tile layers — one per column, never pollute cell background colors
+        private DragHighlightLayer _coreHighlightLayer;
+        private DragHighlightLayer _prismHighlightLayer;
+        private DragHighlightLayer _sailHighlightLayer;
+        private DragHighlightLayer _satHighlightLayer;
 
         // Cell size and gap used for overlay positioning (must match UICanvasBuilder values)
         // These are read from the first cell's RectTransform at runtime.
@@ -94,6 +110,29 @@ namespace ProjectArk.UI
             InitColumn(_prismColumn, SlotType.Prism,     StarChartTheme.PrismColor);
             InitColumn(_coreColumn,  SlotType.Core,      StarChartTheme.CoreColor);
             InitColumn(_satColumn,   SlotType.Satellite, StarChartTheme.SatColor);
+
+            // Create independent highlight layers for each column
+            _coreHighlightLayer  = CreateHighlightLayer(_coreColumn);
+            _prismHighlightLayer = CreateHighlightLayer(_prismColumn);
+            _sailHighlightLayer  = CreateHighlightLayer(_sailColumn);
+            _satHighlightLayer   = CreateHighlightLayer(_satColumn);
+
+            // Apply debug slot count overrides (only when > 0)
+            ApplyDebugSlotCounts();
+        }
+
+        /// <summary>
+        /// Create and initialize a DragHighlightLayer for the given column.
+        /// Returns null if the column is null.
+        /// </summary>
+        private DragHighlightLayer CreateHighlightLayer(TypeColumn col)
+        {
+            if (col == null) return null;
+            var go = new GameObject("DragHighlightLayer", typeof(RectTransform));
+            go.transform.SetParent(col.GridContainer, false);
+            var layer = go.AddComponent<DragHighlightLayer>();
+            layer.Initialize(col.GridContainer, _cellSize, _cellGap, 2);
+            return layer;
         }
 
         private void InitColumn(TypeColumn col, SlotType slotType, Color typeColor)
@@ -129,6 +168,21 @@ namespace ProjectArk.UI
         // Public API
         // =====================================================================
 
+        /// <summary>
+        /// Apply debug slot count overrides to the bound track's layers.
+        /// Called from Awake (before Bind) and again from Bind if track is already set.
+        /// </summary>
+        private void ApplyDebugSlotCounts()
+        {
+            if (_track == null) return;
+            if (_debugCoreCols > 0 || _debugPrismCols > 0)
+            {
+                int coreCols  = _debugCoreCols  > 0 ? _debugCoreCols  : _track.CoreLayer.Cols;
+                int prismCols = _debugPrismCols > 0 ? _debugPrismCols : _track.PrismLayer.Cols;
+                _track.SetLayerCols(coreCols, prismCols);
+            }
+        }
+
         /// <summary> Bind to a WeaponTrack and StarChartController, subscribe to loadout changes. </summary>
         public void Bind(WeaponTrack track, StarChartController controller = null)
         {
@@ -148,6 +202,9 @@ namespace ProjectArk.UI
                         ? "PRIMARY" : "SECONDARY";
                     _trackLabel.color = StarChartTheme.Cyan;
                 }
+
+                // Re-apply debug overrides now that track is bound
+                ApplyDebugSlotCounts();
             }
 
             Refresh();
@@ -213,9 +270,24 @@ namespace ProjectArk.UI
             if (col == null) return;
             var cells = col.Cells;
 
-            // Reset all cells to empty (cells remain as drop targets)
-            foreach (var cell in cells)
-                cell?.SetEmpty();
+            // Determine how many cells are currently unlocked
+            int unlockedCount = layer != null ? layer.Rows * layer.Cols : 0;
+
+            // Show unlocked cells, hide locked cells via CanvasGroup (CLAUDE.md 第11条：禁止 SetActive)
+            for (int i = 0; i < cells.Length; i++)
+            {
+                if (cells[i] == null) continue;
+                bool unlocked = i < unlockedCount;
+                var cg = cells[i].GetComponent<CanvasGroup>();
+                if (cg == null) cg = cells[i].gameObject.AddComponent<CanvasGroup>();
+                cg.alpha          = unlocked ? 1f : 0f;
+                cg.interactable   = unlocked;
+                cg.blocksRaycasts = unlocked;
+            }
+
+            // Reset visible cells to empty (cells remain as drop targets)
+            for (int i = 0; i < unlockedCount && i < cells.Length; i++)
+                cells[i]?.SetEmpty();
 
             // Destroy previous overlays for this column
             DestroyOverlaysForColumn(col);
@@ -225,15 +297,15 @@ namespace ProjectArk.UI
             // Track which items have already had their overlay created
             var processedItems = new HashSet<T>();
 
-            for (int r = 0; r < SlotLayer<T>.GRID_ROWS; r++)
+            for (int r = 0; r < layer.Rows; r++)
             {
-                for (int c = 0; c < SlotLayer<T>.GRID_COLS; c++)
+                for (int c = 0; c < layer.Cols; c++)
                 {
                     var item = layer.GetAt(c, r);
                     if (item == null) continue;
 
                     // Mark the underlying cell as occupied (hide '+' placeholder)
-                    int cellIndex = r * SlotLayer<T>.GRID_COLS + c;
+                    int cellIndex = r * layer.Cols + c;
                     if (cellIndex < cells.Length && cells[cellIndex] != null)
                         cells[cellIndex].SetOverlay(item, isPrimary: false); // hide placeholder, no icon
 
@@ -293,17 +365,22 @@ namespace ProjectArk.UI
 
             var sail = _controller?.GetEquippedLightSail();
 
-            // SAIL column: only cell[0] is used (1 slot)
-            if (cells[0] != null)
+            // Debug override: how many sail slots to show (default 1)
+            int sailSlots = _debugSailSlots > 0 ? _debugSailSlots : 1;
+            sailSlots = Mathf.Clamp(sailSlots, 1, cells.Length);
+
+            // Show active sail slots
+            for (int i = 0; i < sailSlots; i++)
             {
-                if (sail != null)
-                    cells[0].SetItem(sail);
+                if (cells[i] == null) continue;
+                if (i == 0 && sail != null)
+                    cells[i].SetItem(sail);
                 else
-                    cells[0].SetEmpty();
+                    cells[i].SetEmpty();
             }
 
-            // Remaining cells stay empty
-            for (int i = 1; i < cells.Length; i++)
+            // Hide extra cells beyond sailSlots
+            for (int i = sailSlots; i < cells.Length; i++)
                 cells[i]?.SetEmpty();
         }
 
@@ -317,14 +394,26 @@ namespace ProjectArk.UI
 
             var sats = _controller?.GetEquippedSatellites();
 
+            // Debug override: how many sat slots to show (default = cells.Length = 4)
+            int satSlots = _debugSatSlots > 0 ? _debugSatSlots : cells.Length;
+            satSlots = Mathf.Clamp(satSlots, 1, cells.Length);
+
             for (int i = 0; i < cells.Length; i++)
             {
                 if (cells[i] == null) continue;
 
-                if (sats != null && i < sats.Count)
-                    cells[i].SetItem(sats[i]);
+                if (i < satSlots)
+                {
+                    if (sats != null && i < sats.Count)
+                        cells[i].SetItem(sats[i]);
+                    else
+                        cells[i].SetEmpty();
+                }
                 else
+                {
+                    // Slots beyond satSlots: show as empty (still visible but inactive)
                     cells[i].SetEmpty();
+                }
             }
         }
 
@@ -392,9 +481,9 @@ namespace ProjectArk.UI
         {
             anchor = new Vector2Int(-1, -1);
             if (layer == null || item == null) return false;
-            for (int r = 0; r < SlotLayer<T>.GRID_ROWS; r++)
+            for (int r = 0; r < layer.Rows; r++)
             {
-                for (int c = 0; c < SlotLayer<T>.GRID_COLS; c++)
+                for (int c = 0; c < layer.Cols; c++)
                 {
                     var (canPlace, evictList) = layer.CanPlace(item as T, c, r);
                     if (canPlace && (evictList == null || evictList.Count == 0))
@@ -433,40 +522,51 @@ namespace ProjectArk.UI
         /// <summary>
         /// Highlight all cells covered by the given shape placed at (anchorCol, anchorRow)
         /// in the specified column (Core or Prism layer).
+        /// Delegates to DragHighlightLayer — does NOT modify SlotCellView._backgroundImage.
         /// </summary>
         public void SetShapeHighlight(int anchorCol, int anchorRow, ItemShape shape, DropPreviewState state, bool isCoreLayer)
         {
-            var col = isCoreLayer ? _coreColumn : _prismColumn;
-            if (col == null) return;
-            var cells = col.Cells;
+            // Update grid col count in case debug overrides changed it
+            int gridCols = isCoreLayer ? _track?.CoreLayer?.Cols ?? SlotLayer<StarCoreSO>.MAX_COLS
+                                       : _track?.PrismLayer?.Cols ?? SlotLayer<PrismSO>.MAX_COLS;
 
-            // Use a local constant to avoid misleading generic type parameter on GRID_COLS
-            // (GRID_COLS is a constant independent of the type argument)
-            const int gridCols = SlotLayer<StarChartItemSO>.GRID_COLS;
+            var layer = isCoreLayer ? _coreHighlightLayer : _prismHighlightLayer;
+            layer?.SetGridCols(gridCols);
+            layer?.ShowHighlight(anchorCol, anchorRow, shape, state);
+        }
 
-            foreach (var offset in ItemShapeHelper.GetCells(shape))
+        /// <summary>
+        /// Show a single-cell highlight for SAIL or SAT columns.
+        /// </summary>
+        public void SetSingleHighlight(SlotType slotType, int col, int row, DropPreviewState state)
+        {
+            var layer = slotType switch
             {
-                int c = anchorCol + offset.x;
-                int r = anchorRow + offset.y;
-                int cellIndex = r * gridCols + c;
-                if (cellIndex < 0 || cellIndex >= cells.Length || cells[cellIndex] == null) continue;
+                SlotType.LightSail => _sailHighlightLayer,
+                SlotType.Satellite => _satHighlightLayer,
+                _                  => null
+            };
+            layer?.ShowSingleHighlight(col, row, state);
+        }
 
-                switch (state)
-                {
-                    case DropPreviewState.Valid:
-                        cells[cellIndex].SetHighlight(true);
-                        break;
-                    case DropPreviewState.Replace:
-                        cells[cellIndex].SetReplaceHighlight();
-                        break;
-                    case DropPreviewState.Invalid:
-                        cells[cellIndex].SetHighlight(false);
-                        break;
-                    default:
-                        cells[cellIndex].ClearHighlight();
-                        break;
-                }
-            }
+        /// <summary>
+        /// Clear shape highlight tiles for the given column type.
+        /// </summary>
+        public void ClearShapeHighlight(bool isCoreLayer)
+        {
+            var layer = isCoreLayer ? _coreHighlightLayer : _prismHighlightLayer;
+            layer?.ClearHighlight();
+        }
+
+        /// <summary>
+        /// Clear all highlight tiles across all columns.
+        /// </summary>
+        public void ClearAllHighlightTiles()
+        {
+            _coreHighlightLayer?.ClearHighlight();
+            _prismHighlightLayer?.ClearHighlight();
+            _sailHighlightLayer?.ClearHighlight();
+            _satHighlightLayer?.ClearHighlight();
         }
 
         /// <summary>
@@ -488,6 +588,8 @@ namespace ProjectArk.UI
                 col?.ClearAllCellHighlights();
                 col?.ClearDropHighlight();
             }
+            // Also clear independent highlight tile layers
+            ClearAllHighlightTiles();
         }
 
         /// <summary> Get the TypeColumn for a given SlotType. </summary>

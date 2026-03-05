@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -19,7 +18,8 @@ namespace ProjectArk.UI
         IBeginDragHandler, IDragHandler, IEndDragHandler,
         IPointerEnterHandler, IPointerExitHandler, IPointerMoveHandler
     {
-        [SerializeField] private Image _iconImage;
+        // _iconImage is intentionally removed: Icon is now built dynamically by ItemIconRenderer
+        // (fixed-size, centered on shape centroid — not stretched to bounding box).
         [SerializeField] private TMP_Text _nameLabel;
         [SerializeField] private TMP_Text _slotSizeLabel;
         [SerializeField] private Button _button;
@@ -30,8 +30,10 @@ namespace ProjectArk.UI
         [SerializeField] private Image _typeDot;          // top-left type color dot
         [SerializeField] private Image _equippedBorder;   // green border when equipped
 
-        // Dynamically created shape preview cells
+        // Dynamically created shape preview cells (managed by ItemIconRenderer)
         private Image[] _shapePreviewCells;
+        // Dynamically created icon image (managed by ItemIconRenderer)
+        private Image _iconImageDynamic;
         private bool _isEquipped;
 
         /// <summary> Fired when this item card is clicked. </summary>
@@ -52,46 +54,11 @@ namespace ProjectArk.UI
                 _button.onClick.AddListener(() => OnClicked?.Invoke(Item));
         }
 
-        // Cached 1x1 white sprite used as placeholder when item has no icon.
-        private static Sprite _whitePlaceholder;
-        private static Sprite WhitePlaceholder
-        {
-            get
-            {
-                if (_whitePlaceholder == null)
-                {
-                    var tex = new Texture2D(4, 4);
-                    var pixels = new Color[16];
-                    for (int i = 0; i < 16; i++) pixels[i] = Color.white;
-                    tex.SetPixels(pixels);
-                    tex.Apply();
-                    _whitePlaceholder = Sprite.Create(tex, new Rect(0, 0, 4, 4), Vector2.one * 0.5f);
-                }
-                return _whitePlaceholder;
-            }
-        }
-
         /// <summary> Configure this view with an item and its equipped status. </summary>
         public void Setup(StarChartItemSO item, bool isEquipped)
         {
             Item = item;
             _isEquipped = isEquipped;
-
-            if (_iconImage != null)
-            {
-                if (item.Icon != null)
-                {
-                    _iconImage.sprite = item.Icon;
-                    _iconImage.color = Color.white;
-                }
-                else
-                {
-                    // Image component won't render color when sprite is null.
-                    // Use a white placeholder sprite and tint it with the type color.
-                    _iconImage.sprite = WhitePlaceholder;
-                    _iconImage.color = StarChartTheme.GetTypeColor(item.ItemType);
-                }
-            }
 
             if (_nameLabel != null)
                 _nameLabel.text = item.DisplayName;
@@ -111,8 +78,7 @@ namespace ProjectArk.UI
                 _equippedBadge.enabled = isEquipped;
 
             // C3: _equippedBorder is a stretch Image — keep it clear to avoid leaking into
-            // empty cells of non-rectangular shapes. The equipped tint is handled per-cell
-            // inside BuildShapePreview via the _isEquipped flag.
+            // empty cells of non-rectangular shapes.
             if (_equippedBorder != null)
                 _equippedBorder.color = Color.clear;
 
@@ -139,43 +105,15 @@ namespace ProjectArk.UI
 
         /// <summary>
         /// C3: Refresh the active cell colors — e.g., when equip state changes.
-        /// Only active cells receive color; empty cells stay transparent.
+        /// Delegates to ItemIconRenderer for consistent Icon/Shape decoupled rendering.
         /// </summary>
         public void RefreshShapeColors()
         {
             if (Item == null || _shapePreviewCells == null) return;
-
-            var cells = ItemShapeHelper.GetCells(Item.Shape);
-            var bounds = ItemShapeHelper.GetBounds(Item.Shape);
-
-            var activeCellSet = new HashSet<Vector2Int>();
-            foreach (var c in cells) activeCellSet.Add(c);
-
-            Color typeColor = StarChartTheme.GetTypeColor(Item.ItemType);
-            Color activeColor;
-            if (_isEquipped)
-            {
-                Color equippedGreen = StarChartTheme.EquippedGreen;
-                Color blended = Color.Lerp(typeColor, equippedGreen, 0.4f);
-                activeColor = new Color(blended.r, blended.g, blended.b, 0.45f);
-            }
-            else
-            {
-                activeColor = new Color(typeColor.r, typeColor.g, typeColor.b, 0.35f);
-            }
-
-            int idx = 0;
-            for (int row = 0; row < bounds.y; row++)
-            {
-                for (int col = 0; col < bounds.x; col++)
-                {
-                    if (idx >= _shapePreviewCells.Length) break;
-                    bool isActive = activeCellSet.Contains(new Vector2Int(col, row));
-                    if (_shapePreviewCells[idx] != null)
-                        _shapePreviewCells[idx].color = isActive ? activeColor : Color.clear;
-                    idx++;
-                }
-            }
+            ItemIconRenderer.RefreshShapeCellColors(_shapePreviewCells, Item.Shape, ComputeActiveColor());
+            // Also refresh icon alpha
+            if (_iconImageDynamic != null)
+                ItemIconRenderer.SetIconSprite(_iconImageDynamic, Item);
         }
 
         /// <summary> Returns a type-based placeholder color when an item has no icon. </summary>
@@ -216,7 +154,7 @@ namespace ProjectArk.UI
             // Dim source card with animation
             Tween.Alpha(CachedCanvasGroup, endValue: 0.4f, duration: 0.08f,
                 ease: Ease.OutQuad, useUnscaledTime: true);
-            DragDropManager.Instance.BeginDrag(payload, CachedCanvasGroup);
+            DragDropManager.Instance.BeginDrag(payload, eventData, CachedCanvasGroup);
         }
 
         public void OnDrag(PointerEventData eventData)
@@ -263,18 +201,17 @@ namespace ProjectArk.UI
             DragDropManager.Instance?.TooltipView?.UpdatePosition();
         }
 
-        // ========== Shape Preview ==========
+        // ========== Shape Preview (Icon/Shape decoupled via ItemIconRenderer) ==========
 
         /// <summary>
-        /// C2/C3: Builds the shape background layer for the inventory card.
-        /// Renders ONLY the active cells (from ItemShapeHelper.GetCells) with type color.
-        /// Empty cells in the bounding box remain Color.clear (true holes, not filled squares).
-        /// This matches the HTML prototype's .inv-shape-grid: active cells colored, empty transparent.
-        /// Applies to ALL shapes including 1x1 (since the card background Image is now Color.clear).
+        /// C2/C3: Builds the shape background layer + centered icon for the inventory card.
+        /// Delegates to ItemIconRenderer — Shape cells and Icon are two independent layers.
+        /// Shape cells: only active cells colored, empty cells Color.clear (true holes).
+        /// Icon: fixed-size image centered on shape centroid, NOT stretched to bounding box.
         /// </summary>
         private void BuildShapePreview(ItemShape shape)
         {
-            // Destroy old preview cells
+            // Destroy old shape cells
             if (_shapePreviewCells != null)
             {
                 foreach (var img in _shapePreviewCells)
@@ -282,67 +219,33 @@ namespace ProjectArk.UI
                 _shapePreviewCells = null;
             }
 
-            var cells = ItemShapeHelper.GetCells(shape);
-            var bounds = ItemShapeHelper.GetBounds(shape);
+            // Destroy old dynamic icon
+            if (_iconImageDynamic != null)
+            {
+                Destroy(_iconImageDynamic.gameObject);
+                _iconImageDynamic = null;
+            }
 
-            // Build a lookup set for active cells (C1: single source of truth)
-            var activeCellSet = new HashSet<Vector2Int>();
-            foreach (var c in cells) activeCellSet.Add(c);
+            // Build Shape Layer via ItemIconRenderer
+            _shapePreviewCells = ItemIconRenderer.BuildShapeCells(
+                transform, shape, ComputeActiveColor(), cellPaddingPx: 1f);
 
-            // C3: active-cell color — type color at 0.35 opacity (matching HTML prototype)
-            // Equipped items get a green-tinted mix to indicate equip status,
-            // applied only to active cells (never to empty holes).
+            // Build Icon Layer via ItemIconRenderer — fixed size, centered on shape centroid
+            if (Item != null)
+                _iconImageDynamic = ItemIconRenderer.BuildIconCentered(
+                    transform, Item, iconSizePx: 32f);
+        }
+
+        /// <summary> Compute the active-cell color based on item type and equip state. </summary>
+        private Color ComputeActiveColor()
+        {
             Color typeColor = Item != null ? StarChartTheme.GetTypeColor(Item.ItemType) : Color.white;
-            Color activeColor;
             if (_isEquipped)
             {
-                // Blend type color toward equipped green for a subtle equipped indicator
-                Color equippedGreen = StarChartTheme.EquippedGreen;
-                Color blended = Color.Lerp(typeColor, equippedGreen, 0.4f);
-                activeColor = new Color(blended.r, blended.g, blended.b, 0.45f);
+                Color blended = Color.Lerp(typeColor, StarChartTheme.EquippedGreen, 0.4f);
+                return new Color(blended.r, blended.g, blended.b, 0.45f);
             }
-            else
-            {
-                activeColor = new Color(typeColor.r, typeColor.g, typeColor.b, 0.35f);
-            }
-            // C3: empty cells stay fully transparent — they are genuine holes
-            Color emptyColor = Color.clear;
-
-            // Create one cell image per bounding-box position.
-            // Active cells get colored, empty cells stay transparent.
-            int totalCells = bounds.x * bounds.y;
-            _shapePreviewCells = new Image[totalCells];
-
-            float cellW = 1f / bounds.x;
-            float cellH = 1f / bounds.y;
-            int idx = 0;
-
-            for (int row = 0; row < bounds.y; row++)
-            {
-                for (int col = 0; col < bounds.x; col++)
-                {
-                    bool isActive = activeCellSet.Contains(new Vector2Int(col, row));
-
-                    var cellGo = new GameObject($"ShapeCell_{col}_{row}", typeof(RectTransform), typeof(Image));
-                    cellGo.transform.SetParent(transform, false);
-                    cellGo.transform.SetAsFirstSibling(); // behind icon and labels
-
-                    var cellRect = cellGo.GetComponent<RectTransform>();
-                    float xMin = col * cellW;
-                    float yMax = 1f - row * cellH;
-                    cellRect.anchorMin = new Vector2(xMin, yMax - cellH);
-                    cellRect.anchorMax = new Vector2(xMin + cellW, yMax);
-                    // 1px inset padding for cell-gap visual separation
-                    cellRect.offsetMin = new Vector2(1f, 1f);
-                    cellRect.offsetMax = new Vector2(-1f, -1f);
-
-                    var cellImg = cellGo.GetComponent<Image>();
-                    // C3: only active cells are colored — empty cells are transparent holes
-                    cellImg.color = isActive ? activeColor : emptyColor;
-                    cellImg.raycastTarget = false;
-                    _shapePreviewCells[idx++] = cellImg;
-                }
-            }
+            return new Color(typeColor.r, typeColor.g, typeColor.b, 0.35f);
         }
 
         private void OnDestroy()
@@ -353,6 +256,8 @@ namespace ProjectArk.UI
                     if (img != null && img.gameObject != null)
                         Destroy(img.gameObject);
             }
+            if (_iconImageDynamic != null && _iconImageDynamic.gameObject != null)
+                Destroy(_iconImageDynamic.gameObject);
         }
     }
 }

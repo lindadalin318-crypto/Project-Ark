@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using ProjectArk.Combat;
 
 namespace ProjectArk.UI
@@ -65,6 +66,10 @@ namespace ProjectArk.UI
         // Source InventoryItemView — used to restore alpha on cancel/end
         private CanvasGroup _sourceCanvasGroup;
 
+        // Drag anchor offset: mouse position relative to Ghost center in canvas local space.
+        // Computed once in BeginDrag so the ghost stays "under" the exact click point.
+        private Vector2 _dragOffset;
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -123,7 +128,10 @@ namespace ProjectArk.UI
         /// <summary>
         /// Start a new drag operation.
         /// </summary>
-        public void BeginDrag(DragPayload payload, CanvasGroup sourceCanvasGroup = null)
+        /// <param name="payload">Drag payload describing the item and source.</param>
+        /// <param name="eventData">Pointer event data from OnBeginDrag — used to anchor the ghost under the click point.</param>
+        /// <param name="sourceCanvasGroup">Optional source card CanvasGroup to dim during drag.</param>
+        public void BeginDrag(DragPayload payload, PointerEventData eventData = null, CanvasGroup sourceCanvasGroup = null)
         {
             if (IsDragging) return;
 
@@ -144,14 +152,30 @@ namespace ProjectArk.UI
 
             // Show ghost
             if (_ghostView != null)
+            {
                 _ghostView.Show(payload.Item);
+
+                // Compute drag anchor offset so the ghost stays pinned under the click point.
+                // After Show(), the ghost has a known size. We convert the pointer screen position
+                // to canvas local space, then store the delta from ghost center (which FollowPointer
+                // would place at the pointer). This offset is subtracted every frame in FollowPointer.
+                if (eventData != null)
+                    _dragOffset = _ghostView.ComputeDragOffset(eventData);
+                else
+                    _dragOffset = Vector2.zero;
+            }
 
             // Suppress tooltip during drag
             _panel?.GetComponentInChildren<ItemTooltipView>(true)?.SetDragSuppressed(true);
 
             // Show unequip hint when dragging from an equipped slot
             if (payload.Source == DragSource.Slot)
+            {
                 _panel?.StatusBar?.ShowPersistent("DRAG TO INVENTORY TO UNEQUIP", StarChartTheme.HighlightReplace);
+                // Immediately refresh track views to remove the ItemOverlayView of the dragged item,
+                // preventing Ghost + overlay double-render (Problem D).
+                _panel?.RefreshAllViews();
+            }
 
             BroadcastDragBegin(payload.Item);
         }
@@ -159,10 +183,10 @@ namespace ProjectArk.UI
         /// <summary>
         /// Move the ghost to follow the pointer. Call from IDragHandler.OnDrag.
         /// </summary>
-        public void UpdateGhostPosition(UnityEngine.EventSystems.PointerEventData eventData)
+        public void UpdateGhostPosition(PointerEventData eventData)
         {
             if (_ghostView != null && IsDragging)
-                _ghostView.FollowPointer(eventData);
+                _ghostView.FollowPointer(eventData, _dragOffset);
         }
 
         /// <summary>
@@ -477,6 +501,14 @@ namespace ProjectArk.UI
 
             if (_ghostView != null)
                 _ghostView.Hide();
+
+            // Clear all shape highlight tiles across every TrackView
+            if (_panel != null)
+            {
+                var trackViews = _panel.GetComponentsInChildren<TrackView>(true);
+                foreach (var tv in trackViews)
+                    tv.ClearAllHighlightTiles();
+            }
 
             BroadcastDragEnd();
 

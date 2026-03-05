@@ -4,11 +4,21 @@ using UnityEngine;
 namespace ProjectArk.Ship
 {
     /// <summary>
-    /// Handles ship physics-based movement using Rigidbody2D.
-    /// Reads input from InputHandler. Does NOT handle rotation (that's ShipAiming).
+    /// 飞船物理移动 — Twin-Stick 世界方向移动模型（对应 GG 鼠标模式手感）：
     ///
-    /// Movement model: curve-driven acceleration/deceleration with sharp-turn penalty
-    /// and initial-boost burst. Provides velocity override API for Dash system.
+    ///   移动模型：
+    ///     - WASD / 左摇杆 → 世界空间方向施力（W=上, S=下, A=左, D=右）
+    ///     - 力的大小 = forwardAcceleration * 输入强度（完整 WASD 向量）
+    ///     - 速度上限由代码 clamp（非 boost 时 = maxSpeed，boost 时 = maxSpeed * multiplier）
+    ///     - 无输入时 Rigidbody2D.linearDrag 自然衰减（物理减速，无"刹车"代码）
+    ///
+    ///   朝向与移动分离：
+    ///     - 移动方向由 WASD 决定（世界空间）
+    ///     - 船头朝向由 ShipAiming（鼠标/右摇杆）独立控制
+    ///     - 这正是 GG 鼠标模式的手感：WASD 移动 + 鼠标瞄准完全独立
+    ///
+    ///   Boost / Dash：
+    ///     - 通过 AddExternalImpulse() 叠加冲量，方向分别为船头方向/输入方向
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
     [RequireComponent(typeof(InputHandler))]
@@ -20,45 +30,60 @@ namespace ProjectArk.Ship
         // Events
         // ══════════════════════════════════════════════════════════════
 
-        /// <summary>
-        /// Fired each physics frame with normalized speed (0..1).
-        /// Subscribe for VFX intensity, audio pitch, etc.
-        /// </summary>
+        /// <summary>每物理帧发送归一化速度 (0..1)，供 VFX / Audio 订阅。</summary>
         public event Action<float> OnSpeedChanged;
 
         // ══════════════════════════════════════════════════════════════
         // Public Properties
         // ══════════════════════════════════════════════════════════════
 
-        public Vector2 CurrentVelocity => _rigidbody.linearVelocity;
-        public float CurrentSpeed => _rigidbody.linearVelocity.magnitude;
-        public float NormalizedSpeed => _stats.MoveSpeed > 0f
-            ? Mathf.Clamp01(_rigidbody.linearVelocity.magnitude / _stats.MoveSpeed)
+        public Vector2 CurrentVelocity  => _rb.linearVelocity;
+        public float   CurrentSpeed     => _rb.linearVelocity.magnitude;
+        public float   NormalizedSpeed  => _stats.MaxSpeed > 0f
+            ? Mathf.Clamp01(_rb.linearVelocity.magnitude / _stats.MaxSpeed)
             : 0f;
 
+        /// <summary>是否处于 Boost 状态（ShipBoost 写入）。</summary>
+        public bool IsBoosting { get; private set; }
+
         /// <summary>
-        /// True when the dash system has taken control of velocity.
-        /// Normal movement logic is skipped while dashing.
+        /// 进入 Boost 物理状态。对应 GG StateData.Apply()：
+        /// 临时替换 linearDrag / 速度上限 / 角加速度为 Boost 专属参数。
         /// </summary>
-        public bool IsDashing { get; set; }
+        public void EnterBoostState(float boostLinearDrag, float boostMaxSpeed)
+        {
+            IsBoosting = true;
+            _boostMaxSpeed = boostMaxSpeed;
+            _rb.linearDamping = boostLinearDrag;
+        }
+
+        /// <summary>
+        /// 退出 Boost 物理状态，恢复正常参数。
+        /// </summary>
+        public void ExitBoostState()
+        {
+            IsBoosting = false;
+            _boostMaxSpeed = 0f;
+            _rb.linearDamping = _stats.LinearDrag;
+        }
+
+        // Boost 期间的速度上限（由 ShipBoost 写入）
+        private float _boostMaxSpeed;
+
+        // ── 向后兼容旧 ShipBoost 接口 ──
+        /// <summary>向后兼容：Boost 速度倍率不再使用，由 BoostMaxSpeed 直接替代。</summary>
+        public float BoostSpeedMultiplier { get; set; } = 1f;
 
         // ══════════════════════════════════════════════════════════════
         // Private State
         // ══════════════════════════════════════════════════════════════
 
-        private Rigidbody2D _rigidbody;
+        private Rigidbody2D _rb;
         private InputHandler _inputHandler;
         private float _previousNormalizedSpeed;
 
-        // Curve-driven acceleration tracking
-        private float _accelerationProgress; // 0→1, how far along the accel curve
-        private float _decelerationProgress; // 0→1, how far along the decel curve
-        private float _timeSinceStartedMoving;
-        private bool _wasMoving;
-
-        // Velocity override (used by ShipDash)
-        private bool _hasVelocityOverride;
-        private Vector2 _velocityOverride;
+        // 当前帧移动输入（由 Update 写，FixedUpdate 读，避免漏帧）
+        private Vector2 _moveInputThisFrame;
 
         // ══════════════════════════════════════════════════════════════
         // Lifecycle
@@ -66,188 +91,99 @@ namespace ProjectArk.Ship
 
         private void Awake()
         {
-            _rigidbody = GetComponent<Rigidbody2D>();
+            _rb = GetComponent<Rigidbody2D>();
             _inputHandler = GetComponent<InputHandler>();
+        }
+
+        private void Start()
+        {
+            ApplyPhysicsSettings();
+        }
+
+        private void Update()
+        {
+            // 缓存输入向量给 FixedUpdate 使用（避免 Update/FixedUpdate 频率差异漏帧）
+            _moveInputThisFrame = _inputHandler.MoveInput;
         }
 
         private void FixedUpdate()
         {
-            if (IsDashing)
-            {
-                // During dash, apply velocity override if set
-                if (_hasVelocityOverride)
-                    _rigidbody.linearVelocity = _velocityOverride;
-
-                EmitSpeedEvent();
-                return;
-            }
-
-            HandleMovement();
+            ApplyThrust();
+            ClampSpeed();
             EmitSpeedEvent();
         }
 
         // ══════════════════════════════════════════════════════════════
-        // Curve-Driven Movement
+        // Physics Settings
         // ══════════════════════════════════════════════════════════════
 
-        private void HandleMovement()
+        private void ApplyPhysicsSettings()
         {
-            Vector2 input = _inputHandler.MoveInput;
-            Vector2 currentVel = _rigidbody.linearVelocity;
-            float dt = Time.fixedDeltaTime;
-            bool isMoving = input.sqrMagnitude > 0.001f;
-
-            if (isMoving)
-            {
-                // Track time since movement started (for initial boost)
-                if (!_wasMoving)
-                {
-                    _timeSinceStartedMoving = 0f;
-                    _accelerationProgress = 0f;
-                }
-                _timeSinceStartedMoving += dt;
-
-                // Reset deceleration tracking
-                _decelerationProgress = 0f;
-
-                // ── Direction Change Snappiness (New!) ──
-                if (currentVel.sqrMagnitude > _stats.MinSpeedForDirectionChange * _stats.MinSpeedForDirectionChange)
-                {
-                    Vector2 currentDir = currentVel.normalized;
-                    Vector2 targetDir = input.normalized;
-                    
-                    // Blend between current and target direction based on snappiness
-                    Vector2 blendedDir = Vector2.Lerp(currentDir, targetDir, _stats.DirectionChangeSnappiness).normalized;
-                    
-                    // Blend the velocity magnitude
-                    float speed = currentVel.magnitude;
-                    currentVel = blendedDir * speed;
-                }
-
-                // ── Sharp Turn Detection (Relaxed) ──
-                float sharpTurnMultiplier = 1f;
-                if (currentVel.sqrMagnitude > 0.01f)
-                {
-                    float angleBetween = Vector2.Angle(currentVel.normalized, input.normalized);
-                    if (angleBetween > _stats.SharpTurnAngleThreshold)
-                    {
-                        // Penalize speed during sharp turns
-                        sharpTurnMultiplier = _stats.SharpTurnSpeedPenalty;
-                        float penalizedSpeed = currentVel.magnitude * sharpTurnMultiplier;
-                        currentVel = currentVel.normalized * penalizedSpeed;
-                        _rigidbody.linearVelocity = currentVel;
-                    }
-                }
-
-                // ── Curve-Driven Acceleration ──
-                float targetSpeed = _stats.MoveSpeed;
-                float currentSpeed = currentVel.magnitude;
-
-                // Advance acceleration progress based on current speed ratio
-                _accelerationProgress = Mathf.Clamp01(currentSpeed / targetSpeed);
-                float curveMultiplier = _stats.AccelerationCurve.Evaluate(_accelerationProgress);
-                // Ensure minimum curve value so we can always start moving
-                curveMultiplier = Mathf.Max(curveMultiplier, 0.1f);
-
-                float baseAccel = _stats.Acceleration * curveMultiplier;
-
-                // ── Initial Boost ──
-                if (_timeSinceStartedMoving <= _stats.InitialBoostDuration)
-                {
-                    baseAccel *= _stats.InitialBoostMultiplier;
-                }
-
-                // ── Apply acceleration toward desired velocity ──
-                Vector2 desiredVelocity = input * targetSpeed;
-                Vector2 velocityDiff = desiredVelocity - currentVel;
-                float maxStep = baseAccel * dt;
-
-                if (velocityDiff.sqrMagnitude <= maxStep * maxStep)
-                {
-                    _rigidbody.linearVelocity = desiredVelocity;
-                }
-                else
-                {
-                    _rigidbody.linearVelocity = currentVel + velocityDiff.normalized * maxStep;
-                }
-            }
-            else
-            {
-                // ── Curve-Driven Deceleration ──
-                _wasMoving = false;
-                _accelerationProgress = 0f;
-
-                float speed = currentVel.magnitude;
-                if (speed < _stats.MinMoveSpeedThreshold)
-                {
-                    _rigidbody.linearVelocity = Vector2.zero;
-                    _decelerationProgress = 0f;
-                }
-                else
-                {
-                    // Advance deceleration progress (1 = was at max speed, 0 = stopped)
-                    _decelerationProgress = Mathf.Clamp01(1f - (speed / _stats.MoveSpeed));
-                    float curveMultiplier = _stats.DecelerationCurve.Evaluate(_decelerationProgress);
-                    curveMultiplier = Mathf.Max(curveMultiplier, 0.1f);
-
-                    float decelStep = _stats.Deceleration * curveMultiplier * dt;
-
-                    if (speed <= decelStep)
-                    {
-                        _rigidbody.linearVelocity = Vector2.zero;
-                    }
-                    else
-                    {
-                        _rigidbody.linearVelocity = currentVel.normalized * (speed - decelStep);
-                    }
-                }
-            }
-
-            _wasMoving = isMoving;
-
-            // ── Final safety speed clamp ──
-            if (_rigidbody.linearVelocity.sqrMagnitude > _stats.MoveSpeed * _stats.MoveSpeed)
-            {
-                _rigidbody.linearVelocity = _rigidbody.linearVelocity.normalized * _stats.MoveSpeed;
-            }
+            if (_stats == null) return;
+            _rb.linearDamping  = _stats.LinearDrag;
+            _rb.angularDamping = _stats.AngularDrag;
+            _rb.gravityScale   = 0f;
         }
 
         // ══════════════════════════════════════════════════════════════
-        // Public API — Impulse (backward compatible)
+        // World-Space Thrust  (Twin-Stick: WASD → world direction)
+        // ══════════════════════════════════════════════════════════════
+
+        private void ApplyThrust()
+        {
+            if (_moveInputThisFrame.sqrMagnitude < 0.01f) return;
+
+            // WASD 直接映射世界方向施力（W=世界上, D=世界右）
+            // 输入向量已在 InputHandler 中 clamp 到 magnitude ≤ 1
+            _rb.AddForce(_moveInputThisFrame * _stats.ForwardAcceleration, ForceMode2D.Force);
+        }
+
+        private void ClampSpeed()
+        {
+            float speedLimit = IsBoosting ? _boostMaxSpeed : _stats.MaxSpeed;
+            float sqrLimit = speedLimit * speedLimit;
+
+            if (_rb.linearVelocity.sqrMagnitude > sqrLimit)
+                _rb.linearVelocity = _rb.linearVelocity.normalized * speedLimit;
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // Public API — External Impulse (Boost / Dash / 击退)
         // ══════════════════════════════════════════════════════════════
 
         /// <summary>
-        /// Applies an instantaneous velocity impulse (e.g., weapon recoil).
-        /// The existing deceleration logic will naturally dampen it.
+        /// 施加外部冲量（ForceMode2D.Impulse）。
+        /// Boost 和 Dash 都通过此接口叠加速度，不干预正常移动逻辑。
+        /// 对应 GGSteering.AddForce(force, Impulse)。
         /// </summary>
-        public void ApplyImpulse(Vector2 impulse)
+        public void AddExternalImpulse(Vector2 impulse)
         {
-            _rigidbody.linearVelocity += impulse;
-        }
-
-        // ══════════════════════════════════════════════════════════════
-        // Public API — Velocity Override (used by ShipDash)
-        // ══════════════════════════════════════════════════════════════
-
-        /// <summary>
-        /// Sets a velocity override. While active, FixedUpdate applies this velocity each frame.
-        /// Used by ShipDash to maintain consistent dash speed.
-        /// </summary>
-        public void SetVelocityOverride(Vector2 velocity)
-        {
-            _hasVelocityOverride = true;
-            _velocityOverride = velocity;
-            _rigidbody.linearVelocity = velocity;
+            _rb.AddForce(impulse, ForceMode2D.Impulse);
         }
 
         /// <summary>
-        /// Clears the velocity override, returning control to normal movement.
+        /// 直接设置速度（用于特殊场景，如剧情传送等）。
+        /// 正常游戏中尽量用 AddExternalImpulse。
         /// </summary>
-        public void ClearVelocityOverride()
+        public void SetVelocity(Vector2 velocity)
         {
-            _hasVelocityOverride = false;
-            _velocityOverride = Vector2.zero;
+            _rb.linearVelocity = velocity;
         }
+
+        /// <summary>
+        /// 向后兼容 ShipDash 旧接口。等同于 SetVelocity。
+        /// </summary>
+        public void SetVelocityOverride(Vector2 velocity) => SetVelocity(velocity);
+
+        /// <summary>
+        /// 向后兼容 ShipDash 旧接口。GG 模型中无需清除覆盖，空实现。
+        /// </summary>
+        public void ClearVelocityOverride() { }
+
+        /// <summary>
+        /// 向后兼容旧代码 ApplyImpulse。等同于 AddExternalImpulse。
+        /// </summary>
+        public void ApplyImpulse(Vector2 impulse) => AddExternalImpulse(impulse);
 
         // ══════════════════════════════════════════════════════════════
         // Speed Event
@@ -262,5 +198,12 @@ namespace ProjectArk.Ship
                 _previousNormalizedSpeed = normalized;
             }
         }
+
+        // ══════════════════════════════════════════════════════════════
+        // Backward Compatibility
+        // ══════════════════════════════════════════════════════════════
+
+        /// <summary>向后兼容旧代码 IsDashing 标志（ShipDash 写入，ShipMotor 现在不依赖它）。</summary>
+        public bool IsDashing { get; set; }
     }
 }

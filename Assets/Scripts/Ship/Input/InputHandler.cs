@@ -53,6 +53,9 @@ namespace ProjectArk.Ship
         /// <summary> Fired once when the dash button is pressed. </summary>
         public event Action OnDashPressed;
 
+        /// <summary> Fired once when the boost button is pressed (Space / South Button). </summary>
+        public event Action OnBoostPressed;
+
         /// <summary> Fired once when ToggleSpaceLife is performed. </summary>
         public event Action OnToggleSpaceLifePerformed;
 
@@ -64,6 +67,7 @@ namespace ProjectArk.Ship
         private InputAction _toggleSpaceLifeAction;
         private InputAction _interactAction;
         private InputAction _dashAction;
+        private InputAction _boostAction;
         private Camera _mainCamera;
         private bool _isUsingGamepad;
 
@@ -102,6 +106,7 @@ namespace ProjectArk.Ship
             _fireSecondaryAction = shipMap.FindAction("FireSecondary");
             _interactAction = shipMap.FindAction("Interact");
             _dashAction = shipMap.FindAction("Dash");
+            _boostAction = shipMap.FindAction("Boost");
             _toggleSpaceLifeAction = shipMap.FindAction("ToggleSpaceLife");
         }
 
@@ -137,6 +142,9 @@ namespace ProjectArk.Ship
             if (_dashAction != null)
                 _dashAction.performed += OnDashActionPerformed;
 
+            if (_boostAction != null)
+                _boostAction.performed += OnBoostActionPerformed;
+
             if (_toggleSpaceLifeAction != null)
             {
                 _toggleSpaceLifeAction.performed += OnToggleSpaceLifeActionPerformed;
@@ -169,6 +177,9 @@ namespace ProjectArk.Ship
 
             if (_dashAction != null)
                 _dashAction.performed -= OnDashActionPerformed;
+
+            if (_boostAction != null)
+                _boostAction.performed -= OnBoostActionPerformed;
 
             if (_toggleSpaceLifeAction != null)
                 _toggleSpaceLifeAction.performed -= OnToggleSpaceLifeActionPerformed;
@@ -281,6 +292,11 @@ namespace ProjectArk.Ship
         private void OnDashActionPerformed(InputAction.CallbackContext ctx)
         {
             OnDashPressed?.Invoke();
+        }
+
+        private void OnBoostActionPerformed(InputAction.CallbackContext ctx)
+        {
+            OnBoostPressed?.Invoke();
         }
 
         private void OnToggleSpaceLifeActionPerformed(InputAction.CallbackContext ctx)
