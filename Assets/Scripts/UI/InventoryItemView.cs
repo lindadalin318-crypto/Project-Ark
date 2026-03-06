@@ -154,7 +154,7 @@ namespace ProjectArk.UI
             // Dim source card with animation
             Tween.Alpha(CachedCanvasGroup, endValue: 0.4f, duration: 0.08f,
                 ease: Ease.OutQuad, useUnscaledTime: true);
-            DragDropManager.Instance.BeginDrag(payload, eventData, CachedCanvasGroup);
+            DragDropManager.Instance.BeginDrag(payload, eventData, CachedCanvasGroup, GetComponent<RectTransform>());
         }
 
         public void OnDrag(PointerEventData eventData)

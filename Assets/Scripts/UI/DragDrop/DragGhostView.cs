@@ -294,19 +294,12 @@ namespace ProjectArk.UI
         /// </summary>
         public void SetDropState(DropPreviewState state, int evictCount = 0)
         {
-            Color borderColor = state switch
-            {
-                DropPreviewState.Valid   => StarChartTheme.HighlightValid,
-                DropPreviewState.Replace => StarChartTheme.HighlightReplace,
-                DropPreviewState.Invalid => StarChartTheme.HighlightInvalid,
-                _                        => Color.clear
-            };
-
+            // Ghost border color is intentionally kept transparent — drop state feedback
+            // is shown exclusively on the Track grid cells (DragHighlightLayer), not on the ghost.
             if (_borderImage != null)
             {
                 _borderColorTween.Stop();
-                _borderColorTween = Tween.Color(_borderImage, endValue: borderColor,
-                    duration: 0.08f, ease: Ease.OutQuad, useUnscaledTime: true);
+                _borderImage.color = Color.clear;
             }
 
             // 用 CanvasGroup.alpha 控制 replaceHintLabel 显隐（CLAUDE.md 第11条）
@@ -323,40 +316,12 @@ namespace ProjectArk.UI
         }
 
         /// <summary>
-        /// Compute the drag anchor offset: the delta from ghost center to the pointer,
-        /// in canvas local space. Call once after Show() in BeginDrag.
-        /// The offset is subtracted every frame in FollowPointer so the ghost stays
-        /// pinned under the exact pixel the user clicked.
+        /// Compute the drag anchor offset.
+        /// Returns Vector2.zero so the ghost center always follows the cursor.
         /// </summary>
-        public Vector2 ComputeDragOffset(PointerEventData eventData)
+        public Vector2 ComputeDragOffset(PointerEventData eventData, RectTransform sourceRect = null)
         {
-            if (_rectTransform == null || _parentCanvas == null) return Vector2.zero;
-
-            var canvasRect = _parentCanvas.transform as RectTransform;
-            if (canvasRect == null) return Vector2.zero;
-
-            Camera cam = _parentCanvas.renderMode == RenderMode.ScreenSpaceOverlay
-                ? null
-                : _parentCanvas.worldCamera;
-
-            // Convert pointer screen position to canvas local space
-            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                    canvasRect, eventData.position, cam, out var pointerLocal))
-                return Vector2.zero;
-
-            // Convert the source object (pressPosition) to canvas local space
-            // to find where on the ghost the user actually clicked.
-            // pressPosition is the screen position of the initial press.
-            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                    canvasRect, eventData.pressPosition, cam, out var pressLocal))
-                return Vector2.zero;
-
-            // The ghost will be placed at pointerLocal each frame.
-            // We want the ghost's visual to appear as if the user grabbed it at pressLocal.
-            // Offset = pressLocal - pointerLocal (delta from current pointer to press point).
-            // This is subtracted from localPosition each frame, shifting the ghost so the
-            // press point stays under the cursor.
-            return pressLocal - pointerLocal;
+            return Vector2.zero;
         }
 
         /// <summary>
@@ -378,8 +343,21 @@ namespace ProjectArk.UI
             if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
                     canvasRect, eventData.position, cam, out var localPoint))
             {
-                // Apply drag offset so the ghost stays pinned under the original click point
-                _rectTransform.localPosition = localPoint + dragOffset;
+                // BuildShapeCellsAbsolute uses anchorMin=anchorMax=zero (Ghost's bottom-left corner)
+                // with pivot=(0,1), so cells expand right-downward from the Ghost's bottom-left.
+                // Ghost pivot=(0.5,0.5) means localPosition places the Ghost center at localPoint.
+                //
+                // To center the visual content on the cursor:
+                //   - Ghost center is at localPoint
+                //   - Ghost bottom-left (anchor) = localPoint + (-size.x*0.5, -size.y*0.5)
+                //   - Cell[0,0] top-left = Ghost bottom-left = localPoint + (-size.x*0.5, -size.y*0.5)
+                //   - Visual center ≈ localPoint + (0, -size.y*0.5)  (cells go downward from anchor)
+                //
+                // So we need to shift Ghost UP by size.y to bring visual center to cursor:
+                //   centeringOffset = (0, size.y * 1.0f)
+                Vector2 size = _rectTransform.sizeDelta;
+                Vector2 centeringOffset = new Vector2(0f, size.y * 1.0f);
+                _rectTransform.localPosition = localPoint + centeringOffset + dragOffset;
             }
         }
 

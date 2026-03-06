@@ -193,6 +193,30 @@ namespace ProjectArk.UI
             }
         }
 
+        /// <summary>
+        /// Hide this cell visually — used when an ItemOverlayView covers it.
+        /// The cell remains active as a drag source AND drop target.
+        /// IMPORTANT: DisplayedItem is intentionally preserved (not set to null).
+        /// This mirrors SAIL/SAT behavior: SlotCellView.OnBeginDrag checks DisplayedItem != null
+        /// to decide whether to start a drag. Clearing it here breaks drag-out from tracks.
+        /// The overlay handles all visuals; the cell only needs to stay as a functional drag source.
+        /// </summary>
+        public void SetHiddenByOverlay(StarChartItemSO item)
+        {
+            _isOverlayCell = true;
+            DisplayedItem = item;   // preserve item so OnBeginDrag can fire
+
+            _flashSequence.Stop();
+            if (_backgroundImage != null)
+                _backgroundImage.color = Color.clear;
+
+            if (_iconImage != null)
+                _iconImage.enabled = false;
+
+            if (_placeholderLabel != null)
+                _placeholderLabel.enabled = false;
+        }
+
         /// <summary> Show empty state (no item, available for equip). </summary>
         public void SetEmpty()
         {
@@ -320,11 +344,12 @@ namespace ProjectArk.UI
                 else
                 {
                     // SAIL / SAT: single-cell highlight via DragHighlightLayer
-                    // SAIL/SAT columns are single-column, multi-row: col=0, row=CellIndex
+                    // Use CellIndex directly to avoid col/row conversion errors
+                    // (SAT is 2x2, so CellIndex != row)
                     var singleState = isReplace ? DropPreviewState.Replace
                                     : accepted  ? DropPreviewState.Valid
                                                 : DropPreviewState.Invalid;
-                    OwnerTrack?.SetSingleHighlight(SlotType, 0, CellIndex, singleState);
+                    OwnerTrack?.SetSingleHighlightAtIndex(SlotType, CellIndex, singleState);
                 }
             }
             else
@@ -427,7 +452,7 @@ namespace ProjectArk.UI
 
             _isDragSource = true;
             var payload = new DragPayload(DisplayedItem, DragSource.Slot, OwnerTrack?.Track);
-            mgr.BeginDrag(payload, eventData);
+            mgr.BeginDrag(payload, eventData, null, GetComponent<RectTransform>());
         }
 
         public void OnDrag(PointerEventData eventData)

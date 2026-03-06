@@ -131,6 +131,141 @@ namespace ProjectArk.UI
         }
 
         /// <summary>
+        /// Build shape-cell Images by directly reading each SlotCellView's RectTransform —
+        /// the same pixel-perfect approach used by DragHighlightLayer.
+        /// The parent overlay must be a stretch-anchor child of the same GridContainer as the cells.
+        /// Each active cell gets <paramref name="activeColor"/>; bounding-box holes are Color.clear.
+        /// </summary>
+        /// <param name="parent">The overlay transform (stretch-anchored to GridContainer).</param>
+        /// <param name="shape">The item shape.</param>
+        /// <param name="activeColor">Color for occupied cells.</param>
+        /// <param name="cells">All SlotCellViews in the column (row-major, gridCols wide).</param>
+        /// <param name="anchorCol">Anchor column of the item in the grid.</param>
+        /// <param name="anchorRow">Anchor row of the item in the grid.</param>
+        /// <param name="gridCols">Number of columns in the grid (for col+row → index).</param>
+        public static Image[] BuildShapeCellsFromCells(
+            Transform parent,
+            ItemShape shape,
+            Color activeColor,
+            SlotCellView[] cells,
+            int anchorCol,
+            int anchorRow,
+            int gridCols)
+        {
+            var shapeCells = ItemShapeHelper.GetCells(shape);
+            var bounds     = ItemShapeHelper.GetBounds(shape);
+
+            var occupiedSet = new HashSet<Vector2Int>();
+            foreach (var c in shapeCells) occupiedSet.Add(c);
+
+            int total  = bounds.x * bounds.y;
+            var images = new Image[total];
+
+            for (int r = 0; r < bounds.y; r++)
+            {
+                for (int c = 0; c < bounds.x; c++)
+                {
+                    int idx      = r * bounds.x + c;
+                    bool isActive = occupiedSet.Contains(new Vector2Int(c, r));
+
+                    var go = new GameObject($"ShapeCell_{c}_{r}",
+                        typeof(RectTransform), typeof(Image));
+
+                    // CRITICAL: Add LayoutElement.ignoreLayout BEFORE SetParent.
+                    // GridLayoutGroup repositions children immediately on SetParent,
+                    // so the LayoutElement must exist before the node enters the hierarchy.
+                    var le = go.AddComponent<LayoutElement>();
+                    le.ignoreLayout = true;
+
+                    go.transform.SetParent(parent, false);
+                    go.transform.SetAsFirstSibling();
+
+                    var rt  = go.GetComponent<RectTransform>();
+                    var img = go.GetComponent<Image>();
+                    img.color         = isActive ? activeColor : Color.clear;
+                    img.raycastTarget = false;
+
+                    // Directly copy position/size from the corresponding cell's RectTransform —
+                    // guaranteed pixel-perfect regardless of GridLayoutGroup settings.
+                    int cellIndex = (anchorRow + r) * gridCols + (anchorCol + c);
+                    if (cells != null && cellIndex >= 0 && cellIndex < cells.Length
+                        && cells[cellIndex] != null)
+                    {
+                        var cellRt = cells[cellIndex].GetComponent<RectTransform>();
+                        if (cellRt != null)
+                        {
+                            rt.anchorMin        = cellRt.anchorMin;
+                            rt.anchorMax        = cellRt.anchorMax;
+                            rt.pivot            = cellRt.pivot;
+                            rt.anchoredPosition = cellRt.anchoredPosition;
+                            rt.sizeDelta        = cellRt.sizeDelta;
+                        }
+                    }
+
+                    images[idx] = img;
+                }
+            }
+
+            return images;
+        }
+
+        /// <summary>
+        /// Build a fixed-size Icon Image centered on the anchor cell,
+        /// by directly reading the anchor cell's RectTransform.
+        /// The parent overlay must be a stretch-anchor child of the same GridContainer.
+        /// </summary>
+        public static Image BuildIconFromCell(
+            Transform parent,
+            StarChartItemSO item,
+            SlotCellView[] cells,
+            int anchorCol,
+            int anchorRow,
+            int gridCols,
+            float iconSizePx = 36f,
+            float alpha = 1f)
+        {
+            var go = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+
+            // CRITICAL: Add LayoutElement.ignoreLayout BEFORE SetParent.
+            // GridLayoutGroup repositions children immediately on SetParent.
+            var le = go.AddComponent<LayoutElement>();
+            le.ignoreLayout = true;
+
+            go.transform.SetParent(parent, false);
+
+            var img = go.GetComponent<Image>();
+            img.raycastTarget = false;
+            SetIconSprite(img, item, alpha);
+
+            var rt = go.GetComponent<RectTransform>();
+
+            int cellIndex = anchorRow * gridCols + anchorCol;
+            if (cells != null && cellIndex >= 0 && cellIndex < cells.Length
+                && cells[cellIndex] != null)
+            {
+                var cellRt = cells[cellIndex].GetComponent<RectTransform>();
+                if (cellRt != null)
+                {
+                    // Copy anchor/pivot/position from the cell, then override sizeDelta to icon size
+                    rt.anchorMin        = cellRt.anchorMin;
+                    rt.anchorMax        = cellRt.anchorMax;
+                    rt.pivot            = new Vector2(0.5f, 0.5f);
+                    rt.anchoredPosition = cellRt.anchoredPosition;
+                    rt.sizeDelta        = new Vector2(iconSizePx, iconSizePx);
+                    return img;
+                }
+            }
+
+            // Fallback: center in parent
+            rt.anchorMin        = new Vector2(0.5f, 0.5f);
+            rt.anchorMax        = new Vector2(0.5f, 0.5f);
+            rt.pivot            = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta        = new Vector2(iconSizePx, iconSizePx);
+            return img;
+        }
+
+        /// <summary>
         /// Recolor existing shape-cell Images (e.g. on equip-state change).
         /// <paramref name="cellImages"/> must have been created by BuildShapeCells.
         /// </summary>

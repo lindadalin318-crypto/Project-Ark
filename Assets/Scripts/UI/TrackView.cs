@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -66,6 +67,10 @@ namespace ProjectArk.UI
         // Active overlay views — destroyed and recreated on each Refresh
         private readonly List<ItemOverlayView> _activeOverlays = new();
 
+        // Debounce flag: prevents multiple Refresh() calls in the same frame
+        // from creating duplicate overlays. Only the last call in a frame executes.
+        private bool _refreshPending;
+
         // Independent highlight tile layers — one per column, never pollute cell background colors
         private DragHighlightLayer _coreHighlightLayer;
         private DragHighlightLayer _prismHighlightLayer;
@@ -105,6 +110,8 @@ namespace ProjectArk.UI
                 }
             }
 
+
+
             // Initialize each column
             InitColumn(_sailColumn,  SlotType.LightSail, StarChartTheme.SailColor);
             InitColumn(_prismColumn, SlotType.Prism,     StarChartTheme.PrismColor);
@@ -131,7 +138,10 @@ namespace ProjectArk.UI
             var go = new GameObject("DragHighlightLayer", typeof(RectTransform));
             go.transform.SetParent(col.GridContainer, false);
             var layer = go.AddComponent<DragHighlightLayer>();
-            layer.Initialize(col.GridContainer, _cellSize, _cellGap, 2);
+
+            // Pass the cells array directly — tiles are positioned by reading each cell's
+            // RectTransform, so they are always pixel-perfect regardless of GridLayoutGroup settings.
+            layer.Initialize(col.GridContainer, col.Cells, 2);
             return layer;
         }
 
@@ -220,9 +230,46 @@ namespace ProjectArk.UI
                 _selectionBorder.color = selected ? StarChartTheme.Cyan : StarChartTheme.Border;
         }
 
-        /// <summary> Refresh all columns from current track loadout. </summary>
+        /// <summary>
+        /// Refresh all columns from current track loadout.
+        /// Debounced: if called multiple times in the same frame (e.g. from OnLoadoutChanged
+        /// firing several times during a single drop), only the last call executes.
+        /// Also waits one frame so GridLayoutGroup has time to complete its Layout pass,
+        /// ensuring cell anchoredPositions are correct when overlays are created.
+        /// </summary>
         public void Refresh()
         {
+            if (_refreshPending) return; // already scheduled — skip duplicate
+            _refreshPending = true;
+            DoRefreshAsync().Forget();
+        }
+
+        private async UniTaskVoid DoRefreshAsync()
+        {
+            // Wait one frame: GridLayoutGroup runs in LateUpdate, so after one yield
+            // all cell RectTransforms will have their final anchoredPositions.
+            await UniTask.Yield(PlayerLoopTiming.LastPostLateUpdate, destroyCancellationToken);
+
+            // Reset flag BEFORE doing any work, so any Refresh() call that arrives
+            // during the await (e.g. from RefreshAllViews) is NOT blocked by the old flag.
+            // If another Refresh() sneaks in between the await and here, it will schedule
+            // a new DoRefreshAsync — that is fine, it will run after this one completes.
+            _refreshPending = false;
+
+            // Eagerly destroy ALL active overlays before rebuilding.
+            // Using DestroyImmediate here (Edit Mode safe) or Destroy + clear list.
+            // We clear the list first so DestroyOverlaysForColumn won't find them,
+            // then destroy the GameObjects directly.
+            for (int i = _activeOverlays.Count - 1; i >= 0; i--)
+            {
+                var ov = _activeOverlays[i];
+                if (ov != null) Destroy(ov.gameObject);
+            }
+            _activeOverlays.Clear();
+
+            // Force canvas layout to be up-to-date before reading cell positions
+            Canvas.ForceUpdateCanvases();
+
             RefreshColumn(_coreColumn,  _track?.CoreLayer,  StarChartItemType.Core);
             RefreshColumn(_prismColumn, _track?.PrismLayer, StarChartItemType.Prism);
             RefreshSailColumn();
@@ -304,10 +351,12 @@ namespace ProjectArk.UI
                     var item = layer.GetAt(c, r);
                     if (item == null) continue;
 
-                    // Mark the underlying cell as occupied (hide '+' placeholder)
+                    // Hide the underlying cell visually — ItemOverlayView handles all visuals.
+                    // SetHiddenByOverlay(item) clears background/icon but PRESERVES DisplayedItem,
+                    // so SlotCellView.OnBeginDrag can still fire (same path as SAIL/SAT).
                     int cellIndex = r * layer.Cols + c;
                     if (cellIndex < cells.Length && cells[cellIndex] != null)
-                        cells[cellIndex].SetOverlay(item, isPrimary: false); // hide placeholder, no icon
+                        cells[cellIndex].SetHiddenByOverlay(item);
 
                     // Only create one overlay per item (at its anchor)
                     if (processedItems.Contains(item)) continue;
@@ -321,17 +370,44 @@ namespace ProjectArk.UI
                         typeof(RectTransform));
                     var overlayView = overlayGo.AddComponent<ItemOverlayView>();
 
+                    // CRITICAL: Add LayoutElement.ignoreLayout=true BEFORE SetParent.
+                    // If we SetParent first, GridLayoutGroup immediately repositions the
+                    // overlay (overriding the stretch anchors set in Setup()).
+                    // Adding LayoutElement before SetParent prevents this entirely.
+                    var overlayLe = overlayGo.AddComponent<LayoutElement>();
+                    overlayLe.ignoreLayout = true;
+
                     // Parent to the grid container (same parent as the cells)
                     var gridContainer = col.GridContainer;
                     overlayGo.transform.SetParent(gridContainer, false);
                     overlayGo.transform.SetAsLastSibling(); // render on top of cells
 
+                    // Read cell size/gap fresh from the actual RectTransforms at Refresh time
+                    // (GridLayoutGroup has completed Layout by now, unlike Awake)
+                    float freshCellSize = _cellSize;
+                    float freshCellGap  = _cellGap;
+                    if (col.Cells.Length > 0 && col.Cells[0] != null)
+                    {
+                        var c0rt = col.Cells[0].GetComponent<RectTransform>();
+                        if (c0rt != null)
+                        {
+                            freshCellSize = c0rt.sizeDelta.x;
+                            if (col.Cells.Length > 1 && col.Cells[1] != null)
+                            {
+                                var c1rt = col.Cells[1].GetComponent<RectTransform>();
+                                if (c1rt != null)
+                                    freshCellGap = Mathf.Abs(c1rt.anchoredPosition.x - c0rt.anchoredPosition.x) - freshCellSize;
+                            }
+                        }
+                    }
                     overlayView.Setup(
                         item,
                         col.SlotType,
                         this,
                         anchor.x, anchor.y,
-                        _cellSize, _cellGap);
+                        freshCellSize, freshCellGap,
+                        cells,          // pass cells array for pixel-perfect anchor
+                        layer.Cols);    // pass grid cols for anchorRow * cols + anchorCol
 
                     _activeOverlays.Add(overlayView);
                 }
@@ -360,10 +436,14 @@ namespace ProjectArk.UI
             if (_sailColumn == null) return;
             var cells = _sailColumn.Cells;
 
+            // SAIL is a global slot (not per-track). Only the Primary track displays it;
+            // Secondary track shows the slot as empty to avoid duplicate rendering.
+            bool isPrimary = _track?.Id == WeaponTrack.TrackId.Primary;
+
             if (_controller == null)
                 Debug.LogWarning("[TrackView] _controller is null, SAIL slot will be empty.");
 
-            var sail = _controller?.GetEquippedLightSail();
+            var sail = isPrimary ? _controller?.GetEquippedLightSail() : null;
 
             // Debug override: how many sail slots to show (default 1)
             int sailSlots = _debugSailSlots > 0 ? _debugSailSlots : 1;
@@ -389,10 +469,14 @@ namespace ProjectArk.UI
             if (_satColumn == null) return;
             var cells = _satColumn.Cells;
 
+            // SAT is a global slot (not per-track). Only the Primary track displays it;
+            // Secondary track shows the slots as empty to avoid duplicate rendering.
+            bool isPrimary = _track?.Id == WeaponTrack.TrackId.Primary;
+
             if (_controller == null)
                 Debug.LogWarning("[TrackView] _controller is null, SAT slots will be empty.");
 
-            var sats = _controller?.GetEquippedSatellites();
+            var sats = isPrimary ? _controller?.GetEquippedSatellites() : null;
 
             // Debug override: how many sat slots to show (default = cells.Length = 4)
             int satSlots = _debugSatSlots > 0 ? _debugSatSlots : cells.Length;
@@ -498,12 +582,19 @@ namespace ProjectArk.UI
 
         private bool HasSpaceForSail(StarChartItemSO item)
         {
+            // SAIL is a global slot displayed only on the Primary track.
+            // Secondary track cells must not accept drops to avoid the item
+            // visually "jumping" to the Primary track after equip.
+            if (_track?.Id != WeaponTrack.TrackId.Primary) return false;
             if (_controller == null) return true;
             return _controller.GetEquippedLightSail() == null;
         }
 
         private bool HasSpaceForSat(StarChartItemSO item)
         {
+            // SAT is a global slot displayed only on the Primary track.
+            // Secondary track cells must not accept drops for the same reason.
+            if (_track?.Id != WeaponTrack.TrackId.Primary) return false;
             if (_controller == null) return true;
             var sats = _controller.GetEquippedSatellites();
             return sats == null || sats.Count < 4; // 2×2 = 4 SAT slots
@@ -547,6 +638,21 @@ namespace ProjectArk.UI
                 _                  => null
             };
             layer?.ShowSingleHighlight(col, row, state);
+        }
+
+        /// <summary>
+        /// Show a single-cell highlight for SAIL or SAT columns using a direct cell index.
+        /// Bypasses col/row conversion — always pixel-perfect regardless of grid layout.
+        /// </summary>
+        public void SetSingleHighlightAtIndex(SlotType slotType, int cellIndex, DropPreviewState state)
+        {
+            var layer = slotType switch
+            {
+                SlotType.LightSail => _sailHighlightLayer,
+                SlotType.Satellite => _satHighlightLayer,
+                _                  => null
+            };
+            layer?.ShowHighlightAtCellIndex(cellIndex, state);
         }
 
         /// <summary>

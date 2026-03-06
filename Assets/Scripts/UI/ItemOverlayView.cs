@@ -67,7 +67,9 @@ namespace ProjectArk.UI
             int anchorCol,
             int anchorRow,
             float cellSize,
-            float cellGap)
+            float cellGap,
+            SlotCellView[] cells = null,
+            int gridCols = 2)
         {
             _item = item;
             _slotType = slotType;
@@ -90,38 +92,58 @@ namespace ProjectArk.UI
             var bounds = ItemShapeHelper.GetBounds(shape);
 
             // ── Position & size the overlay RectTransform ──────────────────
+            // Stretch the overlay to fill the entire GridContainer — the overlay itself
+            // does NOT need precise positioning because all child nodes (shape cells, icon)
+            // will be positioned by directly reading each cell's RectTransform, exactly
+            // like DragHighlightLayer does. This eliminates ALL pivot/anchor math.
             var rt = GetComponent<RectTransform>();
-            float overlayW = bounds.x * cellSize + (bounds.x - 1) * cellGap;
-            float overlayH = bounds.y * cellSize + (bounds.y - 1) * cellGap;
-
-            // Anchor to top-left of the grid container
             rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.zero;
-            rt.pivot = new Vector2(0f, 1f); // top-left pivot
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            rt.pivot     = new Vector2(0.5f, 0.5f);
 
-            float xPos =  anchorCol * (cellSize + cellGap);
-            float yPos = -anchorRow * (cellSize + cellGap);
-            rt.anchoredPosition = new Vector2(xPos, yPos);
-            rt.sizeDelta = new Vector2(overlayW, overlayH);
-
-            // ── Build per-cell images via ItemIconRenderer (Shape Layer) ──
+            // ── Build per-cell images (Shape Layer) ───────────────────────
+            // Use BuildShapeCellsFromCells: directly reads each cell's RectTransform,
+            // same pixel-perfect approach as DragHighlightLayer. No formula, no offset math.
             Color activeColor = new Color(typeColor.r, typeColor.g, typeColor.b, 0.55f);
-            _cellImages = ItemIconRenderer.BuildShapeCellsAbsolute(
-                transform, shape, activeColor, cellSize, cellGap);
+            if (cells != null)
+            {
+                _cellImages = ItemIconRenderer.BuildShapeCellsFromCells(
+                    transform, shape, activeColor, cells, anchorCol, anchorRow, gridCols);
+            }
+            else
+            {
+                // Fallback: formula-based (cells array not provided)
+                _cellImages = ItemIconRenderer.BuildShapeCellsAbsolute(
+                    transform, shape, activeColor, cellSize, cellGap);
+            }
 
             // ── Border / glow image ────────────────────────────────────────
+            // The border image stretches over the ENTIRE GridContainer (same as the overlay RT).
+            // Setting it to a tinted color creates a large ghost rectangle behind the shape cells.
+            // We disable it here — the per-cell shape images already provide sufficient visual
+            // feedback. If a border effect is needed in the future, it should be sized to the
+            // item's bounding box only, NOT the full GridContainer.
             if (_borderImage != null)
             {
-                // Subtle background tint; the per-cell images provide the main visual
-                _borderImage.color = new Color(typeColor.r, typeColor.g, typeColor.b, 0.12f);
+                _borderImage.color = Color.clear;   // invisible — no ghost rectangle
                 _borderImage.raycastTarget = false;
             }
 
-            // ── Icon image via ItemIconRenderer (Icon Layer) ───────────────
-            // Fixed-size icon centered on anchor cell — NOT stretched to bounding box.
-            // This is the Backpack Monsters approach: Icon = identity, Shape = occupancy.
-            _iconImage = ItemIconRenderer.BuildIconOnAnchorCell(
-                transform, item, cellSize, iconSizePx: cellSize * 0.65f);
+            // ── Icon image (Icon Layer) ────────────────────────────────────
+            // Fixed-size icon centered on anchor cell — directly reads cell RectTransform.
+            if (cells != null)
+            {
+                _iconImage = ItemIconRenderer.BuildIconFromCell(
+                    transform, item, cells, anchorCol, anchorRow, gridCols,
+                    iconSizePx: cellSize * 0.65f);
+            }
+            else
+            {
+                _iconImage = ItemIconRenderer.BuildIconOnAnchorCell(
+                    transform, item, cellSize, iconSizePx: cellSize * 0.65f);
+            }
 
             // ── Snap-in entrance animation ─────────────────────────────────
             rt.localScale = Vector3.one * 0.85f;
@@ -201,7 +223,7 @@ namespace ProjectArk.UI
 
             _isDragSource = true;
             var payload = new DragPayload(_item, DragSource.Slot, _ownerTrack?.Track);
-            mgr.BeginDrag(payload, eventData);
+            mgr.BeginDrag(payload, eventData, null, GetComponent<RectTransform>());
         }
 
         public void OnDrag(PointerEventData eventData)

@@ -8529,3 +8529,159 @@ DragGhostView 中存在两个 Icon 来源同时可见：
 - boostAngularAcceleration: 400（GG 原值 40×10，mass=1 对应）
 - boostDuration: 0.2s（★GG minTime 原值）
 
+
+## Fix: Drag Ghost Visual Center Misaligned with Cursor (2026-03-06 13:16)
+
+### Modified Files
+- Assets/Scripts/UI/DragDrop/DragGhostView.cs
+
+### Summary
+Fixed drag ghost appearing below the cursor instead of centered on it.
+
+### Root Cause
+Ghost RectTransform pivot = (0.5, 0.5). FollowPointer placed the pivot point (center) at the cursor position. However, BuildShapeCellsAbsolute creates shape cells with anchorMin=zero and anchoredPosition starting from (0,0) — which is the Ghost's center — expanding right and downward. This caused the entire visual content to be offset to the bottom-right of the cursor.
+
+### Fix
+In FollowPointer, added a `centeringOffset = (-size.x * 0.5f, size.y * 0.5f)` that shifts the Ghost left-up by half its size, so the top-left corner of the shape cell grid aligns with the cursor, making the visual center appear at the cursor.
+
+---
+
+## Fix: Drag Ghost Position Offset (2026-03-06 13:02)
+
+### Modified Files
+- Assets/Scripts/UI/DragDrop/DragGhostView.cs`n- Assets/Scripts/UI/DragDrop/DragDropManager.cs`n- Assets/Scripts/UI/InventoryItemView.cs`n- Assets/Scripts/UI/SlotCellView.cs`n- Assets/Scripts/UI/ItemOverlayView.cs`n
+### Summary
+Fixed drag ghost not following the exact click point on the card.
+
+### Root Cause
+ComputeDragOffset computed pressLocal - pointerLocal, but since BeginDrag is called from OnBeginDrag, eventData.position == eventData.pressPosition at that moment, making the offset always Vector2.zero. The ghost always snapped its center to the cursor instead of the clicked point.
+
+### Fix
+- DragGhostView.ComputeDragOffset(eventData, sourceRect): Added sourceRect parameter. Now computes the click offset relative to the card's top-left corner (via GetWorldCorners), then subtracts ghost half-size to get the correct offset from ghost center.
+- DragDropManager.BeginDrag(...): Added optional sourceRect parameter, passed through to ComputeDragOffset.
+- InventoryItemView, SlotCellView, ItemOverlayView: Pass GetComponent<RectTransform>() as sourceRect in BeginDrag call.
+
+---
+
+## Fix: DragHighlightLayer Tiles Way Off From Actual Cells — Root Cause Fix (2026-03-06 13:45)
+
+### Modified Files
+- `Assets/Scripts/UI/DragHighlightLayer.cs`
+- `Assets/Scripts/UI/TrackView.cs`
+
+### Summary
+Completely rewrote DragHighlightLayer to position tiles by directly reading each SlotCellView's RectTransform instead of computing positions with a formula.
+
+### Root Cause (Previous Approach Was Wrong)
+All previous attempts tried to compute tile positions via `anchoredPosition = offset + (col * step, -row * step)`. This always fails because GridLayoutGroup can use any childAlignment (e.g. MiddleCenter), padding, or spacing that shifts cells away from the assumed origin. No formula can reliably reproduce the exact cell positions without knowing all GridLayoutGroup internals.
+
+### Fix (Direct Cell Coordinate Reading)
+- `DragHighlightLayer.Initialize(container, cells[], gridCols)`: Now accepts the `SlotCellView[]` array directly. No cellSize/cellGap/originOffset needed.
+- `ShowHighlight()`: For each shape cell offset, computes `cellIndex = row * gridCols + col`, then copies `anchorMin/anchorMax/pivot/anchoredPosition/sizeDelta` directly from `cells[cellIndex].GetComponent<RectTransform>()`. Tiles are guaranteed pixel-perfect.
+- Removed all formula-based fields: `_cellSize`, `_cellGap`, `_originOffset`, `_cell0Rect`.
+- `TrackView.CreateHighlightLayer()`: Now calls `layer.Initialize(col.GridContainer, col.Cells, 2)` — no cell0Rect, no size params.
+
+---
+
+## Fix: DragHighlightLayer Debug Log Cleanup (2026-03-06 13:51)
+
+### Modified Files
+- `Assets/Scripts/UI/DragHighlightLayer.cs`
+
+### Summary
+Removed temporary diagnostic `Debug.Log` from `ShowHighlight()` after confirming via InstanceID logging that `tileParentID == cellParentID == containerID` and `tileWorld == cellWorld` (pixel-perfect match). Retained the `Debug.LogWarning` for out-of-bounds cell index misses.
+
+---
+
+## Fix: Remove Ghost Drop-State Color Highlight (2026-03-06 13:55)
+
+### Modified Files
+- `Assets/Scripts/UI/DragDrop/DragGhostView.cs`
+
+### Summary
+Removed the green/red border color feedback from the drag ghost (`SetDropState`). Drop state visual feedback is now shown **exclusively on the Track grid cells** via `DragHighlightLayer`. The ghost border is kept permanently transparent (`Color.clear`). This simplifies the visual language: one highlight location (Track cells), not two.
+
+---
+
+## Fix: SAT/SAIL Highlight Cell Index Mismatch (2026-03-06 14:14)
+
+### Modified Files
+- `Assets/Scripts/UI/DragHighlightLayer.cs`
+- `Assets/Scripts/UI/TrackView.cs`
+- `Assets/Scripts/UI/SlotCellView.cs`
+
+### Root Cause
+`SlotCellView` was calling `SetSingleHighlight(SlotType, col=0, row=CellIndex, state)` for SAIL/SAT cells. Inside `ShowHighlight`, the index was recomputed as `cellIndex = row * gridCols + col = CellIndex * 2 + 0`. For SAT (2×2 grid, gridCols=2), `CellIndex=1` (top-right) → `cellIndex=2` (bottom-left). This caused the highlight to appear on the wrong cell.
+
+### Fix
+- Added `DragHighlightLayer.ShowHighlightAtCellIndex(int cellIndex, DropPreviewState)` — directly reads `cells[cellIndex].RectTransform` with no col/row conversion.
+- Added `TrackView.SetSingleHighlightAtIndex(SlotType, int cellIndex, DropPreviewState)` — routes to the new method.
+- Changed `SlotCellView` SAIL/SAT branch to call `SetSingleHighlightAtIndex(SlotType, CellIndex, state)` instead of `SetSingleHighlight(SlotType, 0, CellIndex, state)`.
+- Removed residual `[HL]` debug logs from `DragHighlightLayer.ShowHighlight()`.
+
+---
+
+## Bug Fix: ItemOverlayView Ghost/Duplicate Rendering (PRISM/CORE) — 2026-03-06 15:17
+
+### Modified Files
+- `Assets/Scripts/UI/TrackView.cs`
+- `Assets/Scripts/UI/ItemIconRenderer.cs`
+
+### Root Cause
+`LayoutElement.ignoreLayout = true` was added to the overlay GameObject **after** `SetParent()`. Unity's `GridLayoutGroup` repositions children **immediately** when `SetParent()` is called, overriding the stretch anchors (`anchorMin=0,0`, `anchorMax=1,1`) set in `ItemOverlayView.Setup()`. By the time `ignoreLayout = true` was applied, the overlay's anchor had already been overwritten to a grid-cell position, causing the overlay to render at the wrong location (ghost/duplicate appearance).
+
+The same ordering bug existed in `BuildShapeCellsFromCells` and `BuildIconFromCell` for the overlay's child nodes.
+
+### Fix
+- In `TrackView.RefreshColumn`: moved `overlayGo.AddComponent<LayoutElement>()` + `ignoreLayout = true` to **before** `SetParent(gridContainer, false)`.
+- In `ItemIconRenderer.BuildShapeCellsFromCells`: moved `go.AddComponent<LayoutElement>()` + `ignoreLayout = true` to before `go.transform.SetParent(parent, false)`.
+- In `ItemIconRenderer.BuildIconFromCell`: same fix — `LayoutElement` added before `SetParent`.
+
+### Key Insight
+SAIL/SAT never had this bug because they use `SlotCellView.SetItem()` directly — no overlay GameObject is created, so GridLayoutGroup is never involved. This was the diagnostic clue that pointed to the overlay creation order as the root cause.
+
+---
+
+## Bug Fix: PRISM/CORE Items Cannot Be Dragged Back to Inventory  2026-03-06 15:42
+
+### Modified Files
+- `Assets/Scripts/UI/SlotCellView.cs`
+- `Assets/Scripts/UI/TrackView.cs`
+- `Assets/Scripts/UI/ItemOverlayView.cs`
+
+### Root Cause
+`SetHiddenByOverlay()` was setting `DisplayedItem = null`. `SlotCellView.OnBeginDrag` checks `if (DisplayedItem == null) return`  so drag was silently aborted before it started.
+
+SAIL/SAT were unaffected because they call `SetItem(item)` which sets `DisplayedItem = item`, keeping the drag path intact.
+
+### Fix
+- `SlotCellView.SetHiddenByOverlay(StarChartItemSO item)`: changed signature to accept `item`, sets `DisplayedItem = item` (preserves drag source), only clears visual (background/icon/label).
+- `TrackView.RefreshColumn`: updated call to `cells[cellIndex].SetHiddenByOverlay(item)`.
+- `ItemOverlayView.Setup`: removed the erroneous `raycastBlocker` AddComponent added in the previous failed fix attempt.
+
+### Key Insight
+The fix directly mirrors SAIL/SAT behavior: preserve `DisplayedItem` on the cell so `OnBeginDrag` can fire. The overlay is purely visual  the cell underneath remains the functional drag source. **Overlay = visuals only, cell = interaction**.
+
+---
+
+## Bug Fix: SAIL Drop Defaults to Primary Track First Cell — 2026-03-06 15:51
+
+### Modified Files
+- `Assets/Scripts/UI/TrackView.cs`
+
+### Root Cause
+SAIL and SAT are **global slots** — they are not per-track. `RefreshSailColumn()` and `RefreshSatColumn()` only display the equipped item on the **Primary track**; the Secondary track shows empty cells.
+
+However, `HasSpaceForSail()` and `HasSpaceForSat()` had no `isPrimary` guard. When a user dragged a SAIL item onto the **Secondary track's SAIL cell**, `ComputeDropValidity` returned `true` (space available), `DropTargetTrack` was set to the Secondary track, and `EquipLightSail()` was called successfully.
+
+After `RefreshAllViews()`, the SAIL appeared on the **Primary track's first cell** (because that's where `RefreshSailColumn` always renders it), making it look like the item "jumped" to the wrong location.
+
+### Fix
+Added `isPrimary` guard to both delegates:
+- `HasSpaceForSail`: returns `false` immediately if `_track.Id != Primary`
+- `HasSpaceForSat`: returns `false` immediately if `_track.Id != Primary`
+
+Secondary track SAIL/SAT cells now show as invalid drop targets (red highlight), preventing the confusing visual jump.
+
+### Key Insight
+Global slots (SAIL/SAT) must only accept drops on the Primary track. The Secondary track renders them as empty purely for visual symmetry — those cells must not be functional drop targets.

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using ProjectArk.Combat;
@@ -131,7 +132,8 @@ namespace ProjectArk.UI
         /// <param name="payload">Drag payload describing the item and source.</param>
         /// <param name="eventData">Pointer event data from OnBeginDrag — used to anchor the ghost under the click point.</param>
         /// <param name="sourceCanvasGroup">Optional source card CanvasGroup to dim during drag.</param>
-        public void BeginDrag(DragPayload payload, PointerEventData eventData = null, CanvasGroup sourceCanvasGroup = null)
+        /// <param name="sourceRect">Optional source card RectTransform — used to pin the ghost under the exact click point.</param>
+        public void BeginDrag(DragPayload payload, PointerEventData eventData = null, CanvasGroup sourceCanvasGroup = null, RectTransform sourceRect = null)
         {
             if (IsDragging) return;
 
@@ -160,7 +162,7 @@ namespace ProjectArk.UI
                 // to canvas local space, then store the delta from ghost center (which FollowPointer
                 // would place at the pointer). This offset is subtracted every frame in FollowPointer.
                 if (eventData != null)
-                    _dragOffset = _ghostView.ComputeDragOffset(eventData);
+                    _dragOffset = _ghostView.ComputeDragOffset(eventData, sourceRect);
                 else
                     _dragOffset = Vector2.zero;
             }
@@ -172,9 +174,18 @@ namespace ProjectArk.UI
             if (payload.Source == DragSource.Slot)
             {
                 _panel?.StatusBar?.ShowPersistent("DRAG TO INVENTORY TO UNEQUIP", StarChartTheme.HighlightReplace);
-                // Immediately refresh track views to remove the ItemOverlayView of the dragged item,
+                // Refresh track views to remove the ItemOverlayView of the dragged item,
                 // preventing Ghost + overlay double-render (Problem D).
-                _panel?.RefreshAllViews();
+                //
+                // IMPORTANT: Do NOT call RefreshAllViews() synchronously here!
+                // If the drag was initiated from an ItemOverlayView.OnBeginDrag, calling
+                // RefreshAllViews() immediately destroys the overlay's GameObject in the
+                // same frame — before OnDrag/OnEndDrag can fire. This breaks drag entirely
+                // for PRISM/CORE items (SAIL/SAT use SlotCellView which survives the refresh).
+                //
+                // Solution: defer one frame via UniTask so the current drag event chain
+                // (OnBeginDrag → OnDrag → ...) completes before the overlay is destroyed.
+                DeferredRefreshAsync().Forget();
             }
 
             BroadcastDragBegin(payload.Item);
@@ -531,6 +542,16 @@ namespace ProjectArk.UI
         /// <summary>
         /// Broadcast drag begin to all registered columns so each column can self-evaluate.
         /// </summary>
+        /// <summary>
+        /// Refresh all track views one frame after BeginDrag, so the current drag event
+        /// chain (OnBeginDrag → OnDrag) completes before any overlay GameObjects are destroyed.
+        /// </summary>
+        private async UniTaskVoid DeferredRefreshAsync()
+        {
+            await UniTask.Yield(PlayerLoopTiming.LastPostLateUpdate, destroyCancellationToken);
+            _panel?.RefreshAllViews();
+        }
+
         private void BroadcastDragBegin(StarChartItemSO item)
         {
             if (item == null) return;

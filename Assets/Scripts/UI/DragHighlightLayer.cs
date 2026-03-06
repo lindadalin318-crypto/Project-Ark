@@ -7,11 +7,10 @@ namespace ProjectArk.UI
 {
     /// <summary>
     /// Manages an independent layer of highlight tiles rendered on top of all ItemOverlayViews.
-    /// Tiles are pooled (not destroyed/recreated each frame) and only rebuilt when
-    /// shape/anchor/state changes. This avoids polluting SlotCellView._backgroundImage.color.
+    /// Tiles are pooled and positioned by directly reading each SlotCellView's RectTransform —
+    /// no formula, no offset math, always pixel-perfect regardless of GridLayoutGroup settings.
     ///
-    /// Created and owned by TrackView; one instance per TypeColumn (Core / Prism).
-    /// For SAIL/SAT single-cell columns, ShowSingleHighlight is used.
+    /// Created and owned by TrackView; one instance per TypeColumn (Core / Prism / Sail / Sat).
     /// </summary>
     public class DragHighlightLayer : MonoBehaviour
     {
@@ -21,6 +20,12 @@ namespace ProjectArk.UI
 
         // Parent transform where highlight tiles are spawned (same as GridContainer)
         private RectTransform _container;
+
+        // The actual cell views — tiles are positioned by reading their RectTransforms directly.
+        private SlotCellView[] _cells;
+
+        // Grid column count (needed to convert col+row → cell index)
+        private int _gridCols = 2;
 
         // Pooled tile GameObjects
         private readonly List<Image> _tilePool = new();
@@ -34,38 +39,23 @@ namespace ProjectArk.UI
         private ItemShape _lastShape;
         private DropPreviewState _lastState = DropPreviewState.None;
 
-        // Cell layout (injected by TrackView)
-        private float _cellSize = 56f;
-        private float _cellGap  = 4f;
-        private int   _gridCols = 2;
-
         // =====================================================================
         // Public API
         // =====================================================================
 
         /// <summary>
-        /// Initialize the layer with layout parameters.
-        /// Reads cellSize and spacing directly from the GridLayoutGroup on the container
-        /// (if present) so values are always accurate regardless of when Awake runs.
-        /// Must be called once before ShowHighlight.
+        /// Initialize the layer.
+        /// Tiles will be positioned by reading each cell's RectTransform directly —
+        /// no formula, no offset math.
         /// </summary>
-        public void Initialize(RectTransform container, float cellSize, float cellGap, int gridCols)
+        /// <param name="container">GridContainer — parent for spawned tiles.</param>
+        /// <param name="cells">All SlotCellViews in this column (row-major order).</param>
+        /// <param name="gridCols">Number of columns in the grid (used for col+row → index).</param>
+        public void Initialize(RectTransform container, SlotCellView[] cells, int gridCols)
         {
             _container = container;
-            _gridCols  = gridCols;
-
-            // Prefer reading from GridLayoutGroup for accuracy (Awake runs before Layout)
-            var glg = container != null ? container.GetComponent<GridLayoutGroup>() : null;
-            if (glg != null)
-            {
-                _cellSize = glg.cellSize.x;
-                _cellGap  = glg.spacing.x;
-            }
-            else
-            {
-                _cellSize = cellSize;
-                _cellGap  = cellGap;
-            }
+            _cells     = cells;
+            _gridCols  = Mathf.Max(1, gridCols);
         }
 
         /// <summary>
@@ -73,14 +63,15 @@ namespace ProjectArk.UI
         /// </summary>
         public void SetGridCols(int gridCols)
         {
-            _gridCols = gridCols;
+            _gridCols = Mathf.Max(1, gridCols);
         }
 
         /// <summary>
         /// Show highlight tiles for the given shape placed at (anchorCol, anchorRow).
-        /// Tiles are rendered on top of all siblings (SetAsLastSibling).
+        /// Tiles are positioned by reading the corresponding SlotCellView's RectTransform —
+        /// guaranteed to be pixel-perfect regardless of GridLayoutGroup alignment.
         /// </summary>
-        public void ShowHighlight(int anchorCol, int anchorRow, ItemShape shape, DropPreviewState state)
+public void ShowHighlight(int anchorCol, int anchorRow, ItemShape shape, DropPreviewState state)
         {
             if (_container == null) return;
 
@@ -119,27 +110,101 @@ namespace ProjectArk.UI
                 _                        => Color.clear
             };
 
-            float step = _cellSize + _cellGap;
             int tileIdx = 0;
             foreach (var offset in cells)
             {
                 int col = anchorCol + offset.x;
                 int row = anchorRow + offset.y;
+                int cellIndex = row * _gridCols + col;
 
                 var tile = _tilePool[tileIdx++];
                 tile.color = tileColor;
                 tile.gameObject.SetActive(true);
 
-                // Position: top-left origin, col increases right, row increases down
                 var rt = tile.rectTransform;
-                rt.anchoredPosition = new Vector2(col * step, -row * step);
-                rt.sizeDelta        = new Vector2(_cellSize, _cellSize);
+
+                // Directly copy position and size from the actual cell's RectTransform.
+                if (_cells != null && cellIndex >= 0 && cellIndex < _cells.Length
+                    && _cells[cellIndex] != null)
+                {
+                    var cellRt = _cells[cellIndex].GetComponent<RectTransform>();
+
+                    rt.anchorMin        = cellRt.anchorMin;
+                    rt.anchorMax        = cellRt.anchorMax;
+                    rt.pivot            = cellRt.pivot;
+                    rt.anchoredPosition = cellRt.anchoredPosition;
+                    rt.sizeDelta        = cellRt.sizeDelta;
+                }
+                else
+                {
+                    Debug.LogWarning($"[DragHighlightLayer] MISS cellIndex={cellIndex} " +
+                                     $"col={col} row={row} gridCols={_gridCols}");
+                }
 
                 // Always render on top of cells and overlays
                 tile.transform.SetAsLastSibling();
 
                 _activeTiles.Add(tile);
             }
+        }
+
+        /// <summary>
+        /// Show a single-cell highlight directly at the given cell index.
+        /// Bypasses col/row → index conversion entirely — always pixel-perfect for any grid layout.
+        /// </summary>
+        public void ShowHighlightAtCellIndex(int cellIndex, DropPreviewState state)
+        {
+            if (_container == null) return;
+            if (_cells == null || cellIndex < 0 || cellIndex >= _cells.Length
+                || _cells[cellIndex] == null)
+            {
+                Debug.LogWarning($"[DragHighlightLayer] ShowHighlightAtCellIndex MISS cellIndex={cellIndex}");
+                return;
+            }
+
+            // Skip rebuild if nothing changed
+            if (cellIndex == _lastAnchorCol && _lastAnchorRow == -1 && state == _lastState)
+                return;
+
+            _lastAnchorCol = cellIndex;
+            _lastAnchorRow = -1;  // sentinel: means "direct cellIndex mode"
+            _lastShape     = ItemShape.Shape1x1;
+            _lastState     = state;
+
+            // Deactivate all active tiles
+            foreach (var t in _activeTiles)
+                if (t != null) t.gameObject.SetActive(false);
+            _activeTiles.Clear();
+
+            if (state == DropPreviewState.None) return;
+
+            Color tileColor = state switch
+            {
+                DropPreviewState.Valid   => StarChartTheme.HighlightValid,
+                DropPreviewState.Replace => StarChartTheme.HighlightReplace,
+                DropPreviewState.Invalid => StarChartTheme.HighlightInvalid,
+                _                        => Color.clear
+            };
+
+            // Ensure pool has at least 1 tile
+            while (_tilePool.Count < 1)
+                _tilePool.Add(CreateTile());
+
+            var tile = _tilePool[0];
+            tile.color = tileColor;
+            tile.gameObject.SetActive(true);
+
+            var rt     = tile.rectTransform;
+            var cellRt = _cells[cellIndex].GetComponent<RectTransform>();
+
+            rt.anchorMin        = cellRt.anchorMin;
+            rt.anchorMax        = cellRt.anchorMax;
+            rt.pivot            = cellRt.pivot;
+            rt.anchoredPosition = cellRt.anchoredPosition;
+            rt.sizeDelta        = cellRt.sizeDelta;
+
+            tile.transform.SetAsLastSibling();
+            _activeTiles.Add(tile);
         }
 
         /// <summary>
@@ -179,13 +244,9 @@ namespace ProjectArk.UI
             var img = go.AddComponent<Image>();
             img.raycastTarget = false; // tiles must NOT block pointer events on cells below
 
-            var rt = go.GetComponent<RectTransform>();
-            // Match ItemOverlayView coordinate convention:
-            // anchor at bottom-left (0,0), pivot at top-left (0,1)
-            // anchoredPosition = (col * step, -row * step) places tiles correctly
-            rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.zero;
-            rt.pivot     = new Vector2(0f, 1f);
+            // Prevent GridLayoutGroup from repositioning this tile
+            var le = go.AddComponent<LayoutElement>();
+            le.ignoreLayout = true;
 
             go.SetActive(false);
             return img;
@@ -193,7 +254,6 @@ namespace ProjectArk.UI
 
         private void OnDestroy()
         {
-            // Pool tiles are children of _container; destroyed with it automatically.
             _tilePool.Clear();
             _activeTiles.Clear();
         }
