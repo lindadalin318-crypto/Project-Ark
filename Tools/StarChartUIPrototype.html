@@ -445,7 +445,45 @@ body::after {
   margin-top: 1px;
 }
 
-/* Track layout — 4 columns left-to-right: SAIL | PRISM | CORE | SAT */
+/* ── Loadout card body: SAIL column (shared) + tracks area ── */
+.lc-body {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Shared SAIL column on the left */
+.sail-col-shared {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 2px 4px;
+  border-radius: 2px;
+  border: 1px solid rgba(52,211,153,0.15);
+  transition: border-color 0.15s, background 0.15s;
+}
+.sail-col-shared:hover {
+  background: rgba(255,255,255,0.02);
+}
+.sail-col-shared .track-col-header {
+  border-bottom-color: rgba(52,211,153,0.30);
+}
+
+/* Tracks area (primary + secondary stacked) */
+.tracks-area {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Track layout — 3 columns: PRISM | CORE | SAT */
 .track-rows {
   display: flex;
   flex-direction: row;
@@ -1123,7 +1161,8 @@ body::after {
 }
 
 /* ── Candidate column glow while dragging ── */
-.track-col.drop-candidate-col {
+.track-col.drop-candidate-col,
+.sail-col-shared.drop-candidate-col {
   border-color: rgba(34,197,94,0.5) !important;
   animation: candidateColPulse 1.1s ease-in-out infinite !important;
 }
@@ -1370,57 +1409,64 @@ body::after {
           <span class="lc-subtitle">LOADOUT #<span id="lc-card-num">1</span></span>
         </div>
 
-        <!-- PRIMARY track: 4 columns SAIL | PRISM | CORE | SAT -->
-        <div class="track-block" id="track-primary" data-track="primary">
-          <div class="track-block-label">
-            <div class="tb-name">PRIMARY</div>
-            <div class="tb-bind">[LMB]</div>
-          </div>
-          <div class="track-rows" id="primary-rows">
-            <div class="track-col trl-sail">
-              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAIL</span></div>
-              <div class="track-slots-grid" id="primary-slots-sail"></div>
-            </div>
-            <div class="track-col trl-prism">
-              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">PRISM</span></div>
-              <div class="track-slots-grid" id="primary-slots-prism"></div>
-            </div>
-            <div class="track-col trl-core">
-              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">CORE</span></div>
-              <div class="track-slots-grid" id="primary-slots-core"></div>
-            </div>
-            <div class="track-col trl-sat">
-              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAT</span></div>
-              <div class="track-slots-grid" id="primary-slots-sat"></div>
-            </div>
-          </div>
-        </div>
+        <!-- Card body: shared SAIL column + tracks area -->
+        <div class="lc-body">
 
-        <!-- SECONDARY track: 4 columns SAIL | PRISM | CORE | SAT -->
-        <div class="track-block" id="track-secondary" data-track="secondary">
-          <div class="track-block-label">
-            <div class="tb-name">SECONDARY</div>
-            <div class="tb-bind">[RMB]</div>
+          <!-- Shared SAIL column (not primary/secondary specific) -->
+          <div class="sail-col-shared trl-sail">
+            <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAIL</span></div>
+            <div class="track-slots-grid" id="shared-slots-sail"></div>
           </div>
-          <div class="track-rows" id="secondary-rows">
-            <div class="track-col trl-sail">
-              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAIL</span></div>
-              <div class="track-slots-grid" id="secondary-slots-sail"></div>
+
+          <!-- Tracks area: PRIMARY + SECONDARY stacked, each with PRISM | CORE | SAT -->
+          <div class="tracks-area">
+
+            <!-- PRIMARY track: PRISM | CORE | SAT -->
+            <div class="track-block" id="track-primary" data-track="primary">
+              <div class="track-block-label">
+                <div class="tb-name">PRIMARY</div>
+                <div class="tb-bind">[LMB]</div>
+              </div>
+              <div class="track-rows" id="primary-rows">
+                <div class="track-col trl-prism">
+                  <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">PRISM</span></div>
+                  <div class="track-slots-grid" id="primary-slots-prism"></div>
+                </div>
+                <div class="track-col trl-core">
+                  <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">CORE</span></div>
+                  <div class="track-slots-grid" id="primary-slots-core"></div>
+                </div>
+                <div class="track-col trl-sat">
+                  <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAT</span></div>
+                  <div class="track-slots-grid" id="primary-slots-sat"></div>
+                </div>
+              </div>
             </div>
-            <div class="track-col trl-prism">
-              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">PRISM</span></div>
-              <div class="track-slots-grid" id="secondary-slots-prism"></div>
+
+            <!-- SECONDARY track: PRISM | CORE | SAT -->
+            <div class="track-block" id="track-secondary" data-track="secondary">
+              <div class="track-block-label">
+                <div class="tb-name">SECONDARY</div>
+                <div class="tb-bind">[RMB]</div>
+              </div>
+              <div class="track-rows" id="secondary-rows">
+                <div class="track-col trl-prism">
+                  <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">PRISM</span></div>
+                  <div class="track-slots-grid" id="secondary-slots-prism"></div>
+                </div>
+                <div class="track-col trl-core">
+                  <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">CORE</span></div>
+                  <div class="track-slots-grid" id="secondary-slots-core"></div>
+                </div>
+                <div class="track-col trl-sat">
+                  <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAT</span></div>
+                  <div class="track-slots-grid" id="secondary-slots-sat"></div>
+                </div>
+              </div>
             </div>
-            <div class="track-col trl-core">
-              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">CORE</span></div>
-              <div class="track-slots-grid" id="secondary-slots-core"></div>
-            </div>
-            <div class="track-col trl-sat">
-              <div class="track-col-header"><div class="trl-dot"></div><span class="trl-text">SAT</span></div>
-              <div class="track-slots-grid" id="secondary-slots-sat"></div>
-            </div>
-          </div>
-        </div>
+
+          </div><!-- /.tracks-area -->
+        </div><!-- /.lc-body -->
 
       </div>
     </div>
@@ -1543,8 +1589,9 @@ function makeGrid() {
 
 // Track data structure: { type, grid: [[null,null],[null,null]] }
 // grid[row][col] = itemId | null
-// Each loadout: { name, primary: { sail, prism, core, sat }, secondary: { ... } }
+// Each loadout: { name, sail (shared), primary: { prism, core, sat }, secondary: { prism, core, sat } }
 // Each type key holds: { grid: 2×2 array }
+// SAIL is global (not primary/secondary specific) — stored at lo.sail
 
 function makeTrackType() {
   return { grid: makeGrid() };
@@ -1553,8 +1600,9 @@ function makeTrackType() {
 function makeLoadout(name) {
   return {
     name,
-    primary:   { sail: makeTrackType(), prism: makeTrackType(), core: makeTrackType(), sat: makeTrackType() },
-    secondary: { sail: makeTrackType(), prism: makeTrackType(), core: makeTrackType(), sat: makeTrackType() },
+    sail:      makeTrackType(),   // shared, not tied to primary/secondary
+    primary:   { prism: makeTrackType(), core: makeTrackType(), sat: makeTrackType() },
+    secondary: { prism: makeTrackType(), core: makeTrackType(), sat: makeTrackType() },
   };
 }
 
@@ -1569,25 +1617,25 @@ function placeItem(trackTypeObj, itemId, anchorCol, anchorRow) {
 
 // Build initial loadouts
 const lo1 = makeLoadout('LOADOUT 1');
-placeItem(lo1.primary.sail,  's1',   0, 0);
-placeItem(lo1.primary.prism, 'p2',   0, 0);
-placeItem(lo1.primary.core,  'c2',   0, 0);  // 1×2 horizontal → [0,0],[1,0]
-placeItem(lo1.primary.sat,   'sat1', 0, 0);
-placeItem(lo1.secondary.prism,'p3',  0, 0);  // 2×1 vertical → [0,0],[0,1]
-placeItem(lo1.secondary.core, 'c1',  0, 0);
+placeItem(lo1.sail,           's1',   0, 0);  // shared sail
+placeItem(lo1.primary.prism,  'p2',   0, 0);
+placeItem(lo1.primary.core,   'c2',   0, 0);  // 1×2 horizontal → [0,0],[1,0]
+placeItem(lo1.primary.sat,    'sat1', 0, 0);
+placeItem(lo1.secondary.prism,'p3',   0, 0);  // 2×1 vertical → [0,0],[0,1]
+placeItem(lo1.secondary.core, 'c1',   0, 0);
 
 const lo2 = makeLoadout('LOADOUT 2');
-placeItem(lo2.primary.sail,  's2',   0, 0);  // 1×2 horizontal
-placeItem(lo2.primary.prism, 'p1',   0, 0);
-placeItem(lo2.primary.core,  'c3',   0, 0);  // 2×1 vertical
+placeItem(lo2.sail,           's2',   0, 0);  // shared sail, 1×2 horizontal
+placeItem(lo2.primary.prism,  'p1',   0, 0);
+placeItem(lo2.primary.core,   'c3',   0, 0);  // 2×1 vertical
 
 const lo3 = makeLoadout('LOADOUT 3');
-placeItem(lo3.primary.sail,  's1',   0, 0);
-placeItem(lo3.primary.prism, 'p4',   0, 0);  // L-shape
-placeItem(lo3.primary.core,  'c4',   0, 0);  // L-shape
-placeItem(lo3.primary.sat,   'sat2', 0, 0);  // 2×1 vertical
-placeItem(lo3.secondary.core,'c5',   0, 0);  // 2×2 full
-placeItem(lo3.secondary.sat, 'sat1', 0, 0);
+placeItem(lo3.sail,           's1',   0, 0);  // shared sail
+placeItem(lo3.primary.prism,  'p4',   0, 0);  // L-shape
+placeItem(lo3.primary.core,   'c4',   0, 0);  // L-shape
+placeItem(lo3.primary.sat,    'sat2', 0, 0);  // 2×1 vertical
+placeItem(lo3.secondary.core, 'c5',   0, 0);  // 2×2 full
+placeItem(lo3.secondary.sat,  'sat1', 0, 0);
 
 const state = {
   loadouts: [lo1, lo2, lo3],
@@ -1602,34 +1650,41 @@ const state = {
 const getItem = id => ITEMS.find(i => i.id === id);
 function currentLoadout() { return state.loadouts[state.currentLoadout]; }
 
-const TYPE_KEYS = ['sail', 'prism', 'core', 'sat'];
+const TYPE_KEYS = ['prism', 'core', 'sat'];  // sail is shared, handled separately
 const TRACK_KEYS = ['primary', 'secondary'];
+
+// Helper: extract equipped entries from a single track-type grid
+function extractEntries(tt, track, typeKey) {
+  const result = [];
+  if (!tt) return result;
+  const seen = new Set();
+  for (let r = 0; r < 2; r++) {
+    for (let c = 0; c < 2; c++) {
+      const id = tt.grid[r][c];
+      if (id && !seen.has(id)) {
+        seen.add(id);
+        const item = getItem(id);
+        if (!item) continue;
+        let minR = 99, minC = 99;
+        for (let rr = 0; rr < 2; rr++) for (let cc = 0; cc < 2; cc++) {
+          if (tt.grid[rr][cc] === id) { if (rr < minR || (rr === minR && cc < minC)) { minR = rr; minC = cc; } }
+        }
+        result.push({ itemId: id, track, typeKey, anchorCol: minC, anchorRow: minR });
+      }
+    }
+  }
+  return result;
+}
 
 // Returns all { itemId, track, typeKey, anchorCol, anchorRow } for equipped items in a loadout
 function allEquippedEntries(lo) {
   const result = [];
+  // Shared sail (track = 'shared')
+  result.push(...extractEntries(lo.sail, 'shared', 'sail'));
+  // Primary/secondary prism/core/sat
   for (const track of TRACK_KEYS) {
     for (const typeKey of TYPE_KEYS) {
-      const tt = lo[track][typeKey];
-      if (!tt) continue;
-      const seen = new Set();
-      for (let r = 0; r < 2; r++) {
-        for (let c = 0; c < 2; c++) {
-          const id = tt.grid[r][c];
-          if (id && !seen.has(id)) {
-            seen.add(id);
-            // Find anchor (top-left cell of this item)
-            const item = getItem(id);
-            if (!item) continue;
-            // Anchor = smallest row then smallest col among occupied cells
-            let minR = 99, minC = 99;
-            for (let rr = 0; rr < 2; rr++) for (let cc = 0; cc < 2; cc++) {
-              if (tt.grid[rr][cc] === id) { if (rr < minR || (rr === minR && cc < minC)) { minR = rr; minC = cc; } }
-            }
-            result.push({ itemId: id, track, typeKey, anchorCol: minC, anchorRow: minR });
-          }
-        }
-      }
+      result.push(...extractEntries(lo[track][typeKey], track, typeKey));
     }
   }
   return result;
@@ -1642,7 +1697,8 @@ function isEquippedInCurrentLoadout(itemId) {
 function getEquippedLocation(itemId) {
   const entry = allEquippedEntries(currentLoadout()).find(e => e.itemId === itemId);
   if (!entry) return null;
-  return `${entry.track.toUpperCase()} · ${entry.typeKey.toUpperCase()} [${entry.anchorCol},${entry.anchorRow}]`;
+  const trackLabel = entry.track === 'shared' ? 'SHARED' : entry.track.toUpperCase();
+  return `${trackLabel} · ${entry.typeKey.toUpperCase()} [${entry.anchorCol},${entry.anchorRow}]`;
 }
 
 function countEquipped() {
@@ -1683,6 +1739,7 @@ const CELL_GAP  = 3;   // px
 
 // ── Task 2: Render a single 2×2 track-type grid ──
 function renderTrackTypeGrid(trackName, typeKey, tt) {
+  // For shared sail, container id is 'shared-slots-sail'
   const containerId = `${trackName}-slots-${typeKey}`;
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -1858,6 +1915,9 @@ function renderItemOverlay(trackName, typeKey, itemId, anchorCol, anchorRow, con
 
 function renderAllTracks() {
   const lo = currentLoadout();
+  // Render shared sail
+  renderTrackTypeGrid('shared', 'sail', lo.sail);
+  // Render primary/secondary prism/core/sat
   for (const track of TRACK_KEYS) {
     for (const typeKey of TYPE_KEYS) {
       renderTrackTypeGrid(track, typeKey, lo[track][typeKey]);
@@ -2096,9 +2156,16 @@ function moveGhost(x, y) {
 
 // ── Candidate highlight: glow all matching type columns while dragging ──
 function highlightCandidateColumns(itemType) {
-  document.querySelectorAll(`.track-col.trl-${itemType}`).forEach(col => {
-    col.classList.add('drop-candidate-col');
-  });
+  if (itemType === 'sail') {
+    // Sail has a single shared column
+    document.querySelectorAll('.sail-col-shared').forEach(col => {
+      col.classList.add('drop-candidate-col');
+    });
+  } else {
+    document.querySelectorAll(`.track-col.trl-${itemType}`).forEach(col => {
+      col.classList.add('drop-candidate-col');
+    });
+  }
 }
 
 function clearCandidateColumns() {
@@ -2116,10 +2183,15 @@ function clearPreviewHighlights() {
   dragState.previewTarget = null;
 }
 
+function getTrackTypeData(lo, trackName, typeKey) {
+  if (trackName === 'shared') return lo.sail;
+  return lo[trackName]?.[typeKey];
+}
+
 function applyPreview(trackName, typeKey, anchorCol, anchorRow) {
   clearPreviewHighlights();
   const lo = currentLoadout();
-  const tt = lo[trackName][typeKey];
+  const tt = getTrackTypeData(lo, trackName, typeKey);
   const item = dragState.item;
   const selfId = dragState.sourceType === 'overlay' ? item.id : null;
 
@@ -2231,7 +2303,7 @@ function cancelDrag() {
   if (dragState.isDragging && dragState.sourceType === 'overlay' && dragState.sourceSlotId) {
     const { track, typeKey, anchorCol, anchorRow } = dragState.sourceSlotId;
     const lo = state.loadouts[dragState.sourceLoadout];
-    const tt = lo[track][typeKey];
+    const tt = getTrackTypeData(lo, track, typeKey);
     writeItemToGrid(tt, dragState.item, anchorCol, anchorRow);
     renderAllTracks();
     renderInventory();
@@ -2245,35 +2317,39 @@ function cancelDrag() {
 // ── Task 6: Assert grid data ↔ DOM overlay sync (dev guard) ──
 function assertGridDomSync() {
   const lo = currentLoadout();
+  // Check shared sail
+  const allSlots = [{ track: 'shared', typeKey: 'sail', tt: lo.sail }];
   for (const track of TRACK_KEYS) {
     for (const typeKey of TYPE_KEYS) {
-      const tt = lo[track][typeKey];
-      const containerId = `${track}-slots-${typeKey}`;
-      const container = document.getElementById(containerId);
-      if (!container) continue;
+      allSlots.push({ track, typeKey, tt: lo[track][typeKey] });
+    }
+  }
+  for (const { track, typeKey, tt } of allSlots) {
+    const containerId = `${track}-slots-${typeKey}`;
+    const container = document.getElementById(containerId);
+    if (!container) continue;
 
-      // Collect item IDs that should have overlays (from grid data)
-      const dataIds = new Set();
-      for (let r = 0; r < 2; r++) for (let c = 0; c < 2; c++) {
-        const id = tt.grid[r][c];
-        if (id) dataIds.add(id);
+    // Collect item IDs that should have overlays (from grid data)
+    const dataIds = new Set();
+    for (let r = 0; r < 2; r++) for (let c = 0; c < 2; c++) {
+      const id = tt.grid[r][c];
+      if (id) dataIds.add(id);
+    }
+
+    // Collect item IDs that actually have overlays in DOM
+    const domIds = new Set();
+    container.querySelectorAll('.item-overlay').forEach(el => domIds.add(el.dataset.itemId));
+
+    // Check for ghost occupancy (data has id but no overlay)
+    for (const id of dataIds) {
+      if (!domIds.has(id)) {
+        console.warn(`[StarChart] Ghost occupancy detected: ${id} in ${track}/${typeKey} has grid data but no overlay`);
       }
-
-      // Collect item IDs that actually have overlays in DOM
-      const domIds = new Set();
-      container.querySelectorAll('.item-overlay').forEach(el => domIds.add(el.dataset.itemId));
-
-      // Check for ghost occupancy (data has id but no overlay)
-      for (const id of dataIds) {
-        if (!domIds.has(id)) {
-          console.warn(`[StarChart] Ghost occupancy detected: ${id} in ${track}/${typeKey} has grid data but no overlay`);
-        }
-      }
-      // Check for ghost overlays (overlay exists but data has no id)
-      for (const id of domIds) {
-        if (!dataIds.has(id)) {
-          console.warn(`[StarChart] Ghost overlay detected: ${id} in ${track}/${typeKey} has overlay but no grid data`);
-        }
+    }
+    // Check for ghost overlays (overlay exists but data has no id)
+    for (const id of domIds) {
+      if (!dataIds.has(id)) {
+        console.warn(`[StarChart] Ghost overlay detected: ${id} in ${track}/${typeKey} has overlay but no grid data`);
       }
     }
   }
@@ -2295,7 +2371,8 @@ window.addEventListener('mousemove', e => {
         // Pre-clear the grid so cells show as empty during drag
         const { track, typeKey } = sourceSlotId;
         const lo = state.loadouts[sourceLoadoutIdx];
-        clearItemFromGrid(lo[track][typeKey], item.id);
+        const tt = getTrackTypeData(lo, track, typeKey);
+        clearItemFromGrid(tt, item.id);
         renderAllTracks();
         renderInventory();
       }
@@ -2379,7 +2456,7 @@ window.addEventListener('mouseup', e => {
     }
 
     const lo = currentLoadout();
-    const tt = lo[track][typeKey];
+    const tt = getTrackTypeData(lo, track, typeKey);
 
     // ── Task 4: For same-track moves, the source grid was already pre-cleared in mousemove.
     //    For cross-track moves from overlay, clear source now.
@@ -2388,7 +2465,7 @@ window.addEventListener('mouseup', e => {
       // Only clear if different track/typeKey (same-track was pre-cleared in mousemove)
       if (src.track !== track || src.typeKey !== typeKey) {
         const srcLo = state.loadouts[dragState.sourceLoadout];
-        clearItemFromGrid(srcLo[src.track][src.typeKey], dragItem.id);
+        clearItemFromGrid(getTrackTypeData(srcLo, src.track, src.typeKey), dragItem.id);
       }
     }
 
