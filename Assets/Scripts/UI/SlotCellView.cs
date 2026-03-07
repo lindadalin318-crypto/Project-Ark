@@ -316,6 +316,9 @@ namespace ProjectArk.UI
                 mgr.DropTargetAnchorCol = anchor.x;
                 mgr.DropTargetAnchorRow = anchor.y;
 
+                // Mark shared SAIL column drop target (OwnerTrack is null for shared SAIL)
+                mgr.DropTargetIsSailColumn = (OwnerTrack == null && SlotType == SlotType.LightSail);
+
                 // Update ghost and column preview
                 mgr.UpdateGhostDropState(previewState, isReplace ? 1 : 0);
                 OwnerColumn?.SetDropPreview(previewState);
@@ -341,15 +344,29 @@ namespace ProjectArk.UI
                             ItemShape.Shape1x1, DropPreviewState.Invalid, isCoreLayer);
                     }
                 }
-                else
+                else if (OwnerTrack != null && SlotType == SlotType.Satellite)
                 {
-                    // SAIL / SAT: single-cell highlight via DragHighlightLayer
-                    // Use CellIndex directly to avoid col/row conversion errors
-                    // (SAT is 2x2, so CellIndex != row)
+                    // SAT: use DragHighlightLayer via SetSingleHighlightAtIndex (SAT is always Shape1x1)
                     var singleState = isReplace ? DropPreviewState.Replace
                                     : accepted  ? DropPreviewState.Valid
                                                 : DropPreviewState.Invalid;
-                    OwnerTrack?.SetSingleHighlightAtIndex(SlotType, CellIndex, singleState);
+                    OwnerTrack.SetSingleHighlightAtIndex(SlotType, CellIndex, singleState);
+                }
+                else if (OwnerTrack != null)
+                {
+                    // Other types: single-cell highlight via DragHighlightLayer
+                    var singleState = isReplace ? DropPreviewState.Replace
+                                    : accepted  ? DropPreviewState.Valid
+                                                : DropPreviewState.Invalid;
+                    OwnerTrack.SetSingleHighlightAtIndex(SlotType, CellIndex, singleState);
+                }
+                else if (SlotType == SlotType.LightSail)
+                {
+                    // Shared SAIL column: use DragDropManager's exposed SailHighlightLayer
+                    var singleState = isReplace ? DropPreviewState.Replace
+                                    : accepted  ? DropPreviewState.Valid
+                                                : DropPreviewState.Invalid;
+                    mgr.SailHighlightLayer?.ShowHighlightAtCellIndex(CellIndex, singleState);
                 }
             }
             else
@@ -376,7 +393,12 @@ namespace ProjectArk.UI
                 if (OwnerTrack != null)
                     OwnerTrack.ClearAllHighlights();
                 else
+                {
                     ClearHighlight();
+                    // Shared SAIL column: also clear the sail highlight layer
+                    if (SlotType == SlotType.LightSail)
+                        mgr.SailHighlightLayer?.ClearHighlight();
+                }
 
                 // Delay one frame before clearing DropTargetTrack:
                 // if the pointer moved to another cell in the same TrackView,
@@ -429,6 +451,7 @@ namespace ProjectArk.UI
                 mgr.DropTargetValid = true;
                 mgr.DropTargetAnchorCol = anchor.x;
                 mgr.DropTargetAnchorRow = anchor.y;
+                mgr.DropTargetIsSailColumn = (OwnerTrack == null && SlotType == SlotType.LightSail);
                 mgr.EndDrag(true);
             }
         }
@@ -515,26 +538,34 @@ namespace ProjectArk.UI
             bool hasSpace = false;
             if (HasSpaceForItem != null)
             {
-                // SAIL/SAT: use injected delegate
+                // Legacy SAIL-style: use injected delegate (only for LightSail)
                 hasSpace = HasSpaceForItem(payload.Item);
             }
             else if (OwnerTrack != null)
             {
-                // CORE/PRISM: use TrackView.HasSpaceForItem
-                hasSpace = OwnerTrack.HasSpaceForItem(payload.Item, SlotType == SlotType.Core);
+                // CORE/PRISM/SAT: use TrackView.HasSpaceForItem
+                bool isCoreLayer = SlotType == SlotType.Core;
+                bool isPrismLayer = SlotType == SlotType.Prism;
+                if (isCoreLayer || isPrismLayer)
+                    hasSpace = OwnerTrack.HasSpaceForItem(payload.Item, isCoreLayer);
+                else if (SlotType == SlotType.Satellite)
+                    hasSpace = OwnerTrack.Track?.SatLayer?.FreeSpace > 0;
             }
 
             bool valid = typeMatch && hasSpace;
             isReplace = typeMatch && !hasSpace && IsOccupied;
 
-            // For CORE/PRISM, resolve shape anchor against hovered cell.
-            if (OwnerTrack != null && (SlotType == SlotType.Core || SlotType == SlotType.Prism))
+            // For CORE/PRISM/SAT, resolve shape anchor against hovered cell.
+            if (OwnerTrack != null && (SlotType == SlotType.Core || SlotType == SlotType.Prism || SlotType == SlotType.Satellite))
             {
                 // Read dynamic column count from the active layer
                 bool isCoreLayer = SlotType == SlotType.Core;
+                bool isSatLayer  = SlotType == SlotType.Satellite;
                 int gridCols = isCoreLayer
                     ? (OwnerTrack.Track?.CoreLayer?.Cols  ?? SlotLayer<StarCoreSO>.MAX_COLS)
-                    : (OwnerTrack.Track?.PrismLayer?.Cols ?? SlotLayer<PrismSO>.MAX_COLS);
+                    : isSatLayer
+                        ? (OwnerTrack.Track?.SatLayer?.Cols ?? 2)
+                        : (OwnerTrack.Track?.PrismLayer?.Cols ?? SlotLayer<PrismSO>.MAX_COLS);
                 int gridRows = SlotLayer<StarCoreSO>.FIXED_ROWS;
                 int hoverCol = CellIndex % gridCols;
                 int hoverRow = CellIndex / gridCols;

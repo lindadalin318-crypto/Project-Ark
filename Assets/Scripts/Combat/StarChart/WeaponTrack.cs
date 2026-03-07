@@ -17,6 +17,7 @@ namespace ProjectArk.Combat
         private readonly TrackId _id;
         private readonly SlotLayer<StarCoreSO> _coreLayer;
         private readonly SlotLayer<PrismSO> _prismLayer;
+        private readonly SlotLayer<SatelliteSO> _satLayer;
 
         private float _fireCooldownTimer;
         private TrackFiringSnapshot _cachedSnapshot;
@@ -25,9 +26,22 @@ namespace ProjectArk.Combat
         /// <summary> Fires when this track's loadout changes (equip/unequip). </summary>
         public event Action OnLoadoutChanged;
 
+        /// <summary>
+        /// Notify subscribers that this track's loadout has changed.
+        /// Called by StarChartController when equipping/unequipping satellites externally.
+        /// </summary>
+        public void NotifyLoadoutChanged() => OnLoadoutChanged?.Invoke();
+
+        /// <summary>
+        /// Satellites equipped on this track, backed by SatLayer.
+        /// Read-only view for compatibility with existing code.
+        /// </summary>
+        public IReadOnlyList<SatelliteSO> EquippedSatelliteSOs => _satLayer.Items;
+
         public TrackId Id => _id;
         public SlotLayer<StarCoreSO> CoreLayer => _coreLayer;
         public SlotLayer<PrismSO> PrismLayer => _prismLayer;
+        public SlotLayer<SatelliteSO> SatLayer => _satLayer;
 
         /// <summary> True if the track has cores and cooldown is ready. </summary>
         public bool CanFire => !_coreLayer.IsEmpty && _fireCooldownTimer <= 0f;
@@ -35,8 +49,10 @@ namespace ProjectArk.Combat
         public WeaponTrack(TrackId id)
         {
             _id = id;
-            _coreLayer = new SlotLayer<StarCoreSO>();
+            _coreLayer  = new SlotLayer<StarCoreSO>();
             _prismLayer = new SlotLayer<PrismSO>();
+            // SAT layer: fixed 2×2 grid (2 rows × 2 cols), always fully unlocked.
+            _satLayer   = new SlotLayer<SatelliteSO>(initialCols: 2);
             _snapshotDirty = true;
         }
 
@@ -128,6 +144,35 @@ namespace ProjectArk.Combat
         }
 
         /// <summary>
+        /// Equip a satellite at a specific anchor position in the SAT layer.
+        /// Uses TryPlace which respects the exact anchor.
+        /// </summary>
+        public bool EquipSatellite(SatelliteSO sat, int anchorCol, int anchorRow)
+        {
+            bool ok = _satLayer.TryPlace(sat, anchorCol, anchorRow);
+            if (ok) NotifyLoadoutChanged();
+            return ok;
+        }
+
+        /// <summary>
+        /// Legacy: equip a satellite by finding the first available slot.
+        /// </summary>
+        public bool EquipSatellite(SatelliteSO sat)
+        {
+            bool ok = _satLayer.TryEquip(sat);
+            if (ok) NotifyLoadoutChanged();
+            return ok;
+        }
+
+        /// <summary> Remove a satellite from the SAT layer. </summary>
+        public bool UnequipSatellite(SatelliteSO sat)
+        {
+            bool ok = _satLayer.Unequip(sat);
+            if (ok) NotifyLoadoutChanged();
+            return ok;
+        }
+
+        /// <summary>
         /// Restores the unlocked column counts for both layers from save data.
         /// Called during ImportTrack before re-equipping items.
         /// </summary>
@@ -144,11 +189,12 @@ namespace ProjectArk.Combat
                 _prismLayer.TryUnlockColumn();
         }
 
-        /// <summary> Clear all equipped items from both layers. </summary>
+        /// <summary> Clear all equipped items from both layers and the satellite layer. </summary>
         public void ClearAll()
         {
             _coreLayer.Clear();
             _prismLayer.Clear();
+            _satLayer.Clear();
             MarkDirty();
         }
 

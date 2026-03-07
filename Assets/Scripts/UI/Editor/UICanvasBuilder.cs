@@ -107,8 +107,8 @@ namespace ProjectArk.UI.Editor
             Debug.Log("  │  ├─ LoadoutSection (55%)");
             Debug.Log("  │  │  ├─ GatlingCol (▲ DrumCounter ▼ LOADOUT label, LoadoutSwitcher)");
             Debug.Log("  │  │  └─ LoadoutCard (CardHeader + PrimaryTrackView + SecondaryTrackView)");
-            Debug.Log("  │  │     ├─ PrimaryTrackView   (SAIL 2×2 | PRISM 2×2 | CORE 2×2 | SAT 2×2)");
-            Debug.Log("  │  │     └─ SecondaryTrackView (SAIL 2×2 | PRISM 2×2 | CORE 2×2 | SAT 2×2)");
+            Debug.Log("  │  │     ├─ PrimaryTrackView   (PRISM 2×2 | CORE 2×2 | SAT 2×2)");
+            Debug.Log("  │  │     └─ SecondaryTrackView (PRISM 2×2 | CORE 2×2 | SAT 2×2)");
             Debug.Log("  │  ├─ SectionDivider");
             Debug.Log("  │  ├─ InventorySection (40%)");
             Debug.Log("  │  │  ├─ InventoryView (filters + 64x64 grid)");
@@ -362,13 +362,50 @@ namespace ProjectArk.UI.Editor
             SetAnchors(cardHeader, new Vector2(0f, 0.91f), new Vector2(1f, 1f));
             BuildLoadoutCardHeader(cardHeader.transform);
 
-            // Track blocks area (PRIMARY on top, SECONDARY on bottom — matches HTML prototype)
-            var tracksArea = CreateUIObject("TracksArea", loadoutCardGo.transform);
-            SetAnchors(tracksArea, new Vector2(0f, 0f), new Vector2(1f, 0.90f));
+            // ── lc-body layout: SharedSailColumn (fixed left) + TracksArea (flex:1 right) ──
+            // HTML prototype: sail-col-shared (flex-shrink:0) + tracks-area (flex:1)
+            // SharedSailColumn: x 0-0.22 (SAIL column width), y 0-0.90
+            var sharedSailGo = CreateUIObject("SharedSailColumn", loadoutCardGo.transform);
+            SetAnchors(sharedSailGo, new Vector2(0f, 0f), new Vector2(0.22f, 0.90f));
+            var sharedSailColumn = BuildTypeColumn("SharedSailColumn", sharedSailGo.transform,
+                new Vector2(0f, 0f), new Vector2(1f, 1f),
+                "SAIL", StarChartTheme.SailColor, null);
 
-            // PrimaryTrackView (top half: y 0.52 → 1.0)
-            var primaryTrackGo = CreateUIObject("PrimaryTrackView", tracksArea.transform);
-            SetAnchors(primaryTrackGo, new Vector2(0f, 0.52f), new Vector2(1f, 1f));
+            // SharedSailColumn DragHighlightLayer
+            var sailHighlightGo = new GameObject("DragHighlightLayer", typeof(RectTransform));
+            sailHighlightGo.transform.SetParent(sharedSailColumn.GridContainer, false);
+            var sailHighlightLayer = sailHighlightGo.AddComponent<DragHighlightLayer>();
+            sailHighlightLayer.Initialize(sharedSailColumn.GridContainer, sharedSailColumn.Cells, 2);
+
+            // TracksArea: x 0.22-1.0, y 0-0.90 (contains Primary + Secondary track blocks)
+            var tracksArea = CreateUIObject("TracksArea", loadoutCardGo.transform);
+            SetAnchors(tracksArea, new Vector2(0.22f, 0f), new Vector2(1f, 0.90f));
+
+            // PrimaryTrackBlock (top half: y 0.52 → 1.0)
+            var primaryBlockGo = CreateUIObject("PrimaryTrackBlock", tracksArea.transform);
+            SetAnchors(primaryBlockGo, new Vector2(0f, 0.52f), new Vector2(1f, 1f));
+
+            // track-block-label for Primary ("PRIMARY [LMB]")
+            var primaryLabelGo = CreateUIObject("TrackBlockLabel", primaryBlockGo.transform);
+            SetAnchors(primaryLabelGo, new Vector2(0f, 0f), new Vector2(0.09f, 1f));
+            var primaryLabelTmp = primaryLabelGo.AddComponent<TextMeshProUGUI>();
+            primaryLabelTmp.text = "PRIMARY\n<size=80%>[LMB]</size>";
+            primaryLabelTmp.fontSize = 9;
+            primaryLabelTmp.fontStyle = FontStyles.Bold;
+            primaryLabelTmp.color = StarChartTheme.Cyan;
+            primaryLabelTmp.alignment = TextAlignmentOptions.Center;
+            primaryLabelTmp.raycastTarget = false;
+
+            // Vertical divider between label and track-rows
+            var divPrimaryLabel = CreateUIObject("DividerLabel", primaryBlockGo.transform);
+            SetAnchors(divPrimaryLabel, new Vector2(0.089f, 0.05f), new Vector2(0.091f, 0.95f));
+            var divPrimaryLabelImg = divPrimaryLabel.AddComponent<Image>();
+            divPrimaryLabelImg.color = StarChartTheme.Border;
+            divPrimaryLabelImg.raycastTarget = false;
+
+            // PrimaryTrackView (track-rows: 3 columns PRISM | CORE | SAT)
+            var primaryTrackGo = CreateUIObject("PrimaryTrackView", primaryBlockGo.transform);
+            SetAnchors(primaryTrackGo, new Vector2(0.09f, 0f), new Vector2(1f, 1f));
             var primaryTrack = BuildTrackView(primaryTrackGo, "PRIMARY");
 
             // Horizontal divider between Primary and Secondary
@@ -378,9 +415,31 @@ namespace ProjectArk.UI.Editor
             dividerTrackImg.color = StarChartTheme.Border;
             dividerTrackImg.raycastTarget = false;
 
-            // SecondaryTrackView (bottom half: y 0.0 → 0.49)
-            var secondaryTrackGo = CreateUIObject("SecondaryTrackView", tracksArea.transform);
-            SetAnchors(secondaryTrackGo, new Vector2(0f, 0f), new Vector2(1f, 0.49f));
+            // SecondaryTrackBlock (bottom half: y 0.0 → 0.49)
+            var secondaryBlockGo = CreateUIObject("SecondaryTrackBlock", tracksArea.transform);
+            SetAnchors(secondaryBlockGo, new Vector2(0f, 0f), new Vector2(1f, 0.49f));
+
+            // track-block-label for Secondary ("SECONDARY [RMB]")
+            var secondaryLabelGo = CreateUIObject("TrackBlockLabel", secondaryBlockGo.transform);
+            SetAnchors(secondaryLabelGo, new Vector2(0f, 0f), new Vector2(0.09f, 1f));
+            var secondaryLabelTmp = secondaryLabelGo.AddComponent<TextMeshProUGUI>();
+            secondaryLabelTmp.text = "SECONDARY\n<size=80%>[RMB]</size>";
+            secondaryLabelTmp.fontSize = 9;
+            secondaryLabelTmp.fontStyle = FontStyles.Bold;
+            secondaryLabelTmp.color = StarChartTheme.Cyan;
+            secondaryLabelTmp.alignment = TextAlignmentOptions.Center;
+            secondaryLabelTmp.raycastTarget = false;
+
+            // Vertical divider between label and track-rows
+            var divSecondaryLabel = CreateUIObject("DividerLabel", secondaryBlockGo.transform);
+            SetAnchors(divSecondaryLabel, new Vector2(0.089f, 0.05f), new Vector2(0.091f, 0.95f));
+            var divSecondaryLabelImg = divSecondaryLabel.AddComponent<Image>();
+            divSecondaryLabelImg.color = StarChartTheme.Border;
+            divSecondaryLabelImg.raycastTarget = false;
+
+            // SecondaryTrackView (track-rows: 3 columns PRISM | CORE | SAT)
+            var secondaryTrackGo = CreateUIObject("SecondaryTrackView", secondaryBlockGo.transform);
+            SetAnchors(secondaryTrackGo, new Vector2(0.09f, 0f), new Vector2(1f, 1f));
             var secondaryTrack = BuildTrackView(secondaryTrackGo, "SECONDARY");
 
             // Wire LoadoutSwitcher → LoadoutCard
@@ -796,6 +855,8 @@ namespace ProjectArk.UI.Editor
             // ── Wire StarChartPanel fields ──
             WireField(starChartPanel, "_primaryTrackView",   primaryTrack);
             WireField(starChartPanel, "_secondaryTrackView", secondaryTrack);
+            WireField(starChartPanel, "_sharedSailColumn",   sharedSailColumn);
+            WireField(starChartPanel, "_sailHighlightLayer", sailHighlightLayer);
             WireField(starChartPanel, "_inventoryView",      inventoryView);
             WireField(starChartPanel, "_itemDetailView",     itemDetailView);
             WireField(starChartPanel, "_dragDropManager",    dragDropMgr);
@@ -1028,59 +1089,32 @@ namespace ProjectArk.UI.Editor
             var selectBtnImg = selectBtnGo.AddComponent<Image>();
             selectBtnImg.color = Color.clear;
 
-            // ── Left label column (matches HTML .track-block-label: 64px fixed width) ──
-            // LoadoutCard width ≈ 980 * 0.93 = 911px, 64/911 ≈ 7%
-            // Shows "PRIMARY [LMB]" or "SECONDARY [RMB]" vertically centered
-            var labelGo = CreateUIObject("TrackLabel", root.transform);
-            SetAnchors(labelGo, new Vector2(0f, 0f), new Vector2(0.07f, 1f));
-            var labelTmp = labelGo.AddComponent<TextMeshProUGUI>();
-            labelTmp.text = label == "PRIMARY" ? "PRIMARY\n<size=80%>[LMB]</size>" : "SECONDARY\n<size=80%>[RMB]</size>";
-            labelTmp.fontSize = 9;
-            labelTmp.fontStyle = FontStyles.Bold;
-            labelTmp.color = StarChartTheme.Cyan;
-            labelTmp.alignment = TextAlignmentOptions.Center;
-            labelTmp.raycastTarget = false;
-
-            // Vertical divider between label column and type columns
-            var dividerLabel = CreateUIObject("DividerLabel", root.transform);
-            SetAnchors(dividerLabel, new Vector2(0.069f, 0.05f), new Vector2(0.071f, 0.95f));
-            var dividerLabelImg = dividerLabel.AddComponent<Image>();
-            dividerLabelImg.color = StarChartTheme.Border;
-            dividerLabelImg.raycastTarget = false;
-
-            // ── 4-column layout: SAIL | PRISM | CORE | SAT (right 93%) ──────────────
-            // TrackLabel occupies 0-7%, columns start at x=0.08
-            // Each column occupies ~22.75% of the right area (0.92 / 4 ≈ 0.23)
-            // Mapping: SAIL 0.08-0.29, PRISM 0.30-0.51, CORE 0.52-0.73, SAT 0.74-0.99
-            var sailColumn  = BuildTypeColumn("SailColumn",  root.transform,
-                new Vector2(0.08f, 0f), new Vector2(0.29f, 1f),
-                "SAIL",  StarChartTheme.SailColor,  trackView);
-
+            // ── 3-column layout: PRISM | CORE | SAT (full width) ──────────────
+            // SAIL column is now a shared column (SharedSailColumn) outside TrackView.
+            // Each column occupies ~33% of the track width.
+            // Mapping: PRISM 0.0-0.33, CORE 0.34-0.66, SAT 0.67-1.0
             var prismColumn = BuildTypeColumn("PrismColumn", root.transform,
-                new Vector2(0.30f, 0f), new Vector2(0.51f, 1f),
+                new Vector2(0.00f, 0f), new Vector2(0.33f, 1f),
                 "PRISM", StarChartTheme.PrismColor, trackView);
 
             var coreColumn  = BuildTypeColumn("CoreColumn",  root.transform,
-                new Vector2(0.52f, 0f), new Vector2(0.73f, 1f),
+                new Vector2(0.34f, 0f), new Vector2(0.66f, 1f),
                 "CORE",  StarChartTheme.CoreColor,  trackView);
 
             var satColumn   = BuildTypeColumn("SatColumn",   root.transform,
-                new Vector2(0.74f, 0f), new Vector2(0.99f, 1f),
+                new Vector2(0.67f, 0f), new Vector2(1.00f, 1f),
                 "SAT",   StarChartTheme.SatColor,   trackView);
 
             // Note: TypeColumn is a top-level class (TypeColumn.cs), not a nested class of TrackView.
             // This ensures stable Unity GUID serialization across scene rebuilds.
 
             // ── Column dividers ──
-            BuildColumnDivider("DivSailPrism", root.transform, 0.295f);
-            BuildColumnDivider("DivPrismCore", root.transform, 0.515f);
-            BuildColumnDivider("DivCoreSat",   root.transform, 0.735f);
+            BuildColumnDivider("DivPrismCore", root.transform, 0.335f);
+            BuildColumnDivider("DivCoreSat",   root.transform, 0.665f);
 
             // Wire TrackView fields
-            WireField(trackView, "_trackLabel",      labelTmp);
             WireField(trackView, "_selectButton",    selectBtn);
             WireField(trackView, "_selectionBorder", borderImg);
-            WireField(trackView, "_sailColumn",      sailColumn);
             WireField(trackView, "_prismColumn",     prismColumn);
             WireField(trackView, "_coreColumn",      coreColumn);
             WireField(trackView, "_satColumn",       satColumn);

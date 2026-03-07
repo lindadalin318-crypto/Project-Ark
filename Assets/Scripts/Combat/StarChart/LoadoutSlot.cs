@@ -1,10 +1,9 @@
-using System.Collections.Generic;
-
 namespace ProjectArk.Combat
 {
     /// <summary>
     /// Encapsulates a single loadout configuration:
-    /// two weapon tracks (Primary/Secondary), a Light Sail, and a list of Satellites.
+    /// two weapon tracks (Primary/Secondary) and a Light Sail.
+    /// Each WeaponTrack owns its own satellite list (Per-Track).
     /// Pure C# class — not a MonoBehaviour.
     /// </summary>
     public class LoadoutSlot
@@ -18,9 +17,6 @@ namespace ProjectArk.Combat
         /// <summary> Currently equipped Light Sail SO, or null. </summary>
         public LightSailSO EquippedLightSailSO;
 
-        /// <summary> Currently equipped Satellite SOs. </summary>
-        public readonly List<SatelliteSO> EquippedSatelliteSOs = new();
-
         /// <summary>
         /// Creates a new LoadoutSlot with two fresh, independent WeaponTrack instances.
         /// </summary>
@@ -31,7 +27,8 @@ namespace ProjectArk.Combat
         }
 
         /// <summary>
-        /// Clears all equipped items from both tracks and removes LightSail / Satellites.
+        /// Clears all equipped items from both tracks and removes LightSail.
+        /// Satellite lists are cleared inside WeaponTrack.ClearAll().
         /// Does NOT dispose Runners — caller is responsible for that.
         /// </summary>
         public void Clear()
@@ -39,7 +36,6 @@ namespace ProjectArk.Combat
             PrimaryTrack.ClearAll();
             SecondaryTrack.ClearAll();
             EquippedLightSailSO = null;
-            EquippedSatelliteSOs.Clear();
         }
     }
 }

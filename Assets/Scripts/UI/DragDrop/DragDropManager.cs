@@ -41,6 +41,12 @@ namespace ProjectArk.UI
         public bool DropTargetIsReplace { get; set; }
 
         /// <summary>
+        /// True when the current drop target is the shared SAIL column (not a per-track cell).
+        /// In this case DropTargetTrack may be null; SAIL equip goes directly through the controller.
+        /// </summary>
+        public bool DropTargetIsSailColumn { get; set; }
+
+        /// <summary>
         /// The resolved anchor column for the current drop target (computed by FindBestAnchor).
         /// Valid only when DropTargetValid is true and DropTargetSlotType is Core or Prism.
         /// </summary>
@@ -58,6 +64,9 @@ namespace ProjectArk.UI
         /// </summary>
         public List<(StarChartItemSO item, WeaponTrack track)> EvictedItems { get; } = new();
         public ItemTooltipView TooltipView { get; private set; }
+
+        /// <summary> Exposes the shared SAIL highlight layer for SlotCellView hover feedback. </summary>
+        public DragHighlightLayer SailHighlightLayer => _panel?.SailHighlightLayer;
 
         private StarChartPanel _panel;
         private StarChartController _controller;
@@ -146,6 +155,7 @@ namespace ProjectArk.UI
             DropTargetTrack = null;
             DropTargetValid = false;
             DropTargetIsReplace = false;
+            DropTargetIsSailColumn = false;
             EvictedItems.Clear();
 
             // Dim source card
@@ -248,7 +258,21 @@ namespace ProjectArk.UI
         /// </summary>
         private void ExecuteDrop()
         {
-            if (CurrentPayload == null || DropTargetTrack == null || _panel == null) return;
+            if (CurrentPayload == null || _panel == null) return;
+
+            // Shared SAIL column: DropTargetTrack may be null, but DropTargetIsSailColumn is set.
+            // SAIL equip/unequip goes directly through the controller, no track needed.
+            if (DropTargetIsSailColumn)
+            {
+                EquipToTrack(CurrentPayload.Item, null);
+                _panel.RefreshAllViews();
+                _panel.SelectAndShowItem(CurrentPayload.Item);
+                PlaySnapInAnimation(CurrentPayload.Item);
+                TriggerFlyBackAnimations();
+                return;
+            }
+
+            if (DropTargetTrack == null) return;
 
             var item = CurrentPayload.Item;
             var source = CurrentPayload.Source;
@@ -302,6 +326,14 @@ namespace ProjectArk.UI
                 _panel?.RefreshAllViews();
                 _panel?.SelectAndShowItem(item);
             }
+            else if (item is LightSailSO)
+            {
+                // Shared SAIL column: SourceTrack is null (no owning track).
+                // Unequip directly through the controller.
+                _controller?.UnequipLightSail();
+                _panel?.RefreshAllViews();
+                _panel?.SelectAndShowItem(item);
+            }
         }
 
         private void EquipToTrack(StarChartItemSO item, WeaponTrack track)
@@ -349,7 +381,8 @@ namespace ProjectArk.UI
                     break;
 
                 case LightSailSO sail:
-                    // Evict existing sail if present
+                    // Shared SAIL column: equip directly through controller, no track needed.
+                    // Evict existing sail if present.
                     var existingSail = _controller?.GetEquippedLightSail();
                     if (existingSail != null)
                     {
@@ -361,17 +394,17 @@ namespace ProjectArk.UI
                     break;
 
                 case SatelliteSO sat:
-                    var sats = _controller?.GetEquippedSatellites();
-                    int maxSats = 2;
-                    if (sats != null && sats.Count >= maxSats)
+                    // SAT now uses SlotLayer<SatelliteSO> — place at the resolved anchor position.
+                    // anchorCol/anchorRow are already declared at the top of EquipToTrack.
+                    var satOccupant = track.SatLayer?.GetAt(anchorCol, anchorRow);
+                    if (satOccupant != null && !ReferenceEquals(satOccupant, sat))
                     {
-                        // Evict the oldest satellite
-                        var evicted = sats[0];
-                        EvictedItems.Add((evicted, track));
-                        _controller.UnequipSatellite(evicted);
-                        ShowReplaceMessage(item);
+                        // Evict the occupant at the target cell first
+                        EvictedItems.Add((satOccupant, track));
+                        _controller.UnequipSatellite(satOccupant, track.Id);
+                        ShowReplaceMessage(sat);
                     }
-                    _controller?.EquipSatellite(sat);
+                    _controller.EquipSatellite(sat, track.Id, anchorCol, anchorRow);
                     break;
             }
         }
@@ -393,7 +426,8 @@ namespace ProjectArk.UI
                     break;
 
                 case SatelliteSO sat:
-                    _controller?.UnequipSatellite(sat);
+                    // Unequip from the track that owns this satellite
+                    _controller?.UnequipSatellite(sat, track.Id);
                     break;
             }
         }
@@ -519,6 +553,9 @@ namespace ProjectArk.UI
                 var trackViews = _panel.GetComponentsInChildren<TrackView>(true);
                 foreach (var tv in trackViews)
                     tv.ClearAllHighlightTiles();
+
+                // Also clear shared SAIL highlight layer
+                _panel.SailHighlightLayer?.ClearHighlight();
             }
 
             BroadcastDragEnd();
@@ -535,6 +572,7 @@ namespace ProjectArk.UI
             DropTargetValid = false;
             DropTargetIsReplace = false;
             DropTargetIsCoreLayer = false;
+            DropTargetIsSailColumn = false;
             DropTargetAnchorCol = 0;
             DropTargetAnchorRow = 0;
         }

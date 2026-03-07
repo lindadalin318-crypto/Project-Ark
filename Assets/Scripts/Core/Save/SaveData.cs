@@ -63,11 +63,18 @@ namespace ProjectArk.Core.Save
         public TrackSaveData PrimaryTrack   = new();
         public TrackSaveData SecondaryTrack = new();
         public string LightSailID;
+
+        /// <summary>
+        /// Legacy slot-level satellite IDs. Kept for migration from old saves only.
+        /// New saves store satellite IDs inside each TrackSaveData.
+        /// </summary>
+        [Obsolete("Satellites are now stored per-track inside TrackSaveData.SatelliteIDs. " +
+                  "This field is kept for automatic migration of old saves only.")]
         public List<string> SatelliteIDs = new();
     }
 
     /// <summary>
-    /// Single weapon track serialization (core + prism IDs + unlocked column counts).
+    /// Single weapon track serialization (core + prism IDs + satellite IDs + unlocked column counts).
     /// </summary>
     [Serializable]
     public class TrackSaveData
@@ -77,6 +84,9 @@ namespace ProjectArk.Core.Save
 
         /// <summary> Equipped Prism unique IDs. </summary>
         public List<string> PrismIDs = new();
+
+        /// <summary> Equipped Satellite unique IDs for this track (Per-Track). </summary>
+        public List<string> SatelliteIDs = new();
 
         /// <summary>
         /// Number of unlocked columns in the Core layer (1–4).

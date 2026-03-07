@@ -11,9 +11,10 @@ namespace ProjectArk.UI
 {
     /// <summary>
     /// Visual representation of one <see cref="WeaponTrack"/> (Primary or Secondary).
-    /// Displays 4 TypeColumns: SAIL / PRISM / CORE / SAT.
+    /// Displays 3 TypeColumns: PRISM / CORE / SAT.
     /// Each column contains a 2×2 grid of <see cref="SlotCellView"/> cells.
     /// Subscribes to <see cref="WeaponTrack.OnLoadoutChanged"/> for reactive refresh.
+    /// SAIL column is now a shared column managed by StarChartPanel, not per-track.
     /// </summary>
     public class TrackView : MonoBehaviour, IPointerEnterHandler
     {
@@ -30,8 +31,7 @@ namespace ProjectArk.UI
         [SerializeField] private Button _selectButton;
         [SerializeField] private Image _selectionBorder;
 
-        [Header("Type Columns (SAIL / PRISM / CORE / SAT)")]
-        [SerializeField] private TypeColumn _sailColumn;
+        [Header("Type Columns (PRISM / CORE / SAT)")]
         [SerializeField] private TypeColumn _prismColumn;
         [SerializeField] private TypeColumn _coreColumn;
         [SerializeField] private TypeColumn _satColumn;
@@ -41,10 +41,6 @@ namespace ProjectArk.UI
         [SerializeField] [Range(0, 4)] private int _debugCoreCols = 0;
         [Tooltip("Override Prism layer column count for debugging. 0 = use save data. Range 1-4.")]
         [SerializeField] [Range(0, 4)] private int _debugPrismCols = 0;
-        [Tooltip("Override Sail slot count for debugging. 0 = default (1 slot).")]
-        [SerializeField] [Range(0, 4)] private int _debugSailSlots = 0;
-        [Tooltip("Override Satellite slot count for debugging. 0 = default (4 slots).")]
-        [SerializeField] [Range(0, 4)] private int _debugSatSlots = 0;
 
         /// <summary> Fired when a cell with an equipped item is clicked (for unequip). </summary>
         public event Action<StarChartItemSO> OnCellClicked;
@@ -74,7 +70,6 @@ namespace ProjectArk.UI
         // Independent highlight tile layers — one per column, never pollute cell background colors
         private DragHighlightLayer _coreHighlightLayer;
         private DragHighlightLayer _prismHighlightLayer;
-        private DragHighlightLayer _sailHighlightLayer;
         private DragHighlightLayer _satHighlightLayer;
 
         // Cell size and gap used for overlay positioning (must match UICanvasBuilder values)
@@ -87,10 +82,10 @@ namespace ProjectArk.UI
             if (_selectButton != null)
                 _selectButton.onClick.AddListener(() => OnTrackSelected?.Invoke(this));
 
-            _columns = new[] { _sailColumn, _prismColumn, _coreColumn, _satColumn };
+            _columns = new[] { _prismColumn, _coreColumn, _satColumn };
 
             // Detect cell size from the first available cell's RectTransform
-            foreach (var col in new[] { _coreColumn, _prismColumn, _sailColumn, _satColumn })
+            foreach (var col in new[] { _coreColumn, _prismColumn, _satColumn })
             {
                 if (col?.Cells == null) continue;
                 var firstCell = col.Cells.Length > 0 ? col.Cells[0] : null;
@@ -113,7 +108,6 @@ namespace ProjectArk.UI
 
 
             // Initialize each column
-            InitColumn(_sailColumn,  SlotType.LightSail, StarChartTheme.SailColor);
             InitColumn(_prismColumn, SlotType.Prism,     StarChartTheme.PrismColor);
             InitColumn(_coreColumn,  SlotType.Core,      StarChartTheme.CoreColor);
             InitColumn(_satColumn,   SlotType.Satellite, StarChartTheme.SatColor);
@@ -121,7 +115,6 @@ namespace ProjectArk.UI
             // Create independent highlight layers for each column
             _coreHighlightLayer  = CreateHighlightLayer(_coreColumn);
             _prismHighlightLayer = CreateHighlightLayer(_prismColumn);
-            _sailHighlightLayer  = CreateHighlightLayer(_sailColumn);
             _satHighlightLayer   = CreateHighlightLayer(_satColumn);
 
             // Apply debug slot count overrides (only when > 0)
@@ -161,17 +154,8 @@ namespace ProjectArk.UI
                 captured.OnPointerExited += HandleCellPointerExit;
             }
 
-            // SAIL/SAT: inject space-check delegates
-            if (slotType == SlotType.LightSail)
-            {
-                foreach (var cell in cells)
-                    if (cell != null) cell.HasSpaceForItem = (item) => HasSpaceForSail(item);
-            }
-            else if (slotType == SlotType.Satellite)
-            {
-                foreach (var cell in cells)
-                    if (cell != null) cell.HasSpaceForItem = (item) => HasSpaceForSat(item);
-            }
+            // SAT: no special delegate needed — uses SlotLayer<SatelliteSO> like Core/Prism
+            // (HasSpaceForItem delegate is only for legacy SAIL-style single-slot types)
         }
 
         // =====================================================================
@@ -272,8 +256,7 @@ namespace ProjectArk.UI
 
             RefreshColumn(_coreColumn,  _track?.CoreLayer,  StarChartItemType.Core);
             RefreshColumn(_prismColumn, _track?.PrismLayer, StarChartItemType.Prism);
-            RefreshSailColumn();
-            RefreshSatColumn();
+            RefreshColumn(_satColumn,   _track?.SatLayer,   StarChartItemType.Satellite);
         }
 
         // =====================================================================
@@ -288,7 +271,6 @@ namespace ProjectArk.UI
             {
                 SlotType.Core      => "CORE",
                 SlotType.Prism     => "PRISM",
-                SlotType.LightSail => "SAIL",
                 SlotType.Satellite => "SAT",
                 _                  => string.Empty
             };
@@ -431,76 +413,6 @@ namespace ProjectArk.UI
             }
         }
 
-        private void RefreshSailColumn()
-        {
-            if (_sailColumn == null) return;
-            var cells = _sailColumn.Cells;
-
-            // SAIL is a global slot (not per-track). Only the Primary track displays it;
-            // Secondary track shows the slot as empty to avoid duplicate rendering.
-            bool isPrimary = _track?.Id == WeaponTrack.TrackId.Primary;
-
-            if (_controller == null)
-                Debug.LogWarning("[TrackView] _controller is null, SAIL slot will be empty.");
-
-            var sail = isPrimary ? _controller?.GetEquippedLightSail() : null;
-
-            // Debug override: how many sail slots to show (default 1)
-            int sailSlots = _debugSailSlots > 0 ? _debugSailSlots : 1;
-            sailSlots = Mathf.Clamp(sailSlots, 1, cells.Length);
-
-            // Show active sail slots
-            for (int i = 0; i < sailSlots; i++)
-            {
-                if (cells[i] == null) continue;
-                if (i == 0 && sail != null)
-                    cells[i].SetItem(sail);
-                else
-                    cells[i].SetEmpty();
-            }
-
-            // Hide extra cells beyond sailSlots
-            for (int i = sailSlots; i < cells.Length; i++)
-                cells[i]?.SetEmpty();
-        }
-
-        private void RefreshSatColumn()
-        {
-            if (_satColumn == null) return;
-            var cells = _satColumn.Cells;
-
-            // SAT is a global slot (not per-track). Only the Primary track displays it;
-            // Secondary track shows the slots as empty to avoid duplicate rendering.
-            bool isPrimary = _track?.Id == WeaponTrack.TrackId.Primary;
-
-            if (_controller == null)
-                Debug.LogWarning("[TrackView] _controller is null, SAT slots will be empty.");
-
-            var sats = isPrimary ? _controller?.GetEquippedSatellites() : null;
-
-            // Debug override: how many sat slots to show (default = cells.Length = 4)
-            int satSlots = _debugSatSlots > 0 ? _debugSatSlots : cells.Length;
-            satSlots = Mathf.Clamp(satSlots, 1, cells.Length);
-
-            for (int i = 0; i < cells.Length; i++)
-            {
-                if (cells[i] == null) continue;
-
-                if (i < satSlots)
-                {
-                    if (sats != null && i < sats.Count)
-                        cells[i].SetItem(sats[i]);
-                    else
-                        cells[i].SetEmpty();
-                }
-                else
-                {
-                    // Slots beyond satSlots: show as empty (still visible but inactive)
-                    cells[i].SetEmpty();
-                }
-            }
-        }
-
         // =====================================================================
         // Cell click & hover
         // =====================================================================
@@ -519,7 +431,6 @@ namespace ProjectArk.UI
             {
                 SlotType.Core      => "CORE",
                 SlotType.Prism     => "PRISM",
-                SlotType.LightSail => "SAIL",
                 SlotType.Satellite => "SAT",
                 _                  => string.Empty
             };
@@ -580,24 +491,12 @@ namespace ProjectArk.UI
             return false;
         }
 
-        private bool HasSpaceForSail(StarChartItemSO item)
-        {
-            // SAIL is a global slot displayed only on the Primary track.
-            // Secondary track cells must not accept drops to avoid the item
-            // visually "jumping" to the Primary track after equip.
-            if (_track?.Id != WeaponTrack.TrackId.Primary) return false;
-            if (_controller == null) return true;
-            return _controller.GetEquippedLightSail() == null;
-        }
-
         private bool HasSpaceForSat(StarChartItemSO item)
         {
-            // SAT is a global slot displayed only on the Primary track.
-            // Secondary track cells must not accept drops for the same reason.
-            if (_track?.Id != WeaponTrack.TrackId.Primary) return false;
-            if (_controller == null) return true;
-            var sats = _controller.GetEquippedSatellites();
-            return sats == null || sats.Count < 4; // 2×2 = 4 SAT slots
+            // Legacy: kept for reference. SAT now uses SlotLayer<SatelliteSO> like Core/Prism.
+            // This method is no longer called.
+            if (_track == null) return true;
+            return _track.SatLayer.FreeSpace > 0;
         }
 
         /// <summary>
@@ -627,13 +526,12 @@ namespace ProjectArk.UI
         }
 
         /// <summary>
-        /// Show a single-cell highlight for SAIL or SAT columns.
+        /// Show a single-cell highlight for SAT column.
         /// </summary>
         public void SetSingleHighlight(SlotType slotType, int col, int row, DropPreviewState state)
         {
             var layer = slotType switch
             {
-                SlotType.LightSail => _sailHighlightLayer,
                 SlotType.Satellite => _satHighlightLayer,
                 _                  => null
             };
@@ -641,14 +539,13 @@ namespace ProjectArk.UI
         }
 
         /// <summary>
-        /// Show a single-cell highlight for SAIL or SAT columns using a direct cell index.
+        /// Show a single-cell highlight for SAT column using a direct cell index.
         /// Bypasses col/row conversion — always pixel-perfect regardless of grid layout.
         /// </summary>
         public void SetSingleHighlightAtIndex(SlotType slotType, int cellIndex, DropPreviewState state)
         {
             var layer = slotType switch
             {
-                SlotType.LightSail => _sailHighlightLayer,
                 SlotType.Satellite => _satHighlightLayer,
                 _                  => null
             };
@@ -671,7 +568,6 @@ namespace ProjectArk.UI
         {
             _coreHighlightLayer?.ClearHighlight();
             _prismHighlightLayer?.ClearHighlight();
-            _sailHighlightLayer?.ClearHighlight();
             _satHighlightLayer?.ClearHighlight();
         }
 
@@ -703,7 +599,6 @@ namespace ProjectArk.UI
         {
             return slotType switch
             {
-                SlotType.LightSail => _sailColumn,
                 SlotType.Prism     => _prismColumn,
                 SlotType.Core      => _coreColumn,
                 SlotType.Satellite => _satColumn,

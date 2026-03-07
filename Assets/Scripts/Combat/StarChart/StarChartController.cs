@@ -78,7 +78,9 @@ namespace ProjectArk.Combat
 
         // Per-slot runtime runners (parallel arrays, indexed by loadout slot)
         private LightSailRunner[] _lightSailRunners;
-        private List<SatelliteRunner>[] _satelliteRunners;
+        // Per-slot, per-track satellite runners: [slotIndex] → (primaryRunners, secondaryRunners)
+        private List<SatelliteRunner>[] _primarySatRunners;
+        private List<SatelliteRunner>[] _secondarySatRunners;
 
         private InputHandler _inputHandler;
         private ShipAiming _shipAiming;
@@ -102,8 +104,14 @@ namespace ProjectArk.Combat
         /// <summary> Get the currently equipped Light Sail SO, or null. </summary>
         public LightSailSO GetEquippedLightSail() => ActiveSlot.EquippedLightSailSO;
 
-        /// <summary> Get the currently equipped Satellite SOs. </summary>
-        public IReadOnlyList<SatelliteSO> GetEquippedSatellites() => ActiveSlot.EquippedSatelliteSOs;
+        /// <summary> Get the currently equipped Satellite SOs for the specified track. </summary>
+        public IReadOnlyList<SatelliteSO> GetEquippedSatellites(WeaponTrack.TrackId trackId)
+        {
+            var track = trackId == WeaponTrack.TrackId.Primary
+                ? ActiveSlot.PrimaryTrack
+                : ActiveSlot.SecondaryTrack;
+            return track.EquippedSatelliteSOs;
+        }
 
         /// <summary>
         /// Equip a Light Sail at runtime. Disposes the previous one if any.
@@ -134,26 +142,53 @@ namespace ProjectArk.Combat
         }
 
         /// <summary>
-        /// Equip a Satellite at runtime. Creates a new SatelliteRunner.
+        /// Equip a Satellite at runtime to the specified track. Creates a new SatelliteRunner.
         /// </summary>
-        public void EquipSatellite(SatelliteSO sat)
+        public void EquipSatellite(SatelliteSO sat, WeaponTrack.TrackId trackId)
         {
             if (sat == null) return;
 
+            var track   = trackId == WeaponTrack.TrackId.Primary ? ActiveSlot.PrimaryTrack : ActiveSlot.SecondaryTrack;
+            var runners = trackId == WeaponTrack.TrackId.Primary
+                ? _primarySatRunners[_activeLoadoutIndex]
+                : _secondarySatRunners[_activeLoadoutIndex];
+
             var runner = new SatelliteRunner(sat, _context);
-            _satelliteRunners[_activeLoadoutIndex].Add(runner);
-            ActiveSlot.EquippedSatelliteSOs.Add(sat);
+            runners.Add(runner);
+            track.EquipSatellite(sat); // uses TryEquip (first available slot)
             OnSatellitesChanged?.Invoke();
         }
 
         /// <summary>
-        /// Unequip a specific Satellite at runtime.
+        /// Equip a Satellite at a specific anchor position in the SAT layer.
         /// </summary>
-        public void UnequipSatellite(SatelliteSO sat)
+        public void EquipSatellite(SatelliteSO sat, WeaponTrack.TrackId trackId, int anchorCol, int anchorRow)
         {
             if (sat == null) return;
 
-            var runners = _satelliteRunners[_activeLoadoutIndex];
+            var track   = trackId == WeaponTrack.TrackId.Primary ? ActiveSlot.PrimaryTrack : ActiveSlot.SecondaryTrack;
+            var runners = trackId == WeaponTrack.TrackId.Primary
+                ? _primarySatRunners[_activeLoadoutIndex]
+                : _secondarySatRunners[_activeLoadoutIndex];
+
+            var runner = new SatelliteRunner(sat, _context);
+            runners.Add(runner);
+            track.EquipSatellite(sat, anchorCol, anchorRow);
+            OnSatellitesChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Unequip a specific Satellite at runtime from the specified track.
+        /// </summary>
+        public void UnequipSatellite(SatelliteSO sat, WeaponTrack.TrackId trackId)
+        {
+            if (sat == null) return;
+
+            var track   = trackId == WeaponTrack.TrackId.Primary ? ActiveSlot.PrimaryTrack : ActiveSlot.SecondaryTrack;
+            var runners = trackId == WeaponTrack.TrackId.Primary
+                ? _primarySatRunners[_activeLoadoutIndex]
+                : _secondarySatRunners[_activeLoadoutIndex];
+
             for (int i = runners.Count - 1; i >= 0; i--)
             {
                 if (runners[i].Data == sat)
@@ -164,7 +199,7 @@ namespace ProjectArk.Combat
                 }
             }
 
-            ActiveSlot.EquippedSatelliteSOs.Remove(sat);
+            track.UnequipSatellite(sat);
             OnSatellitesChanged?.Invoke();
         }
 
@@ -202,10 +237,15 @@ namespace ProjectArk.Combat
                 sailRunner = null;
             }
 
-            var satRunners = _satelliteRunners[slotIndex];
-            for (int i = satRunners.Count - 1; i >= 0; i--)
-                satRunners[i].Dispose();
-            satRunners.Clear();
+            var primaryRunners = _primarySatRunners[slotIndex];
+            for (int i = primaryRunners.Count - 1; i >= 0; i--)
+                primaryRunners[i].Dispose();
+            primaryRunners.Clear();
+
+            var secondaryRunners = _secondarySatRunners[slotIndex];
+            for (int i = secondaryRunners.Count - 1; i >= 0; i--)
+                secondaryRunners[i].Dispose();
+            secondaryRunners.Clear();
         }
 
         /// <summary>
@@ -220,12 +260,22 @@ namespace ProjectArk.Combat
             if (slot.EquippedLightSailSO != null)
                 _lightSailRunners[slotIndex] = new LightSailRunner(slot.EquippedLightSailSO, _context);
 
-            // Satellites
-            var satRunners = _satelliteRunners[slotIndex];
-            for (int i = 0; i < slot.EquippedSatelliteSOs.Count; i++)
+            // Primary track satellites
+            var primaryRunners = _primarySatRunners[slotIndex];
+            for (int i = 0; i < slot.PrimaryTrack.EquippedSatelliteSOs.Count; i++)
             {
-                if (slot.EquippedSatelliteSOs[i] != null)
-                    satRunners.Add(new SatelliteRunner(slot.EquippedSatelliteSOs[i], _context));
+                var sat = slot.PrimaryTrack.EquippedSatelliteSOs[i];
+                if (sat != null)
+                    primaryRunners.Add(new SatelliteRunner(sat, _context));
+            }
+
+            // Secondary track satellites
+            var secondaryRunners = _secondarySatRunners[slotIndex];
+            for (int i = 0; i < slot.SecondaryTrack.EquippedSatelliteSOs.Count; i++)
+            {
+                var sat = slot.SecondaryTrack.EquippedSatelliteSOs[i];
+                if (sat != null)
+                    secondaryRunners.Add(new SatelliteRunner(sat, _context));
             }
         }
 
@@ -246,11 +296,13 @@ namespace ProjectArk.Combat
             const int SlotCount = 3;
             _loadouts = new LoadoutSlot[SlotCount];
             _lightSailRunners = new LightSailRunner[SlotCount];
-            _satelliteRunners = new List<SatelliteRunner>[SlotCount];
+            _primarySatRunners   = new List<SatelliteRunner>[SlotCount];
+            _secondarySatRunners = new List<SatelliteRunner>[SlotCount];
             for (int i = 0; i < SlotCount; i++)
             {
-                _loadouts[i] = new LoadoutSlot();
-                _satelliteRunners[i] = new List<SatelliteRunner>();
+                _loadouts[i]            = new LoadoutSlot();
+                _primarySatRunners[i]   = new List<SatelliteRunner>();
+                _secondarySatRunners[i] = new List<SatelliteRunner>();
             }
             _activeLoadoutIndex = 0;
 
@@ -277,9 +329,14 @@ namespace ProjectArk.Combat
 
             // 光帆和伴星 tick（在武器 Tick 之后、开火检查之前）
             _lightSailRunners[_activeLoadoutIndex]?.Tick(dt);
-            var activeSatRunners = _satelliteRunners[_activeLoadoutIndex];
-            for (int i = 0; i < activeSatRunners.Count; i++)
-                activeSatRunners[i]?.Tick(dt);
+            // Tick primary track satellite runners
+            var activePrimaryRunners = _primarySatRunners[_activeLoadoutIndex];
+            for (int i = 0; i < activePrimaryRunners.Count; i++)
+                activePrimaryRunners[i]?.Tick(dt);
+            // Tick secondary track satellite runners
+            var activeSecondaryRunners = _secondarySatRunners[_activeLoadoutIndex];
+            for (int i = 0; i < activeSecondaryRunners.Count; i++)
+                activeSecondaryRunners[i]?.Tick(dt);
 
             // Guard: inputHandler must be valid
             if (_inputHandler == null) return;
@@ -307,14 +364,24 @@ namespace ProjectArk.Combat
                 for (int i = 0; i < _lightSailRunners.Length; i++)
                     _lightSailRunners[i]?.Dispose();
             }
-            if (_satelliteRunners != null)
+            if (_primarySatRunners != null)
             {
-                for (int i = 0; i < _satelliteRunners.Length; i++)
+                for (int i = 0; i < _primarySatRunners.Length; i++)
                 {
-                    if (_satelliteRunners[i] == null) continue;
-                    for (int j = 0; j < _satelliteRunners[i].Count; j++)
-                        _satelliteRunners[i][j].Dispose();
-                    _satelliteRunners[i].Clear();
+                    if (_primarySatRunners[i] == null) continue;
+                    for (int j = 0; j < _primarySatRunners[i].Count; j++)
+                        _primarySatRunners[i][j].Dispose();
+                    _primarySatRunners[i].Clear();
+                }
+            }
+            if (_secondarySatRunners != null)
+            {
+                for (int i = 0; i < _secondarySatRunners.Length; i++)
+                {
+                    if (_secondarySatRunners[i] == null) continue;
+                    for (int j = 0; j < _secondarySatRunners[i].Count; j++)
+                        _secondarySatRunners[i][j].Dispose();
+                    _secondarySatRunners[i].Clear();
                 }
             }
         }
@@ -622,7 +689,7 @@ namespace ProjectArk.Combat
                 _lightSailRunners[0] = new LightSailRunner(_debugLightSail, _context);
             }
 
-            // 伴星
+            // 伴星（debug 默认装备到 Primary 轨道）
             if (_debugSatellites != null)
             {
                 for (int i = 0; i < _debugSatellites.Length; i++)
@@ -630,8 +697,8 @@ namespace ProjectArk.Combat
                     if (_debugSatellites[i] != null)
                     {
                         var runner = new SatelliteRunner(_debugSatellites[i], _context);
-                        _satelliteRunners[0].Add(runner);
-                        slot0.EquippedSatelliteSOs.Add(_debugSatellites[i]);
+                        _primarySatRunners[0].Add(runner);
+                        slot0.PrimaryTrack.EquipSatellite(_debugSatellites[i]);
                     }
                 }
             }
@@ -693,13 +760,8 @@ namespace ProjectArk.Combat
                 var slotData = new LoadoutSlotSaveData();
                 slotData.PrimaryTrack   = ExportTrack(slot.PrimaryTrack);
                 slotData.SecondaryTrack = ExportTrack(slot.SecondaryTrack);
-                slotData.LightSailID    = slot.EquippedLightSailSO != null ? slot.EquippedLightSailSO.DisplayName : "";
-                slotData.SatelliteIDs   = new List<string>();
-                for (int j = 0; j < slot.EquippedSatelliteSOs.Count; j++)
-                {
-                    if (slot.EquippedSatelliteSOs[j] != null)
-                        slotData.SatelliteIDs.Add(slot.EquippedSatelliteSOs[j].DisplayName);
-                }
+                slotData.LightSailID = slot.EquippedLightSailSO != null ? slot.EquippedLightSailSO.DisplayName : "";
+                // Satellites are now stored per-track inside TrackSaveData
                 data.Loadouts.Add(slotData);
             }
 
@@ -768,18 +830,33 @@ namespace ProjectArk.Combat
                     }
                 }
 
-                if (slotData.SatelliteIDs != null)
+#pragma warning disable CS0618 // Obsolete field access for legacy migration
+                // --- Satellite migration: old saves stored SatelliteIDs at slot level ---
+                if (slotData.SatelliteIDs != null && slotData.SatelliteIDs.Count > 0)
                 {
+                    // Legacy format: migrate all satellites to Primary track
+                    Debug.LogWarning("[StarChartController] Migrating legacy slot-level SatelliteIDs to PrimaryTrack.");
                     for (int j = 0; j < slotData.SatelliteIDs.Count; j++)
                     {
                         var sat = resolver.FindSatellite(slotData.SatelliteIDs[j]);
                         if (sat != null)
                         {
-                            slot.EquippedSatelliteSOs.Add(sat);
-                            _satelliteRunners[i].Add(new SatelliteRunner(sat, _context));
+                            slot.PrimaryTrack.EquipSatellite(sat);
+                            _primarySatRunners[i].Add(new SatelliteRunner(sat, _context));
+                        }
+                        else
+                        {
+                            Debug.LogWarning($"[StarChartController] Cannot resolve legacy satellite ID '{slotData.SatelliteIDs[j]}', skipping.");
                         }
                     }
                 }
+                else
+                {
+                    // New format: load per-track satellite IDs from TrackSaveData
+                    ImportTrackSatellites(slot.PrimaryTrack,   slotData.PrimaryTrack,   _primarySatRunners[i],   resolver);
+                    ImportTrackSatellites(slot.SecondaryTrack, slotData.SecondaryTrack, _secondarySatRunners[i], resolver);
+                }
+#pragma warning restore CS0618
             }
 
             // Re-initialize pools for the active loadout
@@ -802,6 +879,14 @@ namespace ProjectArk.Combat
             {
                 if (prisms[i] != null)
                     data.PrismIDs.Add(prisms[i].DisplayName);
+            }
+
+            // Persist per-track satellite IDs
+            var sats = track.EquippedSatelliteSOs;
+            for (int i = 0; i < sats.Count; i++)
+            {
+                if (sats[i] != null)
+                    data.SatelliteIDs.Add(sats[i].DisplayName);
             }
 
             // Persist unlocked column counts for progressive capacity system
@@ -836,6 +921,33 @@ namespace ProjectArk.Combat
                 {
                     var prism = resolver.FindPrism(data.PrismIDs[i]);
                     if (prism != null) track.EquipPrism(prism);
+                }
+            }
+            // Note: Satellite IDs are imported separately via ImportTrackSatellites
+            // to allow runner creation alongside data restoration.
+        }
+
+        /// <summary>
+        /// Import satellite IDs from TrackSaveData into the given WeaponTrack,
+        /// and create corresponding SatelliteRunners.
+        /// Unresolvable IDs are skipped with a warning (no exception thrown).
+        /// </summary>
+        private void ImportTrackSatellites(WeaponTrack track, TrackSaveData data,
+                                            List<SatelliteRunner> runners,
+                                            IStarChartItemResolver resolver)
+        {
+            if (data?.SatelliteIDs == null) return;
+            for (int i = 0; i < data.SatelliteIDs.Count; i++)
+            {
+                var sat = resolver.FindSatellite(data.SatelliteIDs[i]);
+                if (sat != null)
+                {
+                    track.EquipSatellite(sat);
+                    runners.Add(new SatelliteRunner(sat, _context));
+                }
+                else
+                {
+                    Debug.LogWarning($"[StarChartController] Cannot resolve satellite ID '{data.SatelliteIDs[i]}', skipping.");
                 }
             }
         }

@@ -18,6 +18,10 @@ namespace ProjectArk.UI
         [SerializeField] private TrackView _primaryTrackView;
         [SerializeField] private TrackView _secondaryTrackView;
 
+        [Header("Shared SAIL Column")]
+        [SerializeField] private TypeColumn _sharedSailColumn;
+        [SerializeField] private DragHighlightLayer _sailHighlightLayer;
+
         [Header("Loadout")]
         [SerializeField] private LoadoutSwitcher _loadoutSwitcher;
         [SerializeField] private RectTransform _loadoutCard;
@@ -105,7 +109,11 @@ namespace ProjectArk.UI
 
                 case SatelliteSO:
                     typeName = "SAT";
-                    trackName = "SHARED";
+                    // SAT is now Per-Track: check both tracks
+                    if (ListContains(_controller.PrimaryTrack.EquippedSatelliteSOs, item as SatelliteSO))
+                        trackName = "PRIMARY";
+                    else if (ListContains(_controller.SecondaryTrack.EquippedSatelliteSOs, item as SatelliteSO))
+                        trackName = "SECONDARY";
                     break;
             }
 
@@ -191,9 +199,33 @@ namespace ProjectArk.UI
             _selectedTrack = controller.PrimaryTrack;
             UpdateTrackSelection();
 
-            // Initialize drag-and-drop manager
+            // Bind drag-and-drop manager
             if (_dragDropManager != null)
                 _dragDropManager.Bind(this, controller);
+
+            // Initialize the shared SAIL column so each cell gets SlotType.LightSail and OwnerTrack=null.
+            // This is required for IsTypeMatch and DropTargetIsSailColumn to work correctly.
+            if (_sharedSailColumn != null)
+            {
+                _sharedSailColumn.Initialize(SlotType.LightSail, StarChartTheme.SailColor, null);
+
+                // Inject HasSpaceForItem delegate for shared SAIL column cells
+                // (cells have no OwnerTrack, so they need a direct delegate for drop validity)
+                foreach (var cell in _sharedSailColumn.Cells)
+                {
+                    if (cell != null)
+                        cell.HasSpaceForItem = (item) => _controller?.GetEquippedLightSail() == null;
+                }
+
+                // Initialize the SAIL highlight layer — must be done AFTER Initialize() so
+                // GridContainer and Cells are wired up. Without this, _container is null and
+                // ShowHighlightAtCellIndex() returns immediately (no green/red highlight).
+                if (_sailHighlightLayer != null)
+                    _sailHighlightLayer.Initialize(
+                        _sharedSailColumn.GridContainer,
+                        _sharedSailColumn.Cells,
+                        2);
+            }
 
             // Bind inventory item hover events to tooltip
             if (_inventoryView != null)
@@ -306,6 +338,7 @@ namespace ProjectArk.UI
             // Refresh both tracks via the current Loadout
             _primaryTrackView?.Refresh();
             _secondaryTrackView?.Refresh();
+            RefreshSharedSailColumn();
             _inventoryView?.Refresh();
 
             // Update status bar equipped count
@@ -327,6 +360,51 @@ namespace ProjectArk.UI
         {
             RefreshAll();
         }
+
+        /// <summary>
+        /// Refresh the shared SAIL column from the current loadout.
+        /// Mirrors RefreshColumn() in TrackView: only cells[0] is unlocked (SAIL has 1 slot);
+        /// cells[1..3] are hidden via CanvasGroup so they cannot receive drops or show as empty.
+        /// </summary>
+        public void RefreshSharedSailColumn()
+        {
+            if (_sharedSailColumn == null) return;
+            var cells = _sharedSailColumn.Cells;
+            if (cells == null || cells.Length == 0) return;
+
+            // SAIL has exactly 1 slot — only cells[0] is unlocked.
+            // Hide all other cells via CanvasGroup (CLAUDE.md: 禁止 SetActive, 用 CanvasGroup).
+            for (int i = 0; i < cells.Length; i++)
+            {
+                if (cells[i] == null) continue;
+                bool unlocked = (i == 0);
+                var cg = cells[i].GetComponent<CanvasGroup>();
+                if (cg == null) cg = cells[i].gameObject.AddComponent<CanvasGroup>();
+                cg.alpha          = unlocked ? 1f : 0f;
+                cg.interactable   = unlocked;
+                cg.blocksRaycasts = unlocked;
+            }
+
+            // Set cells[0] to show the equipped sail (or empty)
+            var sail = _controller?.GetEquippedLightSail();
+            if (cells[0] != null)
+            {
+                if (sail != null)
+                    cells[0].SetItem(sail);
+                else
+                    cells[0].SetEmpty();
+            }
+        }
+
+        /// <summary>
+        /// Exposes the shared SAIL highlight layer for DragDropManager.
+        /// </summary>
+        public DragHighlightLayer SailHighlightLayer => _sailHighlightLayer;
+
+        /// <summary>
+        /// Exposes the shared SAIL TypeColumn for DragDropManager drop-target detection.
+        /// </summary>
+        public TypeColumn SharedSailColumn => _sharedSailColumn;
 
         /// <summary>
         /// Select an item and show it in the detail panel. Called by DragDropManager after successful drop.
@@ -362,8 +440,8 @@ namespace ProjectArk.UI
             count += _controller.SecondaryTrack.CoreLayer.Items.Count;
             count += _controller.SecondaryTrack.PrismLayer.Items.Count;
             if (_controller.GetEquippedLightSail() != null) count++;
-            var sats = _controller.GetEquippedSatellites();
-            if (sats != null) count += sats.Count;
+            count += _controller.PrimaryTrack.EquippedSatelliteSOs.Count;
+            count += _controller.SecondaryTrack.EquippedSatelliteSOs.Count;
             return count;
         }
 
@@ -497,7 +575,8 @@ namespace ProjectArk.UI
                     break;
 
                 case SatelliteSO sat:
-                    _controller.EquipSatellite(sat);
+                    // Equip to the currently selected track
+                    _controller.EquipSatellite(sat, _selectedTrack?.Id ?? WeaponTrack.TrackId.Primary);
                     _statusBar?.ShowMessage($"EQUIPPED: {sat.DisplayName}", StarChartTheme.StatusNormal, 3f);
                     break;
             }
@@ -525,7 +604,11 @@ namespace ProjectArk.UI
                     break;
 
                 case SatelliteSO sat:
-                    _controller.UnequipSatellite(sat);
+                    // Unequip from whichever track owns this satellite
+                    if (ListContains(_controller.PrimaryTrack.EquippedSatelliteSOs, sat))
+                        _controller.UnequipSatellite(sat, WeaponTrack.TrackId.Primary);
+                    else
+                        _controller.UnequipSatellite(sat, WeaponTrack.TrackId.Secondary);
                     _statusBar?.ShowMessage($"UNEQUIPPED: {sat.DisplayName}", StarChartTheme.StatusNormal, 3f);
                     break;
             }
@@ -554,11 +637,8 @@ namespace ProjectArk.UI
                     return _controller.GetEquippedLightSail() == sail;
 
                 case SatelliteSO sat:
-                    var satellites = _controller.GetEquippedSatellites();
-                    if (satellites != null)
-                        for (int i = 0; i < satellites.Count; i++)
-                            if (satellites[i] == sat) return true;
-                    return false;
+                    return ListContains(_controller.PrimaryTrack.EquippedSatelliteSOs, sat)
+                        || ListContains(_controller.SecondaryTrack.EquippedSatelliteSOs, sat);
 
                 default:
                     return false;

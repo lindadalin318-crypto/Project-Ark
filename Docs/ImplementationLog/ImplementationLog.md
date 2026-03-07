@@ -7760,71 +7760,71 @@ UICanvasBuilder 一键重建后，LoadoutSwitcher 的所有字段均自动连线
 
 ---
 
-## Remove Diagnostic Debug.Log from ItemTooltipView — 2026-03-03 17:07
+## 移除 ItemTooltipView 中的诊断 Debug.Log — 2026-03-03 17:07
 
-### Modified Files
+### 修改文件
 - `Assets/Scripts/UI/ItemTooltipView.cs`
 
-### Summary
-Removed 4 diagnostic `Debug.Log`/`Debug.LogWarning` calls from the `PositionNearMouse()` method that were firing every frame via `Update()`, severely polluting the Console and degrading editor performance.
+### 内容简述
+删除了 `PositionNearMouse()` 方法中每帧通过 `Update()` 触发的 4 条诊断日志（`Debug.Log`/`Debug.LogWarning`），这些日志严重污染了 Console 并降低了编辑器性能。
 
-### Purpose
-Eliminate per-frame log spam that made Console unusable and caused performance overhead in the editor.
+### 目的
+消除每帧日志刷屏问题，使 Console 恢复可用状态，并降低编辑器性能开销。
 
-### Technical Approach
-Straight deletion of 4 log statements (2× `Debug.Log`, 2× `Debug.LogWarning`) in `PositionNearMouse()`. Replaced with silent comments where appropriate. No behavioral changes to tooltip positioning logic.
+### 技术方案
+直接删除 `PositionNearMouse()` 中的 4 条日志语句（2× `Debug.Log`、2× `Debug.LogWarning`），必要处替换为静默注释。不影响 tooltip 定位逻辑的任何行为。
 
 ---
 
-## Fix ReplaceHint MissingComponentException in DragGhostView — 2026-03-03 17:12
+## 修复 DragGhostView 中 ReplaceHint 的 MissingComponentException — 2026-03-03 17:12
 
-### Modified Files
+### 修改文件
 - `Assets/Scripts/UI/DragDrop/DragGhostView.cs`
 
-### Scene Changes
-- `ReplaceHint` GameObject: added `CanvasGroup` component, set `activeSelf = true` (was false)
+### 场景变更
+- `ReplaceHint` GameObject：添加 `CanvasGroup` 组件，将 `activeSelf` 设为 `true`（原为 false）
 
-### Summary
-Fixed `MissingComponentException` thrown in `DragGhostView.Awake()` at line 91 when attempting to set `CanvasGroup.alpha` on the `ReplaceHint` child GameObject.
+### 内容简述
+修复了 `DragGhostView.Awake()` 第 91 行在尝试对 `ReplaceHint` 子 GameObject 设置 `CanvasGroup.alpha` 时抛出的 `MissingComponentException`。
 
-### Purpose
-Eliminate runtime exception that prevented DragGhost from initializing properly.
+### 目的
+消除阻止 DragGhost 正常初始化的运行时异常。
 
-### Technical Approach
-1. **Root cause**: `ReplaceHint` GameObject had no `CanvasGroup` component and was `SetActive(false)`. The code's `AddComponent<CanvasGroup>()` fallback failed on the inactive object, producing a `MissingComponentException`.
-2. **Scene fix**: Added `CanvasGroup` component to `ReplaceHint` directly in the scene, and set `activeSelf = true` with `CanvasGroup.alpha = 0` (following CLAUDE.md Rule #11: never use SetActive for UI visibility).
-3. **Code fix**: Added null guard around `_replaceHintCg` usage in `Awake()` with `Debug.LogError` fallback to prevent silent failures in the future.
+### 技术方案
+1. **根因**：`ReplaceHint` GameObject 没有 `CanvasGroup` 组件且处于 `SetActive(false)` 状态。代码中的 `AddComponent<CanvasGroup>()` 回退逻辑在非激活对象上执行失败，产生 `MissingComponentException`。
+2. **场景修复**：直接在场景中为 `ReplaceHint` 添加 `CanvasGroup` 组件，并将 `activeSelf` 设为 `true`，`CanvasGroup.alpha = 0`（遵循 CLAUDE.md 第 11 条：禁止用 SetActive 控制 UI 显隐）。
+3. **代码修复**：在 `Awake()` 中为 `_replaceHintCg` 的使用添加 null 守卫，并配合 `Debug.LogError` 回退，防止未来出现静默失败。
 
 ---
 
-## Shaped Inventory Grid — Backpack displays item shapes like HTML prototype — 2026-03-03 17:16
+## 异形背包格子 — 背包按 HTML 原型显示部件形状 — 2026-03-03 17:16
 
-### Modified Files
+### 修改文件
 - `Assets/Scripts/UI/InventoryView.cs`
 - `Assets/Scripts/UI/InventoryItemView.cs`
 
-### Summary
-Backpack inventory now displays shaped items (1×2H, 2×1V, L-shape, 2×2) at their actual multi-cell size, matching the HTML prototype's CSS Grid `grid-column: span N / grid-row: span N` behavior. Previously all items appeared as uniform 1×1 squares regardless of their shape.
+### 内容简述
+背包现在以实际多格尺寸显示异形部件（1×2H、2×1V、L 形、2×2），与 HTML 原型的 CSS Grid `grid-column: span N / grid-row: span N` 行为一致。此前所有部件无论形状如何都显示为统一的 1×1 方块。
 
-### Purpose
-User reported that inventory items all appeared 1×1 even though the drag ghost already showed correct shapes. The backpack grid needed to visually differentiate shaped items like the HTML prototype does.
+### 目的
+用户反馈背包中所有部件都显示为 1×1，而拖拽 Ghost 已能正确显示形状。背包格子需要像 HTML 原型一样在视觉上区分异形部件。
 
-### Technical Approach
+### 技术方案
 
-**InventoryView.cs — Custom row-priority packing layout:**
-1. Replaced dependency on Unity's `GridLayoutGroup` (which forces uniform cellSize) with a custom packing algorithm.
-2. New serialized fields: `_gridColumns` (8), `_cellSize` (80), `_cellGap` (2), `_gridPadding` (6) — matching existing GridLayoutGroup settings.
-3. In `Refresh()`: disables `GridLayoutGroup` and `ContentSizeFitter` at runtime, then manually positions each item using a 2D boolean occupancy grid.
-4. `TryFindPosition()`: scans row-by-row, column-by-column to find the first available slot that fits the item's bounding box (row-priority packing, same as CSS Grid auto-flow).
-5. Each `InventoryItemView`'s `RectTransform.sizeDelta` is set to `(spanCols × cellSize + gaps, spanRows × cellSize + gaps)`.
-6. Content height is calculated from the highest occupied row and applied to the content RectTransform for correct ScrollRect behavior.
+**InventoryView.cs — 自定义行优先排列布局：**
+1. 用自定义排列算法替代 Unity 的 `GridLayoutGroup`（后者强制统一 cellSize）。
+2. 新增序列化字段：`_gridColumns`（8）、`_cellSize`（80）、`_cellGap`（2）、`_gridPadding`（6）——与原有 GridLayoutGroup 设置保持一致。
+3. 在 `Refresh()` 中：运行时禁用 `GridLayoutGroup` 和 `ContentSizeFitter`，然后用二维布尔占位网格手动定位每个部件。
+4. `TryFindPosition()`：逐行逐列扫描，找到第一个能容纳部件 bounding box 的可用位置（行优先排列，与 CSS Grid auto-flow 一致）。
+5. 每个 `InventoryItemView` 的 `RectTransform.sizeDelta` 设为 `(spanCols × cellSize + gaps, spanRows × cellSize + gaps)`。
+6. 内容高度根据最高占用行计算，并应用到 content RectTransform，确保 ScrollRect 正常工作。
 
-**InventoryItemView.cs — Enhanced shape preview:**
-1. `BuildShapePreview()` now renders the full bounding box grid (not just active cells) for multi-cell shapes.
-2. Active cells use type-colored tint (via `StarChartTheme.GetTypeColor()`) at 25% alpha — matching HTML's `.inv-shape-active-{type}` classes.
-3. Empty cells in the bounding box (e.g. bottom-right of L-shape) are transparent, clearly showing the non-rectangular shape.
-4. 1×1 items skip shape preview entirely (no visual difference from full-cell fill).
-5. Added `System.Collections.Generic` import for `HashSet<Vector2Int>` used in active cell lookup.
+**InventoryItemView.cs — 增强形状预览：**
+1. `BuildShapePreview()` 现在为多格形状渲染完整的 bounding box 网格（而非仅渲染 active cells）。
+2. Active cells 使用类型颜色着色（通过 `StarChartTheme.GetTypeColor()`），透明度 25%——与 HTML 的 `.inv-shape-active-{type}` 类一致。
+3. Bounding box 中的空格（如 L 形的右下角）为透明，清晰展示非矩形形状。
+4. 1×1 部件完全跳过形状预览（与全格填充无视觉差异）。
+5. 新增 `System.Collections.Generic` 导入，用于 active cell 快查的 `HashSet<Vector2Int>`。
 
 ---
 
@@ -8530,158 +8530,315 @@ DragGhostView 中存在两个 Icon 来源同时可见：
 - boostDuration: 0.2s（★GG minTime 原值）
 
 
-## Fix: Drag Ghost Visual Center Misaligned with Cursor (2026-03-06 13:16)
+## Bug Fix: 拖拽 Ghost 视觉中心与鼠标不对齐 — 2026-03-06 13:16
 
-### Modified Files
-- Assets/Scripts/UI/DragDrop/DragGhostView.cs
+### 修改文件
+- `Assets/Scripts/UI/DragDrop/DragGhostView.cs`
 
-### Summary
-Fixed drag ghost appearing below the cursor instead of centered on it.
+### 内容简述
+修复拖拽 Ghost 出现在鼠标下方而非居中于鼠标的问题。
 
-### Root Cause
-Ghost RectTransform pivot = (0.5, 0.5). FollowPointer placed the pivot point (center) at the cursor position. However, BuildShapeCellsAbsolute creates shape cells with anchorMin=zero and anchoredPosition starting from (0,0) — which is the Ghost's center — expanding right and downward. This caused the entire visual content to be offset to the bottom-right of the cursor.
+### 根因
+Ghost RectTransform pivot = (0.5, 0.5)。`FollowPointer` 将 pivot 点（中心）放置在鼠标位置。然而 `BuildShapeCellsAbsolute` 创建的 shape cells 以 `anchorMin=zero`、`anchoredPosition` 从 `(0,0)` 开始——即 Ghost 的中心——向右向下展开。这导致整个视觉内容偏移到鼠标右下方。
 
-### Fix
-In FollowPointer, added a `centeringOffset = (-size.x * 0.5f, size.y * 0.5f)` that shifts the Ghost left-up by half its size, so the top-left corner of the shape cell grid aligns with the cursor, making the visual center appear at the cursor.
-
----
-
-## Fix: Drag Ghost Position Offset (2026-03-06 13:02)
-
-### Modified Files
-- Assets/Scripts/UI/DragDrop/DragGhostView.cs`n- Assets/Scripts/UI/DragDrop/DragDropManager.cs`n- Assets/Scripts/UI/InventoryItemView.cs`n- Assets/Scripts/UI/SlotCellView.cs`n- Assets/Scripts/UI/ItemOverlayView.cs`n
-### Summary
-Fixed drag ghost not following the exact click point on the card.
-
-### Root Cause
-ComputeDragOffset computed pressLocal - pointerLocal, but since BeginDrag is called from OnBeginDrag, eventData.position == eventData.pressPosition at that moment, making the offset always Vector2.zero. The ghost always snapped its center to the cursor instead of the clicked point.
-
-### Fix
-- DragGhostView.ComputeDragOffset(eventData, sourceRect): Added sourceRect parameter. Now computes the click offset relative to the card's top-left corner (via GetWorldCorners), then subtracts ghost half-size to get the correct offset from ghost center.
-- DragDropManager.BeginDrag(...): Added optional sourceRect parameter, passed through to ComputeDragOffset.
-- InventoryItemView, SlotCellView, ItemOverlayView: Pass GetComponent<RectTransform>() as sourceRect in BeginDrag call.
+### 修复方案
+在 `FollowPointer` 中添加 `centeringOffset = (-size.x * 0.5f, size.y * 0.5f)`，将 Ghost 向左上方偏移半个尺寸，使 shape cell 网格的左上角对齐鼠标，视觉中心呈现在鼠标位置。
 
 ---
 
-## Fix: DragHighlightLayer Tiles Way Off From Actual Cells — Root Cause Fix (2026-03-06 13:45)
+## Bug Fix: 拖拽 Ghost 位置偏移 — 2026-03-06 13:02
 
-### Modified Files
+### 修改文件
+- `Assets/Scripts/UI/DragDrop/DragGhostView.cs`
+- `Assets/Scripts/UI/DragDrop/DragDropManager.cs`
+- `Assets/Scripts/UI/InventoryItemView.cs`
+- `Assets/Scripts/UI/SlotCellView.cs`
+- `Assets/Scripts/UI/ItemOverlayView.cs`
+
+### 内容简述
+修复拖拽 Ghost 不跟随卡片上实际点击位置的问题。
+
+### 根因
+`ComputeDragOffset` 计算 `pressLocal - pointerLocal`，但由于 `BeginDrag` 是从 `OnBeginDrag` 调用的，此时 `eventData.position == eventData.pressPosition`，导致偏移量始终为 `Vector2.zero`。Ghost 中心始终吸附到鼠标位置，而非用户实际点击的位置。
+
+### 修复方案
+- `DragGhostView.ComputeDragOffset(eventData, sourceRect)`：新增 `sourceRect` 参数。现在通过 `GetWorldCorners` 计算点击位置相对于卡片左上角的偏移，再减去 Ghost 半尺寸，得到相对于 Ghost 中心的正确偏移量。
+- `DragDropManager.BeginDrag(...)`：新增可选的 `sourceRect` 参数，透传给 `ComputeDragOffset`。
+- `InventoryItemView`、`SlotCellView`、`ItemOverlayView`：在 `BeginDrag` 调用中传入 `GetComponent<RectTransform>()` 作为 `sourceRect`。
+
+---
+
+## Bug Fix: DragHighlightLayer 高亮 Tile 与实际格子严重偏移 — 根因修复 — 2026-03-06 13:45
+
+### 修改文件
 - `Assets/Scripts/UI/DragHighlightLayer.cs`
 - `Assets/Scripts/UI/TrackView.cs`
 
-### Summary
-Completely rewrote DragHighlightLayer to position tiles by directly reading each SlotCellView's RectTransform instead of computing positions with a formula.
+### 内容简述
+完全重写 `DragHighlightLayer`，改为直接读取每个 `SlotCellView` 的 `RectTransform` 来定位高亮 tile，而非用公式计算位置。
 
-### Root Cause (Previous Approach Was Wrong)
-All previous attempts tried to compute tile positions via `anchoredPosition = offset + (col * step, -row * step)`. This always fails because GridLayoutGroup can use any childAlignment (e.g. MiddleCenter), padding, or spacing that shifts cells away from the assumed origin. No formula can reliably reproduce the exact cell positions without knowing all GridLayoutGroup internals.
+### 根因（原方案根本错误）
+所有之前的尝试都试图通过 `anchoredPosition = offset + (col * step, -row * step)` 公式计算 tile 位置。这种方式必然失败，因为 `GridLayoutGroup` 可以使用任意 `childAlignment`（如 MiddleCenter）、padding 或 spacing，使格子偏离假设的原点。在不了解 `GridLayoutGroup` 全部内部参数的情况下，没有任何公式能可靠地还原精确的格子位置。
 
-### Fix (Direct Cell Coordinate Reading)
-- `DragHighlightLayer.Initialize(container, cells[], gridCols)`: Now accepts the `SlotCellView[]` array directly. No cellSize/cellGap/originOffset needed.
-- `ShowHighlight()`: For each shape cell offset, computes `cellIndex = row * gridCols + col`, then copies `anchorMin/anchorMax/pivot/anchoredPosition/sizeDelta` directly from `cells[cellIndex].GetComponent<RectTransform>()`. Tiles are guaranteed pixel-perfect.
-- Removed all formula-based fields: `_cellSize`, `_cellGap`, `_originOffset`, `_cell0Rect`.
-- `TrackView.CreateHighlightLayer()`: Now calls `layer.Initialize(col.GridContainer, col.Cells, 2)` — no cell0Rect, no size params.
+### 修复方案（直接读取格子坐标）
+- `DragHighlightLayer.Initialize(container, cells[], gridCols)`：现在直接接收 `SlotCellView[]` 数组，无需 cellSize/cellGap/originOffset。
+- `ShowHighlight()`：对每个形状格子偏移，计算 `cellIndex = row * gridCols + col`，然后直接从 `cells[cellIndex].GetComponent<RectTransform>()` 复制 `anchorMin/anchorMax/pivot/anchoredPosition/sizeDelta`。Tile 位置保证像素级精确。
+- 移除所有基于公式的字段：`_cellSize`、`_cellGap`、`_originOffset`、`_cell0Rect`。
+- `TrackView.CreateHighlightLayer()`：现在调用 `layer.Initialize(col.GridContainer, col.Cells, 2)`——无需 cell0Rect 和尺寸参数。
 
 ---
 
-## Fix: DragHighlightLayer Debug Log Cleanup (2026-03-06 13:51)
+## Bug Fix: DragHighlightLayer 诊断日志清理 — 2026-03-06 13:51
 
-### Modified Files
+### 修改文件
 - `Assets/Scripts/UI/DragHighlightLayer.cs`
 
-### Summary
-Removed temporary diagnostic `Debug.Log` from `ShowHighlight()` after confirming via InstanceID logging that `tileParentID == cellParentID == containerID` and `tileWorld == cellWorld` (pixel-perfect match). Retained the `Debug.LogWarning` for out-of-bounds cell index misses.
+### 内容简述
+在通过 InstanceID 日志确认 `tileParentID == cellParentID == containerID` 且 `tileWorld == cellWorld`（像素级精确匹配）后，移除了 `ShowHighlight()` 中的临时诊断 `Debug.Log`。保留了越界格子索引未命中时的 `Debug.LogWarning`。
 
 ---
 
-## Fix: Remove Ghost Drop-State Color Highlight (2026-03-06 13:55)
+## Bug Fix: 移除 Ghost 放置状态颜色高亮 — 2026-03-06 13:55
 
-### Modified Files
+### 修改文件
 - `Assets/Scripts/UI/DragDrop/DragGhostView.cs`
 
-### Summary
-Removed the green/red border color feedback from the drag ghost (`SetDropState`). Drop state visual feedback is now shown **exclusively on the Track grid cells** via `DragHighlightLayer`. The ghost border is kept permanently transparent (`Color.clear`). This simplifies the visual language: one highlight location (Track cells), not two.
+### 内容简述
+移除了拖拽 Ghost 上的绿色/红色边框颜色反馈（`SetDropState`）。放置状态的视觉反馈现在**仅通过 `DragHighlightLayer` 显示在 Track 格子上**。Ghost 边框保持永久透明（`Color.clear`）。这简化了视觉语言：只有一个高亮位置（Track 格子），而非两个。
 
 ---
 
-## Fix: SAT/SAIL Highlight Cell Index Mismatch (2026-03-06 14:14)
+## Bug Fix: SAT/SAIL 高亮格子索引不匹配 — 2026-03-06 14:14
 
-### Modified Files
+### 修改文件
 - `Assets/Scripts/UI/DragHighlightLayer.cs`
 - `Assets/Scripts/UI/TrackView.cs`
 - `Assets/Scripts/UI/SlotCellView.cs`
 
-### Root Cause
-`SlotCellView` was calling `SetSingleHighlight(SlotType, col=0, row=CellIndex, state)` for SAIL/SAT cells. Inside `ShowHighlight`, the index was recomputed as `cellIndex = row * gridCols + col = CellIndex * 2 + 0`. For SAT (2×2 grid, gridCols=2), `CellIndex=1` (top-right) → `cellIndex=2` (bottom-left). This caused the highlight to appear on the wrong cell.
+### 根因
+`SlotCellView` 对 SAIL/SAT 格子调用 `SetSingleHighlight(SlotType, col=0, row=CellIndex, state)`。在 `ShowHighlight` 内部，索引被重新计算为 `cellIndex = row * gridCols + col = CellIndex * 2 + 0`。对于 SAT（2×2 网格，gridCols=2），`CellIndex=1`（右上角）→ `cellIndex=2`（左下角），导致高亮出现在错误的格子上。
 
-### Fix
-- Added `DragHighlightLayer.ShowHighlightAtCellIndex(int cellIndex, DropPreviewState)` — directly reads `cells[cellIndex].RectTransform` with no col/row conversion.
-- Added `TrackView.SetSingleHighlightAtIndex(SlotType, int cellIndex, DropPreviewState)` — routes to the new method.
-- Changed `SlotCellView` SAIL/SAT branch to call `SetSingleHighlightAtIndex(SlotType, CellIndex, state)` instead of `SetSingleHighlight(SlotType, 0, CellIndex, state)`.
-- Removed residual `[HL]` debug logs from `DragHighlightLayer.ShowHighlight()`.
+### 修复方案
+- 新增 `DragHighlightLayer.ShowHighlightAtCellIndex(int cellIndex, DropPreviewState)`——直接读取 `cells[cellIndex].RectTransform`，无需行列转换。
+- 新增 `TrackView.SetSingleHighlightAtIndex(SlotType, int cellIndex, DropPreviewState)`——路由到新方法。
+- 将 `SlotCellView` 的 SAIL/SAT 分支改为调用 `SetSingleHighlightAtIndex(SlotType, CellIndex, state)`，而非 `SetSingleHighlight(SlotType, 0, CellIndex, state)`。
+- 移除 `DragHighlightLayer.ShowHighlight()` 中残留的 `[HL]` 调试日志。
 
 ---
 
-## Bug Fix: ItemOverlayView Ghost/Duplicate Rendering (PRISM/CORE) — 2026-03-06 15:17
+## Bug Fix: ItemOverlayView 幽灵/重复渲染（PRISM/CORE）— 2026-03-06 15:17
 
-### Modified Files
+### 修改文件
 - `Assets/Scripts/UI/TrackView.cs`
 - `Assets/Scripts/UI/ItemIconRenderer.cs`
 
-### Root Cause
-`LayoutElement.ignoreLayout = true` was added to the overlay GameObject **after** `SetParent()`. Unity's `GridLayoutGroup` repositions children **immediately** when `SetParent()` is called, overriding the stretch anchors (`anchorMin=0,0`, `anchorMax=1,1`) set in `ItemOverlayView.Setup()`. By the time `ignoreLayout = true` was applied, the overlay's anchor had already been overwritten to a grid-cell position, causing the overlay to render at the wrong location (ghost/duplicate appearance).
+### 根因
+`LayoutElement.ignoreLayout = true` 是在 `SetParent()` **之后**才添加到 overlay GameObject 上的。Unity 的 `GridLayoutGroup` 在 `SetParent()` 被调用时**立即**重新定位子节点，覆盖了 `ItemOverlayView.Setup()` 中设置的拉伸锚点（`anchorMin=0,0`、`anchorMax=1,1`）。等到 `ignoreLayout = true` 生效时，overlay 的锚点已被覆写为某个网格格子的位置，导致 overlay 渲染在错误位置（幽灵/重复渲染现象）。
 
-The same ordering bug existed in `BuildShapeCellsFromCells` and `BuildIconFromCell` for the overlay's child nodes.
+`BuildShapeCellsFromCells` 和 `BuildIconFromCell` 中 overlay 子节点也存在相同的顺序 bug。
 
-### Fix
-- In `TrackView.RefreshColumn`: moved `overlayGo.AddComponent<LayoutElement>()` + `ignoreLayout = true` to **before** `SetParent(gridContainer, false)`.
-- In `ItemIconRenderer.BuildShapeCellsFromCells`: moved `go.AddComponent<LayoutElement>()` + `ignoreLayout = true` to before `go.transform.SetParent(parent, false)`.
-- In `ItemIconRenderer.BuildIconFromCell`: same fix — `LayoutElement` added before `SetParent`.
+### 修复方案
+- 在 `TrackView.RefreshColumn` 中：将 `overlayGo.AddComponent<LayoutElement>()` + `ignoreLayout = true` 移到 `SetParent(gridContainer, false)` **之前**。
+- 在 `ItemIconRenderer.BuildShapeCellsFromCells` 中：将 `go.AddComponent<LayoutElement>()` + `ignoreLayout = true` 移到 `go.transform.SetParent(parent, false)` 之前。
+- 在 `ItemIconRenderer.BuildIconFromCell` 中：同样修复——`LayoutElement` 在 `SetParent` 之前添加。
 
-### Key Insight
-SAIL/SAT never had this bug because they use `SlotCellView.SetItem()` directly — no overlay GameObject is created, so GridLayoutGroup is never involved. This was the diagnostic clue that pointed to the overlay creation order as the root cause.
+### 关键洞察
+SAIL/SAT 从未出现此 bug，因为它们直接调用 `SlotCellView.SetItem()`——不创建 overlay GameObject，`GridLayoutGroup` 从不介入。这是指向 overlay 创建顺序为根因的诊断线索。
 
 ---
 
-## Bug Fix: PRISM/CORE Items Cannot Be Dragged Back to Inventory  2026-03-06 15:42
+## Bug Fix: PRISM/CORE 部件无法拖回背包 — 2026-03-06 15:42
 
-### Modified Files
+### 修改文件
 - `Assets/Scripts/UI/SlotCellView.cs`
 - `Assets/Scripts/UI/TrackView.cs`
 - `Assets/Scripts/UI/ItemOverlayView.cs`
 
-### Root Cause
-`SetHiddenByOverlay()` was setting `DisplayedItem = null`. `SlotCellView.OnBeginDrag` checks `if (DisplayedItem == null) return`  so drag was silently aborted before it started.
+### 根因
+`SetHiddenByOverlay()` 将 `DisplayedItem` 设为 `null`。`SlotCellView.OnBeginDrag` 检查 `if (DisplayedItem == null) return`，导致拖拽在开始前被静默中止。
 
-SAIL/SAT were unaffected because they call `SetItem(item)` which sets `DisplayedItem = item`, keeping the drag path intact.
+SAIL/SAT 不受影响，因为它们调用 `SetItem(item)` 将 `DisplayedItem = item`，保持了拖拽路径完整。
 
-### Fix
-- `SlotCellView.SetHiddenByOverlay(StarChartItemSO item)`: changed signature to accept `item`, sets `DisplayedItem = item` (preserves drag source), only clears visual (background/icon/label).
-- `TrackView.RefreshColumn`: updated call to `cells[cellIndex].SetHiddenByOverlay(item)`.
-- `ItemOverlayView.Setup`: removed the erroneous `raycastBlocker` AddComponent added in the previous failed fix attempt.
+### 修复方案
+- `SlotCellView.SetHiddenByOverlay(StarChartItemSO item)`：修改签名以接收 `item` 参数，设置 `DisplayedItem = item`（保留拖拽来源），仅清除视觉（背景/图标/标签）。
+- `TrackView.RefreshColumn`：更新调用为 `cells[cellIndex].SetHiddenByOverlay(item)`。
+- `ItemOverlayView.Setup`：移除上一次失败修复尝试中错误添加的 `raycastBlocker` AddComponent。
 
-### Key Insight
-The fix directly mirrors SAIL/SAT behavior: preserve `DisplayedItem` on the cell so `OnBeginDrag` can fire. The overlay is purely visual  the cell underneath remains the functional drag source. **Overlay = visuals only, cell = interaction**.
+### 关键洞察
+修复方案直接镜像 SAIL/SAT 的行为：在格子上保留 `DisplayedItem`，使 `OnBeginDrag` 能够触发。Overlay 纯粹是视觉层——底层格子仍是功能性的拖拽来源。**Overlay = 纯视觉，Cell = 交互**。
 
 ---
 
-## Bug Fix: SAIL Drop Defaults to Primary Track First Cell — 2026-03-06 15:51
+## Bug Fix: SAIL 放置后默认跳到 Primary 轨道第一格 — 2026-03-06 15:51
 
-### Modified Files
+### 修改文件
 - `Assets/Scripts/UI/TrackView.cs`
 
-### Root Cause
-SAIL and SAT are **global slots** — they are not per-track. `RefreshSailColumn()` and `RefreshSatColumn()` only display the equipped item on the **Primary track**; the Secondary track shows empty cells.
+### 根因
+SAIL 和 SAT 是**全局槽位**——不属于某个特定轨道。`RefreshSailColumn()` 和 `RefreshSatColumn()` 只在 **Primary 轨道**上显示已装备的部件；Secondary 轨道显示空格。
 
-However, `HasSpaceForSail()` and `HasSpaceForSat()` had no `isPrimary` guard. When a user dragged a SAIL item onto the **Secondary track's SAIL cell**, `ComputeDropValidity` returned `true` (space available), `DropTargetTrack` was set to the Secondary track, and `EquipLightSail()` was called successfully.
+然而 `HasSpaceForSail()` 和 `HasSpaceForSat()` 没有 `isPrimary` 守卫。当用户将 SAIL 部件拖到 **Secondary 轨道的 SAIL 格子**时，`ComputeDropValidity` 返回 `true`（有空间），`DropTargetTrack` 被设为 Secondary 轨道，`EquipLightSail()` 成功调用。
 
-After `RefreshAllViews()`, the SAIL appeared on the **Primary track's first cell** (because that's where `RefreshSailColumn` always renders it), making it look like the item "jumped" to the wrong location.
+`RefreshAllViews()` 后，SAIL 出现在 **Primary 轨道的第一格**（因为 `RefreshSailColumn` 始终在那里渲染），看起来像是部件"跳"到了错误的位置。
 
-### Fix
-Added `isPrimary` guard to both delegates:
-- `HasSpaceForSail`: returns `false` immediately if `_track.Id != Primary`
-- `HasSpaceForSat`: returns `false` immediately if `_track.Id != Primary`
+### 修复方案
+为两个委托添加 `isPrimary` 守卫：
+- `HasSpaceForSail`：若 `_track.Id != Primary` 则立即返回 `false`
+- `HasSpaceForSat`：若 `_track.Id != Primary` 则立即返回 `false`
 
-Secondary track SAIL/SAT cells now show as invalid drop targets (red highlight), preventing the confusing visual jump.
+Secondary 轨道的 SAIL/SAT 格子现在显示为无效放置目标（红色高亮），防止令人困惑的视觉跳转。
 
-### Key Insight
-Global slots (SAIL/SAT) must only accept drops on the Primary track. The Secondary track renders them as empty purely for visual symmetry — those cells must not be functional drop targets.
+### 关键洞察
+全局槽位（SAIL/SAT）只能在 Primary 轨道上接受放置。Secondary 轨道渲染空格纯粹是为了视觉对称——这些格子不应成为功能性的放置目标。
+
+---
+
+### ✨ Refactor: 伴星（Satellite）从 Shared 改为 Per-Track — 2026-03-06 22:30
+
+**功能说明：** 将伴星数据从 `LoadoutSlot` 级别（Shared）迁移到 `WeaponTrack` 级别（Per-Track），使 Primary 和 Secondary 轨道可以独立配置不同的伴星组合。消除了 `isPrimary` 守卫逻辑，Secondary TrackView 不再显示无意义的空格占位。
+
+**修改文件：**
+- `Assets/Scripts/Combat/StarChart/WeaponTrack.cs`
+  - 新增 `public readonly List<SatelliteSO> EquippedSatelliteSOs = new()` 字段
+  - `ClearAll()` 中新增 `EquippedSatelliteSOs.Clear()`
+- `Assets/Scripts/Combat/StarChart/LoadoutSlot.cs`
+  - 移除 `EquippedSatelliteSOs` 字段（已迁移至 WeaponTrack）
+  - `Clear()` 中移除 `EquippedSatelliteSOs.Clear()`（由 WeaponTrack.ClearAll() 负责）
+- `Assets/Scripts/Core/Save/SaveData.cs`
+  - `TrackSaveData` 新增 `List<string> SatelliteIDs` 字段（Per-Track 存档）
+  - `LoadoutSlotSaveData.SatelliteIDs` 标记为 `[Obsolete]`，保留用于旧存档迁移
+- `Assets/Scripts/Combat/StarChart/StarChartController.cs`
+  - `_satelliteRunners` 拆分为 `_primarySatRunners` 和 `_secondarySatRunners` 两个并行数组
+  - `EquipSatellite(SatelliteSO, WeaponTrack.TrackId)` 新增 TrackId 参数
+  - `UnequipSatellite(SatelliteSO, WeaponTrack.TrackId)` 新增 TrackId 参数
+  - `GetEquippedSatellites(WeaponTrack.TrackId)` 新增 TrackId 参数
+  - `Update()` 分别 Tick Primary/Secondary 伴星 Runner 列表
+  - `DisposeSlotRunners()` / `RebuildSlotRunners()` 按轨道分组处理
+  - `ExportTrack()` 新增 SatelliteIDs 序列化
+  - `ImportFromSaveData()` 新增旧格式迁移逻辑（旧 SatelliteIDs → PrimaryTrack）
+  - 新增 `ImportTrackSatellites()` 辅助方法（含 ID 解析失败警告）
+  - `InitializeSailAndSatellites()` debug 伴星改为写入 PrimaryTrack
+- `Assets/Scripts/UI/TrackView.cs`
+  - `RefreshSatColumn()` 直接读取 `_track.EquippedSatelliteSOs`，移除 `isPrimary` 守卫
+  - `HasSpaceForSat()` 移除 Primary 限制，改为检查当前轨道伴星数量（< 4）
+- `Assets/Scripts/UI/StarChartPanel.cs`
+  - `GetEquippedLocation()` SAT 改为检查 Primary/Secondary 各自的 EquippedSatelliteSOs
+  - `CountEquipped()` 改为累加两个轨道的伴星数量
+  - `EquipItem()` SAT 改为 `EquipSatellite(sat, _selectedTrack.Id)`
+  - `UnequipItem()` SAT 改为按归属轨道调用 `UnequipSatellite(sat, trackId)`
+  - `IsItemEquipped()` SAT 改为检查两个轨道的 EquippedSatelliteSOs
+- `Assets/Scripts/UI/DragDrop/DragDropManager.cs`
+  - `EquipToTrack()` SAT 改为 `EquipSatellite(sat, track.Id)`，maxSats 改为 4（每轨道 2×2）
+  - `UnequipFromTrack()` SAT 改为 `UnequipSatellite(sat, track.Id)`
+
+**存档迁移规则：**
+- 旧格式：`LoadoutSlotSaveData.SatelliteIDs` 非空 → 全部迁移到 `PrimaryTrack.SatelliteIDs`，Secondary 为空
+- 新格式：`TrackSaveData.SatelliteIDs` 分别存储 Primary/Secondary 的伴星 ID
+- 无法解析的 ID 跳过并输出 `Debug.LogWarning`，不抛出异常
+
+**Per-Track Runner 扩展点：**
+- `_primarySatRunners[slotIndex]` 和 `_secondarySatRunners[slotIndex]` 分别管理两个轨道的 Runner
+- 未来如需 Per-Track Context（如 `WeaponTrack.ResetCooldown` 触发），只需向 `SatelliteRunner` 构造函数传入轨道引用，无需修改基类
+
+---
+
+## SAT 拖拽位置修复 — 完全参考 Prism/Core 实现 (2026-03-06 23:19)
+
+### 修改文件
+- `Assets/Scripts/Combat/StarChart/WeaponTrack.cs`
+- `Assets/Scripts/Combat/StarChart/StarChartController.cs`
+- `Assets/Scripts/UI/TrackView.cs`
+- `Assets/Scripts/UI/SlotCellView.cs`
+- `Assets/Scripts/UI/DragDrop/DragDropManager.cs`
+
+### 问题描述
+SAT 无论拖到哪个格子，都会自动吸附到左上角第一格。
+
+### 根本原因
+SAT 的数据层使用 `List<SatelliteSO>`（无位置信息），`RefreshSatColumn()` 总是从 `cells[0]` 开始按列表顺序填充，导致 SAT 始终显示在第一个空格子。同时 `ComputeDropValidity` 中 SAT 走 `HasSpaceForItem` delegate 分支，不进行 anchor 计算，`DropTargetAnchorCol/Row` 始终为 (0,0)。
+
+### 技术方案
+完全参考 Prism/Core 的 `SlotLayer<T>` 实现：
+
+1. **WeaponTrack.cs**：添加 `SlotLayer<SatelliteSO> _satLayer`（固定 2 cols × 2 rows），添加 `EquipSatellite(sat, col, row)` / `EquipSatellite(sat)` / `UnequipSatellite(sat)` 方法，`EquippedSatelliteSOs` 改为 `IReadOnlyList<SatelliteSO>`（从 `_satLayer.Items` 派生）
+
+2. **StarChartController.cs**：添加 `EquipSatellite(sat, trackId, anchorCol, anchorRow)` 重载，所有直接操作 `EquippedSatelliteSOs.Add/Remove` 的地方改为调用 `track.EquipSatellite/UnequipSatellite`
+
+3. **TrackView.cs**：移除 `HasSpaceForSat` delegate 注入，`RefreshSatColumn()` 改为 `RefreshColumn(_satColumn, _track?.SatLayer, StarChartItemType.Satellite)`，删除废弃的 `RefreshSatColumn()` 方法和 `_debugSatSlots` 字段
+
+4. **SlotCellView.cs**：`ComputeDropValidity` 中 SAT 走 `FindBestAnchor` 路径（和 Core/Prism 一样），使用 `SatLayer.Cols` 计算 `gridCols`；高亮逻辑中 SAT 走 `SetSingleHighlightAtIndex` 路径
+
+5. **DragDropManager.cs**：`EquipToTrack` 中 SAT 分支使用方法开头已声明的 `anchorCol/anchorRow`，先检查目标格子是否有占用者并 evict，再调用 `EquipSatellite(sat, trackId, anchorCol, anchorRow)`
+
+### 结果
+SAT 现在完全参考 Prism/Core 的实现，支持按位置放置，拖到哪个格子就显示在哪个格子。编译零错误。
+
+---
+
+## SAIL 拖拽修复 — 无法放入/取下部件 (2026-03-06 23:47)
+
+### 修改文件
+- `Assets/Scripts/UI/StarChartPanel.cs`
+- `Assets/Scripts/UI/DragDrop/DragDropManager.cs`
+
+### 问题描述
+1. SAIL 列无法放入任何部件（拖拽时格子不显示 Valid 高亮）
+2. 已装备的 SAIL 部件无法取下（拖到 Inventory 无效）
+
+### 根本原因
+
+**问题 1（无法放入）**：
+`_sharedSailColumn` 在 `UICanvasBuilder.BuildTypeColumn()` 中创建，但**没有调用 `TypeColumn.Initialize()`**。`Initialize()` 负责将 `SlotType.LightSail` 设置到每个格子的 `SlotCellView.SlotType` 字段。
+- 格子的 `SlotType` 保持默认值（`SlotType.Core = 0`）
+- `SlotCellView.IsTypeMatch()` 检查 `SlotType.LightSail`，但格子是 `Core`，返回 `false`
+- `ComputeDropValidity` 返回 `false`，格子不接受任何拖拽
+
+**问题 2（无法取下）**：
+- SAIL 格子的 `OwnerTrack = null`（共享列，不属于任何 TrackView）
+- `SlotCellView.OnBeginDrag` 创建 `DragPayload(item, DragSource.Slot, OwnerTrack?.Track)` → `SourceTrack = null`
+- `ExecuteUnequipDrop()` 中 `if (sourceTrack != null)` 条件不满足，直接跳过，SAIL 不会被卸下
+- 另外，`DropTargetIsSailColumn = (OwnerTrack == null && SlotType == LightSail)` 因为 `SlotType` 不对，始终为 `false`
+
+### 技术方案
+
+1. **StarChartPanel.cs**：在 `Bind()` 中注入 `HasSpaceForItem` delegate 之前，先调用 `_sharedSailColumn.Initialize(SlotType.LightSail, StarChartTheme.SailColor, null)`，正确设置每个格子的 `SlotType = LightSail` 和 `OwnerTrack = null`
+
+2. **DragDropManager.cs**：在 `ExecuteUnequipDrop()` 中添加 `else if (item is LightSailSO)` 分支，当 `sourceTrack == null` 时直接调用 `_controller?.UnequipLightSail()`（SAIL 是共享列，不需要 track 引用）
+
+### 结果
+两个修改合计 2 处，编译零错误。SAIL 现在可以正常放入和取下部件。
+
+---
+
+## SAIL 吸附左上角 & 无高亮修复 (2026-03-06 23:38)
+
+### 修改文件
+- `Assets/Scripts/UI/StarChartPanel.cs`
+
+### 问题描述
+1. SAIL 无论拖到哪个格子，都会吸附到左上角（cells[0]）
+2. SAIL 格子拖拽时没有红绿高亮反馈
+
+### 根本原因
+
+**问题 1（吸附左上角）**：
+`RefreshSharedSailColumn()` 只刷新 `cells[0]`，但 SAIL 列有 4 个格子（cells[0..3]），其他 3 个格子没有被隐藏，用户可以拖到任意格子。由于 SAIL 只有 1 个槽位，`RefreshSharedSailColumn()` 永远只在 `cells[0]` 显示，所以无论拖到哪个格子，视觉上都"跳"到 cells[0]（左上角）。
+
+**问题 2（无高亮）**：
+`_sailHighlightLayer` 是 `[SerializeField]` 直接引用，但**从未调用 `Initialize()`**。`DragHighlightLayer.ShowHighlightAtCellIndex()` 第一行检查 `if (_container == null) return`，由于 `_container` 未被初始化（为 null），所有高亮调用都直接返回，不显示任何颜色。
+
+### 技术方案（完全参考 Prism/Core 实现）
+
+1. **修复高亮**：在 `Bind()` 中调用 `_sharedSailColumn.Initialize()` 之后，立即调用：
+   ```csharp
+   _sailHighlightLayer.Initialize(_sharedSailColumn.GridContainer, _sharedSailColumn.Cells, 2);
+   ```
+   这与 `TrackView.CreateHighlightLayer()` 的逻辑完全一致。
+
+2. **修复吸附**：重构 `RefreshSharedSailColumn()` 完全参考 `TrackView.RefreshColumn()` 的实现：
+   - 用 CanvasGroup 隐藏 cells[1..3]（`alpha=0, interactable=false, blocksRaycasts=false`）
+   - 只保留 cells[0] 可见和可交互
+   - 这样用户只能拖到 cells[0]，不会有"吸附"的感觉
+
+### 结果
+1 个文件修改，编译零错误。SAIL 现在只显示 1 个可见格子，高亮正常工作（绿色=可放入，红色=不可放入，橙色=替换）。
