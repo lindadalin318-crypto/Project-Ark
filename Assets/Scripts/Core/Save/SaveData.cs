@@ -65,6 +65,12 @@ namespace ProjectArk.Core.Save
         public string LightSailID;
 
         /// <summary>
+        /// Number of unlocked columns in the SAIL layer (1–4).
+        /// Default 1. Old saves without this field will deserialize to 0; callers must clamp to ≥ 1.
+        /// </summary>
+        public int SailLayerCols = 1;
+
+        /// <summary>
         /// Legacy slot-level satellite IDs. Kept for migration from old saves only.
         /// New saves store satellite IDs inside each TrackSaveData.
         /// </summary>
@@ -101,6 +107,13 @@ namespace ProjectArk.Core.Save
         /// will deserialize to 0 via JsonUtility; callers must clamp to ≥ 1.
         /// </summary>
         public int PrismLayerCols = 1;
+
+        /// <summary>
+        /// Number of unlocked columns in the SAT layer (1–4).
+        /// Default 1 = 2 cells (initial state). Old saves without this field
+        /// will deserialize to 0 via JsonUtility; callers must clamp to ≥ 1.
+        /// </summary>
+        public int SatLayerCols = 1;
     }
 
     /// <summary>

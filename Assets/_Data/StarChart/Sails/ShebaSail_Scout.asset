@@ -17,6 +17,7 @@ MonoBehaviour:
     5 grants +8% damage per unit.'
   _icon: {fileID: 0}
   _slotSize: 1
+  _shape: 0
   _heatCost: 0
   _conditionDescription: Speed > 5 units/s
   _effectDescription: +8% damage per unit of speed above 5

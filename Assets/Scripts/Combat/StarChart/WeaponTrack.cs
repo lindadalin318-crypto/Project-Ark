@@ -51,8 +51,8 @@ namespace ProjectArk.Combat
             _id = id;
             _coreLayer  = new SlotLayer<StarCoreSO>();
             _prismLayer = new SlotLayer<PrismSO>();
-            // SAT layer: fixed 2×2 grid (2 rows × 2 cols), always fully unlocked.
-            _satLayer   = new SlotLayer<SatelliteSO>(initialCols: 2);
+            // SAT layer: starts with 1 column (like Core/Prism), expandable via SetLayerCols.
+            _satLayer   = new SlotLayer<SatelliteSO>(initialCols: 1);
             _snapshotDirty = true;
         }
 
@@ -173,20 +173,23 @@ namespace ProjectArk.Combat
         }
 
         /// <summary>
-        /// Restores the unlocked column counts for both layers from save data.
+        /// Restores the unlocked column counts for Core, Prism, and SAT layers from save data.
         /// Called during ImportTrack before re-equipping items.
         /// </summary>
-        public void SetLayerCols(int coreCols, int prismCols)
+        public void SetLayerCols(int coreCols, int prismCols, int satCols = 1)
         {
             // Clamp to valid range without UnityEngine.Mathf (WeaponTrack is pure C#)
             int targetCore  = coreCols  < 1 ? 1 : coreCols  > SlotLayer<StarCoreSO>.MAX_COLS ? SlotLayer<StarCoreSO>.MAX_COLS : coreCols;
             int targetPrism = prismCols < 1 ? 1 : prismCols > SlotLayer<PrismSO>.MAX_COLS    ? SlotLayer<PrismSO>.MAX_COLS    : prismCols;
+            int targetSat   = satCols   < 1 ? 1 : satCols   > SlotLayer<SatelliteSO>.MAX_COLS ? SlotLayer<SatelliteSO>.MAX_COLS : satCols;
 
             // Unlock columns one by one until we reach the saved count
             while (_coreLayer.Cols < targetCore)
                 _coreLayer.TryUnlockColumn();
             while (_prismLayer.Cols < targetPrism)
                 _prismLayer.TryUnlockColumn();
+            while (_satLayer.Cols < targetSat)
+                _satLayer.TryUnlockColumn();
         }
 
         /// <summary> Clear all equipped items from both layers and the satellite layer. </summary>

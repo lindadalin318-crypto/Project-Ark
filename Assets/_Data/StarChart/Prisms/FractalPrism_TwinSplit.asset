@@ -16,8 +16,7 @@ MonoBehaviour:
   _description: "Fractal prism: +2 projectiles with 15\xB0 spread for fan-shaped
     coverage."
   _icon: {fileID: 0}
-  _slotSize: 2
-  _shape: 1
+  _slotSize: 1
   _heatCost: 0
   _family: 0
   _statModifiers:

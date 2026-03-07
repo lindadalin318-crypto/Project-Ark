@@ -16,6 +16,7 @@ MonoBehaviour:
   _description: 'Sheba Core 1016: Precision light beam. Zero spread, instant hit.'
   _icon: {fileID: 0}
   _slotSize: 1
+  _shape: 0
   _heatCost: 8
   _family: 1
   _damageType: 0

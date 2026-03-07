@@ -16,6 +16,7 @@ MonoBehaviour:
   _description: "\u79FB\u52A8\u8D8A\u5FEB\uFF0C\u4F24\u5BB3\u8D8A\u9AD8"
   _icon: {fileID: 0}
   _slotSize: 1
+  _shape: 0
   _heatCost: 0
   _conditionDescription: 
   _effectDescription: 

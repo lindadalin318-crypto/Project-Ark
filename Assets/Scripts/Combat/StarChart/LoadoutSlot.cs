@@ -1,3 +1,5 @@
+using ProjectArk.Core;
+
 namespace ProjectArk.Combat
 {
     /// <summary>
@@ -14,8 +16,22 @@ namespace ProjectArk.Combat
         /// <summary> Secondary weapon track for this loadout. </summary>
         public readonly WeaponTrack SecondaryTrack;
 
-        /// <summary> Currently equipped Light Sail SO, or null. </summary>
-        public LightSailSO EquippedLightSailSO;
+        /// <summary> Light Sail slot layer for this loadout (starts with 1 column). </summary>
+        public readonly SlotLayer<LightSailSO> SailLayer;
+
+        /// <summary>
+        /// Backward-compatible accessor: returns the first equipped Light Sail, or null.
+        /// </summary>
+        public LightSailSO EquippedLightSailSO
+        {
+            get => SailLayer.Items.Count > 0 ? SailLayer.Items[0] : null;
+            set
+            {
+                SailLayer.Clear();
+                if (value != null)
+                    SailLayer.TryEquip(value);
+            }
+        }
 
         /// <summary>
         /// Creates a new LoadoutSlot with two fresh, independent WeaponTrack instances.
@@ -24,6 +40,7 @@ namespace ProjectArk.Combat
         {
             PrimaryTrack   = new WeaponTrack(WeaponTrack.TrackId.Primary);
             SecondaryTrack = new WeaponTrack(WeaponTrack.TrackId.Secondary);
+            SailLayer      = new SlotLayer<LightSailSO>(initialCols: 1);
         }
 
         /// <summary>
@@ -35,7 +52,7 @@ namespace ProjectArk.Combat
         {
             PrimaryTrack.ClearAll();
             SecondaryTrack.ClearAll();
-            EquippedLightSailSO = null;
+            SailLayer.Clear();
         }
     }
 }

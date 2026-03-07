@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -21,6 +22,8 @@ namespace ProjectArk.UI
         [Header("Shared SAIL Column")]
         [SerializeField] private TypeColumn _sharedSailColumn;
         [SerializeField] private DragHighlightLayer _sailHighlightLayer;
+        [Tooltip("Override SAIL layer column count for debugging. 0 = use save data. Range 1-4.")]
+        [SerializeField] [Range(0, 4)] private int _debugSailCols = 0;
 
         [Header("Loadout")]
         [SerializeField] private LoadoutSwitcher _loadoutSwitcher;
@@ -214,7 +217,21 @@ namespace ProjectArk.UI
                 foreach (var cell in _sharedSailColumn.Cells)
                 {
                     if (cell != null)
-                        cell.HasSpaceForItem = (item) => _controller?.GetEquippedLightSail() == null;
+                    {
+                        cell.HasSpaceForItem = (item) =>
+                        {
+                            var sailLayer = _controller?.SailLayer;
+                            if (sailLayer == null) return false;
+                            // If the dragged SAIL is already in the layer, exclude it from the
+                            // free-space check so it can be moved to another slot within the column.
+                            var mgr = DragDropManager.Instance;
+                            if (mgr != null && mgr.CurrentPayload?.Source == DragSource.Slot
+                                && item is LightSailSO draggedSail
+                                && sailLayer.Items.Contains(draggedSail))
+                                return sailLayer.FreeSpace + draggedSail.SlotSize > 0;
+                            return sailLayer.FreeSpace > 0;
+                        };
+                    }
                 }
 
                 // Initialize the SAIL highlight layer — must be done AFTER Initialize() so
@@ -226,6 +243,10 @@ namespace ProjectArk.UI
                         _sharedSailColumn.Cells,
                         2);
             }
+
+            // Apply debug SAIL column count override (only when > 0)
+            if (_debugSailCols > 0 && _controller != null)
+                _controller.SetSailLayerCols(_debugSailCols);
 
             // Bind inventory item hover events to tooltip
             if (_inventoryView != null)
@@ -363,8 +384,8 @@ namespace ProjectArk.UI
 
         /// <summary>
         /// Refresh the shared SAIL column from the current loadout.
-        /// Mirrors RefreshColumn() in TrackView: only cells[0] is unlocked (SAIL has 1 slot);
-        /// cells[1..3] are hidden via CanvasGroup so they cannot receive drops or show as empty.
+        /// Mirrors RefreshColumn() in TrackView: reads SailLayer.Rows * SailLayer.Cols
+        /// to determine unlocked cell count; hides the rest via CanvasGroup.
         /// </summary>
         public void RefreshSharedSailColumn()
         {
@@ -372,12 +393,16 @@ namespace ProjectArk.UI
             var cells = _sharedSailColumn.Cells;
             if (cells == null || cells.Length == 0) return;
 
-            // SAIL has exactly 1 slot — only cells[0] is unlocked.
-            // Hide all other cells via CanvasGroup (CLAUDE.md: 禁止 SetActive, 用 CanvasGroup).
+            // Read unlocked count from SailLayer (consistent with TrackView.RefreshColumn)
+            var sailLayer = _controller?.SailLayer;
+            int unlockedCount = sailLayer != null ? sailLayer.Rows * sailLayer.Cols : 0;
+
+            // Show unlocked cells, hide locked cells via CanvasGroup
+            // (CLAUDE.md: 禁止 SetActive, 用 CanvasGroup)
             for (int i = 0; i < cells.Length; i++)
             {
                 if (cells[i] == null) continue;
-                bool unlocked = (i == 0);
+                bool unlocked = (i < unlockedCount);
                 var cg = cells[i].GetComponent<CanvasGroup>();
                 if (cg == null) cg = cells[i].gameObject.AddComponent<CanvasGroup>();
                 cg.alpha          = unlocked ? 1f : 0f;
@@ -385,14 +410,23 @@ namespace ProjectArk.UI
                 cg.blocksRaycasts = unlocked;
             }
 
-            // Set cells[0] to show the equipped sail (or empty)
-            var sail = _controller?.GetEquippedLightSail();
-            if (cells[0] != null)
+            if (sailLayer == null) return;
+
+            // Reset all unlocked cells to empty first
+            for (int i = 0; i < unlockedCount && i < cells.Length; i++)
+                cells[i]?.SetEmpty();
+
+            // Fill cells with equipped sails from SailLayer
+            for (int r = 0; r < sailLayer.Rows; r++)
             {
-                if (sail != null)
-                    cells[0].SetItem(sail);
-                else
-                    cells[0].SetEmpty();
+                for (int c = 0; c < sailLayer.Cols; c++)
+                {
+                    var sail = sailLayer.GetAt(c, r);
+                    if (sail == null) continue;
+                    int cellIndex = r * sailLayer.Cols + c;
+                    if (cellIndex < cells.Length && cells[cellIndex] != null)
+                        cells[cellIndex].SetItem(sail);
+                }
             }
         }
 
@@ -439,7 +473,7 @@ namespace ProjectArk.UI
             count += _controller.PrimaryTrack.PrismLayer.Items.Count;
             count += _controller.SecondaryTrack.CoreLayer.Items.Count;
             count += _controller.SecondaryTrack.PrismLayer.Items.Count;
-            if (_controller.GetEquippedLightSail() != null) count++;
+            if (_controller.SailLayer != null) count += _controller.SailLayer.Items.Count;
             count += _controller.PrimaryTrack.EquippedSatelliteSOs.Count;
             count += _controller.SecondaryTrack.EquippedSatelliteSOs.Count;
             return count;
@@ -598,8 +632,8 @@ namespace ProjectArk.UI
                     _statusBar?.ShowMessage($"UNEQUIPPED: {prism.DisplayName}", StarChartTheme.StatusNormal, 3f);
                     break;
 
-                case LightSailSO:
-                    _controller.UnequipLightSail();
+                case LightSailSO sail:
+                    _controller.UnequipLightSail(sail);
                     _statusBar?.ShowMessage($"UNEQUIPPED: {item.DisplayName}", StarChartTheme.StatusNormal, 3f);
                     break;
 
@@ -634,7 +668,7 @@ namespace ProjectArk.UI
                         || ListContains(_controller.SecondaryTrack.PrismLayer.Items, prism);
 
                 case LightSailSO sail:
-                    return _controller.GetEquippedLightSail() == sail;
+                    return _controller.SailLayer != null && ListContains(_controller.SailLayer.Items, sail);
 
                 case SatelliteSO sat:
                     return ListContains(_controller.PrimaryTrack.EquippedSatelliteSOs, sat)

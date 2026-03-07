@@ -99,10 +99,25 @@ namespace ProjectArk.Combat
         /// <summary> Current active loadout index (0-based). </summary>
         public int ActiveLoadoutIndex => _activeLoadoutIndex;
 
+        /// <summary> The SAIL slot layer for the active loadout. </summary>
+        public SlotLayer<LightSailSO> SailLayer => ActiveSlot.SailLayer;
+
         // --- Runtime Equip API (for UI) ---
 
         /// <summary> Get the currently equipped Light Sail SO, or null. </summary>
         public LightSailSO GetEquippedLightSail() => ActiveSlot.EquippedLightSailSO;
+
+        /// <summary>
+        /// Expand the SAIL layer to the given column count.
+        /// Only expands (never shrinks), consistent with Core/Prism/SAT behavior.
+        /// </summary>
+        public void SetSailLayerCols(int cols)
+        {
+            var layer = ActiveSlot.SailLayer;
+            int target = cols < 1 ? 1 : cols > SlotLayer<LightSailSO>.MAX_COLS ? SlotLayer<LightSailSO>.MAX_COLS : cols;
+            while (layer.Cols < target)
+                layer.TryUnlockColumn();
+        }
 
         /// <summary> Get the currently equipped Satellite SOs for the specified track. </summary>
         public IReadOnlyList<SatelliteSO> GetEquippedSatellites(WeaponTrack.TrackId trackId)
@@ -115,29 +130,58 @@ namespace ProjectArk.Combat
 
         /// <summary>
         /// Equip a Light Sail at runtime. Disposes the previous one if any.
+        /// Supports optional anchor position for multi-slot SAIL layer.
         /// </summary>
-        public void EquipLightSail(LightSailSO sail)
+        public void EquipLightSail(LightSailSO sail, int anchorCol = 0, int anchorRow = 0)
         {
             if (sail == null) return;
 
-            // 卸载旧光帆
-            UnequipLightSail();
+            // If the target cell is already occupied by this sail, no-op
+            var existing = ActiveSlot.SailLayer.GetAt(anchorCol, anchorRow);
+            if (existing != null && !ReferenceEquals(existing, sail))
+            {
+                // Evict the occupant first
+                UnequipLightSail(existing);
+            }
+            else if (ReferenceEquals(existing, sail))
+            {
+                return; // already placed here
+            }
 
-            ActiveSlot.EquippedLightSailSO = sail;
-            _lightSailRunners[_activeLoadoutIndex] = new LightSailRunner(sail, _context);
-            OnLightSailChanged?.Invoke();
+            // If no free space, evict the first sail
+            if (ActiveSlot.SailLayer.FreeSpace <= 0)
+                UnequipLightSail();
+
+            bool placed = ActiveSlot.SailLayer.TryPlace(sail, anchorCol, anchorRow);
+            if (!placed)
+                placed = ActiveSlot.SailLayer.TryEquip(sail); // fallback: first available slot
+
+            if (placed)
+            {
+                _lightSailRunners[_activeLoadoutIndex] = new LightSailRunner(sail, _context);
+                OnLightSailChanged?.Invoke();
+            }
         }
 
         /// <summary> Unequip the current Light Sail. </summary>
         public void UnequipLightSail()
         {
+            var sail = ActiveSlot.EquippedLightSailSO;
+            if (sail != null)
+                UnequipLightSail(sail);
+        }
+
+        /// <summary> Unequip a specific Light Sail from the active loadout. </summary>
+        public void UnequipLightSail(LightSailSO sail)
+        {
+            if (sail == null) return;
+            ActiveSlot.SailLayer.Unequip(sail);
             ref var runner = ref _lightSailRunners[_activeLoadoutIndex];
             if (runner != null)
             {
                 runner.Dispose();
                 runner = null;
             }
-            ActiveSlot.EquippedLightSailSO = null;
             OnLightSailChanged?.Invoke();
         }
 
@@ -256,9 +300,10 @@ namespace ProjectArk.Combat
         {
             var slot = _loadouts[slotIndex];
 
-            // Light Sail
-            if (slot.EquippedLightSailSO != null)
-                _lightSailRunners[slotIndex] = new LightSailRunner(slot.EquippedLightSailSO, _context);
+            // Light Sail — rebuild runner for the first equipped sail (single runner model)
+            var sail = slot.SailLayer.Items.Count > 0 ? slot.SailLayer.Items[0] : null;
+            if (sail != null)
+                _lightSailRunners[slotIndex] = new LightSailRunner(sail, _context);
 
             // Primary track satellites
             var primaryRunners = _primarySatRunners[slotIndex];
@@ -761,6 +806,7 @@ namespace ProjectArk.Combat
                 slotData.PrimaryTrack   = ExportTrack(slot.PrimaryTrack);
                 slotData.SecondaryTrack = ExportTrack(slot.SecondaryTrack);
                 slotData.LightSailID = slot.EquippedLightSailSO != null ? slot.EquippedLightSailSO.DisplayName : "";
+                slotData.SailLayerCols = slot.SailLayer.Cols;
                 // Satellites are now stored per-track inside TrackSaveData
                 data.Loadouts.Add(slotData);
             }
@@ -825,6 +871,11 @@ namespace ProjectArk.Combat
                     var sail = resolver.FindLightSail(slotData.LightSailID);
                     if (sail != null)
                     {
+                        // Restore SAIL layer column count before equipping
+                        int sailCols = System.Math.Max(1, slotData.SailLayerCols);
+                        while (slot.SailLayer.Cols < sailCols)
+                            slot.SailLayer.TryUnlockColumn();
+
                         slot.EquippedLightSailSO = sail;
                         _lightSailRunners[i] = new LightSailRunner(sail, _context);
                     }
@@ -892,6 +943,7 @@ namespace ProjectArk.Combat
             // Persist unlocked column counts for progressive capacity system
             data.CoreLayerCols  = track.CoreLayer.Cols;
             data.PrismLayerCols = track.PrismLayer.Cols;
+            data.SatLayerCols   = track.SatLayer.Cols;
 
             return data;
         }
@@ -904,7 +956,8 @@ namespace ProjectArk.Combat
             // Restore unlocked column counts (clamp to ≥1 for old saves where field defaults to 0)
             int coreCols  = Mathf.Max(1, data.CoreLayerCols);
             int prismCols = Mathf.Max(1, data.PrismLayerCols);
-            track.SetLayerCols(coreCols, prismCols);
+            int satCols   = Mathf.Max(1, data.SatLayerCols);
+            track.SetLayerCols(coreCols, prismCols, satCols);
 
             if (data.CoreIDs != null)
             {

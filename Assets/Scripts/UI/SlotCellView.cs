@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -536,26 +537,58 @@ namespace ProjectArk.UI
                 return false;
 
             bool hasSpace = false;
+            // When dragging an already-equipped item, determine if it comes from this same track.
+            // If so, we must exclude the item itself from the space calculation so its own
+            // occupied cells are not counted against available space.
+            bool isDraggingFromSameTrack = payload.Source == DragSource.Slot
+                && payload.SourceTrack != null
+                && OwnerTrack != null
+                && payload.SourceTrack == OwnerTrack.Track;
+
             if (HasSpaceForItem != null)
             {
-                // Legacy SAIL-style: use injected delegate (only for LightSail)
-                hasSpace = HasSpaceForItem(payload.Item);
+                // Legacy SAIL-style: use injected delegate (only for LightSail).
+                // If the dragged item is already in the SAIL column (column-internal move),
+                // exclude its own occupied space so the space check doesn't falsely fail.
+                var sailLayer = DragDropManager.Instance?.SailLayer;
+                bool isSailInternalMove = payload.Source == DragSource.Slot
+                    && payload.Item is LightSailSO draggedSailCheck
+                    && sailLayer != null
+                    && sailLayer.Items.Contains(draggedSailCheck);
+
+                if (isSailInternalMove && payload.Item is LightSailSO draggedSail)
+                    hasSpace = sailLayer.FreeSpace + draggedSail.SlotSize > 0;
+                else
+                    hasSpace = HasSpaceForItem(payload.Item);
             }
             else if (OwnerTrack != null)
             {
-                // CORE/PRISM/SAT: use TrackView.HasSpaceForItem
+                // CORE/PRISM/SAT: use TrackView.HasSpaceForItem (or Excluding variant for same-track drags)
                 bool isCoreLayer = SlotType == SlotType.Core;
                 bool isPrismLayer = SlotType == SlotType.Prism;
                 if (isCoreLayer || isPrismLayer)
-                    hasSpace = OwnerTrack.HasSpaceForItem(payload.Item, isCoreLayer);
+                {
+                    hasSpace = isDraggingFromSameTrack
+                        ? OwnerTrack.HasSpaceForItemExcluding(payload.Item, payload.Item, isCoreLayer)
+                        : OwnerTrack.HasSpaceForItem(payload.Item, isCoreLayer);
+                }
                 else if (SlotType == SlotType.Satellite)
-                    hasSpace = OwnerTrack.Track?.SatLayer?.FreeSpace > 0;
+                {
+                    var satLayer = OwnerTrack.Track?.SatLayer;
+                    if (isDraggingFromSameTrack && satLayer != null
+                        && payload.Item is SatelliteSO draggedSat
+                        && satLayer.Items.Contains(draggedSat))
+                        // SAT is always 1×1: excluding self always frees exactly 1 slot
+                        hasSpace = satLayer.FreeSpace + draggedSat.SlotSize > 0;
+                    else
+                        hasSpace = satLayer?.FreeSpace > 0;
+                }
             }
 
             bool valid = typeMatch && hasSpace;
             isReplace = typeMatch && !hasSpace && IsOccupied;
 
-            // For CORE/PRISM/SAT, resolve shape anchor against hovered cell.
+            // For CORE/PRISM/SAT/SAIL, resolve shape anchor against hovered cell.
             if (OwnerTrack != null && (SlotType == SlotType.Core || SlotType == SlotType.Prism || SlotType == SlotType.Satellite))
             {
                 // Read dynamic column count from the active layer
@@ -586,6 +619,50 @@ namespace ProjectArk.UI
                 }
 
                 anchor = bestAnchor;
+            }
+            else if (SlotType == SlotType.LightSail)
+            {
+                // Shared SAIL column: compute anchor from CellIndex using SailLayer grid dimensions
+                var sailLayer = DragDropManager.Instance?.SailLayer;
+                int gridCols = sailLayer?.Cols ?? 1;
+                int gridRows = SlotLayer<LightSailSO>.FIXED_ROWS;
+                int hoverCol = CellIndex % gridCols;
+                int hoverRow = CellIndex / gridCols;
+
+                bool anchorFound = ItemShapeHelper.FindBestAnchor(
+                    payload.Item.Shape,
+                    hoverCol,
+                    hoverRow,
+                    gridCols,
+                    gridRows,
+                    out Vector2Int bestAnchor);
+
+                if (!anchorFound)
+                {
+                    isReplace = false;
+                    previewState = DropPreviewState.Invalid;
+                    return false;
+                }
+
+                anchor = bestAnchor;
+
+                // No-op detection: if the dragged SAIL is already at this exact anchor, treat as Valid (no-op).
+                bool isSailInternalMove = payload.Source == DragSource.Slot
+                    && payload.Item is LightSailSO noOpSail
+                    && sailLayer != null
+                    && sailLayer.Items.Contains(noOpSail);
+
+                if (isSailInternalMove && payload.Item is LightSailSO currentSail)
+                {
+                    var currentAnchor = sailLayer.GetAnchor(currentSail);
+                    if (currentAnchor == anchor)
+                    {
+                        // Dropped on the exact same slot — no-op, show Valid but nothing will change.
+                        isReplace = false;
+                        previewState = DropPreviewState.Valid;
+                        return true;
+                    }
+                }
             }
 
             if (isReplace)

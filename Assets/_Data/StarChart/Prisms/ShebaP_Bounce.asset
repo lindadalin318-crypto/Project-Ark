@@ -16,6 +16,7 @@ MonoBehaviour:
   _description: 'Sheba Prism 2013: Projectiles bounce off walls up to 3 times.'
   _icon: {fileID: 0}
   _slotSize: 1
+  _shape: 0
   _heatCost: 0
   _family: 1
   _statModifiers: []

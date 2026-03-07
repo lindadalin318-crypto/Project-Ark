@@ -16,6 +16,7 @@ MonoBehaviour:
   _description: 'Sheba Sail 3005: No passive effect. The baseline for comparison.'
   _icon: {fileID: 0}
   _slotSize: 1
+  _shape: 0
   _heatCost: 0
   _conditionDescription: Always active
   _effectDescription: No effect

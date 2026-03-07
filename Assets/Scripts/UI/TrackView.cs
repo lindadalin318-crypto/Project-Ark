@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -41,6 +42,8 @@ namespace ProjectArk.UI
         [SerializeField] [Range(0, 4)] private int _debugCoreCols = 0;
         [Tooltip("Override Prism layer column count for debugging. 0 = use save data. Range 1-4.")]
         [SerializeField] [Range(0, 4)] private int _debugPrismCols = 0;
+        [Tooltip("Override SAT layer column count for debugging. 0 = use save data. Range 1-4.")]
+        [SerializeField] [Range(0, 4)] private int _debugSatCols = 0;
 
         /// <summary> Fired when a cell with an equipped item is clicked (for unequip). </summary>
         public event Action<StarChartItemSO> OnCellClicked;
@@ -169,11 +172,12 @@ namespace ProjectArk.UI
         private void ApplyDebugSlotCounts()
         {
             if (_track == null) return;
-            if (_debugCoreCols > 0 || _debugPrismCols > 0)
+            if (_debugCoreCols > 0 || _debugPrismCols > 0 || _debugSatCols > 0)
             {
                 int coreCols  = _debugCoreCols  > 0 ? _debugCoreCols  : _track.CoreLayer.Cols;
                 int prismCols = _debugPrismCols > 0 ? _debugPrismCols : _track.PrismLayer.Cols;
-                _track.SetLayerCols(coreCols, prismCols);
+                int satCols   = _debugSatCols   > 0 ? _debugSatCols   : _track.SatLayer.Cols;
+                _track.SetLayerCols(coreCols, prismCols, satCols);
             }
         }
 
@@ -465,6 +469,46 @@ namespace ProjectArk.UI
                 return FindFirstAnchor(_track.CoreLayer, item, out _);
             else
                 return FindFirstAnchor(_track.PrismLayer, item, out _);
+        }
+
+        /// <summary>
+        /// Check whether this track's layer has space for <paramref name="item"/>,
+        /// temporarily treating <paramref name="excludeItem"/> as if it were not equipped.
+        /// Used when dragging an already-equipped item within the same track so that
+        /// its own occupied cells are not counted against the available space.
+        /// </summary>
+        public bool HasSpaceForItemExcluding(StarChartItemSO item, StarChartItemSO excludeItem, bool isCoreLayer)
+        {
+            if (_track == null) return false;
+
+            if (isCoreLayer)
+            {
+                var layer = _track.CoreLayer;
+                if (excludeItem is StarCoreSO excludeCore && layer.Items.Contains(excludeCore))
+                {
+                    // Remember the original anchor so we can restore it exactly.
+                    var originalAnchor = layer.GetAnchor(excludeCore);
+                    layer.Unequip(excludeCore);
+                    bool result = FindFirstAnchor(layer, item, out _);
+                    // Restore the item to its original position.
+                    layer.TryPlace(excludeCore, originalAnchor.x, originalAnchor.y);
+                    return result;
+                }
+                return FindFirstAnchor(layer, item, out _);
+            }
+            else
+            {
+                var layer = _track.PrismLayer;
+                if (excludeItem is PrismSO excludePrism && layer.Items.Contains(excludePrism))
+                {
+                    var originalAnchor = layer.GetAnchor(excludePrism);
+                    layer.Unequip(excludePrism);
+                    bool result = FindFirstAnchor(layer, item, out _);
+                    layer.TryPlace(excludePrism, originalAnchor.x, originalAnchor.y);
+                    return result;
+                }
+                return FindFirstAnchor(layer, item, out _);
+            }
         }
 
         /// <summary>

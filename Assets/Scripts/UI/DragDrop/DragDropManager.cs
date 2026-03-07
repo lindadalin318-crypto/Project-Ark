@@ -68,6 +68,9 @@ namespace ProjectArk.UI
         /// <summary> Exposes the shared SAIL highlight layer for SlotCellView hover feedback. </summary>
         public DragHighlightLayer SailHighlightLayer => _panel?.SailHighlightLayer;
 
+        /// <summary> Exposes the SAIL slot layer for SlotCellView anchor computation. </summary>
+        public SlotLayer<LightSailSO> SailLayer => _panel?.Controller?.SailLayer;
+
         private StarChartPanel _panel;
         private StarChartController _controller;
         private RectTransform _inventoryRect; // target for fly-back animations
@@ -264,10 +267,37 @@ namespace ProjectArk.UI
             // SAIL equip/unequip goes directly through the controller, no track needed.
             if (DropTargetIsSailColumn)
             {
-                EquipToTrack(CurrentPayload.Item, null);
+                var sailItem = CurrentPayload.Item;
+
+                // Detect SAIL column-internal move (already equipped → moving to another slot).
+                bool isSailInternalMove = CurrentPayload.Source == DragSource.Slot
+                    && sailItem is LightSailSO movingSail
+                    && _controller?.SailLayer != null
+                    && System.Linq.Enumerable.Contains(_controller.SailLayer.Items, movingSail);
+
+                if (isSailInternalMove && sailItem is LightSailSO internalSail)
+                {
+                    // No-op check: if the target anchor is the same as the current anchor, do nothing.
+                    var currentAnchor = _controller.SailLayer.GetAnchor(internalSail);
+                    bool isSameSlot = currentAnchor.x == DropTargetAnchorCol
+                                   && currentAnchor.y == DropTargetAnchorRow;
+                    if (!isSameSlot)
+                    {
+                        // Move within SAIL column: unequip from old position first, then equip at new position.
+                        _controller.UnequipLightSail(internalSail);
+                        EquipToTrack(sailItem, null);
+                    }
+                    // else: dropped on the exact same slot — true no-op, nothing to do.
+                }
+                else
+                {
+                    // From Inventory or other source: equip normally.
+                    EquipToTrack(sailItem, null);
+                }
+
                 _panel.RefreshAllViews();
-                _panel.SelectAndShowItem(CurrentPayload.Item);
-                PlaySnapInAnimation(CurrentPayload.Item);
+                _panel.SelectAndShowItem(sailItem);
+                PlaySnapInAnimation(sailItem);
                 TriggerFlyBackAnimations();
                 return;
             }
@@ -296,7 +326,25 @@ namespace ProjectArk.UI
                 }
                 else if (sourceTrack != null && sourceTrack == DropTargetTrack)
                 {
-                    // Same track — no-op
+                    // Same track — move to a different slot.
+                    // Resolve the item's current anchor position to detect a no-op (drop on same slot).
+                    Vector2Int currentAnchor = new Vector2Int(-1, -1);
+                    if (item is StarCoreSO coreItem && sourceTrack.CoreLayer != null)
+                        currentAnchor = sourceTrack.CoreLayer.GetAnchor(coreItem);
+                    else if (item is PrismSO prismItem && sourceTrack.PrismLayer != null)
+                        currentAnchor = sourceTrack.PrismLayer.GetAnchor(prismItem);
+                    else if (item is SatelliteSO satItem && sourceTrack.SatLayer != null)
+                        currentAnchor = sourceTrack.SatLayer.GetAnchor(satItem);
+
+                    bool isSameSlot = currentAnchor.x == DropTargetAnchorCol
+                                   && currentAnchor.y == DropTargetAnchorRow;
+                    if (!isSameSlot)
+                    {
+                        // Move within the same track: unequip from old position, equip at new position.
+                        UnequipFromTrack(item, sourceTrack);
+                        EquipToTrack(item, DropTargetTrack);
+                    }
+                    // else: dropped on the exact same slot — true no-op, nothing to do.
                 }
             }
 
@@ -326,11 +374,11 @@ namespace ProjectArk.UI
                 _panel?.RefreshAllViews();
                 _panel?.SelectAndShowItem(item);
             }
-            else if (item is LightSailSO)
+            else if (item is LightSailSO sail)
             {
                 // Shared SAIL column: SourceTrack is null (no owning track).
-                // Unequip directly through the controller.
-                _controller?.UnequipLightSail();
+                // Unequip the specific sail directly through the controller.
+                _controller?.UnequipLightSail(sail);
                 _panel?.RefreshAllViews();
                 _panel?.SelectAndShowItem(item);
             }
@@ -381,16 +429,38 @@ namespace ProjectArk.UI
                     break;
 
                 case LightSailSO sail:
-                    // Shared SAIL column: equip directly through controller, no track needed.
-                    // Evict existing sail if present.
-                    var existingSail = _controller?.GetEquippedLightSail();
-                    if (existingSail != null)
+                    // Shared SAIL column: equip at the resolved anchor position.
+                    var sailLayer = _controller?.SailLayer;
+                    // Defensive guard: if this sail is already in the layer (column-internal move
+                    // that wasn't pre-unequipped by ExecuteDrop), unequip it first to prevent duplicates.
+                    bool sailAlreadyEquipped = sailLayer != null && System.Linq.Enumerable.Contains(sailLayer.Items, sail);
+                    if (sailAlreadyEquipped)
                     {
-                        EvictedItems.Add((existingSail, track));
-                        _controller.UnequipLightSail();
-                        ShowReplaceMessage(item);
+                        _controller.UnequipLightSail(sail);
                     }
-                    _controller?.EquipLightSail(sail);
+                    else
+                    {
+                        // Only run eviction logic when equipping from outside the SAIL column.
+                        var sailOccupant = sailLayer?.GetAt(anchorCol, anchorRow);
+                        if (sailOccupant != null && !ReferenceEquals(sailOccupant, sail))
+                        {
+                            EvictedItems.Add((sailOccupant, track));
+                            _controller.UnequipLightSail(sailOccupant);
+                            ShowReplaceMessage(sail);
+                        }
+                        else if (sailLayer != null && sailLayer.FreeSpace <= 0 && sailOccupant == null)
+                        {
+                            // No free space and target cell is empty — evict the first sail
+                            var firstSail = sailLayer.Items.Count > 0 ? sailLayer.Items[0] : null;
+                            if (firstSail != null)
+                            {
+                                EvictedItems.Add((firstSail, track));
+                                _controller.UnequipLightSail(firstSail);
+                                ShowReplaceMessage(sail);
+                            }
+                        }
+                    }
+                    _controller?.EquipLightSail(sail, anchorCol, anchorRow);
                     break;
 
                 case SatelliteSO sat:
@@ -421,8 +491,8 @@ namespace ProjectArk.UI
                     track.UnequipPrism(prism);
                     break;
 
-                case LightSailSO:
-                    _controller?.UnequipLightSail();
+                case LightSailSO sail:
+                    _controller?.UnequipLightSail(sail);
                     break;
 
                 case SatelliteSO sat:
