@@ -87,7 +87,9 @@ namespace ProjectArk.Ship
             int intervalMs = Mathf.Max(1, Mathf.RoundToInt(interval * 1000f));
 
             Sprite currentSprite = _shipSpriteRenderer.sprite;
-            Color baseColor = _shipSpriteRenderer.color;
+            // Use the configured tint color (defaults to GG cyan-green rgba(0.28,0.43,0.43))
+            // rather than sampling the live sprite color, so the ghost always has the correct hue.
+            Color baseColor = _juiceSettings.AfterImageColor;
 
             for (int i = 0; i < count; i++)
             {

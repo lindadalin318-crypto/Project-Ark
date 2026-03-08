@@ -23,6 +23,44 @@ namespace ProjectArk.Ship
     public class ShipStatsSO : ScriptableObject
     {
         // ══════════════════════════════════════════════════════════════
+        // State Machine Data Array  (GG StateData[] — primary source of truth)
+        // ══════════════════════════════════════════════════════════════
+
+        [Header("State Machine  (GG StateData[] — configure Normal / Boost / Dash here)")]
+        [Tooltip("Per-state physics parameter packs. ShipStateController reads this array. " +
+                 "Add one entry per ShipShipState value you want to configure.")]
+        [SerializeField] private ShipStateData[] _stateDataArray = System.Array.Empty<ShipStateData>();
+
+        /// <summary>
+        /// Returns the ShipStateData for the requested state.
+        /// Falls back to Normal if the state is not found, and logs a warning.
+        /// </summary>
+        public ShipStateData GetStateData(ShipShipState state)
+        {
+            foreach (var data in _stateDataArray)
+            {
+                if (data != null && data.state == state)
+                    return data;
+            }
+
+            // Fallback: try Normal
+            if (state != ShipShipState.Normal)
+            {
+                Debug.LogWarning($"[ShipStatsSO] No ShipStateData found for state '{state}'. " +
+                                 "Falling back to Normal.", this);
+                foreach (var data in _stateDataArray)
+                {
+                    if (data != null && data.state == ShipShipState.Normal)
+                        return data;
+                }
+            }
+
+            Debug.LogWarning($"[ShipStatsSO] No ShipStateData found for Normal state either. " +
+                             "Returning null — assign state data in the Inspector.", this);
+            return null;
+        }
+
+        // ══════════════════════════════════════════════════════════════
         // Rotation  (对应 GGSteering.angularAcceleration / maxRotationSpeed)
         // ══════════════════════════════════════════════════════════════
 

@@ -43,8 +43,10 @@ namespace ProjectArk.Ship
         // Public State
         // ══════════════════════════════════════════════════════════════
 
-        /// <summary>是否处于 Boost 状态（参数覆盖期间）。</summary>
-        public bool IsBoosting { get; private set; }
+        /// <summary>是否处于 Boost 状态。优先从 ShipStateController 查询。</summary>
+        public bool IsBoosting => _stateController != null
+            ? _stateController.IsInState(ShipShipState.Boost)
+            : _legacyIsBoosting;
 
         /// <summary>是否处于冷却中。</summary>
         public bool IsOnCooldown { get; private set; }
@@ -58,12 +60,14 @@ namespace ProjectArk.Ship
         // Private State
         // ══════════════════════════════════════════════════════════════
 
-        private ShipMotor    _motor;
-        private InputHandler _inputHandler;
-        private ShipAiming   _aiming;
+        private ShipMotor           _motor;
+        private InputHandler        _inputHandler;
+        private ShipAiming          _aiming;
+        private ShipStateController _stateController; // optional — null-safe
 
         private float _cooldownEndTime;
         private bool  _buffered;
+        private bool  _legacyIsBoosting; // fallback when no ShipStateController
 
         // ══════════════════════════════════════════════════════════════
         // Lifecycle
@@ -71,9 +75,14 @@ namespace ProjectArk.Ship
 
         private void Awake()
         {
-            _motor        = GetComponent<ShipMotor>();
-            _inputHandler = GetComponent<InputHandler>();
-            _aiming       = GetComponent<ShipAiming>();
+            _motor           = GetComponent<ShipMotor>();
+            _inputHandler    = GetComponent<InputHandler>();
+            _aiming          = GetComponent<ShipAiming>();
+            _stateController = GetComponent<ShipStateController>(); // optional
+
+            if (_stats == null)
+                Debug.LogError($"[ShipBoost] _stats (ShipStatsSO) is not assigned on {gameObject.name}! " +
+                               "Please assign it in the Inspector.", this);
         }
 
         private void OnEnable()
@@ -140,13 +149,23 @@ namespace ProjectArk.Ship
 
         private async UniTaskVoid ExecuteBoostAsync()
         {
-            IsBoosting = true;
+            if (_stats == null)
+            {
+                Debug.LogError($"[ShipBoost] Cannot execute boost: _stats is null on {gameObject.name}.", this);
+                return;
+            }
 
-            // ── 1. 切换到 Boost 物理参数（对应 GG StateData.Apply()）
-            //       linearDrag 2.5 → 阻力降低，飞船更难停下
-            //       maxMoveSpeed 9 → 速度上限提升
-            //       ShipAiming 会在 BoostAngularAcceleration 期间感知到 IsBoosting
-            _motor.EnterBoostState(_stats.BoostLinearDrag, _stats.BoostMaxSpeed);
+            _legacyIsBoosting = true;
+
+            // ── 1. 切换到 Boost 状态（对应 GG StateData.Apply()）
+            //       ShipStateController 会自动应用 linearDrag / maxMoveSpeed / angularAcceleration
+            if (_stateController != null)
+                _stateController.ToStateForce(ShipShipState.Boost);
+            else
+            {
+                // Legacy fallback: 直接操作 ShipMotor
+                _motor.EnterBoostState(_stats.BoostLinearDrag, _stats.BoostMaxSpeed);
+            }
 
             // ── 2. 通知 VFX（引擎粒子增强等）
             OnBoostStarted?.Invoke();
@@ -158,14 +177,17 @@ namespace ProjectArk.Ship
                 await UniTask.Delay(ms, cancellationToken: destroyCancellationToken);
             }
 
-            // ── 4. 恢复正常参数（对应 GG StateData → IsBlueState）
-            //       多余速度由 linearDrag 3 自然衰减（回到正常手感）
-            _motor.ExitBoostState();
-            IsBoosting = false;
+            // ── 4. 恢复正常状态（对应 GG StateData → IsBlueState）
+            if (_stateController != null)
+                _stateController.ToStateForce(ShipShipState.Normal);
+            else
+                _motor.ExitBoostState();
+
+            _legacyIsBoosting = false;
             OnBoostEnded?.Invoke();
 
             // ── 5. 进入冷却
-            IsOnCooldown   = true;
+            IsOnCooldown     = true;
             _cooldownEndTime = Time.time + _stats.BoostCooldown;
         }
     }

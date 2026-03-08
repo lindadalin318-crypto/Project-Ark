@@ -1,4 +1,4 @@
-﻿# Implementation Log — Project Ark
+# Implementation Log — Project Ark
 
 ---
 
@@ -9175,3 +9175,658 @@ Tooltip 触发链路为：`SlotCellView.OnPointerEntered → TrackView.HandleCel
 
 **技术方案：**
 在 `StarChartPanel.Bind()` 初始化 `_sharedSailColumn` 之后，直接遍历其 Cells 订阅 `OnPointerEntered` / `OnPointerExited` 事件，转发到新增的 `HandleSailCellPointerEntered()` 方法（复用 `IsItemEquipped` + `GetEquippedLocation` 构建 tooltip 内容）。在 `OnDestroy()` 中对称取消订阅，保持事件卫生。
+
+---
+
+## Minishoot' Adventures 逆向工程结构分析 - 2026-03-08 11:38
+
+**新建文件：**
+- `Docs/Reference/Minishoot_Adventures_Structure_Analysis.md`
+- `Tools/dump_minishoot_types.ps1`
+- `Tools/start_assetripper.ps1`
+- `Tools/assetripper_export.ps1`
+- `Tools/analyze_assets.ps1`
+
+**内容简述：**
+对 Minishoot' Adventures（Steam 版）进行完整逆向工程分析，提取代码架构和美术资产结构，生成参考文档。
+
+**目的：**
+为 Project Ark 提供同类型游戏（Top-Down 弹幕射击 × 银河恶魔城）的实现参考，重点关注 AI 行为调度、子弹系统、属性数据层、关卡结构等核心系统。
+
+**技术方案：**
+1. **类型识别**：检测 `MonoBleedingEdge` 目录确认为 Mono 构建（非 IL2CPP），Unity 版本 2021.3.14f1
+2. **代码提取**：通过 PowerShell + .NET 反射加载 `Assembly-CSharp.dll`，提取 233 个类型签名；AssetRipper 导出完整 Unity 项目（12,513 个文件），获得 337 个完整 C# 源文件
+3. **AssetRipper 操作**：下载 GUI Free 版，`--headless --port 8080` 启动 REST 服务，通过 `/LoadFolder` + `/Export/UnityProject` API 导出（字段名为小写 `path`）
+4. **架构分析**：深度阅读 Player/ShipBehaviour/Movable/PlayerWeapon/Bullet/Enemy/AIPatternManager/AIWeapon/AIFollow/PlayerData/EnemyData/GameManager/SaveManager 等核心文件
+
+**关键发现：**
+- AI 使用 **Pattern-Action 时间轴调度**（非 HFSM），`AIPatternAction` 通过反射动态分发行为，轻量灵活
+- 子弹使用 **手动 CircleCast**（非 Physics Trigger），每帧检测，精度高无帧延迟
+- 属性系统通过 **AnimationCurve.Evaluate(level/levelMax)** 计算，曲线可视化调参
+- 存档使用 **Easy Save 3** 文件缓存，键值对存储，LateUpdate 自动存档
+- 场景采用 **Additive 加载**，GlobalObjects 场景常驻，其他场景按需加载/激活
+
+---
+
+## Rain World 逆向工程结构分析 - 2026-03-08 12:36
+
+**新建文件：**
+- `Docs/Reference/RainWorld_Structure_Analysis.md`
+
+**内容简述：**
+对 Rain World（Steam 版）进行完整逆向工程分析，提取代码架构、程序化世界系统、AI 生态模拟和美术资产结构，生成参考文档。
+
+**目的：**
+为 Project Ark 提供生态模拟 AI、程序化动画、调色板驱动渲染等核心技术的实现参考。
+
+**技术方案：**
+1. **类型识别**：确认为 Mono 构建（`RainWorld_Data/Managed/Assembly-CSharp.dll`），有 BepInEx 模组框架
+2. **代码提取**：通过 Python 解析 .NET PE 元数据的 `#Strings` 堆（offset=1246724, size=479620），提取 11,729 个符号名；进一步过滤出 70+ 个 AI 类、30+ 个 Graphics 类、完整的社会关系系统类名
+3. **StreamingAssets 分析**：直接读取文本格式的世界图（`world_su.txt`）、房间文件（`su_a01.txt`）、区域属性（`properties.txt`），理解数据格式
+4. **资产统计**：313 个 .shader 源文件、1620 个音效、269 个程序化音乐片段、54 个调色板、265 个贴花
+
+**关键发现：**
+- **完全自定义渲染**：使用 Futile 框架（非 Unity SpriteRenderer），`FSprite/FAtlas/FStage` 手动管理批次
+- **完全自定义物理**：`BodyChunk` 质点数组 + `SharedPhysics` Verlet 积分，不用 Unity Physics2D
+- **完全程序化动画**：每种生物有独立 `[Creature]Graphics` 类，IK + 弹簧阻尼 + Perlin Noise，无任何 AnimationClip
+- **LINEAGE 系统**：每个生成槽有概率权重进化链，每个 Rain Cycle 重新随机选择生物，实现生态动态变化
+- **双层 AI 架构**：`AbstractCreatureAI`（世界层轻量模拟）+ `[Creature]AI`（房间层完整 AI），生物在视野外也持续存在
+- **Room_Attr 系统**：每个房间对每种生物有 Like/Avoid/Forbidden/Stay 标记，设计师通过文本文件控制生态分布
+- **着色器源码存 StreamingAssets**：313 个 .shader 文件运行时动态编译，模组可直接修改
+- **调色板驱动着色**：所有 Sprite 使用灰度纹理，运行时从调色板 PNG 采样颜色，实现区域主题切换
+- **资产极度轻量**：`resources.assets` 仅 19.7 MB，所有游戏内容在 StreamingAssets 文本/PNG/WAV 文件中
+
+---
+
+## Unity 逆向工程指南全面升级 - 2026-03-08 13:05
+
+**修改文件：**
+- `Docs/Reference/Unity_Game_Reverse_Engineering_Guide.md`
+
+**内容简述：**
+基于 Magicraft 解构工作新增的实战经验，对逆向工程指南进行完整重写和升级。
+
+**目的：**
+将 Magicraft（IL2CPP + Unity 6 + DOTS）解包过程中积累的工具使用技巧、API 调用方式、自动化脚本、JSON 配置读取方法全部沉淀到文档中，形成可复用的标准作业手册。
+
+**新增内容：**
+1. **Unity 版本检测方法**：从 `globalgamemanagers` 文件头和 `UnityPlayer.dll` 版本信息提取 Unity 版本字符串
+2. **Il2CppDumper 完整使用指南**：下载命令、运行方式、5种输出文件的说明、非交互模式的处理
+3. **Mono.Cecil 程序化分析**：用 Il2CppDumper 自带的 Mono.Cecil.dll 在 PowerShell 中程序化读取 DummyDll，实现按关键词分类、统计命名空间、查看类字段/方法
+4. **AssetRipper Web API 完整自动化**：OpenAPI 端点列表、正确的 Content-Type、curl 处理反斜杠路径、后台导出+日志监控的完整 PowerShell 脚本
+5. **UnityPy 批量导出完整脚本**：兼容 IL2CPP 内置类型（Texture2D/Sprite/AudioClip），处理 `.resS` 关联、`m_Name` API 变更、运行时路径问题
+6. **Magicraft 完整解构复盘**：Unity 6 + IL2CPP + DOTS 架构分析，JSON 配置读取示例，SpellBase 方法架构，后置槽触发条件系统
+7. **技巧 3（JSON Balance Sheet）**：使用 `ConvertFrom-Json` + PowerShell 分析游戏数值分布
+8. **技巧 6（stringliteral.json）**：利用 Il2CppDumper 输出的字符串字面量查找资源路径和事件名
+9. **本地工具路径表**：记录 Project Ark 环境下各工具的绝对路径和 Python 环境
+10. **已解构游戏索引表**：5款游戏的版本/输出目录/主要收获快速参考
+11. **完整命令序列快速参考**：从版本检测到 AssetRipper 导出的端对端 PowerShell 命令
+
+---
+
+## TUNIC 逆向工程结构分析 - 2026-03-08 13:14
+
+**新建文件：**
+- `Docs/Reference/TUNIC_Structure_Analysis.md`
+
+**修改文件：**
+- `Docs/Reference/Unity_Game_Reverse_Engineering_Guide.md`（新增 TUNIC 到已解构游戏列表 + 第十四节实战复盘）
+
+**内容简述：**
+对 TUNIC（Steam 版）进行完整逆向工程分析，重点解析 Progression System（StateVariable/ConduitNode/升级/饰品/手册页面）和 Exploration System（72 个场景/区域标签/地图/门锁/谜题机关），生成参考文档。
+
+**目的：**
+为 Project Ark 的银河恶魔城关卡系统、进度管理、区域提示、谜题设计提供直接参考。
+
+**技术方案：**
+1. **类型识别**：确认 IL2CPP 构建（`il2cpp_data` 目录 + `GameAssembly.dll` 21MB）
+2. **Il2CppDumper**：提取 dump.cs + DummyDll + stringliteral.json（9,829 个字符串）
+3. **Mono.Cecil 分析**：754 个类型，660 个游戏代码类，提取所有游戏专属枚举（TypeDefIndex > 5400）
+4. **stringliteral.json 挖掘**：提取 FMOD 事件路径（49 个）、场景名、存档键名
+5. **GI 目录统计**：72 个场景（level5~level84），最大场景 105 个光照贴图文件
+6. **FMOD bank 文件分析**：137 个 bank，`music_main.bank` 361MB，每个敌人独立 bank
+
+**关键发现：**
+- **StateVariable 系统**：ScriptableObject + 观察者模式，全局状态管理核心。每个游戏状态对应一个 SO 资产，支持 IntValue/BoolValue，内置订阅/取消订阅，可绑定 AchievementID 自动触发成就
+- **ConduitNode 电路系统**：图论连通性检查（`checkConnectedToPower` 递归），ScriptableObject 节点，驱动平台/传送点/机关的谜题核心
+- **手册页面地图**：`YouAreHereMapper`（场景中放置，记录页码）+ `YouAreHereMarker`（手册 UI，读取位置显示标记），地图就是手册的一页
+- **AreaLabel 区域提示**：`AreaData` ScriptableObject + 多语言 `LanguageLine`，进入区域时 Animator 驱动显示
+- **FMOD 模块化音频**：每个敌人独立 bank（`en_*.bank`），每个场景独立环境音 bank（`sfx_scene_*.bank`），音乐单独 `music_main.bank`
+- **AmplifyColor 色彩分级**：Volume 触发器切换 LUT，实现不同区域视觉主题
+- **TrinketEffect 枚举**：16 种饰品效果（RTSR/BTSR/GLASS_CANNON/PARRY_WINDOW 等），与 Project Ark 星图部件被动效果高度对应
+- **37 个成就**：AchievementID 枚举完整还原，包含 GT1-GT12（黄金宝藏）、HEX1-3（六边形谜题）等关键进度节点
+- **72 个场景**：从 GI 光照贴图目录统计，覆盖 Overworld/Forest/Fortress/Library/Cathedral/Crypt/Swamp/Quarry/Atoll/Archipelago/Mountain/Ziggurat 等所有主要区域
+
+---
+## Hollow Knight Silksong 完整解构 - 2026-03-08 14:30
+
+**新建文件：**
+- `D:\ReferenceAssets\Silksong\Silksong_Deconstruction_Report.md`
+- `D:\ReferenceAssets\Silksong\export_art2.py`
+- `D:\ReferenceAssets\Silksong\probe.py`
+
+**导出资产：**
+- `D:\ReferenceAssets\Silksong\Ripped\` — AssetRipper 全项目导出（含 9,099 个反编译 .cs 文件）
+- `D:\ReferenceAssets\Silksong\Art\` — UnityPy 美术资产（进行中）
+
+**内容简述：**
+对 Hollow Knight Silksong（Unity 6000.0.50f1，Mono 后端）进行完整代码+美术解构，重点分析 Progression 和 Exploration 两大系统。
+
+**关键发现：**
+- **Mono 后端**：Assembly-CSharp.dll (6.8MB) 可直接通过 Mono.Cecil 分析 / dnSpy 反编译，无需 Il2CppDumper
+- **PlayMaker 主导**：2,240 个 PlayMaker Action 类，游戏逻辑（NPC/事件/Boss）几乎全部用可视化 FSM 实现
+- **PlayerData 单体**：1,359 个字段（1,163 Boolean + 91 Int32）扁平化存储所有游戏状态
+- **Progression 系统**：28 个区域地图碎片、42 个 MapZone、13 个快速旅行节点、20+ has* 技能字段
+- **Exploration 系统**：PersistentBoolItem 场景物件持久化、TransitionPoint 过渡机制、GameMap+MapPin 地图系统
+- **Quest 系统**：BasicQuestBase + QuestCompletionData + QuestRumourData，30+ NPC 任务已识别
+- **存档系统**：QueueSaveGame/AutoSave 队列化、PersistentBoolCollection 关卡状态序列化
+
+**目的：**
+建立 Hollow Knight 系列的架构参考基准，为 Project Ark 的 Exploration+Progression 设计提供实战依据。
+
+**技术：**
+Mono.Cecil（Assembly 分析）、AssetRipper headless API（全项目导出）、UnityPy（美术导出，FALLBACK_UNITY_VERSION=6000.0.50f1）
+
+---
+## 跨游戏借鉴技术方案参考手册 - 2026-03-08 15:00
+
+**新建文件：**
+- `Docs/Reference/CrossGame_Architecture_Reference.md`
+
+**内容简述：**
+汇聚从 TUNIC、Hollow Knight Silksong、Minishoot' Adventures、Rain World 四款游戏代码解构中提炼的、与 Project Ark 直接相关的可落地技术方案，形成专属 Ark 的架构参考手册。
+
+**文档覆盖内容：**
+- Section 1：Progression 系统（ProgressFlag SO 驱动环境响应、has* 技能注册表、Boss 三阶段状态追踪、StateVariable 适配方案）
+- Section 2：Exploration 系统（PersistentBoolItem 场景持久化、MapPin 类型系统、AreaLabel 区域提示、TransitionPoint 细节字段、ZoneId 地图碎片架构）
+- Section 3：关卡/世界架构（BiomeZone 空间视觉切换、ConduitNode 谜题系统、QuestRumour 叙事分离、EnemyDirector 世界层升级路径）
+- Section 4：优先级矩阵（紧迫性 × 工期 × 与现有系统关系）
+- Section 5：Progression 闭环验证用例（Boss 击败→门打开→存档重读后保持）
+
+**目的：**
+为后续 Feature 开发提供经过验证的参考方案，避免重复设计，每个方案均对应到 Ark 已有系统（WorldProgressManager / SaveManager / MinimapManager / Door / CombatEvents 等）并附有接口伪代码。
+
+---
+## CrossGame_Architecture_Reference.md v2.0 扩充 - 2026-03-08 17:30
+
+**修改文件：**
+- `Docs/Reference/CrossGame_Architecture_Reference.md`（v1.0 → v2.0，从 925 行扩充至约 1800 行）
+
+**新增游戏覆盖：**
+- **Galactic Glitch**：同品类双摇杆飞船 Roguelite，深度解构武器时序/飞船 Boost 手感/弹幕超类设计
+- **BackpackBattles / BackpackMonsters**：物品网格系统/融合配方/战斗倒计时，对星图组合系统设计有结构性参考
+- **Magicraft**：DOTS ECS 弹幕/后置触发槽/TimeScaleMgr HitStop 统一管理/法术 JSON 配置
+
+**新增 Section 内容：**
+
+- **Section 5 — 战斗手感反馈系统**（4个子节）
+  - 5.1 TimeScaleManager：统一 HitStop 请求栈，防止多系统 timeScale 冲突（参考 Magicraft）
+  - 5.2 受击视觉反馈链：HitFlashEffect 独立组件 + 按 DamageType 分发 VFX（参考 Minishoot + Magicraft）
+  - 5.3 Boost/Dash 惯性：afterBoostDrag 平滑减速 + Dash 残影（参考 GalacticGlitch）
+  - 5.4 CameraShakeManager：Cinemachine Impulse 统一入口（参考 GalacticGlitch）
+
+- **Section 6 — 武器与弹幕系统**（4个子节）
+  - 6.1 BulletBehaviourData struct：单结构覆盖追踪/蛇形/分裂/穿透弹道行为（参考 Minishoot + GG + Magicraft）
+  - 6.2 武器攻击时序规范：StartupTime/PerformingTime/EndTime 玩家端 Signal-Window（参考 GalacticGlitch）
+  - 6.3 后置触发槽：OnKill/OnCrit/OnOverheat 条件触发轨道（参考 Magicraft，Ark 扩展热量联动）
+  - 6.4 轨道共鸣系统：Core+Prism+Sail 组合触发 ResonanceSO 奖励（参考 BackpackMonsters 融合）
+
+- **Section 7 — 性能与循环架构**（4个子节）
+  - 7.1 IPausable 接口 + GamePauseManager：编织态统一暂停（参考 Minishoot MiniBehaviour）
+  - 7.2 BatchUpdate：何时引入的判断标准（超过 300 对象时，参考 GalacticGlitch）
+  - 7.3 CircleCast 子弹检测：防穿墙 + 精确命中点（参考 Minishoot）
+  - 7.4 对象池 vs DOTS：规模上限分析，Ark 当前 PoolManager 足够（对比 Magicraft DOTS）
+
+- **Section 8 — 存档与数据架构**（3个子节）
+  - 8.1 自动增量存档三层防线：Checkpoint + 场景退出 + 60s 兜底（参考 Minishoot ES3）
+  - 8.2 局内/永久存档分层决策：RunSaveData vs PlayerSaveData（参考 BackpackBattles + Magicraft）
+  - 8.3 完整数据分层图：PlayerSaveData / RunSaveData / SystemSaveData 职责划分
+
+- **Section 9 — 架构风险红队**（6个风险条目）
+  - 9.1 [HIGH] SO 运行时污染：StarChartItemSO 运行时字段修改检查方法 + OnValidate 防护
+  - 9.2 [HIGH] CombatEvents 僵尸订阅：静态事件 + 对象池的致命组合，订阅数监控方案
+  - 9.3 [MEDIUM] UniTask CancellationToken 泄漏：对象池场景下必须用 CancellationTokenSource
+  - 9.4 [MEDIUM] ServiceLocator Awake 顺序依赖：强制规则"Awake 只注册，Start 才 Get"
+  - 9.5 [MEDIUM] Assembly 循环依赖：dotnet build 验证 + 依赖方向检查清单
+  - 9.6 [LOW] WeavingState UI inactive 序列化状态：场景配置阶段的高频陷阱
+
+**同步更新：**
+- Section 4 优先级矩阵：拆分为"立即/短期/中期/长期"四级，新增 16 个来自新 Section 的方案条目
+- 附录 A：新增 v2.0 系统映射（TimeScaleManager / ShipMotor / Projectile / CameraShakeManager 等）
+- 附录 B：新增游戏报告索引（GalacticGlitch / Magicraft / BackpackBattles）+ 核心技术对照表
+
+**目的：**
+从 7 款参考游戏的代码解构中系统性提炼可落地方案，尤其补全了 v1.0 缺失的"战斗手感"维度，并通过架构风险红队主动暴露 Ark 中期可能爆发的 5 类潜在问题，提前建立防御机制。
+
+---
+
+## Glitch 飞船视觉层复刻 (Glitch Ship Visual Replica) - 2026-03-08 22:40
+
+### 新建文件
+- `Assets/Scripts/Ship/VFX/ShipView.cs` — 飞船多层 Sprite 视觉状态管理组件（~170 行）
+- `Assets/Scripts/Ship/Editor/ShipGlowMaterialCreator.cs` — 一键创建 Additive 发光材质 Editor 工具
+- `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs` — 一键重建 Ship.prefab 5层 Sprite 结构 Editor 工具
+
+### 修改文件
+- `Assets/Scripts/Ship/Data/ShipJuiceSettingsSO.cs` — 新增 4 个字段：`_afterImageColor`（青绿色默认值）、`_boostGlowBrightnessMultiplier`、`_boostGlowRampUpDuration`、`_boostGlowRampDownDuration`、`_iFrameFlashAlpha`、`_iFrameFlashInterval`，及对应 Public Getters
+- `Assets/Scripts/Ship/VFX/DashAfterImageSpawner.cs` — `SpawnAfterImagesAsync()` 中将残影颜色从采样 `_shipSpriteRenderer.color` 改为读取 `_juiceSettings.AfterImageColor`（默认青绿色 rgba(0.28, 0.43, 0.43)）
+- `Assets/Scripts/Ship/VFX/ShipEngineVFX.cs` — 新增 `_boost` 字段、`_isBoosting` 状态、`OnBoostStarted/OnBoostEnded` 事件订阅，Boost 期间粒子发射率与 Dash 同级增强
+- `Assets/Scripts/Ship/Editor/ShipBuilder.cs` — 新增 5 层 Sprite 子节点常量、`EnsureSpriteLayers()` 方法、`EnsureSpriteLayer()` 辅助方法；`AddScriptComponents()` 中加入 `ShipView`；`WireReferences()` 签名增加 `SpriteRenderer[] spriteLayers` 参数并连线 ShipView 的 5 个字段
+
+### 内容简述
+
+完整实现 Galactic Glitch Glitch 飞船的**视觉层复刻**，包含：
+
+**多层 Sprite 结构（5层）**：
+| 层名 | SortOrder | 贴图 | 材质 |
+|------|-----------|------|------|
+| Ship_Sprite_Back | -3 | GrabGun_Back_3.png | 默认 |
+| Ship_Sprite_Liquid | -2 | GrabGun_Base_9.png | ShipGlowMaterial（Additive） |
+| Ship_Sprite_HL | -1 | GrabGun_Base_8.png | 默认，Alpha=0.5 |
+| Ship_Sprite_Solid | 0 | GrabGun_Base_9.png | 默认 |
+| Ship_Sprite_Core | 1 | 空占位 | 默认 |
+
+**ShipView 组件**（视觉与物理完全解耦）：
+- Boost 响应：PrimeTween 在 0.1s 内将 `_liquidRenderer` 亮度提升至 1.5 倍，结束后 0.3s 恢复
+- Dash 响应：无敌帧期间 `_solidRenderer` 以 0.05s 间隔闪烁（Alpha 1.0 ↔ 0.3），`OnDashEnded` 立即恢复
+- `OnDisable()` 取消所有事件订阅，防止内存泄漏
+- UniTask CancellationTokenSource 管理 i-frame 闪烁生命周期
+
+**残影颜色对齐**：`DashAfterImageSpawner` 改为从 `ShipJuiceSettingsSO.AfterImageColor` 读取颜色（默认青绿色），不再采样主体 SpriteRenderer 颜色，与 GG 原版 `Dodge_Sprite` 效果一致。
+
+**引擎粒子 Boost 联动**：`ShipEngineVFX` 补充订阅 `ShipBoost.OnBoostStarted/OnBoostEnded`，Boost 期间粒子发射率与 Dash 同级增强，`OnBoostEnded` 后由下一帧 `OnSpeedChanged` 自然恢复。
+
+### 目的
+
+完整复刻 GG Glitch 飞船的视觉层，使 Project Ark 飞船在外观和视觉反馈上与参考游戏对齐：
+1. **多层质感**：主体 + 高光 + 发光叠加，有立体感
+2. **Boost 发光**：引擎过载感，与粒子增强同步触发
+3. **Dash 残影**：青绿色残影 + 无敌帧闪烁，清晰传达无敌状态
+4. **架构解耦**：ShipView 封装所有视觉逻辑，ShipBoost/ShipDash 零视觉代码
+
+### 技术方案
+
+- `PrimeTween.Tween.Color()` 驱动发光层亮度渐变（无手写 Lerp）
+- `UniTask.Delay` + `CancellationTokenSource` 管理 i-frame 闪烁循环
+- `PrefabUtility.EditPrefabContentsScope` 安全编辑 Prefab 序列化文件
+- `SerializedObject.FindProperty()` + `ApplyModifiedProperties()` 连线 SerializeField 引用
+- `ShipJuiceSettingsSO` 统一管理所有视觉参数（颜色/时长/倍率），零 hardcode
+
+### Play Mode 验证清单（待执行）
+
+1. 运行 `ProjectArk > Ship > Create Ship Glow Material` 创建材质
+2. 运行 `ProjectArk > Ship > Rebuild Ship Prefab Sprite Layers` 重建 Prefab
+3. 进入 Play Mode，验证 5 层 Sprite 正确渲染
+4. 按 Dash 键：青绿色残影生成 + 无敌帧闪烁 + 结束后 Alpha 恢复
+5. 按 Boost 键：发光层亮度增强 + 引擎粒子爆发同步触发
+6. 切换场景：无 NullReferenceException（OnDisable 取消订阅验证）
+
+---
+
+## Glitch 飞船完整特效复刻（Phase 2）— 2026-03-08 23:18
+
+### 新建文件
+
+- `Assets/Scripts/Ship/VFX/ShipBoostTrailVFX.cs` — Boost 专属尾迹粒子系统控制器，订阅 `ShipBoost` 事件，`OnBoostStarted` 时配置并播放 `BoostTrailParticles`，`OnBoostEnded` 时 `Stop(false)` 让粒子自然消亡；所有参数来自 `ShipJuiceSettingsSO`；`simulationSpace = World` 确保粒子不跟随飞船旋转
+
+### 修改文件
+
+- `Assets/Scripts/Ship/Data/ShipJuiceSettingsSO.cs` — 新增 14 个特效参数字段（4组）：
+  - **Engine Precise**：`_engineIdleEmissionRate`(5)、`_engineMaxEmissionRate`(40)、`_engineDashEmissionRate`(120)、`_engineStartSizeMin/Max`(0.04/0.08)
+  - **Boost Trail Particles**：`_boostTrailEmissionRate`(80)、`_boostTrailLifetime`(0.3s)、`_boostTrailStartSpeed`(3.0)、`_boostTrailStartSizeMin/Max`(0.08/0.15)、`_boostTrailColor`(青绿色)
+  - **Boost TrailRenderer**：`_boostTrailTime`(0.25s)、`_boostTrailStartWidth`(0.12)、`_boostTrailMinVertexDistance`(0.05)、`_boostTrailRendererColor`(青绿色 0.8α)
+  - **Thruster Pulse**：`_boostBackScalePeak`(1.3)、`_boostBackEntryPulseDuration`(0.15s)、`_boostBackPulsePeriod`(0.3s)、`_boostBackPulseScale`(1.1)、`_boostBackRestoreDuration`(0.1s)
+
+- `Assets/Scripts/Ship/VFX/ShipView.cs` — 完整重写，新增三大特效模块：
+  - **BoostTrail TrailRenderer**：`OnBoostStarted` 配置参数（time/startWidth/endWidth/color/minVertexDistance）并 `emitting=true`；`OnBoostEnded` 设 `emitting=false` 自然消退；`ResetVFX()` 调用 `Clear()`
+  - **Dodge_Sprite 静态残影**：`OnDashStarted` 时 `SetParent(null)` 解耦，定位到 Dash 起始世界坐标，设青绿色 Alpha=1，PrimeTween `Tween.Alpha` 在 `AfterImageFadeDuration` 内衰减至 0，`OnComplete` 回调重新挂载并停用 GO；Fallback 使用 `_solidRenderer.sprite`
+  - **推进器脉冲动画**：`OnBoostStarted` 触发入场脉冲（1.0→1.3→1.0，0.15s），完成后启动无限循环 PrimeTween Sequence（1.0↔1.1，周期 0.3s）；`OnBoostEnded` 停止 Sequence，0.1s 内恢复 `Vector3.one`
+  - **ResetVFX() 公共接口**：停止所有粒子/Trail/Tween/Sequence，重置所有视觉状态；`OnDisable()` 调用 `ResetVFX()`
+
+- `Assets/Scripts/Ship/VFX/ShipEngineVFX.cs` — 完整重写，实现四档发射率精确对齐：
+  - 怠速（5/s）→ 常规飞行（0～40/s 线性插值）→ Dash（120/s，粒子大小×1.5）→ Boost（保持 40/s，独立 BoostTrailVFX 处理专属尾迹）
+  - `simulationSpace = Local`，粒子方向始终跟随飞船旋转
+  - 随机粒子大小 `MinMaxCurve(0.04, 0.08)`，与 GG 原版对齐
+  - 缓存 `_lastNormalizedSpeed`，Dash/Boost 结束后立即恢复正确发射率
+
+- `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs` — 扩展三类新增 GO 节点创建：
+  - `EnsureParticleSystemChild()`：在 `Ship_Sprite_Back` 下创建 `BoostTrailParticles`（ParticleSystem，偏移 `(0,-0.15,0)`）
+  - `EnsureTrailRendererChild()`：在 `Ship_Sprite_Back` 下创建 `BoostTrail`（TrailRenderer，默认参数，`emitting=false`）
+  - `EnsureDodgeSpriteChild()`：在 `ShipVisual` 下创建 `Dodge_Sprite`（SpriteRenderer，SortOrder=-1，Alpha=0，初始 inactive，自动赋值 `player_test_fire.png`）
+  - 自动添加 `ShipBoostTrailVFX` 组件并连线 `_boostTrailParticles` + `_juiceSettings`
+  - 连线 `ShipView._boostTrail`、`_dodgeSprite`、`_backSpriteTransform` 三个新字段
+
+### 目的
+
+完整复刻 GG Glitch 飞船的**全部动态特效**，弥补 Phase 1 仅完成静态视觉层的缺口：
+1. **Boost 尾迹粒子**：青绿色粒子从推进器喷出，世界空间飘散，Additive 叠加发光
+2. **Boost TrailRenderer**：连续发光尾迹线，流体感高速移动视觉
+3. **Dodge_Sprite 静态残影**：Dash 起始位置留下青绿色飞船轮廓，清晰传达位移距离和无敌帧
+4. **推进器脉冲动画**：Boost 时推进器缩放脉冲，机械过载感
+5. **引擎粒子精确对齐**：四档发射率与 GG 原版数值完全一致
+
+### 技术方案
+
+- `PrimeTween.Sequence.Create(cycles: -1)` 实现无限循环推进器脉冲（无 Animator 依赖）
+- `TrailRenderer.emitting` 开关控制尾迹，`Clear()` 确保 ResetVFX 干净
+- `Transform.SetParent(null, worldPositionStays: true)` 解耦 Dodge_Sprite，使其停留在世界坐标
+- `ParticleSystem.MinMaxCurve` 实现随机粒子大小，`colorOverLifetime` 实现青绿→透明渐变
+- `simulationSpace = Local` 确保引擎粒子方向跟随飞船旋转
+
+### Play Mode 验证清单（待执行）
+
+1. 运行 `ProjectArk > Ship > Rebuild Ship Prefab Sprite Layers` 验证幂等性（多次运行无重复节点）
+2. 进入 Play Mode，常规飞行：引擎粒子发射率随速度线性变化（怠速 5/s → 全速 40/s）
+3. 按 Dash 键：① Dodge_Sprite 青绿色残影停留在起始位置并淡出 ② 无敌帧闪烁 ③ 引擎粒子爆发至 120/s
+4. 按 Boost 键：① BoostTrailParticles 青绿色粒子喷出 ② BoostTrail 发光尾迹线 ③ 推进器入场脉冲 + 循环脉冲 ④ 发光层亮度增强
+5. 松开 Boost：① 粒子自然消亡 ② 尾迹自然消退 ③ 推进器 0.1s 恢复 Scale=1
+6. 切换场景：`ResetVFX()` 清除所有特效，无残留粒子/Trail/Tween
+
+---
+
+## Glitch 飞船特效 Bug 修复 (glitch-ship-vfx-bugfix) — 2026-03-08 23:36
+
+### 修改文件
+
+- `Assets/Scripts/Ship/Editor/ShipGlowMaterialCreator.cs` — 重写
+- `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs` — 新增 EnsureDodgeSpriteTexture()、Additive 材质赋值、localRotation 修正
+- `Assets/Scripts/Ship/VFX/ShipBoostTrailVFX.cs` — 修复粒子方向
+- `Assets/Scripts/Ship/VFX/ShipEngineVFX.cs` — 新增 colorOverLifetime 青绿色渐变
+- `Assets/Scripts/Ship/VFX/ShipView.cs` — 移除 _solidTween 死代码
+- `Assets/Scripts/Ship/Data/ShipJuiceSettingsSO.cs` — 移除旧版 Engine 参数组，新增 _engineParticleColor
+
+### Bug 根本原因与修复方案
+
+| Bug | 根本原因 | 修复方案 |
+|-----|---------|---------|
+| B1: Dodge 残影贴图缺失 | ShipPrefabRebuilder 未复制 player_test_fire.png | 新增 EnsureDodgeSpriteTexture()，自动从参考目录复制并配置导入参数（PPU=707, Bilinear, Uncompressed） |
+| B2: ShipGlowMaterial Additive 未生效 | CreateOrGet() 发现已存在时直接返回旧材质，未强制刷新；旧材质参数不完整 | 强制删除旧材质再重建；双 shader 策略（URP 2D 优先 + Sprites/Default fallback）；正确设置 renderQueue=3000、RenderType=Transparent、_SrcBlend=1/_DstBlend=1 |
+| B3: Boost 粒子/Trail 无 Additive 材质 | ShipPrefabRebuilder 创建 GO 时未赋材质 | 在创建 BoostTrailParticles 和 BoostTrail 后，自动调用 ShipGlowMaterialCreator.CreateOrGet() 并赋值给 ParticleSystemRenderer 和 TrailRenderer |
+| B4: Boost 粒子方向错误 | simulationSpace=World 但未设置速度方向，粒子向世界固定方向喷射 | 改为 simulationSpace=Local；startSpeed=0；通过 velocityOverLifetime 在局部 -Y 方向设置速度（值为 BoostTrailStartSpeed）；localRotation=identity |
+| B5: 引擎粒子白色 | ShipEngineVFX 未配置 colorOverLifetime | 在 ApplyPreciseBaseSettings() 中启用 colorOverLifetime，从 EngineParticleColor（rgba 0.28,0.43,0.43,1）渐变至透明 |
+| B6: _solidTween 死代码 | 重构遗留，字段声明但从未赋值 | 从 ShipView.cs 移除字段声明及所有 .Stop() 调用 |
+| B7: 旧版 Engine 参数冗余 | 两套重复字段（Legacy + Precise）造成 Inspector 混淆 | 从 ShipJuiceSettingsSO 移除旧版 _engineParticleMinSpeed(legacy)、_engineBaseEmissionRate、_engineDashEmissionMultiplier 及对应 Getters；保留 Precise 参数组中的 _engineParticleMinSpeed |
+
+### 技术方案要点
+
+- **Additive 材质双策略**：URP 2D `Sprite-Lit-Default` 优先，通过 `EnableKeyword("_SURFACE_TYPE_TRANSPARENT")` + `_SrcBlend=1/_DstBlend=1` + `renderQueue=3000` 实现 Additive；若 shader 不存在则 fallback 到 `Sprites/Default` 并输出警告
+- **粒子方向修正**：`simulationSpace=Local` + `velocityOverLifetime.space=Local` + `vel.y = -BoostTrailStartSpeed`，确保粒子始终沿飞船局部 -Y 方向喷出
+- **颜色渐变**：`colorOverLifetime` 使用 GradientColorKey 保持颜色不变，仅通过 GradientAlphaKey 控制 alpha 从 1→0，避免颜色偏移
+- **幂等性保持**：EnsureDodgeSpriteTexture() 先检查目标路径是否已存在，避免重复复制；ShipGlowMaterialCreator 强制刷新但保持幂等（每次运行结果一致）
+
+---
+
+## Glitch Ship VFX — 数据层 Bug 修复 — 2026-03-08 23:50
+
+**修改文件：**
+- `Assets/_Data/Ship/DefaultShipJuiceSettings.asset` — 替换全部旧字段为新字段名并填入正确默认值
+- `Assets/_Prefabs/Ship/Ship.prefab` — 修复 ShipBoost._stats 为 null（fileID: 0 → DefaultShipStats.asset）
+
+**内容简述：**
+修复两个导致 Glitch Ship 特效完全不生效的数据层 Bug。
+
+**根本原因：**
+1. `DefaultShipJuiceSettings.asset` 存储的是旧版字段名（`_engineBaseEmissionRate`、`_engineDashEmissionMultiplier`），而代码已重构为 19 个新字段（`_engineIdleEmissionRate`、`_engineMaxEmissionRate`、`_boostTrailEmissionRate` 等）。Unity 序列化规则：字段名不匹配时所有新字段读取为默认值 0，导致引擎粒子发射率=0、Boost Trail 宽度=0、推进器脉冲幅度=0，特效完全不可见。
+2. `Ship.prefab` 中 `ShipBoost._stats` 序列化为 `{fileID: 0}`（null），导致 `NullReferenceException` 并使 Boost 功能完全无法执行。
+
+**技术方案：**
+- 全量替换 `DefaultShipJuiceSettings.asset` 内容，字段名与 `ShipJuiceSettingsSO.cs` 完全对齐，填入合理默认值（引擎粒子 idle=5/max=40/dash=120，Boost Trail 宽度=0.12，推进器脉冲峰值=1.3 等）
+- 将 `Ship.prefab` 第 389 行 `ShipBoost._stats: {fileID: 0}` 改为 `{fileID: 11400000, guid: c7b34ced4ffa0eed0080816c6bfbc02a, type: 2}`（DefaultShipStats.asset）
+
+---
+
+## Glitch Ship VFX — playOnAwake 修复 — 2026-03-09 00:00
+
+**修改文件：**
+- `Assets/_Prefabs/Ship/Ship.prefab` — EngineExhaust 和 BoostTrailParticles 的 `playOnAwake: 1` → `playOnAwake: 0`
+- `Assets/Scripts/Ship/VFX/ShipEngineVFX.cs` — Awake 末尾添加 `_engineParticles.Play()`
+
+**内容简述：**
+修复旧粒子特效一直在 emit 的根本原因：Prefab 里的粒子系统 `playOnAwake=1` 导致旧参数（白色、速度5）在 Awake 时就开始播放，新代码的参数修改来不及覆盖。
+
+**根本原因：**
+- `EngineExhaust` ParticleSystem 在 Prefab 里序列化了 `playOnAwake: 1`，游戏启动时立即用旧参数（白色粒子、startSpeed=5）开始播放
+- `BoostTrailParticles` 同样有 `playOnAwake: 1`，虽然 `ShipBoostTrailVFX.Awake()` 会调用 `Stop()` 停止它，但仍会有一帧的旧特效闪现
+- `ShipEngineVFX.Awake()` 调用 `ApplyPreciseBaseSettings()` 修改参数，但 `playOnAwake` 在 Awake 之前就已触发，用户看到的是旧的白色粒子
+
+**技术方案：**
+- 在 Prefab 里将两个粒子系统的 `playOnAwake` 改为 `0`，让代码完全控制播放时机
+- 在 `ShipEngineVFX.Awake()` 的 `ApplyPreciseBaseSettings()` 之后手动调用 `_engineParticles.Play()`，确保引擎粒子在正确参数设置后才开始播放（青绿色、正确大小）
+
+---
+
+## Glitch Ship VFX — 外观修复（ShipGlowMaterial + ShipVisual 清理）— 2026-03-09 00:05
+
+**修改文件：**
+- `Assets/_Art/Ship/Glitch/ShipGlowMaterial.mat` — 修复 Additive 混合，改为 Sprites/Default shader，颜色改为紫色
+- `Assets/_Prefabs/Ship/Ship.prefab` — 移除 ShipVisual 根节点上多余的旧 SpriteRenderer（ship.png）
+- `Assets/_Art/Ship/Glitch/Reference/reactor.png` — 从 GG 参考资产复制核心图标贴图
+
+**内容简述：**
+修复 Glitch 飞船外观与 GG 原版不一致的根本原因：ShipGlowMaterial 的 Additive 混合未生效，以及 ShipVisual 上有旧的占位贴图叠加。
+
+**根本原因：**
+1. `ShipGlowMaterial.mat` 使用 URP 2D `Sprite-Lit-Default` shader，但 `_SURFACE_TYPE_TRANSPARENT` keyword 被标记为 `m_InvalidKeywords`（该 shader 不支持此 keyword），导致 Additive 混合完全未生效，`Ship_Sprite_Liquid` 层渲染为普通不透明层，没有发光叠加效果
+2. `ShipVisual` GO 本身有一个多余的 SpriteRenderer，用的是旧的 `Assets/Art/Sprites/Ship/ship.png`（0.48×0.48 单位的旧占位贴图），叠加在飞船上方
+
+**技术方案：**
+- `ShipGlowMaterial.mat` 改用 `Sprites/Default` shader（fileID: 10753825，Unity 内置），设置 `_SrcBlend=1, _DstBlend=1`（One One = Additive），颜色改为紫色 `rgba(0.6, 0.3, 0.9, 0.8)` 匹配 GG Glitch 飞船
+- 从 `ShipVisual` GO 的 `m_Component` 列表中移除 `SpriteRenderer &8315951473149945674` 引用，并删除整个 SpriteRenderer 块
+- 复制 `reactor.png`（64×64，核心图标）到 `Assets/_Art/Ship/Glitch/Reference/`，待 Unity 导入后手动赋值给 `Ship_Sprite_Core`
+
+---
+
+## Glitch Ship — 全面对齐 GG 原版（颜色+核心图标）— 2026-03-09 00:13
+
+**修改文件：**
+- `Assets/_Data/Ship/DefaultShipJuiceSettings.asset` — 所有颜色参数从青绿色改为紫色
+- `Assets/_Prefabs/Ship/Ship.prefab` — 给 `Ship_Sprite_Core` 赋值 `reactor.png`
+
+**内容简述：**
+对照 GG 截图和 GalacticGlitch_ArtAssets_Analysis.md，全面诊断并修复 Glitch 飞船与 GG 原版不一致的所有问题。
+
+**诊断结论：**
+1. Sort Order 已经正确（Liquid=-2, HL=-1, Back=-3, Solid=0, Core=1）✅
+2. `ShipGlowMaterial` 已在上一轮修复为 Sprites/Default + Additive 混合 ✅
+3. `ShipVisual` 根节点多余的旧 SpriteRenderer 已在上一轮移除 ✅
+4. **本轮新发现**：所有颜色参数（引擎粒子、Boost 尾迹、残影）都是青绿色 `rgba(0.28,0.43,0.43)`，这是 GG 里 Dodge 残影的颜色，不是 Glitch 飞船的紫色主题
+5. **本轮新发现**：`Ship_Sprite_Core` 的 `m_Sprite` 是 null，飞船中心没有核心图标
+
+**技术方案：**
+- `DefaultShipJuiceSettings.asset` 中 `_afterImageColor`、`_engineParticleColor`、`_boostTrailColor`、`_boostTrailRendererColor` 全部改为紫色 `rgba(0.55, 0.2, 0.85, 1.0)`（匹配 GG Glitch 飞船紫色主题）
+- `Ship_Sprite_Core` 的 `m_Sprite` 赋值为 `reactor.png`（GUID: `e218e07d4e686834f8b968d3e90cf6b8`，fileID: 21300000），Size 改为 0.2×0.2（64px÷320PPU），`m_WasSpriteAssigned` 改为 1
+
+
+---
+
+## Glitch Ship — 反向追踪 Primary_4.PNG 并替换正确素材 — 2026-03-09 00:26
+
+**修改文件：**
+- Assets/_Art/Ship/Glitch/Primary_4.png（新增，从 GG 复制）
+- Assets/_Art/Ship/Glitch/Primary.png（新增，从 GG 复制）
+- Assets/_Art/Ship/Glitch/Primary_6.png（新增，从 GG 复制）
+- Assets/_Art/Ship/Glitch/Primary_4.png.meta（修正 spriteMode=1, PPU=320）
+- Assets/_Art/Ship/Glitch/Primary.png.meta（修正 spriteMode=1, PPU=320）
+- Assets/_Art/Ship/Glitch/Primary_6.png.meta（修正 spriteMode=1, PPU=320）
+- Assets/_Prefabs/Ship/Ship.prefab（替换 3 个 SpriteRenderer 的 Sprite 引用）
+- Assets/_Data/Ship/DefaultShipJuiceSettings.asset（颜色修正为 GG 官方精确值）
+
+**内容简述：**
+反向追踪 Primary_4.PNG 发现其挂载在 PlayerSkinDefault.asset（MonoBehaviour SO）里，获得完整皮肤数据结构。
+solidSprite=Primary_4.png, liquidSprite=Primary.png, highlightSprite=Primary_6.png, shipSpriteBack=GrabGun_Back_3.png。
+颜色修正为 GG 官方精确值：engineParticle/boostTrail=rgba(0.545,0.09,1,1)，afterImage/boostTrailRenderer=rgba(0.67,0,1,1)。
+
+---
+
+## Glitch 飞船手感参数 & 特效对齐 GG 原始数据 — 2026-03-09 00:43
+
+**修改文件：**
+- `Assets/_Data/Ship/DefaultShipStats.asset`
+- `Assets/_Data/Ship/DefaultShipJuiceSettings.asset`
+- `Assets/Scripts/Ship/VFX/ShipBoostTrailVFX.cs`
+
+**内容简述：**
+从 GG Player.prefab 和 PlayerSkinDefault.asset 精确提取 Glitch 飞船原始参数，修正 Project Ark 与 GG 的差距。
+
+**手感参数修改（DefaultShipStats.asset）：**
+- `_angularAcceleration`: 800 → 80（对齐 GG angularAcceleration=80，消除过度灵敏的转向）
+- `_maxRotationSpeed`: 360 → 80（对齐 GG maxRotationSpeed=80，恢复惯性感）
+- `_boostAngularAcceleration`: 400 → 40（对齐 GG boost 状态 angularAcceleration=40）
+
+**特效参数修改（DefaultShipJuiceSettings.asset）：**
+- `_boostTrailEmissionRate`: 80 → 30（世界空间不需要高发射率）
+- `_boostTrailLifetime`: 0.3 → 1.2s（世界空间留下更长轨迹，对齐 GG 5s 的比例缩放）
+- `_boostTrailStartSpeed`: 3 → 5（对齐 GG startSpeed=5）
+- `_boostTrailStartSizeMin/Max`: 0.08/0.15 → 0.06/0.12（更细腻的轨迹粒子）
+
+**代码修改（ShipBoostTrailVFX.cs）：**
+- Boost Trail 粒子系统从 Local 空间改为 World 空间（对齐 GG moveWithTransform=0）
+- 禁用 velocityOverLifetime（世界空间用 startSpeed 自然扩散）
+- 效果：Boost 时在世界中留下真实的紫色轨迹，而非跟随飞船的局部粒子
+
+**技术方案：**
+直接从 GG_Ripped/ExportedProject/Assets/GameObject/Player.prefab 和 MonoBehaviour/PlayerSkinDefault.asset 提取原始序列化数据，精确对比并修正 Project Ark 的参数。
+
+---
+
+## Glitch 飞船视觉 Bug 修复 — 多余贴图 & Boost 特效不可见 — 2026-03-09 01:00
+
+**修改文件：**
+- `Assets/_Prefabs/Ship/Ship.prefab`（Ship_Sprite_Liquid alpha 0.3）
+- `Assets/_Data/Ship/DefaultShipJuiceSettings.asset`（Boost Trail 粒子参数）
+- `Assets/Scripts/Ship/VFX/ShipBoostTrailVFX.cs`（startSpeed 改为 0）
+
+**Bug 1：飞船周围多了一个别的贴图**
+根因：Ship_Sprite_Liquid（Primary.png）使用 ShipGlowMaterial（Additive 混合），初始 alpha=1 导致发光轮廓图以全亮度叠加在飞船主体上，形成"多余贴图"效果。
+修复：将 Ship_Sprite_Liquid 的 m_Color alpha 从 1 降低到 0.3，平时微弱发光，Boost 时由 ShipView 增亮到 0.45（0.3 * 1.5）。
+
+**Bug 2：Boost 持续特效看不到**
+根因：_boostDuration=0.2s，_boostTrailLifetime=1.2s，_boostTrailEmissionRate=30。
+0.2s 内只发射 6 个粒子（30/s * 0.2s），且 startSpeed=5 让粒子向各方向扩散，效果几乎不可见。
+修复：
+- _boostTrailEmissionRate: 30 → 80（0.2s 内发射 16 个粒子）
+- _boostTrailLifetime: 1.2 → 0.4s（粒子快速消散，视觉更集中）
+- _boostTrailStartSpeed: 5 → 0（世界空间停留，飞船飞过后粒子留在原地形成轨迹）
+- _boostTrailStartSizeMin/Max: 0.06/0.12 → 0.15/0.25（更大的粒子，更容易看到）
+- ShipBoostTrailVFX.cs: startSpeed 硬编码为 0（不再从 juiceSettings 读取）
+
+---
+
+## Glitch 飞船 VFX Bug 修复（B2/B4 精确修复）— 2026-03-09 01:02
+
+**修改文件：**
+- `Assets/Scripts/Ship/VFX/ShipBoostTrailVFX.cs`（B4：改回 Local 空间 + -Y 方向）
+- `Assets/_Data/Ship/DefaultShipJuiceSettings.asset`（B4：恢复 startSpeed=3, lifetime=0.3）
+- `Assets/_Art/Ship/Glitch/ShipGlowMaterial.mat`（B2：改用 URP ParticlesUnlit Additive shader）
+
+**状态核查结论（对照 glitch-ship-vfx-bugfix 规划文档）：**
+- B1（Dodge 残影贴图）：✅ 已修复（player_test_fire.png 已存在，ShipView 有 fallback）
+- B2（ShipGlowMaterial Additive）：❌→✅ 本次修复
+- B3（Boost 粒子/Trail 材质）：✅ 已修复（ParticleSystemRenderer 已赋值 ShipGlowMaterial）
+- B4（Boost 粒子方向）：❌→✅ 本次修复（撤销了上一轮错误的 World 空间修改）
+- B5（引擎粒子颜色）：✅ 已修复（ShipEngineVFX.ApplyPreciseBaseSettings 已有 colorOverLifetime）
+- B6（_solidTween 死代码）：✅ 已修复（ShipView.cs 中无该字段）
+- B7（旧版 Engine 参数冗余）：✅ 已修复（ShipJuiceSettingsSO.cs 中无旧版字段）
+
+**B4 修复详情：**
+上一轮错误地将 simulationSpace 改为 World + startSpeed=0，导致粒子不跟随飞船方向。
+本次改回 Local 空间，通过 velocityOverLifetime 设置 -Y 方向（飞船尾部），速度读取 BoostTrailStartSpeed=3。
+同时恢复 DefaultShipJuiceSettings.asset 参数：lifetime=0.3s, startSpeed=3, size=0.08-0.15。
+
+**B2 修复详情：**
+原 ShipGlowMaterial 使用 Built-in Sprites/Default shader（fileID: 10753825），在 URP 项目里 _SrcBlend/_DstBlend 属性不生效，Additive 混合实际上没有工作。
+改用 URP ParticlesUnlit shader（GUID: 0406db5a14f94604a8c57ccfbc9f3b46），该 shader 支持 _Surface/_Blend/_SrcBlend/_DstBlend 属性。
+设置：_Surface=1(Transparent), _Blend=3(Additive), _SrcBlend=1(One), _DstBlend=1(One), _BlendOp=0(Add)。
+
+---
+
+## 手感参数根因分析与修复 — 2026-03-09 01:09
+
+**修改文件：**
+- `Assets/_Data/Ship/DefaultShipStats.asset`（恢复旋转参数到鼠标瞄准架构的正确值）
+
+**根因分析：**
+GG 的 angularAcceleration=80 / maxRotationSpeed=80 参数不能直接套用到 Project Ark，原因：
+
+1. 架构差异（最根本原因）：
+   - GG：左摇杆持续施加旋转力，maxRotationSpeed=80 deg/s 是合理的（玩家持续按住才能转）
+   - Project Ark：鼠标直接瞄准，ShipAiming 计算角度差驱动 angularVelocity
+   - 鼠标模式下 maxRotationSpeed=80 deg/s 会让飞船追不上鼠标（转 90° 需要 1.125 秒）
+
+2. 物理系统差异：
+   - GG：Rigidbody2D.mass=100，如果用 AddTorque，实际加速度=angularAccel*mass=8000 deg/s²
+   - Project Ark：直接设置 angularVelocity，mass 无关，angularAcceleration 就是每秒角速度变化量
+
+3. 之前的错误：把 angularAcceleration 从 800 改为 80，maxRotationSpeed 从 360 改为 80
+   - angularAcceleration=80 + maxRotationSpeed=80 → 从 0 到最大转速需要 1 秒，极其迟钝
+   - 这是错误地把 GG 的 mass=100 系统参数直接套用到 mass=1 系统
+
+**正确参数（针对鼠标瞄准架构）：**
+- _angularAcceleration: 800（快速响应，0.1 秒内达到最大转速，有轻微惯性感）
+- _maxRotationSpeed: 360（每秒转 360°，能快速跟上鼠标移动）
+- _boostAngularAcceleration: 400（Boost 时响应稍慢，对应 GG 的 40/80=50% 比例）
+
+**GG 参数的正确参考意义：**
+- GG 普通/Boost 状态的 angularAcceleration 比值（80:40=2:1）→ 我们的 800:400=2:1 ✅
+- GG 的 linearDrag=3, boostLinearDrag=2.5, maxSpeed=7.5, boostMaxSpeed=9 → 直接套用 ✅（线速度参数与 mass 无关，因为我们也是直接 clamp velocity）
+
+---
+
+## ShipStateController — 状态机驱动的飞船参数系统 (2026-03-09 01:30)
+
+### 新建文件
+- `Assets/Scripts/Ship/Data/ShipShipState.cs` — 飞船状态枚举（Normal=0/Dash=2/Boost=3/MainAttack=6/MainAttackFire=10，与 GG PlayerShipState 完全对齐）
+- `Assets/Scripts/Ship/Data/ShipStateData.cs` — 可序列化状态参数包（linearDrag/angularDrag/moveAcceleration/maxMoveSpeed/angularAcceleration/maxRotationSpeed/minTime/animatorTrigger/colliders），含 Apply()/Disable() 方法
+- `Assets/Scripts/Ship/ShipStateController.cs` — 状态机核心 MonoBehaviour，实现 TryToState()/ToStateForce()/IsInState()，暴露 OnStateChanged 事件
+
+### 修改文件
+- `Assets/Scripts/Ship/Data/ShipStatsSO.cs` — 新增 `_stateDataArray: ShipStateData[]` 字段和 `GetStateData(ShipShipState)` 方法（保留所有旧字段向后兼容）
+- `Assets/Scripts/Ship/Movement/ShipMotor.cs` — 新增 `RuntimeMaxSpeed`/`RuntimeMoveAcceleration` 运行时字段；`ClampSpeed`/`ApplyThrust` 改用运行时字段；`IsBoosting` 改为查询 ShipStateController；保留 `EnterBoostState`/`ExitBoostState` 作为 legacy fallback
+- `Assets/Scripts/Ship/Aiming/ShipAiming.cs` — 新增 `RuntimeAngularAcceleration`/`RuntimeMaxRotationSpeed` 运行时字段；`UpdateAngularVelocity` 改用运行时字段（移除 IsBoosting 分支判断）
+- `Assets/Scripts/Ship/Movement/ShipBoost.cs` — 获取 ShipStateController 引用；`ExecuteBoostAsync` 改为调用 `ToStateForce(Boost/Normal)`；保留 legacy fallback
+- `Assets/Scripts/Ship/Movement/ShipDash.cs` — 获取 ShipStateController 引用；`ExecuteDashAsync` 改为调用 `ToStateForce(Dash/Normal)`；碰撞体管理交由 ShipStateData.Apply/Disable 处理
+- `Assets/Scripts/Ship/VFX/ShipView.cs` — 获取 ShipStateController 引用；`OnEnable/OnDisable` 优先订阅 `OnStateChanged`；新增 `HandleStateChanged` 分发方法；保留旧事件订阅作为 legacy fallback
+- `Assets/_Data/Ship/DefaultShipStats.asset` — 新增 `_stateDataArray` 序列化数据（Normal/Boost/Dash 三个状态，数值完全对齐 GG 原版）
+- `Assets/Scripts/Ship/Editor/ShipBuilder.cs` — `AddScriptComponents` 中添加 `ShipStateController`；`WireReferences` 中连接 `ShipStateController._stats`
+
+### 目的
+完整复刻 GG 的状态机驱动参数系统（Player.states[] + TryToState/ToStateForce），消除 ShipBoost/ShipDash/ShipAiming 中散落的状态分支代码，统一由 ShipStateController 管理所有物理参数切换。
+
+### 技术方案
+- **数据层**：ShipStateData（Serializable class）封装每个状态的完整物理参数包，ShipStatsSO 持有 ShipStateData[] 数组
+- **控制层**：ShipStateController 持有当前状态和 CurrentStateData，通过 Apply()/Disable() 原子性切换参数
+- **运行时字段**：ShipMotor.RuntimeMaxSpeed/RuntimeMoveAcceleration 和 ShipAiming.RuntimeAngularAcceleration/RuntimeMaxRotationSpeed 作为运行时写入点，SO 字段作为初始化 fallback
+- **向后兼容**：所有修改均保留 null-safe fallback，ShipStateController 不存在时退化为旧行为，不崩溃
+- **VFX 统一**：ShipView 优先订阅 OnStateChanged，legacy 事件订阅仅在无 Controller 时生效
+
+### 验收步骤（Unity Editor 中执行）
+1. 运行 `ProjectArk > Ship > Build Ship` 自动挂载 ShipStateController 并连接 _stats
+2. 或手动：在 Ship 根节点添加 ShipStateController 组件，将 DefaultShipStats 拖入 _Stats 字段
+3. Play Mode 验收：
+   - 正常飞行：Console 无报错，linearDrag=3，maxMoveSpeed=8
+   - 按 Space（Dash）：Console 无报错，ShipStateController.CurrentState = Dash，碰撞体禁用（若已配置）
+   - Dash 结束后自动 Boost：CurrentState = Boost，linearDrag=2.5，maxMoveSpeed=9，angularAcceleration=400
+   - Boost 结束：CurrentState = Normal，参数恢复
+   - VFX 正确触发（glow ramp / trail / flicker）
+
+
+---
+
+## Remove GrabGun_Back_3 Reference from Ship_Sprite_Back — 2026-03-09 02:05
+
+### Modified Files
+- `Assets/_Prefabs/Ship/Ship.prefab`
+- `Assets/Scripts/Ship/Editor/ShipBuilder.cs`
+- `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs`
+
+### Summary
+Removed the incorrect `GrabGun_Back_3` sprite reference from the `Ship_Sprite_Back` SpriteRenderer node.
+
+### Purpose
+Investigation confirmed that `GrabGun_Back_3` belongs exclusively to the GG **GrabGun skin** (State 7 / Grab state, `GrabGun_Base_*` series). It is NOT part of the `Primary_4` skin set nor any skin used by our Glitch ship. The `Ship_Sprite_Back` node is correct and should be retained (it serves as the parent for Boost Trail VFX), but its sprite must be an original art asset — not a GG reference asset.
+
+### Technical Approach
+- **prefab**: Set `m_Sprite: {fileID: 0}` (null) on the `Ship_Sprite_Back` SpriteRenderer (SortingOrder -3)
+- **ShipBuilder.cs**: Replaced `FindAssets("GrabGun_Back_3 t:Sprite")` lookup with `Sprite backSprite = null`
+- **ShipPrefabRebuilder.cs**: Same — removed `FindSprite("GrabGun_Back_3")` and its null-check warning
+- `Ship_Sprite_Back` node structure and SortingOrder (-3) are preserved; sprite slot left empty pending original art

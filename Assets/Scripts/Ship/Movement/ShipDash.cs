@@ -50,11 +50,12 @@ namespace ProjectArk.Ship
         // Private State
         // ══════════════════════════════════════════════════════════════
 
-        private ShipMotor   _motor;
-        private InputHandler _inputHandler;
-        private ShipAiming  _aiming;
-        private ShipHealth  _health;
-        private ShipBoost   _boost; // Dash 结束后自动触发 Boost（GG 同款链式触发）
+        private ShipMotor    _motor;
+        private InputHandler  _inputHandler;
+        private ShipAiming    _aiming;
+        private ShipHealth    _health;
+        private ShipBoost     _boost; // Dash 结束后自动触发 Boost（GG 同款链式触发）
+        private ShipStateController _stateController; // optional — null-safe
 
         private bool  _isCoolingDown;
         private float _cooldownEndTime;
@@ -66,11 +67,12 @@ namespace ProjectArk.Ship
 
         private void Awake()
         {
-            _motor        = GetComponent<ShipMotor>();
-            _inputHandler = GetComponent<InputHandler>();
-            _aiming       = GetComponent<ShipAiming>();
-            _health       = GetComponent<ShipHealth>();
-            _boost        = GetComponent<ShipBoost>(); // 可选，无 ShipBoost 时退化为纯 Dash
+            _motor           = GetComponent<ShipMotor>();
+            _inputHandler    = GetComponent<InputHandler>();
+            _aiming          = GetComponent<ShipAiming>();
+            _health          = GetComponent<ShipHealth>();
+            _boost           = GetComponent<ShipBoost>(); // 可选，无 ShipBoost 时退化为纯 Dash
+            _stateController = GetComponent<ShipStateController>(); // optional
         }
 
         private void OnEnable()
@@ -139,39 +141,42 @@ namespace ProjectArk.Ship
             // ── 2. 施加冲量（一次性，物理自然衰减）
             _motor.AddExternalImpulse(dashDir * _stats.DashImpulse);
 
-            // ── 3. 标记 Dash 状态（用于 VFX / 无敌帧判断）
+            // ── 3. 切换到 Dash 状态（包含禁用碰撞体 + 应用 Dash 物理参数）
             IsDashing = true;
             _motor.IsDashing = true;
 
-            // ── 4. 开启无敌帧
-            if (_stats.DashIFrames && _health != null)
-                _health.SetInvulnerable(true);
+            if (_stateController != null)
+                _stateController.ToStateForce(ShipShipState.Dash);
+            else if (_stats.DashIFrames && _health != null)
+                _health.SetInvulnerable(true); // Legacy: 直接开启无敌帧
 
-            // ── 5. 通知 VFX
+            // ── 4. 通知 VFX
             OnDashStarted?.Invoke(dashDir);
 
-            // ── 6. 等待无敌帧时长（冲量本身由物理处理，无需等速度降下来）
+            // ── 5. 等待无敌帧时长（冲量本身由物理处理，无需等速度降下来）
             if (_stats.DashIFrameDuration > 0f)
             {
                 int ms = Mathf.RoundToInt(_stats.DashIFrameDuration * 1000f);
                 await UniTask.Delay(ms, cancellationToken: destroyCancellationToken);
             }
 
-            // ── 7. 关闭无敌帧
-            if (_stats.DashIFrames && _health != null)
-                _health.SetInvulnerable(false);
+            // ── 6. 退出 Dash 状态
+            if (_stateController != null)
+                _stateController.ToStateForce(ShipShipState.Normal);
+            else if (_stats.DashIFrames && _health != null)
+                _health.SetInvulnerable(false); // Legacy
 
             IsDashing = false;
             _motor.IsDashing = false;
             OnDashEnded?.Invoke();
 
-            // ── 8. 触发 Boost 状态（GG 真实机制：Dodge 结束后自动进入 IsBoostState）
+            // ── 7. 触发 Boost 状态（GG 真实机制：Dodge 结束后自动进入 IsBoostState）
             //       对应 BoosterBurnoutPower.UsePower() 在 AfterDodge 时被调用
             _boost?.ForceActivate();
 
-            // ── 9. 进入冷却
-            _isCoolingDown    = true;
-            _cooldownEndTime  = Time.time + _stats.DashCooldown;
+            // ── 8. 进入冷却
+            _isCoolingDown   = true;
+            _cooldownEndTime = Time.time + _stats.DashCooldown;
         }
     }
 }

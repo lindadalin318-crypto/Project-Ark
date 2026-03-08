@@ -24,9 +24,18 @@ namespace ProjectArk.Ship.Editor
     /// </summary>
     public static class ShipBuilder
     {
-        private const string SHIP_GO_NAME  = "Ship";
-        private const string VISUAL_CHILD_NAME  = "VisualChild";
-        private const string ENGINE_PARTICLES_NAME = "EngineParticles";
+        private const string SHIP_GO_NAME           = "Ship";
+        private const string VISUAL_CHILD_NAME       = "VisualChild";
+        private const string ENGINE_PARTICLES_NAME   = "EngineParticles";
+
+        // 5-layer sprite structure (children of VisualChild)
+        private const string SPRITE_BACK_NAME    = "Ship_Sprite_Back";
+        private const string SPRITE_LIQUID_NAME  = "Ship_Sprite_Liquid";
+        private const string SPRITE_HL_NAME      = "Ship_Sprite_HL";
+        private const string SPRITE_SOLID_NAME   = "Ship_Sprite_Solid";
+        private const string SPRITE_CORE_NAME    = "Ship_Sprite_Core";
+
+        private const string GLOW_MATERIAL_PATH  = "Assets/_Art/Ship/Glitch/ShipGlowMaterial.mat";
 
         [MenuItem("ProjectArk/Ship/Build Ship")]
         public static void BuildShip()
@@ -44,12 +53,15 @@ namespace ProjectArk.Ship.Editor
             AddScriptComponents(shipGo, log);
 
             // ── Step 3: Child Nodes ────────────────────────────────────
-            var visualChild   = EnsureChild(shipGo, VISUAL_CHILD_NAME, log);
-            var spriteRenderer = GetOrAddComponent<SpriteRenderer>(visualChild);
+            var visualChild       = EnsureChild(shipGo, VISUAL_CHILD_NAME, log);
+            var spriteRenderer    = GetOrAddComponent<SpriteRenderer>(visualChild);
             var engineParticlesGo = EnsureChild(shipGo, ENGINE_PARTICLES_NAME, log);
             engineParticlesGo.transform.localPosition = new Vector3(0f, -0.3f, 0f);
             var ps = GetOrAddComponent<ParticleSystem>(engineParticlesGo);
             ConfigureEngineParticles(ps, log);
+
+            // ── Step 3b: 5-layer sprite children (under VisualChild) ───
+            var spriteLayerRenderers = EnsureSpriteLayers(visualChild, log);
 
             // ── Step 4: Find / create SO assets ───────────────────────
             var statsSO  = FindOrCreateShipStatsSO(log);
@@ -60,7 +72,7 @@ namespace ProjectArk.Ship.Editor
 
             // ── Step 6: Wire all SerializeFields ──────────────────────
             WireReferences(shipGo, visualChild, spriteRenderer, ps,
-                statsSO, juiceSO, inputAsset, log, todo);
+                statsSO, juiceSO, inputAsset, spriteLayerRenderers, log, todo);
 
             // ── Step 7: Back-wire WeavingStateTransition ───────────────
             WireWeavingTransition(shipGo, log, todo);
@@ -143,13 +155,15 @@ namespace ProjectArk.Ship.Editor
             GetOrAddComponent<InputHandler>(shipGo);
             GetOrAddComponent<ShipMotor>(shipGo);
             GetOrAddComponent<ShipAiming>(shipGo);
+            GetOrAddComponent<ShipStateController>(shipGo); // state machine — must come after Motor+Aiming
             GetOrAddComponent<ShipHealth>(shipGo);
             GetOrAddComponent<ShipDash>(shipGo);
             GetOrAddComponent<ShipBoost>(shipGo);
             GetOrAddComponent<ShipVisualJuice>(shipGo);
+            GetOrAddComponent<ShipView>(shipGo);
             GetOrAddComponent<ShipEngineVFX>(shipGo);
             GetOrAddComponent<DashAfterImageSpawner>(shipGo);
-            log.Add("✓ All script components added (InputHandler → ShipMotor → ShipAiming → ShipHealth → ShipDash → ShipBoost → ShipVisualJuice → ShipEngineVFX → DashAfterImageSpawner)");
+            log.Add("✓ All script components added (InputHandler → ShipMotor → ShipAiming → ShipStateController → ShipHealth → ShipDash → ShipBoost → ShipVisualJuice → ShipView → ShipEngineVFX → DashAfterImageSpawner)");
         }
 
         // ════════════════════════════════════════════════════════════════
@@ -171,6 +185,77 @@ namespace ProjectArk.Ship.Editor
             Undo.RegisterCreatedObjectUndo(child, $"Create {childName}");
             log.Add($"✓ Created child: {childName}");
             return child;
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        // Step 3b — 5-layer sprite children
+        // ════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Ensures the 5 sprite layer children exist under visualChild.
+        /// Returns array [back, liquid, hl, solid, core] SpriteRenderers.
+        /// </summary>
+        private static SpriteRenderer[] EnsureSpriteLayers(GameObject visualChild, List<string> log)
+        {
+            var glowMat = AssetDatabase.LoadAssetAtPath<Material>(GLOW_MATERIAL_PATH);
+            if (glowMat == null)
+                log.Add($"⚠ ShipGlowMaterial not found at {GLOW_MATERIAL_PATH} — assign manually to Ship_Sprite_Liquid");
+
+            // Try to load reference sprites
+            var spriteGuids = AssetDatabase.FindAssets("GrabGun_Base_9 t:Sprite");
+            Sprite mainSprite = spriteGuids.Length > 0
+                ? AssetDatabase.LoadAssetAtPath<Sprite>(AssetDatabase.GUIDToAssetPath(spriteGuids[0]))
+                : null;
+
+            var hlGuids = AssetDatabase.FindAssets("GrabGun_Base_8 t:Sprite");
+            Sprite hlSprite = hlGuids.Length > 0
+                ? AssetDatabase.LoadAssetAtPath<Sprite>(AssetDatabase.GUIDToAssetPath(hlGuids[0]))
+                : null;
+
+            // Ship_Sprite_Back: no reference sprite assigned — awaiting original art asset
+            Sprite backSprite = null;
+
+            SpriteRenderer back   = EnsureSpriteLayer(visualChild, SPRITE_BACK_NAME,   -3, backSprite,  null,    log);
+            SpriteRenderer liquid = EnsureSpriteLayer(visualChild, SPRITE_LIQUID_NAME, -2, mainSprite,  glowMat, log);
+            SpriteRenderer hl     = EnsureSpriteLayer(visualChild, SPRITE_HL_NAME,     -1, hlSprite,    null,    log);
+            SpriteRenderer solid  = EnsureSpriteLayer(visualChild, SPRITE_SOLID_NAME,   0, mainSprite,  null,    log);
+            SpriteRenderer core   = EnsureSpriteLayer(visualChild, SPRITE_CORE_NAME,    1, null,        null,    log);
+
+            // HL layer default alpha = 0.5
+            if (hl != null)
+            {
+                var c = hl.color;
+                c.a = 0.5f;
+                hl.color = c;
+            }
+
+            return new[] { back, liquid, hl, solid, core };
+        }
+
+        private static SpriteRenderer EnsureSpriteLayer(
+            GameObject parent, string childName, int sortOrder,
+            Sprite sprite, Material material, List<string> log)
+        {
+            var childGo = parent.transform.Find(childName)?.gameObject;
+            if (childGo == null)
+            {
+                childGo = new GameObject(childName);
+                childGo.transform.SetParent(parent.transform, false);
+                childGo.transform.localPosition = Vector3.zero;
+                Undo.RegisterCreatedObjectUndo(childGo, $"Create {childName}");
+                log.Add($"✓ Created sprite layer: {childName} (SortOrder={sortOrder})");
+            }
+            else
+            {
+                log.Add($"✓ Sprite layer '{childName}' already exists, updating");
+            }
+
+            var sr = GetOrAddComponent<SpriteRenderer>(childGo);
+            sr.sortingOrder = sortOrder;
+            if (sprite != null) sr.sprite = sprite;
+            if (material != null) sr.sharedMaterial = material;
+
+            return sr;
         }
 
         private static void ConfigureEngineParticles(ParticleSystem ps, List<string> log)
@@ -301,6 +386,7 @@ namespace ProjectArk.Ship.Editor
             ShipStatsSO statsSO,
             ShipJuiceSettingsSO juiceSO,
             InputActionAsset inputAsset,
+            SpriteRenderer[] spriteLayers,
             List<string> log,
             List<string> todo)
         {
@@ -318,6 +404,11 @@ namespace ProjectArk.Ship.Editor
             var aiming = shipGo.GetComponent<ShipAiming>();
             if (aiming != null && statsSO != null)
                 WireField(aiming, "_stats", statsSO, log, "ShipAiming._stats");
+
+            // ShipStateController
+            var stateController = shipGo.GetComponent<ShipStateController>();
+            if (stateController != null && statsSO != null)
+                WireField(stateController, "_stats", statsSO, log, "ShipStateController._stats");
 
             // ShipHealth
             var health = shipGo.GetComponent<ShipHealth>();
@@ -350,6 +441,19 @@ namespace ProjectArk.Ship.Editor
                 WireField(engineVFX, "_engineParticles", enginePS, log, "ShipEngineVFX._engineParticles");
                 if (juiceSO != null)
                     WireField(engineVFX, "_juiceSettings", juiceSO, log, "ShipEngineVFX._juiceSettings");
+            }
+
+            // ShipView — wire 5 sprite layer renderers
+            var shipView = shipGo.GetComponent<ShipView>();
+            if (shipView != null && spriteLayers != null && spriteLayers.Length == 5)
+            {
+                WireField(shipView, "_backRenderer",   spriteLayers[0], log, "ShipView._backRenderer");
+                WireField(shipView, "_liquidRenderer", spriteLayers[1], log, "ShipView._liquidRenderer");
+                WireField(shipView, "_hlRenderer",     spriteLayers[2], log, "ShipView._hlRenderer");
+                WireField(shipView, "_solidRenderer",  spriteLayers[3], log, "ShipView._solidRenderer");
+                WireField(shipView, "_coreRenderer",   spriteLayers[4], log, "ShipView._coreRenderer");
+                if (juiceSO != null)
+                    WireField(shipView, "_juiceSettings", juiceSO, log, "ShipView._juiceSettings");
             }
 
             // DashAfterImageSpawner

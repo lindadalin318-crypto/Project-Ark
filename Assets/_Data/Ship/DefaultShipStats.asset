@@ -12,6 +12,37 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e2b5ac2c789250b438979e67441297a3, type: 3}
   m_Name: DefaultShipStats
   m_EditorClassIdentifier: 
+  _stateDataArray:
+  - state: 0
+    animatorTrigger: 
+    minTime: 0
+    linearDrag: 3
+    angularDrag: 0
+    moveAcceleration: 20
+    maxMoveSpeed: 8
+    angularAcceleration: 800
+    maxRotationSpeed: 360
+    colliders: []
+  - state: 3
+    animatorTrigger: 
+    minTime: 0.2
+    linearDrag: 2.5
+    angularDrag: 0
+    moveAcceleration: 20
+    maxMoveSpeed: 9
+    angularAcceleration: 400
+    maxRotationSpeed: 360
+    colliders: []
+  - state: 2
+    animatorTrigger: 
+    minTime: 0.15
+    linearDrag: 1.7
+    angularDrag: 0
+    moveAcceleration: 12
+    maxMoveSpeed: 4
+    angularAcceleration: 200
+    maxRotationSpeed: 180
+    colliders: []
   _angularAcceleration: 800
   _maxRotationSpeed: 360
   _angularDrag: 0

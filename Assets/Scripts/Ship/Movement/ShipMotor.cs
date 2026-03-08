@@ -39,47 +39,65 @@ namespace ProjectArk.Ship
 
         public Vector2 CurrentVelocity  => _rb.linearVelocity;
         public float   CurrentSpeed     => _rb.linearVelocity.magnitude;
-        public float   NormalizedSpeed  => _stats.MaxSpeed > 0f
-            ? Mathf.Clamp01(_rb.linearVelocity.magnitude / _stats.MaxSpeed)
+        public float NormalizedSpeed  => RuntimeMaxSpeed > 0f
+            ? Mathf.Clamp01(_rb.linearVelocity.magnitude / RuntimeMaxSpeed)
             : 0f;
 
-        /// <summary>是否处于 Boost 状态（ShipBoost 写入）。</summary>
-        public bool IsBoosting { get; private set; }
+        /// <summary>是否处于 Boost 状态（向后兼容，由 ShipStateController.IsInState(Boost) 替代）。</summary>
+        public bool IsBoosting => _stateController != null
+            ? _stateController.IsInState(ShipShipState.Boost)
+            : _legacyIsBoosting;
+
+        // Legacy fallback for scenes without ShipStateController
+        private bool _legacyIsBoosting;
 
         /// <summary>
-        /// 进入 Boost 物理状态。对应 GG StateData.Apply()：
-        /// 临时替换 linearDrag / 速度上限 / 角加速度为 Boost 专属参数。
+        /// [Legacy] 进入 Boost 物理状态。保留向后兼容，新代码请用 ShipStateController.ToStateForce()。
         /// </summary>
         public void EnterBoostState(float boostLinearDrag, float boostMaxSpeed)
         {
-            IsBoosting = true;
-            _boostMaxSpeed = boostMaxSpeed;
-            _rb.linearDamping = boostLinearDrag;
+            _legacyIsBoosting  = true;
+            RuntimeMaxSpeed    = boostMaxSpeed;
+            _rb.linearDamping  = boostLinearDrag;
         }
 
         /// <summary>
-        /// 退出 Boost 物理状态，恢复正常参数。
+        /// [Legacy] 退出 Boost 物理状态。保留向后兼容，新代码请用 ShipStateController.ToStateForce()。
         /// </summary>
         public void ExitBoostState()
         {
-            IsBoosting = false;
-            _boostMaxSpeed = 0f;
-            _rb.linearDamping = _stats.LinearDrag;
+            _legacyIsBoosting  = false;
+            RuntimeMaxSpeed    = _stats != null ? _stats.MaxSpeed : 8f;
+            _rb.linearDamping  = _stats != null ? _stats.LinearDrag : 3f;
         }
 
-        // Boost 期间的速度上限（由 ShipBoost 写入）
-        private float _boostMaxSpeed;
-
         // ── 向后兼容旧 ShipBoost 接口 ──
-        /// <summary>向后兼容：Boost 速度倍率不再使用，由 BoostMaxSpeed 直接替代。</summary>
+        /// <summary>向后兼容：Boost 速度倍率不再使用，由 RuntimeMaxSpeed 直接替代。</summary>
         public float BoostSpeedMultiplier { get; set; } = 1f;
+
+        // ══════════════════════════════════════════════════════════════
+        // Runtime Parameters  (written by ShipStateController via ShipStateData.Apply)
+        // ══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Runtime max speed. Written by ShipStateData.Apply() on state transitions.
+        /// Falls back to _stats.MaxSpeed if ShipStateController is absent.
+        /// </summary>
+        public float RuntimeMaxSpeed { get; set; } = 8f;
+
+        /// <summary>
+        /// Runtime move acceleration. Written by ShipStateData.Apply() on state transitions.
+        /// Falls back to _stats.ForwardAcceleration if ShipStateController is absent.
+        /// </summary>
+        public float RuntimeMoveAcceleration { get; set; } = 20f;
 
         // ══════════════════════════════════════════════════════════════
         // Private State
         // ══════════════════════════════════════════════════════════════
 
-        private Rigidbody2D _rb;
-        private InputHandler _inputHandler;
+        private Rigidbody2D  _rb;
+        private InputHandler  _inputHandler;
+        private ShipStateController _stateController; // optional — null-safe
         private float _previousNormalizedSpeed;
 
         // 当前帧移动输入（由 Update 写，FixedUpdate 读，避免漏帧）
@@ -91,8 +109,16 @@ namespace ProjectArk.Ship
 
         private void Awake()
         {
-            _rb = GetComponent<Rigidbody2D>();
-            _inputHandler = GetComponent<InputHandler>();
+            _rb              = GetComponent<Rigidbody2D>();
+            _inputHandler    = GetComponent<InputHandler>();
+            _stateController = GetComponent<ShipStateController>(); // optional
+
+            // Initialize runtime params from SO as fallback defaults
+            if (_stats != null)
+            {
+                RuntimeMaxSpeed          = _stats.MaxSpeed;
+                RuntimeMoveAcceleration  = _stats.ForwardAcceleration;
+            }
         }
 
         private void Start()
@@ -135,13 +161,13 @@ namespace ProjectArk.Ship
 
             // WASD 直接映射世界方向施力（W=世界上, D=世界右）
             // 输入向量已在 InputHandler 中 clamp 到 magnitude ≤ 1
-            _rb.AddForce(_moveInputThisFrame * _stats.ForwardAcceleration, ForceMode2D.Force);
+            _rb.AddForce(_moveInputThisFrame * RuntimeMoveAcceleration, ForceMode2D.Force);
         }
 
         private void ClampSpeed()
         {
-            float speedLimit = IsBoosting ? _boostMaxSpeed : _stats.MaxSpeed;
-            float sqrLimit = speedLimit * speedLimit;
+            float speedLimit = RuntimeMaxSpeed;
+            float sqrLimit   = speedLimit * speedLimit;
 
             if (_rb.linearVelocity.sqrMagnitude > sqrLimit)
                 _rb.linearVelocity = _rb.linearVelocity.normalized * speedLimit;

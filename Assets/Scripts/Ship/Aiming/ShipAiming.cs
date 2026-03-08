@@ -50,9 +50,26 @@ namespace ProjectArk.Ship
         // Private State
         // ══════════════════════════════════════════════════════════════
 
-        private Rigidbody2D _rb;
-        private InputHandler _inputHandler;
-        private ShipMotor    _motor;
+        private Rigidbody2D  _rb;
+        private InputHandler  _inputHandler;
+        private ShipMotor     _motor;
+        private ShipStateController _stateController; // optional — null-safe
+
+        // ══════════════════════════════════════════════════════════════
+        // Runtime Parameters  (written by ShipStateData.Apply)
+        // ══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Runtime angular acceleration (deg/s²). Written by ShipStateData.Apply() on state transitions.
+        /// Falls back to _stats.AngularAcceleration if ShipStateController is absent.
+        /// </summary>
+        public float RuntimeAngularAcceleration { get; set; } = 800f;
+
+        /// <summary>
+        /// Runtime max rotation speed (deg/s). Written by ShipStateData.Apply() on state transitions.
+        /// Falls back to _stats.MaxRotationSpeed if ShipStateController is absent.
+        /// </summary>
+        public float RuntimeMaxRotationSpeed { get; set; } = 360f;
 
         // ══════════════════════════════════════════════════════════════
         // Lifecycle
@@ -60,9 +77,17 @@ namespace ProjectArk.Ship
 
         private void Awake()
         {
-            _rb           = GetComponent<Rigidbody2D>();
-            _inputHandler = GetComponent<InputHandler>();
-            _motor        = GetComponent<ShipMotor>();
+            _rb              = GetComponent<Rigidbody2D>();
+            _inputHandler    = GetComponent<InputHandler>();
+            _motor           = GetComponent<ShipMotor>();
+            _stateController = GetComponent<ShipStateController>(); // optional
+
+            // Initialize runtime params from SO as fallback defaults
+            if (_stats != null)
+            {
+                RuntimeAngularAcceleration = _stats.AngularAcceleration;
+                RuntimeMaxRotationSpeed    = _stats.MaxRotationSpeed;
+            }
         }
 
         private void FixedUpdate()
@@ -89,16 +114,16 @@ namespace ProjectArk.Ship
             // 计算最短角度差（-180 ~ +180）
             float angleDiff = Mathf.DeltaAngle(currentAngle, targetAngle);
 
-            // Boost 期间使用降低的角加速度（对应 GG IsBoostState.angularAcceleration=40 vs 正常 80）
-            bool isBoosting = _motor != null && _motor.IsBoosting;
-            float angularAccel = isBoosting ? _stats.BoostAngularAcceleration : _stats.AngularAcceleration;
+            // 当前状态的角加速度和最大角速度（由 ShipStateController 通过 ShipStateData.Apply 写入）
+            float angularAccel  = RuntimeAngularAcceleration;
+            float maxRotSpeed   = RuntimeMaxRotationSpeed;
 
             // 用角度差的符号决定加速方向，角度差越大越猛（但 clamp 避免过冲）
             // GGSteering 同款：靠近目标时自动减速（因为 angularDiff 会缩小）
             float desiredAngularVelocity = Mathf.Clamp(
-                angleDiff * (angularAccel / _stats.MaxRotationSpeed),
-                -_stats.MaxRotationSpeed,
-                _stats.MaxRotationSpeed
+                angleDiff * (angularAccel / maxRotSpeed),
+                -maxRotSpeed,
+                maxRotSpeed
             );
 
             // 以 angularAcceleration 向目标角速度靠近（平滑加速，不是瞬间到位）
