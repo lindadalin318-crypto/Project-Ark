@@ -6,7 +6,9 @@ namespace ProjectArk.Combat
     /// <summary>
     /// A 2D grid layer (Rows × Cols) that holds Star Chart items.
     /// Each item occupies one or more cells according to its <see cref="ItemShape"/>.
-    /// Columns can be unlocked progressively (min 1 col = 2 cells, max 4 cols = 8 cells).
+    /// Both columns and rows can be unlocked progressively.
+    /// Initial state: Cols=2, Rows=1 (2 cells, horizontal layout).
+    /// Maximum state: Cols=4, Rows=4 (16 cells).
     /// Pure data class — not a MonoBehaviour.
     /// </summary>
     /// <typeparam name="T">StarCoreSO or PrismSO</typeparam>
@@ -16,18 +18,18 @@ namespace ProjectArk.Combat
         // Constants
         // =====================================================================
 
-        /// <summary> Fixed row count — always 2. </summary>
-        public const int FIXED_ROWS = 2;
-
         /// <summary> Maximum unlockable column count. </summary>
         public const int MAX_COLS = 4;
+
+        /// <summary> Maximum unlockable row count. </summary>
+        public const int MAX_ROWS = 4;
 
         // =====================================================================
         // Dynamic capacity
         // =====================================================================
 
-        /// <summary> Current number of rows (always 2). </summary>
-        public int Rows => FIXED_ROWS;
+        /// <summary> Current number of unlocked rows (1–4). </summary>
+        public int Rows { get; private set; }
 
         /// <summary> Current number of unlocked columns (1–4). </summary>
         public int Cols { get; private set; }
@@ -35,8 +37,8 @@ namespace ProjectArk.Combat
         /// <summary> Total number of cells (Rows × Cols). </summary>
         public int Capacity => Rows * Cols;
 
-        // grid[row, col] — null means empty; sized to MAX_COLS to avoid reallocation
-        private readonly T[,] _grid = new T[FIXED_ROWS, MAX_COLS];
+        // grid[row, col] — null means empty; sized to MAX_ROWS × MAX_COLS to avoid reallocation
+        private readonly T[,] _grid = new T[MAX_ROWS, MAX_COLS];
 
         // Anchor positions for each placed item (col, row of anchor cell)
         private readonly Dictionary<T, Vector2Int> _anchors = new();
@@ -87,12 +89,15 @@ namespace ProjectArk.Combat
         // =====================================================================
 
         /// <summary>
-        /// Creates a new SlotLayer with the given initial column count.
+        /// Creates a new SlotLayer with the given initial column and row counts.
+        /// Default: Cols=2, Rows=1 (horizontal 2-cell layout).
         /// </summary>
-        /// <param name="initialCols">Starting column count (default 1 → 2 cells).</param>
-        public SlotLayer(int initialCols = 1)
+        /// <param name="initialCols">Starting column count (default 2). Clamped to [1, MAX_COLS].</param>
+        /// <param name="initialRows">Starting row count (default 1). Clamped to [1, MAX_ROWS].</param>
+        public SlotLayer(int initialCols = 2, int initialRows = 1)
         {
             Cols = Mathf.Clamp(initialCols, 1, MAX_COLS);
+            Rows = Mathf.Clamp(initialRows, 1, MAX_ROWS);
         }
 
         // =====================================================================
@@ -100,7 +105,7 @@ namespace ProjectArk.Combat
         // =====================================================================
 
         /// <summary>
-        /// Attempts to unlock one additional column.
+        /// Attempts to unlock one additional column (expand right).
         /// Returns true if successful; false if already at MAX_COLS.
         /// Existing items are unaffected — the new column starts empty.
         /// </summary>
@@ -108,6 +113,18 @@ namespace ProjectArk.Combat
         {
             if (Cols >= MAX_COLS) return false;
             Cols++;
+            return true;
+        }
+
+        /// <summary>
+        /// Attempts to unlock one additional row (expand downward).
+        /// Returns true if successful; false if already at MAX_ROWS.
+        /// Existing items are unaffected — the new row starts empty.
+        /// </summary>
+        public bool TryUnlockRow()
+        {
+            if (Rows >= MAX_ROWS) return false;
+            Rows++;
             return true;
         }
 

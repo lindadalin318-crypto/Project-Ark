@@ -224,12 +224,15 @@ namespace ProjectArk.UI
             _isOverlayCell = false;
             DisplayedItem = null;
 
-            // Phase C: fade to empty color
+            // Phase C: fade to empty color (skip tween if already at target color)
             _flashSequence.Stop();
             if (_backgroundImage != null)
             {
-                Tween.Color(_backgroundImage, endValue: StarChartTheme.SlotEmpty,
-                    duration: 0.1f, ease: Ease.OutQuad, useUnscaledTime: true);
+                if (_backgroundImage.color == StarChartTheme.SlotEmpty)
+                    _backgroundImage.color = StarChartTheme.SlotEmpty;
+                else
+                    Tween.Color(_backgroundImage, endValue: StarChartTheme.SlotEmpty,
+                        duration: 0.1f, ease: Ease.OutQuad, useUnscaledTime: true);
             }
 
             if (_iconImage != null)
@@ -599,7 +602,11 @@ namespace ProjectArk.UI
                     : isSatLayer
                         ? (OwnerTrack.Track?.SatLayer?.Cols ?? 2)
                         : (OwnerTrack.Track?.PrismLayer?.Cols ?? SlotLayer<PrismSO>.MAX_COLS);
-                int gridRows = SlotLayer<StarCoreSO>.FIXED_ROWS;
+                int gridRows = isCoreLayer
+                    ? (OwnerTrack.Track?.CoreLayer?.Rows ?? SlotLayer<StarCoreSO>.MAX_ROWS)
+                    : isSatLayer
+                        ? (OwnerTrack.Track?.SatLayer?.Rows ?? SlotLayer<SatelliteSO>.MAX_ROWS)
+                        : (OwnerTrack.Track?.PrismLayer?.Rows ?? SlotLayer<PrismSO>.MAX_ROWS);
                 int hoverCol = CellIndex % gridCols;
                 int hoverRow = CellIndex / gridCols;
 
@@ -625,7 +632,7 @@ namespace ProjectArk.UI
                 // Shared SAIL column: compute anchor from CellIndex using SailLayer grid dimensions
                 var sailLayer = DragDropManager.Instance?.SailLayer;
                 int gridCols = sailLayer?.Cols ?? 1;
-                int gridRows = SlotLayer<LightSailSO>.FIXED_ROWS;
+                int gridRows = sailLayer?.Rows ?? SlotLayer<LightSailSO>.MAX_ROWS;
                 int hoverCol = CellIndex % gridCols;
                 int hoverRow = CellIndex / gridCols;
 

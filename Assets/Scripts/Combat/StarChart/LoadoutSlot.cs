@@ -40,7 +40,7 @@ namespace ProjectArk.Combat
         {
             PrimaryTrack   = new WeaponTrack(WeaponTrack.TrackId.Primary);
             SecondaryTrack = new WeaponTrack(WeaponTrack.TrackId.Secondary);
-            SailLayer      = new SlotLayer<LightSailSO>(initialCols: 1);
+SailLayer      = new SlotLayer<LightSailSO>(initialCols: 2, initialRows: 1);
         }
 
         /// <summary>

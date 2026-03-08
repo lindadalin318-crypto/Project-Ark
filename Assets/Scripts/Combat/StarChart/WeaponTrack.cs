@@ -49,10 +49,10 @@ namespace ProjectArk.Combat
         public WeaponTrack(TrackId id)
         {
             _id = id;
-            _coreLayer  = new SlotLayer<StarCoreSO>();
-            _prismLayer = new SlotLayer<PrismSO>();
-            // SAT layer: starts with 1 column (like Core/Prism), expandable via SetLayerCols.
-            _satLayer   = new SlotLayer<SatelliteSO>(initialCols: 1);
+            // All layers start with 2 cols × 1 row = 2 cells (horizontal layout).
+            _coreLayer  = new SlotLayer<StarCoreSO>(initialCols: 2, initialRows: 1);
+            _prismLayer = new SlotLayer<PrismSO>(initialCols: 2, initialRows: 1);
+            _satLayer   = new SlotLayer<SatelliteSO>(initialCols: 2, initialRows: 1);
             _snapshotDirty = true;
         }
 
@@ -176,12 +176,13 @@ namespace ProjectArk.Combat
         /// Restores the unlocked column counts for Core, Prism, and SAT layers from save data.
         /// Called during ImportTrack before re-equipping items.
         /// </summary>
-        public void SetLayerCols(int coreCols, int prismCols, int satCols = 1)
+        public void SetLayerCols(int coreCols, int prismCols, int satCols = 2)
         {
             // Clamp to valid range without UnityEngine.Mathf (WeaponTrack is pure C#)
-            int targetCore  = coreCols  < 1 ? 1 : coreCols  > SlotLayer<StarCoreSO>.MAX_COLS ? SlotLayer<StarCoreSO>.MAX_COLS : coreCols;
-            int targetPrism = prismCols < 1 ? 1 : prismCols > SlotLayer<PrismSO>.MAX_COLS    ? SlotLayer<PrismSO>.MAX_COLS    : prismCols;
-            int targetSat   = satCols   < 1 ? 1 : satCols   > SlotLayer<SatelliteSO>.MAX_COLS ? SlotLayer<SatelliteSO>.MAX_COLS : satCols;
+            // Minimum is 2 (initial state = 2 cols × 1 row)
+            int targetCore  = coreCols  < 2 ? 2 : coreCols  > SlotLayer<StarCoreSO>.MAX_COLS ? SlotLayer<StarCoreSO>.MAX_COLS : coreCols;
+            int targetPrism = prismCols < 2 ? 2 : prismCols > SlotLayer<PrismSO>.MAX_COLS    ? SlotLayer<PrismSO>.MAX_COLS    : prismCols;
+            int targetSat   = satCols   < 2 ? 2 : satCols   > SlotLayer<SatelliteSO>.MAX_COLS ? SlotLayer<SatelliteSO>.MAX_COLS : satCols;
 
             // Unlock columns one by one until we reach the saved count
             while (_coreLayer.Cols < targetCore)
@@ -190,6 +191,26 @@ namespace ProjectArk.Combat
                 _prismLayer.TryUnlockColumn();
             while (_satLayer.Cols < targetSat)
                 _satLayer.TryUnlockColumn();
+        }
+
+        /// <summary>
+        /// Restores the unlocked row counts for Core, Prism, and SAT layers from save data.
+        /// Called during ImportTrack before re-equipping items.
+        /// </summary>
+        public void SetLayerRows(int coreRows, int prismRows, int satRows = 1)
+        {
+            // Clamp to valid range without UnityEngine.Mathf (WeaponTrack is pure C#)
+            int targetCore  = coreRows  < 1 ? 1 : coreRows  > SlotLayer<StarCoreSO>.MAX_ROWS ? SlotLayer<StarCoreSO>.MAX_ROWS : coreRows;
+            int targetPrism = prismRows < 1 ? 1 : prismRows > SlotLayer<PrismSO>.MAX_ROWS    ? SlotLayer<PrismSO>.MAX_ROWS    : prismRows;
+            int targetSat   = satRows   < 1 ? 1 : satRows   > SlotLayer<SatelliteSO>.MAX_ROWS ? SlotLayer<SatelliteSO>.MAX_ROWS : satRows;
+
+            // Unlock rows one by one until we reach the saved count
+            while (_coreLayer.Rows < targetCore)
+                _coreLayer.TryUnlockRow();
+            while (_prismLayer.Rows < targetPrism)
+                _prismLayer.TryUnlockRow();
+            while (_satLayer.Rows < targetSat)
+                _satLayer.TryUnlockRow();
         }
 
         /// <summary> Clear all equipped items from both layers and the satellite layer. </summary>

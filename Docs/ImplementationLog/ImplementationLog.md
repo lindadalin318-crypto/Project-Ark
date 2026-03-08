@@ -9063,3 +9063,115 @@ Twin Split 在 Inspector 中显示为 Shape1x2H（占 2 格），导致无法放
 
 ### 技术方案
 直接编辑 `.asset` YAML 序列化文件，在 `_slotSize` 字段后插入 `_shape` 字段（整数枚举值）。`ItemShape` 枚举值对照：Shape1x1=0, Shape1x2H=1, Shape2x1V=2, ShapeL=3, ShapeLMirror=4, Shape2x2=5。
+
+---
+
+## SlotLayer 行列双向解锁重构 — 2026-03-08 02:10
+
+### 修改文件
+- `Assets/Scripts/Combat/StarChart/SlotLayer.cs` — 核心重构
+- `Assets/Scripts/Combat/StarChart/WeaponTrack.cs` — 初始化更新 + 新增 SetLayerRows
+- `Assets/Scripts/Core/Save/SaveData.cs` — 新增 *Rows 存档字段
+- `Assets/Scripts/Combat/Tests/SlotLayerTests.cs` — 测试套件全面更新
+
+### 内容简述
+重构 `SlotLayer<T>` 数据结构，使其行列语义与视觉表现完全一致，并支持行列双向独立解锁。
+
+**SlotLayer.cs**
+- 删除 `FIXED_ROWS = 2` 常量，新增 `MAX_ROWS = 4` 常量（保留 `MAX_COLS = 4`）
+- `Rows` 从 `=> FIXED_ROWS` 改为 `{ get; private set; }`，支持动态解锁
+- `_grid` 从 `new T[FIXED_ROWS, MAX_COLS]` 改为 `new T[MAX_ROWS, MAX_COLS]`（预分配最大尺寸，避免重分配）
+- 构造函数签名改为 `SlotLayer(int initialCols = 2, int initialRows = 1)`，两参数均 Clamp 到合法范围
+- 新增 `TryUnlockRow()` 方法：`Rows < MAX_ROWS` 时 `Rows++` 返回 `true`，否则返回 `false`
+
+**WeaponTrack.cs**
+- 三个 Layer 初始化改为 `new SlotLayer<T>(initialCols: 2, initialRows: 1)`
+- `SetLayerCols` Clamp 最小值从 `1` 改为 `2`
+- 新增 `SetLayerRows(int coreRows, int prismRows, int satRows)` 方法，逐步调用 `TryUnlockRow` 恢复存档行数
+
+**SaveData.cs**
+- `TrackSaveData` 新增 `CoreLayerRows = 1`、`PrismLayerRows = 1`、`SatLayerRows = 1` 字段
+- `CoreLayerCols`、`PrismLayerCols`、`SatLayerCols` 默认值从 `1` 改为 `2`
+- `LoadoutSlotSaveData` 新增 `SailLayerRows = 1` 字段
+- 所有新字段含旧存档迁移注释（`Cols=0` Clamp 到 `2`，`Rows=0` Clamp 到 `1`）
+
+**SlotLayerTests.cs**
+- 更新 8 个现有测试以反映新初始状态（`Cols=2, Rows=1`），删除所有 `FIXED_ROWS` 引用
+- 新增 4 个行解锁测试：`TryUnlockRow_IncreasesRows`、`TryUnlockRow_AtMaxRows_ReturnsFalse`、`TryUnlockCol_And_Row_MaxCapacity_Is16`、`UnlockRow_NewCellsAreEmpty_OldItemsUnaffected`
+
+### 目的
+修复数据坐标系（行=纵向）与视觉坐标系（列=横向）的语义错位问题。重构后初始状态为横向2格（`Cols=2, Rows=1`），Machine Gun（Shape1x2H）可正确放入 Core 区域初始格。行列均可独立解锁，最大支持 4×4=16 格。
+
+### 技术方案
+`_grid` 预分配为 `MAX_ROWS × MAX_COLS`（4×4），解锁行/列时只修改 `Rows`/`Cols` 计数器，无需重新分配内存。所有边界检查（`InBounds`、`FitsInGrid`）均使用当前 `Rows`/`Cols` 值，新增格子自动为 null（空）。旧存档向后兼容：`Cols=0` 时 Clamp 到 `2`，`Rows=0` 时 Clamp 到 `1`。
+
+---
+
+## Bug Fix: SlotCellView FIXED_ROWS 编译错误 — 2026-03-08 10:07
+
+### 修改文件
+- `Assets/Scripts/UI/SlotCellView.cs`
+
+### 内容简述
+修复两处编译错误：`SlotLayer<StarCoreSO>.FIXED_ROWS` 和 `SlotLayer<LightSailSO>.FIXED_ROWS` 不存在（已在上次重构中移除）。
+
+### 目的
+`SlotLayer<T>` 重构为动态行列后移除了 `FIXED_ROWS` 常量，但 `SlotCellView` 中的拖放预览逻辑未同步更新，导致编译失败。
+
+### 技术方案
+- 第 602 行（Core/Sat/Prism 分支）：改为读取对应 layer 的动态 `Rows` 属性（`CoreLayer?.Rows` / `SatLayer?.Rows` / `PrismLayer?.Rows`），fallback 使用 `MAX_ROWS`
+- 第 628 行（LightSail 分支）：改为读取 `sailLayer?.Rows`，fallback 使用 `SlotLayer<LightSailSO>.MAX_ROWS`
+
+---
+
+## Bug Fix: SlotCellView SetEmpty 重复 Tween 警告 — 2026-03-08 10:13
+
+**修改文件：**
+- `Assets/Scripts/UI/SlotCellView.cs`
+
+**内容简述：**
+`SetEmpty()` 方法中对 `_backgroundImage` 启动颜色 Tween 时，若颜色已等于目标值 `StarChartTheme.SlotEmpty`（0.10, 0.12, 0.16, 0.85），PrimeTween 会持续输出 `endValue equals current` 警告。
+
+**目的：**
+消除 Console 中反复出现的 PrimeTween 警告，避免创建无意义的 Tween 对象。
+
+**技术方案（方案A）：**
+在 `SetEmpty()` 中加颜色相等判断：若 `_backgroundImage.color` 已等于 `StarChartTheme.SlotEmpty`，直接赋值跳过 Tween；否则正常启动 Tween 动画。
+
+---
+
+## Checkpoint InputHandler 时序修复 - 2026-03-08 10:18
+
+**修改文件：**
+- `Assets/Scripts/Level/Checkpoint/Checkpoint.cs`
+
+**内容简述：**
+`Checkpoint.OnEnable()` 在 `InputHandler.Awake()` 之前执行时，`ServiceLocator.Get<InputHandler>()` 返回 null，导致 Checkpoint 无法订阅交互事件，玩家按下 Interact 键无响应。
+
+**目的：**
+修复 Checkpoint 因 Unity 生命周期时序不确定性导致的交互事件订阅失败问题。
+
+**技术方案（方案D）：**
+缓存 `_inputHandler` 字段引用，采用 OnEnable + Start 双重订阅保底策略：
+- `OnEnable()`：尝试获取并订阅，若 InputHandler 已注册则立即生效
+- `Start()`：若 `_inputHandler == null`（OnEnable 时未注册），在此补订阅（Start 保证在所有 Awake 之后执行）
+- `OnDisable()`：取消订阅并将 `_inputHandler = null`，确保下次 OnEnable 重新获取（支持 InputHandler 重建场景）
+此方案保留了 OnEnable/OnDisable 事件卫生模式，不依赖 Script Execution Order 的未定义行为。
+
+---
+
+## Sail Cell Tooltip 修复 - 2026-03-08 10:25
+
+**修改文件：**
+- `Assets/Scripts/UI/StarChartPanel.cs`
+
+**内容简述：**
+Sail 列（`_sharedSailColumn`）的部件 hover 时 ItemTooltip 不显示。
+
+**根本原因：**
+Tooltip 触发链路为：`SlotCellView.OnPointerEntered → TrackView.HandleCellPointerEnter → TrackView.OnCellPointerEntered → StarChartPanel.HandleCellPointerEntered → ShowTooltip`。
+
+但 Sail 的 `TypeColumn` 是独立的 `_sharedSailColumn`，在 `Bind()` 中通过 `_sharedSailColumn.Initialize(..., ownerTrack: null)` 初始化，**从未经过 `TrackView.InitColumn()`**，因此 Sail cell 的 `OnPointerEntered` 事件从未被任何地方订阅，hover 事件无法传递到 tooltip。
+
+**技术方案：**
+在 `StarChartPanel.Bind()` 初始化 `_sharedSailColumn` 之后，直接遍历其 Cells 订阅 `OnPointerEntered` / `OnPointerExited` 事件，转发到新增的 `HandleSailCellPointerEntered()` 方法（复用 `IsItemEquipped` + `GetEquippedLocation` 构建 tooltip 内容）。在 `OnDestroy()` 中对称取消订阅，保持事件卫生。

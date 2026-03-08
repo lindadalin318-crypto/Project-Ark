@@ -40,6 +40,7 @@ namespace ProjectArk.Level
 
         private bool _playerInRange;
         private bool _isActivated;
+        private InputHandler _inputHandler;
 
         // ──────────────────── Public Properties ────────────────────
 
@@ -78,16 +79,29 @@ namespace ProjectArk.Level
 
         private void OnEnable()
         {
-            var inputHandler = ServiceLocator.Get<InputHandler>();
-            if (inputHandler != null)
-                inputHandler.OnInteractPerformed += HandleInteract;
+            // Try to subscribe immediately; InputHandler may not be registered yet on first enable
+            _inputHandler = ServiceLocator.Get<InputHandler>();
+            if (_inputHandler != null)
+                _inputHandler.OnInteractPerformed += HandleInteract;
+        }
+
+        private void Start()
+        {
+            // Fallback: if OnEnable ran before InputHandler registered, subscribe now
+            if (_inputHandler == null)
+            {
+                _inputHandler = ServiceLocator.Get<InputHandler>();
+                if (_inputHandler != null)
+                    _inputHandler.OnInteractPerformed += HandleInteract;
+            }
         }
 
         private void OnDisable()
         {
-            var inputHandler = ServiceLocator.Get<InputHandler>();
-            if (inputHandler != null)
-                inputHandler.OnInteractPerformed -= HandleInteract;
+            if (_inputHandler != null)
+                _inputHandler.OnInteractPerformed -= HandleInteract;
+            // Clear reference so next OnEnable re-fetches (handles InputHandler recreation)
+            _inputHandler = null;
         }
 
         // ──────────────────── Player Detection ────────────────────

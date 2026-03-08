@@ -242,6 +242,16 @@ namespace ProjectArk.UI
                         _sharedSailColumn.GridContainer,
                         _sharedSailColumn.Cells,
                         2);
+
+                // Subscribe to Sail cell hover events for tooltip.
+                // Sail cells have OwnerTrack=null so they bypass TrackView.InitColumn();
+                // we must wire them up here directly.
+                foreach (var cell in _sharedSailColumn.Cells)
+                {
+                    if (cell == null) continue;
+                    cell.OnPointerEntered += HandleSailCellPointerEntered;
+                    cell.OnPointerExited  += HandleCellPointerExited;
+                }
             }
 
             // Apply debug SAIL column count override (only when > 0)
@@ -489,6 +499,14 @@ namespace ProjectArk.UI
             ShowTooltip(item, true, location);
         }
 
+        private void HandleSailCellPointerEntered(StarChartItemSO item)
+        {
+            if (item == null) return;
+            bool equipped = IsItemEquipped(item);
+            string location = equipped ? GetEquippedLocation(item) : string.Empty;
+            ShowTooltip(item, equipped, location);
+        }
+
         private void HandleCellPointerExited()
         {
             HideTooltip();
@@ -716,6 +734,17 @@ namespace ProjectArk.UI
 
             if (_loadoutSwitcher != null)
                 _loadoutSwitcher.OnLoadoutChanged -= HandleLoadoutChanged;
+
+            // Unsubscribe Sail cell hover events
+            if (_sharedSailColumn != null)
+            {
+                foreach (var cell in _sharedSailColumn.Cells)
+                {
+                    if (cell == null) continue;
+                    cell.OnPointerEntered -= HandleSailCellPointerEntered;
+                    cell.OnPointerExited  -= HandleCellPointerExited;
+                }
+            }
         }
     }
 }

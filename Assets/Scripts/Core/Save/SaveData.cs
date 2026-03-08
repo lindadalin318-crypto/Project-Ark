@@ -66,9 +66,16 @@ namespace ProjectArk.Core.Save
 
         /// <summary>
         /// Number of unlocked columns in the SAIL layer (1–4).
+        /// Default 2 (initial state = 2 cols × 1 row). Old saves without this field will
+        /// deserialize to 0 via JsonUtility; callers must clamp to ≥ 2.
+        /// </summary>
+        public int SailLayerCols = 2;
+
+        /// <summary>
+        /// Number of unlocked rows in the SAIL layer (1–4).
         /// Default 1. Old saves without this field will deserialize to 0; callers must clamp to ≥ 1.
         /// </summary>
-        public int SailLayerCols = 1;
+        public int SailLayerRows = 1;
 
         /// <summary>
         /// Legacy slot-level satellite IDs. Kept for migration from old saves only.
@@ -96,24 +103,42 @@ namespace ProjectArk.Core.Save
 
         /// <summary>
         /// Number of unlocked columns in the Core layer (1–4).
-        /// Default 1 = 2 cells (initial state). Old saves without this field
-        /// will deserialize to 0 via JsonUtility; callers must clamp to ≥ 1.
+        /// Default 2 (initial state = 2 cols × 1 row). Old saves without this field
+        /// will deserialize to 0 via JsonUtility; callers must clamp to ≥ 2.
         /// </summary>
-        public int CoreLayerCols = 1;
+        public int CoreLayerCols = 2;
+
+        /// <summary>
+        /// Number of unlocked rows in the Core layer (1–4).
+        /// Default 1. Old saves without this field will deserialize to 0; callers must clamp to ≥ 1.
+        /// </summary>
+        public int CoreLayerRows = 1;
 
         /// <summary>
         /// Number of unlocked columns in the Prism layer (1–4).
-        /// Default 1 = 2 cells (initial state). Old saves without this field
-        /// will deserialize to 0 via JsonUtility; callers must clamp to ≥ 1.
+        /// Default 2 (initial state = 2 cols × 1 row). Old saves without this field
+        /// will deserialize to 0 via JsonUtility; callers must clamp to ≥ 2.
         /// </summary>
-        public int PrismLayerCols = 1;
+        public int PrismLayerCols = 2;
+
+        /// <summary>
+        /// Number of unlocked rows in the Prism layer (1–4).
+        /// Default 1. Old saves without this field will deserialize to 0; callers must clamp to ≥ 1.
+        /// </summary>
+        public int PrismLayerRows = 1;
 
         /// <summary>
         /// Number of unlocked columns in the SAT layer (1–4).
-        /// Default 1 = 2 cells (initial state). Old saves without this field
-        /// will deserialize to 0 via JsonUtility; callers must clamp to ≥ 1.
+        /// Default 2 (initial state = 2 cols × 1 row). Old saves without this field
+        /// will deserialize to 0 via JsonUtility; callers must clamp to ≥ 2.
         /// </summary>
-        public int SatLayerCols = 1;
+        public int SatLayerCols = 2;
+
+        /// <summary>
+        /// Number of unlocked rows in the SAT layer (1–4).
+        /// Default 1. Old saves without this field will deserialize to 0; callers must clamp to ≥ 1.
+        /// </summary>
+        public int SatLayerRows = 1;
     }
 
     /// <summary>
