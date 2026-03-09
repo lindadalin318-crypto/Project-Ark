@@ -650,6 +650,16 @@ dotnet build Project-Ark.slnx
 
 ---
 
+## GalacticGlitch 参考资产
+
+> ⚠️ **完整分析文档（含 PlayerSkinDefault 映射表、颜色数据、防错误引用警告）见**：  
+> `Docs/Reference/GalacticGlitch_Structure_Analysis.md`
+>
+> **核心记忆**：`Primary_4.png` 对应 State 3/4/8，使用 `Primary_4` / `Primary` / `Primary_6`。  
+> `GrabGun_Base_9/8` **只属于 State 7**，绝对不能用于其他状态。
+
+---
+
 ## 实现日志 (Implementation Log) — ⚠️ 严格执行
 
 > **这是最高优先级的流程规则。** 曾因遗漏此步骤导致整个架构大修（数十个文件）未被记录。以下规则必须无条件执行。

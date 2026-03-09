@@ -1,0 +1,42 @@
+=== EventId 879 ===
+[PS] id=ResourceId::15338
+[PS] Entry: main
+[PS] CBuffers (2):
+  CB 'uniforms43' bindPoint=0 (1 vars):
+    _child0: float4 offset=0
+  CB 'uniforms56' bindPoint=1 (18 vars):
+    _child0: float4 offset=0
+    _child1: float4 offset=16
+    _child2: float offset=32
+    _child3: float offset=36
+    _child4: float4 offset=48
+    _child5: float4 offset=64
+    _child6: float2 offset=80
+    _child7: float4 offset=96
+    _child8: float4 offset=112
+    _child9: float2 offset=128
+    _child10: float4 offset=144
+    _child11: float4 offset=160
+    _child12: float2 offset=176
+    _child13: float offset=184
+    _child14: float offset=188
+    _child15: float offset=192
+    _child16: float offset=196
+    _child17: float offset=200
+[PS] Textures from reflection (3):
+  'res135' bind=3
+  'res156' bind=4
+  'res84' bind=5
+[PS] Disassembly saved (14324 chars)
+
+[Textures bound to PS]
+  [Approach1] GetReadOnlyResources: 3 descriptors
+    [0] attrs=['access', 'acquire', 'append', 'descriptor', 'disown', 'next', 'own', 'sampler', 'this', 'thisown']
+    [1] attrs=['access', 'acquire', 'append', 'descriptor', 'disown', 'next', 'own', 'sampler', 'this', 'thisown']
+    [2] attrs=['access', 'acquire', 'append', 'descriptor', 'disown', 'next', 'own', 'sampler', 'this', 'thisown']
+  (no textures extracted)
+
+[CBuffer Values]
+  [CBuffer Approach1] failed: 'renderdoc.PipeState' object has no attribute 'GetConstantBufferId'
+  CB[0] 'uniforms43' variables (from reflection only):
+    _child0: float4 offset=0

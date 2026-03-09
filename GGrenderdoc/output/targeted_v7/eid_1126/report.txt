@@ -1,0 +1,37 @@
+=== EventId 1126 ===
+[PS] id=ResourceId::15912
+[PS] Entry: main
+[PS] CBuffers (1):
+  CB 'uniforms66' bind=0 (3 vars)
+[PS] Textures (5):
+  'res219' bind=5
+  'res137' bind=6
+  'res128' bind=7
+  'res12' bind=8
+  'res30' bind=9
+[PS] Disasm saved (8986 chars)
+
+[Textures]
+  [A1] GetReadOnlyResources: 5 items
+    [0] descriptor attrs: ['acquire', 'append', 'bufferStructCount', 'byteOffset', 'byteSize', 'counterByteOffset', 'disown', 'elementByteSize', 'firstMip', 'firstSlice', 'flags', 'format', 'minLODClamp', 'next', 'numMips', 'numSlices', 'own', 'resource', 'secondary', 'swizzle', 'textureType', 'this', 'thisown', 'type', 'view']
+    [0] -> tex_slot0 res=ResourceId::4117
+    [1] descriptor attrs: ['acquire', 'append', 'bufferStructCount', 'byteOffset', 'byteSize', 'counterByteOffset', 'disown', 'elementByteSize', 'firstMip', 'firstSlice', 'flags', 'format', 'minLODClamp', 'next', 'numMips', 'numSlices', 'own', 'resource', 'secondary', 'swizzle', 'textureType', 'this', 'thisown', 'type', 'view']
+    [1] -> tex_slot1 res=ResourceId::180
+    [2] descriptor attrs: ['acquire', 'append', 'bufferStructCount', 'byteOffset', 'byteSize', 'counterByteOffset', 'disown', 'elementByteSize', 'firstMip', 'firstSlice', 'flags', 'format', 'minLODClamp', 'next', 'numMips', 'numSlices', 'own', 'resource', 'secondary', 'swizzle', 'textureType', 'this', 'thisown', 'type', 'view']
+    [2] -> tex_slot2 res=ResourceId::114486
+    [3] descriptor attrs: ['acquire', 'append', 'bufferStructCount', 'byteOffset', 'byteSize', 'counterByteOffset', 'disown', 'elementByteSize', 'firstMip', 'firstSlice', 'flags', 'format', 'minLODClamp', 'next', 'numMips', 'numSlices', 'own', 'resource', 'secondary', 'swizzle', 'textureType', 'this', 'thisown', 'type', 'view']
+    [3] -> tex_slot3 res=ResourceId::180
+    [4] descriptor attrs: ['acquire', 'append', 'bufferStructCount', 'byteOffset', 'byteSize', 'counterByteOffset', 'disown', 'elementByteSize', 'firstMip', 'firstSlice', 'flags', 'format', 'minLODClamp', 'next', 'numMips', 'numSlices', 'own', 'resource', 'secondary', 'swizzle', 'textureType', 'this', 'thisown', 'type', 'view']
+    [4] -> tex_slot4 res=ResourceId::114486
+  SAVED tex_slot0: OK (17158 bytes)
+  SAVED tex_slot1: OK (77 bytes)
+  SAVED tex_slot2: OK (136335 bytes)
+  SAVED tex_slot3: OK (77 bytes)
+  SAVED tex_slot4: OK (136335 bytes)
+
+[CBuffer Values]
+  CB[0] 'uniforms66':
+    (GetCBufferVariableContents failed: 'renderdoc.PipeState' object has no attribute 'GetConstantBuffer')
+    _child0: float @offset=0
+    _child1: float @offset=4
+    _child2: float4 @offset=16

@@ -1,0 +1,48 @@
+=== EventId 1080 ===
+[PS] id=ResourceId::15338
+[PS] Entry: main
+[PS] CBuffers (2):
+  CB 'uniforms43' bind=0 (1 vars)
+  CB 'uniforms56' bind=1 (18 vars)
+[PS] Textures (3):
+  'res135' bind=3
+  'res156' bind=4
+  'res84' bind=5
+[PS] Disasm saved (14324 chars)
+
+[Textures]
+  [A1] GetReadOnlyResources: 3 items
+    [0] descriptor attrs: ['acquire', 'append', 'bufferStructCount', 'byteOffset', 'byteSize', 'counterByteOffset', 'disown', 'elementByteSize', 'firstMip', 'firstSlice', 'flags', 'format', 'minLODClamp', 'next', 'numMips', 'numSlices', 'own', 'resource', 'secondary', 'swizzle', 'textureType', 'this', 'thisown', 'type', 'view']
+    [0] -> tex_slot0 res=ResourceId::6673
+    [1] descriptor attrs: ['acquire', 'append', 'bufferStructCount', 'byteOffset', 'byteSize', 'counterByteOffset', 'disown', 'elementByteSize', 'firstMip', 'firstSlice', 'flags', 'format', 'minLODClamp', 'next', 'numMips', 'numSlices', 'own', 'resource', 'secondary', 'swizzle', 'textureType', 'this', 'thisown', 'type', 'view']
+    [1] -> tex_slot1 res=ResourceId::4900
+    [2] descriptor attrs: ['acquire', 'append', 'bufferStructCount', 'byteOffset', 'byteSize', 'counterByteOffset', 'disown', 'elementByteSize', 'firstMip', 'firstSlice', 'flags', 'format', 'minLODClamp', 'next', 'numMips', 'numSlices', 'own', 'resource', 'secondary', 'swizzle', 'textureType', 'this', 'thisown', 'type', 'view']
+    [2] -> tex_slot2 res=ResourceId::6673
+  SAVED tex_slot0: OK (662097 bytes)
+  SAVED tex_slot1: OK (70192 bytes)
+  SAVED tex_slot2: OK (662097 bytes)
+
+[CBuffer Values]
+  CB[0] 'uniforms43':
+    (GetCBufferVariableContents failed: 'renderdoc.PipeState' object has no attribute 'GetConstantBuffer')
+    _child0: float4 @offset=0
+  CB[1] 'uniforms56':
+    (GetCBufferVariableContents failed: 'renderdoc.PipeState' object has no attribute 'GetConstantBuffer')
+    _child0: float4 @offset=0
+    _child1: float4 @offset=16
+    _child2: float @offset=32
+    _child3: float @offset=36
+    _child4: float4 @offset=48
+    _child5: float4 @offset=64
+    _child6: float2 @offset=80
+    _child7: float4 @offset=96
+    _child8: float4 @offset=112
+    _child9: float2 @offset=128
+    _child10: float4 @offset=144
+    _child11: float4 @offset=160
+    _child12: float2 @offset=176
+    _child13: float @offset=184
+    _child14: float @offset=188
+    _child15: float @offset=192
+    _child16: float @offset=196
+    _child17: float @offset=200

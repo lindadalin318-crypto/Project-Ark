@@ -1,0 +1,10 @@
+=== EventId 1484 ===
+[PS] Disassembly failed: in method 'ReplayController_DisassembleShader', argument 3 of type 'ShaderReflection const *'
+[PS] Entry: main
+[PS] CBuffers (1):
+  CB 'uniforms46' (1 vars):
+    - _child0 : float4 [1x4]
+[PS] Samplers (1):
+  Sampler 'res16' reg=0
+[PS] Read-only resources (2):
+[ERROR] 'renderdoc.ShaderResource' object has no attribute 'resType'

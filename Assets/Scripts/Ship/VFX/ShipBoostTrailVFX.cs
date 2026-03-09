@@ -3,16 +3,22 @@ using UnityEngine;
 namespace ProjectArk.Ship
 {
     /// <summary>
-    /// Drives the dedicated Boost trail particle system (BoostTrailParticles).
+    /// Drives the Boost trail particle systems (Glow layer + Ember layer).
     /// Activates on Boost start, deactivates on Boost end.
-    /// All parameters are sourced from ShipJuiceSettingsSO — no hardcoded values.
+    /// Two-layer design mirrors GG's mat_boost_trail_glow + mat_boost_ember_trail:
+    ///   - Glow layer:  orange-yellow → red  (HDR, large soft particles)
+    ///   - Ember layer: magenta → deep-red   (HDR, small sharp sparks)
+    /// All parameters sourced from ShipJuiceSettingsSO.
     /// </summary>
     [RequireComponent(typeof(ShipBoost))]
     public class ShipBoostTrailVFX : MonoBehaviour
     {
         [Header("References")]
-        [Tooltip("The dedicated Boost trail ParticleSystem (child of Ship_Sprite_Back).")]
+        [Tooltip("Glow trail ParticleSystem (child of Ship_Sprite_Back). Matches GG mat_boost_trail_glow.")]
         [SerializeField] private ParticleSystem _boostTrailParticles;
+
+        [Tooltip("Ember trail ParticleSystem (child of Ship_Sprite_Back). Matches GG mat_boost_ember_trail. Optional.")]
+        [SerializeField] private ParticleSystem _boostEmberParticles;
 
         [SerializeField] private ShipJuiceSettingsSO _juiceSettings;
 
@@ -21,8 +27,14 @@ namespace ProjectArk.Ship
         // ══════════════════════════════════════════════════════════════
 
         private ShipBoost _boost;
-        private ParticleSystem.EmissionModule _emission;
-        private ParticleSystem.MainModule _main;
+
+        private ParticleSystem.EmissionModule _glowEmission;
+        private ParticleSystem.MainModule     _glowMain;
+
+        private ParticleSystem.EmissionModule _emberEmission;
+        private ParticleSystem.MainModule     _emberMain;
+
+        private bool _hasEmber;
 
         // ══════════════════════════════════════════════════════════════
         // Lifecycle
@@ -34,16 +46,22 @@ namespace ProjectArk.Ship
 
             if (_boostTrailParticles == null)
             {
-                Debug.LogWarning("[ShipBoostTrailVFX] No BoostTrailParticles assigned. Disabling.");
+                Debug.LogWarning("[ShipBoostTrailVFX] No BoostTrailParticles (glow) assigned. Disabling.");
                 enabled = false;
                 return;
             }
 
-            _emission = _boostTrailParticles.emission;
-            _main     = _boostTrailParticles.main;
-
-            // Ensure particles start stopped
+            _glowEmission = _boostTrailParticles.emission;
+            _glowMain     = _boostTrailParticles.main;
             _boostTrailParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+            _hasEmber = _boostEmberParticles != null;
+            if (_hasEmber)
+            {
+                _emberEmission = _boostEmberParticles.emission;
+                _emberMain     = _boostEmberParticles.main;
+                _boostEmberParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
         }
 
         private void OnEnable()
@@ -63,7 +81,7 @@ namespace ProjectArk.Ship
                 _boost.OnBoostEnded   -= HandleBoostEnded;
             }
 
-            StopTrailParticles(clearImmediately: true);
+            StopAll(clearImmediately: true);
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -72,79 +90,149 @@ namespace ProjectArk.Ship
 
         private void HandleBoostStarted()
         {
-            if (_boostTrailParticles == null || _juiceSettings == null) return;
+            if (_juiceSettings == null) return;
 
-            ApplyParticleSettings();
+            ApplyGlowSettings();
             _boostTrailParticles.Play();
+
+            if (_hasEmber)
+            {
+                ApplyEmberSettings();
+                _boostEmberParticles.Play();
+            }
         }
 
         private void HandleBoostEnded()
         {
-            // Stop emitting but let existing particles finish their lifetime naturally
-            StopTrailParticles(clearImmediately: false);
+            StopAll(clearImmediately: false);
         }
 
         // ══════════════════════════════════════════════════════════════
-        // Parameter Configuration
+        // Glow Layer — mat_boost_trail_glow
+        // Orange-yellow (HDR 1.89, 0.828, 0.426) → Red (0.973, 0.106, 0.246)
         // ══════════════════════════════════════════════════════════════
 
-        private void ApplyParticleSettings()
+        private void ApplyGlowSettings()
         {
-            // Emission rate
-            _emission.rateOverTime = _juiceSettings.BoostTrailEmissionRate;
+            var s = _juiceSettings;
 
-            // Main module — Local space so particles track ship rotation
-            // Particles emit in local -Y direction (ship tail), direction follows ship heading
-            _main.loop            = true;
-            _main.simulationSpace = ParticleSystemSimulationSpace.Local;
-            _main.startLifetime   = _juiceSettings.BoostTrailLifetime;
-            _main.startSpeed      = 0f; // Speed driven by velocityOverLifetime below
+            _glowEmission.rateOverTime = s.BoostTrailEmissionRate;
 
-            // Velocity over lifetime: emit in local -Y direction (ship tail)
+            _glowMain.loop            = true;
+            _glowMain.simulationSpace = ParticleSystemSimulationSpace.Local;
+            _glowMain.startLifetime   = s.BoostTrailLifetime;
+            _glowMain.startSpeed      = 0f;
+            _glowMain.maxParticles    = 300;
+
+            _glowMain.startSize = new ParticleSystem.MinMaxCurve(
+                s.BoostTrailStartSizeMin,
+                s.BoostTrailStartSizeMax);
+
+            // Velocity: local -Y (ship tail direction)
             var vel = _boostTrailParticles.velocityOverLifetime;
             vel.enabled = true;
             vel.space   = ParticleSystemSimulationSpace.Local;
             vel.x       = 0f;
-            vel.y       = new ParticleSystem.MinMaxCurve(-_juiceSettings.BoostTrailStartSpeed);
+            vel.y       = new ParticleSystem.MinMaxCurve(-s.BoostTrailStartSpeed);
             vel.z       = 0f;
 
-            // Random start size between min and max
-            _main.startSize = new ParticleSystem.MinMaxCurve(
-                _juiceSettings.BoostTrailStartSizeMin,
-                _juiceSettings.BoostTrailStartSizeMax);
-
-            // Color: teal → transparent over lifetime
-            var colorOverLifetime = _boostTrailParticles.colorOverLifetime;
-            colorOverLifetime.enabled = true;
-            Color startColor = _juiceSettings.BoostTrailColor;
-            Color endColor   = new Color(startColor.r, startColor.g, startColor.b, 0f);
-            colorOverLifetime.color = new ParticleSystem.MinMaxGradient(
+            // Color: orange-yellow → red → transparent
+            // GG: Color_b3dc=(1.89,0.828,0.426) → Color_d33d=(0.973,0.106,0.246)
+            var col = _boostTrailParticles.colorOverLifetime;
+            col.enabled = true;
+            Color startColor = s.BoostTrailColorStart;
+            Color midColor   = s.BoostTrailColorEnd;
+            Color endColor   = new Color(midColor.r, midColor.g, midColor.b, 0f);
+            col.color = new ParticleSystem.MinMaxGradient(
                 new Gradient
                 {
                     colorKeys = new[]
                     {
                         new GradientColorKey(startColor, 0f),
+                        new GradientColorKey(midColor,   0.6f),
                         new GradientColorKey(endColor,   1f)
                     },
                     alphaKeys = new[]
                     {
-                        new GradientAlphaKey(1f, 0f),
-                        new GradientAlphaKey(0f, 1f)
+                        new GradientAlphaKey(1f,  0f),
+                        new GradientAlphaKey(0.8f, 0.5f),
+                        new GradientAlphaKey(0f,  1f)
                     }
                 });
-
-            // Max particles cap (performance guard)
-            _main.maxParticles = 200;
         }
 
-        private void StopTrailParticles(bool clearImmediately)
-        {
-            if (_boostTrailParticles == null) return;
+        // ══════════════════════════════════════════════════════════════
+        // Ember Layer — mat_boost_ember_trail
+        // Magenta (HDR 2.0, 0.0, 1.083) → Deep-red (0.849, 0.076, 0.215)
+        // ══════════════════════════════════════════════════════════════
 
-            if (clearImmediately)
-                _boostTrailParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-            else
-                _boostTrailParticles.Stop(false, ParticleSystemStopBehavior.StopEmitting);
+        private void ApplyEmberSettings()
+        {
+            var s = _juiceSettings;
+
+            _emberEmission.rateOverTime = s.BoostEmberEmissionRate;
+
+            _emberMain.loop            = true;
+            _emberMain.simulationSpace = ParticleSystemSimulationSpace.Local;
+            _emberMain.startLifetime   = s.BoostEmberLifetime;
+            _emberMain.startSpeed      = 0f;
+            _emberMain.maxParticles    = 200;
+
+            _emberMain.startSize = new ParticleSystem.MinMaxCurve(
+                s.BoostEmberStartSizeMin,
+                s.BoostEmberStartSizeMax);
+
+            // Velocity: local -Y with slight random spread (ember scatter)
+            // NOTE: x/y/z must all use the same MinMaxCurve mode to avoid
+            // "Particle Velocity curves must all be in the same mode" error.
+            // Use RandomBetweenTwoConstants (two-float ctor) for all three axes.
+            var vel = _boostEmberParticles.velocityOverLifetime;
+            vel.enabled = true;
+            vel.space   = ParticleSystemSimulationSpace.Local;
+            vel.x       = new ParticleSystem.MinMaxCurve(-0.3f, 0.3f);
+            vel.y       = new ParticleSystem.MinMaxCurve(-s.BoostEmberStartSpeed, -s.BoostEmberStartSpeed * 0.5f);
+            vel.z       = new ParticleSystem.MinMaxCurve(0f, 0f);
+
+            // Color: magenta → deep-red → transparent
+            // GG: Color_b3dc=(2.0,0.0,1.083) → Color_d33d=(0.849,0.076,0.215)
+            var col = _boostEmberParticles.colorOverLifetime;
+            col.enabled = true;
+            Color startColor = s.BoostEmberColorStart;
+            Color midColor   = s.BoostEmberColorEnd;
+            Color endColor   = new Color(midColor.r, midColor.g, midColor.b, 0f);
+            col.color = new ParticleSystem.MinMaxGradient(
+                new Gradient
+                {
+                    colorKeys = new[]
+                    {
+                        new GradientColorKey(startColor, 0f),
+                        new GradientColorKey(midColor,   0.5f),
+                        new GradientColorKey(endColor,   1f)
+                    },
+                    alphaKeys = new[]
+                    {
+                        new GradientAlphaKey(1f,  0f),
+                        new GradientAlphaKey(0.6f, 0.4f),
+                        new GradientAlphaKey(0f,  1f)
+                    }
+                });
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // Helpers
+        // ══════════════════════════════════════════════════════════════
+
+        private void StopAll(bool clearImmediately)
+        {
+            var mode = clearImmediately
+                ? ParticleSystemStopBehavior.StopEmittingAndClear
+                : ParticleSystemStopBehavior.StopEmitting;
+
+            if (_boostTrailParticles != null)
+                _boostTrailParticles.Stop(!clearImmediately, mode);
+
+            if (_hasEmber && _boostEmberParticles != null)
+                _boostEmberParticles.Stop(!clearImmediately, mode);
         }
     }
 }

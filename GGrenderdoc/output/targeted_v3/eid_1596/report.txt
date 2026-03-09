@@ -1,0 +1,35 @@
+=== EventId 1596 ===
+[PS] id=ResourceId::15534
+[PS] Entry: main
+[PS] CBuffers (1):
+  CB 'uniforms141' bindPoint=0 (6 vars):
+    _child0: float4 offset=0
+    _child1: float4 offset=16
+    _child2: float4 offset=32
+    _child3: float offset=48
+    _child4: float4 offset=64
+    _child5: float4 offset=80
+[PS] Textures from reflection (4):
+  'res12' bind=1
+  'res125' bind=2
+  'res574' bind=3
+  'res408' bind=4
+[PS] Disassembly saved (21250 chars)
+
+[Textures bound to PS]
+  [Approach1] GetReadOnlyResources: 4 descriptors
+    [0] attrs=['access', 'acquire', 'append', 'descriptor', 'disown', 'next', 'own', 'sampler', 'this', 'thisown']
+    [1] attrs=['access', 'acquire', 'append', 'descriptor', 'disown', 'next', 'own', 'sampler', 'this', 'thisown']
+    [2] attrs=['access', 'acquire', 'append', 'descriptor', 'disown', 'next', 'own', 'sampler', 'this', 'thisown']
+    [3] attrs=['access', 'acquire', 'append', 'descriptor', 'disown', 'next', 'own', 'sampler', 'this', 'thisown']
+  (no textures extracted)
+
+[CBuffer Values]
+  [CBuffer Approach1] failed: 'renderdoc.PipeState' object has no attribute 'GetConstantBufferId'
+  CB[0] 'uniforms141' variables (from reflection only):
+    _child0: float4 offset=0
+    _child1: float4 offset=16
+    _child2: float4 offset=32
+    _child3: float offset=48
+    _child4: float4 offset=64
+    _child5: float4 offset=80

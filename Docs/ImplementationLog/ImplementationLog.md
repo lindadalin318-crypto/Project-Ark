@@ -1,4 +1,4 @@
-# Implementation Log — Project Ark
+﻿# Implementation Log — Project Ark
 
 ---
 
@@ -9830,3 +9830,408 @@ Investigation confirmed that `GrabGun_Back_3` belongs exclusively to the GG **Gr
 - **ShipBuilder.cs**: Replaced `FindAssets("GrabGun_Back_3 t:Sprite")` lookup with `Sprite backSprite = null`
 - **ShipPrefabRebuilder.cs**: Same — removed `FindSprite("GrabGun_Back_3")` and its null-check warning
 - `Ship_Sprite_Back` node structure and SortingOrder (-3) are preserved; sprite slot left empty pending original art
+
+---
+
+## ShipBoostTrailVFX Velocity Curve Mode 修复 — 2026-03-09 12:57
+
+### 修改文件
+- `Assets/Scripts/Ship/VFX/ShipBoostTrailVFX.cs`（`ApplyEmberSettings` 方法）
+
+### 内容简述
+修复 Unity 报错：`Particle Velocity curves must all be in the same mode`。
+
+### 根因
+`ApplyEmberSettings()` 中 `velocityOverLifetime` 的三轴赋值模式不一致：
+- `vel.x` = `new MinMaxCurve(-0.3f, 0.3f)` → **RandomBetweenTwoConstants (mode=1)**
+- `vel.y` = `new MinMaxCurve(a, b)` → **RandomBetweenTwoConstants (mode=1)**
+- `vel.z` = `0f`（直接赋 float）→ **Constant (mode=0)**
+
+Unity 要求同一个 VelocityModule 的 x/y/z 必须使用相同的 MinMaxCurve mode。
+
+### 技术方案
+将 `vel.z = 0f` 改为 `vel.z = new ParticleSystem.MinMaxCurve(0f, 0f)`，统一为 RandomBetweenTwoConstants 模式。
+
+---
+
+## Glitch 飞船贴图 PPU 修正 — 2026-03-09 12:53
+
+### 修改文件
+- `Assets/_Art/Ship/Glitch/Movement_10.png.meta`（spritePixelsToUnits: 100 → 320）
+- `Assets/_Art/Ship/Glitch/Movement_3.png.meta`（spritePixelsToUnits: 100 → 320）
+- `Assets/_Art/Ship/Glitch/Movement_21.png.meta`（spritePixelsToUnits: 100 → 320）
+
+### 内容简述
+三张新复制的贴图（Movement_10/3/21.png）被 Unity 以默认 PPU=100 导入，导致飞船贴图在世界空间中显示为 4.3 units（430px÷100），而 GG 原版是 1.34 units（430px÷320），差了 3.2 倍。
+
+### 根因
+从 GG 复制 PNG 文件时没有同步 meta 文件，Unity 自动生成了默认 PPU=100 的 meta。GG 原版 `Movement_10.png.meta` 中 `spritePixelsToUnits: 320`，与 Primary_4/Primary/Primary_6 系列一致。
+
+### 技术方案
+直接修改三个 .meta 文件中的 `spritePixelsToUnits` 字段：100 → 320。Unity 重新导入后贴图世界尺寸将与 GG 原版完全一致（1.34×1.34 units）。
+
+### 验收
+在 Unity Editor 中 `Assets > Reimport All`（或等待自动检测），确认飞船贴图大小与 GG 截图一致。
+
+---
+
+## Glitch 飞船 Normal 状态贴图修正 — 2026-03-09 12:44
+
+### 修改文件
+- `Assets/_Art/Ship/Glitch/Movement_10.png`（新增，从 GG 复制）
+- `Assets/_Art/Ship/Glitch/Movement_3.png`（新增，从 GG 复制）
+- `Assets/_Art/Ship/Glitch/Movement_21.png`（新增，从 GG 复制）
+- `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs`（修正 sprite 引用）
+
+### 内容简述
+反向追踪 GG `PlayerSkinDefault.asset` 的完整 stateToSpritesTable，发现之前 Builder 使用的 `GrabGun_Base_9`（solidSprite）和 `GrabGun_Base_8`（hlSprite）是**错误的**。
+
+**正确的 State 对应关系：**
+- State 0 (Normal 普通飞行)：solidSprite=`Movement_10`, liquidSprite=`Movement_3`, highlightSprite=`Movement_21`
+- State 3 (Boost 加速)：solidSprite=`Primary_4`, liquidSprite=`Primary`, highlightSprite=`Primary_6`
+- State 7 (GrabGun 抓钩)：solidSprite=`GrabGun_Base_*`（我们不使用此状态）
+
+`GrabGun_Base_9/8` 属于 State 7（GrabGun 抓钩状态），与 Glitch 飞船的 Normal 状态完全无关。
+
+### 目的
+修正 ShipPrefabRebuilder 使用正确的 Normal 状态贴图，消除之前错误引用 GrabGun 系列贴图的问题。
+
+### 技术方案
+- 从 GG Texture2D 目录复制 `Movement_10/3/21.png` 到 `Assets/_Art/Ship/Glitch/`
+- ShipPrefabRebuilder.cs：`FindSprite("GrabGun_Base_9")` → `FindSprite("Movement_10")`（solidSprite），新增 `FindSprite("Movement_3")`（liquidSprite），`FindSprite("GrabGun_Base_8")` → `FindSprite("Movement_21")`（hlSprite）
+- 三张贴图导入后运行 `FORCE Rebuild` 即可自动更新 Ship.prefab 的 SpriteRenderer 引用
+
+### 验收步骤
+1. 在 Unity Editor 中等待 Movement_10/3/21.png 自动导入（或手动 Reimport）
+2. 运行 `ProjectArk > Ship > FORCE Rebuild Ship Prefab (Delete + Recreate)`
+3. 确认 Console 日志中出现 `Movement_10`、`Movement_3`、`Movement_21` 的 sprite wired 信息
+4. Play Mode 验证飞船外观使用正确的 Normal 状态贴图
+
+---
+
+## Glitch 飞船 Boost 尾焰特效精确复刻 — 2026-03-09 11:19
+
+### 修改文件
+- `Assets/Scripts/Ship/Data/ShipJuiceSettingsSO.cs`
+- `Assets/Scripts/Ship/VFX/ShipBoostTrailVFX.cs`
+- `Assets/Scripts/Ship/VFX/ShipEngineVFX.cs`
+- `Assets/_Data/Ship/DefaultShipJuiceSettings.asset`
+
+### 内容
+通过逆向分析 GG 参考资产中的材质文件，精确提取颜色参数并一比一复刻到项目中：
+
+**引擎粒子颜色（ShipEngineVFX）**
+- 原来：单色紫色 `(0.545, 0.090, 1.0)`
+- 现在：双色渐变 — 青蓝 `TopColor=(0.099, 0.846, 1.0)` → 品红 `BottomColor=(1.0, 0.0, 0.915)` → 透明
+- 来源：GG `MainEngineParticle.mat` 的 `TopColor` / `BottomColor` 字段
+
+**Boost 尾焰 Glow 层（ShipBoostTrailVFX）**
+- 原来：单色紫色
+- 现在：橙黄 HDR `(1.89, 0.828, 0.426)` → 红色 `(0.973, 0.106, 0.246)` → 透明
+- 来源：GG `mat_boost_trail_glow.mat` 的 `Color_b3dc` / `Color_d33d` 字段
+
+**Boost 尾焰 Ember 层（新增，ShipBoostTrailVFX）**
+- 新增第二层粒子系统（ember sparks）
+- 颜色：品红 HDR `(2.0, 0.0, 1.083)` → 深红 `(0.849, 0.076, 0.215)` → 透明
+- 来源：GG `mat_boost_ember_trail.mat` 的 `Color_b3dc` / `Color_d33d` 字段
+- 特点：粒子更小（0.04–0.10），带随机横向散射（±0.3），模拟火星飞溅
+
+### 目的
+一比一复刻 GG Primary_4.png 飞船的 Boost 尾焰视觉效果，包括颜色精确匹配
+
+### 技术
+- 逆向分析 GG `.mat` 文件的 `m_Colors` 字段（支持 HDR 超亮值 >1.0）
+- `ShipJuiceSettingsSO` 新增 `EngineParticleColorTop/Bottom`、`BoostTrailColorStart/End`、`BoostEmberColor*` 等参数
+- `ShipBoostTrailVFX` 重构为双层粒子架构（`_boostTrailParticles` glow + `_boostEmberParticles` ember）
+- `colorOverLifetime` 使用三段 Gradient（start→mid→fade）精确还原材质渐变效果
+- Ember 层使用 `velocityOverLifetime.x = MinMaxCurve(-0.3, 0.3)` 模拟火星横向散射
+
+### 待办（需在 Unity Editor 中完成）
+1. 在 Ship Prefab 的 `ShipBoostTrailVFX` 组件上，将新的 `_boostEmberParticles` 字段指向一个新建的子 ParticleSystem（可复制现有 BoostTrail PS 并命名为 `BoostEmberTrail`）
+2. 确认两个 PS 的 Material 使用 Additive 混合模式（URP Particles/Additive 或 Sprites/Additive）
+
+---
+
+## ShipPrefabRebuilder 增强 — 2026-03-09 11:34
+
+### 修改文件
+- `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs`
+
+### 内容
+重写一键生成工具，新增以下能力：
+
+**新增节点**
+- `BoostEmberParticles`（ParticleSystem，Ship_Sprite_Back 子节点）— 对应 `ShipBoostTrailVFX._boostEmberParticles`
+- `EngineParticles`（ParticleSystem，Ship_Sprite_Back 子节点）— 对应 `ShipEngineVFX._engineParticles`
+
+**新增组件连线**
+- `ShipEngineVFX` 组件：自动添加到 Ship root，连线 `_engineParticles` 和 `_juiceSettings`
+- `ShipBoostTrailVFX._boostEmberParticles`：连线到新建的 `BoostEmberParticles` 子节点
+
+**Force Rebuild 模式**
+- 新增菜单项 `ProjectArk > Ship > FORCE Rebuild Ship Prefab (Delete + Recreate)`
+- 先删除所有受管节点（MANAGED_VISUAL_CHILDREN + MANAGED_BACK_CHILDREN）和受管组件（ShipBoostTrailVFX、ShipEngineVFX），再从零重建
+- 普通 Rebuild 保持幂等（更新已有节点，不删除）
+
+**代码重构**
+- 提取 `EnsureComponent<T>` 泛型 helper，统一组件添加逻辑
+- 提取 `WireJuiceSettings` helper，避免重复查找 SO
+- `ForceDeleteManagedNodes` / `ForceDeleteManagedComponents` 集中管理删除逻辑
+- 所有 PS 子节点统一通过 `EnsureParticleSystemChild` 创建，自动分配 ShipGlowMaterial
+
+### 目的
+省去手动在 Unity Editor 中连线 `BoostEmberParticles` 和 `EngineParticles` 的操作，一键完成所有 Prefab 配置
+
+### 技术
+- `PrefabUtility.EditPrefabContentsScope` 安全编辑 Prefab
+- `SerializedObject` + `FindProperty` 连线所有 `[SerializeField]` 字段
+- `Object.DestroyImmediate` 在 Force Rebuild 模式下删除受管节点
+
+---
+
+## Bug Fix: ShipPrefabRebuilder Unity Object ?? 运算符陷阱 — 2026-03-09 11:59
+
+### 修改文件
+- `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs`
+
+### 内容
+修复 `MissingComponentException: There is no 'SpriteRenderer' attached to "Ship_Sprite_Back"` 错误。
+
+将所有 `GetComponent<T>() ?? AddComponent<T>()` 写法改为显式 null 检查：
+```csharp
+// 修复前（有问题）
+var sr = go.GetComponent<SpriteRenderer>() ?? go.AddComponent<SpriteRenderer>();
+
+// 修复后（正确）
+var sr = go.GetComponent<SpriteRenderer>();
+if (sr == null) sr = go.AddComponent<SpriteRenderer>();
+```
+涉及 `EnsureSpriteLayer`、`EnsureParticleSystemChild`、`EnsureTrailRendererChild`、`EnsureDodgeSpriteChild` 四个方法。
+
+### 目的
+消除 Force Rebuild 时的运行时异常，使 Builder 能正常完成 Prefab 重建。
+
+### 技术
+Unity 重载了 `==` 运算符以支持"假 null"（已销毁/无效的 UnityEngine.Object 在 `==` 比较时返回 true，但 C# 的 `??` 运算符绕过了 Unity 的 `==` 重载，直接检查 CLR 引用是否为 null）。在 Prefab 编辑上下文（`EditPrefabContentsScope`）中，`GetComponent` 在某些情况下返回一个"假 null"的 Unity Object，`??` 无法识别，导致 `AddComponent` 未被调用，后续访问该无效引用时抛出 `MissingComponentException`。
+
+---
+
+## GalacticGlitch 参考文档重组 — 2026-03-09 13:06
+
+### 修改文件
+- **新建**：`Docs/Reference/GalacticGlitch_Structure_Analysis.md`
+- **删除**：`Docs/Reference/GalacticGlitch_ArtAssets_Analysis.md`
+- **修改**：`CLAUDE.md`（GalacticGlitch 章节精简为引用链接）
+
+### 内容简述
+将原 `GalacticGlitch_ArtAssets_Analysis.md` 重命名为 `GalacticGlitch_Structure_Analysis.md`，并大幅完善内容：
+1. 新增"零号警告"章节，明确列出命名陷阱和最常犯错误
+2. 新增 `PlayerSkinDefault.asset` 完整 Sprite 映射表（含 fadeDuration、spritesOffset 数据）
+3. 新增颜色数据表（shipHLSR、transitionColor、energyModule 系列颜色，均为紫色系）
+4. 将 GrabGun_Base 系列明确标注为"State 7 专用"，防止误用
+5. 新增资产路径速查表
+6. CLAUDE.md 中的冗余映射表章节替换为简洁引用
+
+### 目的
+防止反复犯"将 GrabGun_Base_9 误用于 Primary 状态"的错误，将权威参考数据集中到单一文档中。
+
+### 技术
+通过 PowerShell GUID 解析（遍历 `.meta` 文件匹配 GUID）从 `PlayerSkinDefault.asset` 反查所有 Sprite 文件名，建立完整的 State→Sprite 映射表。
+
+---
+
+## Boost Trail 材质修复 - 2026-03-09 13:20
+
+### 新建文件
+- `Assets/_Art/Ship/Glitch/mat_boost_trail_glow.mat`
+- `Assets/_Art/Ship/Glitch/mat_boost_ember_trail.mat`
+- `Assets/Scripts/Ship/Editor/CreateBoostTrailMaterials.cs`
+
+### 修改文件
+- `Assets/_Prefabs/Ship/Ship.prefab` — 3 处粒子 Renderer 材质替换
+
+### 目的
+修复 Boost Trail 特效显示为紫色的问题，对齐 GG 参考的橙黄/品红 Additive 辉光效果。
+
+### 技术方案
+根本原因：BoostTrail / BoostEmberParticles / BoostTrailParticles 三个粒子 Renderer 均使用 `ShipGlowMaterial`（青绿色 Sprites/Default），与 colorOverLifetime 橙黄/品红混合后呈紫色。修复：创建 URP Particles/Unlit Additive 材质（`mat_boost_trail_glow` 橙黄 HDR / `mat_boost_ember_trail` 品红 HDR），按行号精确替换 Ship.prefab 中对应 Renderer 的材质 GUID。
+
+
+---
+
+## Boost Trail 材质修复 - 2026-03-09 13:20
+
+### 新建文件
+- Assets/_Art/Ship/Glitch/mat_boost_trail_glow.mat  橙黄色 HDR Additive 粒子材质
+- Assets/_Art/Ship/Glitch/mat_boost_ember_trail.mat  品红色 HDR Additive 粒子材质
+- Assets/Scripts/Ship/Editor/CreateBoostTrailMaterials.cs  一键创建材质的 Editor 工具脚本
+
+### 修改文件
+- Assets/_Prefabs/Ship/Ship.prefab  替换 3 处粒子系统 Renderer 材质引用
+
+### 内容简述
+修复 Boost Trail 特效显示为紫色的问题。
+
+### 目的
+对齐 GalacticGlitch 参考游戏的 Boost Trail 视觉效果（橙黄/品红 Additive 辉光）。
+
+### 技术方案
+**根本原因**：BoostTrail / BoostEmberParticles / BoostTrailParticles 三个粒子系统的 Renderer 均使用了 ShipGlowMaterial（青绿色 Sprites/Default 材质），与粒子系统 colorOverLifetime 的橙黄/品红颜色混合后呈现紫色。
+
+**修复**：
+1. 通过 Editor 脚本（CreateBoostTrailMaterials.cs）创建两个 URP Particles/Unlit Additive 材质：
+   - mat_boost_trail_glow：_BaseColor = (1.89, 0.828, 0.426) HDR 橙黄，对应 GG mat_boost_trail_glow
+   - mat_boost_ember_trail：_BaseColor = (2.0, 0.0, 1.083) HDR 品红，对应 GG mat_boost_ember_trail
+   - 两者均设置 _Blend=2（Additive）、_SrcBlend=1（One）、_DstBlend=1（One）
+2. 在 Ship.prefab 中按行号精确替换 3 处材质 GUID：
+   - Line 500：BoostTrail Renderer  mat_boost_trail_glow
+   - Line 15550：BoostEmberParticles Renderer  mat_boost_ember_trail
+   - Line 20477：BoostTrailParticles Renderer  mat_boost_trail_glow
+   - 保留 Ship_Sprite_Liquid（Line 5486）和 EngineParticles（Line 10713）不变
+
+---
+
+## GalacticGlitch Boost Trail VFX 深度研究 — 2026-03-09 15:17
+
+### 新建文件
+- `Docs/Reference/GalacticGlitch_BoostTrail_VFX_Plan.md`
+
+### 内容简述
+对 GalacticGlitch 飞船 Boost 状态（State 1）移动拖尾特效进行完整逆向研究，并与之前的 Primary VFX Plan 区分开来。
+
+### 目的
+澄清之前研究中提到的"TrailRenderer + 粒子系统"架构，明确哪些资产可复用、哪些需要重建，为 Project Ark 提供可落地的实现方案。
+
+### 技术方案
+**GG Boost Trail 三层架构**：
+1. **TrailRenderer 主拖尾**：`BurnoutTrail (fire/fucsia/plasm).prefab`，使用自定义程序化 Shader（无贴图），通过 `_TintA`/`_TintB` HDR 颜色参数控制火焰外观。widthMultiplier=3.0，time=3.5s，头细尾宽曲线。
+2. **火焰粒子**：`ps_techno_flame_*` 系列，使用 `vfx_boost_techno_flame.png` 纹理，关键参数：`rateOverDistance=15`（按移动距离发射），生命极短（0.07~0.4s）。
+3. **余烬粒子**：`ps_ember_*` 系列，使用 `vfx_ember_trail.png` + `vfx_ember_sparks.png` 纹理，`ps_embers_lasting` 在 Boost 启动时以 speed=50 一次性爆发。
+
+**资产可用性**：
+- ✅ 可直接复制：`vfx_boost_techno_flame.png`、`vfx_ember_trail.png`、`vfx_ember_sparks.png`
+- ❌ 不可用：所有 `.mat` 文件（依赖 GG 自定义 Shader Graph，无 .shadergraph 文件）
+- ❌ 不可用：`BurnoutTrail` prefab 的程序化火焰效果（Shader 不可用）
+
+**Project Ark 替代方案**：TrailRenderer + URP Particles/Unlit Additive 材质 + 上述可复用纹理，通过 HDR BaseColor 近似原版颜色效果。
+
+---
+
+## RenderDoc 纹理提取脚本修复 (v4)  2026-03-09 19:43
+
+### 修改文件
+- Tools/renderdoc_extract_targeted.py  修复纹理提取 API，升级为 v4
+
+### 内容简述
+修复了 RenderDoc Python API 中 UsedDescriptor 对象的纹理 ResourceId 访问方式，成功提取了 GalacticGlitch Boost Trail 相关 Draw Call 的所有纹理。
+
+### 目的
+获取 GG Boost Trail 特效的实际运行时纹理，用于 Project Ark 飞船特效参考实现。
+
+### 技术方案
+1. **根本问题**：UsedDescriptor 对象没有直接的 .resourceId 属性，正确路径是 .descriptor.resourceId（descriptor 是一个子对象 Descriptor）
+2. **三层 Fallback**：A1=UsedDescriptor.descriptor.resourceId（主路径） A2=controller.GetResources() 按名字匹配  A3=打印所有资源名（调试）
+3. **CBuffer 修复**：GetConstantBufferId  state.GetConstantBuffer(stage, idx, 0) 获取 buffer 对象
+
+### 提取结果
+- eid_878（飞船本体）：3张纹理（Solid/Liquid/Highlight 层，662KB/91KB/662KB）
+- eid_1260（Trail 粒子段）：1张纹理（Sprite Sheet 48帧，178KB）
+- eid_1484（Trail 颜色混合）：2张纹理（极小，1KB/325B，纯色查找表）
+- eid_1596（Trail 主特效）：4张纹理（主Sprite Sheet 4.5MB + 3张辅助纹理）
+- 所有纹理保存至：F:\UnityProjects\ReferenceAssets\GGrenderdoc\output\targeted_v4\
+
+### 文档更新
+- Docs/Reference/GalacticGlitch_BoostTrail_VFX_Plan.md  第九节补充实际提取纹理清单，移除"待完成"警告
+
+
+---
+
+## GalacticGlitch Boost Trail VFX Plan 文档完善  2026-03-09 19:56
+
+### 修改文件
+- Docs/Reference/GalacticGlitch_BoostTrail_VFX_Plan.md  追加第十、十一、十二章，更新第八章
+
+### 内容简述
+基于第二个 RDC（Boost 激活瞬间帧）的分析结果，完善了 Boost Trail VFX 研究文档，新增了之前 miss 的特效分析。
+
+### 目的
+将新 RDC 分析发现的 Boost 瞬间特效（全屏闪光、Bloom 爆发、Rim Light、帧间插值）完整记录到参考文档中，为 Project Ark 实现提供完整依据。
+
+### 新增内容
+1. **第十章：Boost 瞬间帧分析**
+   - 10.1 新发现特效总览（4个新发现）
+   - 10.2 全屏闪光 Pass（eid_1484）：两张纯色纹理 gamma 混合，产生白色闪光
+   - 10.3 全屏 Bloom/Blur Pass（eid_1260）：8次高斯采样，对当前帧 RT 模糊
+   - 10.4 Trail 增强版 Shader（18个uniform，噪声扰动+边缘光晕15）
+   - 10.5 飞船本体 Boost 变体（Rim Light 系统 + 帧间插值动画）
+   - 10.6 Boost 瞬间完整渲染顺序（6步）
+2. **第十一章：完整实现路线图（更新版）**
+   - Phase 1-3：原有内容（Trail 基础）
+   - Phase 4：Boost 瞬间特效（全屏闪光 + Bloom 爆发）
+   - Phase 5：飞船本体增强（Rim Light + 帧间插值）
+   - Phase 6：颜色主题扩展（fucsia/plasm 变体 + SO）
+3. **第十二章：Project Ark 实现注意事项**
+   - HDR 颜色与 Bloom 配置
+   - Additive 混合模式设置
+   - 对象池重置规范（CLAUDE.md 规范）
+   - Sprite Sheet 帧间插值实现参考
+4. **第八章更新**：实现优先级与新路线图对齐，增加 Phase 4/5 说明
+
+
+---
+
+## GalacticGlitch 4.rdc 帧分析（targeted_v5） 2026-03-09 20:14
+
+### 修改文件
+- Docs/Reference/GalacticGlitch_BoostTrail_VFX_Plan.md  追加第十三章（4.rdc targeted_v5 完整分析）
+
+### 内容简述
+对 4.rdc 的 9 个目标 EID 进行了完整分析，提取纹理并反汇编 SPIR-V Shader，发现了新的特效和跨 RDC 一致性验证结果。
+
+### 目的
+完善 GG Boost Trail VFX 研究文档，补充 4.rdc 的新发现，为 Project Ark 飞船特效实现提供更完整的参考依据。
+
+### 新发现
+1. **飞船 Boost 噪声特效（eid_1050）**：最复杂 Shader（111,635字符），3个CBuffer，4张纹理，使用 Perlin 噪声扰动 UV + 4层纹理叠加 + smoothstep alpha 控制，是飞船 Boost 状态的能量流动视觉层
+2. **Boost 激活闪光（eid_1631）**：局部光晕特效（非全屏），4.86MB 主纹理，2个CBuffer，8个参数
+3. **背景视差层（eid_21）**：6层背景叠加，含 int 类型 uniform（层数开关），共享纹理 res12
+4. **跨 RDC 一致性验证**：飞船本体（uniforms43+56，res84/135/156）和 Trail 主特效（uniforms141，res12/125/574/408）在 1.rdc 和 4.rdc 中完全一致
+
+### 技术方案
+- 通过 SPIR-V 反汇编识别 Perlin 噪声（289.0 常数特征）
+- 识别 smoothstep 函数（t*t*(-2t+3) 模式）
+- 通过 ResourceId 跨 EID 追踪共享纹理
+
+
+---
+
+## GalacticGlitch 3.rdc 帧分析（targeted_v7） 四 RDC 最终验证完成  2026-03-09 20:54
+
+### 修改文件
+- Docs/Reference/GalacticGlitch_BoostTrail_VFX_Plan.md  追加第十六章（3.rdc targeted_v7 完整分析 + 四 RDC 最终验证）
+
+### 内容简述
+对 3.rdc 的 9 个目标 EID 进行了完整分析，完成了 1/3/4/5.rdc 四个 RDC 的最终交叉验证，所有核心特效 Shader 完全确认。
+
+### 目的
+完成 GG Boost Trail VFX 研究的最后一个 RDC 分析，为 Project Ark 飞船特效实现提供最终可靠的参考依据。
+
+### 四 RDC 最终验证结论
+1. **飞船本体**（uniforms43+56，res84/135/156）：四 RDC 完全一致，最终确认
+2. **Trail 主特效**（uniforms141，4.5MB Sprite Sheet）：四 RDC 完全一致，最终确认
+3. **Boost 噪声特效**（3个CBuffer，Perlin 噪声）：三 RDC 完全一致，最终确认
+4. **双重 Boost 能量层**（uniforms66，5张纹理）：两 RDC 完全一致，最终确认
+5. **背景视差层**（uniforms55，6张纹理）：四 RDC 完全一致，最终确认
+
+### 3.rdc 新发现
+1. **飞船本体变体（eid_1080）**：同 Shader，但 slot1（Liquid 层）从 91KB 变为 70KB，证实液体动画通过切换不同 Liquid 贴图实现
+2. **全局能量场变体（eid_1964）**：Shader 完全相同（disasm 134,308 chars），但 slot1 从 369KB 变为 939KB，证实有动态纹理切换机制
+
+### 可直接提取的资产
+- eid_877/tex_slot0.png (662KB)  飞船 Solid 贴图
+- eid_877/tex_slot1.png (91KB)   飞船 Liquid 贴图（标准帧）
+- eid_877/tex_slot2.png (662KB)  飞船 Highlight 贴图
+- eid_1598/tex_slot0.png (4.5MB)  Trail 核心 Sprite Sheet
+- eid_1598/tex_slot1.png (408KB)  Trail 第二层 Sprite Sheet
+- eid_21/tex_slot1~5.png  背景视差层纹理（5张）
+

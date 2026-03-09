@@ -1,0 +1,23 @@
+=== EventId 1484 ===
+[PS] id=ResourceId::15343
+[PS] Entry: main
+[PS] CBuffers (1):
+  CB 'uniforms46' bind=0 (1 vars)
+[PS] Textures (2):
+  'res28' bind=1
+  'res12' bind=2
+[PS] Disasm saved (1977 chars)
+
+[Textures]
+  [A1] GetReadOnlyResources: 2 items
+    [0] descriptor attrs: ['acquire', 'append', 'bufferStructCount', 'byteOffset', 'byteSize', 'counterByteOffset', 'disown', 'elementByteSize', 'firstMip', 'firstSlice', 'flags', 'format', 'minLODClamp', 'next', 'numMips', 'numSlices', 'own', 'resource', 'secondary', 'swizzle', 'textureType', 'this', 'thisown', 'type', 'view']
+    [0] -> tex_slot0 res=ResourceId::15317
+    [1] descriptor attrs: ['acquire', 'append', 'bufferStructCount', 'byteOffset', 'byteSize', 'counterByteOffset', 'disown', 'elementByteSize', 'firstMip', 'firstSlice', 'flags', 'format', 'minLODClamp', 'next', 'numMips', 'numSlices', 'own', 'resource', 'secondary', 'swizzle', 'textureType', 'this', 'thisown', 'type', 'view']
+    [1] -> tex_slot1 res=ResourceId::15329
+  SAVED tex_slot0: OK (1072 bytes)
+  SAVED tex_slot1: OK (325 bytes)
+
+[CBuffer Values]
+  CB[0] 'uniforms46':
+    (GetCBufferVariableContents failed: 'renderdoc.PipeState' object has no attribute 'GetConstantBuffer')
+    _child0: float4 @offset=0

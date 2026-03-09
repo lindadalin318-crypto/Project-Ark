@@ -1,0 +1,588 @@
+SPIR-V 1.0 module, <id> bound of 525
+
+Generator: Glslang Reference Front End from Khronos - Contact John Kessenich, johnkessenich@google.com
+Generator Version: 6
+
+Capability(Shader);
+
+
+
+MemoryModel(Logical, GLSL450);
+
+EntryPoint(Fragment, _4, "main", {
+    vs_TEXCOORD1, 
+    vs_TEXCOORD0, 
+    _331
+  });
+
+ExecutionMode(_4, OriginUpperLeft);
+
+
+
+
+
+Private float3* _9;
+Input float4* vs_TEXCOORD1 : [[Location(1)]];
+struct _41 : [[Block]] {
+  float4 _child0 : [[Offset(0)]];
+}
+Uniform struct41* _43 : [[DescriptorSet(1), Binding(0)]];
+Private float3* _51;
+struct _54 : [[Block]] {
+  float4 _child0 : [[Offset(0)]];
+  float4 _child1 : [[Offset(16)]];
+  float _child2 : [[Offset(32)]];
+  float _child3 : [[Offset(36)]];
+  float4 _child4 : [[Offset(48)]];
+  float4 _child5 : [[Offset(64)]];
+  float2 _child6 : [[Offset(80)]];
+  float4 _child7 : [[Offset(96)]];
+  float4 _child8 : [[Offset(112)]];
+  float2 _child9 : [[Offset(128)]];
+  float4 _child10 : [[Offset(144)]];
+  float4 _child11 : [[Offset(160)]];
+  float2 _child12 : [[Offset(176)]];
+  float _child13 : [[Offset(184)]];
+  float _child14 : [[Offset(188)]];
+  float _child15 : [[Offset(192)]];
+  float _child16 : [[Offset(196)]];
+  float _child17 : [[Offset(200)]];
+}
+Uniform struct54* _56 : [[DescriptorSet(1), Binding(1)]];
+Input float4* vs_TEXCOORD0 : [[Location(0)]];
+UniformConstant Image<float, 2D>* _84 : [[DescriptorSet(0), Binding(5)]];
+UniformConstant sampler* _88 : [[DescriptorSet(0), Binding(2)]];
+Private float2* _98;
+Private float3* _110;
+UniformConstant Image<float, 2D>* _135 : [[DescriptorSet(0), Binding(3)]];
+UniformConstant sampler* _137 : [[DescriptorSet(0), Binding(0)]];
+UniformConstant Image<float, 2D>* _156 : [[DescriptorSet(0), Binding(4)]];
+UniformConstant sampler* _158 : [[DescriptorSet(0), Binding(1)]];
+Private float* _207;
+Output float4* _331 : [[Location(0)]];
+Private bool* _387;
+Private float3* _452;
+Private bool* _457;
+
+void _4() {
+  float3* _397;
+  float* _403;
+  float* _415;
+  float* _428;
+  float3* _463;
+  float* _467;
+  float* _479;
+  float* _491;
+  float4* _516;
+  int4* _519;
+  bool* _521;
+  uint4* _524;
+  float4 _14 = *vs_TEXCOORD1;
+  float2 _15 = _14.xy;
+  float _19 = Dot(_15, {12.9898, 78.2330});
+  float* _23 = &_9.x;
+  *_23 = _19;
+  float* _24 = &_9.x;
+  float _25 = *_24;
+  float _26 = GLSL.std.450::Sin(_25);
+  float* _27 = &_9.x;
+  *_27 = _26;
+  float* _28 = &_9.x;
+  float _29 = *_28;
+  float _31 = _29 * 43758.5469;
+  float* _32 = &_9.x;
+  *_32 = _31;
+  float* _33 = &_9.x;
+  float _34 = *_33;
+  float _35 = GLSL.std.450::Fract(_34);
+  float* _36 = &_9.x;
+  *_36 = _35;
+  float* _37 = &_9.x;
+  float _38 = *_37;
+  float _40 = _38 * 8.0000;
+  float* _47 = &_43._child0.x;
+  float _48 = *_47;
+  float _49 = _40 + _48;
+  float* _50 = &_9.x;
+  *_50 = _49;
+  float3 _52 = *_9;
+  float2 _53 = _52.xx;
+  float2* _59 = &_56._child12;
+  float2 _60 = *_59;
+  float2 _61 = _53 * _60;
+  float4* _64 = &_56._child11;
+  float4 _65 = *_64;
+  float2 _66 = _65.zw;
+  float2 _67 = _61 + _66;
+  float3 _68 = *_51;
+  float3 _69 = float3(_67.x, _67.y, _68.z);
+  *_51 = _69;
+  float4 _71 = *vs_TEXCOORD0;
+  float2 _72 = _71.xy;
+  float4* _73 = &_56._child11;
+  float4 _74 = *_73;
+  float2 _75 = _74.xy;
+  float2 _76 = _72 * _75;
+  float3 _77 = *_51;
+  float2 _78 = _77.xy;
+  float2 _79 = _76 + _78;
+  float3 _80 = *_51;
+  float3 _81 = float3(_79.x, _79.y, _80.z);
+  *_51 = _81;
+  Image<float, 2D> _85 = *_84;
+  sampler _89 = *_88;
+  SampledImage<float, 2D> _91 = SampledImage(_85, _89);
+  float3 _92 = *_51;
+  float2 _93 = _92.xy;
+  float4 _94 = ImageSampleImplicitLod(_91, _93);
+  float _95 = _94.x;
+  float* _96 = &_51.x;
+  *_96 = _95;
+  float3 _99 = *_9;
+  float2 _100 = _99.xx;
+  float2* _102 = &_56._child9;
+  float2 _103 = *_102;
+  float2 _104 = _100 * _103;
+  float4* _106 = &_56._child8;
+  float4 _107 = *_106;
+  float2 _108 = _107.zw;
+  float2 _109 = _104 + _108;
+  *_98 = _109;
+  float3 _111 = *_9;
+  float2 _112 = _111.xx;
+  float2* _114 = &_56._child6;
+  float2 _115 = *_114;
+  float2 _116 = _112 * _115;
+  float4* _118 = &_56._child5;
+  float4 _119 = *_118;
+  float2 _120 = _119.zw;
+  float2 _121 = _116 + _120;
+  float3 _122 = *_110;
+  float3 _123 = float3(_121.x, _121.y, _122.z);
+  *_110 = _123;
+  float4 _124 = *vs_TEXCOORD0;
+  float2 _125 = _124.xy;
+  float4* _126 = &_56._child5;
+  float4 _127 = *_126;
+  float2 _128 = _127.xy;
+  float2 _129 = _125 * _128;
+  float3 _130 = *_110;
+  float2 _131 = _130.xy;
+  float2 _132 = _129 + _131;
+  float3 _133 = *_110;
+  float3 _134 = float3(_132.x, _132.y, _133.z);
+  *_110 = _134;
+  Image<float, 2D> _136 = *_135;
+  sampler _138 = *_137;
+  SampledImage<float, 2D> _139 = SampledImage(_136, _138);
+  float3 _140 = *_110;
+  float2 _141 = _140.xy;
+  float4 _142 = ImageSampleImplicitLod(_139, _141);
+  float2 _143 = _142.xw;
+  float3 _144 = *_110;
+  float3 _145 = float3(_143.x, _143.y, _144.z);
+  *_110 = _145;
+  float4 _146 = *vs_TEXCOORD0;
+  float2 _147 = _146.xy;
+  float4* _148 = &_56._child8;
+  float4 _149 = *_148;
+  float2 _150 = _149.xy;
+  float2 _151 = _147 * _150;
+  float2 _152 = *_98;
+  float2 _153 = _151 + _152;
+  float3 _154 = *_9;
+  float3 _155 = float3(_153.x, _154.y, _153.y);
+  *_9 = _155;
+  Image<float, 2D> _157 = *_156;
+  sampler _159 = *_158;
+  SampledImage<float, 2D> _160 = SampledImage(_157, _159);
+  float3 _161 = *_9;
+  float2 _162 = _161.xz;
+  float4 _163 = ImageSampleImplicitLod(_160, _162);
+  float _164 = _163.x;
+  float* _165 = &_9.x;
+  *_165 = _164;
+  float* _166 = &_51.x;
+  float _167 = *_166;
+  float* _168 = &_9.x;
+  float _169 = *_168;
+  float _170 = _167 * _169;
+  float* _171 = &_51.x;
+  *_171 = _170;
+  float* _172 = &_9.x;
+  float _173 = *_172;
+  float* _176 = &vs_TEXCOORD1.w;
+  float _177 = *_176;
+  float _178 = _173 * _177;
+  float* _179 = &_9.x;
+  *_179 = _178;
+  float* _180 = &_9.x;
+  float _181 = *_180;
+  float* _183 = &_110.y;
+  float _184 = *_183;
+  float _185 = _181 * _184;
+  float* _186 = &_9.x;
+  *_186 = _185;
+  float* _187 = &_51.x;
+  float _188 = *_187;
+  float* _189 = &_110.x;
+  float _190 = *_189;
+  float _191 = _188 * _190;
+  float* _193 = &_56._child15;
+  float _194 = *_193;
+  float _195 = -_194;
+  float _196 = _191 + _195;
+  float* _197 = &_98.x;
+  *_197 = _196;
+  float* _198 = &_51.x;
+  float _199 = *_198;
+  float* _200 = &_51.x;
+  *_200 = _199;
+  float* _201 = &_51.x;
+  float _202 = *_201;
+  float _205 = GLSL.std.450::FClamp(_202, 0.0000, 1.0000);
+  float* _206 = &_51.x;
+  *_206 = _205;
+  float* _209 = &_56._child13;
+  float _210 = *_209;
+  float _211 = _210 + 1.0000;
+  *_207 = _211;
+  float* _212 = &_56._child15;
+  float _213 = *_212;
+  float _214 = *_207;
+  float _215 = _213 * _214;
+  float* _216 = &_56._child15;
+  float _217 = *_216;
+  float _218 = -_217;
+  float _219 = _215 + _218;
+  *_207 = _219;
+  float _220 = *_207;
+  float _221 = 1.0000 / _220;
+  *_207 = _221;
+  float _222 = *_207;
+  float* _223 = &_98.x;
+  float _224 = *_223;
+  float _225 = _222 * _224;
+  float* _226 = &_98.x;
+  *_226 = _225;
+  float* _227 = &_98.x;
+  float _228 = *_227;
+  float _229 = GLSL.std.450::FClamp(_228, 0.0000, 1.0000);
+  float* _230 = &_98.x;
+  *_230 = _229;
+  float* _231 = &_98.x;
+  float _232 = *_231;
+  float _234 = _232 * -2.0000;
+  float _236 = _234 + 3.0000;
+  *_207 = _236;
+  float* _237 = &_98.x;
+  float _238 = *_237;
+  float* _239 = &_98.x;
+  float _240 = *_239;
+  float _241 = _238 * _240;
+  float* _242 = &_98.x;
+  *_242 = _241;
+  float* _243 = &_98.x;
+  float _244 = *_243;
+  float _245 = *_207;
+  float _246 = _244 * _245;
+  float* _247 = &_98.x;
+  *_247 = _246;
+  float* _248 = &_98.x;
+  float _249 = *_248;
+  float _250 = GLSL.std.450::FMin(_249, 1.0000);
+  float* _251 = &_98.x;
+  *_251 = _250;
+  float* _252 = &_9.x;
+  float _253 = *_252;
+  float* _254 = &_98.x;
+  float _255 = *_254;
+  float _256 = _253 * _255;
+  float* _257 = &_9.x;
+  *_257 = _256;
+  float* _258 = &_9.x;
+  float _259 = *_258;
+  float* _261 = &_56._child3;
+  float _262 = *_261;
+  float _263 = _259 * _262;
+  float* _264 = &_9.x;
+  *_264 = _263;
+  float* _265 = &_9.x;
+  float _266 = *_265;
+  float _267 = GLSL.std.450::FClamp(_266, 0.0000, 1.0000);
+  float* _268 = &_9.x;
+  *_268 = _267;
+  float* _270 = &_56._child16;
+  float _271 = *_270;
+  float _273 = _271 * -1.4000;
+  float* _274 = &vs_TEXCOORD0.x;
+  float _275 = *_274;
+  float _276 = _273 + _275;
+  float* _277 = &_98.x;
+  *_277 = _276;
+  float* _278 = &_98.x;
+  float _279 = *_278;
+  float _280 = _279 + 1.0000;
+  float* _281 = &_98.x;
+  *_281 = _280;
+  float* _282 = &_98.x;
+  float _283 = *_282;
+  float _285 = _283 * 3.0200;
+  float _287 = _285 + -1.7600;
+  *_207 = _287;
+  float _288 = *_207;
+  float _289 = GLSL.std.450::FClamp(_288, 0.0000, 1.0000);
+  *_207 = _289;
+  float* _290 = &_98.x;
+  float _291 = *_290;
+  float _292 = -_291;
+  float _293 = _292 + 1.0000;
+  float* _294 = &_98.x;
+  *_294 = _293;
+  float* _295 = &_98.x;
+  float _296 = *_295;
+  float _298 = _296 * 15.0000;
+  float* _299 = &_98.x;
+  *_299 = _298;
+  float* _300 = &_98.x;
+  float _301 = *_300;
+  float _302 = GLSL.std.450::FClamp(_301, 0.0000, 1.0000);
+  float* _303 = &_98.x;
+  *_303 = _302;
+  float* _304 = &_98.x;
+  float _305 = *_304;
+  float _306 = *_207;
+  float _307 = _305 * _306;
+  *_207 = _307;
+  float* _308 = &_98.x;
+  float _309 = *_308;
+  float* _311 = &_56._child17;
+  float _312 = *_311;
+  float _313 = _309 / _312;
+  float* _314 = &_98.x;
+  *_314 = _313;
+  float* _315 = &_98.x;
+  float _316 = *_315;
+  float _317 = *_207;
+  float _318 = GLSL.std.450::FMax(_316, _317);
+  float* _319 = &_98.x;
+  *_319 = _318;
+  float* _320 = &_98.x;
+  float _321 = *_320;
+  float _322 = GLSL.std.450::FMin(_321, 1.0000);
+  float* _323 = &_98.x;
+  *_323 = _322;
+  float* _324 = &_98.x;
+  float _325 = *_324;
+  float* _326 = &_56._child17;
+  float _327 = *_326;
+  float _328 = _325 * _327;
+  float* _329 = &_98.x;
+  *_329 = _328;
+  float* _332 = &_9.x;
+  float _333 = *_332;
+  float* _334 = &_98.x;
+  float _335 = *_334;
+  float _336 = _333 * _335;
+  float* _338 = &_331.w;
+  *_338 = _336;
+  float* _339 = &_51.x;
+  float _340 = *_339;
+  float* _341 = &_98.x;
+  float _342 = *_341;
+  float _343 = _340 * _342;
+  float* _344 = &_9.x;
+  *_344 = _343;
+  float* _345 = &_9.x;
+  float _346 = *_345;
+  float _347 = GLSL.std.450::Log2(_346);
+  float* _348 = &_9.x;
+  *_348 = _347;
+  float* _349 = &_9.x;
+  float _350 = *_349;
+  float* _352 = &_56._child2;
+  float _353 = *_352;
+  float _354 = _350 * _353;
+  float* _355 = &_9.x;
+  *_355 = _354;
+  float* _356 = &_9.x;
+  float _357 = *_356;
+  float _358 = GLSL.std.450::Exp2(_357);
+  float* _359 = &_9.x;
+  *_359 = _358;
+  float4* _360 = &_56._child0;
+  float4 _361 = *_360;
+  float3 _362 = _361.xyz;
+  float3 _363 = GLSL.std.450::FAbs(_362);
+  float3 _364 = GLSL.std.450::Log2(_363);
+  *_51 = _364;
+  float3 _365 = *_51;
+  float3 _368 = _365 * {0.4167, 0.4167, 0.4167};
+  *_51 = _368;
+  float3 _369 = *_51;
+  float3 _370 = GLSL.std.450::Exp2(_369);
+  *_51 = _370;
+  float3 _371 = *_51;
+  float3 _374 = _371 * {1.0550, 1.0550, 1.0550};
+  float3 _377 = _374 + {-0.0550, -0.0550, -0.0550};
+  *_51 = _377;
+  float4* _378 = &_56._child0;
+  float4 _379 = *_378;
+  float3 _380 = _379.xyz;
+  float3 _383 = _380 * {12.9200, 12.9200, 12.9200};
+  *_110 = _383;
+  float4* _390 = &_56._child0;
+  float4 _391 = *_390;
+  float4 _392 = _391.xyzx;
+  bool _394 = {0.0031, 0.0031, 0.0031, 0.0000} >= _392;
+  bool _395 = _394.xyz;
+  *_387 = _395;
+  float3 _398 = *_51;
+  *_397 = _398;
+  bool* _400 = &_387.x;
+  bool _401 = *_400;
+  
+  if(_401) {
+    float* _406 = &_110.x;
+    float _407 = *_406;
+    *_403 = _407;
+  } else {
+    float* _409 = &_51.x;
+    float _410 = *_409;
+    *_403 = _410;
+  }
+
+  float _411 = *_403;
+  float* _412 = &_397.x;
+  *_412 = _411;
+  bool* _413 = &_387.y;
+  bool _414 = *_413;
+  
+  if(_414) {
+    float* _418 = &_110.y;
+    float _419 = *_418;
+    *_415 = _419;
+  } else {
+    float* _421 = &_51.y;
+    float _422 = *_421;
+    *_415 = _422;
+  }
+
+  float _423 = *_415;
+  float* _424 = &_397.y;
+  *_424 = _423;
+  bool* _426 = &_387.z;
+  bool _427 = *_426;
+  
+  if(_427) {
+    float* _431 = &_110.z;
+    float _432 = *_431;
+    *_428 = _432;
+  } else {
+    float* _434 = &_51.z;
+    float _435 = *_434;
+    *_428 = _435;
+  }
+
+  float _436 = *_428;
+  float* _437 = &_397.z;
+  *_437 = _436;
+  float3 _438 = *_397;
+  *_51 = _438;
+  float4* _440 = &_56._child1;
+  float4 _441 = *_440;
+  float3 _442 = _441.xyz;
+  float3 _443 = GLSL.std.450::FAbs(_442);
+  float3 _444 = GLSL.std.450::Log2(_443);
+  *_110 = _444;
+  float3 _445 = *_110;
+  float3 _446 = _445 * {0.4167, 0.4167, 0.4167};
+  *_110 = _446;
+  float3 _447 = *_110;
+  float3 _448 = GLSL.std.450::Exp2(_447);
+  *_110 = _448;
+  float3 _449 = *_110;
+  float3 _450 = _449 * {1.0550, 1.0550, 1.0550};
+  float3 _451 = _450 + {-0.0550, -0.0550, -0.0550};
+  *_110 = _451;
+  float4* _453 = &_56._child1;
+  float4 _454 = *_453;
+  float3 _455 = _454.xyz;
+  float3 _456 = _455 * {12.9200, 12.9200, 12.9200};
+  *_452 = _456;
+  float4* _458 = &_56._child1;
+  float4 _459 = *_458;
+  float4 _460 = _459.xyzx;
+  bool _461 = {0.0031, 0.0031, 0.0031, 0.0000} >= _460;
+  bool _462 = _461.xyz;
+  *_457 = _462;
+  float3 _464 = *_110;
+  *_463 = _464;
+  bool* _465 = &_457.x;
+  bool _466 = *_465;
+  
+  if(_466) {
+    float* _470 = &_452.x;
+    float _471 = *_470;
+    *_467 = _471;
+  } else {
+    float* _473 = &_110.x;
+    float _474 = *_473;
+    *_467 = _474;
+  }
+
+  float _475 = *_467;
+  float* _476 = &_463.x;
+  *_476 = _475;
+  bool* _477 = &_457.y;
+  bool _478 = *_477;
+  
+  if(_478) {
+    float* _482 = &_452.y;
+    float _483 = *_482;
+    *_479 = _483;
+  } else {
+    float* _485 = &_110.y;
+    float _486 = *_485;
+    *_479 = _486;
+  }
+
+  float _487 = *_479;
+  float* _488 = &_463.y;
+  *_488 = _487;
+  bool* _489 = &_457.z;
+  bool _490 = *_489;
+  
+  if(_490) {
+    float* _494 = &_452.z;
+    float _495 = *_494;
+    *_491 = _495;
+  } else {
+    float* _497 = &_110.z;
+    float _498 = *_497;
+    *_491 = _498;
+  }
+
+  float _499 = *_491;
+  float* _500 = &_463.z;
+  *_500 = _499;
+  float3 _501 = *_463;
+  *_110 = _501;
+  float3 _502 = *_51;
+  float3 _503 = *_110;
+  float3 _504 = -_503;
+  float3 _505 = _502 + _504;
+  *_51 = _505;
+  float3 _506 = *_9;
+  float3 _507 = _506.xxx;
+  float3 _508 = *_51;
+  float3 _509 = _507 * _508;
+  float3 _510 = *_110;
+  float3 _511 = _509 + _510;
+  float4 _512 = *_331;
+  float4 _513 = float4(_511.x, _511.y, _511.z, _512.w);
+  *_331 = _513;
+  return;
+}
+
+

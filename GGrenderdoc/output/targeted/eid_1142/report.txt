@@ -1,0 +1,65 @@
+=== EventId 1142 ===
+[PS] Disassembly failed: in method 'ReplayController_DisassembleShader', argument 3 of type 'ShaderReflection const *'
+[PS] Entry: main
+[PS] CBuffers (3):
+  CB 'uniforms183' (5 vars):
+    - _child0 : float4 [1x4]
+    - _child1 : float [1x1]
+    - _child2 : float [1x1]
+    - _child3 : float4 [1x4]
+    - _child4 : float4 [1x4]
+  CB 'uniforms426' (17 vars):
+    - _child0 : float4 [1x4]
+    - _child1 : float4 [1x4]
+    - _child2 : float4 [1x4]
+    - _child3 : float4 [1x4]
+    - _child4 : float4 [1x4]
+    - _child5 : float4 [1x4]
+    - _child6 : float4 [1x4]
+    - _child7 : float4 [1x4]
+    - _child8 : float4 [1x4]
+    - _child9 : float4 [1x4]
+    - _child10 : float4 [1x4]
+    - _child11 : float4 [1x4]
+    - _child12 : float4 [1x4]
+    - _child13 : float4 [1x4]
+    - _child14 : float4 [1x4]
+    - _child15 : float4 [1x4]
+    - _child16 : float4 [1x4]
+  CB 'uniforms13' (29 vars):
+    - _child0 : float4 [1x4]
+    - _child1 : float4 [1x4]
+    - _child2 : float4 [1x4]
+    - _child3 : float4 [1x4]
+    - _child4 : float [1x1]
+    - _child5 : float4 [1x4]
+    - _child6 : float4 [1x4]
+    - _child7 : float [1x1]
+    - _child8 : float [1x1]
+    - _child9 : float4 [1x4]
+    - _child10 : float4 [1x4]
+    - _child11 : float4 [1x4]
+    - _child12 : float4 [1x4]
+    - _child13 : float [1x1]
+    - _child14 : float [1x1]
+    - _child15 : float4 [1x4]
+    - _child16 : float [1x1]
+    - _child17 : float4 [1x4]
+    - _child18 : float4 [1x4]
+    - _child19 : float4 [1x4]
+    - _child20 : float4 [1x4]
+    - _child21 : float4 [1x4]
+    - _child22 : float4 [1x4]
+    - _child23 : float4 [1x4]
+    - _child24 : float [1x1]
+    - _child25 : float [1x1]
+    - _child26 : float [1x1]
+    - _child27 : float4 [1x4]
+    - _child28 : float4 [1x4]
+[PS] Samplers (0):
+[PS] Read-only resources (0):
+
+[Textures]
+
+[Blend State]
+  (blend state failed: 'renderdoc.PipeState' object has no attribute 'GetFramebuffer')

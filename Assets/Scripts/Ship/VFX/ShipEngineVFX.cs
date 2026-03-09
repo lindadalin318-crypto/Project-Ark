@@ -106,23 +106,27 @@ namespace ProjectArk.Ship
             // Start at idle emission rate
             _emission.rateOverTime = _juiceSettings.EngineIdleEmissionRate;
 
-            // Color over lifetime: teal → transparent (matches GG rgba(0.28, 0.43, 0.43))
+            // Color over lifetime: cyan-blue → magenta → transparent
+            // GG MainEngineParticle: TopColor=(0.099,0.846,1.0) → BottomColor=(1.0,0.0,0.915)
             var colorOverLifetime = _engineParticles.colorOverLifetime;
             colorOverLifetime.enabled = true;
-            Color baseColor = _juiceSettings.EngineParticleColor;
-            Color fadeColor = new Color(baseColor.r, baseColor.g, baseColor.b, 0f);
+            Color topColor    = _juiceSettings.EngineParticleColorTop;
+            Color bottomColor = _juiceSettings.EngineParticleColorBottom;
+            Color fadeColor   = new Color(bottomColor.r, bottomColor.g, bottomColor.b, 0f);
             colorOverLifetime.color = new ParticleSystem.MinMaxGradient(
                 new Gradient
                 {
                     colorKeys = new[]
                     {
-                        new GradientColorKey(baseColor, 0f),
-                        new GradientColorKey(baseColor, 1f)
+                        new GradientColorKey(topColor,    0f),
+                        new GradientColorKey(bottomColor, 0.6f),
+                        new GradientColorKey(fadeColor,   1f)
                     },
                     alphaKeys = new[]
                     {
-                        new GradientAlphaKey(1f, 0f),
-                        new GradientAlphaKey(0f, 1f)
+                        new GradientAlphaKey(1f,  0f),
+                        new GradientAlphaKey(0.7f, 0.5f),
+                        new GradientAlphaKey(0f,  1f)
                     }
                 });
         }

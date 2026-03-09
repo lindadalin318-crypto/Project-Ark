@@ -1,0 +1,62 @@
+=== EventId 805 ===
+[PS] id=ResourceId::9404
+[PS] Entry: main
+[PS] CBuffers (1):
+  CB 'uniforms16' bind=0 (16 vars)
+[PS] Textures (8):
+  'res1035' bind=1
+  'res1083' bind=2
+  'res1102' bind=3
+  'res1111' bind=4
+  'res835' bind=5
+  'res967' bind=6
+  'res976' bind=7
+  'res847' bind=8
+[PS] Disasm saved (34445 chars)
+
+[Textures]
+  [A1] GetReadOnlyResources: 8 items
+    [0] descriptor attrs: ['acquire', 'append', 'bufferStructCount', 'byteOffset', 'byteSize', 'counterByteOffset', 'disown', 'elementByteSize', 'firstMip', 'firstSlice', 'flags', 'format', 'minLODClamp', 'next', 'numMips', 'numSlices', 'own', 'resource', 'secondary', 'swizzle', 'textureType', 'this', 'thisown', 'type', 'view']
+    [0] -> tex_slot0 res=ResourceId::9359
+    [1] descriptor attrs: ['acquire', 'append', 'bufferStructCount', 'byteOffset', 'byteSize', 'counterByteOffset', 'disown', 'elementByteSize', 'firstMip', 'firstSlice', 'flags', 'format', 'minLODClamp', 'next', 'numMips', 'numSlices', 'own', 'resource', 'secondary', 'swizzle', 'textureType', 'this', 'thisown', 'type', 'view']
+    [1] -> tex_slot1 res=ResourceId::9363
+    [2] descriptor attrs: ['acquire', 'append', 'bufferStructCount', 'byteOffset', 'byteSize', 'counterByteOffset', 'disown', 'elementByteSize', 'firstMip', 'firstSlice', 'flags', 'format', 'minLODClamp', 'next', 'numMips', 'numSlices', 'own', 'resource', 'secondary', 'swizzle', 'textureType', 'this', 'thisown', 'type', 'view']
+    [2] -> tex_slot2 res=ResourceId::9367
+    [3] descriptor attrs: ['acquire', 'append', 'bufferStructCount', 'byteOffset', 'byteSize', 'counterByteOffset', 'disown', 'elementByteSize', 'firstMip', 'firstSlice', 'flags', 'format', 'minLODClamp', 'next', 'numMips', 'numSlices', 'own', 'resource', 'secondary', 'swizzle', 'textureType', 'this', 'thisown', 'type', 'view']
+    [3] -> tex_slot3 res=ResourceId::9371
+    [4] descriptor attrs: ['acquire', 'append', 'bufferStructCount', 'byteOffset', 'byteSize', 'counterByteOffset', 'disown', 'elementByteSize', 'firstMip', 'firstSlice', 'flags', 'format', 'minLODClamp', 'next', 'numMips', 'numSlices', 'own', 'resource', 'secondary', 'swizzle', 'textureType', 'this', 'thisown', 'type', 'view']
+    [4] -> tex_slot4 res=ResourceId::9375
+    [5] descriptor attrs: ['acquire', 'append', 'bufferStructCount', 'byteOffset', 'byteSize', 'counterByteOffset', 'disown', 'elementByteSize', 'firstMip', 'firstSlice', 'flags', 'format', 'minLODClamp', 'next', 'numMips', 'numSlices', 'own', 'resource', 'secondary', 'swizzle', 'textureType', 'this', 'thisown', 'type', 'view']
+    [5] -> tex_slot5 res=ResourceId::9379
+    [6] descriptor attrs: ['acquire', 'append', 'bufferStructCount', 'byteOffset', 'byteSize', 'counterByteOffset', 'disown', 'elementByteSize', 'firstMip', 'firstSlice', 'flags', 'format', 'minLODClamp', 'next', 'numMips', 'numSlices', 'own', 'resource', 'secondary', 'swizzle', 'textureType', 'this', 'thisown', 'type', 'view']
+    [6] -> tex_slot6 res=ResourceId::9387
+    [7] descriptor attrs: ['acquire', 'append', 'bufferStructCount', 'byteOffset', 'byteSize', 'counterByteOffset', 'disown', 'elementByteSize', 'firstMip', 'firstSlice', 'flags', 'format', 'minLODClamp', 'next', 'numMips', 'numSlices', 'own', 'resource', 'secondary', 'swizzle', 'textureType', 'this', 'thisown', 'type', 'view']
+    [7] -> tex_slot7 res=ResourceId::9383
+  SAVED tex_slot0: OK (81 bytes)
+  SAVED tex_slot1: OK (81 bytes)
+  SAVED tex_slot2: OK (81 bytes)
+  SAVED tex_slot3: OK (81 bytes)
+  SAVED tex_slot4: OK (76 bytes)
+  SAVED tex_slot5: OK (76 bytes)
+  SAVED tex_slot6: OK (76 bytes)
+  SAVED tex_slot7: OK (76 bytes)
+
+[CBuffer Values]
+  CB[0] 'uniforms16':
+    (GetCBufferVariableContents failed: 'renderdoc.PipeState' object has no attribute 'GetConstantBuffer')
+    _child0: float4 @offset=0
+    _child1: float4 @offset=16
+    _child2: float4 @offset=32
+    _child3: float4 @offset=48
+    _child4: float4 @offset=64
+    _child5: float4 @offset=80
+    _child6: float4 @offset=96
+    _child7: float4 @offset=112
+    _child8: float4 @offset=128
+    _child9: float4 @offset=144
+    _child10: float4 @offset=160
+    _child11: float4 @offset=176
+    _child12: float4 @offset=192
+    _child13: float4 @offset=208
+    _child14: float4 @offset=224
+    _child15: float4 @offset=240

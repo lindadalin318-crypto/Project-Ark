@@ -1,0 +1,19 @@
+=== EventId 1276 ===
+[VS] id=ResourceId::15233
+[PS] id=ResourceId::15234
+[PS] Entry: main
+[PS] CBuffers (1):
+  CB 'uniforms17' bindPoint=0 (1 vars):
+    _child0: float4 rows=1 cols=4 offset=0
+[PS] Samplers (1):
+  'res54' bind=0
+[PS] Textures (1):
+  'res50' bind=1 type=4
+[PS] DebugInfo: compiler=3 files=0
+[PS] Disassembly saved (4803 chars)
+
+[Textures bound to PS]
+  Error: 'renderdoc.UsedDescriptor' object has no attribute 'resources'
+
+[CBuffer Values]
+  CB read error: 'renderdoc.PipeState' object has no attribute 'GetConstantBuffer'

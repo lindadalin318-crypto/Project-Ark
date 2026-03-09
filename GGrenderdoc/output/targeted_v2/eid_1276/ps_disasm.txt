@@ -1,0 +1,180 @@
+SPIR-V 1.0 module, <id> bound of 177
+
+Generator: Glslang Reference Front End from Khronos - Contact John Kessenich, johnkessenich@google.com
+Generator Version: 6
+
+Capability(Shader);
+
+
+
+MemoryModel(Logical, GLSL450);
+
+EntryPoint(Fragment, _4, "main", {
+    vs_TEXCOORD0, 
+    _154
+  });
+
+ExecutionMode(_4, OriginUpperLeft);
+
+
+
+
+
+Private float4* _9;
+struct _15 : [[Block]] {
+  float4 _child0 : [[Offset(0)]];
+}
+Uniform struct15* _17 : [[DescriptorSet(1), Binding(0)]];
+Private float4* _31;
+Input float2* vs_TEXCOORD0 : [[Location(0)]];
+Private float3* _47;
+UniformConstant Image<float, 2D>* _50 : [[DescriptorSet(0), Binding(1)]];
+UniformConstant sampler* _54 : [[DescriptorSet(0), Binding(0), RelaxedPrecision]];
+Output float4* _154 : [[Location(0)]];
+
+void _4() {
+  float4* _166;
+  int4* _169;
+  bool* _173;
+  uint4* _176;
+  float* _14 = &_9.x;
+  *_14 = 0.0000;
+  float4* _22 = &_17._child0;
+  float4 _23 = *_22;
+  float2 _24 = _23.yy;
+  float2 _28 = _24 * {3.2308, 1.3846};
+  float4 _29 = *_9;
+  float4 _30 = float4(_29.x, _28.x, _29.z, _28.y);
+  *_9 = _30;
+  float4 _32 = *_9;
+  float4 _33 = _32.xyxw;
+  float4 _34 = -_33;
+  float2 _37 = *vs_TEXCOORD0;
+  float4 _38 = _37.xyxy;
+  float4 _39 = _34 + _38;
+  *_31 = _39;
+  float4 _40 = *_9;
+  float4 _41 = _40.xwxy;
+  float2 _42 = *vs_TEXCOORD0;
+  float4 _43 = _42.xyxy;
+  float4 _44 = _41 + _43;
+  *_9 = _44;
+  Image<float, 2D> _51 = *_50;
+  sampler _55 = *_54 : [[RelaxedPrecision]];
+  SampledImage<float, 2D> _57 = SampledImage(_51, _55);
+  float4 _58 = *_31;
+  float2 _59 = _58.zw;
+  float4 _60 = ImageSampleImplicitLod(_57, _59);
+  float3 _61 = _60.xyz;
+  *_47 = _61;
+  Image<float, 2D> _62 = *_50;
+  sampler _63 = *_54 : [[RelaxedPrecision]];
+  SampledImage<float, 2D> _64 = SampledImage(_62, _63);
+  float4 _65 = *_31;
+  float2 _66 = _65.xy;
+  float4 _67 = ImageSampleImplicitLod(_64, _66);
+  float3 _68 = _67.xyz;
+  float4 _69 = *_31;
+  float4 _70 = float4(_68.x, _68.y, _68.z, _69.w);
+  *_31 = _70;
+  float4 _71 = *_31;
+  float3 _72 = _71.xyz;
+  float4 _73 = *_31;
+  float3 _74 = _73.xyz;
+  float3 _75 = _72 * _74;
+  float4 _76 = *_31;
+  float4 _77 = float4(_75.x, _75.y, _75.z, _76.w);
+  *_31 = _77;
+  float3 _78 = *_47;
+  float3 _79 = *_47;
+  float3 _80 = _78 * _79;
+  *_47 = _80;
+  float3 _81 = *_47;
+  float3 _84 = _81 * {0.3162, 0.3162, 0.3162};
+  *_47 = _84;
+  float4 _85 = *_31;
+  float3 _86 = _85.xyz;
+  float3 _89 = _86 * {0.0703, 0.0703, 0.0703};
+  float3 _90 = *_47;
+  float3 _91 = _89 + _90;
+  float4 _92 = *_31;
+  float4 _93 = float4(_91.x, _91.y, _91.z, _92.w);
+  *_31 = _93;
+  Image<float, 2D> _94 = *_50;
+  sampler _95 = *_54 : [[RelaxedPrecision]];
+  SampledImage<float, 2D> _96 = SampledImage(_94, _95);
+  float2 _97 = *vs_TEXCOORD0;
+  float4 _98 = ImageSampleImplicitLod(_96, _97);
+  float3 _99 = _98.xyz;
+  *_47 = _99;
+  float3 _100 = *_47;
+  float3 _101 = *_47;
+  float3 _102 = _100 * _101;
+  *_47 = _102;
+  float3 _103 = *_47;
+  float3 _106 = _103 * {0.2270, 0.2270, 0.2270};
+  float4 _107 = *_31;
+  float3 _108 = _107.xyz;
+  float3 _109 = _106 + _108;
+  float4 _110 = *_31;
+  float4 _111 = float4(_109.x, _109.y, _109.z, _110.w);
+  *_31 = _111;
+  Image<float, 2D> _112 = *_50;
+  sampler _113 = *_54 : [[RelaxedPrecision]];
+  SampledImage<float, 2D> _114 = SampledImage(_112, _113);
+  float4 _115 = *_9;
+  float2 _116 = _115.xy;
+  float4 _117 = ImageSampleImplicitLod(_114, _116);
+  float3 _118 = _117.xyz;
+  *_47 = _118;
+  Image<float, 2D> _119 = *_50;
+  sampler _120 = *_54 : [[RelaxedPrecision]];
+  SampledImage<float, 2D> _121 = SampledImage(_119, _120);
+  float4 _122 = *_9;
+  float2 _123 = _122.zw;
+  float4 _124 = ImageSampleImplicitLod(_121, _123);
+  float3 _125 = _124.xyz;
+  float4 _126 = *_9;
+  float4 _127 = float4(_125.x, _125.y, _125.z, _126.w);
+  *_9 = _127;
+  float4 _128 = *_9;
+  float3 _129 = _128.xyz;
+  float4 _130 = *_9;
+  float3 _131 = _130.xyz;
+  float3 _132 = _129 * _131;
+  float4 _133 = *_9;
+  float4 _134 = float4(_132.x, _132.y, _132.z, _133.w);
+  *_9 = _134;
+  float3 _135 = *_47;
+  float3 _136 = *_47;
+  float3 _137 = _135 * _136;
+  *_47 = _137;
+  float3 _138 = *_47;
+  float3 _139 = _138 * {0.3162, 0.3162, 0.3162};
+  float4 _140 = *_31;
+  float3 _141 = _140.xyz;
+  float3 _142 = _139 + _141;
+  float4 _143 = *_31;
+  float4 _144 = float4(_142.x, _142.y, _142.z, _143.w);
+  *_31 = _144;
+  float4 _145 = *_9;
+  float3 _146 = _145.xyz;
+  float3 _147 = _146 * {0.0703, 0.0703, 0.0703};
+  float4 _148 = *_31;
+  float3 _149 = _148.xyz;
+  float3 _150 = _147 + _149;
+  float4 _151 = *_9;
+  float4 _152 = float4(_150.x, _150.y, _150.z, _151.w);
+  *_9 = _152;
+  float4 _155 = *_9;
+  float3 _156 = _155.xyz;
+  float3 _157 = GLSL.std.450::Sqrt(_156);
+  float4 _158 = *_154;
+  float4 _159 = float4(_157.x, _157.y, _157.z, _158.w);
+  *_154 = _159;
+  float* _163 = &_154.w;
+  *_163 = 1.0000;
+  return;
+}
+
+
