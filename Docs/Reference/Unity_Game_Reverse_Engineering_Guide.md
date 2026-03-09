@@ -1087,5 +1087,438 @@ python "export_art.py"  # 使用第五节脚本，修改路径后运行
 
 ---
 
-*文档最后更新：2026-03-08*
+## 十七、RenderDoc + Python API 帧分析工作流
+
+> **适用场景**：当 AssetRipper 无法提取 Shader 逻辑（IL2CPP），但你需要了解游戏的**实际渲染管线**、**Shader 参数**和**运行时纹理**时，使用 RenderDoc 帧捕获 + Python API 进行精确分析。
+>
+> **实战来源**：对 Galactic Glitch 飞船 Boost Trail 特效进行的 4 个 RDC 帧捕获分析（1.rdc / 3.rdc / 4.rdc / 5.rdc），完整还原了 7 层渲染架构。
+
+### 17.1 工具与环境
+
+| 工具 | 用途 | 路径 |
+|------|------|------|
+| **RenderDoc** | 帧捕获 + Python Shell 宿主 | 官网下载，安装后自带 Python 环境 |
+| **提取脚本** | 自动化 Draw Call 分析 + 纹理提取 | `F:\UnityProjects\Project-Ark\Tools\renderdoc_extract_targeted.py` |
+
+**RenderDoc Python Shell 的特殊性**：
+- RenderDoc 内置 Python 解释器，`import renderdoc as rd` 只在 RenderDoc 的 Python Shell 中有效
+- **不能**在系统 Python 中运行，必须通过 RenderDoc 菜单 → **Window → Python Shell** 执行
+- 执行方式：`exec(open(r"脚本路径", encoding="utf-8").read())`
+
+### 17.2 完整工作流（两阶段）
+
+```
+Phase 1: LIST MODE（扫描阶段）
+  目标：快速了解这个 RDC 有哪些 Draw Call，各自有多少纹理/CBuffer
+  操作：设置 TARGET_EVENT_IDS = []，运行脚本
+  输出：all_drawcalls.txt（每行一个 Draw Call 的摘要）
+
+Phase 2: EXTRACT MODE（提取阶段）
+  目标：对选定的目标 EID 提取纹理 + Shader 反汇编 + CBuffer 值
+  操作：分析 all_drawcalls.txt，设置 TARGET_EVENT_IDS = [eid1, eid2, ...]，再次运行
+  输出：每个 EID 一个子目录，含 report.txt + tex_slotN.png + ps_disasm.txt
+```
+
+### 17.3 完整提取脚本
+
+脚本路径：`F:\UnityProjects\Project-Ark\Tools\renderdoc_extract_targeted.py`
+
+```python
+"""
+RenderDoc Targeted Shader Extractor v4
+- LIST MODE: TARGET_EVENT_IDS = [] → 扫描所有 Draw Call，输出 all_drawcalls.txt
+- EXTRACT MODE: TARGET_EVENT_IDS = [eid1, eid2, ...] → 提取指定 EID 的纹理+Shader
+"""
+import renderdoc as rd
+import os
+
+# ===== 配置区域（每次分析新 RDC 时修改这里）=====
+RDC_FILE   = r"F:\UnityProjects\ReferenceAssets\GGrenderdoc\1.rdc"
+OUTPUT_DIR = r"F:\UnityProjects\ReferenceAssets\GGrenderdoc\output\targeted_v1"
+
+# 留空 [] → LIST MODE（扫描所有 Draw Call）
+# 填入 EID → EXTRACT MODE（提取指定 Draw Call）
+TARGET_EVENT_IDS = [
+    878,   # Ship body (3tex+2cb)
+    1596,  # Trail main effect (4tex+1cb)
+]
+# ===== 配置区域结束 =====
+
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+def flatten_actions(actions):
+    result = []
+    for a in actions:
+        result.append(a)
+        if hasattr(a, 'children') and a.children:
+            result.extend(flatten_actions(a.children))
+    return result
+
+def save_texture(controller, res_id, slot_name, out_dir):
+    try:
+        texsave = rd.TextureSave()
+        texsave.resourceId = res_id
+        texsave.destType = rd.FileType.PNG
+        texsave.mip = 0
+        texsave.slice.sliceIndex = 0
+        out_path = os.path.join(out_dir, f"{slot_name}.png")
+        controller.SaveTexture(texsave, out_path)
+        if os.path.exists(out_path):
+            return f"OK ({os.path.getsize(out_path)} bytes)"
+        return "(file not created)"
+    except Exception as e:
+        return f"(save failed: {e})"
+
+def get_bound_textures(controller, state, lines):
+    """获取当前 Draw Call 绑定的 PS 纹理列表。"""
+    bound = []
+    try:
+        descriptors = state.GetReadOnlyResources(rd.ShaderStage.Pixel)
+        for i, used in enumerate(descriptors):
+            res_id = None
+            if hasattr(used, 'descriptor'):
+                d = used.descriptor
+                if hasattr(d, 'resourceId'):   res_id = d.resourceId
+                elif hasattr(d, 'resource'):   res_id = d.resource
+            slot_idx = used.access.index if hasattr(used, 'access') and hasattr(used.access, 'index') else i
+            if res_id and res_id != rd.ResourceId.Null():
+                bound.append((f"tex_slot{slot_idx}", res_id))
+        if bound:
+            return bound
+    except Exception as e:
+        lines.append(f"  [GetReadOnlyResources] failed: {e}\n")
+    return bound
+
+def read_cbuffer_values(controller, state, lines):
+    """读取 CBuffer 的运行时值。"""
+    try:
+        refl = state.GetShaderReflection(rd.ShaderStage.Pixel)
+        if not refl or not refl.constantBlocks:
+            lines.append("  (no constant blocks)\n")
+            return
+        pipe_obj  = state.GetGraphicsPipelineObject()
+        shader_id = state.GetShader(rd.ShaderStage.Pixel)
+        for cb_idx, cb in enumerate(refl.constantBlocks):
+            lines.append(f"  CB[{cb_idx}] '{cb.name}' ({len(cb.variables)} vars):\n")
+            try:
+                cb_res = state.GetConstantBuffer(rd.ShaderStage.Pixel, cb_idx, 0)
+                buf_id = cb_res.resourceId if hasattr(cb_res, 'resourceId') else rd.ResourceId.Null()
+                vars_data = controller.GetCBufferVariableContents(
+                    pipe_obj, shader_id, rd.ShaderStage.Pixel,
+                    refl.entryPoint, cb_idx, buf_id, 0, 0)
+                for v in vars_data[:20]:
+                    lines.append(f"    {v.name} = {getattr(v, 'value', None)}\n")
+            except Exception as e1:
+                for v in cb.variables:
+                    lines.append(f"    {v.name}: {v.type.name} @offset={v.byteOffset}\n")
+    except Exception as e:
+        lines.append(f"  [CBuffer] failed: {e}\n")
+
+def extract_draw(controller, draw, out_dir):
+    eid = draw.eventId
+    draw_dir = os.path.join(out_dir, f"eid_{eid}")
+    os.makedirs(draw_dir, exist_ok=True)
+    lines = [f"=== EventId {eid} ===\n"]
+    try:
+        controller.SetFrameEvent(eid, True)
+        state = controller.GetPipelineState()
+        ps_id = state.GetShader(rd.ShaderStage.Pixel)
+        if ps_id == rd.ResourceId.Null():
+            lines.append("[PS] No pixel shader\n")
+        else:
+            refl = state.GetShaderReflection(rd.ShaderStage.Pixel)
+            if refl:
+                lines.append(f"[PS] Entry: {refl.entryPoint}\n")
+                for cb in refl.constantBlocks:
+                    lines.append(f"  CB '{cb.name}' bind={cb.fixedBindNumber} ({len(cb.variables)} vars)\n")
+                for r in refl.readOnlyResources:
+                    lines.append(f"  Tex '{r.name}' bind={r.fixedBindNumber}\n")
+            try:
+                disasm = controller.DisassembleShader(ps_id, refl, "")
+                if disasm:
+                    with open(os.path.join(draw_dir, "ps_disasm.txt"), "w", encoding="utf-8") as f:
+                        f.write(disasm)
+                    lines.append(f"[PS] Disasm saved ({len(disasm)} chars)\n")
+            except Exception as e:
+                lines.append(f"[PS] Disasm error: {e}\n")
+        lines.append("\n[Textures]\n")
+        for slot_name, res_id in get_bound_textures(controller, state, lines):
+            result = save_texture(controller, res_id, slot_name, draw_dir)
+            lines.append(f"  SAVED {slot_name}: {result}\n")
+        lines.append("\n[CBuffer Values]\n")
+        read_cbuffer_values(controller, state, lines)
+    except Exception as e:
+        import traceback
+        lines.append(f"[FATAL] {e}\n{traceback.format_exc()}")
+    with open(os.path.join(draw_dir, "report.txt"), "w", encoding="utf-8") as f:
+        f.writelines(lines)
+    return lines
+
+def main():
+    print(f"Opening: {RDC_FILE}")
+    cap = rd.OpenCaptureFile()
+    if cap.OpenFile(RDC_FILE, "", None) != rd.ResultCode.Succeeded:
+        print("[ERROR] Open failed"); return
+
+    result, controller = cap.OpenCapture(rd.ReplayOptions(), None)
+    if result != rd.ResultCode.Succeeded:
+        print("[ERROR] Replay failed"); cap.Shutdown(); return
+
+    root = controller.GetRootActions() if hasattr(controller, 'GetRootActions') else controller.GetDrawcalls()
+    all_actions = flatten_actions(root)
+    eid_map = {a.eventId: a for a in all_actions}
+    print(f"[INFO] Total actions: {len(all_actions)}")
+
+    target_ids = list(TARGET_EVENT_IDS)
+
+    # ---- LIST MODE ----
+    if not target_ids:
+        print("[LIST MODE] Scanning all draw calls with PS...")
+        list_lines = []
+        for a in all_actions:
+            if not (a.flags & rd.ActionFlags.Drawcall):
+                continue
+            try:
+                controller.SetFrameEvent(a.eventId, True)
+                state = controller.GetPipelineState()
+                if state.GetShader(rd.ShaderStage.Pixel) == rd.ResourceId.Null():
+                    continue
+                refl = state.GetShaderReflection(rd.ShaderStage.Pixel)
+                tex_count = len(refl.readOnlyResources) if refl else 0
+                cb_count  = len(refl.constantBlocks)    if refl else 0
+                entry     = refl.entryPoint              if refl else "?"
+                line = f"eid={a.eventId:5d}  textures={tex_count}  cbuffers={cb_count}  entry={entry}"
+                print(line)
+                list_lines.append(line + "\n")
+            except Exception as e:
+                list_lines.append(f"eid={a.eventId:5d}  ERROR: {e}\n")
+        list_path = os.path.join(OUTPUT_DIR, "all_drawcalls.txt")
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        with open(list_path, "w", encoding="utf-8") as f:
+            f.writelines(list_lines)
+        print(f"\n[DONE] List saved to: {list_path}")
+        print("Set TARGET_EVENT_IDS to the EIDs you want to extract, then re-run.")
+        controller.Shutdown(); cap.Shutdown(); return
+
+    # ---- EXTRACT MODE ----
+    for eid in target_ids:
+        if eid in eid_map:
+            print(f"  Extracting eid={eid} ...")
+            lines = extract_draw(controller, eid_map[eid], OUTPUT_DIR)
+            for l in lines[:8]: print("   ", l.rstrip())
+        else:
+            print(f"  [SKIP] eid={eid} not found")
+
+    print(f"\n[DONE] Output: {OUTPUT_DIR}")
+    controller.Shutdown()
+    cap.Shutdown()
+
+main()
+```
+
+### 17.4 操作步骤（完整流程）
+
+#### Step 1：录制帧捕获
+
+1. 打开 RenderDoc，点击 **Launch Application**
+2. 填入游戏 `.exe` 路径，点击 **Launch**
+3. 游戏运行后，在你想分析的**特效出现时**按 `F12`（或 Print Screen）截帧
+4. 回到 RenderDoc，双击捕获的帧缩略图打开
+
+#### Step 2：LIST MODE — 扫描所有 Draw Call
+
+1. 修改脚本顶部配置：
+   ```python
+   RDC_FILE   = r"F:\...\your_capture.rdc"
+   OUTPUT_DIR = r"F:\...\output\targeted_v1"
+   TARGET_EVENT_IDS = []   # 空列表 = LIST MODE
+   ```
+2. 在 RenderDoc 菜单 → **Window → Python Shell**
+3. 执行：
+   ```python
+   exec(open(r"F:\UnityProjects\Project-Ark\Tools\renderdoc_extract_targeted.py", encoding="utf-8").read())
+   ```
+4. 等待扫描完成，查看输出的 `all_drawcalls.txt`
+
+#### Step 3：分析 all_drawcalls.txt，选择目标 EID
+
+```
+eid=   21  textures=6  cbuffers=1  entry=main   ← 6张纹理，值得关注
+eid=  869  textures=3  cbuffers=2  entry=main   ← 3tex+2cb，飞船本体候选
+eid= 1050  textures=4  cbuffers=3  entry=main   ← 4tex+3cb，最复杂！
+eid= 1571  textures=4  cbuffers=1  entry=main   ← Trail 主特效候选
+```
+
+**选择策略**：
+- `textures` 数量异常多（≥4）→ 高优先级
+- `cbuffers` 数量多（≥2）→ 复杂 Shader，值得分析
+- 连续出现相同特征的 EID（如 869/870/871...）→ 粒子系统批次
+- 帧开头的 EID（如 21）→ 背景/环境层
+- 帧末尾的 EID → 后处理/UI 层
+
+#### Step 4：EXTRACT MODE — 提取目标 EID
+
+1. 修改脚本：
+   ```python
+   TARGET_EVENT_IDS = [
+       21,    # 6tex - background layers
+       869,   # 3tex+2cb - ship body candidate
+       1050,  # 4tex+3cb - complex shader
+       1571,  # 4tex - Trail main effect candidate
+   ]
+   ```
+2. 再次在 Python Shell 执行脚本
+3. 查看输出目录，每个 EID 一个子目录：
+   ```
+   output/targeted_v1/
+     eid_21/
+       report.txt        ← Shader 信息 + 纹理大小
+       tex_slot0.png     ← 第一张绑定纹理
+       tex_slot1.png     ← 第二张绑定纹理
+       ps_disasm.txt     ← Pixel Shader 反汇编（SPIR-V）
+     eid_869/
+       ...
+   ```
+
+#### Step 5：分析 report.txt
+
+```
+=== EventId 869 ===
+[PS] Entry: main
+  CB 'uniforms43' bind=2 (1 vars)
+  CB 'uniforms56' bind=3 (18 vars)
+  Tex 'res84' bind=5
+  Tex 'res135' bind=3
+  Tex 'res156' bind=4
+[PS] Disasm saved (45230 chars)
+
+[Textures]
+  SAVED tex_slot5: OK (677888 bytes)   ← 662 KB
+  SAVED tex_slot3: OK (93184 bytes)    ← 91 KB
+  SAVED tex_slot4: OK (677888 bytes)   ← 662 KB
+
+[CBuffer Values]
+  CB[0] 'uniforms43' (1 vars):
+    _child0 = [0.5, 0.5, 0.5, 1.0]
+  CB[1] 'uniforms56' (18 vars):
+    _child0 = [1.0, 0.0, 0.0, 0.0]
+    ...
+```
+
+**关键信息解读**：
+- `CB 'uniforms43' (1 vars)` → Shader 名 + 参数数量
+- `tex_slot5: OK (677888 bytes)` → 纹理大小（662KB）
+- 纹理大小相同 → 可能是同一张纹理的不同用途（Solid/Highlight）
+- 纹理大小极小（77B）→ 1×1 颜色纹理（占位符）
+
+### 17.5 跨 RDC 交叉验证方法
+
+分析多个 RDC 时，通过以下特征进行跨帧验证：
+
+| 验证维度 | 方法 | 意义 |
+|---------|------|------|
+| **Shader 名称** | 比较 `CB 'uniforms43'` 等名称 | 相同 Shader = 相同特效 |
+| **纹理大小** | 比较 `tex_slotN` 的字节数 | 相同大小 = 相同纹理资产 |
+| **CBuffer 参数数量** | 比较 `(N vars)` | 相同数量 = 相同 Shader 变体 |
+| **Disasm 字符数** | 比较 `Disasm saved (N chars)` | 完全相同 = 完全相同的 Shader 代码 |
+| **EID 位置** | 比较 EID 在帧中的相对位置 | 相同位置 = 相同渲染阶段 |
+
+**实战案例**（GG 飞船 Boost Trail，4 个 RDC 交叉验证）：
+
+| 特效 | 1.rdc | 3.rdc | 4.rdc | 5.rdc | 验证结论 |
+|------|-------|-------|-------|-------|---------|
+| 飞船本体 | eid_878 | eid_877 | eid_869 | eid_877 | ✅ Shader 名/纹理大小完全一致 |
+| Trail 主特效 | eid_1596 | eid_1598 | eid_1571 | eid_1725 | ✅ 4.5MB 主纹理四 RDC 一致 |
+| Boost 噪声 | — | eid_1076 | eid_1050 | eid_1181 | ✅ 3个CBuffer结构完全一致 |
+| 背景视差层 | — | eid_21 | eid_21 | eid_21 | ✅ EID 完全相同！ |
+
+### 17.6 ps_disasm.txt 分析技巧
+
+SPIR-V 反汇编（`ps_disasm.txt`）可以揭示 Shader 的核心逻辑，即使没有源码：
+
+```glsl
+// 关键模式识别：
+
+// 1. Perlin/Simplex 噪声（经典 289.0 常数）
+OpFMul %float %uv %float_289   → 噪声生成
+
+// 2. smoothstep 函数
+// t*t*(-2*t+3) 的展开形式
+OpFMul %t %t %neg2t_plus3      → smoothstep(0,1,t)
+
+// 3. 多层纹理混合
+OpImageSampleImplicitLod %tex0 %uv0
+OpImageSampleImplicitLod %tex1 %uv1
+OpFMix %result %tex0 %tex1 %alpha  → lerp(tex0, tex1, alpha)
+
+// 4. 顶点颜色驱动
+OpLoad %vertex_color %vs_COLOR     → 顶点颜色输入
+OpCompositeExtract %w %vertex_color 3  → 取 w 分量
+
+// 5. 世界空间坐标（说明特效跟随世界位置）
+OpLoad %world_pos %vs_TEXCOORD0    → 世界空间坐标输入
+OpMatrixTimesVector %transformed %matrix %world_pos  → 矩阵变换
+```
+
+**bound 值的意义**：
+- `bound=100~300`：简单 Shader（颜色混合/UV 变换）
+- `bound=300~700`：中等复杂度（多层纹理 + 噪声）
+- `bound=700~2000`：复杂 Shader（程序化噪声 + 世界空间变换）
+
+### 17.7 常见陷阱与解决方案
+
+| 陷阱 | 原因 | 解决方案 |
+|------|------|---------|
+| `import renderdoc` 失败 | 在系统 Python 中运行 | 必须在 RenderDoc 的 Python Shell 中执行 |
+| 纹理全部为 77B（极小） | RT 绑定 Pass，纹理未实际写入 | 跳过这个 EID，它是渲染目标绑定操作 |
+| `GetReadOnlyResources` 返回空 | API 版本差异 | 检查 `descriptor.resourceId` vs `descriptor.resource` |
+| 纹理保存失败 | 纹理是 Render Target（非普通纹理） | 正常现象，RT 无法直接保存为 PNG |
+| 同一特效在不同 RDC 中纹理大小不同 | 动态纹理切换（Sprite Sheet 帧） | 这是正常的，说明该特效有动画帧 |
+| `DisassembleShader` 返回空 | Shader 被混淆或格式不支持 | 跳过，只分析纹理和 CBuffer |
+| 脚本运行很慢（LIST MODE） | 每个 Draw Call 都要 SetFrameEvent | 正常，等待即可（通常 1-3 分钟） |
+
+### 17.8 输出目录结构
+
+```
+output/
+└── targeted_v1/                    ← OUTPUT_DIR
+    ├── all_drawcalls.txt           ← LIST MODE 输出（所有 Draw Call 摘要）
+    ├── eid_21/                     ← 每个目标 EID 一个子目录
+    │   ├── report.txt              ← Shader 信息 + 纹理大小 + CBuffer 值
+    │   ├── tex_slot0.png           ← 第一张绑定纹理（按 binding 槽位命名）
+    │   ├── tex_slot1.png
+    │   └── ps_disasm.txt           ← Pixel Shader SPIR-V 反汇编
+    ├── eid_869/
+    │   ├── report.txt
+    │   ├── tex_slot3.png           ← 注意：槽位编号来自 fixedBindNumber
+    │   ├── tex_slot4.png
+    │   ├── tex_slot5.png
+    │   └── ps_disasm.txt
+    └── eid_1571/
+        └── ...
+```
+
+### 17.9 与其他工具的配合
+
+| 场景 | 推荐工具组合 |
+|------|------------|
+| 了解游戏有哪些系统 | Il2CppDumper → dump.cs 搜索类名 |
+| 提取 ScriptableObject 数值 | AssetRipper → MonoBehaviour YAML |
+| 提取贴图/音频 | UnityPy 批量导出 |
+| **分析运行时 Shader 和纹理** | **RenderDoc + Python API（本章）** |
+| 验证配置值是否与运行时一致 | Cheat Engine 内存扫描 |
+
+**典型组合流程**（IL2CPP 游戏完整分析）：
+```
+1. Il2CppDumper → 了解类结构和字段名
+2. AssetRipper  → 提取 SO 数值和 Prefab 结构
+3. UnityPy      → 批量导出贴图/音频
+4. RenderDoc    → 分析运行时渲染管线（本章）
+5. Cheat Engine → 验证运行时参数值
+```
+
+---
+
+*文档最后更新：2026-03-09*
 *基于实战经验：Galactic Glitch (IL2CPP/2021) + Backpack Monsters (Mono/2022) + Magicraft (IL2CPP/Unity 6) + Minishoot' Adventures (Mono/2021) + Rain World (Mono/2021)*
+*第十七章新增：RenderDoc + Python API 帧分析工作流（基于 GG Boost Trail 4 RDC 实战）*
