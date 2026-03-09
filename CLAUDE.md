@@ -659,6 +659,7 @@ dotnet build Project-Ark.slnx
 - 日志文件位于 `Docs/ImplementationLog/ImplementationLog.md`
 - **每次**创建新文件、修改现有文件、或做出重大架构变更后，**必须在当前回合结束前**将变更追加到日志中
 - 纯讨论、问答、不涉及文件变更的对话不需要记录
+- **记录语言：** 中文
 
 ### 执行时机
 
