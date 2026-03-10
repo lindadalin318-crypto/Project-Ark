@@ -10235,3 +10235,28 @@ Unity 重载了 `==` 运算符以支持"假 null"（已销毁/无效的 UnityEng
 - eid_1598/tex_slot1.png (408KB)  Trail 第二层 Sprite Sheet
 - eid_21/tex_slot1~5.png  背景视差层纹理（5张）
 
+
+---
+
+## Unity_Game_Reverse_Engineering_Guide.md 新增第十七章  2026-03-09 21:10
+
+### 修改文件
+- Docs/Reference/Unity_Game_Reverse_Engineering_Guide.md  追加第十七章（RenderDoc + Python API 帧分析工作流）
+
+### 内容简述
+将 GG Boost Trail VFX 研究过程中形成的 RenderDoc + Python 工作流整理为通用方法论，追加到逆向工程指南中。
+
+### 目的
+将实战中积累的 RenderDoc 帧分析经验沉淀为可复用的工作流文档，供未来分析其他游戏时参考。
+
+### 新增内容
+1. 工具与环境（RenderDoc Python Shell 的特殊性）
+2. 完整工作流（LIST MODE + EXTRACT MODE 两阶段）
+3. 完整提取脚本（renderdoc_extract_targeted.py 精简版）
+4. 操作步骤（Step 1~5 完整流程）
+5. 跨 RDC 交叉验证方法（4维度验证 + GG 实战案例表格）
+6. ps_disasm.txt 分析技巧（SPIR-V 关键模式识别）
+7. 常见陷阱与解决方案（7条）
+8. 输出目录结构说明
+9. 与其他工具的配合（典型组合流程）
+
