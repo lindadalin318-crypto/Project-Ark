@@ -24,9 +24,6 @@ namespace ProjectArk.Ship
         private ShipMotor _motor;
         private ShipDash  _dash;
         private ShipBoost _boost;
-        private ParticleSystem.EmissionModule _emission;
-        private ParticleSystem.MainModule     _mainModule;
-
         private bool  _isDashing;
         private bool  _isBoosting;
         private float _lastNormalizedSpeed;
@@ -48,11 +45,10 @@ namespace ProjectArk.Ship
                 return;
             }
 
-            _emission   = _engineParticles.emission;
-            _mainModule = _engineParticles.main;
+            var mainModule = _engineParticles.main;
 
             // Particles follow ship rotation (direction always tracks ship heading)
-            _mainModule.simulationSpace = ParticleSystemSimulationSpace.Local;
+            mainModule.simulationSpace = ParticleSystemSimulationSpace.Local;
 
             ApplyPreciseBaseSettings();
 
@@ -98,13 +94,16 @@ namespace ProjectArk.Ship
         {
             if (_juiceSettings == null) return;
 
+            var mainModule = _engineParticles.main;
+            var emission = _engineParticles.emission;
+
             // Random start size between min and max (matches GG 0.04–0.08)
-            _mainModule.startSize = new ParticleSystem.MinMaxCurve(
+            mainModule.startSize = new ParticleSystem.MinMaxCurve(
                 _juiceSettings.EngineStartSizeMin,
                 _juiceSettings.EngineStartSizeMax);
 
             // Start at idle emission rate
-            _emission.rateOverTime = _juiceSettings.EngineIdleEmissionRate;
+            emission.rateOverTime = _juiceSettings.EngineIdleEmissionRate;
 
             // Color over lifetime: cyan-blue → magenta → transparent
             // GG MainEngineParticle: TopColor=(0.099,0.846,1.0) → BottomColor=(1.0,0.0,0.915)
@@ -149,7 +148,8 @@ namespace ProjectArk.Ship
             if (normalizedSpeed < minSpeed)
             {
                 // Idle tier: keep a low idle emission for thruster presence
-                _emission.rateOverTime = _juiceSettings.EngineIdleEmissionRate;
+                var idleEmission = _engineParticles.emission;
+                idleEmission.rateOverTime = _juiceSettings.EngineIdleEmissionRate;
                 return;
             }
 
@@ -159,11 +159,13 @@ namespace ProjectArk.Ship
                 _juiceSettings.EngineIdleEmissionRate,
                 _juiceSettings.EngineMaxEmissionRate,
                 t);
-            _emission.rateOverTime = rate;
+            var emission = _engineParticles.emission;
+            emission.rateOverTime = rate;
 
             // Scale particle size with speed (0.5x at idle → 1x at full speed)
+            var mainModule = _engineParticles.main;
             float sizeScale = Mathf.Lerp(0.5f, 1f, t);
-            _mainModule.startSize = new ParticleSystem.MinMaxCurve(
+            mainModule.startSize = new ParticleSystem.MinMaxCurve(
                 _juiceSettings.EngineStartSizeMin  * sizeScale,
                 _juiceSettings.EngineStartSizeMax  * sizeScale);
         }
@@ -177,10 +179,12 @@ namespace ProjectArk.Ship
             _isDashing = true;
             if (_juiceSettings == null) return;
 
-            _emission.rateOverTime = _juiceSettings.EngineDashEmissionRate;
+            var emission = _engineParticles.emission;
+            emission.rateOverTime = _juiceSettings.EngineDashEmissionRate;
 
             // Larger particles during dash (×1.5)
-            _mainModule.startSize = new ParticleSystem.MinMaxCurve(
+            var mainModule = _engineParticles.main;
+            mainModule.startSize = new ParticleSystem.MinMaxCurve(
                 _juiceSettings.EngineStartSizeMin * 1.5f,
                 _juiceSettings.EngineStartSizeMax * 1.5f);
         }
@@ -192,7 +196,8 @@ namespace ProjectArk.Ship
             // Restore size to normal
             if (_juiceSettings != null)
             {
-                _mainModule.startSize = new ParticleSystem.MinMaxCurve(
+                var mainModule = _engineParticles.main;
+                mainModule.startSize = new ParticleSystem.MinMaxCurve(
                     _juiceSettings.EngineStartSizeMin,
                     _juiceSettings.EngineStartSizeMax);
             }
@@ -211,7 +216,8 @@ namespace ProjectArk.Ship
             if (_juiceSettings == null) return;
 
             // Engine holds at max emission during boost
-            _emission.rateOverTime = _juiceSettings.EngineMaxEmissionRate;
+            var emission = _engineParticles.emission;
+            emission.rateOverTime = _juiceSettings.EngineMaxEmissionRate;
         }
 
         private void OnBoostEnded()

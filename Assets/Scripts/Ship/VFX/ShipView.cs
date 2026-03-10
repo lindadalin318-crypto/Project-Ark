@@ -47,6 +47,16 @@ namespace ProjectArk.Ship
         [Tooltip("TrailRenderer on BoostTrail GO (child of Ship_Sprite_Back).")]
         [SerializeField] private TrailRenderer _boostTrail;
 
+        [Tooltip("Full Boost Trail VFX controller (BoostTrailRoot prefab). Optional — if assigned, replaces legacy TrailRenderer-only logic.")]
+        [SerializeField] private BoostTrailView _boostTrailView;
+
+        [Header("VFX — Boost Liquid Sprite")]
+        [Tooltip("Sprite to use for _liquidRenderer when in Boost state (Boost_16).")]
+        [SerializeField] private Sprite _boostLiquidSprite;
+
+        [Tooltip("Sprite to use for _liquidRenderer in Normal state (Movement_3).")]
+        [SerializeField] private Sprite _normalLiquidSprite;
+
         [Header("VFX — Dodge Sprite")]
         [Tooltip("SpriteRenderer on Dodge_Sprite GO (child of ShipVisual, SortOrder -1).")]
         [SerializeField] private SpriteRenderer _dodgeSprite;
@@ -73,6 +83,9 @@ namespace ProjectArk.Ship
         private Color _liquidBaseColor;
         private Color _solidBaseColor;
 
+        // Cached baseline liquid sprite (Normal state)
+        private Sprite _cachedNormalLiquidSprite;
+
         // Active tweens — killed before starting a new one to avoid conflicts
         private Tween    _liquidTween;
         private Tween    _dodgeFadeTween;
@@ -92,7 +105,15 @@ namespace ProjectArk.Ship
             _dash            = GetComponent<ShipDash>();
             _stateController = GetComponent<ShipStateController>(); // optional
 
-            if (_liquidRenderer != null) _liquidBaseColor = _liquidRenderer.color;
+            if (_liquidRenderer != null)
+            {
+                _liquidBaseColor = _liquidRenderer.color;
+                // Cache normal sprite at startup (fallback if _normalLiquidSprite not assigned)
+                if (_normalLiquidSprite == null)
+                    _cachedNormalLiquidSprite = _liquidRenderer.sprite;
+                else
+                    _cachedNormalLiquidSprite = _normalLiquidSprite;
+            }
             if (_solidRenderer  != null) _solidBaseColor  = _solidRenderer.color;
 
             // HL layer default alpha = 0.5 (per spec)
@@ -193,12 +214,20 @@ namespace ProjectArk.Ship
             if (_liquidRenderer != null) _liquidRenderer.color = _liquidBaseColor;
             if (_solidRenderer  != null) _solidRenderer.color  = _solidBaseColor;
 
-            // Reset BoostTrail
+            // Reset BoostTrail (legacy)
             if (_boostTrail != null)
             {
                 _boostTrail.emitting = false;
                 _boostTrail.Clear();
             }
+
+            // Reset BoostTrailView (full VFX)
+            if (_boostTrailView != null)
+                _boostTrailView.ResetState();
+
+            // Reset liquid sprite to Normal state
+            if (_liquidRenderer != null && _cachedNormalLiquidSprite != null)
+                _liquidRenderer.sprite = _cachedNormalLiquidSprite;
 
             // Reset Dodge_Sprite
             ResetDodgeSprite();
@@ -259,10 +288,17 @@ namespace ProjectArk.Ship
                     ease: Ease.OutQuad);
             }
 
-            // 2. BoostTrail TrailRenderer
-            StartBoostTrail();
+            // 2. Liquid sprite → Boost_16
+            if (_liquidRenderer != null && _boostLiquidSprite != null)
+                _liquidRenderer.sprite = _boostLiquidSprite;
 
-            // 3. Thruster pulse
+            // 3. BoostTrailView (full VFX — replaces legacy trail if assigned)
+            if (_boostTrailView != null)
+                _boostTrailView.OnBoostStart();
+            else
+                StartBoostTrail(); // legacy fallback
+
+            // 4. Thruster pulse
             StartThrusterPulse();
         }
 
@@ -281,10 +317,17 @@ namespace ProjectArk.Ship
                     ease: Ease.InQuad);
             }
 
-            // 2. Stop BoostTrail
-            StopBoostTrail();
+            // 2. Liquid sprite → Movement_3 (Normal)
+            if (_liquidRenderer != null && _cachedNormalLiquidSprite != null)
+                _liquidRenderer.sprite = _cachedNormalLiquidSprite;
 
-            // 3. Stop thruster pulse
+            // 3. BoostTrailView (full VFX — replaces legacy trail if assigned)
+            if (_boostTrailView != null)
+                _boostTrailView.OnBoostEnd();
+            else
+                StopBoostTrail(); // legacy fallback
+
+            // 4. Stop thruster pulse
             StopThrusterPulse();
         }
 

@@ -1,0 +1,559 @@
+fileFormatVersion: 2
+guid: add92fe044593e741935ff4efb75567a
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 2413446595624323281
+    second: boost_noise_layer4_0
+  - first:
+      213: 8730134278798475513
+    second: boost_noise_layer4_1
+  - first:
+      213: 1473686185455905249
+    second: boost_noise_layer4_2
+  - first:
+      213: 1367014523232071758
+    second: boost_noise_layer4_3
+  - first:
+      213: -6314192615812128416
+    second: boost_noise_layer4_4
+  - first:
+      213: -8874609235488976025
+    second: boost_noise_layer4_5
+  - first:
+      213: -4181524204450282440
+    second: boost_noise_layer4_6
+  - first:
+      213: 8475225224172344717
+    second: boost_noise_layer4_7
+  - first:
+      213: -7819601392415832128
+    second: boost_noise_layer4_8
+  - first:
+      213: 809689104193038759
+    second: boost_noise_layer4_9
+  - first:
+      213: -5634884977876847598
+    second: boost_noise_layer4_10
+  - first:
+      213: -5697390551888571582
+    second: boost_noise_layer4_11
+  - first:
+      213: 8862405454096001708
+    second: boost_noise_layer4_12
+  - first:
+      213: -5295159711615412723
+    second: boost_noise_layer4_13
+  - first:
+      213: 6912291436341252984
+    second: boost_noise_layer4_14
+  - first:
+      213: 8524774125634994496
+    second: boost_noise_layer4_15
+  - first:
+      213: -8712631252889908662
+    second: boost_noise_layer4_16
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: boost_noise_layer4_0
+      rect:
+        serializedVersion: 2
+        x: 1122
+        y: 1136
+        width: 98
+        height: 99
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1d8409844e84e7120800000000000000
+      internalID: 2413446595624323281
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer4_1
+      rect:
+        serializedVersion: 2
+        x: 1154
+        y: 1158
+        width: 88
+        height: 82
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9f08e315fdaa72970800000000000000
+      internalID: 8730134278798475513
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer4_2
+      rect:
+        serializedVersion: 2
+        x: 1219
+        y: 1230
+        width: 21
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1e9ef7a17c5937410800000000000000
+      internalID: 1473686185455905249
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer4_3
+      rect:
+        serializedVersion: 2
+        x: 1283
+        y: 1199
+        width: 43
+        height: 47
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e403c04577c98f210800000000000000
+      internalID: 1367014523232071758
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer4_4
+      rect:
+        serializedVersion: 2
+        x: 1285
+        y: 1160
+        width: 13
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 061af1b154b7f58a0800000000000000
+      internalID: -6314192615812128416
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer4_5
+      rect:
+        serializedVersion: 2
+        x: 1279
+        y: 1091
+        width: 9
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 76357468bed07d480800000000000000
+      internalID: -8874609235488976025
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer4_6
+      rect:
+        serializedVersion: 2
+        x: 1373
+        y: 982
+        width: 211
+        height: 147
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8340b0604ed38f5c0800000000000000
+      internalID: -4181524204450282440
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer4_7
+      rect:
+        serializedVersion: 2
+        x: 1204
+        y: 890
+        width: 169
+        height: 147
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d85193e007c0e9570800000000000000
+      internalID: 8475225224172344717
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer4_8
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 744
+        width: 122
+        height: 103
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0c787efa6f13b7390800000000000000
+      internalID: -7819601392415832128
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer4_9
+      rect:
+        serializedVersion: 2
+        x: 102
+        y: 657
+        width: 253
+        height: 161
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7a92ee943f79c3b00800000000000000
+      internalID: 809689104193038759
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer4_10
+      rect:
+        serializedVersion: 2
+        x: 680
+        y: 570
+        width: 296
+        height: 209
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 214377fa7fddcc1b0800000000000000
+      internalID: -5634884977876847598
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer4_11
+      rect:
+        serializedVersion: 2
+        x: 1471
+        y: 742
+        width: 81
+        height: 76
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 243d308aa7dcee0b0800000000000000
+      internalID: -5697390551888571582
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer4_12
+      rect:
+        serializedVersion: 2
+        x: 593
+        y: 352
+        width: 209
+        height: 195
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: caa60e23ec69dfa70800000000000000
+      internalID: 8862405454096001708
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer4_13
+      rect:
+        serializedVersion: 2
+        x: 1113
+        y: 430
+        width: 182
+        height: 182
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d0614381c40d386b0800000000000000
+      internalID: -5295159711615412723
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer4_14
+      rect:
+        serializedVersion: 2
+        x: 1556
+        y: 381
+        width: 180
+        height: 207
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 873581f30746def50800000000000000
+      internalID: 6912291436341252984
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer4_15
+      rect:
+        serializedVersion: 2
+        x: 644
+        y: 129
+        width: 264
+        height: 161
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0414aeca6e41e4670800000000000000
+      internalID: 8524774125634994496
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer4_16
+      rect:
+        serializedVersion: 2
+        x: 979
+        y: 144
+        width: 118
+        height: 218
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a4ac7887904861780800000000000000
+      internalID: -8712631252889908662
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      boost_noise_layer4_0: 2413446595624323281
+      boost_noise_layer4_1: 8730134278798475513
+      boost_noise_layer4_10: -5634884977876847598
+      boost_noise_layer4_11: -5697390551888571582
+      boost_noise_layer4_12: 8862405454096001708
+      boost_noise_layer4_13: -5295159711615412723
+      boost_noise_layer4_14: 6912291436341252984
+      boost_noise_layer4_15: 8524774125634994496
+      boost_noise_layer4_16: -8712631252889908662
+      boost_noise_layer4_2: 1473686185455905249
+      boost_noise_layer4_3: 1367014523232071758
+      boost_noise_layer4_4: -6314192615812128416
+      boost_noise_layer4_5: -8874609235488976025
+      boost_noise_layer4_6: -4181524204450282440
+      boost_noise_layer4_7: 8475225224172344717
+      boost_noise_layer4_8: -7819601392415832128
+      boost_noise_layer4_9: 809689104193038759
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

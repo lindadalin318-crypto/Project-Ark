@@ -28,12 +28,6 @@ namespace ProjectArk.Ship
 
         private ShipBoost _boost;
 
-        private ParticleSystem.EmissionModule _glowEmission;
-        private ParticleSystem.MainModule     _glowMain;
-
-        private ParticleSystem.EmissionModule _emberEmission;
-        private ParticleSystem.MainModule     _emberMain;
-
         private bool _hasEmber;
 
         // ══════════════════════════════════════════════════════════════
@@ -51,15 +45,11 @@ namespace ProjectArk.Ship
                 return;
             }
 
-            _glowEmission = _boostTrailParticles.emission;
-            _glowMain     = _boostTrailParticles.main;
             _boostTrailParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
             _hasEmber = _boostEmberParticles != null;
             if (_hasEmber)
             {
-                _emberEmission = _boostEmberParticles.emission;
-                _emberMain     = _boostEmberParticles.main;
                 _boostEmberParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             }
         }
@@ -115,16 +105,18 @@ namespace ProjectArk.Ship
         private void ApplyGlowSettings()
         {
             var s = _juiceSettings;
+            var glowEmission = _boostTrailParticles.emission;
+            var glowMain = _boostTrailParticles.main;
 
-            _glowEmission.rateOverTime = s.BoostTrailEmissionRate;
+            glowEmission.rateOverTime = s.BoostTrailEmissionRate;
 
-            _glowMain.loop            = true;
-            _glowMain.simulationSpace = ParticleSystemSimulationSpace.Local;
-            _glowMain.startLifetime   = s.BoostTrailLifetime;
-            _glowMain.startSpeed      = 0f;
-            _glowMain.maxParticles    = 300;
+            glowMain.loop            = true;
+            glowMain.simulationSpace = ParticleSystemSimulationSpace.Local;
+            glowMain.startLifetime   = s.BoostTrailLifetime;
+            glowMain.startSpeed      = 0f;
+            glowMain.maxParticles    = 300;
 
-            _glowMain.startSize = new ParticleSystem.MinMaxCurve(
+            glowMain.startSize = new ParticleSystem.MinMaxCurve(
                 s.BoostTrailStartSizeMin,
                 s.BoostTrailStartSizeMax);
 
@@ -169,16 +161,18 @@ namespace ProjectArk.Ship
         private void ApplyEmberSettings()
         {
             var s = _juiceSettings;
+            var emberEmission = _boostEmberParticles.emission;
+            var emberMain = _boostEmberParticles.main;
 
-            _emberEmission.rateOverTime = s.BoostEmberEmissionRate;
+            emberEmission.rateOverTime = s.BoostEmberEmissionRate;
 
-            _emberMain.loop            = true;
-            _emberMain.simulationSpace = ParticleSystemSimulationSpace.Local;
-            _emberMain.startLifetime   = s.BoostEmberLifetime;
-            _emberMain.startSpeed      = 0f;
-            _emberMain.maxParticles    = 200;
+            emberMain.loop            = true;
+            emberMain.simulationSpace = ParticleSystemSimulationSpace.Local;
+            emberMain.startLifetime   = s.BoostEmberLifetime;
+            emberMain.startSpeed      = 0f;
+            emberMain.maxParticles    = 200;
 
-            _emberMain.startSize = new ParticleSystem.MinMaxCurve(
+            emberMain.startSize = new ParticleSystem.MinMaxCurve(
                 s.BoostEmberStartSizeMin,
                 s.BoostEmberStartSizeMax);
 

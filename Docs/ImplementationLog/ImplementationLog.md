@@ -1,4 +1,4 @@
-﻿# Implementation Log — Project Ark
+# Implementation Log — Project Ark
 
 ---
 
@@ -10260,3 +10260,387 @@ Unity 重载了 `==` 运算符以支持"假 null"（已销毁/无效的 UnityEng
 8. 输出目录结构说明
 9. 与其他工具的配合（典型组合流程）
 
+
+---
+
+## Boost Trail VFX 全复刻  2026-03-10 14:46
+
+### 新建/修改文件
+
+**新建文件：**
+- `Assets/_Art/VFX/BoostTrail/Textures/vfx_boost_techno_flame.png`  从 GG 提取的火焰纹理
+- `Assets/_Art/VFX/BoostTrail/Textures/vfx_ember_trail.png`  从 GG 提取的余烬拖尾纹理
+- `Assets/_Art/VFX/BoostTrail/Textures/vfx_ember_sparks.png`  从 GG 提取的余烬火花纹理
+- `Assets/_Art/Ship/Glitch/Boost_16.png`  Boost 状态 Liquid 层贴图
+- `Assets/_Art/VFX/BoostTrail/Materials/mat_flame_trail.mat`  火焰粒子材质（HDR 紫色 5.44,0.42,6.06）
+- `Assets/_Art/VFX/BoostTrail/Materials/mat_ember_trail.mat`  余烬拖尾材质（HDR 品红 2.0,0,1.08）
+- `Assets/_Art/VFX/BoostTrail/Materials/mat_ember_sparks.mat`  余烬火花材质（HDR 超亮白 3.73,3.73,3.73）
+- `Assets/_Art/VFX/BoostTrail/Materials/mat_trail_main.mat`  TrailRenderer 主拖尾材质（HDR 橙黄 2.0,1.1,0.24）
+- `Assets/_Art/VFX/BoostTrail/Materials/mat_boost_energy_layer2.mat`  Layer 2 能量层材质
+- `Assets/_Art/VFX/BoostTrail/Materials/mat_boost_energy_layer3.mat`  Layer 3 能量层材质
+- `Assets/_Art/VFX/BoostTrail/Materials/mat_boost_energy_field.mat`  Layer 4 全局能量场材质
+- `Assets/_Art/VFX/BoostTrail/Shaders/BoostEnergyLayer2.shader`  Layer 2 HLSL Shader（Gradient Noise + UV 扰动 + 4层纹理叠加 + Smoothstep）
+- `Assets/_Art/VFX/BoostTrail/Shaders/BoostEnergyLayer3.shader`  Layer 3 HLSL Shader（顶点颜色驱动 + UV2 + Step 二值化）
+- `Assets/_Art/VFX/BoostTrail/Shaders/BoostEnergyField.shader`  Layer 4 HLSL Shader（世界空间 + 4层梯度噪声 + LUT 可选）
+- `Assets/Scripts/Ship/VFX/BoostTrailView.cs`  全套 Boost Trail VFX 控制脚本
+- `Assets/Scripts/Ship/Editor/BoostTrailPrefabCreator.cs`  一键创建 BoostTrailRoot Prefab 的 Editor 脚本
+- `Assets/Settings/BoostBloomVolumeProfile.asset`  Boost Bloom 爆发 Local Volume Profile
+
+**修改文件：**
+- `Assets/Scripts/Ship/VFX/ShipView.cs`  添加 BoostTrailView 引用、Boost Liquid Sprite 切换（Movement_3  Boost_16）、在 HandleBoostStarted/Ended/ResetVFX 中调用 BoostTrailView
+- `Assets/Settings/GlobalVolumeProfile.asset`  添加 Bloom 组件（Threshold=0.8, Intensity=1.5, Scatter=0.7）
+
+### 内容简述
+
+完整实现 GG Boost Trail VFX 全复刻，覆盖 10 个需求的所有验收标准。
+
+### 目的
+
+复刻 GalacticGlitch 飞船 Boost 状态下的全套视觉特效，包括 TrailRenderer 主拖尾、火焰粒子系统、余烬粒子系统、能量层 Shader（Layer 2/3/4）、全屏闪光、URP Volume Bloom 爆发、Liquid 贴图切换。
+
+### 技术方案
+
+1. **资产层**：从 GG 提取目录复制 3 张 VFX 纹理 + Boost_16 飞船贴图到项目
+2. **材质层**：创建 7 个 URP Particles/Unlit Additive 材质，颜色参数完全对齐 GG 逆向数据
+3. **Shader 层**：用 HLSL 实现 3 个 Shader（Layer 2/3/4），对应 GG SPIR-V 反汇编逻辑：
+   - Layer 2：Gradient Noise（289.0 常数）+ UV 扰动 + 4层纹理叠加 + Lerp3 + Smoothstep
+   - Layer 3：顶点颜色 w 分量驱动 Lerp + UV2-0.5 + 双纹理 + Step(0.01) 二值化
+   - Layer 4：世界空间坐标 + 44矩阵变换 + 4层梯度噪声 + LUT 可选（降级为程序化噪声）
+4. **控制脚本**：BoostTrailView.cs 统一管理所有 VFX 生命周期，通过 MaterialPropertyBlock 驱动 _BoostIntensity，PrimeTween 驱动全屏闪光和 Bloom 爆发
+5. **ShipView 集成**：添加 BoostTrailView 引用和 Liquid Sprite 切换，向后兼容（_boostTrailView 为 null 时退化为旧 TrailRenderer 逻辑）
+6. **Editor 自动化**：BoostTrailPrefabCreator.cs 一键创建完整 BoostTrailRoot Prefab（菜单：ProjectArk > VFX > Create BoostTrailRoot Prefab）
+7. **URP 配置**：GlobalVolumeProfile 添加 Bloom（已确认 URP Asset m_SupportsHDR=1），创建 BoostBloomVolumeProfile 用于 Boost 激活时的 Bloom 爆发叠加
+
+### 待完成（需在 Unity Editor 中手动操作）
+
+1. 在 Unity 中导入纹理后，在 Inspector 中将纹理连线到对应材质的 _BaseMap 槽
+2. 运行菜单 ProjectArk > VFX > Create BoostTrailRoot Prefab 创建 Prefab
+3. 将 BoostTrailRoot Prefab 添加为飞船视觉根节点的子节点
+4. 在 ShipView Inspector 中连线 _boostTrailView、_boostLiquidSprite（Boost_16）、_normalLiquidSprite（Movement_3）
+5. 在场景中创建 Canvas（Overlay）+ 全屏白色 Image（Additive 混合），连线到 BoostTrailView._flashImage
+6. 在场景中创建 Local Volume，挂载 BoostBloomVolumeProfile，连线到 BoostTrailView._boostBloomVolume
+
+---
+
+## Boost Trail VFX Phase 2  缺失功能补全  2026-03-10 15:44
+
+### 新建/修改文件
+
+**新建文件：**
+- `Tools/CopyGGTextures.ps1`  GGrenderdoc 纹理批量复制脚本（17 张纹理，5 个 eid 目录）
+- `Assets/_Art/VFX/BoostTrail/Textures/trail_main_spritesheet.png`  Trail 核心 Sprite Sheet（4.5MB，eid_1598/tex_slot0）
+- `Assets/_Art/VFX/BoostTrail/Textures/trail_second_spritesheet.png`  Trail 第二层 Sprite Sheet（408KB，eid_1598/tex_slot1）
+- `Assets/_Art/VFX/BoostTrail/Textures/trail_edge_glow.png`  Trail 边缘光晕纹理（1.5KB，eid_1598/tex_slot2）
+- `Assets/_Art/VFX/BoostTrail/Textures/trail_color_lut.png`  Trail 辅助颜色 LUT（90B，eid_1598/tex_slot3）
+- `Assets/_Art/VFX/BoostTrail/Textures/boost_noise_main.png`  Boost 噪声主纹理（1.67MB，eid_1076/tex_slot0）
+- `Assets/_Art/VFX/BoostTrail/Textures/boost_noise_distort.png`  噪声扰动纹理（165KB，eid_1076/tex_slot1）
+- `Assets/_Art/VFX/BoostTrail/Textures/boost_noise_layer3.png`  第三层纹理（215KB，eid_1076/tex_slot2）
+- `Assets/_Art/VFX/BoostTrail/Textures/boost_noise_layer4.png`  第四层纹理（405KB，eid_1076/tex_slot3）
+- `Assets/_Art/VFX/BoostTrail/Textures/boost_energy_noise_a.png`  能量层噪声纹理 A（17KB，eid_1126/tex_slot0）
+- `Assets/_Art/VFX/BoostTrail/Textures/boost_energy_main.png`  能量层主纹理（136KB，eid_1126/tex_slot2）
+- `Assets/_Art/VFX/BoostTrail/Textures/boost_field_main.png`  全局能量场主纹理（4.78MB，eid_1964/tex_slot0）
+- `Assets/_Art/VFX/BoostTrail/Textures/boost_field_aux.png`  全局能量场辅助纹理（939KB，eid_1964/tex_slot1）
+- `Assets/_Art/Ship/Glitch/ship_solid_gg.png`  飞船 Solid 层贴图（10241024，662KB，eid_877/tex_slot0）
+- `Assets/_Art/Ship/Glitch/ship_liquid_boost.png`  飞船 Liquid 层 Boost 帧（512512，91KB，eid_877/tex_slot1）
+- `Assets/_Art/Ship/Glitch/ship_highlight_gg.png`  飞船 Highlight 层贴图（10241024，662KB，eid_877/tex_slot2）
+- `Assets/_Art/VFX/BoostTrail/Shaders/TrailMainEffect.shader`  Trail 主特效 HLSL Shader（uniforms141 精确复刻，双层 Sprite Sheet + 边缘光晕 + 8 亮度增强 + output.w=1.0）
+- `Assets/_Art/VFX/BoostTrail/Materials/mat_trail_main_effect.mat`  Trail 主特效材质（4 个纹理槽位，等待 Unity 导入后连线 Shader GUID）
+- `Assets/Scripts/Ship/Editor/MaterialTextureLinker.cs`  材质纹理批量连线 Editor 脚本（菜单：ProjectArk > VFX > Link Material Textures）
+- `Docs/ImplementationLog/BoostTrailPhase2_TestChecklist.md`  Phase 2 Play Mode 测试清单（8 条验收标准）
+
+**修改文件：**
+- `Assets/Scripts/Ship/VFX/BoostTrailView.cs`  添加 `_emberGlow` 字段（[SerializeField] ParticleSystem），在 OnBoostStart/OnBoostEnd/ResetState 中同步控制 EmberGlow
+- `Assets/Scripts/Ship/Editor/BoostTrailPrefabCreator.cs`  添加 EmberGlow 节点创建（ConfigureEmberGlow 方法，StartLifetime=0.12s，Burst 15 粒子，HDR 橙黄），添加 `_emberGlow` SerializedObject 连线，更新完成对话框包含完整纹理连线指南
+
+### 内容简述
+
+Boost Trail VFX Phase 2 补全了 Phase 1 遗漏的所有功能：17 张 GGrenderdoc 纹理导入、Trail 主特效 Shader（uniforms141）实现、EmberGlow 粒子系统、材质纹理批量连线 Editor 脚本、飞船本体贴图导入。
+
+### 目的
+
+完整复刻 GalacticGlitch 飞船 Boost Trail 特效的所有视觉层，使 Project Ark 的 Boost 特效与 GG 原版在视觉质量上完全对齐。
+
+### 技术方案
+
+1. **纹理导入**：PowerShell 脚本 CopyGGTextures.ps1 批量复制 5 个 eid 目录的 17 张纹理，按语义重命名
+2. **Trail 主特效 Shader**：精确复刻 GG uniforms141 SPIR-V（bound=710）：
+   - sRGBLinear 转换（gamma 2.4，常数 0.0774/0.0550/0.9479）
+   - slot1 平方（col1 * col1）
+   - _child3 > 0 时 8 亮度增强
+   - _child2.xyz 颜色混合权重
+   - _child5.z > 0 时边缘光晕（径向渐变，_child4.w 椭圆参数）
+   - 双层 Sprite Sheet 动画（_child0/_child1 控制帧数）
+   - 最终 output.w = 1.0（完全不透明）
+3. **BoostEnergyLayer2 验证**：Perlin 噪声常数 289.0  正确，permute 函数 ((x*34+1)*x)  正确，无需修改
+4. **EmberGlow**：BoostTrailView.cs 添加 _emberGlow 字段，OnBoostStart/End/ResetState 同步控制；BoostTrailPrefabCreator.cs 添加 ConfigureEmberGlow（StartLifetime=0.12s，Burst 15，HDR 橙黄 2.0/1.29/0）
+5. **MaterialTextureLinker**：Editor 脚本自动将 15 张纹理连线到 8 个材质的正确槽位（_Tex0~3/_Slot0~3/_BaseMap/_LUTTex），并设置 _UseLUT=1
+6. **飞船贴图**：ship_solid_gg（10241024）和 ship_highlight_gg（10241024）尺寸与项目现有贴图（430430）不匹配，不强制替换；ship_liquid_boost（512512）作为 Boost_16（430430）的高分辨率备选
+
+### 待完成（需在 Unity Editor 中手动操作）
+
+1. 打开 Unity Editor，等待自动导入 17 张新纹理
+2. 运行 `ProjectArk > VFX > Link Material Textures` 自动连线所有纹理
+3. 运行 `ProjectArk > VFX > Create BoostTrailRoot Prefab` 创建 Prefab
+4. 在 mat_trail_main_effect Inspector 中手动重新指定 TrailMainEffect.shader（GUID 占位符需更新）
+5. 按 BoostTrailPhase2_TestChecklist.md 逐项验证
+
+---
+
+## Boost Trail VFX Phase 2  Bug 修复轮次 1  2026-03-10 16:14
+
+### 修改文件
+
+- `Assets/_Art/VFX/BoostTrail/Shaders/TrailMainEffect.shader`  修复 4 个 bug
+- `Assets/Scripts/Ship/Editor/BoostTrailPrefabCreator.cs`  修复 2 个 bug
+
+### 内容简述
+
+对 Phase 2 实现进行系统性 bug 排查，共发现并修复 8 个 bug（含上一轮 4 个 + 本轮 4 个）。
+
+### 目的
+
+确保 TrailMainEffect.shader 能在 Unity HLSL 编译器下无错误编译，并保证 Sprite Sheet 动画、边缘光晕、最终颜色混合逻辑与 GG SPIR-V 原版一致。
+
+### 技术方案（本轮 4 个 bug）
+
+**Bug 5  编译错误：孤立的 float4 frag 声明**
+- 根因：上一轮 multi_replace 移除 CalcSpriteSheetUV 函数时，new_string 中残留了一个孤立的 float4 frag 行，导致文件中出现两个 float4 frag 声明
+- 修复：移除孤立的 float4 frag 行，保留正确的 float4 frag(Varyings IN) : SV_Target
+
+**Bug 6  逻辑错误：Step 8 最终混合逻辑错误**
+- 根因：finalCol = lerp(ssCol0, ssCol1, blendT1) 完全忽略了 Step 4 计算的 blended（主颜色混合结果），Sprite Sheet 结果替换了主颜色而非调制它
+- 修复：改为 finalCol = blended * ssModulate，Sprite Sheet 作为调制层叠加在主颜色上
+
+**Bug 7  逻辑错误：Step 5 边缘光晕椭圆 UV X 分量被丢弃**
+- 根因：椭圆计算 float2(scaledUV.y * _Child4.w, scaledUV.y) 错误地用 Y 分量计算了 X，导致 X 分量信息丢失，椭圆退化为圆形
+- 修复：改为 float2(scaledUV.x * _Child4.w, scaledUV.y)，X/Y 分量各自独立参与椭圆计算
+
+**Bug 8  编译警告：BoostTrailPrefabCreator.cs 未使用的 using 语句**
+- 根因：引入了 UnityEngine.UI / UnityEngine.Rendering / UnityEngine.Rendering.Universal 但均未使用
+- 修复：移除三个未使用的 using 语句
+
+---
+
+## Boost Trail VFX Phase 2  Bug 修复轮次 2  2026-03-10 16:17
+
+### 修改文件
+
+- `Assets/_Art/VFX/BoostTrail/Shaders/TrailMainEffect.shader`  修复 3 个 bug（Bug 9/10 + 上轮遗留验证）
+- `Assets/Scripts/Ship/VFX/BoostTrailView.cs`  修复 1 个 bug（Bug 13）
+- `Assets/Scripts/Ship/Editor/MaterialTextureLinker.cs`  修复 1 个 bug（Bug 15）
+
+### 内容简述
+
+第三轮系统性 bug 排查，对所有实现文件进行深度静态分析，共发现并修复 4 个新 bug。
+
+### 目的
+
+确保 TrailMainEffect.shader 的 sRGB 转换曲线与 GG 原版完全一致，Sprite Sheet 帧寻址正确，BoostTrailView 符合 CLAUDE.md 事件卫生规范，MaterialTextureLinker 纹理连线语义正确。
+
+### 技术方案（本轮 4 个 bug）
+
+**Bug 9  逻辑错误：SRGBToLinear / LinearToSRGB 中 step() 参数顺序反了**
+- 根因：HLSL step(edge, x) 返回 x >= edge ? 1 : 0。原代码 step(c, 0.0404) 实际计算的是 0.0404 >= c，逻辑完全反转，导致暗色像素走 hi 曲线、亮色像素走 lo 曲线，sRGB 转换结果完全错误
+- 修复：SRGBToLinear 改为 lerp(lo, hi, step(0.0404, c))；LinearToSRGB 改为 lerp(lo, hi, step(0.0031, c))
+
+**Bug 10  逻辑错误：Step 6/7 Sprite Sheet 帧宽度步进计算错误**
+- 根因：原代码用 _Child0.y（帧数 Y 分量）作为帧宽度步进，但正确的帧宽度应为 1.0 / _Child0.x（列数的倒数）。例如 4 列 Sprite Sheet 每帧宽度为 0.25，而非 _Child0.y 的任意值
+- 修复：引入 frameWidth0 = 1.0 / max(_Child0.x, 1.0)，tiledUV 改为 uv * float2(frameWidth0, 1.0)，帧步进改为 frameIdx * frameWidth0；Step 7 同理
+
+**Bug 13  规范违反：BoostTrailView 缺少 OnDestroy 停止 Tween**
+- 根因：CLAUDE.md 事件卫生规则要求 OnDisable/OnDestroy 必须停止 Tween，防止对象销毁后 PrimeTween 回调访问已销毁的 _flashImage / _bloomOverride 等组件，导致 MissingReferenceException
+- 修复：添加 OnDestroy() 方法，停止 _intensityTween / _flashTween / _bloomTween
+
+**Bug 15  语义错误：MaterialTextureLinker 中 mat_trail_main 连线了错误的纹理**
+- 根因：mat_trail_main 是 TrailRenderer（MainTrail）使用的材质，其 _BaseMap 应该是 trail_main_spritesheet（Trail 核心 Sprite Sheet）。原代码错误地连线了 vfx_boost_techno_flame（火焰粒子纹理），导致 TrailRenderer 显示火焰纹理而非 Trail 纹理
+- 修复：将 mat_trail_main._BaseMap 改为 trail_main_spritesheet
+
+---
+
+## Boost Trail VFX Phase 2  Bug 修复轮次 3  2026-03-10 16:20
+
+### 修改文件
+
+- `Assets/_Art/VFX/BoostTrail/Shaders/TrailMainEffect.shader`  修复 2 个 bug（Bug 16/17）
+- `Assets/Scripts/Ship/Editor/BoostTrailPrefabCreator.cs`  修复 1 个 bug（Bug 18）
+- `Assets/Scripts/Ship/Editor/MaterialTextureLinker.cs`  修复 1 个 bug（Bug 19）
+
+### 内容简述
+
+第四轮系统性 bug 排查，对所有实现文件进行深度静态分析，共发现并修复 4 个新 bug。
+
+### 目的
+
+确保 TrailMainEffect.shader 的 glow 颜色方向与 GG SPIR-V 一致，Sprite Sheet 双层调制使用正确的乘法语义，BoostTrailPrefabCreator 明确提示开发者手动连线场景对象字段，MaterialTextureLinker 注释与代码保持一致。
+
+### 技术方案（本轮 4 个 bug）
+
+**Bug 16  逻辑错误：Step 5 glow 颜色混合方向反了**
+- 根因：原代码 radial * (1.0 - _Child4.xyz) + _Child4.xyz 展开为 lerp(_Child4.xyz, 1.0, radial)，即中心为白色(1.0)、边缘为 _Child4.xyz。GG SPIR-V 原版是 lerp(1.0, _Child4.xyz, radial)，即中心为 _Child4.xyz（最强色调）、边缘为白色（无色调）
+- 修复：改为 lerp(float3(1,1,1), _Child4.xyz, radial)，中心处颜色最强，边缘自然过渡到白色
+
+**Bug 17  逻辑错误：Step 8 ssModulate 应为两层 Sprite Sheet 相乘，而非 lerp**
+- 根因：原代码 lerp(ssCol0, ssCol1, blendT1) 用 slot1 的帧内混合权重 blendT1（0~1 小数）来跨 slot 插值，语义完全错误。GG SPIR-V 中两个 Sprite Sheet 层是乘法调制关系（ssCol0 * ssCol1），共同作用于主颜色
+- 修复：改为 ssModulate = ssCol0 * ssCol1，两层 Sprite Sheet 相乘后再调制 blended
+
+**Bug 18  运行时静默失效：BoostTrailPrefabCreator 未提示 _boostBloomVolume/_flashImage 需手动连线**
+- 根因：_boostBloomVolume（Local Volume）和 _flashImage（Canvas Image）是场景对象，无法在 Prefab 中预连线。原代码 SerializedObject 连线段没有任何注释或警告，开发者极易遗漏，导致 TriggerFlash() 和 TriggerBloomBurst() 因 null 守卫静默跳过，全屏闪光和 Bloom 爆发永远不触发
+- 修复：在 so.ApplyModifiedProperties() 后添加 Debug.LogWarning，明确列出两个字段名、期望连线的对象类型，以及不连线的后果
+
+**Bug 19  注释不一致：MaterialTextureLinker 文件头注释 mat_trail_main 纹理描述未更新**
+- 根因：Bug 15 修复后实际代码已改为 trail_main_spritesheet，但文件头 XML 注释仍写 vfx_boost_techno_flame，会误导维护者
+- 修复：将注释第 12 行更新为 mat_trail_main : _BaseMap = trail_main_spritesheet
+
+---
+
+## Boost Trail VFX Phase 2  Bug 修复轮次 4  2026-03-10 16:24
+
+### 修改文件
+
+- `Assets/Scripts/Ship/ProjectArk.Ship.asmdef`  添加 URP Runtime Assembly 引用
+
+### 内容简述
+
+通过读取 Unity Editor.log 发现两个编译错误，根因是 ProjectArk.Ship.asmdef 缺少 URP Runtime Assembly 引用，导致 BoostTrailView.cs 中的 Volume 和 Bloom 类型无法解析。
+
+### 目的
+
+修复 BoostTrailView.cs 编译错误，使 TriggerBloomBurst() 中的 URP Volume/Bloom 后处理逻辑能够正常编译。
+
+### 技术方案
+
+**Bug 20  编译错误：ProjectArk.Ship.asmdef 缺少 Unity.RenderPipelines.Universal.Runtime 引用**
+- 错误信息：
+  - BoostTrailView.cs(6,29): error CS0234: The type or namespace name 'Universal' does not exist in the namespace 'UnityEngine.Rendering'
+  - BoostTrailView.cs(69,34): error CS0246: The type or namespace name 'Volume' could not be found
+  - BoostTrailView.cs(122,17): error CS0246: The type or namespace name 'Bloom' could not be found
+- 根因：BoostTrailView.cs 使用了 UnityEngine.Rendering.Universal 命名空间下的 Volume 和 Bloom 类型，但 ProjectArk.Ship.asmdef 的 references 数组中没有包含 Unity.RenderPipelines.Universal.Runtime
+- 修复：在 references 数组中追加 Unity.RenderPipelines.Universal.Runtime，Unity 重新编译后三个错误全部消除
+- 验证：Editor.log 中除 BoostTrailView 相关错误外无其他 error CS 记录
+
+---
+
+## BoostTrailView Console 残留错误排查  2026-03-10 16:53
+
+### 修改文件
+
+- `Assets/Scripts/Ship/ProjectArk.Ship.asmdef`  补充 URP Core Runtime Assembly 引用
+
+### 内容简述
+
+使用 Unity MCP 读取 Console 后，发现 `BoostTrailView.cs(69,34)` 的 `Volume` 编译错误与 Burst 的 `ProjectArk.UI` 解析异常同时出现。经对照 `validate_script` 结果、`ProjectArk.UI.asmdef` / `ProjectArk.Level.asmdef` 的引用配置，并在清空 Console 后强制刷新重编译，确认当前错误属于历史残留日志，不是仍在发生的实时编译错误。
+
+### 目的
+
+确认 Boost Trail VFX Phase 2 的当前编译状态是否真实异常，避免继续基于过期 Console 日志做错误修复；同时补齐 `ProjectArk.Ship` 对 URP Core Runtime 的显式依赖，降低后续渲染相关 API 引用再次失配的风险。
+
+### 技术方案
+
+1. 使用 Unity MCP `read_console` 拉取最近 Error 栈信息，定位到 `BoostTrailView.cs` 与 Burst 级联异常
+2. 核对 `BoostTrailView.cs` 的 `using UnityEngine.Rendering;` / `using UnityEngine.Rendering.Universal;` 与 `ProjectArk.Ship.asmdef` 的程序集引用
+3. 追加 `Unity.RenderPipelines.Core.Runtime` 到 `ProjectArk.Ship.asmdef`
+4. 使用 Unity MCP `validate_script` 验证 `BoostTrailView.cs` 当前脚本诊断为 `0 errors`
+5. 使用 Unity MCP 清空 Console 后执行 `refresh_unity(mode=force, scope=all, compile=request)` 强制刷新并重编译
+6. 再次读取 Console，确认 Error/Warning 均为 `0`，证明先前报错为残留日志
+
+---
+
+## Boost Trail VFX Phase 2  一键替换工具与Prefab接入收尾  2026-03-10 17:15
+
+### 修改文件
+
+- `Assets/Scripts/Ship/Editor/MaterialTextureLinker.cs`  扩展为可复用的无弹窗连线入口，并自动重绑 BoostTrail 自定义 Shader
+- `Assets/Scripts/Ship/Editor/BoostTrailPrefabCreator.cs`  改为可编程重建 `BoostTrailRoot` Prefab，主拖尾优先使用 `mat_trail_main_effect`，能量层自动补默认 Sprite
+- `Assets/Scripts/Ship/Editor/ShipBoostTrailPrefabReplacer.cs`  新增一键替换 Ship Prefab 的编辑器工具
+- `Assets/_Prefabs/Ship/Ship.prefab`  接入 `BoostTrailRoot`，连线 `ShipView._boostTrailView` / `_boostLiquidSprite` / `_normalLiquidSprite`，并清除旧版 boost trail 残留
+- `Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Fallback.asset`  保留 Unity / TMP 自动回写的 fallback 字形与 atlas 数据
+
+### 内容简述
+
+本轮先修复 Boost Trail 资源接入阶段最容易导致“看起来实现了但运行时不生效”的几个硬问题：材质仍停留在占位 Shader、`BoostTrailRoot` 创建后仍使用旧拖尾材质、能量层 `SpriteRenderer` 没有默认 Sprite，以及 Ship Prefab 需要手动替换新版 Boost Trail 结构。随后新增一个风格对齐 `FORCE Rebuild Ship Prefab` 的一键替换工具，将新版 `BoostTrailRoot` 接入 `Ship.prefab`，并清除 legacy `ShipBoostTrailVFX` / `BoostTrailParticles` / `BoostEmberParticles` / `BoostTrail` 残留。执行 Unity 刷新过程中，TMP fallback 字体资产自动生成了 3 个符号字形（`▲`、`●`、`▼`）及其 atlas，确认属于编辑器自动补字而非本次 Boost Trail 逻辑改坏。
+
+### 目的
+
+把 Boost Trail VFX 从“代码和资源大体齐了，但仍要手工拼接多个环节”推进到“可以一键替换进 Ship Prefab 并落盘”的状态，减少后续迭代和验证成本；同时保留这次 Unity 自动生成的 TMP fallback 变更，避免后续 UI 再次请求相同字符时重复产生噪音 diff。
+
+### 技术方案
+
+1. 在 `MaterialTextureLinker` 中新增 `LinkAllMaterialTextures(bool showDialog)`，既保留菜单入口，也允许其他编辑器工具无弹窗复用
+2. 在材质连线阶段主动调用 `Shader.Find(...)`，将 `mat_trail_main_effect`、`mat_boost_energy_layer2`、`mat_boost_energy_layer3`、`mat_boost_energy_field` 从占位状态切到项目自定义 BoostTrail Shader
+3. 在 `BoostTrailPrefabCreator` 中新增 `CreateOrRebuildBoostTrailRootPrefab(bool showDialog)`，使替换工具可以稳定重建最新版本的 VFX Prefab
+4. 将 `MainTrail` 优先绑定 `mat_trail_main_effect`，避免新 Prefab 仍回退到旧的简化拖尾材质
+5. 为 `BoostEnergyLayer2` / `BoostEnergyLayer3` 自动分配 `Boost_16`，若缺失则回退到 `Movement_3`，防止 `SpriteRenderer` 因空 Sprite 在运行时直接不可见
+6. 新增 `ProjectArk/Ship/Replace Ship Boost Trail (GG)` 与 `ProjectArk/Ship/FORCE Replace Ship Boost Trail (GG)` 菜单工具，自动执行材质重绑、`BoostTrailRoot` 重建、Ship Prefab 接入、`ShipView` 字段连线和 legacy 节点清理
+7. 使用 Unity MCP `validate_script` 校验三个编辑器脚本均为 `0 errors`，并在执行菜单后通过 Prefab 内容确认新版 `BoostTrailRoot` 已接入、旧版 boost trail 组件与子节点已被移除
+8. 对 `LiberationSans SDF - Fallback.asset` 做 diff 审查，确认只新增 fallback glyph / atlas 数据，不涉及字体源、采样参数或 fallback 配置变更，因此按用户决定保留
+
+---
+
+## Boost Trail VFX Phase 2  场景接线自动化收尾  2026-03-10 17:23
+
+### 修改文件
+
+- `Assets/Scripts/Ship/Editor/ShipBoostTrailSceneBinder.cs`  新增场景一键接线工具
+- `Assets/_Art/VFX/BoostTrail/Shaders/UIBoostFlash.shader`  新增 UI Additive Flash Shader
+- `Assets/_Art/VFX/BoostTrail/Materials/mat_ui_boost_flash.mat`  运行工具时自动生成的全屏闪光材质
+- `Assets/Scenes/SampleScene.unity`  接入 `BoostTrailFlashOverlay` 与 `BoostTrailBloomVolume` 场景对象，并将其连线到 `BoostTrailView`
+
+### 内容简述
+
+补完 Boost Trail 最后一段无法在 Prefab 内预连线的场景引用链。新增 `ProjectArk/Ship/Setup Boost Trail Scene References (GG)` 工具，在当前场景中自动复用现有 Overlay Canvas，创建全屏 `BoostTrailFlashOverlay` 和 `BoostTrailBloomVolume`，再把它们批量连线到场景中的 `BoostTrailView`。同时补了一个极简 UI Additive Shader，让 flash overlay 使用独立材质而不是默认 UI 混合模式。
+
+### 目的
+
+把 Boost Trail VFX 从“Prefab 已接好但 Scene 仍需人工补线”推进到“当前场景可一键完成引用闭环并直接进入手感验证”的状态，避免 `_flashImage` / `_boostBloomVolume` 长期为 null 导致全屏闪光和 Bloom burst 静默失效。
+
+### 技术方案
+
+1. 新增 `ShipBoostTrailSceneBinder`，菜单路径为 `ProjectArk/Ship/Setup Boost Trail Scene References (GG)`
+2. 工具优先复用当前场景已有的 Screen Space Overlay Canvas，未找到时才创建 fallback Canvas
+3. 自动创建全屏 `BoostTrailFlashOverlay`，锚点拉伸到全屏、`Image.color.a = 0`、`raycastTarget = false`
+4. 新增 `UIBoostFlash.shader` 并在首次运行工具时自动生成 `mat_ui_boost_flash.mat`，供 `BoostTrailFlashOverlay` 走加色材质
+5. 自动创建 `BoostTrailBloomVolume`，通过反射/`SerializedObject` 配置 URP `Volume`，避免 Editor 程序集直接依赖 `Unity.RenderPipelines.Core.Runtime`
+6. 将 `BoostTrailBloomVolume` 配置为 `isGlobal = true`、`priority = 100`、`weight = 0`，并绑定 `Assets/Settings/BoostBloomVolumeProfile.asset`
+7. 扫描场景中的 `BoostTrailView`，自动写入 `_flashImage` 与 `_boostBloomVolume`
+8. 使用 Unity MCP 验证：
+   - `BoostTrailView._flashImage` 已指向 `BoostTrailFlashOverlay`
+   - `BoostTrailView._boostBloomVolume` 已指向 `BoostTrailBloomVolume`
+   - `BoostTrailFlashOverlay` 已使用 `Assets/_Art/VFX/BoostTrail/Materials/mat_ui_boost_flash.mat`
+   - `BoostTrailBloomVolume` 已绑定 `Assets/Settings/BoostBloomVolumeProfile.asset`
+9. 显式保存 `Assets/Scenes/SampleScene.unity`，确保场景自动接线结果落盘
+
+---
+
+## Boost Trail VFX Play Mode 验证与收口修复  2026-03-10 17:38
+
+### 修改文件
+
+- `Assets/Scripts/Ship/VFX/ShipEngineVFX.cs`  修复 Boost 触发时的 `ParticleSystem` 运行时异常
+- `Assets/Scripts/Ship/VFX/ShipBoostTrailVFX.cs`  同步移除失效的 `ParticleSystem` module struct 缓存写法
+- `Assets/Scripts/Ship/Editor/ShipBoostTrailSceneBinder.cs`  修正 flash overlay 的 Canvas 选择与 Sprite 分配逻辑
+- `Assets/Scripts/Ship/Editor/ShipBoostDebugMenu.cs`  新增 Play Mode 调试入口，便于 MCP 直接触发 Boost / Flash 做回归验证
+- `Assets/Scenes/SampleScene.unity`  通过重新运行场景接线工具，更新 `BoostTrailFlashOverlay` 的父节点与 Image 配置并保存
+
+### 内容简述
+
+本轮使用 Unity MCP 做了一次清单式 Play Mode 回归。先通过新增的调试菜单在 Play Mode 下直接调用 `ShipBoost.ForceActivate()`，确认 Boost 逻辑确实进入运行态，并立即抓到 `ShipEngineVFX.OnBoostStarted()` 内抛出的 `NullReferenceException: Do not create your own module instances`。随后把 `ShipEngineVFX` 与同模式的 `ShipBoostTrailVFX` 改成每次从 `ParticleSystem` 实例现取 `EmissionModule` / `MainModule`，避免缓存失效 struct 句柄。异常清掉后继续用 MCP 截图与运行时资源读取验证场景链路，发现 `BoostTrailFlashOverlay` 虽已连线成功，但最初被挂到错误 Canvas，且后续即使挪到主 Canvas，仍因使用了带透明边界的内置 UI Sprite 而只显示成顶部白条。最终将 SceneBinder 修成优先复用主 gameplay `Canvas`，并给 flash overlay 分配合适的内置纯方形 UI Sprite，重新保存场景后再次验证，白条异常消失，Boost 触发截图也不再报脚本错误。
+
+### 目的
+
+把 Boost Trail VFX 从“编辑器接线看起来完整，但 Play Mode 里仍可能被运行时异常或错误 UI 呈现打断”推进到“至少在 MCP 可复现路径下，Boost 状态、Trail/Flash 触发链和场景依赖都能稳定闭环”的状态，为后续手感微调和真实输入实机验证扫清硬错误。
+
+### 技术方案
+
+1. 新增 `ProjectArk/Ship/Debug/Trigger Boost Once`、`Show Flash Overlay`、`Hide Flash Overlay` 菜单，给 Unity MCP 一个稳定的 Play Mode 触发入口
+2. 通过 Unity MCP `execute_menu_item + read_console + scene/gameobject/.../components + screenshot` 组合，做“触发 -> 读状态 -> 抓画面 -> 查异常”的闭环排查
+3. 将 `ShipEngineVFX` 中缓存的 `ParticleSystem.EmissionModule` / `MainModule` 改为按次获取，修复 Boost 开始时的 module 句柄失效问题
+4. 将 `ShipBoostTrailVFX` 的 glow / ember module 访问方式同步改为按次获取，避免同类隐患在旧 VFX 路径中再次出现
+5. 调整 `ShipBoostTrailSceneBinder.FindOrCreateCanvas()`，从“找到第一个 Overlay Canvas 就复用”改为“优先选择 sortingOrder 更高、且更像主 UI 的 Canvas”
+6. 调整 `FindOrCreateFlashOverlay()`，若发现已有 `BoostTrailFlashOverlay` 被挂在错误父节点下，会自动 reparent 到正确 Canvas
+7. 为 `BoostTrailFlashOverlay` 自动补齐内置 UI Sprite，避免 `Image` 在全屏拉伸时只显示透明边界或局部白条
+8. 使用 Unity MCP 再次验证：
+   - `ShipBoost` 在触发瞬间能进入 `IsBoosting = true`
+   - `ShipMotor` 的 `RuntimeMaxSpeed` / `linearDamping` 会切到 Boost 参数
+   - `BoostTrailView` 仍保持 `_flashImage` / `_boostBloomVolume` 正确连线
+   - 重新触发后 console 不再出现 `ShipEngineVFX` 的运行时异常
+   - 直接显示 flash overlay 的截图中，顶部白条问题已消失

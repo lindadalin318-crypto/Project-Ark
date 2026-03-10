@@ -1,0 +1,845 @@
+fileFormatVersion: 2
+guid: 477f82a873cb05447844258d59e8d7a4
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 4047316313560188373
+    second: boost_noise_layer3_0
+  - first:
+      213: -4746473011525300433
+    second: boost_noise_layer3_1
+  - first:
+      213: -6548846158592851591
+    second: boost_noise_layer3_2
+  - first:
+      213: 4618928301983544951
+    second: boost_noise_layer3_3
+  - first:
+      213: 3401905696570767569
+    second: boost_noise_layer3_4
+  - first:
+      213: 8327622212758012550
+    second: boost_noise_layer3_5
+  - first:
+      213: -1961887113291912138
+    second: boost_noise_layer3_6
+  - first:
+      213: -6333267068632519805
+    second: boost_noise_layer3_7
+  - first:
+      213: 5303057221648722416
+    second: boost_noise_layer3_8
+  - first:
+      213: 6930474573720404234
+    second: boost_noise_layer3_9
+  - first:
+      213: 3161464820532975440
+    second: boost_noise_layer3_10
+  - first:
+      213: -7913357659534005372
+    second: boost_noise_layer3_11
+  - first:
+      213: 7617773757977337987
+    second: boost_noise_layer3_12
+  - first:
+      213: 1145689223056914839
+    second: boost_noise_layer3_13
+  - first:
+      213: -7401085072237018779
+    second: boost_noise_layer3_14
+  - first:
+      213: 8370548571108805023
+    second: boost_noise_layer3_15
+  - first:
+      213: 7736659624215485338
+    second: boost_noise_layer3_16
+  - first:
+      213: 4597260945382837913
+    second: boost_noise_layer3_17
+  - first:
+      213: -8749481234656630902
+    second: boost_noise_layer3_18
+  - first:
+      213: -4357127127765234253
+    second: boost_noise_layer3_19
+  - first:
+      213: 1485242649788289155
+    second: boost_noise_layer3_20
+  - first:
+      213: 6077555570821982067
+    second: boost_noise_layer3_21
+  - first:
+      213: 4192154033314997921
+    second: boost_noise_layer3_22
+  - first:
+      213: -6639704067910200466
+    second: boost_noise_layer3_23
+  - first:
+      213: 1325987592034353836
+    second: boost_noise_layer3_24
+  - first:
+      213: -8474515345089907220
+    second: boost_noise_layer3_25
+  - first:
+      213: -2099782317830913827
+    second: boost_noise_layer3_26
+  - first:
+      213: -7191912393601518247
+    second: boost_noise_layer3_27
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: boost_noise_layer3_0
+      rect:
+        serializedVersion: 2
+        x: 1038
+        y: 1087
+        width: 83
+        height: 92
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5d5066b5eb4fa2830800000000000000
+      internalID: 4047316313560188373
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_1
+      rect:
+        serializedVersion: 2
+        x: 958
+        y: 946
+        width: 53
+        height: 106
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f2f4e04a1f3212eb0800000000000000
+      internalID: -4746473011525300433
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_2
+      rect:
+        serializedVersion: 2
+        x: 992
+        y: 1025
+        width: 25
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9714464bd13dd15a0800000000000000
+      internalID: -6548846158592851591
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_3
+      rect:
+        serializedVersion: 2
+        x: 1016
+        y: 1020
+        width: 19
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7763aba81dab91040800000000000000
+      internalID: 4618928301983544951
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_4
+      rect:
+        serializedVersion: 2
+        x: 1016
+        y: 1002
+        width: 16
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1d87a7bf43ff53f20800000000000000
+      internalID: 3401905696570767569
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_5
+      rect:
+        serializedVersion: 2
+        x: 1020
+        y: 973
+        width: 45
+        height: 40
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6820817e748a19370800000000000000
+      internalID: 8327622212758012550
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_6
+      rect:
+        serializedVersion: 2
+        x: 1031
+        y: 926
+        width: 40
+        height: 52
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 63ca1d2a01af5c4e0800000000000000
+      internalID: -1961887113291912138
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_7
+      rect:
+        serializedVersion: 2
+        x: 1050
+        y: 975
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 38baa7af727bb18a0800000000000000
+      internalID: -6333267068632519805
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_8
+      rect:
+        serializedVersion: 2
+        x: 1501
+        y: 933
+        width: 41
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0f921ff327e389940800000000000000
+      internalID: 5303057221648722416
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_9
+      rect:
+        serializedVersion: 2
+        x: 1571
+        y: 986
+        width: 42
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a014b73d7edfd2060800000000000000
+      internalID: 6930474573720404234
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_10
+      rect:
+        serializedVersion: 2
+        x: 1573
+        y: 934
+        width: 16
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 05713cd0187cfdb20800000000000000
+      internalID: 3161464820532975440
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_11
+      rect:
+        serializedVersion: 2
+        x: 1616
+        y: 1001
+        width: 23
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 48bebdaa22b1e2290800000000000000
+      internalID: -7913357659534005372
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_12
+      rect:
+        serializedVersion: 2
+        x: 1620
+        y: 963
+        width: 28
+        height: 38
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 38028874fd4c7b960800000000000000
+      internalID: 7617773757977337987
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_13
+      rect:
+        serializedVersion: 2
+        x: 1648
+        y: 949
+        width: 26
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 799fc4b374e46ef00800000000000000
+      internalID: 1145689223056914839
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_14
+      rect:
+        serializedVersion: 2
+        x: 1675
+        y: 955
+        width: 12
+        height: 22
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 561cdd4e6501a4990800000000000000
+      internalID: -7401085072237018779
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_15
+      rect:
+        serializedVersion: 2
+        x: 1675
+        y: 946
+        width: 18
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f99081c83992a2470800000000000000
+      internalID: 8370548571108805023
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_16
+      rect:
+        serializedVersion: 2
+        x: 1676
+        y: 978
+        width: 18
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a9b987900f22e5b60800000000000000
+      internalID: 7736659624215485338
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_17
+      rect:
+        serializedVersion: 2
+        x: 1686
+        y: 958
+        width: 16
+        height: 24
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 99e0255f870cccf30800000000000000
+      internalID: 4597260945382837913
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_18
+      rect:
+        serializedVersion: 2
+        x: 1509
+        y: 926
+        width: 8
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a87685f7c29939680800000000000000
+      internalID: -8749481234656630902
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_19
+      rect:
+        serializedVersion: 2
+        x: 1515
+        y: 922
+        width: 23
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3bdc55c56ff5883c0800000000000000
+      internalID: -4357127127765234253
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_20
+      rect:
+        serializedVersion: 2
+        x: 1629
+        y: 922
+        width: 34
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 38014e12254ac9410800000000000000
+      internalID: 1485242649788289155
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_21
+      rect:
+        serializedVersion: 2
+        x: 923
+        y: 706
+        width: 145
+        height: 154
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3776a856790d75450800000000000000
+      internalID: 6077555570821982067
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_22
+      rect:
+        serializedVersion: 2
+        x: 1193
+        y: 753
+        width: 154
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1a6267fd1e58d2a30800000000000000
+      internalID: 4192154033314997921
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_23
+      rect:
+        serializedVersion: 2
+        x: 343
+        y: 542
+        width: 156
+        height: 98
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e631f7234580bd3a0800000000000000
+      internalID: -6639704067910200466
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_24
+      rect:
+        serializedVersion: 2
+        x: 1369
+        y: 471
+        width: 84
+        height: 74
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ca288c780bad66210800000000000000
+      internalID: 1325987592034353836
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_25
+      rect:
+        serializedVersion: 2
+        x: 607
+        y: 322
+        width: 26
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ce5b15c8139746a80800000000000000
+      internalID: -8474515345089907220
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_26
+      rect:
+        serializedVersion: 2
+        x: 613
+        y: 275
+        width: 23
+        height: 47
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dd0ca086b131cd2e0800000000000000
+      internalID: -2099782317830913827
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost_noise_layer3_27
+      rect:
+        serializedVersion: 2
+        x: 497
+        y: 211
+        width: 119
+        height: 57
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 955f6ab48c1313c90800000000000000
+      internalID: -7191912393601518247
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      boost_noise_layer3_0: 4047316313560188373
+      boost_noise_layer3_1: -4746473011525300433
+      boost_noise_layer3_10: 3161464820532975440
+      boost_noise_layer3_11: -7913357659534005372
+      boost_noise_layer3_12: 7617773757977337987
+      boost_noise_layer3_13: 1145689223056914839
+      boost_noise_layer3_14: -7401085072237018779
+      boost_noise_layer3_15: 8370548571108805023
+      boost_noise_layer3_16: 7736659624215485338
+      boost_noise_layer3_17: 4597260945382837913
+      boost_noise_layer3_18: -8749481234656630902
+      boost_noise_layer3_19: -4357127127765234253
+      boost_noise_layer3_2: -6548846158592851591
+      boost_noise_layer3_20: 1485242649788289155
+      boost_noise_layer3_21: 6077555570821982067
+      boost_noise_layer3_22: 4192154033314997921
+      boost_noise_layer3_23: -6639704067910200466
+      boost_noise_layer3_24: 1325987592034353836
+      boost_noise_layer3_25: -8474515345089907220
+      boost_noise_layer3_26: -2099782317830913827
+      boost_noise_layer3_27: -7191912393601518247
+      boost_noise_layer3_3: 4618928301983544951
+      boost_noise_layer3_4: 3401905696570767569
+      boost_noise_layer3_5: 8327622212758012550
+      boost_noise_layer3_6: -1961887113291912138
+      boost_noise_layer3_7: -6333267068632519805
+      boost_noise_layer3_8: 5303057221648722416
+      boost_noise_layer3_9: 6930474573720404234
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

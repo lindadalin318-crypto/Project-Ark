@@ -6,7 +6,9 @@
         "Unity.InputSystem",
         "UniTask",
         "Unity.Cinemachine",
-        "PrimeTween.Runtime"
+        "PrimeTween.Runtime",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
