@@ -8861,3 +8861,190 @@ Secondary 轨道的 SAIL/SAT 格子现在显示为无效放置目标（红色高
 - 将既有 8 类房间模型重组为 checklist 结构
 - 按“通用检查 / 类型专项检查 / 切片字段模板 / 填写范例”四层组织生产规范
 - 以单一主职责、明确通过条件、风险与奖励匹配为核心约束，形成适用于 `Project Ark` 的关卡生产纪律
+
+## Docs: TUNIC 关卡架构拆解启动 — 2026-03-11 11:27
+
+### 修改文件
+- `Docs/Reference/Level_Architecture_Synthesis_Minishoot_Silksong_TUNIC.md`
+- `Docs/ImplementationLog/ImplementationLog.md`
+
+### 内容简述
+开始补写 `TUNIC` 章节。基于 `il2cpp` 反编译产物中的 `SceneLoader`、`ScenePortal`、`PlayerCharacterSpawn`、`DungeonRoom`、`Campfire`、`Door`、`HolySealDoor`、`TempleDoor`、`ConduitNode`、`ConduitTeleporter`、`Fuse`、`PagePickup`、`PageDisplay`、`GameHelpManager`、`PageCondition` 与 `Profile` 等结构，整理出 TUNIC 的五层关卡架构：跨场景入口系统、场景内可见性切片、分层门槛系统、篝火回返锚点，以及“知识即通行证”的 manual/page 条件体系。同步补充了其对 `Project Ark` 的直接映射规则与可借鉴长处。
+
+### 目的
+把参考分析从 Minishoot 的“空间组织与可生产语法”推进到 TUNIC 的“视角遮蔽、知识门槛、认知重读”方向，为《静默方舟》后续落实“理解即武器”提供更贴近系统层的外部参照。
+
+### 技术
+- 基于 `il2cpp` 反编译代码与字符串表进行系统级逆向分析，而非依赖完整场景 YAML
+- 按“跨场景跳转 / 场景内切片 / 门槛分层 / 回返锚点 / 知识条件”五层结构重组 TUNIC 的关卡逻辑
+- 将 `TUNIC` 的知识门槛与世界状态系统翻译为适合 `Project Ark` 的生产规则与设计问题
+
+## Docs: TUNIC 机制词典与房间模板细化 — 2026-03-11 11:34
+
+### 修改文件
+- `Docs/Reference/Level_Architecture_Synthesis_Minishoot_Silksong_TUNIC.md`
+- `Docs/ImplementationLog/ImplementationLog.md`
+
+### 内容简述
+继续深化 `TUNIC` 章节，补写了接近 Minishoot 粒度的机制词典与房间模板分析。新增内容包括：`ScenePortal / ShopScenePortal / PlayerCharacterSpawn` 的跨场景入口件、`DungeonRoom / DungeonRoomRigidbodyTracker` 的场景内切片件、`Campfire / ReturnToCampfireTrigger / Profile` 的回返锚点件、`Door / ProximityDoor / HolySealDoor / TempleDoor / ObsidianDoorway` 的分层门槛件、`PrayerListenerBase / ConduitTeleporter / Fuse / TimeDevice` 的世界改写件、`SecretPassagePanel / RotatingCubeClue` 的隐藏与提示件，以及 `PagePickup / PageDisplay / GameHelpManager / PageCondition` 的知识门槛件。随后又将这些系统压缩成 TUNIC 的房间组织法则、8 类高可信房间模板，以及面向示巴星的 4 个“认知重读”生产问题。
+
+### 目的
+把 `TUNIC` 的参考价值从“高层理念”推进到“可拿来指导关卡生产”的颗粒度，使其在方法论上真正能与前面的 Minishoot 分析并列：前者提供空间与奖励语法，后者补充遮蔽、重读与知识门槛语法。
+
+### 技术
+- 基于 `il2cpp` 反编译结构持续做部件级归类，而非依赖场景坐标还原
+- 按“跨场景入口 / 场景切片 / 回返锚点 / 门槛分层 / 世界改写 / 知识条件”重组 `TUNIC` 的关卡标准件
+- 将系统结论进一步压缩为房间组织法则、房间模板和示巴星可执行的设计提问清单
+
+## Docs: TUNIC 关卡系统扫尾补遗 — 2026-03-11 11:41
+
+### 修改文件
+- `Docs/Reference/Level_Architecture_Synthesis_Minishoot_Silksong_TUNIC.md`
+- `Docs/ImplementationLog/ImplementationLog.md`
+
+### 内容简述
+继续对 `TUNIC` 做关卡系统扫尾遍历，并将补遗结果追加到参考文档。新增了对 `Chest`、`BloodstainChest`、`BloodstainManager`、`CameraPositionOverrideTrigger`、`PlayerCharacterSpiritSpawn`、`BedToggle`、`SleepPrompt`、`AreaData`、`AreaLabel`、`TropicalSecret` 等对象的分析，进一步说明 TUNIC 如何通过宝箱条件化、血痕回收、镜头重映射、灵体/现实出生点映射、昼夜睡眠节点、区域标题与少量区域特供秘密脚本来“缝合”整个世界。文档中同时新增了一个 6 层标准件层级总结，以及对后续 `TUNIC 代表性认知样本拆解` 的方法说明。
+
+### 目的
+把 `TUNIC` 的拆解从“主骨架已清楚”推进到“边缘但关键的缝合系统也已纳入版图”，提高覆盖度与可信度，避免后续把它误读成只有门、祈祷和手册三套系统。
+
+### 技术
+- 针对尚未覆盖的高权重边缘系统做定向反编译阅读
+- 将补遗系统按“奖励节点 / 回返风险 / 镜头解释 / 双世界映射 / 时间相位 / 区域确认”重新归类
+- 在文档中将主骨架与补遗部件统一压缩为一套 6 层关卡标准件层级
+
+## Docs: TUNIC 代表性认知样本拆解 — 2026-03-11 11:43
+
+### 修改文件
+- `Docs/Reference/Level_Architecture_Synthesis_Minishoot_Silksong_TUNIC.md`
+- `Docs/ImplementationLog/ImplementationLog.md`
+
+### 内容简述
+继续深化 `TUNIC` 章节，新增“代表性认知样本拆解”。基于前面已确认的入口系统、房间切片、世界改写、回返锚点与知识条件，整理出 7 类高可信认知样本：远景承诺->后续证明房、局部遮蔽->空间重读房、垂直差->前后景反转房、祈祷改写->世界重排房、篝火回返->风险重挂载房、页面提示->知识解锁房、双世界对应->旧区域翻面房。随后进一步压缩为 4 个适合 `Project Ark` 借用的模板，并明确指出示巴星首切片最值得优先借用的 3 类 TUNIC 样本。
+
+### 目的
+把 `TUNIC` 的拆解推进到真正能和 `Minishoot` 并列的“样本级”颗粒度，只是维度从空间职责转为认知阶段与重读结构，为后续将其方法论翻译到示巴星关卡提供更直接的中间层。
+
+### 技术
+- 以系统证据为基础做“认知样本”重建，而非假装拥有完整房间坐标数据
+- 按“第一次阅读 / 误读点 / 第二次阅读 / 承诺对象 / 验证对象 / Ark 映射”六个维度统一拆解 TUNIC 样本
+- 再将样本压缩为适合 `Project Ark` 的 4 类模板与 3 类优先借鉴对象
+
+## Docs: Silksong 关卡架构拆解启动 — 2026-03-11 11:46
+
+### 修改文件
+- `Docs/Reference/Level_Architecture_Synthesis_Minishoot_Silksong_TUNIC.md`
+- `Docs/ImplementationLog/ImplementationLog.md`
+
+### 内容简述
+开始补写 `Silksong` 章节第一轮总骨架。基于 `SceneTransitionZone`、`SceneTransitionZoneBase`、`WorldNavigation`、`CameraController`、`AreaTitleController`、`GameMap`、`InventoryWideMap`、`FastTravelMapButton`、`Trapdoor`、`TripWire`、`PositionActivator` 等脚本，先整理出其关卡架构的六个关键层面：显式场景图谱、目标场景+目标 Gate 的双字段转场语法、入口条件化的区域标题系统、条件化地图/宽图/快速旅行导航闭环、平台与轻机关标准件，以及镜头作为节奏控制器的角色。同步补充了其与 Minishoot / TUNIC 的差异定位，以及对 `Project Ark` 的第一批直接启示。
+
+### 目的
+在正式深入 `Silksong` 的机制词典与房间样本之前，先建立一个可信的总骨架，明确它最值得 Ark 借用的方向不是单个机关，而是“大规模房间网络的可导航生产方法”。
+
+### 技术
+- 基于 `Assembly-CSharp` 脚本做系统层逆向分析，而非依赖场景 YAML 逐房间复原
+- 以“场景图谱 / 转场语法 / 导航闭环 / 平台机关 / 镜头控制”五个维度重组 Silksong 的关卡主骨架
+- 将结论直接翻译为适合 `Project Ark` 的房间入口、地图、机关与镜头生产建议
+
+## Docs: Silksong 机制词典补完（第一轮）— 2026-03-11 11:56
+
+### 修改文件
+- `Docs/Reference/Level_Architecture_Synthesis_Minishoot_Silksong_TUNIC.md`
+- `Docs/ImplementationLog/ImplementationLog.md`
+
+### 内容简述
+继续深化 `Silksong` 章节，在原有总骨架基础上新增“机制词典”层分析。基于 `WorldNavigation`、`SceneTransitionZone`、`AreaTitleController`、`GameMapScene`、`FastTravelMapButtonBase`、`FastTravelMapPieceBase`、`CameraLockArea`、`PositionActivatorRange`、`SetPosConditional`、`GateSnap` 等脚本，把 `Silksong` 当前可确认的标准件压缩为世界图谱件、转场件、区域确认件、地图分层件、宽图导航件、快速旅行件、镜头锁区件、位置阈值件、轻机关件九类，并进一步归纳成 6 层标准件层级。最后明确指出它的核心价值更接近“导航生产工具箱”，重点不在单房间奇观，而在多房间、多入口、多层次世界中的可维护导航结构。
+
+### 目的
+把 `Silksong` 的拆解推进到与前面 `Minishoot` / `TUNIC` 相同的方法论层级，让后续继续下沉到房间组织、节奏法则与样本拆解时，有一套统一的标准件语言可依托。
+
+### 技术
+- 继续采用 `Assembly-CSharp` 逆向证据，优先抽取字段与职责稳定的关卡标准件
+- 按“世界图谱 -> 转场 -> 区域确认 -> 导航可视化 -> 镜头边界 -> 路径机关”重组为生产层级
+- 将每类标准件同步翻译为 `Project Ark` 可直接借用的架构建议，避免只停留在参考游戏描述
+
+## Docs: Silksong 房间组织与节奏法则（第一轮）— 2026-03-11 12:07
+
+### 修改文件
+- `Docs/Reference/Level_Architecture_Synthesis_Minishoot_Silksong_TUNIC.md`
+- `Docs/ImplementationLog/ImplementationLog.md`
+
+### 内容简述
+继续深化 `Silksong` 章节，在“机制词典”之下新增“房间组织法则 + 节奏法则 + 高可信模板”三层总结。基于 `WorldNavigation` 的显式 scene 图、`SceneTransitionZoneBase` 的 `targetScene + targetGate` 转场语法、`AreaTitleController` 的入口条件化区域播报、`CameraLockArea` 的镜头边界、`TripWire` / `Trapdoor` / `PositionActivatorRange` / `SetPosConditional` 的轻机关与位置阈值，归纳出 6 条房间组织法则：scene 作为正式节点、入口方向影响第一阅读、镜头边界属于房间本体、平台推进依赖轻机关切拍、导航锚点周期性减负、回返路径是房间图第二形态。随后再压缩出推进房、垂直筛选房、轻机关切拍房、区域确认房、结构压缩房 5 个高可信模板，并把结论翻译为示巴星首切片可直接借用的 4 个生产原则。
+
+### 目的
+把 `Silksong` 从“系统标准件拆解”推进到真正能指导搭房的层级，为后续继续做代表性房间样本拆解、奖励规则与跨游戏综合结论建立统一中间层。
+
+### 技术
+- 用“系统证据 -> 组织法则 -> 节奏法则 -> 房型模板”的方法，从脚本层直接重建关卡生产逻辑
+- 重点关注入口、镜头、导航、捷径这些大型地图中最容易被忽略但最决定体验稳定性的结构件
+- 将平台银河城经验翻译为适合 `Project Ark` 顶视角关卡的结构语言，而不是直接照搬横版动作形式
+
+## Docs: Silksong 代表性房间样本拆解（高可信版）— 2026-03-11 12:33
+
+### 修改文件
+- `Docs/Reference/Level_Architecture_Synthesis_Minishoot_Silksong_TUNIC.md`
+- `Docs/ImplementationLog/ImplementationLog.md`
+
+### 内容简述
+继续深化 `Silksong` 章节，在房间组织法则之后补入“代表性房间样本拆解（高可信版）”。由于当前证据主要来自 `WorldNavigation` 的场景命名/出口命名和若干关卡标准件脚本，因此不伪装成逐场景几何复原，而是以 scene 在世界图中的结构职责为核心，拆出 7 类高可信样本：`Tutorial_01` 教学推进房、`Town` 主枢纽导航房、`Room_Town_Stag_Station` 结构压缩房、`Room_mapper` 制图确认房、`Room_shop` / `Room_Mender_House` 生活侧室房、`Room_temple` 章节门槛房、`MazeMistZone` 惩罚式重定向房。随后把这 7 类再压缩为 4 个适合 `Project Ark` 借用的生产模板，并明确指出示巴星首切片最值得先借的 3 个样本：主枢纽导航房、结构压缩房、制图确认房。
+
+### 目的
+把 `Silksong` 的拆解从抽象法则推进到“样本级”颗粒度，使其能和前面的 `Minishoot` / `TUNIC` 一样，直接为示巴星首个可玩切片提供可用的房间参照物与搭建顺序依据。
+
+### 技术
+- 严格遵守证据边界：基于场景名、Gate 名、功能脚本职责重建“世界图中的房间角色”，而非假装拥有完整场景布局
+- 按“已知证据 -> 高可信职责 -> 标准组件推断 -> 节奏作用 -> Ark 翻译”统一拆解每类样本
+- 再将样本压缩为适合 `Project Ark` 的模板层与优先借鉴层，方便后续继续做规则表与跨游戏综合结论
+
+## Docs: Silksong 房间生产模板继续下沉 — 2026-03-11 13:52
+
+### 修改文件
+- `Docs/Reference/Level_Architecture_Synthesis_Minishoot_Silksong_TUNIC.md`
+- `Docs/ImplementationLog/ImplementationLog.md`
+
+### 内容简述
+继续深化 `Silksong` 章节，把前面 7 类代表性样本继续下沉到与 `Minishoot` 相同的“标准组件清单 + 进出规则 + 奖励规则”颗粒度。分别为教学推进房、主枢纽导航房、结构压缩房、制图确认房、生活侧室房、章节门槛房、惩罚式重定向房补充最低限度组件、进入/退出条件、以及最适合的奖励类型。额外新增一节专门总结 `Silksong` 奖励逻辑的核心并不偏向资源，而偏向导航奖励、压缩奖励、解释奖励、许可奖励，并进一步直接翻译成示巴星可使用的房间命名语言：初入废墟引导房、钟城主锚点房、共鸣中继站房、测绘确认房、低压功能房、大钟门槛房、失谐迷廊重置房。
+
+### 目的
+把 `Silksong` 从样本级拆解推进到真正可用于房间生产表和关卡清单的语言层，为后续整理 `Silksong` 版本的示巴星房间生产检查表，以及最终跨游戏综合结论打下基础。
+
+### 技术
+- 参照前面 `Minishoot` 的生产模板结构，统一补齐组件、进出条件、奖励规则三元组
+- 强调 `Silksong` 奖励更偏结构性收益，而非掉落式收益，避免错误照搬
+- 直接把参考游戏术语翻译为适合 `Project Ark` 世界观与示巴星语境的房型命名
+
+## Docs: Silksong 版示巴星房间生产检查表 — 2026-03-11 14:08
+
+### 修改文件
+- `Docs/Reference/Level_Architecture_Synthesis_Minishoot_Silksong_TUNIC.md`
+- `Docs/ImplementationLog/ImplementationLog.md`
+
+### 内容简述
+继续把 `Silksong` 章节从生产模板推进到真正可执行的检查表层级，新增“Silksong 版示巴星房间生产检查表”。结构上参考前面 `Minishoot` 的检查表格式，但将重点调整为 `Silksong` 特有的导航与结构问题：图节点身份、入口语义、导航减负职责、回返价值、记忆锚点、结构性奖励等。检查表包含 4 个部分：通用总检查表、7 类房间专项检查表、示巴星首切片专用简化版、以及一个 `SH-SLICE-R05` 的共鸣中继站房填写范例。最后补充了 `Silksong` 版执行纪律，强制每个房间回答“它是什么节点、回返是否变义、让玩家更懂了什么或更省了什么、奖励是否为结构性收益”这四个问题。
+
+### 目的
+让 `Silksong` 的参考价值不只停留在分析层，而是能像前面 `Minishoot` 一样，直接转化成示巴星房间排产和关卡制作前置检查的工作文档。
+
+### 技术
+- 沿用已有检查表的表格结构，保证不同参考游戏的生产语言可以横向对照
+- 将 `Silksong` 的重点从“房间是否成立”转向“路网节点是否成立、回返是否成立、导航减负是否成立”
+- 用示巴星命名语境和可直接复用的房型字段，缩短从参考分析到实际排房的转换距离
+
+## Docs: 跨游戏综合结论与示巴星推荐骨架 — 2026-03-11 14:19
+
+### 修改文件
+- `Docs/Reference/Level_Architecture_Synthesis_Minishoot_Silksong_TUNIC.md`
+- `Docs/ImplementationLog/ImplementationLog.md`
+
+### 内容简述
+完成 `## 4. 跨游戏综合结论`。将 `Minishoot`、`Silksong`、`TUNIC` 三部分分析压缩为面向 `Project Ark` 的最终执行结论：`Minishoot` 负责房间语法，`Silksong` 负责路网语法，`TUNIC` 负责理解语法。随后区分哪些长处适合 Ark 直接采纳，哪些只能借思想不借形式，并进一步把三者压成一套统一的生产语言：房间职责、图节点身份、首次/回返语义变化、理解增量、奖励类型。最后给出示巴星首个可玩切片的推荐架构模板与 8 房间顺序：初入废墟引导房 -> 开放压力房 -> 测绘确认房 -> 局部遮蔽/空间重读房 -> 节点清算房 -> 大钟门槛房 -> 共鸣中继站房 -> 钟城主锚点房。
+
+### 目的
+结束参考分析阶段，把三款参考游戏的价值真正收束为一个能指导示巴星首切片排房、定节奏、定奖励、定知识门槛的最终中间层。
+
+### 技术
+- 按“直接采纳 / 借思想不借形式 / 统一生产语言 / 推荐切片骨架”四层结构整合三款参考游戏
+- 将抽象比较压回到示巴星可落地的房间顺序与执行原则，避免综合结论继续停留在概念层
+- 保持对项目主轴“理解即武器”的对齐，使 `TUNIC` 的知识门槛方法与 `Minishoot` / `Silksong` 的结构纪律形成同一套工作文档
