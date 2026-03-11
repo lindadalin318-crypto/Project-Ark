@@ -4,7 +4,6 @@ using System;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace ProjectArk.Ship.Editor
 {
@@ -17,9 +16,6 @@ namespace ProjectArk.Ship.Editor
         private const string FlashOverlayName = "BoostTrailFlashOverlay";
         private const string BoostBloomVolumeName = "BoostTrailBloomVolume";
         private const string BoostBloomProfilePath = "Assets/Settings/BoostBloomVolumeProfile.asset";
-        private const string FlashMaterialPath = "Assets/_Art/VFX/BoostTrail/Materials/mat_ui_boost_flash.mat";
-        private const string FlashMaterialFolder = "Assets/_Art/VFX/BoostTrail/Materials";
-        private const string FlashShaderName = "ProjectArk/UI/BoostFlashAdditive";
         private const string VolumeTypeName = "UnityEngine.Rendering.Volume, Unity.RenderPipelines.Core.Runtime";
 
         [MenuItem("ProjectArk/Ship/Setup Boost Trail Scene References (GG)")]
@@ -28,8 +24,7 @@ namespace ProjectArk.Ship.Editor
             var log = new List<string>();
             var todo = new List<string>();
 
-            var canvas = FindOrCreateCanvas(log);
-            var flashImage = FindOrCreateFlashOverlay(canvas, log, todo);
+            RemoveLegacyFlashOverlay(log);
             var bloomVolume = FindOrCreateBoostBloomVolume(log, todo);
 
             var views = UnityEngine.Object.FindObjectsByType<BoostTrailView>(FindObjectsInactive.Include, FindObjectsSortMode.None);
@@ -40,11 +35,8 @@ namespace ProjectArk.Ship.Editor
 
             foreach (var view in views)
             {
-                WireBoostTrailView(view, flashImage, bloomVolume, log, todo);
+                WireBoostTrailView(view, bloomVolume, log, todo);
             }
-
-            if (canvas != null)
-                EditorUtility.SetDirty(canvas.gameObject);
 
             if (bloomVolume != null)
                 EditorUtility.SetDirty(bloomVolume.gameObject);
@@ -56,139 +48,16 @@ namespace ProjectArk.Ship.Editor
 
             string summary = BuildSummary(log, todo);
             Debug.Log("[ShipBoostTrailSceneBinder] Done.\n" + summary);
-            EditorUtility.DisplayDialog("Boost Trail Scene References", summary, "OK");
         }
 
-        private static Canvas FindOrCreateCanvas(List<string> log)
+        private static void RemoveLegacyFlashOverlay(List<string> log)
         {
-            var canvases = UnityEngine.Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            Canvas bestCanvas = null;
+            var flashGo = GameObject.Find(FlashOverlayName);
+            if (flashGo == null)
+                return;
 
-            foreach (var canvas in canvases)
-            {
-                if (canvas.renderMode != RenderMode.ScreenSpaceOverlay)
-                    continue;
-
-                if (bestCanvas == null)
-                {
-                    bestCanvas = canvas;
-                    continue;
-                }
-
-                bool isBetterBySortingOrder = canvas.sortingOrder > bestCanvas.sortingOrder;
-                bool isBetterByName = canvas.sortingOrder == bestCanvas.sortingOrder
-                    && canvas.name == "Canvas"
-                    && bestCanvas.name != "Canvas";
-
-                if (isBetterBySortingOrder || isBetterByName)
-                    bestCanvas = canvas;
-            }
-
-            if (bestCanvas != null)
-            {
-                log.Add($"✓ Reusing overlay Canvas: {bestCanvas.name} (sortingOrder={bestCanvas.sortingOrder})");
-                return bestCanvas;
-            }
-
-            var canvasGo = new GameObject("Canvas");
-            Undo.RegisterCreatedObjectUndo(canvasGo, "Create Boost Trail Canvas");
-
-            var newCanvas = canvasGo.AddComponent<Canvas>();
-            newCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            newCanvas.sortingOrder = 10;
-
-            var scaler = canvasGo.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 0.5f;
-
-            canvasGo.AddComponent<GraphicRaycaster>();
-            log.Add("✓ Created fallback overlay Canvas");
-            return newCanvas;
-        }
-
-        private static Image FindOrCreateFlashOverlay(Canvas canvas, List<string> log, List<string> todo)
-        {
-            if (canvas == null)
-            {
-                todo.Add("Canvas could not be created or found; flash overlay was not wired.");
-                return null;
-            }
-
-            var existingGo = GameObject.Find(FlashOverlayName);
-            var existing = existingGo != null ? existingGo.transform : canvas.transform.Find(FlashOverlayName);
-            GameObject flashGo;
-            if (existing != null)
-            {
-                flashGo = existing.gameObject;
-                log.Add("✓ Reusing existing BoostTrail flash overlay");
-            }
-            else
-            {
-                flashGo = new GameObject(FlashOverlayName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-                Undo.RegisterCreatedObjectUndo(flashGo, "Create Boost Trail Flash Overlay");
-                log.Add("✓ Created BoostTrail flash overlay");
-            }
-
-            if (flashGo.transform.parent != canvas.transform)
-            {
-                Undo.SetTransformParent(flashGo.transform, canvas.transform, "Reparent Boost Trail Flash Overlay");
-                log.Add($"✓ Reparented BoostTrail flash overlay under {canvas.name}");
-            }
-
-            flashGo.transform.SetAsLastSibling();
-
-            var rect = flashGo.GetComponent<RectTransform>();
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
-            rect.anchoredPosition = Vector2.zero;
-            rect.localScale = Vector3.one;
-
-            var image = flashGo.GetComponent<Image>();
-            image.color = new Color(1f, 1f, 1f, 0f);
-            image.raycastTarget = false;
-            image.sprite = GetBuiltInFlashSprite();
-            image.type = Image.Type.Simple;
-            image.material = FindOrCreateFlashMaterial(log, todo);
-
-            flashGo.SetActive(true);
-            return image;
-        }
-
-        private static Material FindOrCreateFlashMaterial(List<string> log, List<string> todo)
-        {
-            var material = AssetDatabase.LoadAssetAtPath<Material>(FlashMaterialPath);
-            if (material != null)
-            {
-                log.Add("✓ Reusing BoostTrail flash additive material");
-                return material;
-            }
-
-            var shader = Shader.Find(FlashShaderName);
-            if (shader == null)
-            {
-                todo.Add($"Flash shader not found: {FlashShaderName}");
-                return null;
-            }
-
-            EnsureFolder("Assets/_Art", "VFX");
-            EnsureFolder("Assets/_Art/VFX", "BoostTrail");
-            EnsureFolder("Assets/_Art/VFX/BoostTrail", "Materials");
-
-            material = new Material(shader)
-            {
-                name = "mat_ui_boost_flash"
-            };
-
-            if (material.HasProperty("_Color"))
-                material.SetColor("_Color", Color.white);
-
-            AssetDatabase.CreateAsset(material, FlashMaterialPath);
-            AssetDatabase.SaveAssets();
-            log.Add("✓ Created BoostTrail flash additive material");
-            return material;
+            Undo.DestroyObjectImmediate(flashGo);
+            log.Add("✓ Removed legacy full-screen BoostTrail flash overlay");
         }
 
         private static Component FindOrCreateBoostBloomVolume(List<string> log, List<string> todo)
@@ -258,7 +127,6 @@ namespace ProjectArk.Ship.Editor
 
         private static void WireBoostTrailView(
             BoostTrailView view,
-            Image flashImage,
             Component bloomVolume,
             List<string> log,
             List<string> todo)
@@ -269,7 +137,6 @@ namespace ProjectArk.Ship.Editor
             var so = new SerializedObject(view);
             bool changed = false;
 
-            changed |= WireObjectReference(so, "_flashImage", flashImage, log, $"{view.name}._flashImage");
             changed |= WireObjectReference(so, "_boostBloomVolume", bloomVolume, log, $"{view.name}._boostBloomVolume");
 
             if (changed)
@@ -281,9 +148,6 @@ namespace ProjectArk.Ship.Editor
             {
                 log.Add($"✓ Scene references already wired on {view.name}");
             }
-
-            if (flashImage == null)
-                todo.Add($"{view.name}: flash image is still null.");
 
             if (bloomVolume == null)
                 todo.Add($"{view.name}: bloom volume is still null.");
@@ -309,22 +173,6 @@ namespace ProjectArk.Ship.Editor
             prop.objectReferenceValue = value;
             log.Add($"✓ {label} wired");
             return true;
-        }
-
-        private static void EnsureFolder(string parentPath, string childName)
-        {
-            string targetPath = $"{parentPath}/{childName}";
-            if (!AssetDatabase.IsValidFolder(targetPath))
-                AssetDatabase.CreateFolder(parentPath, childName);
-        }
-
-        private static Sprite GetBuiltInFlashSprite()
-        {
-            var sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
-            if (sprite != null)
-                return sprite;
-
-            return AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Background.psd");
         }
 
         private static string BuildSummary(List<string> log, List<string> todo)

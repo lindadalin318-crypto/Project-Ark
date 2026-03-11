@@ -356,7 +356,7 @@ MonoBehaviour:
   _solidRenderer: {fileID: 87038346853009014}
   _coreRenderer: {fileID: 6476113041216810219}
   _boostTrail: {fileID: 0}
-  _boostTrailView: {fileID: 523528515842614515}
+  _boostTrailView: {fileID: 643150857732467765}
   _boostLiquidSprite: {fileID: 1803375601408531766, guid: 66ede2a1e65d06a4eb7dc24092131cd3, type: 3}
   _normalLiquidSprite: {fileID: -9119696321562669138, guid: ac76d8d143c32f24ea92d6499d742ecb, type: 3}
   _dodgeSprite: {fileID: 765378406204994902}
@@ -424,7 +424,7 @@ Transform:
   - {fileID: 616142437233085828}
   - {fileID: 4142172829373080594}
   - {fileID: 743564363279903116}
-  - {fileID: 1922863604613461479}
+  - {fileID: 1513348458935008545}
   m_Father: {fileID: 229989502130654230}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1261087382951818147
@@ -10690,7 +10690,7 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
---- !u!1001 &502691787439231076
+--- !u!1001 &672997465492150434
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -10747,10 +10747,10 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: a12a226ee8a5f034388a48cc60e6a6d7, type: 3}
---- !u!114 &523528515842614515 stripped
+--- !u!114 &643150857732467765 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 124440446431949975, guid: a12a226ee8a5f034388a48cc60e6a6d7, type: 3}
-  m_PrefabInstance: {fileID: 502691787439231076}
+  m_PrefabInstance: {fileID: 672997465492150434}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
   m_Enabled: 1
@@ -10758,8 +10758,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 010d2ba78cd9bff4dac73b66ae8e29e1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: ProjectArk.Ship::ProjectArk.Ship.BoostTrailView
---- !u!4 &1922863604613461479 stripped
+--- !u!4 &1513348458935008545 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2041970968134509955, guid: a12a226ee8a5f034388a48cc60e6a6d7, type: 3}
-  m_PrefabInstance: {fileID: 502691787439231076}
+  m_PrefabInstance: {fileID: 672997465492150434}
   m_PrefabAsset: {fileID: 0}

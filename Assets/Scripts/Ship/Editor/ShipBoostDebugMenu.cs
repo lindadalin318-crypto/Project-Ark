@@ -1,7 +1,6 @@
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace ProjectArk.Ship.Editor
 {
@@ -30,46 +29,45 @@ namespace ProjectArk.Ship.Editor
             Debug.Log("[ShipBoostDebugMenu] Triggered ShipBoost.ForceActivate().");
         }
 
-        [MenuItem("ProjectArk/Ship/Debug/Show Flash Overlay")]
-        public static void ShowFlashOverlay()
+        [MenuItem("ProjectArk/Ship/Debug/Show Activation Halo")]
+        public static void ShowActivationHalo()
         {
-            var image = Object.FindFirstObjectByType<Image>(FindObjectsInactive.Include);
-            image = FindNamedImage("BoostTrailFlashOverlay") ?? image;
-            if (image == null)
+            var halo = FindNamedSpriteRenderer("BoostActivationHalo");
+            if (halo == null)
             {
-                Debug.LogWarning("[ShipBoostDebugMenu] BoostTrailFlashOverlay not found.");
+                Debug.LogWarning("[ShipBoostDebugMenu] BoostActivationHalo not found.");
                 return;
             }
 
-            var color = image.color;
-            color.a = 0.7f;
-            image.color = color;
-            Debug.Log("[ShipBoostDebugMenu] Set BoostTrailFlashOverlay alpha to 0.7.");
+            halo.enabled = true;
+            halo.transform.localScale = new Vector3(1.45f, 1.45f, 1f);
+            halo.color = new Color(3.2f, 2.2f, 1.4f, 1.15f);
+            Debug.Log("[ShipBoostDebugMenu] Forced BoostActivationHalo visible.");
         }
 
-        [MenuItem("ProjectArk/Ship/Debug/Hide Flash Overlay")]
-        public static void HideFlashOverlay()
+        [MenuItem("ProjectArk/Ship/Debug/Hide Activation Halo")]
+        public static void HideActivationHalo()
         {
-            var image = FindNamedImage("BoostTrailFlashOverlay");
-            if (image == null)
+            var halo = FindNamedSpriteRenderer("BoostActivationHalo");
+            if (halo == null)
             {
-                Debug.LogWarning("[ShipBoostDebugMenu] BoostTrailFlashOverlay not found.");
+                Debug.LogWarning("[ShipBoostDebugMenu] BoostActivationHalo not found.");
                 return;
             }
 
-            var color = image.color;
-            color.a = 0f;
-            image.color = color;
-            Debug.Log("[ShipBoostDebugMenu] Reset BoostTrailFlashOverlay alpha to 0.");
+            halo.enabled = false;
+            halo.transform.localScale = Vector3.one;
+            halo.color = new Color(3.2f, 2.2f, 1.4f, 0f);
+            Debug.Log("[ShipBoostDebugMenu] Reset BoostActivationHalo.");
         }
 
-        private static Image FindNamedImage(string objectName)
+        private static SpriteRenderer FindNamedSpriteRenderer(string objectName)
         {
-            var images = Object.FindObjectsByType<Image>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            foreach (var image in images)
+            var renderers = Object.FindObjectsByType<SpriteRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var renderer in renderers)
             {
-                if (image != null && image.gameObject.name == objectName)
-                    return image;
+                if (renderer != null && renderer.gameObject.name == objectName)
+                    return renderer;
             }
 
             return null;

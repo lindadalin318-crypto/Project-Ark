@@ -1,0 +1,585 @@
+fileFormatVersion: 2
+guid: 13e058699ba61dc4fa3b870f4f1e5de2
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -6388634622009833469
+    second: boost-local-halo-check-v4_0
+  - first:
+      213: -4147877770886247093
+    second: boost-local-halo-check-v4_1
+  - first:
+      213: -969518972437404865
+    second: boost-local-halo-check-v4_2
+  - first:
+      213: 7711867529647093256
+    second: boost-local-halo-check-v4_3
+  - first:
+      213: 5153076688205129333
+    second: boost-local-halo-check-v4_4
+  - first:
+      213: -1134248147210901492
+    second: boost-local-halo-check-v4_5
+  - first:
+      213: 7117411975000759933
+    second: boost-local-halo-check-v4_6
+  - first:
+      213: -3919142911119235042
+    second: boost-local-halo-check-v4_7
+  - first:
+      213: 2293930613468378322
+    second: boost-local-halo-check-v4_8
+  - first:
+      213: -3791375937011873078
+    second: boost-local-halo-check-v4_9
+  - first:
+      213: -2367266014454042042
+    second: boost-local-halo-check-v4_10
+  - first:
+      213: 5316548066537496934
+    second: boost-local-halo-check-v4_11
+  - first:
+      213: -7711070463827024691
+    second: boost-local-halo-check-v4_12
+  - first:
+      213: -6384046329823087038
+    second: boost-local-halo-check-v4_13
+  - first:
+      213: 4698432788841809677
+    second: boost-local-halo-check-v4_14
+  - first:
+      213: -5299762575926461138
+    second: boost-local-halo-check-v4_15
+  - first:
+      213: 5127424573400987997
+    second: boost-local-halo-check-v4_16
+  - first:
+      213: -2366462587127236692
+    second: boost-local-halo-check-v4_17
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: boost-local-halo-check-v4_0
+      rect:
+        serializedVersion: 2
+        x: 759
+        y: 582
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3088753e8a20757a0800000000000000
+      internalID: -6388634622009833469
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-local-halo-check-v4_1
+      rect:
+        serializedVersion: 2
+        x: 1130
+        y: 476
+        width: 203
+        height: 156
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b4d069ec427cf66c0800000000000000
+      internalID: -4147877770886247093
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-local-halo-check-v4_2
+      rect:
+        serializedVersion: 2
+        x: 458
+        y: 480
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f33eddc91a39b82f0800000000000000
+      internalID: -969518972437404865
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-local-halo-check-v4_3
+      rect:
+        serializedVersion: 2
+        x: 1047
+        y: 451
+        width: 13
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 806fb73b8ae060b60800000000000000
+      internalID: 7711867529647093256
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-local-halo-check-v4_4
+      rect:
+        serializedVersion: 2
+        x: 967
+        y: 400
+        width: 14
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 57620dc12f7638740800000000000000
+      internalID: 5153076688205129333
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-local-halo-check-v4_5
+      rect:
+        serializedVersion: 2
+        x: 193
+        y: 373
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c086952d1575240f0800000000000000
+      internalID: -1134248147210901492
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-local-halo-check-v4_6
+      rect:
+        serializedVersion: 2
+        x: 972
+        y: 257
+        width: 133
+        height: 127
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d7e180a4b7026c260800000000000000
+      internalID: 7117411975000759933
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-local-halo-check-v4_7
+      rect:
+        serializedVersion: 2
+        x: 1281
+        y: 381
+        width: 8
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e186fbe69486c99c0800000000000000
+      internalID: -3919142911119235042
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-local-halo-check-v4_8
+      rect:
+        serializedVersion: 2
+        x: 923
+        y: 353
+        width: 14
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2d43d2b3dbda5df10800000000000000
+      internalID: 2293930613468378322
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-local-halo-check-v4_9
+      rect:
+        serializedVersion: 2
+        x: 951
+        y: 349
+        width: 13
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: aca81704ca3526bc0800000000000000
+      internalID: -3791375937011873078
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-local-halo-check-v4_10
+      rect:
+        serializedVersion: 2
+        x: 920
+        y: 314
+        width: 14
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 642bc972a18c52fd0800000000000000
+      internalID: -2367266014454042042
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-local-halo-check-v4_11
+      rect:
+        serializedVersion: 2
+        x: 1130
+        y: 275
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 661e1495c4c28c940800000000000000
+      internalID: 5316548066537496934
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-local-halo-check-v4_12
+      rect:
+        serializedVersion: 2
+        x: 1085
+        y: 238
+        width: 10
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dc46595a446ccf490800000000000000
+      internalID: -7711070463827024691
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-local-halo-check-v4_13
+      rect:
+        serializedVersion: 2
+        x: 364
+        y: 6
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2463249efaf4767a0800000000000000
+      internalID: -6384046329823087038
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-local-halo-check-v4_14
+      rect:
+        serializedVersion: 2
+        x: 863
+        y: 0
+        width: 149
+        height: 223
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d07c6f36abf243140800000000000000
+      internalID: 4698432788841809677
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-local-halo-check-v4_15
+      rect:
+        serializedVersion: 2
+        x: 1190
+        y: 185
+        width: 10
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e2d7efb34067376b0800000000000000
+      internalID: -5299762575926461138
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-local-halo-check-v4_16
+      rect:
+        serializedVersion: 2
+        x: 1265
+        y: 14
+        width: 10
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d59bc26bb75482740800000000000000
+      internalID: 5127424573400987997
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-local-halo-check-v4_17
+      rect:
+        serializedVersion: 2
+        x: 1552
+        y: 113
+        width: 10
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ca77708a0d2a82fd0800000000000000
+      internalID: -2366462587127236692
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      boost-local-halo-check-v4_0: -6388634622009833469
+      boost-local-halo-check-v4_1: -4147877770886247093
+      boost-local-halo-check-v4_10: -2367266014454042042
+      boost-local-halo-check-v4_11: 5316548066537496934
+      boost-local-halo-check-v4_12: -7711070463827024691
+      boost-local-halo-check-v4_13: -6384046329823087038
+      boost-local-halo-check-v4_14: 4698432788841809677
+      boost-local-halo-check-v4_15: -5299762575926461138
+      boost-local-halo-check-v4_16: 5127424573400987997
+      boost-local-halo-check-v4_17: -2366462587127236692
+      boost-local-halo-check-v4_2: -969518972437404865
+      boost-local-halo-check-v4_3: 7711867529647093256
+      boost-local-halo-check-v4_4: 5153076688205129333
+      boost-local-halo-check-v4_5: -1134248147210901492
+      boost-local-halo-check-v4_6: 7117411975000759933
+      boost-local-halo-check-v4_7: -3919142911119235042
+      boost-local-halo-check-v4_8: 2293930613468378322
+      boost-local-halo-check-v4_9: -3791375937011873078
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

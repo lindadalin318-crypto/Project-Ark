@@ -18,19 +18,23 @@ namespace ProjectArk.Ship.Editor
     ///   ├── [PS] EmberGlow          ← Phase 2 new
     ///   ├── [SpriteRenderer] BoostEnergyLayer2
     ///   ├── [SpriteRenderer] BoostEnergyLayer3
-    ///   └── [MeshRenderer] BoostEnergyField
+    ///   ├── [MeshRenderer] BoostEnergyField
+    ///   └── [SpriteRenderer] BoostActivationHalo
     /// </summary>
     public static class BoostTrailPrefabCreator
     {
         private const string PREFAB_PATH = "Assets/_Prefabs/VFX/BoostTrailRoot.prefab";
         private const string MAT_DIR     = "Assets/_Art/VFX/BoostTrail/Materials";
+        private const string ShipGlowMaterialPath = "Assets/_Art/Ship/Glitch/ShipGlowMaterial.mat";
         private const string BoostSpriteName = "Boost_16";
         private const string NormalSpriteName = "Movement_3";
+        private const string ActivationHaloSpriteName = "vfx_ring_glow_uneven";
+        private const string ActivationHaloFallbackSpriteName = "vfx_magnetic_rings";
 
         [MenuItem("ProjectArk/VFX/Create BoostTrailRoot Prefab")]
         public static void CreateBoostTrailRootPrefab()
         {
-            CreateOrRebuildBoostTrailRootPrefab(showDialog: true);
+            CreateOrRebuildBoostTrailRootPrefab(showDialog: false);
         }
 
         public static GameObject CreateOrRebuildBoostTrailRootPrefab(bool showDialog)
@@ -107,6 +111,17 @@ namespace ProjectArk.Ship.Editor
             if (matField != null) fieldMR.sharedMaterial = matField;
             fieldMR.enabled = false; // Starts disabled, enabled by BoostTrailView
 
+            // ── BoostActivationHalo (local ship-centered flash) ──────
+            var activationHaloGO = new GameObject("BoostActivationHalo");
+            activationHaloGO.transform.SetParent(root.transform, false);
+            activationHaloGO.transform.localScale = new Vector3(1.0f, 1.0f, 1f);
+            var activationHaloSR = activationHaloGO.AddComponent<SpriteRenderer>();
+            activationHaloSR.sprite = FindActivationHaloSprite();
+            activationHaloSR.sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ShipGlowMaterialPath);
+            activationHaloSR.sortingOrder = 4;
+            activationHaloSR.color = new Color(3.2f, 2.2f, 1.4f, 0f);
+            activationHaloSR.enabled = false;
+
             // ── Wire BoostTrailView references ────────────────────────
             var so = new SerializedObject(boostTrailView);
             so.FindProperty("_mainTrail").objectReferenceValue       = trailRenderer;
@@ -119,18 +134,16 @@ namespace ProjectArk.Ship.Editor
             so.FindProperty("_energyLayer2").objectReferenceValue    = layer2SR;
             so.FindProperty("_energyLayer3").objectReferenceValue    = layer3SR;
             so.FindProperty("_energyField").objectReferenceValue     = fieldMR;
-            // NOTE: _boostBloomVolume and _flashImage are scene objects (Canvas/Volume),
-            // they CANNOT be pre-wired in a Prefab (cross-scene reference not allowed).
-            // User MUST wire them manually in the Inspector after placing the Prefab in scene.
+            so.FindProperty("_activationHalo").objectReferenceValue  = activationHaloSR;
+            // NOTE: _boostBloomVolume is a scene object and cannot be pre-wired in a Prefab.
             so.ApplyModifiedProperties();
 
-            // Remind developer that two critical scene-object fields still need manual wiring
+            // Remind developer that the local bloom volume still needs scene-level wiring
             Debug.LogWarning(
                 "[BoostTrailPrefabCreator] ⚠️ MANUAL WIRING REQUIRED:\n" +
-                "  BoostTrailView._flashImage   → Canvas Overlay full-screen white Image\n" +
                 "  BoostTrailView._boostBloomVolume → Local Volume with BoostBloomVolumeProfile\n" +
-                "These are scene objects and cannot be pre-wired in a Prefab.\n" +
-                "Without them: TriggerFlash() and TriggerBloomBurst() will silently no-op!");
+                "This is a scene object and cannot be pre-wired in a Prefab.\n" +
+                "Without it: TriggerBloomBurst() will silently no-op!");
 
             // ── Save as Prefab ─────────────────────────────────────────
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, PREFAB_PATH);
@@ -143,31 +156,13 @@ namespace ProjectArk.Ship.Editor
             {
                 if (showDialog)
                 {
-                    EditorUtility.DisplayDialog(
-                        "BoostTrailRoot Prefab Created",
-                        $"Prefab saved to:\n{PREFAB_PATH}\n\n" +
-                        "=== REQUIRED MANUAL STEPS ===\n\n" +
-                        "[Step 1] Run 'ProjectArk > VFX > Link Material Textures' to auto-assign all textures.\n\n" +
-                        "[Step 2] Add BoostTrailRoot prefab as child of your Ship's visual root.\n\n" +
-                        "[Step 3] In ShipView Inspector:\n" +
-                        "  - Wire _boostTrailView\n" +
-                        "  - Wire _boostLiquidSprite = Boost_16 (or ship_liquid_boost)\n" +
-                        "  - Wire _normalLiquidSprite = Movement_3\n\n" +
-                        "[Step 4] Create Canvas (Overlay) + full-screen white Image (Additive blend)\n" +
-                        "  Wire to BoostTrailView._flashImage\n\n" +
-                        "[Step 5] Create Local Volume with BoostBloomVolumeProfile\n" +
-                        "  Wire to BoostTrailView._boostBloomVolume\n\n" +
-                        "=== TEXTURE LINKER GUIDE ===\n" +
-                        "mat_boost_energy_layer2: _Tex0=boost_noise_main, _Tex1=boost_noise_distort,\n" +
-                        "  _Tex2=boost_noise_layer3, _Tex3=boost_noise_layer4\n" +
-                        "mat_boost_energy_layer3: _Tex0=boost_energy_noise_a, _Tex1=boost_energy_main\n" +
-                        "mat_boost_energy_field: _LUTTex=boost_field_main, _UseLUT=1\n" +
-                        "mat_trail_main_effect: _Slot0=trail_main_spritesheet, _Slot1=trail_second_spritesheet,\n" +
-                        "  _Slot2=trail_edge_glow, _Slot3=trail_color_lut\n" +
-                        "mat_flame_trail: _BaseMap=vfx_boost_techno_flame\n" +
-                        "mat_ember_trail: _BaseMap=vfx_ember_trail\n" +
-                        "mat_ember_sparks: _BaseMap=vfx_ember_sparks",
-                        "OK");
+                    Debug.Log(
+                        "[BoostTrailPrefabCreator] Prefab saved to:\n" + PREFAB_PATH + "\n\n" +
+                        "Required follow-up:\n" +
+                        "1. Run 'ProjectArk > VFX > Link Material Textures'.\n" +
+                        "2. Add BoostTrailRoot under the Ship visual root.\n" +
+                        "3. Verify ShipView sprite references.\n" +
+                        "4. Verify scene wiring for _boostBloomVolume.");
                 }
 
                 Selection.activeObject = prefab;
@@ -377,6 +372,19 @@ namespace ProjectArk.Ship.Editor
                 return boostSprite;
 
             return FindSprite(NormalSpriteName);
+        }
+
+        private static Sprite FindActivationHaloSprite()
+        {
+            var haloSprite = FindSprite(ActivationHaloSpriteName);
+            if (haloSprite != null)
+                return haloSprite;
+
+            haloSprite = FindSprite(ActivationHaloFallbackSpriteName);
+            if (haloSprite != null)
+                return haloSprite;
+
+            return FindOverlaySprite();
         }
 
         private static Sprite FindSprite(string nameFilter)

@@ -8861,3 +8861,127 @@ Secondary 轨道的 SAIL/SAT 格子现在显示为无效放置目标（红色高
 - 将既有 8 类房间模型重组为 checklist 结构
 - 按“通用检查 / 类型专项检查 / 切片字段模板 / 填写范例”四层组织生产规范
 - 以单一主职责、明确通过条件、风险与奖励匹配为核心约束，形成适用于 `Project Ark` 的关卡生产纪律
+
+---
+
+## Boost Trail VFX 局部激活光晕修正  2026-03-11 11:30
+
+### 修改文件
+
+- `Assets/Scripts/Ship/VFX/BoostTrailView.cs`  新增局部 `BoostActivationHalo` 爆发控制，并弱化全屏 flash 的峰值与时序
+- `Assets/Scripts/Ship/Editor/BoostTrailPrefabCreator.cs`  为 `BoostTrailRoot` 自动创建并连线 `BoostActivationHalo` 节点
+
+### 内容
+
+针对 BoostTrail 当前“视觉主观感受偏差较大，Boost 激活看起来更像整屏发白，而不是飞船周围能量爆开”的问题，先按最小可玩修正方案收口。保留全屏 flash 作为补充层，但将其峰值 alpha 和持续时间明显压低；同时在 `BoostTrailRoot` 中新增局部 `BoostActivationHalo` 精灵层，复用 `ship_highlight_gg` 贴图与现有加色材质，在 Boost 启动瞬间做一次围绕飞船的短促圆形/光晕爆发，让视觉焦点重新回到船体附近，而不是屏幕本身。
+
+### 目的
+
+让当前实现重新靠近 `GalacticGlitch_BoostTrail_VFX_Plan.md` 后半段对 `eid_1631` 的定义：Boost 激活最关键的第一眼读感应该是“飞船周围的局部能量闪爆”，全屏 flash 只能作为轻量辅助，而不应成为主视觉。这样可以在不推翻现有 BoostTrail 框架的前提下，先把最违和的观感问题纠正过来。
+
+### 技术
+
+1. 在 `BoostTrailView` 中新增 `SpriteRenderer _activationHalo` 引用，作为局部激活光晕层
+2. 用单个 `Tween.Custom` 驱动局部 halo 的 alpha + scale：小尺寸快速亮起，再向外扩张并衰减
+3. 将全屏 flash 默认值从高峰值长时间可见，改为更短更轻的辅助冲击层
+4. 在 `ResetState()` 中补充局部 halo 的完整复位，避免对象池或重复触发造成状态泄漏
+5. 在 `BoostTrailPrefabCreator` 中自动创建 `BoostActivationHalo` 子节点，默认绑定 `ship_highlight_gg` 和 `ShipGlowMaterial`
+6. 由于本轮修改后 Unity MCP 在域重载后未恢复 ready 状态，暂未完成 prefab 自动替换与 Play Mode 截图回归；代码层已通过 `ReadLints` 校验，本轮运行时验证待 MCP 恢复后补做
+
+---
+
+## Boost Trail VFX 局部 Halo 第二轮实测修正  2026-03-11 11:46
+
+### 修改文件
+
+- `Assets/Scripts/Ship/VFX/BoostTrailView.cs`  增加世界空间能量场临时关闭开关，并继续调高局部 halo 的缩放/峰值
+- `Assets/Scripts/Ship/Editor/BoostTrailPrefabCreator.cs`  将局部 halo 资源从错误的 `ship_highlight_gg` 切换为程序化 halo 纹理，并重新调整默认缩放与颜色
+- `Assets/Scripts/Ship/Editor/ShipBoostDebugMenu.cs`  新增直接显示/隐藏 `BoostActivationHalo` 的调试菜单，便于把“素材问题”和“触发时机问题”拆开验证
+- `Assets/_Art/VFX/BoostTrail/Textures/boost_activation_halo.png`  新增程序化生成的局部 halo 纹理
+- `Assets/Scenes/SampleScene.unity`  重新替换 BoostTrailRoot 后保存
+
+### 内容
+
+Unity MCP 恢复后，继续把前一轮“局部 halo 替代全屏主视觉”的方案落到运行时验证。首先通过重新替换 `BoostTrailRoot` 和 Play Mode 截图确认：`ship_highlight_gg` 并不是圆形局部光晕，而是一整块噪声高亮遮罩，导致画面里再次出现大面积斜方形覆盖。随后将世界空间 `BoostEnergyField` 临时降级为关闭状态，避免它继续抢主视觉，并改为使用程序化生成的 `boost_activation_halo.png` 作为局部 halo 资源。最终实测结果是：此前最离谱的“大面积斜块覆盖”问题已经被压掉，Boost 画面重新回到飞船中心附近；但新的局部 halo 仍偏弱，距离文档预期的“明显的小圆/局部能量爆发”还有差距，后续需要更合适的纹理或直接做径向 halo shader 才能真正对齐 GG 观感。
+
+### 目的
+
+先把当前实现从“明显错误的整块遮罩/大面积屏幕覆盖”修回到“至少不违和、且视觉重心在飞船附近”的状态，再基于 Play Mode 证据明确下一步不是继续乱调数值，而是应该升级局部 halo 的素材或渲染方式。
+
+### 技术
+
+1. 使用 Unity MCP 截图对比三轮结果，确认问题来源先后包括：全屏 flash 过强、错误 halo 资源导致大块遮罩、局部 halo 新资源过弱
+2. 在 `BoostTrailView` 中新增 `_enableWorldEnergyField` 开关，默认关闭当前仍过于抢眼的世界空间能量场
+3. 通过 `manage_texture` 生成 `boost_activation_halo.png`，替换掉不适合作为局部爆发的 `ship_highlight_gg`
+4. 通过 `ShipBoostDebugMenu` 新增 `Show Activation Halo` / `Hide Activation Halo`，将局部 halo 独立从 Boost 时序中剥离出来单独验证
+5. 用 `ProjectArk/Ship/Replace Ship Boost Trail (GG)` 重新替换 `Ship.prefab` 中的 `BoostTrailRoot`，再进入 Play Mode 触发 `Trigger Boost Once`
+6. Play Mode 结果确认：
+   - 大面积斜方形遮罩问题已消失
+   - 全屏 flash 已不再主导画面
+   - 当前局部 halo 仍然过弱，不足以承担文档中 `eid_1631` 的主视觉职责
+
+---
+
+## Boost Trail VFX GG 环形 Halo 资源切换与尺寸收敛  2026-03-11 15:26
+
+### 修改文件
+
+- `Assets/Scripts/Ship/Editor/BoostTrailPrefabCreator.cs`  将 `BoostActivationHalo` 默认资源切换为 `vfx_ring_glow_uneven`，新增 `vfx_magnetic_rings` 兜底，并移除阻塞 Unity MCP 的弹窗；同时把 halo 默认基础缩放从 `1.4` 收到 `1.0`
+- `Assets/Scripts/Ship/VFX/BoostTrailView.cs`  将局部 halo 的爆发参数收敛为更小、更像 GG 的局部小圆 burst（`0.72 -> 1.45`，时长 `0.24s`）
+- `Assets/Scripts/Ship/Editor/ShipBoostDebugMenu.cs`  调整 `Show Activation Halo` 的强制显示尺寸，便于直接验证“当前基础尺寸是否过大”
+- `Assets/Scripts/Ship/Editor/ShipBoostTrailPrefabReplacer.cs`  移除完成后弹窗，避免一键替换在自动化链路里阻塞
+- `Assets/Scripts/Ship/Editor/ShipBoostTrailSceneBinder.cs`  移除完成后弹窗，避免 scene wiring 菜单阻塞 Unity MCP
+- `Assets/_Art/VFX/BoostTrail/Textures/vfx_ring_glow_uneven.png`  从 GG 原始解包素材导入为新的局部 halo 主资源
+- `Assets/_Art/VFX/BoostTrail/Textures/vfx_magnetic_rings.png`  从 GG 原始解包素材导入为备用环形资源
+- `Assets/_Prefabs/VFX/BoostTrailRoot.prefab`  重新生成，使 `BoostActivationHalo` 吃到新的 GG 环形素材与基础缩放
+- `Assets/_Prefabs/Ship/Ship.prefab`  重新替换 `BoostTrailRoot`
+- `Assets/Scenes/SampleScene.unity`  重新执行 scene references 绑定并保存
+- `Docs/ImplementationLog/ImplementationLog.md`
+
+### 内容
+
+继续针对“Boost 不该是全屏，而应该是飞船附近一个小小的圆形能量爆发”的偏差做第三轮收口。先从 GG 原始解包素材中确认 `vfx_ring_glow_uneven.png` 更接近参考效果，再将当前 prefab 生成链、Ship 替换链、scene wiring 链串起来重新落地。随后使用 Unity MCP 在 Play Mode 下分别抓取“强制显示 Halo”和“真实 Trigger Boost”两组截图，验证新的局部环形 glow 已经取代此前的全屏主视觉。相较前一版程序化 halo，这一轮的结果已经明显更接近 GG：主观读感不再是整屏闪白，而是围绕飞船的局部环形 burst；同时通过缩小基础 scale 和收紧扩张范围，避免 halo 再次膨胀成过大的覆盖圈。
+
+### 目的
+
+把当前实现从“方向已经修正，但局部 halo 仍像临时占位资源”继续推进到“已经能读出 GG 式局部小圆 burst”的状态。这样后续若还要继续精修，就不再是先解决明显错误，而是围绕颜色、持续时间、扩张速度和 shader 细节做品相打磨。
+
+### 技术
+
+1. 直接引入 GG 原始 `vfx_ring_glow_uneven` 贴图，替代过弱的程序化 halo 资源
+2. 在 `BoostTrailPrefabCreator` 中把 halo 资源选择改成“GG 主资源 + GG 备用资源 + 旧 overlay 最终兜底”的查找顺序
+3. 去掉三个 Editor 一键工具的 `DisplayDialog` 模态框，修复 Unity MCP 自动化会被菜单成功后的弹窗卡死的问题
+4. 通过重新生成 `BoostTrailRoot`、重新替换 `Ship.prefab`、重新绑定 `SampleScene` 三步，确保资源切换真正落到运行中的 Ship 上
+5. 使用 Unity MCP Play Mode 截图对比验证：
+   - 静态强制显示时，环形 glow 已稳定呈现为局部小圆
+   - 真实 Boost 触发时，局部 halo 已能在船体周围读到，而不再是整屏 flash 抢主视觉
+
+---
+
+## Boost Trail VFX 移除全屏白色 Flash Canvas  2026-03-11 15:32
+
+### 修改文件
+
+- `Assets/Scripts/Ship/VFX/BoostTrailView.cs`  删除全屏 `Image` 引用、flash tween 与 `TriggerFlash()` 逻辑，仅保留局部 halo 与 bloom burst
+- `Assets/Scripts/Ship/Editor/ShipBoostTrailSceneBinder.cs`  停止创建/绑定 `BoostTrailFlashOverlay`，并在重跑工具时自动删除场景中的旧 overlay
+- `Assets/Scripts/Ship/Editor/ShipBoostDebugMenu.cs`  删除 `Show Flash Overlay` / `Hide Flash Overlay` 调试菜单
+- `Assets/Scripts/Ship/Editor/BoostTrailPrefabCreator.cs`  更新说明文字，移除对 `_flashImage` 的场景接线提示
+- `Assets/Scenes/SampleScene.unity`  重新执行 scene binder 后保存，清除旧的 `BoostTrailFlashOverlay`
+- `Docs/ImplementationLog/ImplementationLog.md`
+
+### 内容
+
+结合参考文档和前几轮实测可以确认：虽然文档里曾保留一个 `Screen Flash` 层作为补充，但在当前项目实现中，这个全屏白色 Canvas 的主观存在感过强，已经明显偏离“GG 式局部小圆能量爆发”的目标。为避免它继续污染判断，这一轮将全屏 flash 从运行时主链路中彻底移除，不再只是把 alpha 压低，而是直接删掉 `BoostTrailView` 中的 flash 触发逻辑，并让 `ShipBoostTrailSceneBinder` 在后续任何一次执行时都主动清理旧的 `BoostTrailFlashOverlay` 场景对象。实际验证结果是：场景中已经查询不到 `BoostTrailFlashOverlay`，`BoostTrailView` 组件上也不再存在 `_flashImage` 相关序列化字段，Boost 激活视觉正式收敛为“局部 halo + bloom”两层。
+
+### 目的
+
+把 Boost 激活的视觉重心彻底锁回飞船附近，避免再出现“明明主要在看局部能量爆发，却总被一层全屏白闪打断”的违和感。这样后续继续对齐 GG 时，关注点就能集中在 halo 资源、shader 表现和局部 bloom 上，而不是不断被一个方向已经判定错误的全屏层干扰。
+
+### 技术
+
+1. 在 `BoostTrailView` 中删除 `_flashImage`、`_flashTween` 与 `TriggerFlash()`，从代码层彻底移除全屏 flash 运行时逻辑
+2. 在 `ShipBoostTrailSceneBinder` 中把“创建 overlay Canvas/Image”改为“发现旧 overlay 就删除”，避免一键工具再次把白色全屏层加回来
+3. 删除 `ShipBoostDebugMenu` 中的 flash 调试入口，避免误导后续验证流程
+4. 用 Unity MCP 查询确认：
+   - `BoostTrailFlashOverlay` 当前场景中 `totalCount = 0`
+   - `BoostTrailView` 当前仅保留 `_boostBloomVolume`，不再暴露 `_flashImage`

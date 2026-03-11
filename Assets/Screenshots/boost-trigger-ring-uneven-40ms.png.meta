@@ -1,0 +1,845 @@
+fileFormatVersion: 2
+guid: d64a0d594b2c9af4b87c48207343d9dd
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -3437471203629174055
+    second: boost-trigger-ring-uneven-40ms_0
+  - first:
+      213: 2632389486646468526
+    second: boost-trigger-ring-uneven-40ms_1
+  - first:
+      213: -4531533836429606116
+    second: boost-trigger-ring-uneven-40ms_2
+  - first:
+      213: -4972557249874830906
+    second: boost-trigger-ring-uneven-40ms_3
+  - first:
+      213: 2871906507004375880
+    second: boost-trigger-ring-uneven-40ms_4
+  - first:
+      213: -241928009333318932
+    second: boost-trigger-ring-uneven-40ms_5
+  - first:
+      213: 8209787169414867993
+    second: boost-trigger-ring-uneven-40ms_6
+  - first:
+      213: 7526719813972054527
+    second: boost-trigger-ring-uneven-40ms_7
+  - first:
+      213: -4667223184310090534
+    second: boost-trigger-ring-uneven-40ms_8
+  - first:
+      213: -8275696718190137683
+    second: boost-trigger-ring-uneven-40ms_9
+  - first:
+      213: -1030725696536530202
+    second: boost-trigger-ring-uneven-40ms_10
+  - first:
+      213: 768960255912352637
+    second: boost-trigger-ring-uneven-40ms_11
+  - first:
+      213: -4690529170670413541
+    second: boost-trigger-ring-uneven-40ms_12
+  - first:
+      213: -6286078864131964656
+    second: boost-trigger-ring-uneven-40ms_13
+  - first:
+      213: 301450874506303862
+    second: boost-trigger-ring-uneven-40ms_14
+  - first:
+      213: -8572671651520888478
+    second: boost-trigger-ring-uneven-40ms_15
+  - first:
+      213: -8816021218844605026
+    second: boost-trigger-ring-uneven-40ms_16
+  - first:
+      213: -3994166144261170757
+    second: boost-trigger-ring-uneven-40ms_17
+  - first:
+      213: 7062980858187415610
+    second: boost-trigger-ring-uneven-40ms_18
+  - first:
+      213: 5803867978680485487
+    second: boost-trigger-ring-uneven-40ms_19
+  - first:
+      213: 6982157170639642166
+    second: boost-trigger-ring-uneven-40ms_20
+  - first:
+      213: 1940559825556108225
+    second: boost-trigger-ring-uneven-40ms_21
+  - first:
+      213: 2900064252292469852
+    second: boost-trigger-ring-uneven-40ms_22
+  - first:
+      213: 9028263730223533225
+    second: boost-trigger-ring-uneven-40ms_23
+  - first:
+      213: -6912907980050090680
+    second: boost-trigger-ring-uneven-40ms_24
+  - first:
+      213: -2174195552697430473
+    second: boost-trigger-ring-uneven-40ms_25
+  - first:
+      213: 7619223741820847032
+    second: boost-trigger-ring-uneven-40ms_26
+  - first:
+      213: -2963301248701383223
+    second: boost-trigger-ring-uneven-40ms_27
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_0
+      rect:
+        serializedVersion: 2
+        x: 874
+        y: 583
+        width: 10
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9d27c0e1726ab40d0800000000000000
+      internalID: -3437471203629174055
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_1
+      rect:
+        serializedVersion: 2
+        x: 1337
+        y: 555
+        width: 10
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: eaf19068a40288420800000000000000
+      internalID: 2632389486646468526
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_2
+      rect:
+        serializedVersion: 2
+        x: 1011
+        y: 509
+        width: 11
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c1343ff1cf1cc11c0800000000000000
+      internalID: -4531533836429606116
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_3
+      rect:
+        serializedVersion: 2
+        x: 1171
+        y: 481
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6c9dae7e68dedfab0800000000000000
+      internalID: -4972557249874830906
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_4
+      rect:
+        serializedVersion: 2
+        x: 1166
+        y: 441
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 843f02a80cf0bd720800000000000000
+      internalID: 2871906507004375880
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_5
+      rect:
+        serializedVersion: 2
+        x: 1088
+        y: 425
+        width: 13
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cea587ed1cf74acf0800000000000000
+      internalID: -241928009333318932
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_6
+      rect:
+        serializedVersion: 2
+        x: 1050
+        y: 390
+        width: 13
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 91c688aeee50fe170800000000000000
+      internalID: 8209787169414867993
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_7
+      rect:
+        serializedVersion: 2
+        x: 1125
+        y: 378
+        width: 12
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ff1d2b3eac7447860800000000000000
+      internalID: 7526719813972054527
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_8
+      rect:
+        serializedVersion: 2
+        x: 1181
+        y: 382
+        width: 15
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ad4cabbed31ba3fb0800000000000000
+      internalID: -4667223184310090534
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_9
+      rect:
+        serializedVersion: 2
+        x: 1074
+        y: 367
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dae296b6ea1d62d80800000000000000
+      internalID: -8275696718190137683
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_10
+      rect:
+        serializedVersion: 2
+        x: 1140
+        y: 371
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6e2b215a07022b1f0800000000000000
+      internalID: -1030725696536530202
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_11
+      rect:
+        serializedVersion: 2
+        x: 1329
+        y: 369
+        width: 11
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d7b9c045745ebaa00800000000000000
+      internalID: 768960255912352637
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_12
+      rect:
+        serializedVersion: 2
+        x: 972
+        y: 228
+        width: 195
+        height: 132
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b19159d1294e7eeb0800000000000000
+      internalID: -4690529170670413541
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_13
+      rect:
+        serializedVersion: 2
+        x: 991
+        y: 354
+        width: 8
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 011c251049c53c8a0800000000000000
+      internalID: -6286078864131964656
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_14
+      rect:
+        serializedVersion: 2
+        x: 1236
+        y: 344
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 679dd2429f7fe2400800000000000000
+      internalID: 301450874506303862
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_15
+      rect:
+        serializedVersion: 2
+        x: 1158
+        y: 287
+        width: 20
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 261490b8d80c70980800000000000000
+      internalID: -8572671651520888478
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_16
+      rect:
+        serializedVersion: 2
+        x: 1232
+        y: 299
+        width: 14
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e950676296337a580800000000000000
+      internalID: -8816021218844605026
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_17
+      rect:
+        serializedVersion: 2
+        x: 1422
+        y: 302
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bb9db65cd0fd198c0800000000000000
+      internalID: -3994166144261170757
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_18
+      rect:
+        serializedVersion: 2
+        x: 888
+        y: 259
+        width: 14
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a3005a35bafb40260800000000000000
+      internalID: 7062980858187415610
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_19
+      rect:
+        serializedVersion: 2
+        x: 932
+        y: 263
+        width: 13
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f66c3882d2b7b8050800000000000000
+      internalID: 5803867978680485487
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_20
+      rect:
+        serializedVersion: 2
+        x: 1162
+        y: 238
+        width: 16
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 63e1ce124fa95e060800000000000000
+      internalID: 6982157170639642166
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_21
+      rect:
+        serializedVersion: 2
+        x: 1115
+        y: 212
+        width: 16
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1c37aab31e04eea10800000000000000
+      internalID: 1940559825556108225
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_22
+      rect:
+        serializedVersion: 2
+        x: 1201
+        y: 201
+        width: 13
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c5493bf72191f3820800000000000000
+      internalID: 2900064252292469852
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_23
+      rect:
+        serializedVersion: 2
+        x: 837
+        y: 0
+        width: 121
+        height: 177
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9ac44826706da4d70800000000000000
+      internalID: 9028263730223533225
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_24
+      rect:
+        serializedVersion: 2
+        x: 1043
+        y: 1
+        width: 9
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 845b62c71da6010a0800000000000000
+      internalID: -6912907980050090680
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_25
+      rect:
+        serializedVersion: 2
+        x: 1267
+        y: 114
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 73e4c390aa4b3d1e0800000000000000
+      internalID: -2174195552697430473
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_26
+      rect:
+        serializedVersion: 2
+        x: 1526
+        y: 16
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8b34473ff9becb960800000000000000
+      internalID: 7619223741820847032
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-trigger-ring-uneven-40ms_27
+      rect:
+        serializedVersion: 2
+        x: 1538
+        y: 88
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9cdbeace63d30e6d0800000000000000
+      internalID: -2963301248701383223
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      boost-trigger-ring-uneven-40ms_0: -3437471203629174055
+      boost-trigger-ring-uneven-40ms_1: 2632389486646468526
+      boost-trigger-ring-uneven-40ms_10: -1030725696536530202
+      boost-trigger-ring-uneven-40ms_11: 768960255912352637
+      boost-trigger-ring-uneven-40ms_12: -4690529170670413541
+      boost-trigger-ring-uneven-40ms_13: -6286078864131964656
+      boost-trigger-ring-uneven-40ms_14: 301450874506303862
+      boost-trigger-ring-uneven-40ms_15: -8572671651520888478
+      boost-trigger-ring-uneven-40ms_16: -8816021218844605026
+      boost-trigger-ring-uneven-40ms_17: -3994166144261170757
+      boost-trigger-ring-uneven-40ms_18: 7062980858187415610
+      boost-trigger-ring-uneven-40ms_19: 5803867978680485487
+      boost-trigger-ring-uneven-40ms_2: -4531533836429606116
+      boost-trigger-ring-uneven-40ms_20: 6982157170639642166
+      boost-trigger-ring-uneven-40ms_21: 1940559825556108225
+      boost-trigger-ring-uneven-40ms_22: 2900064252292469852
+      boost-trigger-ring-uneven-40ms_23: 9028263730223533225
+      boost-trigger-ring-uneven-40ms_24: -6912907980050090680
+      boost-trigger-ring-uneven-40ms_25: -2174195552697430473
+      boost-trigger-ring-uneven-40ms_26: 7619223741820847032
+      boost-trigger-ring-uneven-40ms_27: -2963301248701383223
+      boost-trigger-ring-uneven-40ms_3: -4972557249874830906
+      boost-trigger-ring-uneven-40ms_4: 2871906507004375880
+      boost-trigger-ring-uneven-40ms_5: -241928009333318932
+      boost-trigger-ring-uneven-40ms_6: 8209787169414867993
+      boost-trigger-ring-uneven-40ms_7: 7526719813972054527
+      boost-trigger-ring-uneven-40ms_8: -4667223184310090534
+      boost-trigger-ring-uneven-40ms_9: -8275696718190137683
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

@@ -4,7 +4,6 @@ using PrimeTween;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-using UnityEngine.UI;
 
 namespace ProjectArk.Ship
 {
@@ -19,7 +18,8 @@ namespace ProjectArk.Ship
     ///   - Layer 5b: EmberGlow burst particle system (orange-yellow HDR, Burst mode)
     ///   - Layer 6: BoostEnergyLayer2 / Layer3 SpriteRenderer (Shader _BoostIntensity)
     ///   - Layer 7: BoostEnergyField MeshRenderer (world-space shader)
-    ///   - Post:    Full-screen flash (Canvas Overlay Image) + URP Volume Bloom burst
+    ///   - Layer 8: Boost activation halo (local sprite burst around ship)
+    ///   - Post:    URP Volume Bloom burst
     ///
     /// Call OnBoostStart() / OnBoostEnd() / ResetState() from ShipView.
     /// All references via [SerializeField] — no FindObjectOfType.
@@ -64,12 +64,16 @@ namespace ProjectArk.Ship
         [Tooltip("MeshRenderer (Quad) using BoostEnergyField shader (world-space).")]
         [SerializeField] private MeshRenderer _energyField;
 
+        [Tooltip("Temporary kill switch for the world-space energy field while the effect is still too dominant compared to the local activation halo.")]
+        [SerializeField] private bool _enableWorldEnergyField;
+
+        [Header("Activation Halo")]
+        [Tooltip("Local additive sprite burst centered on the ship. This is the primary Boost activation flash, not the full-screen overlay.")]
+        [SerializeField] private SpriteRenderer _activationHalo;
+
         [Header("Post-Processing")]
         [Tooltip("Local Volume for Boost Bloom burst (weight animated 0→1→0).")]
         [SerializeField] private Volume _boostBloomVolume;
-
-        [Tooltip("Full-screen flash Image on Canvas Overlay (Additive blend, initial alpha=0).")]
-        [SerializeField] private Image _flashImage;
 
         [Header("Trail Settings")]
         [Tooltip("Trail fade time in seconds (how long trail persists after stop).")]
@@ -85,12 +89,18 @@ namespace ProjectArk.Ship
         [Tooltip("Duration for _BoostIntensity 1→0 on Boost end.")]
         [SerializeField] private float _intensityRampDownDuration = 0.5f;
 
-        [Header("Flash Settings")]
-        [Tooltip("Peak alpha of full-screen flash (0-1).")]
-        [SerializeField] private float _flashPeakAlpha = 0.7f;
+        [Header("Activation Halo Settings")]
+        [Tooltip("Peak alpha of the local Boost halo burst.")]
+        [SerializeField] private float _activationHaloPeakAlpha = 1.15f;
 
-        [Tooltip("Total duration of full-screen flash animation.")]
-        [SerializeField] private float _flashDuration = 0.3f;
+        [Tooltip("Total duration of the local Boost halo burst.")]
+        [SerializeField] private float _activationHaloDuration = 0.24f;
+
+        [Tooltip("Scale multiplier at the beginning of the local halo burst.")]
+        [SerializeField] private float _activationHaloStartScale = 0.72f;
+
+        [Tooltip("Scale multiplier at the end of the local halo burst.")]
+        [SerializeField] private float _activationHaloEndScale = 1.45f;
 
         [Header("Bloom Burst Settings")]
         [Tooltip("Peak Bloom Intensity during Boost activation.")]
@@ -115,14 +125,16 @@ namespace ProjectArk.Ship
 
         // Active tweens
         private Tween _intensityTween;
-        private Tween _flashTween;
         private Tween _bloomTween;
+        private Tween _activationHaloTween;
 
         // Bloom component from local volume
         private Bloom _bloomOverride;
 
         // Baseline bloom intensity (restored after burst)
         private float _baselineBloomIntensity;
+        private Vector3 _activationHaloBaseScale = Vector3.one;
+        private Color _activationHaloBaseColor = Color.white;
 
         // ══════════════════════════════════════════════════════════════
         // Lifecycle
@@ -143,6 +155,12 @@ namespace ProjectArk.Ship
                     _baselineBloomIntensity = _bloomOverride.intensity.value;
             }
 
+            if (_activationHalo != null)
+            {
+                _activationHaloBaseScale = _activationHalo.transform.localScale;
+                _activationHaloBaseColor = _activationHalo.color;
+            }
+
             // Ensure all VFX start in reset state
             ResetState();
         }
@@ -151,8 +169,8 @@ namespace ProjectArk.Ship
         {
             // Stop all active tweens to prevent callbacks from accessing destroyed components
             _intensityTween.Stop();
-            _flashTween.Stop();
             _bloomTween.Stop();
+            _activationHaloTween.Stop();
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -161,7 +179,7 @@ namespace ProjectArk.Ship
 
         /// <summary>
         /// Call when the ship enters Boost state.
-        /// Activates all trail/particle layers and triggers flash + bloom burst.
+        /// Activates all trail/particle layers and triggers halo + bloom burst.
         /// </summary>
         public void OnBoostStart()
         {
@@ -191,7 +209,7 @@ namespace ProjectArk.Ship
             }
 
             // 5. Activate energy field MeshRenderer
-            if (_energyField != null)
+            if (_enableWorldEnergyField && _energyField != null)
                 _energyField.enabled = true;
 
             // 6. Animate _BoostIntensity 0 → 1 (EaseInQuad, 0.3s)
@@ -203,8 +221,8 @@ namespace ProjectArk.Ship
                 onValueChange: SetBoostIntensity,
                 ease: Ease.InQuad);
 
-            // 7. Full-screen flash: alpha 0 → 0.7 → 0 (EaseOutQuad, 0.3s)
-            TriggerFlash();
+            // 7. Local halo burst
+            TriggerActivationHalo();
 
             // 8. Bloom burst: Intensity → 3.0 → baseline (EaseOutQuad, 0.4s)
             TriggerBloomBurst();
@@ -252,8 +270,8 @@ namespace ProjectArk.Ship
         {
             // Stop all tweens
             _intensityTween.Stop();
-            _flashTween.Stop();
             _bloomTween.Stop();
+            _activationHaloTween.Stop();
 
             // Reset TrailRenderer
             if (_mainTrail != null)
@@ -278,13 +296,7 @@ namespace ProjectArk.Ship
             if (_energyField != null)
                 _energyField.enabled = false;
 
-            // Reset full-screen flash
-            if (_flashImage != null)
-            {
-                var c = _flashImage.color;
-                c.a = 0f;
-                _flashImage.color = c;
-            }
+            ResetActivationHalo();
 
             // Reset bloom volume
             if (_boostBloomVolume != null)
@@ -328,38 +340,53 @@ namespace ProjectArk.Ship
         }
 
         /// <summary>
-        /// Triggers full-screen flash: alpha 0 → peakAlpha → 0.
-        /// Re-starts if already playing (requirement 4.5).
+        /// Triggers the local halo burst around the ship, which should carry the main Boost activation read.
         /// </summary>
-        private void TriggerFlash()
+        private void TriggerActivationHalo()
         {
-            if (_flashImage == null) return;
+            if (_activationHalo == null) return;
 
-            _flashTween.Stop();
+            _activationHaloTween.Stop();
+            _activationHalo.enabled = true;
+            ApplyActivationHalo(0f);
 
-            // Reset to 0 first
-            var c = _flashImage.color;
-            c.a = 0f;
-            _flashImage.color = c;
-
-            float halfDuration = _flashDuration * 0.5f;
-
-            // Phase 1: 0 → peakAlpha
-            _flashTween = Tween.Alpha(
-                _flashImage,
-                endValue: _flashPeakAlpha,
-                duration: halfDuration,
+            _activationHaloTween = Tween.Custom(
+                startValue: 0f,
+                endValue: 1f,
+                duration: _activationHaloDuration,
+                onValueChange: ApplyActivationHalo,
                 ease: Ease.OutQuad)
-                .OnComplete(() =>
-                {
-                    if (_flashImage == null) return;
-                    // Phase 2: peakAlpha → 0
-                    _flashTween = Tween.Alpha(
-                        _flashImage,
-                        endValue: 0f,
-                        duration: halfDuration,
-                        ease: Ease.OutQuad);
-                });
+                .OnComplete(ResetActivationHalo);
+        }
+
+        private void ApplyActivationHalo(float progress)
+        {
+            if (_activationHalo == null) return;
+
+            float peakPoint = 0.2f;
+            float alpha = progress < peakPoint
+                ? Mathf.Lerp(0f, _activationHaloPeakAlpha, progress / peakPoint)
+                : Mathf.Lerp(_activationHaloPeakAlpha, 0f, (progress - peakPoint) / (1f - peakPoint));
+
+            _activationHalo.transform.localScale = _activationHaloBaseScale *
+                Mathf.Lerp(_activationHaloStartScale, _activationHaloEndScale, progress);
+
+            Color color = _activationHaloBaseColor;
+            color.a = alpha;
+            _activationHalo.color = color;
+        }
+
+        private void ResetActivationHalo()
+        {
+            if (_activationHalo == null) return;
+
+            _activationHaloTween.Stop();
+            _activationHalo.transform.localScale = _activationHaloBaseScale;
+
+            Color color = _activationHaloBaseColor;
+            color.a = 0f;
+            _activationHalo.color = color;
+            _activationHalo.enabled = false;
         }
 
         /// <summary>

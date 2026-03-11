@@ -1,0 +1,559 @@
+fileFormatVersion: 2
+guid: 4651ca60083c2f14b8ac4783fd9f2fa9
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 8096890304855709687
+    second: boost-activation-halo-direct_0
+  - first:
+      213: -4884430024665384693
+    second: boost-activation-halo-direct_1
+  - first:
+      213: -5489295788770622227
+    second: boost-activation-halo-direct_2
+  - first:
+      213: 1531903082398470398
+    second: boost-activation-halo-direct_3
+  - first:
+      213: 7443628116138439066
+    second: boost-activation-halo-direct_4
+  - first:
+      213: -3077904173829059920
+    second: boost-activation-halo-direct_5
+  - first:
+      213: -4814345138605516055
+    second: boost-activation-halo-direct_6
+  - first:
+      213: -2793562733656469418
+    second: boost-activation-halo-direct_7
+  - first:
+      213: 2044059208458160055
+    second: boost-activation-halo-direct_8
+  - first:
+      213: -4131415265359998703
+    second: boost-activation-halo-direct_9
+  - first:
+      213: 1840013713616975291
+    second: boost-activation-halo-direct_10
+  - first:
+      213: 7070656074658349170
+    second: boost-activation-halo-direct_11
+  - first:
+      213: -4153343641603881741
+    second: boost-activation-halo-direct_12
+  - first:
+      213: -2292841281406120242
+    second: boost-activation-halo-direct_13
+  - first:
+      213: -3559354358064514830
+    second: boost-activation-halo-direct_14
+  - first:
+      213: -6411289923803891250
+    second: boost-activation-halo-direct_15
+  - first:
+      213: 3613385878702077592
+    second: boost-activation-halo-direct_16
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: boost-activation-halo-direct_0
+      rect:
+        serializedVersion: 2
+        x: 1120
+        y: 532
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7f79a3645deed5070800000000000000
+      internalID: 8096890304855709687
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-activation-halo-direct_1
+      rect:
+        serializedVersion: 2
+        x: 397
+        y: 507
+        width: 10
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b09319975c4073cb0800000000000000
+      internalID: -4884430024665384693
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-activation-halo-direct_2
+      rect:
+        serializedVersion: 2
+        x: 1239
+        y: 516
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: de4874b409a12d3b0800000000000000
+      internalID: -5489295788770622227
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-activation-halo-direct_3
+      rect:
+        serializedVersion: 2
+        x: 895
+        y: 461
+        width: 10
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ef0dfa0bcb9624510800000000000000
+      internalID: 1531903082398470398
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-activation-halo-direct_4
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 406
+        width: 8
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a91ba8665541d4760800000000000000
+      internalID: 7443628116138439066
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-activation-halo-direct_5
+      rect:
+        serializedVersion: 2
+        x: 962
+        y: 388
+        width: 10
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0ba0a3a16761945d0800000000000000
+      internalID: -3077904173829059920
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-activation-halo-direct_6
+      rect:
+        serializedVersion: 2
+        x: 972
+        y: 257
+        width: 119
+        height: 116
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9ea1a4b9a92003db0800000000000000
+      internalID: -4814345138605516055
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-activation-halo-direct_7
+      rect:
+        serializedVersion: 2
+        x: 1709
+        y: 342
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 65013a2ae754b39d0800000000000000
+      internalID: -2793562733656469418
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-activation-halo-direct_8
+      rect:
+        serializedVersion: 2
+        x: 954
+        y: 324
+        width: 14
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7b7c30c2505fd5c10800000000000000
+      internalID: 2044059208458160055
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-activation-halo-direct_9
+      rect:
+        serializedVersion: 2
+        x: 947
+        y: 270
+        width: 13
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 111579094b34aa6c0800000000000000
+      internalID: -4131415265359998703
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-activation-halo-direct_10
+      rect:
+        serializedVersion: 2
+        x: 1216
+        y: 281
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bb5bcf549ba098910800000000000000
+      internalID: 1840013713616975291
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-activation-halo-direct_11
+      rect:
+        serializedVersion: 2
+        x: 1107
+        y: 269
+        width: 9
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 27008faec34002260800000000000000
+      internalID: 7070656074658349170
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-activation-halo-direct_12
+      rect:
+        serializedVersion: 2
+        x: 1149
+        y: 266
+        width: 14
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3f4c21c96fb5c56c0800000000000000
+      internalID: -4153343641603881741
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-activation-halo-direct_13
+      rect:
+        serializedVersion: 2
+        x: 499
+        y: 252
+        width: 10
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ececf67a0013e20e0800000000000000
+      internalID: -2292841281406120242
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-activation-halo-direct_14
+      rect:
+        serializedVersion: 2
+        x: 827
+        y: 218
+        width: 10
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2f873d1d112aa9ec0800000000000000
+      internalID: -3559354358064514830
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-activation-halo-direct_15
+      rect:
+        serializedVersion: 2
+        x: 556
+        y: 147
+        width: 10
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ec9b0a368c58607a0800000000000000
+      internalID: -6411289923803891250
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: boost-activation-halo-direct_16
+      rect:
+        serializedVersion: 2
+        x: 998
+        y: 7
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8963378ef43552230800000000000000
+      internalID: 3613385878702077592
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      boost-activation-halo-direct_0: 8096890304855709687
+      boost-activation-halo-direct_1: -4884430024665384693
+      boost-activation-halo-direct_10: 1840013713616975291
+      boost-activation-halo-direct_11: 7070656074658349170
+      boost-activation-halo-direct_12: -4153343641603881741
+      boost-activation-halo-direct_13: -2292841281406120242
+      boost-activation-halo-direct_14: -3559354358064514830
+      boost-activation-halo-direct_15: -6411289923803891250
+      boost-activation-halo-direct_16: 3613385878702077592
+      boost-activation-halo-direct_2: -5489295788770622227
+      boost-activation-halo-direct_3: 1531903082398470398
+      boost-activation-halo-direct_4: 7443628116138439066
+      boost-activation-halo-direct_5: -3077904173829059920
+      boost-activation-halo-direct_6: -4814345138605516055
+      boost-activation-halo-direct_7: -2793562733656469418
+      boost-activation-halo-direct_8: 2044059208458160055
+      boost-activation-halo-direct_9: -4131415265359998703
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

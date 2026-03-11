@@ -79,10 +79,6 @@ namespace ProjectArk.Ship.Editor
 
             var summary = BuildSummary(forceReplace, log, todo);
             Debug.Log("[ShipBoostTrailPrefabReplacer] Done.\n" + summary);
-            EditorUtility.DisplayDialog(
-                forceReplace ? "Ship Boost Trail Force-Replaced" : "Ship Boost Trail Replaced",
-                summary,
-                "OK");
         }
 
         private static void ReplaceBoostTrailChild(GameObject root, Transform visualRoot, GameObject boostTrailPrefab, List<string> log)
