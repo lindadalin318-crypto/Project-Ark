@@ -15,7 +15,7 @@ namespace ProjectArk.Ship.Editor
     ///   mat_flame_trail         : _BaseMap = vfx_boost_techno_flame
     ///   mat_ember_trail         : _BaseMap = vfx_ember_trail
     ///   mat_ember_sparks        : _BaseMap = vfx_ember_sparks
-    ///   mat_trail_main          : _BaseMap = trail_main_spritesheet
+        ///   mat_trail_main          : _BaseMap = vfx_boost_techno_flame
     /// </summary>
     public static class MaterialTextureLinker
     {
@@ -114,12 +114,12 @@ namespace ProjectArk.Ship.Editor
             else { failCount++; Debug.LogWarning("[MaterialTextureLinker] mat_ember_sparks not found"); }
 
             // ── mat_trail_main ────────────────────────────────────────────────
-            // mat_trail_main is used by TrailRenderer (MainTrail), its _BaseMap
-            // should be the trail sprite sheet, NOT the flame texture.
+            // MainTrail 当前优先走更可控的火焰轮廓纹理，而不是 RenderDoc
+            // 导出的整屏 trail screenshot 纹理，否则主观读感会偏离 GG。
             var matTrailMain = LoadMat("mat_trail_main");
             if (matTrailMain != null)
             {
-                AssignTex(matTrailMain, "_BaseMap", "trail_main_spritesheet", ref successCount, ref failCount);
+                AssignTex(matTrailMain, "_BaseMap", "vfx_boost_techno_flame", ref successCount, ref failCount);
                 EditorUtility.SetDirty(matTrailMain);
             }
             else { failCount++; Debug.LogWarning("[MaterialTextureLinker] mat_trail_main not found"); }

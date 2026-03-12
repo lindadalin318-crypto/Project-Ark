@@ -77,10 +77,10 @@ namespace ProjectArk.Ship
 
         [Header("Trail Settings")]
         [Tooltip("Trail fade time in seconds (how long trail persists after stop).")]
-        [SerializeField] private float _trailTime = 3.5f;
+        [SerializeField] private float _trailTime = 2.2f;
 
         [Tooltip("Trail width multiplier.")]
-        [SerializeField] private float _trailWidthMultiplier = 3.0f;
+        [SerializeField] private float _trailWidthMultiplier = 2.75f;
 
         [Header("Boost Intensity Animation")]
         [Tooltip("Duration for _BoostIntensity 0→1 on Boost start.")]

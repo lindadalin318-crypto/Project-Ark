@@ -199,25 +199,73 @@ namespace ProjectArk.Ship.Editor
 
             var main = ps.main;
             main.loop            = true;
-            main.startLifetime   = 0.4f;
-            main.startSpeed      = 10f;
-            main.startSize       = 0.4f;
+            main.playOnAwake     = false;
+            main.maxParticles    = 256;
+            main.startLifetime   = new ParticleSystem.MinMaxCurve(0.26f, 0.4f);
+            main.startSpeed      = new ParticleSystem.MinMaxCurve(9.5f, 12.5f);
+            main.startSize       = new ParticleSystem.MinMaxCurve(0.18f, 0.3f);
+            main.startRotation   = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             main.startColor      = new Color(5.44f, 0.42f, 6.06f, 1f); // HDR purple
 
             var emission = ps.emission;
             emission.enabled          = true;
             emission.rateOverTime     = 0f;
-            emission.rateOverDistance = 15f; // 15 particles per meter
+            emission.rateOverDistance = 15f;
 
-            // Offset position slightly to left/right of ship center
+            var shape = ps.shape;
+            shape.enabled   = true;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale     = new Vector3(0.025f, 0.08f, 0.01f);
+
+            var colorOverLifetime = ps.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            Gradient flameGradient = new Gradient();
+            flameGradient.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(new Color(6.4f, 2.1f, 6.1f), 0f),
+                    new GradientColorKey(new Color(5.44f, 0.42f, 6.06f), 0.32f),
+                    new GradientColorKey(new Color(0.25f, 0.91f, 1.0f), 1f)
+                },
+                new[]
+                {
+                    new GradientAlphaKey(0.95f, 0f),
+                    new GradientAlphaKey(0.72f, 0.22f),
+                    new GradientAlphaKey(0.42f, 0.55f),
+                    new GradientAlphaKey(0f, 1f)
+                });
+            colorOverLifetime.color = new ParticleSystem.MinMaxGradient(flameGradient);
+
+            var sizeOverLifetime = ps.sizeOverLifetime;
+            sizeOverLifetime.enabled = true;
+            AnimationCurve flameSizeCurve = new AnimationCurve();
+            flameSizeCurve.AddKey(0f, 0.3f);
+            flameSizeCurve.AddKey(0.18f, 0.9f);
+            flameSizeCurve.AddKey(0.5f, 1f);
+            flameSizeCurve.AddKey(1f, 0.04f);
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, flameSizeCurve);
+
+            var noise = ps.noise;
+            noise.enabled     = true;
+            noise.separateAxes = false;
+            noise.strength    = 0.08f;
+            noise.frequency   = 0.9f;
+            noise.scrollSpeed = 0.8f;
+            noise.damping     = true;
+
             ps.transform.localPosition = isRight
-                ? new Vector3(0.15f, 0f, 0f)
-                : new Vector3(-0.15f, 0f, 0f);
+                ? new Vector3(0.18f, -0.09f, 0f)
+                : new Vector3(-0.18f, -0.09f, 0f);
+            ps.transform.localEulerAngles = isRight
+                ? new Vector3(0f, 0f, 12f)
+                : new Vector3(0f, 0f, -12f);
 
             var renderer = ps.GetComponent<ParticleSystemRenderer>();
             if (mat != null) renderer.sharedMaterial = mat;
-            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            renderer.renderMode    = ParticleSystemRenderMode.Stretch;
+            renderer.velocityScale = 0.42f;
+            renderer.lengthScale   = 2.6f;
         }
 
         /// <summary>
@@ -229,18 +277,56 @@ namespace ProjectArk.Ship.Editor
             var mat = AssetDatabase.LoadAssetAtPath<Material>($"{MAT_DIR}/mat_flame_trail.mat");
 
             var main = ps.main;
-            main.loop          = true;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(0.07f, 0.08f);
-            main.startSpeed    = 5f;
-            main.startSize     = 0.6f;
-            main.startColor    = new Color(5.44f, 0.42f, 6.06f, 1f); // HDR purple
+            main.loop            = true;
+            main.playOnAwake     = false;
+            main.maxParticles    = 96;
+            main.startLifetime   = new ParticleSystem.MinMaxCurve(0.08f, 0.14f);
+            main.startSpeed      = new ParticleSystem.MinMaxCurve(1.5f, 4f);
+            main.startSize       = new ParticleSystem.MinMaxCurve(0.26f, 0.48f);
+            main.startRotation   = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.simulationSpace = ParticleSystemSimulationSpace.Local;
+            main.startColor      = new Color(5.44f, 0.42f, 6.06f, 1f); // HDR purple
 
             var emission = ps.emission;
             emission.enabled      = true;
-            emission.rateOverTime = 30f;
+            emission.rateOverTime = 42f;
+
+            var shape = ps.shape;
+            shape.enabled   = true;
+            shape.shapeType = ParticleSystemShapeType.Circle;
+            shape.radius    = 0.035f;
+
+            var colorOverLifetime = ps.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            Gradient coreGradient = new Gradient();
+            coreGradient.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(new Color(8f, 4.2f, 1.4f), 0f),
+                    new GradientColorKey(new Color(5.44f, 0.42f, 6.06f), 0.35f),
+                    new GradientColorKey(new Color(0.25f, 0.91f, 1f), 1f)
+                },
+                new[]
+                {
+                    new GradientAlphaKey(0.95f, 0f),
+                    new GradientAlphaKey(0.7f, 0.35f),
+                    new GradientAlphaKey(0f, 1f)
+                });
+            colorOverLifetime.color = new ParticleSystem.MinMaxGradient(coreGradient);
+
+            var sizeOverLifetime = ps.sizeOverLifetime;
+            sizeOverLifetime.enabled = true;
+            AnimationCurve coreSizeCurve = new AnimationCurve();
+            coreSizeCurve.AddKey(0f, 0.4f);
+            coreSizeCurve.AddKey(0.18f, 1f);
+            coreSizeCurve.AddKey(1f, 0.05f);
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, coreSizeCurve);
+
+            ps.transform.localPosition = new Vector3(0f, -0.06f, 0f);
 
             var renderer = ps.GetComponent<ParticleSystemRenderer>();
             if (mat != null) renderer.sharedMaterial = mat;
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
         }
 
         /// <summary>
@@ -254,16 +340,55 @@ namespace ProjectArk.Ship.Editor
 
             var main = ps.main;
             main.loop            = true;
-            main.startLifetime   = 0.35f;
+            main.playOnAwake     = false;
+            main.maxParticles    = 160;
+            main.startLifetime   = new ParticleSystem.MinMaxCurve(0.18f, 0.28f);
             main.startSpeed      = 0f;
-            main.startSize       = 0.7f;
+            main.startSize       = new ParticleSystem.MinMaxCurve(0.38f, 0.56f);
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             main.startColor      = new Color(2.0f, 0f, 1.08f, 1f); // HDR magenta
 
             var emission = ps.emission;
             emission.enabled          = true;
             emission.rateOverTime     = 0f;
-            emission.rateOverDistance = 2f; // 2 particles per meter
+            emission.rateOverDistance = 3.5f;
+
+            var shape = ps.shape;
+            shape.enabled   = true;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale     = new Vector3(0.12f, 0.06f, 0.01f);
+
+            var colorOverLifetime = ps.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            Gradient emberGradient = new Gradient();
+            emberGradient.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(new Color(2.0f, 0f, 1.08f), 0f),
+                    new GradientColorKey(new Color(2.3f, 0.5f, 0.65f), 0.55f),
+                    new GradientColorKey(new Color(1.6f, 0.9f, 0.15f), 1f)
+                },
+                new[]
+                {
+                    new GradientAlphaKey(0.6f, 0f),
+                    new GradientAlphaKey(0.35f, 0.5f),
+                    new GradientAlphaKey(0f, 1f)
+                });
+            colorOverLifetime.color = new ParticleSystem.MinMaxGradient(emberGradient);
+
+            var sizeOverLifetime = ps.sizeOverLifetime;
+            sizeOverLifetime.enabled = true;
+            AnimationCurve emberSizeCurve = new AnimationCurve();
+            emberSizeCurve.AddKey(0f, 0.85f);
+            emberSizeCurve.AddKey(1f, 0.15f);
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, emberSizeCurve);
+
+            var noise = ps.noise;
+            noise.enabled      = true;
+            noise.separateAxes = false;
+            noise.strength     = 0.06f;
+            noise.frequency    = 0.55f;
+            noise.damping      = true;
 
             var renderer = ps.GetComponent<ParticleSystemRenderer>();
             if (mat != null) renderer.sharedMaterial = mat;
@@ -281,16 +406,40 @@ namespace ProjectArk.Ship.Editor
 
             var main = ps.main;
             main.loop          = false; // Burst mode — triggered on each Boost start
-            main.startLifetime = 0.12f; // Very short, quick glow flash
+            main.playOnAwake   = false;
+            main.startLifetime = 0.14f;
             main.startSpeed    = 0f;    // No self-movement, follows ship
-            main.startSize     = 1.0f;  // Larger than EmberTrail for glow halo effect
+            main.startSize     = 0.8f;
+            main.simulationSpace = ParticleSystemSimulationSpace.Local;
             main.startColor    = new Color(2.0f, 1.29f, 0f, 1f); // HDR orange-yellow
 
             var emission = ps.emission;
             emission.enabled      = true;
             emission.rateOverTime = 0f;
-            // Burst: 15 particles at time 0 for glow halo
-            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, 15) });
+            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, 10) });
+
+            var shape = ps.shape;
+            shape.enabled   = true;
+            shape.shapeType = ParticleSystemShapeType.Circle;
+            shape.radius    = 0.05f;
+
+            var colorOverLifetime = ps.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            Gradient glowGradient = new Gradient();
+            glowGradient.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(new Color(4.5f, 2.8f, 0.8f), 0f),
+                    new GradientColorKey(new Color(2.0f, 1.29f, 0f), 0.45f),
+                    new GradientColorKey(new Color(1.4f, 0.35f, 0.25f), 1f)
+                },
+                new[]
+                {
+                    new GradientAlphaKey(0.7f, 0f),
+                    new GradientAlphaKey(0.45f, 0.45f),
+                    new GradientAlphaKey(0f, 1f)
+                });
+            colorOverLifetime.color = new ParticleSystem.MinMaxGradient(glowGradient);
 
             var renderer = ps.GetComponent<ParticleSystemRenderer>();
             if (mat != null) renderer.sharedMaterial = mat;
@@ -308,26 +457,58 @@ namespace ProjectArk.Ship.Editor
 
             var main = ps.main;
             main.loop          = false; // One-shot burst
-            main.startLifetime = 0.2f;
-            main.startSpeed    = new ParticleSystem.MinMaxCurve(30f, 50f);
-            main.startSize     = 0.3f;
+            main.playOnAwake   = false;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.12f, 0.2f);
+            main.startSpeed    = new ParticleSystem.MinMaxCurve(34f, 52f);
+            main.startSize     = new ParticleSystem.MinMaxCurve(0.08f, 0.22f);
             main.startColor    = new Color(3.73f, 3.73f, 3.73f, 1f); // HDR super-bright white
 
             var emission = ps.emission;
             emission.enabled      = true;
             emission.rateOverTime = 0f;
-            // Burst: 20 particles at time 0
-            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, 20) });
+            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, 14) });
+
+            var shape = ps.shape;
+            shape.enabled   = true;
+            shape.shapeType = ParticleSystemShapeType.Circle;
+            shape.radius    = 0.04f;
 
             // Radial velocity for spark explosion effect
             var vel = ps.velocityOverLifetime;
             vel.enabled = true;
             vel.space   = ParticleSystemSimulationSpace.Local;
-            vel.radial  = new ParticleSystem.MinMaxCurve(-2f, 2f);
+            vel.radial  = new ParticleSystem.MinMaxCurve(-1f, 2.5f);
+
+            var colorOverLifetime = ps.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            Gradient sparkGradient = new Gradient();
+            sparkGradient.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(new Color(4.6f, 4.6f, 4.6f), 0f),
+                    new GradientColorKey(new Color(3.2f, 1.8f, 0.6f), 0.35f),
+                    new GradientColorKey(new Color(1.2f, 0.35f, 0.15f), 1f)
+                },
+                new[]
+                {
+                    new GradientAlphaKey(1f, 0f),
+                    new GradientAlphaKey(0.5f, 0.3f),
+                    new GradientAlphaKey(0f, 1f)
+                });
+            colorOverLifetime.color = new ParticleSystem.MinMaxGradient(sparkGradient);
+
+            var sizeOverLifetime = ps.sizeOverLifetime;
+            sizeOverLifetime.enabled = true;
+            AnimationCurve sparkSizeCurve = new AnimationCurve();
+            sparkSizeCurve.AddKey(0f, 0.9f);
+            sparkSizeCurve.AddKey(1f, 0f);
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, sparkSizeCurve);
 
             var renderer = ps.GetComponent<ParticleSystemRenderer>();
             if (mat != null) renderer.sharedMaterial = mat;
-            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            renderer.renderMode    = ParticleSystemRenderMode.Stretch;
+            renderer.velocityScale = 0.08f;
+            renderer.lengthScale   = 1.4f;
         }
 
         /// <summary>
@@ -337,29 +518,41 @@ namespace ProjectArk.Ship.Editor
         /// </summary>
         private static void ConfigureMainTrail(TrailRenderer trail)
         {
-            var mat = AssetDatabase.LoadAssetAtPath<Material>($"{MAT_DIR}/mat_trail_main_effect.mat");
+            var mat = AssetDatabase.LoadAssetAtPath<Material>($"{MAT_DIR}/mat_trail_main.mat");
             if (mat == null)
-                mat = AssetDatabase.LoadAssetAtPath<Material>($"{MAT_DIR}/mat_trail_main.mat");
+                mat = AssetDatabase.LoadAssetAtPath<Material>($"{MAT_DIR}/mat_trail_main_effect.mat");
 
-            trail.time             = 3.5f;
-            trail.widthMultiplier  = 3.0f;
-            trail.minVertexDistance = 0.1f;
-            trail.emitting         = false;
+            trail.time              = 2.2f;
+            trail.widthMultiplier   = 2.75f;
+            trail.minVertexDistance = 0.03f;
+            trail.textureMode       = LineTextureMode.Tile;
+            trail.numCapVertices    = 8;
+            trail.alignment         = LineAlignment.View;
+            trail.textureScale      = new Vector2(1.9f, 1f);
+            trail.emitting          = false;
 
-            // Width curve: head 0.3 → 40% 1.0 → tail 0.0
             AnimationCurve widthCurve = new AnimationCurve();
-            widthCurve.AddKey(0.0f, 0.3f);   // Head
-            widthCurve.AddKey(0.4f, 1.0f);   // Peak at 40%
-            widthCurve.AddKey(1.0f, 0.0f);   // Tail
+            widthCurve.AddKey(0.0f, 0.12f);
+            widthCurve.AddKey(0.16f, 0.55f);
+            widthCurve.AddKey(0.62f, 1.0f);
+            widthCurve.AddKey(1.0f, 0.05f);
             trail.widthCurve = widthCurve;
 
-            // Color gradient: HDR orange-yellow → transparent
-            Color startColor = new Color(2.0f, 1.1f, 0.24f, 1f);
-            Color endColor   = new Color(2.0f, 1.1f, 0.24f, 0f);
             Gradient gradient = new Gradient();
             gradient.SetKeys(
-                new[] { new GradientColorKey(startColor, 0f), new GradientColorKey(endColor, 1f) },
-                new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0f, 1f) });
+                new[]
+                {
+                    new GradientColorKey(new Color(1f, 0.95f, 0.8f), 0f),
+                    new GradientColorKey(new Color(1f, 0.75f, 0.35f), 0.45f),
+                    new GradientColorKey(new Color(0.75f, 0.22f, 0.05f), 1f)
+                },
+                new[]
+                {
+                    new GradientAlphaKey(1f, 0f),
+                    new GradientAlphaKey(0.9f, 0.2f),
+                    new GradientAlphaKey(0.4f, 0.75f),
+                    new GradientAlphaKey(0f, 1f)
+                });
             trail.colorGradient = gradient;
 
             if (mat != null) trail.sharedMaterial = mat;

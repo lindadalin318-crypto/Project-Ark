@@ -42,12 +42,12 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Child3: 0
+    - _Child3: 1
     m_Colors:
     - _Child0: {r: 1, g: 1, b: 1, a: 0}
     - _Child1: {r: 1, g: 1, b: 1, a: 0}
-    - _Child2: {r: 0.5, g: 0.5, b: 0.5, a: 0.5}
-    - _Child4: {r: 1, g: 1, b: 1, a: 1}
-    - _Child5: {r: 0, g: 0, b: 0, a: 1}
+    - _Child2: {r: 0.35, g: 0.65, b: 0.65, a: 0.65}
+    - _Child4: {r: 1.6, g: 0.95, b: 0.45, a: 1.6}
+    - _Child5: {r: 0, g: 0.08, b: 1.45, a: 2.2}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
