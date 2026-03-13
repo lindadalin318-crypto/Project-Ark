@@ -1,4 +1,5 @@
 using UnityEngine;
+using PrimeTween;
 using ProjectArk.Core;
 
 namespace ProjectArk.Level
@@ -38,6 +39,28 @@ namespace ProjectArk.Level
         [Tooltip("Phase indices during which this door opens. Only relevant if initialState is Locked_Schedule.")]
         [SerializeField] private int[] _openDuringPhases;
 
+        [Header("Visuals")]
+        [Tooltip("SpriteRenderer for the door visual. If null, tries GetComponent.")]
+        [SerializeField] private SpriteRenderer _spriteRenderer;
+
+        [Tooltip("Color when door is open.")]
+        [SerializeField] private Color _openColor = Color.green;
+
+        [Tooltip("Color when door is locked (combat).")]
+        [SerializeField] private Color _combatLockedColor = new Color(1f, 0.3f, 0.3f, 1f);
+
+        [Tooltip("Color when door is locked (key).")]
+        [SerializeField] private Color _keyLockedColor = new Color(1f, 0.8f, 0.2f, 1f);
+
+        [Tooltip("Color when door is locked (ability).")]
+        [SerializeField] private Color _abilityLockedColor = new Color(0.6f, 0.3f, 1f, 1f);
+
+        [Tooltip("Color when door is locked (schedule).")]
+        [SerializeField] private Color _scheduleLockedColor = new Color(0.3f, 0.7f, 1f, 1f);
+
+        [Tooltip("Duration of color transition when state changes.")]
+        [SerializeField] private float _colorTransitionDuration = 0.3f;
+
         [Header("Player Detection")]
         [Tooltip("Layer mask for the player ship.")]
         [SerializeField] private LayerMask _playerLayer;
@@ -75,6 +98,12 @@ namespace ProjectArk.Level
         {
             _currentState = _initialState;
 
+            // Auto-find SpriteRenderer if not assigned
+            if (_spriteRenderer == null)
+            {
+                _spriteRenderer = GetComponent<SpriteRenderer>();
+            }
+
             // Validate
             if (_targetRoom == null)
                 Debug.LogError($"[Door] {gameObject.name}: TargetRoom is not assigned!");
@@ -88,6 +117,9 @@ namespace ProjectArk.Level
                 col.isTrigger = true;
                 Debug.LogWarning($"[Door] {gameObject.name}: Collider was not set as trigger. Auto-fixed.");
             }
+
+            // Apply initial visual
+            ApplyVisualForState(_currentState, immediate: true);
         }
 
         private void Start()
@@ -260,7 +292,48 @@ namespace ProjectArk.Level
 
             Debug.Log($"[Door] {gameObject.name}: {oldState} → {newState}");
 
-            // TODO: Visual feedback (change sprite/color based on state)
+            // Visual feedback
+            ApplyVisualForState(newState, immediate: false);
+        }
+
+        // ──────────────────── Visual Feedback ────────────────────
+
+        private void ApplyVisualForState(DoorState state, bool immediate)
+        {
+            if (_spriteRenderer == null) return;
+
+            Color targetColor = GetColorForState(state);
+
+            if (immediate)
+            {
+                _spriteRenderer.color = targetColor;
+            }
+            else
+            {
+                Color currentColor = _spriteRenderer.color;
+                var sr = _spriteRenderer; // capture for closure
+
+                _ = Tween.Custom(0f, 1f, _colorTransitionDuration,
+                    onValueChange: t =>
+                    {
+                        if (sr != null)
+                            sr.color = Color.Lerp(currentColor, targetColor, t);
+                    },
+                    ease: Ease.InOutSine);
+            }
+        }
+
+        private Color GetColorForState(DoorState state)
+        {
+            return state switch
+            {
+                DoorState.Open => _openColor,
+                DoorState.Locked_Combat => _combatLockedColor,
+                DoorState.Locked_Key => _keyLockedColor,
+                DoorState.Locked_Ability => _abilityLockedColor,
+                DoorState.Locked_Schedule => _scheduleLockedColor,
+                _ => Color.white
+            };
         }
     }
 }

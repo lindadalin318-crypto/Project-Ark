@@ -47,6 +47,7 @@ namespace ProjectArk.Level
         private Door[] _doors;
         private EnemySpawner _spawner;
         private WaveSpawnStrategy _waveStrategy;
+        private OpenEncounterTrigger[] _openEncounters;
         private RoomVariantSO _activeVariant; // currently active variant (null = default)
 
         // ──────────────────── Events ────────────────────
@@ -89,6 +90,9 @@ namespace ProjectArk.Level
 
             // Auto-find EnemySpawner on this room (if any)
             _spawner = GetComponentInChildren<EnemySpawner>(true);
+
+            // Auto-collect OpenEncounterTrigger components from children
+            _openEncounters = GetComponentsInChildren<OpenEncounterTrigger>(true);
 
             // Validate trigger collider
             var boxCollider = GetComponent<BoxCollider2D>();
@@ -270,6 +274,15 @@ namespace ProjectArk.Level
             {
                 _waveStrategy.OnEncounterComplete -= HandleEncounterComplete;
                 _waveStrategy = null;
+            }
+
+            // 重置所有 OpenEncounterTrigger
+            if (_openEncounters != null)
+            {
+                foreach (var openEnc in _openEncounters)
+                {
+                    if (openEnc != null) openEnc.ResetEncounter();
+                }
             }
 
             // 重置房间战斗状态（如果已清除，恢复到 Entered 以允许再次战斗）

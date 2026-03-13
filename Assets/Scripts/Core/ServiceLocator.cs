@@ -45,6 +45,31 @@ namespace ProjectArk.Core
         }
 
         /// <summary>
+        /// Retrieve a registered service without logging warnings when not found.
+        /// Useful for optional dependencies.
+        /// </summary>
+        public static bool TryGet<T>(out T service) where T : class
+        {
+            var type = typeof(T);
+            if (_services.TryGetValue(type, out var existing))
+            {
+                service = (T)existing;
+                return true;
+            }
+
+            service = null;
+            return false;
+        }
+
+        /// <summary>
+        /// Retrieve a registered service without warning logs when missing.
+        /// </summary>
+        public static T TryGet<T>() where T : class
+        {
+            return TryGet<T>(out var service) ? service : null;
+        }
+
+        /// <summary>
         /// Unregister a service. Call in OnDestroy() of the service MonoBehaviour.
         /// Only removes if the registered instance matches (prevents stale unregister).
         /// </summary>

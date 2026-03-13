@@ -2,6 +2,7 @@ namespace ProjectArk.Level
 {
     /// <summary>
     /// Categorizes rooms for gameplay logic (door locking, encounter triggering, map display).
+    /// See also: ShebaRoomGrammar.md § 2.2 for the 8-type design-side taxonomy.
     /// </summary>
     public enum RoomType
     {
@@ -21,6 +22,12 @@ namespace ProjectArk.Level
         Corridor,
 
         /// <summary> Merchant room — player can purchase items or upgrades. </summary>
-        Shop
+        Shop,
+
+        /// <summary> Navigation hub — multi-exit safe zone with checkpoint, map anchor, route decisions. </summary>
+        Hub,
+
+        /// <summary> Chapter gate — visible but locked threshold, promises future content. </summary>
+        Gate
     }
 }

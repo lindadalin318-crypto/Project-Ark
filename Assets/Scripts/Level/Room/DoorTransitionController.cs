@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
@@ -13,14 +14,10 @@ namespace ProjectArk.Level
     /// <summary>
     /// Handles the visual transition when passing through a door:
     /// fade to black → teleport player → update room → fade from black.
-    /// 
-    /// Place on a persistent Canvas GameObject with a full-screen Image child.
-    /// Registers to ServiceLocator so Door components can access it.
+    /// Acts as the shared fade overlay owner for level flow systems.
     /// </summary>
     public class DoorTransitionController : MonoBehaviour
     {
-        // ──────────────────── Configuration ────────────────────
-
         [Header("Fade Overlay")]
         [Tooltip("Full-screen Image used for the fade-to-black effect. Must be a child of a Canvas.")]
         [SerializeField] private Image _fadeImage;
@@ -42,38 +39,28 @@ namespace ProjectArk.Level
         [Tooltip("BGM crossfade duration when changing floors with different ambient music.")]
         [SerializeField] private float _bgmCrossfadeDuration = 1.5f;
 
-        [Tooltip("Camera zoom-out amount during layer transition (added to base ortho size).")]
+        [Tooltip("Camera zoom-out amount during layer transition (added to current ortho size).")]
         [SerializeField] private float _layerZoomOutAmount = 2f;
 
         [Tooltip("Camera zoom transition duration.")]
         [SerializeField] private float _layerZoomDuration = 0.3f;
 
-        // ──────────────────── Runtime State ────────────────────
+        [Header("Camera Fallback")]
+        [Tooltip("Fallback gameplay virtual camera used when CameraDirector is not present.")]
+        [SerializeField] private CinemachineCamera _fallbackVirtualCamera;
 
         private CancellationTokenSource _transitionCts;
         private bool _isTransitioning;
+        private CameraDirector _cameraDirector;
 
-        // ──────────────────── Public Properties ────────────────────
-
-        /// <summary> True while a door transition is in progress. </summary>
         public bool IsTransitioning => _isTransitioning;
-
-        // ──────────────────── Lifecycle ────────────────────
+        public Image FadeImage => _fadeImage;
 
         private void Awake()
         {
             ServiceLocator.Register(this);
-
-            // Start fully transparent
-            if (_fadeImage != null)
-            {
-                _fadeImage.color = new Color(0f, 0f, 0f, 0f);
-                _fadeImage.raycastTarget = false;
-            }
-            else
-            {
-                Debug.LogError("[DoorTransitionController] Fade Image is not assigned!");
-            }
+            ResolveCameraBindings();
+            ResetFadeOverlay();
         }
 
         private void OnDestroy()
@@ -82,13 +69,6 @@ namespace ProjectArk.Level
             ServiceLocator.Unregister(this);
         }
 
-        // ──────────────────── Public API ────────────────────
-
-        /// <summary>
-        /// Execute a door transition: fade out → teleport → room change → fade in.
-        /// </summary>
-        /// <param name="door">The door to transition through.</param>
-        /// <param name="onComplete">Optional callback when transition finishes.</param>
         public void TransitionThroughDoor(Door door, Action onComplete = null)
         {
             if (_isTransitioning)
@@ -100,182 +80,148 @@ namespace ProjectArk.Level
             ExecuteTransition(door, onComplete).Forget();
         }
 
-        // ──────────────────── Transition Logic ────────────────────
+        public async UniTask FadeOutAsync(float duration, CancellationToken token = default)
+        {
+            if (_fadeImage == null)
+            {
+                return;
+            }
+
+            _fadeImage.raycastTarget = true;
+            await Tween.Custom(_fadeImage.color.a, 1f, duration,
+                useUnscaledTime: true,
+                ease: Ease.InQuad,
+                onValueChange: SetFadeAlpha).ToUniTask(cancellationToken: token);
+        }
+
+        public async UniTask FadeInAsync(float duration, CancellationToken token = default)
+        {
+            if (_fadeImage == null)
+            {
+                return;
+            }
+
+            await Tween.Custom(_fadeImage.color.a, 0f, duration,
+                useUnscaledTime: true,
+                ease: Ease.OutQuad,
+                onValueChange: SetFadeAlpha).ToUniTask(cancellationToken: token);
+
+            _fadeImage.raycastTarget = false;
+        }
 
         private async UniTaskVoid ExecuteTransition(Door door, Action onComplete)
         {
             CancelTransition();
             _transitionCts = new CancellationTokenSource();
-            var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-                _transitionCts.Token, destroyCancellationToken);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_transitionCts.Token, destroyCancellationToken);
             var token = linkedCts.Token;
 
             _isTransitioning = true;
 
             try
             {
-                float fadeDuration = door.IsLayerTransition
-                    ? _layerFadeDuration
-                    : _normalFadeDuration;
+                ResolveCameraBindings();
 
-                // ── 1. Disable player input ──
+                float fadeDuration = door.IsLayerTransition ? _layerFadeDuration : _normalFadeDuration;
+
                 var inputHandler = ServiceLocator.Get<InputHandler>();
                 if (inputHandler != null)
+                {
                     inputHandler.enabled = false;
+                }
 
-                // Block raycasts during fade
-                if (_fadeImage != null)
-                    _fadeImage.raycastTarget = true;
+                await FadeOutAsync(fadeDuration, token);
 
-                // ── 2. Fade to black ──
-                _ = Tween.Custom(0f, 1f, fadeDuration, useUnscaledTime: true,
-                    onValueChange: v =>
-                    {
-                        if (_fadeImage != null)
-                            _fadeImage.color = new Color(0f, 0f, 0f, v);
-                    },
-                    ease: Ease.InQuad);
-
-                int fadeMs = Mathf.RoundToInt(fadeDuration * 1000f);
-                await UniTask.Delay(fadeMs, cancellationToken: token);
-
-                // ── 3. Layer transition effects (during black screen) ──
                 if (door.IsLayerTransition)
                 {
                     await PlayLayerTransitionEffects(door, token);
                 }
 
-                // ── 4. Teleport player ──
                 var ship = inputHandler != null ? inputHandler.transform : null;
                 if (ship != null && door.TargetSpawnPoint != null)
                 {
                     ship.position = door.TargetSpawnPoint.position;
                 }
 
-                // ── 5. Switch room ──
                 var roomManager = ServiceLocator.Get<RoomManager>();
                 if (roomManager != null && door.TargetRoom != null)
                 {
                     roomManager.EnterRoom(door.TargetRoom);
-
-                    // BGM crossfade if target room has different ambient music
+                    _cameraDirector?.ClearAllTriggers();
                     HandleBGMCrossfade(door.TargetRoom);
                 }
 
-                // Brief pause at full black for clean transition
                 await UniTask.Delay(door.IsLayerTransition ? 200 : 50, cancellationToken: token);
+                await FadeInAsync(fadeDuration, token);
 
-                // ── 5. Fade from black ──
-                _ = Tween.Custom(1f, 0f, fadeDuration, useUnscaledTime: true,
-                    onValueChange: v =>
-                    {
-                        if (_fadeImage != null)
-                            _fadeImage.color = new Color(0f, 0f, 0f, v);
-                    },
-                    ease: Ease.OutQuad);
-
-                await UniTask.Delay(fadeMs, cancellationToken: token);
-
-                // ── 6. Re-enable player input ──
                 if (inputHandler != null)
+                {
                     inputHandler.enabled = true;
-
-                if (_fadeImage != null)
-                    _fadeImage.raycastTarget = false;
+                }
             }
             catch (OperationCanceledException)
             {
-                // Transition was cancelled — ensure clean state
-                if (_fadeImage != null)
-                {
-                    _fadeImage.color = new Color(0f, 0f, 0f, 0f);
-                    _fadeImage.raycastTarget = false;
-                }
+                ResetFadeOverlay();
 
                 var inputHandler = ServiceLocator.Get<InputHandler>();
                 if (inputHandler != null)
+                {
                     inputHandler.enabled = true;
+                }
             }
             finally
             {
                 _isTransitioning = false;
-                linkedCts.Dispose();
                 onComplete?.Invoke();
             }
         }
 
-        // ──────────────────── Layer Transition Effects ────────────────────
-
         private async UniTask PlayLayerTransitionEffects(Door door, CancellationToken token)
         {
-            // Determine direction (descending if target floor < current floor)
             var roomManager = ServiceLocator.Get<RoomManager>();
             int currentFloor = roomManager?.CurrentFloor ?? 0;
             int targetFloor = door.TargetRoom?.Data?.FloorLevel ?? 0;
             bool descending = targetFloor < currentFloor;
 
-            // ── Particle effect ──
             if (_layerTransitionParticles != null)
             {
-                // Flip particle direction based on ascending/descending
                 var mainModule = _layerTransitionParticles.main;
                 float speed = Mathf.Abs(mainModule.startSpeed.constant);
                 mainModule.startSpeed = descending ? -speed : speed;
-
                 _layerTransitionParticles.Play();
             }
 
-            // ── SFX ──
             var audio = ServiceLocator.Get<AudioManager>();
             if (audio != null && _layerTransitionSFX != null)
             {
                 audio.PlaySFX2D(_layerTransitionSFX);
             }
 
-            // ── Camera zoom-out ──
-            var cam = Camera.main;
-            if (cam != null && cam.orthographic)
+            bool hasCameraSize = TryGetCurrentOrthoSize(out float baseSize);
+            if (hasCameraSize)
             {
-                float baseSize = cam.orthographicSize;
-                float targetSize = baseSize + _layerZoomOutAmount;
-
-                _ = Tween.Custom(baseSize, targetSize, _layerZoomDuration, useUnscaledTime: true,
-                    onValueChange: v =>
-                    {
-                        if (cam != null)
-                            cam.orthographicSize = v;
-                    },
-                    ease: Ease.InOutSine);
+                TweenOrthoSize(baseSize, baseSize + _layerZoomOutAmount, _layerZoomDuration);
             }
 
-            // Hold for particles/effect duration
             await UniTask.Delay(300, cancellationToken: token);
 
-            // ── Stop particles ──
             if (_layerTransitionParticles != null)
             {
                 _layerTransitionParticles.Stop();
             }
 
-            // ── Camera snap back (will happen during fade-in) ──
-            if (cam != null && cam.orthographic)
+            if (hasCameraSize)
             {
-                float currentSize = cam.orthographicSize;
-                float baseSize = currentSize - _layerZoomOutAmount;
-
-                _ = Tween.Custom(currentSize, baseSize, _layerZoomDuration, useUnscaledTime: true,
-                    onValueChange: v =>
-                    {
-                        if (cam != null)
-                            cam.orthographicSize = v;
-                    },
-                    ease: Ease.InOutSine);
+                TweenOrthoSize(baseSize + _layerZoomOutAmount, baseSize, _layerZoomDuration);
             }
         }
 
         private void HandleBGMCrossfade(Room targetRoom)
         {
-            if (targetRoom?.Data?.AmbientMusic == null) return;
+            if (targetRoom?.Data?.AmbientMusic == null)
+            {
+                return;
+            }
 
             var audio = ServiceLocator.Get<AudioManager>();
             if (audio != null)
@@ -284,7 +230,114 @@ namespace ProjectArk.Level
             }
         }
 
-        // ──────────────────── Cancellation ────────────────────
+        private void ResolveCameraBindings()
+        {
+            if (_cameraDirector == null)
+            {
+                _cameraDirector = ServiceLocator.TryGet<CameraDirector>();
+            }
+
+            if (_fallbackVirtualCamera == null && _cameraDirector != null)
+            {
+                _fallbackVirtualCamera = _cameraDirector.VCam;
+            }
+        }
+
+        private bool TryGetCurrentOrthoSize(out float size)
+        {
+            ResolveCameraBindings();
+
+            if (_cameraDirector != null)
+            {
+                size = _cameraDirector.CurrentOrthoSize;
+                return true;
+            }
+
+            if (_fallbackVirtualCamera != null)
+            {
+                size = _fallbackVirtualCamera.Lens.OrthographicSize;
+                return true;
+            }
+
+            var cam = Camera.main;
+            if (cam != null && cam.orthographic)
+            {
+                size = cam.orthographicSize;
+                return true;
+            }
+
+            size = 0f;
+            return false;
+        }
+
+        private void TweenOrthoSize(float from, float to, float duration)
+        {
+            ResolveCameraBindings();
+
+            if (_cameraDirector != null)
+            {
+                _cameraDirector.SetOrthoSize(to, duration, Ease.InOutSine);
+                return;
+            }
+
+            if (_fallbackVirtualCamera != null)
+            {
+                Tween.Custom(from, to, duration,
+                    useUnscaledTime: true,
+                    ease: Ease.InOutSine,
+                    onValueChange: value =>
+                    {
+                        if (_fallbackVirtualCamera == null)
+                        {
+                            return;
+                        }
+
+                        var lens = _fallbackVirtualCamera.Lens;
+                        lens.OrthographicSize = value;
+                        _fallbackVirtualCamera.Lens = lens;
+                    });
+                return;
+            }
+
+            var cam = Camera.main;
+            if (cam != null && cam.orthographic)
+            {
+                Tween.Custom(from, to, duration,
+                    useUnscaledTime: true,
+                    ease: Ease.InOutSine,
+                    onValueChange: value =>
+                    {
+                        if (cam != null)
+                        {
+                            cam.orthographicSize = value;
+                        }
+                    });
+            }
+        }
+
+        private void SetFadeAlpha(float alpha)
+        {
+            if (_fadeImage == null)
+            {
+                return;
+            }
+
+            var color = _fadeImage.color;
+            color.a = alpha;
+            _fadeImage.color = color;
+        }
+
+        private void ResetFadeOverlay()
+        {
+            if (_fadeImage == null)
+            {
+                Debug.LogError("[DoorTransitionController] Fade Image is not assigned!");
+                return;
+            }
+
+            SetFadeAlpha(0f);
+            _fadeImage.raycastTarget = false;
+        }
 
         private void CancelTransition()
         {

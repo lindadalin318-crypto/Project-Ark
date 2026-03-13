@@ -10,8 +10,14 @@ namespace ProjectArk.Level
     [CreateAssetMenu(fileName = "New Encounter", menuName = "ProjectArk/Level/Encounter")]
     public class EncounterSO : ScriptableObject
     {
+        [Tooltip("Encounter mode: Closed (doors lock, must clear) or Open (enemies activate in zone, player can leave).")]
+        [SerializeField] private EncounterMode _mode = EncounterMode.Closed;
+
         [Tooltip("Ordered list of enemy waves. Waves spawn sequentially after the previous wave is cleared.")]
         [SerializeField] private EnemyWave[] _waves;
+
+        /// <summary> Encounter mode (Closed = lock doors, Open = soft aggro zone). </summary>
+        public EncounterMode Mode => _mode;
 
         /// <summary> All waves in this encounter. </summary>
         public EnemyWave[] Waves => _waves;

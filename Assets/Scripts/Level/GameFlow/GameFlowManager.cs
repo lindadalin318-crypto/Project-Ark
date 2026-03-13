@@ -130,20 +130,27 @@ namespace ProjectArk.Level
                     audio.PlaySFX2D(_deathSFX);
 
                 // ── 3. Fade to black ──
-                if (_fadeImage != null)
+                var fadeController = ServiceLocator.TryGet<DoorTransitionController>();
+                ResolveFadeImage(fadeController);
+
+                if (fadeController != null && fadeController.FadeImage != null)
+                {
+                    await fadeController.FadeOutAsync(_deathFadeDuration, token);
+                }
+                else if (_fadeImage != null)
                 {
                     _fadeImage.raycastTarget = true;
-                    _ = Tween.Custom(0f, 1f, _deathFadeDuration, useUnscaledTime: true,
+                    _ = Tween.Custom(_fadeImage.color.a, 1f, _deathFadeDuration, useUnscaledTime: true,
                         onValueChange: v =>
                         {
                             if (_fadeImage != null)
                                 _fadeImage.color = new Color(0f, 0f, 0f, v);
                         },
                         ease: Ease.InQuad);
-                }
 
-                int fadeMs = Mathf.RoundToInt(_deathFadeDuration * 1000f);
-                await UniTask.Delay(fadeMs, cancellationToken: token);
+                    int fadeMs = Mathf.RoundToInt(_deathFadeDuration * 1000f);
+                    await UniTask.Delay(fadeMs, cancellationToken: token);
+                }
 
                 // ── 4. Hold on black screen ──
                 await UniTask.Delay(_deathHoldMs, cancellationToken: token);
@@ -183,6 +190,7 @@ namespace ProjectArk.Level
                 if (roomManager != null && checkpointRoom != null)
                 {
                     roomManager.EnterRoom(checkpointRoom);
+                    ServiceLocator.TryGet<CameraDirector>()?.ClearAllTriggers();
                 }
 
                 // ── 8. Reset player state ──
@@ -203,19 +211,23 @@ namespace ProjectArk.Level
                     audio.PlaySFX2D(_respawnSFX);
 
                 // ── 11. Fade in ──
-                if (_fadeImage != null)
+                if (fadeController != null && fadeController.FadeImage != null)
                 {
-                    _ = Tween.Custom(1f, 0f, _respawnFadeDuration, useUnscaledTime: true,
+                    await fadeController.FadeInAsync(_respawnFadeDuration, token);
+                }
+                else if (_fadeImage != null)
+                {
+                    _ = Tween.Custom(_fadeImage.color.a, 0f, _respawnFadeDuration, useUnscaledTime: true,
                         onValueChange: v =>
                         {
                             if (_fadeImage != null)
                                 _fadeImage.color = new Color(0f, 0f, 0f, v);
                         },
                         ease: Ease.OutQuad);
-                }
 
-                int respawnFadeMs = Mathf.RoundToInt(_respawnFadeDuration * 1000f);
-                await UniTask.Delay(respawnFadeMs, cancellationToken: token);
+                    int respawnFadeMs = Mathf.RoundToInt(_respawnFadeDuration * 1000f);
+                    await UniTask.Delay(respawnFadeMs, cancellationToken: token);
+                }
 
                 // ── 12. Re-enable input ──
                 if (inputHandler != null)
@@ -255,6 +267,19 @@ namespace ProjectArk.Level
             {
                 _isRespawning = false;
                 linkedCts.Dispose();
+            }
+        }
+
+        private void ResolveFadeImage(DoorTransitionController fadeController)
+        {
+            if (_fadeImage == null && fadeController != null)
+            {
+                _fadeImage = fadeController.FadeImage;
+            }
+
+            if (_fadeImage != null)
+            {
+                _fadeImage.color = new Color(0f, 0f, 0f, _fadeImage.color.a);
             }
         }
 

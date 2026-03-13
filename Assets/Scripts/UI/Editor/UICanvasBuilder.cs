@@ -3,6 +3,7 @@
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
+using Unity.Cinemachine;
 using TMPro;
 using ProjectArk.Level;
 
@@ -93,6 +94,28 @@ namespace ProjectArk.UI.Editor
                 doorTransition = BuildDoorTransitionSection(canvasGo);
             else
                 Debug.Log("[UICanvasBuilder] DoorTransitionController already exists, skipping");
+
+            // ── Step 6.5: CameraDirector on CinemachineCamera ─────
+            var gameplayVcam = Object.FindFirstObjectByType<CinemachineCamera>();
+            if (gameplayVcam != null)
+            {
+                var cameraDirector = gameplayVcam.GetComponent<CameraDirector>();
+                if (cameraDirector == null)
+                {
+                    cameraDirector = gameplayVcam.gameObject.AddComponent<CameraDirector>();
+                    Debug.Log("[UICanvasBuilder] Added CameraDirector to CinemachineCamera");
+                }
+
+                WireField(cameraDirector, "_vcam", gameplayVcam);
+
+                var fadeCanvasGroup = doorTransition != null ? doorTransition.GetComponent<CanvasGroup>() : null;
+                if (fadeCanvasGroup != null)
+                    WireField(cameraDirector, "_fadeCanvasGroup", fadeCanvasGroup);
+
+                var shipMotor = Object.FindAnyObjectByType<ProjectArk.Ship.ShipMotor>();
+                if (shipMotor != null)
+                    WireField(cameraDirector, "_defaultFollowTarget", shipMotor.transform);
+            }
 
             // ── Done ───────────────────────────────────────────────
             Selection.activeGameObject = canvasGo;
@@ -897,16 +920,23 @@ namespace ProjectArk.UI.Editor
             if (inventorySO != null)
                 WireField(uiManager, "_playerInventory", inventorySO);
 
-            // Wire WeavingStateTransition — camera and ship will be runtime references,
-            // but try to auto-find the main camera
+            // Wire WeavingStateTransition — prefer the gameplay virtual camera, keep Main Camera as fallback.
             var mainCam = Camera.main;
             if (mainCam != null)
             {
                 WireField(weavingTransition, "_mainCamera", mainCam);
-                // Try to find a ship transform
-                var shipMotor = Object.FindAnyObjectByType<ProjectArk.Ship.ShipMotor>();
-                if (shipMotor != null)
-                    WireField(weavingTransition, "_shipTransform", shipMotor.transform);
+            }
+
+            var gameplayVcam = Object.FindFirstObjectByType<CinemachineCamera>();
+            if (gameplayVcam != null)
+            {
+                WireField(weavingTransition, "_gameplayVirtualCamera", gameplayVcam);
+            }
+
+            var shipMotor = Object.FindAnyObjectByType<ProjectArk.Ship.ShipMotor>();
+            if (shipMotor != null)
+            {
+                WireField(weavingTransition, "_shipTransform", shipMotor.transform);
             }
 
             Debug.Log("[UICanvasBuilder] Created UIManager (+ WeavingStateTransition)");
@@ -927,8 +957,19 @@ namespace ProjectArk.UI.Editor
             fadeImg.color = new Color(0f, 0f, 0f, 0f); // 完全透明
             fadeImg.raycastTarget = false; // 默认不阻挡点击
 
+            if (fadeGo.GetComponent<CanvasGroup>() == null)
+                fadeGo.AddComponent<CanvasGroup>();
+
             var doorTransition = fadeGo.AddComponent<DoorTransitionController>();
             WireField(doorTransition, "_fadeImage", fadeImg);
+
+            var gameplayVcam = Object.FindFirstObjectByType<CinemachineCamera>();
+            if (gameplayVcam != null)
+                WireField(doorTransition, "_fallbackVirtualCamera", gameplayVcam);
+
+            var gameFlowManager = Object.FindFirstObjectByType<GameFlowManager>();
+            if (gameFlowManager != null)
+                WireField(gameFlowManager, "_fadeImage", fadeImg);
 
             Debug.Log("[UICanvasBuilder] Created FadeOverlay + DoorTransitionController");
             return doorTransition;

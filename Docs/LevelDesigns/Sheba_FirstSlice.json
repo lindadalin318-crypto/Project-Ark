@@ -1,0 +1,221 @@
+{
+  "levelName": "示巴星 · 首切片 (R01-R07)",
+  "description": "首个可玩节奏闭环切片。进入→施压→证明→回报→回路→收束。参照 ShebaRoomGrammar.md 生产规范。",
+  "version": "1.0",
+  "lastModified": "2026-03-13",
+  "rhythmLoop": ["进入", "施压", "证明", "回报", "回路", "收束"],
+
+  "rooms": [
+    {
+      "id": "SH-SLICE-R01",
+      "name": "坠机残骸引导房",
+      "designType": "INTRO",
+      "roomType": "Safe",
+      "floor": 0,
+      "position": [0, 0],
+      "size": [14, 8],
+      "rhythmBeat": "进入",
+      "primaryDuty": "建立基调 —— 我掉进了一个死寂但有秩序的世界",
+      "entryCondition": "玩家刚开始游戏 / 区域初始出生",
+      "exitCondition": "玩家理解主方向（东），完成最基础移动",
+      "rewardType": "信息",
+      "rewardDetail": "第一次看到远景中的异星地标",
+      "revisitChange": "残骸仍在，但氛围会因 WorldPhase 微变",
+      "elements": [
+        { "type": "spawn", "position": [2, 4], "note": "出生点" },
+        { "type": "landmark", "position": [7, 4], "note": "坠机残骸地标" },
+        { "type": "cameraTrigger", "position": [7, 4], "note": "CT_Intro_CrashSite，初始镜头收束展示残骸全貌" },
+        { "type": "areaTitle", "note": "示巴星 · 坠机点" }
+      ],
+      "standardComponents": ["Room(Safe)", "CameraTrigger", "AreaTitleDisplay"]
+    },
+
+    {
+      "id": "SH-SLICE-R02",
+      "name": "寂静雪原压力房",
+      "designType": "PRESSURE",
+      "roomType": "Normal",
+      "floor": 0,
+      "position": [16, 0],
+      "size": [16, 10],
+      "rhythmBeat": "施压",
+      "primaryDuty": "引入静默压力 —— 安静不是安全，噪音是代价",
+      "entryCondition": "从 R01 向东推进，无门槛",
+      "exitCondition": "通过或绕开敌群，继续向东",
+      "rewardType": "资源",
+      "rewardDetail": "少量弹药/能量碎片",
+      "revisitChange": "敌群重新刷新，但玩家已学会绕行策略",
+      "elements": [
+        { "type": "openEncounter", "position": [6, 5], "note": "EO_R02_01，2-3 只低威胁巡逻敌" },
+        { "type": "biomeTrigger", "position": [2, 5], "note": "BT_SilentSnow，低通滤波 + 雪花粒子" },
+        { "type": "terrain_cover", "position": [4, 3], "note": "冰柱遮蔽" },
+        { "type": "terrain_cover", "position": [10, 7], "note": "冰柱遮蔽" },
+        { "type": "bypass_path", "note": "可绕行路径，不强制战斗" }
+      ],
+      "standardComponents": ["Room(Normal)", "OpenEncounterTrigger", "BiomeTrigger"]
+    },
+
+    {
+      "id": "SH-SLICE-R03",
+      "name": "冰雕广场锚点房",
+      "designType": "MUSEUM",
+      "roomType": "Normal",
+      "floor": 0,
+      "position": [34, -2],
+      "size": [14, 10],
+      "rhythmBeat": "锚点",
+      "primaryDuty": "建立记忆点 —— 这个世界有历史，某个存在曾在此留下痕迹",
+      "entryCondition": "玩家已经历 R02 压力，准备接受章节身份强化",
+      "exitCondition": "玩家获得明确记忆标签（冰雕 = 这个世界曾有文明）",
+      "rewardType": "信息",
+      "rewardDetail": "缕拉的第一条线索 + 世界观锚点",
+      "revisitChange": "WorldPhase 推进后，冰雕上出现新的痕迹/裂纹",
+      "elements": [
+        { "type": "cameraTrigger", "position": [7, 5], "note": "CT_IceSculpture_Panorama，专用收束镜头" },
+        { "type": "landmark", "position": [7, 5], "note": "冰雕群落地标" },
+        { "type": "lore_interactable", "position": [5, 3], "note": "缕拉痕迹叙事物件" },
+        { "type": "biomeTrigger", "position": [2, 5], "note": "BT_IceBlue，冰蓝色调 + 回声音效" },
+        { "type": "observation_window", "note": "至少 3 秒的无敌压停顿空间" }
+      ],
+      "standardComponents": ["Room(Normal)", "CameraTrigger", "BiomeTrigger"],
+      "secretBranch": {
+        "id": "SH-SLICE-R03-SECRET",
+        "designType": "SECRET",
+        "note": "冰雕广场隐藏支路，HiddenAreaMask 遮蔽，内有叙事碎片"
+      }
+    },
+
+    {
+      "id": "SH-SLICE-R04",
+      "name": "第一清算房",
+      "designType": "ARENA",
+      "roomType": "Arena",
+      "floor": 0,
+      "position": [50, 0],
+      "size": [12, 10],
+      "rhythmBeat": "证明",
+      "primaryDuty": "验证核心 loop —— 主动制造噪音反而让我活下来",
+      "entryCondition": "玩家已见过开放压力房，已学会最基础移动射击",
+      "exitCondition": "清空两波敌人，门打开",
+      "rewardType": "推进",
+      "rewardDetail": "主路线门打开 + 冷却资源回补",
+      "revisitChange": "已清算状态持久化，门永久开启",
+      "elements": [
+        { "type": "arenaController", "note": "EC_R04_01，EncounterSO(Closed, 2 波)" },
+        { "type": "door", "position": [0, 5], "note": "Door_West_R03, Locked_Combat" },
+        { "type": "door", "position": [11, 5], "note": "Door_East_R05, Locked_Combat" },
+        { "type": "cover", "position": [6, 5], "note": "安全柱体 / 遮蔽物" },
+        { "type": "cameraTrigger", "note": "CT_Combat_ZoomIn，战斗时轻微收紧" },
+        { "type": "reward_drop", "note": "战后掉落冷却碎片" }
+      ],
+      "standardComponents": ["Room(Arena)", "ArenaController", "Door(Locked_Combat)", "CameraTrigger"]
+    },
+
+    {
+      "id": "SH-SLICE-R05",
+      "name": "回报/能力确认房",
+      "designType": "ANCHOR",
+      "secondaryType": "回报",
+      "roomType": "Safe",
+      "floor": 0,
+      "position": [64, 0],
+      "size": [10, 8],
+      "rhythmBeat": "回报",
+      "primaryDuty": "给认知奖励 —— 我不只是打赢了，我学会了一件事",
+      "entryCondition": "刚通过 R04 清算，需要缓冲",
+      "exitCondition": "玩家存档 + 获得回报物后，选择继续或回探",
+      "rewardType": "结构 + 资源 + 信息",
+      "rewardDetail": "Checkpoint + 工具/能力碎片 + Lore",
+      "revisitChange": "Checkpoint 永久可用，Lore 标记已读",
+      "elements": [
+        { "type": "checkpoint", "position": [5, 4], "note": "CP_R05" },
+        { "type": "lore_interactable", "position": [3, 6], "note": "涟漪/声学交互确认" },
+        { "type": "chest", "position": [7, 4], "note": "工具/能力碎片" },
+        { "type": "door", "position": [0, 4], "note": "Door_West_R04" },
+        { "type": "door", "position": [9, 4], "note": "Door_East_R06" },
+        { "type": "shortcut_door", "position": [5, 0], "note": "Door_South_R02（回路捷径，初始 Locked_Key）" }
+      ],
+      "standardComponents": ["Room(Safe)", "Checkpoint", "Door×3"]
+    },
+
+    {
+      "id": "SH-SLICE-R06",
+      "name": "大钟门槛 / 回路节点",
+      "designType": "GATE",
+      "secondaryType": "回路",
+      "roomType": "Gate",
+      "floor": 0,
+      "position": [76, 0],
+      "size": [12, 10],
+      "rhythmBeat": "回路",
+      "primaryDuty": "长期承诺 + 银河城回路兑现",
+      "entryCondition": "从 R05 继续推进",
+      "exitCondition": "发现大钟门暂不可开 → 开启回路捷径 → 回返",
+      "rewardType": "长期承诺 + 结构",
+      "rewardDetail": "大钟门承诺 + 捷径永久开启",
+      "revisitChange": "捷径永久开启；大钟门在获得涟漪能力后可打开",
+      "elements": [
+        { "type": "gate_door", "position": [11, 5], "note": "大钟门，Locked_Ability，当前无法打开" },
+        { "type": "cameraTrigger", "position": [8, 5], "note": "CT_Gate_Vista，远景构图展示门后区域" },
+        { "type": "feedback", "note": "靠近时提示'需要 XX 能力'" },
+        { "type": "shortcut_door", "position": [0, 5], "note": "回路捷径门，通回 R01/R02 附近" },
+        { "type": "key_pickup", "note": "回路钥匙（如果不在 R04 获得的话）" }
+      ],
+      "standardComponents": ["Room(Gate)", "Door(Locked_Ability)", "CameraTrigger", "Door(Locked_Key→回路)"]
+    },
+
+    {
+      "id": "SH-SLICE-R07",
+      "name": "收束安全房",
+      "designType": "ANCHOR",
+      "roomType": "Hub",
+      "floor": 0,
+      "position": [50, -14],
+      "size": [14, 10],
+      "rhythmBeat": "收束",
+      "primaryDuty": "形成段落句号 —— 这是完整的一段旅程",
+      "entryCondition": "玩家通过 R06 回路或直接到达",
+      "exitCondition": "玩家自由选择下一步方向",
+      "rewardType": "结构 + 叙事",
+      "rewardDetail": "中央 Checkpoint + 缕拉对话 + 多路分流",
+      "revisitChange": "缕拉对话内容随 WorldPhase 变化",
+      "elements": [
+        { "type": "checkpoint", "position": [7, 5], "note": "CP_R07，主要存档点" },
+        { "type": "npc", "position": [5, 5], "note": "缕拉首次稳定互动" },
+        { "type": "door", "position": [0, 5], "note": "Door_West_R01（回路连接）" },
+        { "type": "door", "position": [13, 5], "note": "Door_East_R06（通向大钟门）" },
+        { "type": "door", "position": [7, 0], "note": "Door_North_FUTURE（未来扩展出口）" },
+        { "type": "map_anchor", "note": "MinimapManager 重要标记" }
+      ],
+      "standardComponents": ["Room(Hub)", "Checkpoint", "Door×3", "NPC"]
+    }
+  ],
+
+  "connections": [
+    { "from": "SH-SLICE-R01", "to": "SH-SLICE-R02", "type": "Door", "direction": "east", "condition": "none" },
+    { "from": "SH-SLICE-R02", "to": "SH-SLICE-R03", "type": "Door", "direction": "east", "condition": "none" },
+    { "from": "SH-SLICE-R03", "to": "SH-SLICE-R04", "type": "Door", "direction": "east", "condition": "none" },
+    { "from": "SH-SLICE-R04", "to": "SH-SLICE-R05", "type": "Door", "direction": "east", "condition": "clear_encounter" },
+    { "from": "SH-SLICE-R05", "to": "SH-SLICE-R06", "type": "Door", "direction": "east", "condition": "none" },
+    { "from": "SH-SLICE-R06", "to": "SH-SLICE-R01", "type": "Shortcut", "direction": "west", "condition": "key_item", "note": "回路捷径，首次开启后永久" },
+    { "from": "SH-SLICE-R05", "to": "SH-SLICE-R02", "type": "Shortcut", "direction": "south", "condition": "key_item", "note": "R05→R02 回路" },
+    { "from": "SH-SLICE-R07", "to": "SH-SLICE-R01", "type": "Door", "direction": "west", "condition": "none", "note": "枢纽回连" },
+    { "from": "SH-SLICE-R07", "to": "SH-SLICE-R06", "type": "Door", "direction": "east", "condition": "none" },
+    { "from": "SH-SLICE-R03", "to": "SH-SLICE-R03-SECRET", "type": "HiddenPath", "direction": "south", "condition": "discovery" }
+  ],
+
+  "validationChecklist": {
+    "rhythmLoop": {
+      "enter": "R01 ✅",
+      "pressure": "R02 ✅",
+      "prove": "R04 ✅",
+      "reward": "R05 ✅",
+      "loop": "R06 ✅",
+      "close": "R07 ✅"
+    },
+    "hasShortcut": true,
+    "hasMemoryAnchor": true,
+    "hasChapterPromise": true,
+    "hasStructuralCompression": true
+  }
+}
