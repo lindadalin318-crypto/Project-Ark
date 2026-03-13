@@ -43,6 +43,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _Child3: 1
+    - _UseLegacySlots: 1
     m_Colors:
     - _Child0: {r: 1, g: 1, b: 1, a: 0}
     - _Child1: {r: 1, g: 1, b: 1, a: 0}

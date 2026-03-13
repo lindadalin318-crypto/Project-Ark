@@ -78,6 +78,7 @@ namespace ProjectArk.Ship.Editor
             if (matTrailEffect != null)
             {
                 EnsureShader(matTrailEffect, TrailMainEffectShader, ref successCount, ref failCount);
+                matTrailEffect.SetFloat("_UseLegacySlots", 1f);
                 AssignTex(matTrailEffect, "_Slot0", "trail_main_spritesheet",   ref successCount, ref failCount);
                 AssignTex(matTrailEffect, "_Slot1", "trail_second_spritesheet", ref successCount, ref failCount);
                 AssignTex(matTrailEffect, "_Slot2", "trail_edge_glow",          ref successCount, ref failCount);
@@ -119,6 +120,8 @@ namespace ProjectArk.Ship.Editor
             var matTrailMain = LoadMat("mat_trail_main");
             if (matTrailMain != null)
             {
+                EnsureShader(matTrailMain, TrailMainEffectShader, ref successCount, ref failCount);
+                matTrailMain.SetFloat("_UseLegacySlots", 0f);
                 AssignTex(matTrailMain, "_BaseMap", "vfx_boost_techno_flame", ref successCount, ref failCount);
                 EditorUtility.SetDirty(matTrailMain);
             }

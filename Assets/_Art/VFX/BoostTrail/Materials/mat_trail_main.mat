@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: mat_trail_main
-  m_Shader: {fileID: 4800000, guid: 0406db5a14f94604a8c57ccfbc9f3b46, type: 3}
+  m_Shader: {fileID: 4800000, guid: 50681fab13b969b47ae39aa1dca44141, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
@@ -33,35 +33,50 @@ Material:
         m_Texture: {fileID: 2800000, guid: d3ab0c1c91b310c4db8355599b1b59ef, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    - _BumpMap:
+    - _Slot0:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    - _EmissionMap:
+    - _Slot1:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Slot2:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Slot3:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _Alpha: 0.82
     - _AlphaClip: 0
     - _AlphaToMask: 0
     - _Blend: 2
     - _BlendOp: 0
+    - _Brightness: 1.85
     - _CameraFadingEnabled: 0
     - _CameraFarFadeDistance: 2
     - _CameraNearFadeDistance: 1
     - _ColorMode: 0
     - _Cull: 2
     - _Cutoff: 0.5
+    - _DistortStrength: 0.22
     - _DistortionBlend: 0.5
     - _DistortionEnabled: 0
     - _DistortionStrength: 1
     - _DistortionStrengthScaled: 0.1
     - _DstBlend: 1
     - _DstBlendAlpha: 1
+    - _EdgePower: 1.85
+    - _FlickerStrength: 0.24
     - _FlipbookBlending: 0
     - _FlipbookMode: 0
+    - _FlowSpeed: 2.4
     - _Mode: 0
+    - _NoiseScale: 3.6
     - _QueueOffset: 0
     - _SoftParticlesEnabled: 0
     - _SoftParticlesFarFadeDistance: 1
@@ -69,12 +84,19 @@ Material:
     - _SrcBlend: 5
     - _SrcBlendAlpha: 1
     - _Surface: 1
+    - _UseLegacySlots: 0
     - _ZWrite: 0
     m_Colors:
-    - _BaseColor: {r: 2.45, g: 1.2, b: 0.28, a: 1}
+    - _BaseColor: {r: 2.8, g: 1.45, b: 0.45, a: 1}
     - _BaseColorAddSubDiff: {r: 0, g: 0, b: 0, a: 0}
     - _CameraFadeParams: {r: 0, g: Infinity, b: 0, a: 0}
+    - _Child0: {r: 1, g: 1, b: 1, a: 0}
+    - _Child1: {r: 1, g: 1, b: 1, a: 0}
+    - _Child2: {r: 0.5, g: 0.5, b: 0.5, a: 0.5}
+    - _Child4: {r: 1, g: 1, b: 1, a: 1}
+    - _Child5: {r: 0, g: 0, b: 0, a: 1}
     - _Color: {r: 2.45, g: 1.2, b: 0.27999997, a: 1}
+    - _EdgeColor: {r: 4.2, g: 2.25, b: 0.8, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _SoftParticleFadeParams: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []
