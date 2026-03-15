@@ -43,13 +43,29 @@ public class CardData
     [JsonPropertyName("anti_synergy_tags")]
     public List<string> AntiSynergyTags { get; set; } = new();
 
-    /// <summary>各 Act 的评分系数（1.0 = 无修正）</summary>
+    /// <summary>各 Act 的评分（数组格式 [act1, act2, act3]）</summary>
     [JsonPropertyName("act_scaling")]
-    public ActScaling ActScaling { get; set; } = new();
+    public List<float> ActScaling { get; set; } = new() { 1f, 1f, 1f };
 
-    /// <summary>升级优先级（0-10，越高越值得优先升级）</summary>
+    /// <summary>获取指定 Act 的评分（1-indexed）</summary>
+    public float GetActScore(int act)
+    {
+        int idx = Math.Clamp(act - 1, 0, ActScaling.Count - 1);
+        return ActScaling.Count > 0 ? ActScaling[idx] : 1f;
+    }
+
+    /// <summary>升级优先级（"low" / "medium" / "high"）</summary>
     [JsonPropertyName("upgrade_priority")]
-    public float UpgradePriority { get; set; }
+    public string UpgradePriority { get; set; } = "medium";
+
+    /// <summary>将升级优先级文字转为 0-10 数值</summary>
+    public float UpgradePriorityScore => UpgradePriority?.ToLowerInvariant() switch
+    {
+        "high"   => 8f,
+        "medium" => 5f,
+        "low"    => 2f,
+        _        => 5f
+    };
 
     /// <summary>升级后的质变描述（中文）</summary>
     [JsonPropertyName("upgrade_delta_zh")]

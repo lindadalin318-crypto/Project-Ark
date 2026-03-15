@@ -1,0 +1,121 @@
+[
+  {
+    "event_id": "dead_adventurer",
+    "name_zh": "死去的冒险者",
+    "act": 1,
+    "options": [
+      {
+        "option_id": "loot",
+        "description_zh": "搜刮遗体（获得金币和道具）",
+        "expected_value": 4.0,
+        "is_risky": false,
+        "notes_zh": "通常能获得遗物或金币，性价比不错"
+      },
+      {
+        "option_id": "leave",
+        "description_zh": "离开",
+        "expected_value": 0.0,
+        "is_risky": false,
+        "notes_zh": "放弃奖励，保险但浪费资源"
+      }
+    ]
+  },
+  {
+    "event_id": "ancient_writing",
+    "name_zh": "古老的文字",
+    "act": 1,
+    "options": [
+      {
+        "option_id": "elegance",
+        "description_zh": "优雅（删除一张牌）",
+        "expected_value": 6.0,
+        "is_risky": false,
+        "notes_zh": "免费删牌，价值等同于商店删牌（75金币）。强烈推荐"
+      },
+      {
+        "option_id": "simplicity",
+        "description_zh": "简洁（所有牌升级）",
+        "expected_value": 5.0,
+        "is_risky": false,
+        "notes_zh": "批量升级，但不如针对性升级+删牌实用。牌组强时选这个"
+      }
+    ]
+  },
+  {
+    "event_id": "drug_dealer",
+    "name_zh": "药品贩子",
+    "act": 2,
+    "options": [
+      {
+        "option_id": "buy_card",
+        "description_zh": "购买卡牌（50金币）",
+        "expected_value": 4.0,
+        "is_risky": false,
+        "notes_zh": "比商店便宜，但选择有限"
+      },
+      {
+        "option_id": "buy_potion",
+        "description_zh": "购买药水（20金币）",
+        "expected_value": 3.0,
+        "is_risky": false,
+        "notes_zh": "药水性价比一般，除非需要特定药水"
+      },
+      {
+        "option_id": "leave",
+        "description_zh": "离开",
+        "expected_value": 0.0,
+        "is_risky": false,
+        "notes_zh": "没有需要的东西时离开"
+      }
+    ]
+  },
+  {
+    "event_id": "mind_bloom",
+    "name_zh": "心灵绽放",
+    "act": 2,
+    "options": [
+      {
+        "option_id": "i_am_ironclad",
+        "description_zh": "我是战士（与旧Boss战斗，胜利获得稀有遗物）",
+        "expected_value": 8.0,
+        "is_risky": true,
+        "notes_zh": "与Act1 Boss战斗，有风险但奖励极高。牌组强时值得尝试"
+      },
+      {
+        "option_id": "become_rich",
+        "description_zh": "变得富有（获得大量金币）",
+        "expected_value": 5.0,
+        "is_risky": false,
+        "notes_zh": "稳定获取99金币，如果下一个商店近的话选这个"
+      },
+      {
+        "option_id": "become_healthy",
+        "description_zh": "变得健康（获得MaxHP+15）",
+        "expected_value": 6.0,
+        "is_risky": false,
+        "notes_zh": "永久+15MaxHP，长期价值高。HP不足时优先选"
+      }
+    ]
+  },
+  {
+    "event_id": "shining_light",
+    "name_zh": "闪耀之光",
+    "act": 1,
+    "options": [
+      {
+        "option_id": "enter",
+        "description_zh": "进入（随机升级2张牌，失去MaxHP）",
+        "expected_value": 3.5,
+        "is_risky": true,
+        "notes_zh": "升级2张牌但损失MaxHP。价值因牌组而异，通常选其他选项更好"
+      },
+      {
+        "option_id": "leave",
+        "description_zh": "离开",
+        "expected_value": 0.0,
+        "is_risky": false,
+        "notes_zh": "避免HP损失的安全选择"
+      }
+    ]
+  }
+]

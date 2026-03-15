@@ -76,7 +76,7 @@ public static class DataLoader
         try
         {
             var json = File.ReadAllText(filePath);
-            var list = JsonSerializer.Deserialize<List<T>>(json, _jsonOptions);
+            var list = TryParseList<T>(json, filePath);
             if (list == null)
             {
                 _log.Warn($"[DataLoader] Empty or null list in: {filePath}");
@@ -103,6 +103,48 @@ public static class DataLoader
             _log.Error($"[DataLoader] Failed to load {filePath}: {ex.Message}");
             return new Dictionary<string, T>();
         }
+    }
+
+    /// <summary>
+    /// 兼容两种 JSON 根格式：
+    ///   1. 裸数组：[{ ... }, ...]
+    ///   2. 包装对象：{ "version": "...", "cards": [{ ... }] }
+    ///      包装对象时，自动找第一个 array 类型的属性值作为数据列表。
+    /// </summary>
+    private static List<T>? TryParseList<T>(string json, string filePath)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        if (root.ValueKind == System.Text.Json.JsonValueKind.Array)
+        {
+            return JsonSerializer.Deserialize<List<T>>(json, _jsonOptions);
+        }
+
+        if (root.ValueKind == System.Text.Json.JsonValueKind.Object)
+        {
+            // 遍历所有属性，找第一个是数组且能反序列化成功的
+            foreach (var prop in root.EnumerateObject())
+            {
+                if (prop.Value.ValueKind != System.Text.Json.JsonValueKind.Array)
+                    continue;
+                try
+                {
+                    var list = JsonSerializer.Deserialize<List<T>>(prop.Value.GetRawText(), _jsonOptions);
+                    if (list != null && list.Count > 0)
+                    {
+                        _log.Info($"[DataLoader] Parsed wrapped array from field '{prop.Name}' in {Path.GetFileName(filePath)}");
+                        return list;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log.Warn($"[DataLoader] Field '{prop.Name}' in {Path.GetFileName(filePath)} failed: {ex.Message}");
+                }
+            }
+        }
+
+        return null;
     }
 
     // ── 便捷查询 ────────────────────────────────────────────────────

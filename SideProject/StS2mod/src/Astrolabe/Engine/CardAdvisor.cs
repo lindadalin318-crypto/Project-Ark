@@ -97,7 +97,7 @@ public static class CardAdvisor
         float baseScore = card.PathScores.TryGetValue(path.PathId, out var ps) ? ps : card.BaseScore;
 
         // 2. Act 适配系数
-        float actScaling = card.ActScaling.ForAct(snapshot.Act);
+        float actScaling = card.GetActScore(snapshot.Act);
 
         // 3. 牌组大小系数
         float deckSizeMultiplier = ComputeDeckSizeMultiplier(card, snapshot.DeckCardIds.Count, path);

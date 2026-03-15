@@ -93,6 +93,9 @@ public static class CardRewardHook
     {
         try
         {
+            // 首次触发时注入 CanvasLayer
+            OverlayHUD.EnsureInjected(__instance);
+
             // 方案 A：使用 ShowScreen 捕获的缓存（推荐）
             IReadOnlyList<CardCreationResult>? options = _pendingOptions;
 
