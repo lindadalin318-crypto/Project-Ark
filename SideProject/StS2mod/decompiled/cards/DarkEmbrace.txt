@@ -1,0 +1,109 @@
+﻿public sealed class DarkEmbrace : CardModel
+	{
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(HoverTipFactory.FromKeyword(CardKeyword.Exhaust));
+
+		public DarkEmbrace()
+			: base(2, CardType.Power, CardRarity.Rare, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await PowerCmd.Apply<DarkEmbracePower>(base.Owner.Creature, 1m, base.Owner.Creature, this);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.EnergyCost.UpgradeBy(-1);
+		}
+	}
+	public sealed class Darkness : CardModel
+	{
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlyArray<IHoverTip>(new IHoverTip[2]
+		{
+			HoverTipFactory.Static(StaticHoverTip.Channeling),
+			HoverTipFactory.FromOrb<DarkOrb>()
+		});
+
+		public Darkness()
+			: base(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await CreatureCmd.TriggerAnim(base.Owner.Creature, "Cast", base.Owner.Character.CastAnimDelay);
+			await OrbCmd.Channel<DarkOrb>(choiceContext, base.Owner);
+			IEnumerable<OrbModel> enumerable = base.Owner.PlayerCombatState.OrbQueue.Orbs.Where((OrbModel orb) => orb is DarkOrb);
+			int triggerCount = ((!base.IsUpgraded) ? 1 : 2);
+			foreach (OrbModel darknessOrb in enumerable)
+			{
+				for (int i = 0; i < triggerCount; i++)
+				{
+					await OrbCmd.Passive(choiceContext, darknessOrb, null);
+				}
+			}
+		}
+	}
+	public sealed class DarkShackles : CardModel
+	{
+		private const string _strengthLossKey = "StrengthLoss";
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new DynamicVar("StrengthLoss", 9m));
+
+		public override IEnumerable<CardKeyword> CanonicalKeywords => new global::<>z__ReadOnlySingleElementList<CardKeyword>(CardKeyword.Exhaust);
+
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(HoverTipFactory.FromPower<StrengthPower>());
+
+		public DarkShackles()
+			: base(0, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			ArgumentNullException.ThrowIfNull(cardPlay.Target, "cardPlay.Target");
+			await CreatureCmd.TriggerAnim(base.Owner.Creature, "Cast", base.Owner.Character.CastAnimDelay);
+			await PowerCmd.Apply<DarkShacklesPower>(cardPlay.Target, base.DynamicVars["StrengthLoss"].BaseValue, base.Owner.Creature, this);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars["StrengthLoss"].UpgradeValueBy(6m);
+		}
+	}
+	public sealed class Dash : CardModel
+	{
+		public override bool GainsBlock => true;
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlyArray<DynamicVar>(new DynamicVar[2]
+		{
+			new DamageVar(10m, ValueProp.Move),
+			new BlockVar(10m, ValueProp.Move)
+		});
+
+		public Dash()
+			: base(2, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			ArgumentNullException.ThrowIfNull(cardPlay.Target, "cardPlay.Target");
+			await CreatureCmd.GainBlock(base.Owner.Creature, base.DynamicVars.Block, cardPlay);
+			await DamageCmd.Attack(base.DynamicVars.Damage.BaseValue).FromCard(this).Targeting(cardPlay.Target)
+				.WithHitFx("vfx/vfx_flying_slash")
+				.Execute(choiceContext);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Damage.UpgradeValueBy(3m);
+			base.DynamicVars.Block.UpgradeValueBy(3m);
+		}
+	}
+	public sealed class Dazed : CardModel
+	{
+		public override int MaxUpgradeLevel => 0;
+
+		public override IEnumerable<CardKeyword> CanonicalKeywords => new global::<>z__ReadO

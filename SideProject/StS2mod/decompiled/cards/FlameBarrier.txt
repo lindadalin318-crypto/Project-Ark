@@ -1,0 +1,106 @@
+﻿public sealed class FlameBarrier : CardModel
+	{
+		private const string _damageBackKey = "DamageBack";
+
+		public override bool GainsBlock => true;
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlyArray<DynamicVar>(new DynamicVar[2]
+		{
+			new BlockVar(12m, ValueProp.Move),
+			new DynamicVar("DamageBack", 4m)
+		});
+
+		public FlameBarrier()
+			: base(2, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			NFireBurningVfx child = NFireBurningVfx.Create(base.Owner.Creature, 0.75f, goingRight: false);
+			NCombatRoom.Instance?.CombatVfxContainer.AddChildSafely(child);
+			await CreatureCmd.GainBlock(base.Owner.Creature, base.DynamicVars.Block, cardPlay);
+			await PowerCmd.Apply<FlameBarrierPower>(base.Owner.Creature, base.DynamicVars["DamageBack"].BaseValue, base.Owner.Creature, this);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Block.UpgradeValueBy(4m);
+			base.DynamicVars["DamageBack"].UpgradeValueBy(2m);
+		}
+	}
+	public sealed class Flanking : CardModel
+	{
+		public override CardMultiplayerConstraint MultiplayerConstraint => CardMultiplayerConstraint.MultiplayerOnly;
+
+		public Flanking()
+			: base(2, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			ArgumentNullException.ThrowIfNull(cardPlay.Target, "cardPlay.Target");
+			await CreatureCmd.TriggerAnim(base.Owner.Creature, "Cast", base.Owner.Character.CastAnimDelay);
+			await PowerCmd.Apply<FlankingPower>(cardPlay.Target, 2m, base.Owner.Creature, this);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.EnergyCost.UpgradeBy(-1);
+		}
+	}
+	public sealed class FlashOfSteel : CardModel
+	{
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlyArray<DynamicVar>(new DynamicVar[2]
+		{
+			new DamageVar(5m, ValueProp.Move),
+			new CardsVar(1)
+		});
+
+		public FlashOfSteel()
+			: base(0, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			ArgumentNullException.ThrowIfNull(cardPlay.Target, "cardPlay.Target");
+			NCombatRoom.Instance?.CombatVfxContainer.AddChildSafely(NThinSliceVfx.Create(cardPlay.Target));
+			float num = base.Owner.Character.AttackAnimDelay;
+			if (SaveManager.Instance.PrefsSave.FastMode == FastModeType.Normal)
+			{
+				num += 0.2f;
+			}
+			await DamageCmd.Attack(base.DynamicVars.Damage.BaseValue).FromCard(this).Targeting(cardPlay.Target)
+				.WithAttackerAnim("Attack", num)
+				.Execute(choiceContext);
+			await CardPileCmd.Draw(choiceContext, base.DynamicVars.Cards.BaseValue, base.Owner);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Damage.UpgradeValueBy(3m);
+		}
+	}
+	public sealed class Flatten : CardModel
+	{
+		protected override bool ShouldGlowGoldInternal => HasOstyAttackedThisTurn;
+
+		protected override bool ShouldGlowRedInternal => base.Owner.IsOstyMissing;
+
+		protected override HashSet<CardTag> CanonicalTags => new HashSet<CardTag> { CardTag.OstyAttack };
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new OstyDamageVar(12m, ValueProp.Move));
+
+		private bool HasOstyAttackedThisTurn => CombatManager.Instance.History.Entries.OfType<CreatureAttackedEntry>().Any((CreatureAttackedEntry e) => e.Actor == base.Owner.Osty && e.HappenedThisTurn(base.CombatState));
+
+		public Flatten()
+			: base(2, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			ArgumentNullException.ThrowIfNull(cardPlay.Target, "cardPlay.Target");
+			if (!Osty.CheckMissingWithA

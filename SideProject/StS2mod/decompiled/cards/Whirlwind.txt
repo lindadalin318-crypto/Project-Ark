@@ -1,0 +1,101 @@
+﻿public sealed class Whirlwind : CardModel
+	{
+		private const string _whirlwindSfx = "event:/sfx/characters/ironclad/ironclad_whirlwind";
+
+		protected override bool HasEnergyCostX => true;
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new DamageVar(5m, ValueProp.Move));
+
+		public Whirlwind()
+			: base(0, CardType.Attack, CardRarity.Uncommon, TargetType.AllEnemies)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			int num = ResolveEnergyXValue();
+			if (num > 0)
+			{
+				Color color = new Color("FFFFFF80");
+				double num2 = ((SaveManager.Instance.PrefsSave.FastMode == FastModeType.Fast) ? 0.2 : 0.3);
+				NCombatRoom.Instance?.CombatVfxContainer.AddChildSafely(NHorizontalLinesVfx.Create(color, 0.8 + (double)Mathf.Min(8, num) * num2));
+				SfxCmd.Play("event:/sfx/characters/ironclad/ironclad_whirlwind");
+				NRun.Instance?.GlobalUi.AddChildSafely(NSmokyVignetteVfx.Create(color, color));
+			}
+			await DamageCmd.Attack(base.DynamicVars.Damage.BaseValue).WithHitCount(num).FromCard(this)
+				.TargetingAllOpponents(base.CombatState)
+				.WithHitFx("vfx/vfx_giant_horizontal_slash")
+				.Execute(choiceContext);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Damage.UpgradeValueBy(3m);
+		}
+	}
+	public sealed class Whistle : CardModel
+	{
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(StunIntent.GetStaticHoverTip());
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new DamageVar(33m, ValueProp.Move));
+
+		public override IEnumerable<CardKeyword> CanonicalKeywords => new global::<>z__ReadOnlySingleElementList<CardKeyword>(CardKeyword.Exhaust);
+
+		public Whistle()
+			: base(3, CardType.Attack, CardRarity.Ancient, TargetType.AnyEnemy)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			ArgumentNullException.ThrowIfNull(cardPlay.Target, "cardPlay.Target");
+			await DamageCmd.Attack(base.DynamicVars.Damage.BaseValue).FromCard(this).Targeting(cardPlay.Target)
+				.WithHitFx("vfx/vfx_attack_slash")
+				.Execute(choiceContext);
+			await CreatureCmd.Stun(cardPlay.Target);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Damage.UpgradeValueBy(11m);
+		}
+	}
+	public sealed class WhiteNoise : CardModel
+	{
+		public override IEnumerable<CardKeyword> CanonicalKeywords => new global::<>z__ReadOnlySingleElementList<CardKeyword>(CardKeyword.Exhaust);
+
+		public WhiteNoise()
+			: base(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await CreatureCmd.TriggerAnim(base.Owner.Creature, "Cast", base.Owner.Character.CastAnimDelay);
+			CardModel cardModel = CardFactory.GetDistinctForCombat(base.Owner, from c in base.Owner.Character.CardPool.GetUnlockedCards(base.Owner.UnlockState, base.Owner.RunState.CardMultiplayerConstraint)
+				where c.Type == CardType.Power
+				select c, 1, base.Owner.RunState.Rng.CombatCardGeneration).FirstOrDefault();
+			if (cardModel != null)
+			{
+				cardModel.SetToFreeThisTurn();
+				await CardPileCmd.AddGeneratedCardToCombat(cardModel, PileType.Hand, addedByPlayer: true);
+			}
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.EnergyCost.UpgradeBy(-1);
+		}
+	}
+	public sealed class Wish : CardModel
+	{
+		public override IEnumerable<CardKeyword> CanonicalKeywords => new global::<>z__ReadOnlySingleElementList<CardKeyword>(CardKeyword.Exhaust);
+
+		public Wish()
+			: base(0, CardType.Skill, CardRarity.Ancient, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			CardSelectorPrefs prefs = new CardSelectorP

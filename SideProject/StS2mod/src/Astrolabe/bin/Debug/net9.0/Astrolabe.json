@@ -1,0 +1,11 @@
+{
+  "id": "Astrolabe",
+  "name": "Astrolabe - Decision Advisor",
+  "author": "AstroTeam",
+  "description": "Real-time advisor that suggests optimal card plays, card picks, shop purchases, and route planning with multi-path build tracking.",
+  "version": "0.1.0",
+  "has_pck": true,
+  "has_dll": true,
+  "dependencies": [],
+  "affects_gameplay": true
+}

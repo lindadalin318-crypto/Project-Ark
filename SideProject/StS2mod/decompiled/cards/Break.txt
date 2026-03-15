@@ -1,0 +1,102 @@
+﻿public sealed class Break : CardModel
+	{
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(HoverTipFactory.FromPower<VulnerablePower>());
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlyArray<DynamicVar>(new DynamicVar[2]
+		{
+			new DamageVar(20m, ValueProp.Move),
+			new PowerVar<VulnerablePower>(5m)
+		});
+
+		public Break()
+			: base(2, CardType.Attack, CardRarity.Ancient, TargetType.AnyEnemy)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			ArgumentNullException.ThrowIfNull(cardPlay.Target, "cardPlay.Target");
+			await DamageCmd.Attack(base.DynamicVars.Damage.BaseValue).FromCard(this).Targeting(cardPlay.Target)
+				.WithHitFx("vfx/vfx_attack_blunt", null, "blunt_attack.mp3")
+				.Execute(choiceContext);
+			await PowerCmd.Apply<VulnerablePower>(cardPlay.Target, base.DynamicVars.Vulnerable.BaseValue, base.Owner.Creature, this);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Damage.UpgradeValueBy(5m);
+			base.DynamicVars.Vulnerable.UpgradeValueBy(2m);
+		}
+	}
+	public sealed class Breakthrough : CardModel
+	{
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlyArray<DynamicVar>(new DynamicVar[2]
+		{
+			new DamageVar(9m, ValueProp.Move),
+			new HpLossVar(1m)
+		});
+
+		public Breakthrough()
+			: base(1, CardType.Attack, CardRarity.Common, TargetType.AllEnemies)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			VfxCmd.PlayOnCreatureCenter(base.Owner.Creature, "vfx/vfx_bloody_impact");
+			await CreatureCmd.Damage(choiceContext, base.Owner.Creature, base.DynamicVars.HpLoss.BaseValue, ValueProp.Unblockable | ValueProp.Unpowered | ValueProp.Move, this);
+			await DamageCmd.Attack(base.DynamicVars.Damage.BaseValue).FromCard(this).TargetingAllOpponents(base.CombatState)
+				.WithHitFx("vfx/vfx_attack_blunt", null, "heavy_attack.mp3")
+				.Execute(choiceContext);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Damage.UpgradeValueBy(4m);
+		}
+	}
+	public sealed class BrightestFlame : CardModel
+	{
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlyArray<DynamicVar>(new DynamicVar[3]
+		{
+			new MaxHpVar(1m),
+			new EnergyVar(2),
+			new CardsVar(2)
+		});
+
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(base.EnergyHoverTip);
+
+		public BrightestFlame()
+			: base(0, CardType.Skill, CardRarity.Ancient, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await PlayerCmd.GainEnergy(base.DynamicVars.Energy.IntValue, base.Owner);
+			await CardPileCmd.Draw(choiceContext, base.DynamicVars.Cards.BaseValue, base.Owner);
+			await CreatureCmd.LoseMaxHp(choiceContext, base.Owner.Creature, base.DynamicVars.MaxHp.BaseValue, isFromCard: true);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Energy.UpgradeValueBy(1m);
+			base.DynamicVars.Cards.UpgradeValueBy(1m);
+		}
+	}
+	public sealed class BubbleBubble : CardModel
+	{
+		protected override bool ShouldGlowGoldInternal => base.CombatState?.HittableEnemies.Any((Creature e) => e.HasPower<PoisonPower>()) ?? false;
+
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(HoverTipFactory.FromPower<PoisonPower>());
+
+		protected override IEnumerable<string> ExtraRunAssetPaths => NSmokePuffVfx.AssetPaths;
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new PowerVar<PoisonPower>(9m));
+
+		public BubbleBubble()
+			: base(1, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy)
+		{
+		}
+
+		protected override async Ta

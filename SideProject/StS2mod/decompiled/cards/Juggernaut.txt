@@ -1,0 +1,133 @@
+﻿public sealed class Juggernaut : CardModel
+	{
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(HoverTipFactory.Static(StaticHoverTip.Block));
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new PowerVar<JuggernautPower>(5m));
+
+		public Juggernaut()
+			: base(2, CardType.Power, CardRarity.Rare, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await CreatureCmd.TriggerAnim(base.Owner.Creature, "Cast", base.Owner.Character.CastAnimDelay);
+			await PowerCmd.Apply<JuggernautPower>(base.Owner.Creature, base.DynamicVars["JuggernautPower"].BaseValue, base.Owner.Creature, this);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars["JuggernautPower"].UpgradeValueBy(2m);
+		}
+	}
+	public sealed class Juggling : CardModel
+	{
+		public Juggling()
+			: base(1, CardType.Power, CardRarity.Uncommon, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await PowerCmd.Apply<JugglingPower>(base.Owner.Creature, 1m, base.Owner.Creature, this);
+		}
+
+		protected override void OnUpgrade()
+		{
+			AddKeyword(CardKeyword.Innate);
+		}
+	}
+	public sealed class KinglyKick : CardModel
+	{
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new DamageVar(24m, ValueProp.Move));
+
+		public KinglyKick()
+			: base(4, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			ArgumentNullException.ThrowIfNull(cardPlay.Target, "cardPlay.Target");
+			await DamageCmd.Attack(base.DynamicVars.Damage.BaseValue).FromCard(this).Targeting(cardPlay.Target)
+				.WithHitFx("vfx/vfx_attack_slash", null, "heavy_attack.mp3")
+				.Execute(choiceContext);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Damage.UpgradeValueBy(6m);
+		}
+
+		public override Task AfterCardDrawn(PlayerChoiceContext choiceContext, CardModel card, bool fromHandDraw)
+		{
+			if (card != this)
+			{
+				return Task.CompletedTask;
+			}
+			base.EnergyCost.AddThisCombat(-1);
+			return Task.CompletedTask;
+		}
+	}
+	public sealed class KinglyPunch : CardModel
+	{
+		private const string _increaseKey = "Increase";
+
+		private decimal _extraDamage;
+
+		private decimal ExtraDamage
+		{
+			get
+			{
+				return _extraDamage;
+			}
+			set
+			{
+				AssertMutable();
+				_extraDamage = value;
+			}
+		}
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlyArray<DynamicVar>(new DynamicVar[2]
+		{
+			new DamageVar(8m, ValueProp.Move),
+			new DynamicVar("Increase", 3m)
+		});
+
+		public KinglyPunch()
+			: base(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			ArgumentNullException.ThrowIfNull(cardPlay.Target, "cardPlay.Target");
+			await DamageCmd.Attack(base.DynamicVars.Damage.BaseValue).FromCard(this).Targeting(cardPlay.Target)
+				.WithHitFx("vfx/vfx_attack_slash")
+				.Execute(choiceContext);
+		}
+
+		public override Task AfterCardDrawn(PlayerChoiceContext choiceContext, CardModel card, bool fromHandDraw)
+		{
+			if (card != this)
+			{
+				return Task.CompletedTask;
+			}
+			decimal baseValue = base.DynamicVars["Increase"].BaseValue;
+			base.DynamicVars.Damage.BaseValue += baseValue;
+			ExtraDamage += baseValue;
+			return Task.CompletedTask;
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars["Increase"].UpgradeValueBy(2m);
+		}
+
+		protected override void AfterDowngraded()
+		{
+			base.AfterDowngraded();
+			base.DynamicVars.Damage.BaseValue += ExtraDamage;
+		}
+	}
+	pub

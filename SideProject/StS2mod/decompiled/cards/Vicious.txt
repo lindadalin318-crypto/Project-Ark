@@ -1,0 +1,108 @@
+﻿public sealed class Vicious : CardModel
+	{
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(HoverTipFactory.FromPower<VulnerablePower>());
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new CardsVar(1));
+
+		public Vicious()
+			: base(1, CardType.Power, CardRarity.Uncommon, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await CreatureCmd.TriggerAnim(base.Owner.Creature, "Cast", base.Owner.Character.CastAnimDelay);
+			await PowerCmd.Apply<ViciousPower>(base.Owner.Creature, base.DynamicVars.Cards.BaseValue, base.Owner.Creature, this);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Cards.UpgradeValueBy(1m);
+		}
+	}
+	public sealed class Void : CardModel
+	{
+		public override int MaxUpgradeLevel => 0;
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new EnergyVar(1));
+
+		public override IEnumerable<CardKeyword> CanonicalKeywords => new global::<>z__ReadOnlyArray<CardKeyword>(new CardKeyword[2]
+		{
+			CardKeyword.Unplayable,
+			CardKeyword.Ethereal
+		});
+
+		public Void()
+			: base(-1, CardType.Status, CardRarity.Status, TargetType.None)
+		{
+		}
+
+		public override async Task AfterCardDrawn(PlayerChoiceContext choiceContext, CardModel card, bool fromHandDraw)
+		{
+			if (card == this)
+			{
+				await Cmd.Wait(0.25f);
+				await PlayerCmd.LoseEnergy(base.DynamicVars.Energy.IntValue, base.Owner);
+			}
+		}
+	}
+	public sealed class VoidForm : CardModel
+	{
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new PowerVar<VoidFormPower>(2m));
+
+		public VoidForm()
+			: base(3, CardType.Power, CardRarity.Rare, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await CreatureCmd.TriggerAnim(base.Owner.Creature, "Cast", base.Owner.Character.CastAnimDelay);
+			await PowerCmd.Apply<VoidFormPower>(base.Owner.Creature, base.DynamicVars["VoidFormPower"].BaseValue, base.Owner.Creature, this);
+			PlayerCmd.EndTurn(base.Owner, canBackOut: false);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars["VoidFormPower"].UpgradeValueBy(1m);
+		}
+	}
+	public sealed class Volley : CardModel
+	{
+		protected override bool HasEnergyCostX => true;
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new DamageVar(10m, ValueProp.Move));
+
+		public Volley()
+			: base(0, CardType.Attack, CardRarity.Uncommon, TargetType.RandomEnemy)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await DamageCmd.Attack(base.DynamicVars.Damage.BaseValue).WithHitCount(ResolveEnergyXValue()).FromCard(this)
+				.TargetingRandomOpponents(base.CombatState)
+				.WithHitFx("vfx/vfx_attack_slash")
+				.Execute(choiceContext);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Damage.UpgradeValueBy(4m);
+		}
+	}
+	public sealed class Voltaic : CardModel
+	{
+		private const string _calculatedChannelsKey = "CalculatedChannels";
+
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlyArray<IHoverTip>(new IHoverTip[2]
+		{
+			HoverTipFactory.Static(StaticHoverTip.Channeling),
+			HoverTipFactory.FromOrb<LightningOrb>()
+		});
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlyArray<DynamicVar>(new DynamicVar[3]
+		{
+			new CalculationBaseVar(0m),
+			new CalculationExtraVar(1m),
+			new CalculatedVar("CalculatedChannels").WithMultiplier((CardModel card, Creature? _) => CombatManager.Instance.History.Entries.OfType<OrbChanneledEntry>().Count((OrbChanneledEnt

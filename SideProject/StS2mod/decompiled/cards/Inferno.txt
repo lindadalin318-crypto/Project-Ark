@@ -1,0 +1,107 @@
+﻿public sealed class Inferno : CardModel
+	{
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new PowerVar<InfernoPower>(6m));
+
+		public Inferno()
+			: base(1, CardType.Power, CardRarity.Uncommon, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await CreatureCmd.TriggerAnim(base.Owner.Creature, "Cast", base.Owner.Character.CastAnimDelay);
+			(await PowerCmd.Apply<InfernoPower>(base.Owner.Creature, base.DynamicVars["InfernoPower"].BaseValue, base.Owner.Creature, this))?.IncrementSelfDamage();
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars["InfernoPower"].UpgradeValueBy(3m);
+		}
+	}
+	public sealed class InfiniteBlades : CardModel
+	{
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(HoverTipFactory.FromCard<Shiv>());
+
+		public InfiniteBlades()
+			: base(1, CardType.Power, CardRarity.Uncommon, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await CreatureCmd.TriggerAnim(base.Owner.Creature, "Cast", base.Owner.Character.CastAnimDelay);
+			await PowerCmd.Apply<InfiniteBladesPower>(base.Owner.Creature, 1m, base.Owner.Creature, this);
+		}
+
+		protected override void OnUpgrade()
+		{
+			AddKeyword(CardKeyword.Innate);
+		}
+	}
+	public sealed class Inflame : CardModel
+	{
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new PowerVar<StrengthPower>(2m));
+
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(HoverTipFactory.FromPower<StrengthPower>());
+
+		protected override IEnumerable<string> ExtraRunAssetPaths => NGroundFireVfx.AssetPaths;
+
+		public Inflame()
+			: base(1, CardType.Power, CardRarity.Uncommon, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			NPowerUpVfx.CreateNormal(base.Owner.Creature);
+			await PowerCmd.Apply<StrengthPower>(base.Owner.Creature, base.DynamicVars["StrengthPower"].BaseValue, base.Owner.Creature, this);
+		}
+
+		public override async Task OnEnqueuePlayVfx(Creature? target)
+		{
+			NCombatRoom.Instance?.CombatVfxContainer.AddChildSafely(NGroundFireVfx.Create(base.Owner.Creature));
+			await CreatureCmd.TriggerAnim(base.Owner.Creature, "Cast", base.Owner.Character.CastAnimDelay);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars["StrengthPower"].UpgradeValueBy(1m);
+		}
+	}
+	public sealed class Injury : CardModel
+	{
+		public override int MaxUpgradeLevel => 0;
+
+		public override IEnumerable<CardKeyword> CanonicalKeywords => new global::<>z__ReadOnlySingleElementList<CardKeyword>(CardKeyword.Unplayable);
+
+		public Injury()
+			: base(-1, CardType.Curse, CardRarity.Curse, TargetType.None)
+		{
+		}
+	}
+	public sealed class Intercept : CardModel
+	{
+		public override CardMultiplayerConstraint MultiplayerConstraint => CardMultiplayerConstraint.MultiplayerOnly;
+
+		public override bool GainsBlock => true;
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new BlockVar(9m, ValueProp.Move));
+
+		public Intercept()
+			: base(1, CardType.Skill, CardRarity.Uncommon, TargetType.AnyAlly)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			ArgumentNullException.ThrowIfNull(cardPlay.Target, "cardPlay.Target");
+			await CreatureCmd.GainBlock(base.Owner.Creature, base.DynamicVars.Block, cardPlay);
+			await PowerCmd.Apply<CoveredPower>(cardPlay.Target, 1m, base.Owner.Creature, this);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Block.UpgradeValueBy(4m);
+		}
+	}
+	public sealed 

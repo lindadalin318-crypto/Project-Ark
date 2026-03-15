@@ -1,0 +1,97 @@
+﻿public sealed class Corruption : CardModel
+	{
+		private const string _powerVarName = "Power";
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new DynamicVar("Power", 1m));
+
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(HoverTipFactory.FromKeyword(CardKeyword.Exhaust));
+
+		public Corruption()
+			: base(3, CardType.Power, CardRarity.Ancient, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			NPowerUpVfx.CreateNormal(base.Owner.Creature);
+			await CreatureCmd.TriggerAnim(base.Owner.Creature, "Cast", base.Owner.Character.CastAnimDelay);
+			await PowerCmd.Apply<CorruptionPower>(base.Owner.Creature, base.DynamicVars["Power"].BaseValue, base.Owner.Creature, this);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.EnergyCost.UpgradeBy(-1);
+		}
+	}
+	public sealed class CosmicIndifference : CardModel
+	{
+		public override bool GainsBlock => true;
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new BlockVar(6m, ValueProp.Move));
+
+		public CosmicIndifference()
+			: base(1, CardType.Skill, CardRarity.Common, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await CreatureCmd.GainBlock(base.Owner.Creature, base.DynamicVars.Block, cardPlay);
+			CardSelectorPrefs prefs = new CardSelectorPrefs(base.SelectionScreenPrompt, 1);
+			CardPile pile = PileType.Discard.GetPile(base.Owner);
+			CardModel cardModel = (await CardSelectCmd.FromSimpleGrid(choiceContext, pile.Cards, base.Owner, prefs)).FirstOrDefault();
+			if (cardModel != null)
+			{
+				await CardPileCmd.Add(cardModel, PileType.Draw, CardPilePosition.Top);
+			}
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Block.UpgradeValueBy(3m);
+		}
+	}
+	public sealed class Countdown : CardModel
+	{
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new PowerVar<CountdownPower>(6m));
+
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(HoverTipFactory.FromPower<DoomPower>());
+
+		public Countdown()
+			: base(1, CardType.Power, CardRarity.Uncommon, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await CreatureCmd.TriggerAnim(base.Owner.Creature, "Cast", base.Owner.Character.CastAnimDelay);
+			await PowerCmd.Apply<CountdownPower>(base.Owner.Creature, base.DynamicVars["CountdownPower"].BaseValue, base.Owner.Creature, this);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars["CountdownPower"].UpgradeValueBy(3m);
+		}
+	}
+	public sealed class CrashLanding : CardModel
+	{
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(HoverTipFactory.FromCard<Debris>());
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new DamageVar(21m, ValueProp.Move));
+
+		public CrashLanding()
+			: base(1, CardType.Attack, CardRarity.Rare, TargetType.AllEnemies)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await DamageCmd.Attack(base.DynamicVars.Damage.BaseValue).FromCard(this).TargetingAllOpponents(base.CombatState)
+				.WithHitFx("vfx/vfx_heavy_blunt", null, "heavy_attack.mp3")
+				.WithHitVfxSpawnedAtBase()
+				.Execute(choiceContext);
+			int num = 10 - CardPile.GetCards(base.Owner, PileType.Hand).Count();
+			List<CardModel> list = new List<CardModel>();
+			for (int i = 0; i < num; i++)
+			{
+				list.Add(base.CombatState.CreateCard<Debris>(base.Owner));

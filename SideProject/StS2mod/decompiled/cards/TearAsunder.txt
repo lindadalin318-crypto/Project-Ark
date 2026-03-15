@@ -1,0 +1,103 @@
+﻿public sealed class TearAsunder : CardModel
+	{
+		private const string _calculatedHitsKey = "CalculatedHits";
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlyArray<DynamicVar>(new DynamicVar[5]
+		{
+			new DamageVar(5m, ValueProp.Move),
+			new RepeatVar(1),
+			new CalculationBaseVar(0m),
+			new CalculationExtraVar(1m),
+			new CalculatedVar("CalculatedHits").WithMultiplier((CardModel card, Creature? _) => 1 + CombatManager.Instance.History.Entries.OfType<DamageReceivedEntry>().Count((DamageReceivedEntry e) => e.Receiver == card.Owner.Creature && e.Result.UnblockedDamage > 0))
+		});
+
+		public TearAsunder()
+			: base(2, CardType.Attack, CardRarity.Rare, TargetType.AnyEnemy)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			ArgumentNullException.ThrowIfNull(cardPlay.Target, "cardPlay.Target");
+			await DamageCmd.Attack(base.DynamicVars.Damage.BaseValue).WithHitCount((int)((CalculatedVar)base.DynamicVars["CalculatedHits"]).Calculate(cardPlay.Target)).FromCard(this)
+				.Targeting(cardPlay.Target)
+				.WithHitFx("vfx/vfx_attack_slash")
+				.Execute(choiceContext);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Damage.UpgradeValueBy(2m);
+		}
+	}
+	public sealed class Tempest : CardModel
+	{
+		protected override bool HasEnergyCostX => true;
+
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlyArray<IHoverTip>(new IHoverTip[2]
+		{
+			HoverTipFactory.Static(StaticHoverTip.Channeling),
+			HoverTipFactory.FromOrb<LightningOrb>()
+		});
+
+		public Tempest()
+			: base(0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await CreatureCmd.TriggerAnim(base.Owner.Creature, "Cast", base.Owner.Character.CastAnimDelay);
+			int numOfOrbs = ResolveEnergyXValue();
+			if (base.IsUpgraded)
+			{
+				numOfOrbs++;
+			}
+			for (int i = 0; i < numOfOrbs; i++)
+			{
+				await OrbCmd.Channel<LightningOrb>(choiceContext, base.Owner);
+			}
+		}
+	}
+	public sealed class Terraforming : CardModel
+	{
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new PowerVar<VigorPower>(6m));
+
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(HoverTipFactory.FromPower<VigorPower>());
+
+		public Terraforming()
+			: base(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await PowerCmd.Apply<VigorPower>(base.Owner.Creature, base.DynamicVars["VigorPower"].IntValue, base.Owner.Creature, this);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars["VigorPower"].UpgradeValueBy(2m);
+		}
+	}
+	public sealed class TeslaCoil : CardModel
+	{
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(HoverTipFactory.FromOrb<LightningOrb>());
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new DamageVar(3m, ValueProp.Move));
+
+		public TeslaCoil()
+			: base(0, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			ArgumentNullException.ThrowIfNull(cardPlay.Target, "cardPlay.Target");
+			await DamageCmd.Attack(base.DynamicVars.Damage.BaseValue).FromCard(this).Targeting(cardPlay.Target)
+				.WithHitFx("vfx/vfx_attack_slash")
+				.Execute(choiceContext);
+			List<LightningOrb> list = base.Owner.PlayerCombatState.OrbQueue.Orbs.OfType<LightningOrb>().ToList();
+			foreach (LightningOrb item in list)
+			{
+				await OrbCmd.Passive(choiceContext, item, cardPlay

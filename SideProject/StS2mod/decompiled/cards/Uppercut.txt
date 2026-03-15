@@ -1,0 +1,103 @@
+﻿public sealed class Uppercut : CardModel
+	{
+		private const string _powerKey = "Power";
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlyArray<DynamicVar>(new DynamicVar[2]
+		{
+			new DamageVar(13m, ValueProp.Move),
+			new DynamicVar("Power", 1m)
+		});
+
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlyArray<IHoverTip>(new IHoverTip[2]
+		{
+			HoverTipFactory.FromPower<WeakPower>(),
+			HoverTipFactory.FromPower<VulnerablePower>()
+		});
+
+		public Uppercut()
+			: base(2, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			ArgumentNullException.ThrowIfNull(cardPlay.Target, "cardPlay.Target");
+			await DamageCmd.Attack(base.DynamicVars.Damage.BaseValue).FromCard(this).Targeting(cardPlay.Target)
+				.WithHitFx("vfx/vfx_attack_slash")
+				.Execute(choiceContext);
+			int amount = base.DynamicVars["Power"].IntValue;
+			await PowerCmd.Apply<WeakPower>(cardPlay.Target, amount, base.Owner.Creature, this);
+			await PowerCmd.Apply<VulnerablePower>(cardPlay.Target, amount, base.Owner.Creature, this);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars["Power"].UpgradeValueBy(1m);
+		}
+	}
+	public sealed class Uproar : CardModel
+	{
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new DamageVar(5m, ValueProp.Move));
+
+		public Uproar()
+			: base(2, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			ArgumentNullException.ThrowIfNull(cardPlay.Target, "cardPlay.Target");
+			await DamageCmd.Attack(base.DynamicVars.Damage.BaseValue).FromCard(this).WithHitCount(2)
+				.Targeting(cardPlay.Target)
+				.WithHitFx("vfx/vfx_attack_slash")
+				.Execute(choiceContext);
+			CardModel cardModel = PileType.Draw.GetPile(base.Owner).Cards.Where((CardModel c) => c.Type == CardType.Attack && !c.Keywords.Contains(CardKeyword.Unplayable)).ToList().StableShuffle(base.Owner.RunState.Rng.Shuffle)
+				.FirstOrDefault();
+			if (cardModel == null)
+			{
+				cardModel = PileType.Draw.GetPile(base.Owner).Cards.Where((CardModel c) => c.Type == CardType.Attack).ToList().StableShuffle(base.Owner.RunState.Rng.Shuffle)
+					.FirstOrDefault();
+			}
+			if (cardModel != null)
+			{
+				await CardCmd.AutoPlay(choiceContext, cardModel, null);
+			}
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Damage.UpgradeValueBy(2m);
+		}
+	}
+	public sealed class Veilpiercer : CardModel
+	{
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new DamageVar(10m, ValueProp.Move));
+
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(HoverTipFactory.FromKeyword(CardKeyword.Ethereal));
+
+		public Veilpiercer()
+			: base(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			ArgumentNullException.ThrowIfNull(cardPlay.Target, "cardPlay.Target");
+			await DamageCmd.Attack(base.DynamicVars.Damage.BaseValue).FromCard(this).Targeting(cardPlay.Target)
+				.WithHitFx("vfx/vfx_attack_slash")
+				.Execute(choiceContext);
+			await PowerCmd.Apply<VeilpiercerPower>(base.Owner.Creature, 1m, base.Owner.Creature, this);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Damage.UpgradeValueBy(3m);
+		}
+	}
+	public sealed class Venerate : CardModel
+	{
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new StarsVar(2));
+
+		public Venerate()
+			: base(1, CardType.Skill, CardRarity.Basic, TargetType.Self)
+		{

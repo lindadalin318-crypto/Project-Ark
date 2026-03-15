@@ -1,0 +1,117 @@
+﻿public sealed class Pillage : CardModel
+	{
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new DamageVar(6m, ValueProp.Move));
+
+		public Pillage()
+			: base(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			ArgumentNullException.ThrowIfNull(cardPlay.Target, "cardPlay.Target");
+			await DamageCmd.Attack(base.DynamicVars.Damage.BaseValue).FromCard(this).Targeting(cardPlay.Target)
+				.WithHitFx("vfx/vfx_attack_slash")
+				.Execute(choiceContext);
+			CardModel cardModel;
+			do
+			{
+				cardModel = await CardPileCmd.Draw(choiceContext, base.Owner);
+			}
+			while (cardModel != null && cardModel.Type == CardType.Attack && CardPile.GetCards(base.Owner, PileType.Hand).Count() < 10);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Damage.UpgradeValueBy(3m);
+		}
+	}
+	public sealed class PillarOfCreation : CardModel
+	{
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(HoverTipFactory.Static(StaticHoverTip.Block));
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new BlockVar(3m, ValueProp.Unpowered));
+
+		public PillarOfCreation()
+			: base(1, CardType.Power, CardRarity.Uncommon, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await PowerCmd.Apply<PillarOfCreationPower>(base.Owner.Creature, base.DynamicVars.Block.BaseValue, base.Owner.Creature, this);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Block.UpgradeValueBy(1m);
+		}
+	}
+	public sealed class Pinpoint : CardModel
+	{
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new DamageVar(17m, ValueProp.Move));
+
+		public Pinpoint()
+			: base(3, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			ArgumentNullException.ThrowIfNull(cardPlay.Target, "cardPlay.Target");
+			await DamageCmd.Attack(base.DynamicVars.Damage.BaseValue).FromCard(this).Targeting(cardPlay.Target)
+				.WithHitFx("vfx/vfx_attack_slash")
+				.Execute(choiceContext);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Damage.UpgradeValueBy(5m);
+		}
+
+		public override Task AfterCardEnteredCombat(CardModel card)
+		{
+			if (card != this)
+			{
+				return Task.CompletedTask;
+			}
+			if (base.IsClone)
+			{
+				return Task.CompletedTask;
+			}
+			int amount = CombatManager.Instance.History.CardPlaysFinished.Count((CardPlayFinishedEntry e) => e.CardPlay.Card.Type == CardType.Skill && e.CardPlay.Card.Owner == base.Owner && e.HappenedThisTurn(base.CombatState));
+			ReduceCostBy(amount);
+			return Task.CompletedTask;
+		}
+
+		public override Task AfterCardPlayed(PlayerChoiceContext context, CardPlay cardPlay)
+		{
+			if (cardPlay.Card.Owner != base.Owner)
+			{
+				return Task.CompletedTask;
+			}
+			if (cardPlay.Card.Type != CardType.Skill)
+			{
+				return Task.CompletedTask;
+			}
+			ReduceCostBy(1);
+			return Task.CompletedTask;
+		}
+
+		private void ReduceCostBy(int amount)
+		{
+			base.EnergyCost.AddThisTurn(-amount);
+		}
+	}
+	public sealed class PoisonedStab : CardModel
+	{
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlyArray<DynamicVar>(new DynamicVar[2]
+		{
+			new DamageVar(6m, ValueProp.Move),
+			new PowerVar<PoisonPower>(3m)
+		});
+
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(HoverTipFactory.FromPower<PoisonPower>());
+
+		public PoisonedStab()
+			: base(1, CardType.Attack, CardRarity.Commo

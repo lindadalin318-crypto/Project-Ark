@@ -1,0 +1,108 @@
+﻿public sealed class PrimalForce : CardModel
+	{
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(HoverTipFactory.FromCard<GiantRock>(base.IsUpgraded));
+
+		public PrimalForce()
+			: base(0, CardType.Skill, CardRarity.Rare, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await CreatureCmd.TriggerAnim(base.Owner.Creature, "Cast", base.Owner.Character.CastAnimDelay);
+			List<CardModel> list = PileType.Hand.GetPile(base.Owner).Cards.Where((CardModel c) => c != null && c.IsTransformable && c.Type == CardType.Attack).ToList();
+			foreach (CardModel item in list)
+			{
+				CardModel cardModel = base.CombatState.CreateCard<GiantRock>(base.Owner);
+				if (base.IsUpgraded)
+				{
+					CardCmd.Upgrade(cardModel);
+				}
+				await CardCmd.Transform(item, cardModel);
+			}
+		}
+	}
+	public sealed class Production : CardModel
+	{
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new EnergyVar(2));
+
+		public override IEnumerable<CardKeyword> CanonicalKeywords => new global::<>z__ReadOnlySingleElementList<CardKeyword>(CardKeyword.Exhaust);
+
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(base.EnergyHoverTip);
+
+		public Production()
+			: base(0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await PlayerCmd.GainEnergy(base.DynamicVars.Energy.BaseValue, base.Owner);
+		}
+
+		protected override void OnUpgrade()
+		{
+			RemoveKeyword(CardKeyword.Exhaust);
+		}
+	}
+	public sealed class Prolong : CardModel
+	{
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(HoverTipFactory.Static(StaticHoverTip.Block));
+
+		public override IEnumerable<CardKeyword> CanonicalKeywords => new global::<>z__ReadOnlySingleElementList<CardKeyword>(CardKeyword.Exhaust);
+
+		public Prolong()
+			: base(0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			Creature creature = base.Owner.Creature;
+			await PowerCmd.Apply<BlockNextTurnPower>(creature, creature.Block, creature, this);
+		}
+
+		protected override void OnUpgrade()
+		{
+			RemoveKeyword(CardKeyword.Exhaust);
+		}
+	}
+	public sealed class Prophesize : CardModel
+	{
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new CardsVar(6));
+
+		public Prophesize()
+			: base(2, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await CreatureCmd.TriggerAnim(base.Owner.Creature, "Cast", base.Owner.Character.AttackAnimDelay);
+			await CardPileCmd.Draw(choiceContext, base.DynamicVars.Cards.BaseValue, base.Owner);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Cards.UpgradeValueBy(3m);
+		}
+	}
+	public sealed class Protector : CardModel
+	{
+		protected override bool ShouldGlowRedInternal => base.Owner.IsOstyMissing;
+
+		protected override HashSet<CardTag> CanonicalTags => new HashSet<CardTag> { CardTag.OstyAttack };
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlyArray<DynamicVar>(new DynamicVar[3]
+		{
+			new CalculationBaseVar(10m),
+			new ExtraDamageVar(1m).FromOsty(),
+			new CalculatedDamageVar(ValueProp.Move).FromOsty().WithMultiplier(delegate(CardModel card, Creature? _)
+			{
+				Creature osty = card.Owner.Osty;
+				return (osty != null && osty.IsAlive) ? osty.MaxHp : 0;
+			})
+		});
+
+		public Protector()
+			: base(1, CardType.Attack, CardRarity.Anci

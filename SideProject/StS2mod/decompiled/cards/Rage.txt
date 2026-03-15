@@ -1,0 +1,120 @@
+﻿public sealed class Rage : CardModel
+	{
+		private const string _powerKey = "Power";
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new DynamicVar("Power", 3m));
+
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(HoverTipFactory.Static(StaticHoverTip.Block));
+
+		public Rage()
+			: base(0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await CreatureCmd.TriggerAnim(base.Owner.Creature, "Cast", base.Owner.Character.CastAnimDelay);
+			await PowerCmd.Apply<RagePower>(base.Owner.Creature, base.DynamicVars["Power"].BaseValue, base.Owner.Creature, this);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars["Power"].UpgradeValueBy(2m);
+		}
+	}
+	public sealed class Rainbow : CardModel
+	{
+		public override IEnumerable<CardKeyword> CanonicalKeywords => new global::<>z__ReadOnlySingleElementList<CardKeyword>(CardKeyword.Exhaust);
+
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlyArray<IHoverTip>(new IHoverTip[4]
+		{
+			HoverTipFactory.Static(StaticHoverTip.Channeling),
+			HoverTipFactory.FromOrb<LightningOrb>(),
+			HoverTipFactory.FromOrb<FrostOrb>(),
+			HoverTipFactory.FromOrb<DarkOrb>()
+		});
+
+		public Rainbow()
+			: base(2, CardType.Skill, CardRarity.Rare, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await CreatureCmd.TriggerAnim(base.Owner.Creature, "Cast", base.Owner.Character.CastAnimDelay);
+			await OrbCmd.Channel<LightningOrb>(choiceContext, base.Owner);
+			await OrbCmd.Channel<FrostOrb>(choiceContext, base.Owner);
+			await OrbCmd.Channel<DarkOrb>(choiceContext, base.Owner);
+		}
+
+		protected override void OnUpgrade()
+		{
+			RemoveKeyword(CardKeyword.Exhaust);
+		}
+	}
+	public sealed class Rally : CardModel
+	{
+		public override CardMultiplayerConstraint MultiplayerConstraint => CardMultiplayerConstraint.MultiplayerOnly;
+
+		public override bool GainsBlock => true;
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new BlockVar(12m, ValueProp.Move));
+
+		public Rally()
+			: base(2, CardType.Skill, CardRarity.Rare, TargetType.AllAllies)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			IEnumerable<Creature> enumerable = from c in base.CombatState.GetTeammatesOf(base.Owner.Creature)
+				where c != null && c.IsAlive && c.IsPlayer
+				select c;
+			foreach (Creature item in enumerable)
+			{
+				await CreatureCmd.GainBlock(item, base.DynamicVars.Block, cardPlay);
+			}
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Block.UpgradeValueBy(5m);
+		}
+	}
+	public sealed class Rampage : CardModel
+	{
+		private const string _increaseKey = "Increase";
+
+		private decimal _extraDamageFromPlays;
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlyArray<DynamicVar>(new DynamicVar[2]
+		{
+			new DamageVar(9m, ValueProp.Move),
+			new DynamicVar("Increase", 5m)
+		});
+
+		private decimal ExtraDamageFromPlays
+		{
+			get
+			{
+				return _extraDamageFromPlays;
+			}
+			set
+			{
+				AssertMutable();
+				_extraDamageFromPlays = value;
+			}
+		}
+
+		public Rampage()
+			: base(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			ArgumentNullException.ThrowIfNull(cardPlay.Target, "cardPlay.Target");
+			await DamageCmd.Attack(base.DynamicVars.Damage.BaseValue).FromCard(this).Targeting(cardPlay.Target)
+				.WithHitFx("vfx/vfx_attack_slash")
+				.Execute(choiceContext);
+			base.DynamicVars.D

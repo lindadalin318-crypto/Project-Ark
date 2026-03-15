@@ -1,0 +1,113 @@
+﻿public sealed class Hellraiser : CardModel
+	{
+		protected override IEnumerable<string> ExtraRunAssetPaths => NHellraiserVfx.AssetPaths;
+
+		public Hellraiser()
+			: base(2, CardType.Power, CardRarity.Rare, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await PowerCmd.Apply<HellraiserPower>(base.Owner.Creature, 1m, base.Owner.Creature, this);
+		}
+
+		public override async Task OnEnqueuePlayVfx(Creature? target)
+		{
+			NCombatRoom.Instance?.CombatVfxContainer.AddChildSafely(NHellraiserVfx.Create(base.Owner.Creature));
+			await CreatureCmd.TriggerAnim(base.Owner.Creature, "Cast", base.Owner.Character.CastAnimDelay);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.EnergyCost.UpgradeBy(-1);
+		}
+	}
+	public sealed class Hemokinesis : CardModel
+	{
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlyArray<DynamicVar>(new DynamicVar[2]
+		{
+			new HpLossVar(2m),
+			new DamageVar(14m, ValueProp.Move)
+		});
+
+		public Hemokinesis()
+			: base(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			ArgumentNullException.ThrowIfNull(cardPlay.Target, "cardPlay.Target");
+			await CreatureCmd.Damage(choiceContext, base.Owner.Creature, base.DynamicVars.HpLoss.BaseValue, ValueProp.Unblockable | ValueProp.Unpowered | ValueProp.Move, this);
+			await DamageCmd.Attack(base.DynamicVars.Damage.BaseValue).FromCard(this).Targeting(cardPlay.Target)
+				.WithHitFx("vfx/vfx_bloody_impact")
+				.Execute(choiceContext);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Damage.UpgradeValueBy(5m);
+		}
+	}
+	public sealed class HiddenCache : CardModel
+	{
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlyArray<DynamicVar>(new DynamicVar[2]
+		{
+			new StarsVar(1),
+			new PowerVar<StarNextTurnPower>(3m)
+		});
+
+		public HiddenCache()
+			: base(1, CardType.Skill, CardRarity.Common, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await CreatureCmd.TriggerAnim(base.Owner.Creature, "Cast", base.Owner.Character.CastAnimDelay);
+			await PlayerCmd.GainStars(base.DynamicVars.Stars.BaseValue, base.Owner);
+			await PowerCmd.Apply<StarNextTurnPower>(base.Owner.Creature, base.DynamicVars["StarNextTurnPower"].BaseValue, base.Owner.Creature, this);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars["StarNextTurnPower"].UpgradeValueBy(1m);
+		}
+	}
+	public sealed class HiddenDaggers : CardModel
+	{
+		private const string _shivKey = "Shivs";
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlyArray<DynamicVar>(new DynamicVar[2]
+		{
+			new CardsVar(2),
+			new DynamicVar("Shivs", 2m)
+		});
+
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(HoverTipFactory.FromCard<Shiv>(base.IsUpgraded));
+
+		public HiddenDaggers()
+			: base(0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await CardCmd.Discard(choiceContext, await CardSelectCmd.FromHandForDiscard(choiceContext, base.Owner, new CardSelectorPrefs(CardSelectorPrefs.DiscardSelectionPrompt, base.DynamicVars.Cards.IntValue), null, this));
+			IEnumerable<CardModel> enumerable = await Shiv.CreateInHand(base.Owner, base.DynamicVars["Shivs"].IntValue, base.CombatState);
+			if (!base.IsUpgraded)
+			{
+				return;
+			}
+			foreach (CardModel item in enumerable)
+			{
+				CardCmd.Upgrade(item);
+			}
+		}
+	}
+	public sealed class HiddenGem : CardModel
+	{
+		private const string _replayKey = "Replay";
+
+		protected override IEnumerable<DynamicVar> CanonicalVars =

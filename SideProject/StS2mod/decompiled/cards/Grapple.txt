@@ -1,0 +1,111 @@
+﻿public sealed class Grapple : CardModel
+	{
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlyArray<DynamicVar>(new DynamicVar[2]
+		{
+			new DamageVar(7m, ValueProp.Move),
+			new PowerVar<GrapplePower>(5m)
+		});
+
+		public Grapple()
+			: base(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			ArgumentNullException.ThrowIfNull(cardPlay.Target, "cardPlay.Target");
+			await DamageCmd.Attack(base.DynamicVars.Damage.BaseValue).FromCard(this).Targeting(cardPlay.Target)
+				.WithHitFx("vfx/vfx_attack_slash")
+				.Execute(choiceContext);
+			await PowerCmd.Apply<GrapplePower>(cardPlay.Target, base.DynamicVars["GrapplePower"].IntValue, base.Owner.Creature, this);
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Damage.UpgradeValueBy(2m);
+			base.DynamicVars["GrapplePower"].UpgradeValueBy(2m);
+		}
+	}
+	public sealed class Graveblast : CardModel
+	{
+		public override IEnumerable<CardKeyword> CanonicalKeywords => new global::<>z__ReadOnlySingleElementList<CardKeyword>(CardKeyword.Exhaust);
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlySingleElementList<DynamicVar>(new DamageVar(4m, ValueProp.Move));
+
+		public Graveblast()
+			: base(1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			ArgumentNullException.ThrowIfNull(cardPlay.Target, "cardPlay.Target");
+			await DamageCmd.Attack(base.DynamicVars.Damage.BaseValue).FromCard(this).Targeting(cardPlay.Target)
+				.WithHitFx("vfx/vfx_attack_slash")
+				.Execute(choiceContext);
+			CardSelectorPrefs prefs = new CardSelectorPrefs(base.SelectionScreenPrompt, 1);
+			CardPile pile = PileType.Discard.GetPile(base.Owner);
+			CardModel cardModel = (await CardSelectCmd.FromSimpleGrid(choiceContext, pile.Cards, base.Owner, prefs)).FirstOrDefault();
+			if (cardModel != null)
+			{
+				await CardPileCmd.Add(cardModel, PileType.Hand);
+			}
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Damage.UpgradeValueBy(2m);
+			RemoveKeyword(CardKeyword.Exhaust);
+		}
+	}
+	public sealed class GraveWarden : CardModel
+	{
+		public override bool GainsBlock => true;
+
+		protected override IEnumerable<DynamicVar> CanonicalVars => new global::<>z__ReadOnlyArray<DynamicVar>(new DynamicVar[2]
+		{
+			new BlockVar(8m, ValueProp.Move),
+			new CardsVar(1)
+		});
+
+		protected override IEnumerable<IHoverTip> ExtraHoverTips => new global::<>z__ReadOnlySingleElementList<IHoverTip>(HoverTipFactory.FromCard<Soul>(base.IsUpgraded));
+
+		public GraveWarden()
+			: base(1, CardType.Skill, CardRarity.Common, TargetType.Self)
+		{
+		}
+
+		protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+		{
+			await CreatureCmd.TriggerAnim(base.Owner.Creature, "Cast", base.Owner.Character.CastAnimDelay);
+			await CreatureCmd.GainBlock(base.Owner.Creature, base.DynamicVars.Block, cardPlay);
+			List<Soul> list = Soul.Create(base.Owner, base.DynamicVars.Cards.IntValue, base.CombatState).ToList();
+			if (base.IsUpgraded)
+			{
+				foreach (Soul item in list)
+				{
+					CardCmd.Upgrade(item);
+				}
+			}
+			CardCmd.PreviewCardPileAdd(await CardPileCmd.AddGeneratedCardsToCombat(list, PileType.Draw, addedByPlayer: true, CardPilePosition.Random));
+		}
+
+		protected override void OnUpgrade()
+		{
+			base.DynamicVars.Block.UpgradeValueBy(2m);
+		}
+	}
+	public class Greed : CardModel
+	{
+		public override int MaxUpgradeLevel => 0;
+
+		public override bool CanBeGeneratedByModifiers => false;
+
+		public override IEnumerable<CardKeyword> CanonicalKeywords => new global::<>z__ReadOnlyArray<CardKeyword>(new CardKeyword[2]
+		{
+			CardKeyword.Eternal,
+			CardKeyword.Unplayable
+		});
+
+		public Greed()
+			: 
