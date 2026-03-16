@@ -16,7 +16,8 @@ public static class AdvisorEngine
         RunSnapshot snapshot)
     {
         var activePaths = BuildPathManager.GetActivePaths();
-        var cardAdvices = CardAdvisor.Analyze(candidateCardIds, snapshot, activePaths);
+        var context = SharedDecisionContext.Create(snapshot, activePaths);
+        var cardAdvices = CardAdvisor.Analyze(candidateCardIds, context);
 
         return new CardRewardAdvice
         {
@@ -39,13 +40,9 @@ public static class AdvisorEngine
     public static CampfireAdvice AnalyzeCampfire(RunSnapshot snapshot)
     {
         var activePaths = BuildPathManager.GetActivePaths();
-        var primaryPath = activePaths.FirstOrDefault();
-        var pathData    = primaryPath != null ? DataLoader.GetBuildPath(primaryPath.PathId) : null;
+        var context = SharedDecisionContext.Create(snapshot, activePaths);
 
-        // 决策逻辑：HP < 40% 时休息；否则查看方案的升级优先队列
-        float hpRatio = snapshot.MaxHP > 0 ? (float)snapshot.HP / snapshot.MaxHP : 1f;
-
-        if (hpRatio < 0.40f)
+        if (context.HPRatio < 0.40f)
         {
             return new CampfireAdvice
             {
@@ -55,8 +52,7 @@ public static class AdvisorEngine
             };
         }
 
-        // 找到最高优先级的升级目标（核心牌中还未升级的）
-        string? upgradeTarget = FindBestUpgradeTarget(pathData, snapshot);
+        string? upgradeTarget = FindBestUpgradeTarget(context.PrimaryPathData, snapshot);
         if (upgradeTarget != null)
         {
             var cardData = DataLoader.GetCard(upgradeTarget);
@@ -65,6 +61,15 @@ public static class AdvisorEngine
                 RecommendedAction   = CampfireAction.Upgrade,
                 Reason              = $"推荐升级「{cardData?.NameZh ?? upgradeTarget}」：{cardData?.UpgradeDeltaZh ?? "核心牌"}",
                 UpgradeTargetCardId = upgradeTarget,
+            };
+        }
+
+        if (context.NeedsPurge && context.HPRatio >= 0.70f)
+        {
+            return new CampfireAdvice
+            {
+                RecommendedAction = CampfireAction.Upgrade,
+                Reason = "当前血量安全，但牌组仍偏厚；若篝火没有关键升级，可优先把后续路线资源留给商店删牌",
             };
         }
 
@@ -80,38 +85,54 @@ public static class AdvisorEngine
     public static ShopAdvice AnalyzeShop(ShopItems shopItems, RunSnapshot snapshot)
     {
         var activePaths = BuildPathManager.GetActivePaths();
+        var context = SharedDecisionContext.Create(snapshot, activePaths);
         var advice = new ShopAdvice
         {
             ActivePaths      = activePaths,
             GoldBudget       = snapshot.Gold,
             PurchasePriority = new List<ShopPurchaseAdvice>(),
-            RemoveAdvice     = BuildRemoveAdvice(snapshot, activePaths),
+            RemoveAdvice     = BuildRemoveAdvice(context),
         };
 
-        // 为每张在售卡牌评分
         foreach (var card in shopItems.Cards)
         {
-            var cardAdvices = CardAdvisor.Analyze(
-                new[] { card.CardId },
-                snapshot,
-                activePaths);
-
-            var cardAdvice = cardAdvices.FirstOrDefault();
-            if (cardAdvice == null) continue;
+            var cardAdvice = CardAdvisor.Analyze(new[] { card.CardId }, context).FirstOrDefault();
+            if (cardAdvice == null)
+                continue;
 
             advice.PurchasePriority.Add(new ShopPurchaseAdvice
             {
-                ItemId      = card.CardId,
-                ItemType    = ShopItemType.Card,
-                NameZh      = cardAdvice.CardNameZh,
-                Price       = card.Price,
+                ItemId = card.CardId,
+                ItemType = ShopItemType.Card,
+                NameZh = cardAdvice.CardNameZh,
+                Price = card.Price,
                 OverallRating = cardAdvice.OverallRating,
-                Reason      = cardAdvice.OverallReason,
+                Score = cardAdvice.PathRatings.Values.Count > 0
+                    ? cardAdvice.PathRatings.Values.Max(r => r.Score)
+                    : 0f,
+                Reason = cardAdvice.OverallReason,
             });
         }
 
-        // 按综合评级排序
-        advice.PurchasePriority.Sort((a, b) => b.OverallRating.CompareTo(a.OverallRating));
+        foreach (var relic in shopItems.Relics)
+        {
+            var relicAdvice = EvaluateRelicPurchase(relic, context);
+            if (relicAdvice != null)
+                advice.PurchasePriority.Add(relicAdvice);
+        }
+
+        advice.PurchasePriority.Sort((a, b) =>
+        {
+            int ratingCompare = a.OverallRating.CompareTo(b.OverallRating);
+            if (ratingCompare != 0)
+                return ratingCompare;
+
+            int scoreCompare = b.Score.CompareTo(a.Score);
+            if (scoreCompare != 0)
+                return scoreCompare;
+
+            return a.Price.CompareTo(b.Price);
+        });
 
         return advice;
     }
@@ -140,40 +161,94 @@ public static class AdvisorEngine
 
     private static string? BuildSkipNote(List<CardAdvice> advices, RunSnapshot snapshot)
     {
-        // 如果所有候选牌都不适合当前方案，建议跳过
+        if (advices.Count == 0)
+            return null;
+
         bool allWeak = advices.All(a =>
             a.OverallRating == CardRating.Skip ||
             a.OverallRating == CardRating.Weak);
 
-        if (allWeak)
-            return "当前三张牌均不适合活跃方案，建议跳过（不选牌）";
+        if (!allWeak)
+            return null;
 
-        return null;
+        return snapshot.DeckCardIds.Count >= 18
+            ? "当前牌组已偏厚，且三张牌都不能明显补强主路线，建议跳过保持密度"
+            : "当前三张牌都不构成有效补强，建议跳过等更关键组件";
     }
 
-    private static RemoveCardAdvice? BuildRemoveAdvice(RunSnapshot snapshot, List<PathState> activePaths)
+    private static RemoveCardAdvice? BuildRemoveAdvice(SharedDecisionContext context)
     {
-        if (snapshot.DeckCardIds.Count == 0) return null;
+        if (context.DeckEntries.Count == 0)
+            return null;
 
-        var primaryPath = activePaths.FirstOrDefault();
-        var pathData = primaryPath != null ? DataLoader.GetBuildPath(primaryPath.PathId) : null;
-
-        // 找到基础牌（打击/防御）中得分最低的，推荐删除
-        var basicCards = snapshot.DeckCardIds
-            .Where(id => id is "strike" or "defend" or "strike+" or "defend+")
-            .ToList();
-
-        if (basicCards.Count > 0)
-        {
-            return new RemoveCardAdvice
-            {
-                RecommendedCardId = basicCards[0],
-                Reason = "删除基础牌以精简牌组，提高关键牌抽到率",
-            };
-        }
-
-        return null;
+        return CardAdvisor.AnalyzeRemove(context);
     }
+
+    private static ShopPurchaseAdvice? EvaluateRelicPurchase(ShopRelicItem item, SharedDecisionContext context)
+    {
+        var relicData = DataLoader.GetRelic(item.RelicId);
+        if (relicData == null)
+            return null;
+
+        float score = relicData.BaseScore;
+
+        if (context.PrimaryPathData != null && relicData.PathScores.TryGetValue(context.PrimaryPathData.PathId, out var pathScore))
+            score = Math.Max(score, pathScore);
+
+        if (context.PrimaryPathData != null && context.PrimaryPathData.KeyRelics.Contains(relicData.RelicId))
+            score += 1.2f;
+
+        if (relicData.SynergyTags.Any(tag => MatchesContextNeed(tag, context)))
+            score += 0.8f;
+
+        if (context.Relics.Any(existing => string.Equals(existing.RelicId, relicData.RelicId, StringComparison.OrdinalIgnoreCase)))
+            score -= 1.2f;
+
+        score = Math.Clamp(score, 0f, 10f);
+
+        return new ShopPurchaseAdvice
+        {
+            ItemId = item.RelicId,
+            ItemType = ShopItemType.Relic,
+            NameZh = relicData.NameZh,
+            Price = item.Price,
+            Score = score,
+            OverallRating = CardAdvisor.ScoreToRating(score),
+            Reason = BuildRelicPurchaseReason(relicData, context),
+        };
+    }
+
+    private static bool MatchesContextNeed(string tag, SharedDecisionContext context)
+    {
+        return tag switch
+        {
+            "draw" => context.NeedsDraw,
+            "block" or "block_gain" or "block_scaling" => context.NeedsBlock,
+            "strength" or "strength_scaling" or "scaling" => context.NeedsScaling,
+            "aoe" or "aoe_damage" => context.NeedsAoe,
+            _ => false,
+        };
+    }
+
+    private static string BuildRelicPurchaseReason(RelicData relicData, SharedDecisionContext context)
+    {
+        var reasons = new List<string>();
+
+        if (context.PrimaryPathData != null && context.PrimaryPathData.KeyRelics.Contains(relicData.RelicId))
+            reasons.Add($"是{context.PrimaryPathData.NameZh}关键遗物");
+
+        if (relicData.SynergyTags.Any(tag => MatchesContextNeed(tag, context)))
+            reasons.Add("能直接补当前牌组缺口");
+
+        if (reasons.Count == 0 && !string.IsNullOrWhiteSpace(relicData.NotesZh))
+            reasons.Add(relicData.NotesZh.Trim().TrimEnd('。', '！', '？'));
+
+        if (reasons.Count == 0)
+            reasons.Add("对当前路线是稳定提升");
+
+        return string.Join("；", reasons);
+    }
+
 }
 
 // ── 建议数据类 ────────────────────────────────────────────────────────
@@ -214,6 +289,7 @@ public class ShopPurchaseAdvice
     public ShopItemType ItemType      { get; set; }
     public string       NameZh        { get; set; } = string.Empty;
     public int          Price         { get; set; }
+    public float        Score         { get; set; }
     public CardRating   OverallRating { get; set; }
     public string       Reason        { get; set; } = string.Empty;
 }

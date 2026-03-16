@@ -31,8 +31,10 @@
 
 | 文件 | 内容 | 状态 |
 |------|------|------|
-| `data/cards.json` | 战士全卡（~75张）含 `base_score`/`tier`/`synergy_tags`/流派评分 | ✅ 完成（已校正评分）|
+| `data/cards.core.json` | 战士全卡事实层（费用/类型/稀有度 + v2.5 结构化字段槽位） | ✅ 完成 |
+| `data/cards.advisor.json` | 战士全卡顾问层（`base_score`/`tier`/`synergy_tags`/流派评分） | ✅ 完成（已校正评分）|
 | `data/relics.json` | 遗物数据（部分覆盖） | ⚠️ 部分完成 |
+
 | `data/buildpaths.json` | 4条流派路线定义（力量战/无限流/格挡流/燃烧流） | ✅ 完成 |
 | `data/bosses.json` | Boss 机制摘要 | ⚠️ 部分完成 |
 | `data/events.json` | 事件选项数据 | ⚠️ 框架完成，数据待补充 |
@@ -101,7 +103,8 @@
 | `draw` | `DynamicVars.ContainsKey("Cards")` | ✅ 精确 |
 | `exhaust` | `card.Keywords.Contains(CardKeyword.Exhaust)` | ✅ 精确 |
 | `buff` | `DynamicVars.ContainsKey("StrengthPower/DexterityPower")` | ✅ 精确（全职业通用） |
-| `synergy_tags` | `cards.json` 手动标注（34种） | ⚠️ 部分标注 |
+| `synergy_tags` | `cards.advisor.json` 手动标注（34种） | ⚠️ 部分标注 |
+
 
 > **关键调研结论**：`PowerVar<T>` 的字典 key = `typeof(T).Name`，因此 `"StrengthPower"` 精确覆盖所有力量增益牌，无需字符串 ID 匹配。
 
@@ -159,7 +162,8 @@
 | `relics.json` 覆盖率低 | 中 | 遗物效果对流派评分影响大，待补充 |
 | `events.json` 数据未完整填充 | 低 | 事件 Advisor 暂未上线 |
 | CombatHook 的 `TryGetAttackDamage` 边缘情况 | 低 | 多段攻击意图的总伤害计算可能不准 |
-| cards.json 仅覆盖战士 | 中 | 其他职业上线需补充 |
+| `cards.core.json` / `cards.advisor.json` 当前仅覆盖战士 | 中 | 其他职业上线需补充 |
+
 | `SimulateSequence` 的 Power 效果建模简化 | 低 | 现仅建模 +2 力量（保守估算），DemonForm 等强力 Power 可能被低估 |
 | synergy_tags 中 34 种 tag 只有 7 种被 ScoreCard 消费 | 中 | 数据已有但评分逻辑未全部接入 |
 
@@ -171,7 +175,8 @@
 
 #### A1. CombatAdvisor 继续深化
 
-- [ ] **`cards.json` baseScore 数据扩充**：当前仅覆盖战士，逐步补全其他职业
+- [ ] **`cards.advisor.json` baseScore 数据扩充**：当前仅覆盖战士，逐步补全其他职业
+
 - [ ] **更多 synergy_tags 接入 ScoreCard**：
   - `burn_apply` + 手牌 `burn_scaling` 协同加分
   - `block_to_damage`（BodySlam 型）：当前格挡值越高得分越高
@@ -190,7 +195,8 @@
 
 - [ ] `relics.json` 补全常见遗物的流派评分和场景效果
 - [ ] `events.json` 补全全部事件数据（约 50+ 个事件）
-- [ ] `cards.json` 扩展至沉默者、机器人职业
+- [ ] `cards.core.json` / `cards.advisor.json` 扩展至沉默者、机器人职业
+
 
 ---
 
@@ -261,7 +267,8 @@
                                               (维护3套并行方案 + 可行性评分)
                                                       ↑
                                               DataLoader
-                                              (cards.json / relics.json /
+                                              (cards.core.json / cards.advisor.json /
+
                                                buildpaths.json / events.json)
 ```
 
@@ -271,13 +278,18 @@
 
 ```
 StS2mod/
+├── Docs/
+│   ├── STS2_Asset_ID_System.md   # 解包资产与 ID 规范
+│   └── STS2_Unpack_Report.md     # 解包过程与资产总览
 ├── GDD.md                    # 完整策划案
 ├── PROGRESS.md               # 本文件（进度 + 规划）
 ├── README.md                 # 快速入门
 ├── build.ps1                 # 构建 + 部署脚本
 ├── data/
-│   ├── cards.json            # 卡牌数据（战士完整，其他职业待补）
+│   ├── cards.core.json       # 卡牌事实层（战士完整，其他职业待补）
+│   ├── cards.advisor.json    # 卡牌顾问层（战士完整，其他职业待补）
 │   ├── relics.json           # 遗物数据（部分）
+
 │   ├── buildpaths.json       # 流派路线定义
 │   ├── bosses.json           # Boss 机制（部分）
 │   └── events.json           # 事件数据（框架）

@@ -118,7 +118,8 @@ public static class BuildPathManager
         int matched = 0;
         foreach (var coreCardId in path.CoreCards)
         {
-            // 支持升级变体（如 "limit_break" 匹配 "limit_break+"）
+            // 支持升级变体（如 "LIMIT_BREAK" 匹配 "LIMIT_BREAK+"）
+
             bool hasCoreCard = snapshot.DeckCardIds.Any(id =>
                 string.Equals(id, coreCardId, StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(id, coreCardId + "+", StringComparison.OrdinalIgnoreCase));

@@ -497,7 +497,8 @@ public static class CombatAdvisor
     }
 
     /// <summary>
-    /// cards.json 中无记录时，根据稀有度+类型+费用推断基础分，
+    /// `cards.advisor.json` 中无记录时，根据稀有度+类型+费用推断基础分，
+
     /// 保证稀有牌比普通牌得分高，避免所有未知牌均为 5f。
     /// </summary>
     private static float InferBaseScore(CombatCardInfo card)

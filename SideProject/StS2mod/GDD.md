@@ -508,9 +508,10 @@ public class EnemyState
 
 ### 5.2 卡牌评分矩阵
 
-每张卡牌在 `cards.json` 中有以下属性（基于深度社区数据调研后打包）：
+每张卡牌的数据已拆为 `cards.core.json`（事实层）与 `cards.advisor.json`（顾问层）；下面示例主要展示顾问层字段：
 
 ```json
+
 {
   "card_id": "whirlwind",
   "name": "旋风斩",
@@ -533,7 +534,8 @@ public class EnemyState
 
 最终卡牌推荐分 = `path_scores[activePath] × act_scaling × deck_size_modifier × relic_bonus`
 
-### 5.3 cards.json 数据采集策略
+### 5.3 cards.core.json / cards.advisor.json 数据采集策略
+
 
 > 数据采集阶段需联网深度调研，打包后运行时完全离线。
 
@@ -703,8 +705,10 @@ Tab → 折叠/展开所有 HUD 面板
 ```
 Astrolabe/
 ├── data/
-│   ├── cards.json          // 全职业全卡牌评分 + 流派权重
+│   ├── cards.core.json     // 全职业卡牌事实层 + 结构化效果字段
+│   ├── cards.advisor.json  // 全职业卡牌顾问层 + 流派权重/协同先验
 │   ├── relics.json         // 遗物评分 + 流派协同
+
 │   ├── events.json         // 所有事件选项期望值
 │   ├── bosses.json         // Boss 机制 + 针对建议
 │   └── buildpaths.json     // 构筑方案定义（每个职业 3-4 套）
@@ -758,8 +762,9 @@ Astrolabe/
 
 **产出**：
 - [ ] `buildpaths.json` v1（战士全部方案 + 猎手全部方案）
-- [ ] `cards.json` v1（战士 + 猎手全卡，含深度调研评分）
+- [ ] `cards.core.json` / `cards.advisor.json` v1（战士 + 猎手全卡，含深度调研评分）
 - [ ] `BuildPathManager` 实现（方案可行性计算 + 收束逻辑）
+
 - [ ] 选牌顾问 UI（多方案卡片 + 颜色标签 + 悬停面板）
 - [ ] 地图规划 UI（多色连线 + 路线说明面板）
 - [ ] 篝火建议 UI
@@ -771,7 +776,8 @@ Astrolabe/
 **目标**：补全数据库，实现商店/事件建议。
 
 **产出**：
-- [ ] `cards.json` 补全全职业（机器人 + 观者）
+- [ ] `cards.core.json` / `cards.advisor.json` 补全全职业（机器人 + 观者）
+
 - [ ] `relics.json` v1（全遗物）
 - [ ] `events.json` v1（全事件）
 - [ ] `bosses.json` v1（全 Boss）
@@ -806,7 +812,8 @@ Astrolabe/
 | `sts2.dll` 反编译后关键类名难以定位 | 中 | 高 | 参考 BaseLib-StS2 源码辅助定位；社区 Discord 求助 |
 | Godot CanvasLayer 坐标系与游戏 UI 不一致 | 低 | 中 | 参考现有 STS2 mod 的 UI 实现；早期技术验证专门测试 |
 | 战斗内建议的出牌顺序评估准确度不足 | 高 | 中 | 明确标注「参考建议，非绝对最优」；Phase 2 后期迭代 |
-| cards.json 数据量巨大，调研耗时高 | 高 | 中 | MVP 先覆盖战士 + 猎手，其他职业分批追加 |
+| cards.core.json / cards.advisor.json 数据量巨大，调研耗时高 | 高 | 中 | MVP 先覆盖战士 + 猎手，其他职业分批追加 |
+
 | 多方案收束逻辑复杂，边缘 case 多 | 中 | 中 | 设定最低可行性阈值（< 20% 即淡出），简化逻辑 |
 | 游戏开发商反对此类辅助 Mod | 低 | 高 | MegaCrit 对 mod 社区一向开放；「教练」定位非作弊 |
 

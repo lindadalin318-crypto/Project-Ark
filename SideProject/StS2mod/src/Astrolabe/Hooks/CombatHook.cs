@@ -1,6 +1,8 @@
 using System.Reflection;
+using Astrolabe.Data;
 using Astrolabe.Engine;
 using Astrolabe.UI;
+
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Cards;
@@ -258,25 +260,27 @@ public static class CombatHook
                 // 手牌
                 foreach (var card in pcs.Hand.Cards)
                 {
-                    var cardData = Astrolabe.Data.DataLoader.GetCard(card.Id.Category)
-                                ?? Astrolabe.Data.DataLoader.GetCard(card.Id.Entry);
+                    string runtimeCardId = IdNormalizer.NormalizeModelId(
+                        card.IsUpgraded ? card.Id.Entry + "+" : card.Id.Entry);
+                    var cardData = DataLoader.GetCard(runtimeCardId);
                     bool isXCost = card.EnergyCost?.CostsX ?? false;
                     int cost     = isXCost ? -1 : (card.EnergyCost?.Canonical ?? 1);
 
                     string nameZh;
                     try { nameZh = card.Title; }
-                    catch { nameZh = cardData?.NameZh ?? card.Id.Entry; }
+                    catch { nameZh = cardData?.NameZh ?? runtimeCardId; }
 
                     var tags = BuildCardTags(card, cardData);
                     snap.HandCards.Add(new CombatCardInfo
                     {
-                        CardId     = card.Id.Category,
+                        CardId     = runtimeCardId,
                         CardNameZh = nameZh,
                         CardType   = card.Type.ToString(),
                         Cost       = cost,
                         Tags       = tags,
                         Rarity     = card.Rarity.ToString(),
                     });
+
 
                     // 汇总手牌特征（供 Advisor 快速判断）
                     if (tags.Contains("block")) snap.HasBlockInHand = true;

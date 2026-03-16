@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace Astrolabe.Data;
@@ -7,7 +9,9 @@ namespace Astrolabe.Data;
 // ─────────────────────────────────────────────
 
 /// <summary>
-/// 单张卡牌的评分数据（来自 cards.json）。
+/// Astrolabe 运行时使用的合并卡牌视图。
+/// 由 <c>cards.core.json</c>（事实层）与 <c>cards.advisor.json</c>（顾问层）合并而成，
+/// 对上层保持单对象读取体验，避免业务层感知底层拆分。
 /// </summary>
 public class CardData
 {
@@ -23,6 +27,24 @@ public class CardData
     [JsonPropertyName("character")]
     public string Character { get; set; } = string.Empty;
 
+    [JsonPropertyName("cost")]
+    public int Cost { get; set; } = 1;
+
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = "Skill";
+
+    [JsonPropertyName("rarity")]
+    public string Rarity { get; set; } = "Common";
+
+    [JsonPropertyName("target")]
+    public string Target { get; set; } = string.Empty;
+
+    [JsonPropertyName("effects")]
+    public CardEffectSet Effects { get; set; } = new();
+
+    [JsonPropertyName("flags")]
+    public CardFlagsData Flags { get; set; } = new();
+
     /// <summary>综合基础评分（0-10）</summary>
     [JsonPropertyName("base_score")]
     public float BaseScore { get; set; }
@@ -33,7 +55,11 @@ public class CardData
 
     /// <summary>各构筑方案中的评分（key = path_id，value = 0-10）</summary>
     [JsonPropertyName("path_scores")]
-    public Dictionary<string, float> PathScores { get; set; } = new();
+    public Dictionary<string, float> PathScores { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>保留旧版历史流派评分，仅用于审计与迁移，不参与当前 advisor 计算。</summary>
+    [JsonPropertyName("legacy_path_scores")]
+    public Dictionary<string, float> LegacyPathScores { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>协同标签（如 "strength"、"poison"、"exhaust"）</summary>
     [JsonPropertyName("synergy_tags")]
@@ -64,7 +90,7 @@ public class CardData
         "high"   => 8f,
         "medium" => 5f,
         "low"    => 2f,
-        _        => 5f
+        _         => 5f,
     };
 
     /// <summary>升级后的质变描述（中文）</summary>
@@ -74,6 +100,193 @@ public class CardData
     /// <summary>策略说明（中文）</summary>
     [JsonPropertyName("notes_zh")]
     public string NotesZh { get; set; } = string.Empty;
+
+    /// <summary>
+    /// advisor 侧新增的结构化先验字段。
+    /// 当前阶段允许部分为空，逐步替代对 `notes_zh` 的文本猜测。
+    /// </summary>
+    [JsonPropertyName("advisor")]
+    public CardAdvisorMetadata Advisor { get; set; } = new();
+}
+
+/// <summary>
+/// <c>cards.core.json</c> 中的单卡事实层数据。
+/// </summary>
+public class CardCoreData
+{
+    [JsonPropertyName("card_id")]
+    public string CardId { get; set; } = string.Empty;
+
+    [JsonPropertyName("name_zh")]
+    public string NameZh { get; set; } = string.Empty;
+
+    [JsonPropertyName("name_en")]
+    public string NameEn { get; set; } = string.Empty;
+
+    [JsonPropertyName("character")]
+    public string Character { get; set; } = string.Empty;
+
+    [JsonPropertyName("cost")]
+    public int Cost { get; set; } = 1;
+
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = "Skill";
+
+    [JsonPropertyName("rarity")]
+    public string Rarity { get; set; } = "Common";
+
+    [JsonPropertyName("target")]
+    public string Target { get; set; } = string.Empty;
+
+    [JsonPropertyName("effects")]
+    public CardEffectSet Effects { get; set; } = new();
+
+    [JsonPropertyName("flags")]
+    public CardFlagsData Flags { get; set; } = new();
+}
+
+/// <summary>
+/// <c>cards.advisor.json</c> 中的单卡顾问层数据。
+/// </summary>
+public class CardAdvisorData
+{
+    [JsonPropertyName("card_id")]
+    public string CardId { get; set; } = string.Empty;
+
+    [JsonPropertyName("character")]
+    public string Character { get; set; } = string.Empty;
+
+    [JsonPropertyName("base_score")]
+    public float BaseScore { get; set; }
+
+    [JsonPropertyName("tier")]
+    public string Tier { get; set; } = "C";
+
+    [JsonPropertyName("path_scores")]
+    public Dictionary<string, float> PathScores { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    [JsonPropertyName("legacy_path_scores")]
+    public Dictionary<string, float> LegacyPathScores { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    [JsonPropertyName("synergy_tags")]
+    public List<string> SynergyTags { get; set; } = new();
+
+    [JsonPropertyName("anti_synergy_tags")]
+    public List<string> AntiSynergyTags { get; set; } = new();
+
+    [JsonPropertyName("act_scaling")]
+    public List<float> ActScaling { get; set; } = new() { 1f, 1f, 1f };
+
+    [JsonPropertyName("upgrade_priority")]
+    public string UpgradePriority { get; set; } = "medium";
+
+    [JsonPropertyName("upgrade_delta_zh")]
+    public string UpgradeDeltaZh { get; set; } = string.Empty;
+
+    [JsonPropertyName("notes_zh")]
+    public string NotesZh { get; set; } = string.Empty;
+
+    [JsonPropertyName("advisor")]
+    public CardAdvisorMetadata Advisor { get; set; } = new();
+}
+
+public class CardEffectSet
+{
+    [JsonPropertyName("base")]
+    public CardEffectProfile Base { get; set; } = new();
+
+    [JsonPropertyName("upgraded")]
+    public CardEffectProfile Upgraded { get; set; } = new();
+}
+
+public class CardEffectProfile
+{
+    [JsonPropertyName("damage")]
+    public int? Damage { get; set; }
+
+    [JsonPropertyName("block")]
+    public int? Block { get; set; }
+
+    [JsonPropertyName("draw")]
+    public int? Draw { get; set; }
+
+    [JsonPropertyName("energy_gain")]
+    public int? EnergyGain { get; set; }
+
+    [JsonPropertyName("hits")]
+    public int? Hits { get; set; }
+
+    [JsonPropertyName("discard")]
+    public int? Discard { get; set; }
+
+    [JsonPropertyName("exhaust_count")]
+    public int? ExhaustCount { get; set; }
+
+    [JsonPropertyName("hp_cost")]
+    public int? HpCost { get; set; }
+
+    [JsonPropertyName("apply")]
+    public Dictionary<string, int> Apply { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    [JsonPropertyName("consume")]
+    public Dictionary<string, int> Consume { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    [JsonPropertyName("create_cards")]
+    public List<string> CreateCards { get; set; } = new();
+
+    [JsonPropertyName("add_status")]
+    public Dictionary<string, int> AddStatus { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    [JsonPropertyName("scale_from")]
+    public List<string> ScaleFrom { get; set; } = new();
+}
+
+public class CardFlagsData
+{
+    [JsonPropertyName("exhaust")]
+    public bool? Exhaust { get; set; }
+
+    [JsonPropertyName("ethereal")]
+    public bool? Ethereal { get; set; }
+
+    [JsonPropertyName("retain")]
+    public bool? Retain { get; set; }
+
+    [JsonPropertyName("innate")]
+    public bool? Innate { get; set; }
+
+    [JsonPropertyName("x_cost")]
+    public bool? XCost { get; set; }
+
+    [JsonPropertyName("self_replicate")]
+    public bool? SelfReplicate { get; set; }
+
+    [JsonPropertyName("upgrades_hand")]
+    public bool? UpgradesHand { get; set; }
+
+    [JsonPropertyName("upgrades_deck")]
+    public bool? UpgradesDeck { get; set; }
+}
+
+public class CardAdvisorMetadata
+{
+    [JsonPropertyName("roles")]
+    public List<string> Roles { get; set; } = new();
+
+    [JsonPropertyName("duplicate_policy")]
+    public string DuplicatePolicy { get; set; } = "neutral";
+
+    [JsonPropertyName("deck_pressure")]
+    public string DeckPressure { get; set; } = "neutral";
+
+    [JsonPropertyName("pickup_windows")]
+    public List<string> PickupWindows { get; set; } = new();
+
+    [JsonPropertyName("upgrade_spike")]
+    public float? UpgradeSpike { get; set; }
+
+    [JsonPropertyName("remove_priority")]
+    public float? RemovePriority { get; set; }
 }
 
 public class ActScaling
@@ -88,7 +301,7 @@ public class ActScaling
         1 => Act1,
         2 => Act2,
         3 => Act3,
-        _ => Act4
+        _ => Act4,
     };
 }
 
@@ -106,6 +319,9 @@ public class RelicData
 
     [JsonPropertyName("name_en")]
     public string NameEn { get; set; } = string.Empty;
+
+    [JsonPropertyName("character")]
+    public string Character { get; set; } = "Shared";
 
     [JsonPropertyName("tier")]
     public string Tier { get; set; } = "common";

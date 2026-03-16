@@ -1,3 +1,4 @@
+using Astrolabe.Data;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
@@ -6,6 +7,7 @@ using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
 using MegaCrit.Sts2.Core.Runs;
+
 
 namespace Astrolabe.Core;
 
@@ -115,8 +117,9 @@ public static class CombatStateReader
             if (pcs == null) return;
 
             snapshot.HandCardIds = pcs.Hand.Cards
-                .Select(c => c.IsUpgraded ? c.Id.Entry + "+" : c.Id.Entry)
+                .Select(c => IdNormalizer.NormalizeModelId(c.IsUpgraded ? c.Id.Entry + "+" : c.Id.Entry))
                 .ToList();
+
         }
         catch (Exception ex)
         {
@@ -133,12 +136,13 @@ public static class CombatStateReader
             if (pcs == null) return;
 
             snapshot.DrawPileCardIds = pcs.DrawPile.Cards
-                .Select(c => c.IsUpgraded ? c.Id.Entry + "+" : c.Id.Entry)
+                .Select(c => IdNormalizer.NormalizeModelId(c.IsUpgraded ? c.Id.Entry + "+" : c.Id.Entry))
                 .ToList();
 
             snapshot.DiscardPileCardIds = pcs.DiscardPile.Cards
-                .Select(c => c.IsUpgraded ? c.Id.Entry + "+" : c.Id.Entry)
+                .Select(c => IdNormalizer.NormalizeModelId(c.IsUpgraded ? c.Id.Entry + "+" : c.Id.Entry))
                 .ToList();
+
         }
         catch (Exception ex)
         {
@@ -168,7 +172,8 @@ public static class CombatStateReader
     {
         var state = new EnemyState
         {
-            EnemyId = enemy.IsMonster ? enemy.Monster!.Id.Entry : "unknown",
+            EnemyId = enemy.IsMonster ? IdNormalizer.NormalizeLookupId(enemy.Monster!.Id.Entry) : "unknown",
+
             EnemyName = enemy.Name,
             HP = enemy.CurrentHp,
             MaxHP = enemy.MaxHp,
@@ -212,7 +217,8 @@ public static class CombatStateReader
             snapshot.PlayerStatuses = player.Creature.Powers
                 .Select(p => new StatusEffect
                 {
-                    StatusId = p.Id.Entry,
+                    StatusId = IdNormalizer.NormalizeLookupId(p.Id.Entry),
+
                     StatusName = p.Title.GetFormattedText(),
                     Stacks = p.Amount,
                     IsPositive = p.TypeForCurrentAmount == PowerType.Buff,

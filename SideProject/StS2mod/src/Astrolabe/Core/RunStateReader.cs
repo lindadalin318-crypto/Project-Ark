@@ -1,8 +1,10 @@
 using Astrolabe.Core;
+using Astrolabe.Data;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Runs;
+
 
 namespace Astrolabe.Core;
 
@@ -61,7 +63,8 @@ public static class RunStateReader
             // Floor = 当前幕内楼层（ActFloor）+ 历史总楼层偏移
             snapshot.Floor = runState.ActFloor;
             snapshot.Act = runState.CurrentActIndex + 1; // 转为 1-based
-            snapshot.CharacterId = player.Character.Id.Entry;
+            snapshot.CharacterId = IdNormalizer.NormalizeCharacterId(player.Character.Id.Entry);
+
         }
         catch (Exception ex)
         {
@@ -73,12 +76,13 @@ public static class RunStateReader
     {
         try
         {
-            // CardModel.Id 是 ModelId，.Entry 是字符串 key（如 "strike_r"）
-            // IsUpgraded = CurrentUpgradeLevel > 0（已通过反编译确认）
+            // CardModel.Id.Entry 是游戏内 canonical 业务键（如 "STRIKE_IRONCLAD" / "LIMIT_BREAK"）。
+            // 升级形态只在运行时追加 '+'，静态数据库仍按基础条目查询。
             snapshot.DeckCardIds = player.Deck.Cards
-                .Select(c => c.IsUpgraded ? c.Id.Entry + "+" : c.Id.Entry)
+                .Select(c => IdNormalizer.NormalizeModelId(c.IsUpgraded ? c.Id.Entry + "+" : c.Id.Entry))
                 .ToList();
         }
+
         catch (Exception ex)
         {
             _log.Warn($"[RunStateReader] TryCaptureDeck failed: {ex.Message}");
@@ -91,12 +95,13 @@ public static class RunStateReader
         try
         {
             snapshot.RelicIds = player.Relics
-                .Select(r => r.Id.Entry)
+                .Select(r => IdNormalizer.NormalizeLookupId(r.Id.Entry))
                 .ToList();
 
             snapshot.PotionIds = player.Potions
-                .Select(p => p.Id.Entry)
+                .Select(p => IdNormalizer.NormalizeLookupId(p.Id.Entry))
                 .ToList();
+
         }
         catch (Exception ex)
         {
@@ -110,11 +115,11 @@ public static class RunStateReader
     {
         try
         {
-            // ActModel.Id.Entry 返回 Act 的字符串 key（如 "act_1"）
-            // 真实 Boss 信息需要从 Act 的 BossEncounters 中获取，
-            // 此处用 Act key 作为粗略标识，后续可精化为具体 Boss ID
-            snapshot.ActBossId = runState.Act.Id.Entry;
+            // 路线规划需要的是当前幕实际分配到的 BossEncounter.Id.Entry，
+            // 不是 Act 自身的 Id.Entry（如 "EXORDIUM" / "THE_CITY"）。
+            snapshot.ActBossId = IdNormalizer.NormalizeLookupId(runState.Act.BossEncounter.Id.Entry);
         }
+
         catch (Exception ex)
         {
             _log.Warn($"[RunStateReader] TryCaptureMapInfo failed: {ex.Message}");

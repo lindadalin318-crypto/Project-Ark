@@ -1,7 +1,9 @@
 using System.Reflection;
 using Astrolabe.Core;
+using Astrolabe.Data;
 using Astrolabe.Engine;
 using Astrolabe.UI;
+
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Merchant;
 using MegaCrit.Sts2.Core.Logging;
@@ -122,11 +124,13 @@ public static class ShopHook
             var card = entry.CreationResult.Card;
             items.Cards.Add(new ShopCardItem
             {
-                CardId = card.IsUpgraded ? card.Id.Entry + "+" : card.Id.Entry,
+                CardId = IdNormalizer.NormalizeModelId(
+                    card.IsUpgraded ? card.Id.Entry + "+" : card.Id.Entry),
                 Price = entry.Cost,
                 IsSale = entry.IsOnSale,
                 IsSold = !entry.IsStocked, // IsStocked=false 时已售出
             });
+
         }
 
         // 遗物 — MerchantRelicEntry 继承 MerchantEntry，字段需反编译确认
@@ -166,7 +170,8 @@ public static class ShopHook
                 var field = typeof(MerchantRelicEntry).GetField(
                     fieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                 if (field?.GetValue(entry) is MegaCrit.Sts2.Core.Models.RelicModel relic)
-                    return relic.Id.Entry;
+                    return IdNormalizer.NormalizeLookupId(relic.Id.Entry);
+
             }
         }
         catch { }
@@ -182,7 +187,8 @@ public static class ShopHook
                 var field = typeof(MerchantPotionEntry).GetField(
                     fieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                 if (field?.GetValue(entry) is MegaCrit.Sts2.Core.Models.PotionModel potion)
-                    return potion.Id.Entry;
+                    return IdNormalizer.NormalizeLookupId(potion.Id.Entry);
+
             }
         }
         catch { }

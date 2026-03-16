@@ -1,1251 +1,2548 @@
 {
   "version": "2.0-real",
   "source": "decompiled from sts2.dll v2026-03-13",
-  "note": "relic_id matches C# class name. character='Shared' means available to all. Rarity: Starter/Common/Uncommon/Rare/Shop/Event/Ancient/Boss",
-  "ironclad_starter": "BurningBlood",
-  "ironclad_exclusive": ["Brimstone","BurningBlood","CharonsAshes","DemonTongue","PaperPhrog","RedSkull","RuinedHelmet","SelfFormingClay"],
+  "note": "relic_id uses StS2 ModelId.Entry (UPPER_SNAKE_CASE). character='Shared' means available to all.",
+  "ironclad_starter": "BURNING_BLOOD",
+  "ironclad_exclusive": [
+    "BRIMSTONE",
+    "BURNING_BLOOD",
+    "CHARONS_ASHES",
+    "DEMON_TONGUE",
+    "PAPER_PHROG",
+    "RED_SKULL",
+    "RUINED_HELMET",
+    "SELF_FORMING_CLAY"
+  ],
   "relics": [
     {
-      "relic_id": "BurningBlood",
+      "relic_id": "BURNING_BLOOD",
       "name_zh": "燃烧之血",
-      "character": "Ironclad", "rarity": "Starter",
+      "character": "IRONCLAD",
+      "rarity": "Starter",
       "base_score": 8,
-      "path_scores": { "strength_build": 8, "exhaust_build": 7, "block_build": 8, "burn_build": 8 },
-      "synergy_tags": ["healing"],
-      "notes_zh": "战士起始遗物。每场战斗胜利后回复6HP，全程续航核心"
+      "path_scores": {
+        "ironclad_strength": 8,
+        "ironclad_infinite": 7,
+        "ironclad_defense": 8
+      },
+      "synergy_tags": [
+        "healing"
+      ],
+      "notes_zh": "战士起始遗物。每场战斗胜利后回复6HP，全程续航核心",
+      "legacy_path_scores": {
+        "burn_build": 8
+      }
     },
     {
-      "relic_id": "Brimstone",
+      "relic_id": "BRIMSTONE",
       "name_zh": "硫磺",
-      "character": "Ironclad", "rarity": "Shop",
+      "character": "IRONCLAD",
+      "rarity": "Shop",
       "base_score": 7,
-      "path_scores": { "strength_build": 9, "exhaust_build": 6, "block_build": 5, "burn_build": 6 },
-      "synergy_tags": ["strength", "burn_apply"],
-      "notes_zh": "每回合开始获得2力量但敌人获得1力量，高收益高风险，力量流强力"
+      "path_scores": {
+        "ironclad_strength": 9,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "strength",
+        "burn_apply"
+      ],
+      "notes_zh": "每回合开始获得2力量但敌人获得1力量，高收益高风险，力量流强力",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "CharonsAshes",
+      "relic_id": "CHARONS_ASHES",
       "name_zh": "卡戎的骨灰",
-      "character": "Ironclad", "rarity": "Rare",
+      "character": "IRONCLAD",
+      "rarity": "Rare",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 8, "block_build": 5, "burn_build": 7 },
-      "synergy_tags": ["exhaust", "aoe_damage"],
-      "notes_zh": "消耗牌时对所有敌人造成3伤害，消耗流强力遗物"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 8,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "exhaust",
+        "aoe_damage"
+      ],
+      "notes_zh": "消耗牌时对所有敌人造成3伤害，消耗流强力遗物",
+      "legacy_path_scores": {
+        "burn_build": 7
+      }
     },
     {
-      "relic_id": "DemonTongue",
+      "relic_id": "DEMON_TONGUE",
       "name_zh": "恶魔之舌",
-      "character": "Ironclad", "rarity": "Rare",
+      "character": "IRONCLAD",
+      "rarity": "Rare",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 4, "burn_build": 6 },
-      "synergy_tags": ["burn_scaling"],
-      "notes_zh": "燃烧效果增强，burn流遗物"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 4
+      },
+      "synergy_tags": [
+        "burn_scaling"
+      ],
+      "notes_zh": "燃烧效果增强，burn流遗物",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "PaperPhrog",
+      "relic_id": "PAPER_PHROG",
       "name_zh": "纸蛙",
-      "character": "Ironclad", "rarity": "Uncommon",
+      "character": "IRONCLAD",
+      "rarity": "Uncommon",
       "base_score": 6,
-      "path_scores": { "strength_build": 7, "exhaust_build": 5, "block_build": 5, "burn_build": 6 },
-      "synergy_tags": ["strength", "card_play_trigger"],
-      "notes_zh": "打出攻击牌时获得力量加成，攻击流高价值"
+      "path_scores": {
+        "ironclad_strength": 7,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "strength",
+        "card_play_trigger"
+      ],
+      "notes_zh": "打出攻击牌时获得力量加成，攻击流高价值",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "RedSkull",
+      "relic_id": "RED_SKULL",
       "name_zh": "红色骷髅",
-      "character": "Ironclad", "rarity": "Common",
+      "character": "IRONCLAD",
+      "rarity": "Common",
       "base_score": 6,
-      "path_scores": { "strength_build": 8, "exhaust_build": 5, "block_build": 4, "burn_build": 6 },
-      "synergy_tags": ["strength", "low_hp"],
-      "notes_zh": "HP低于50%时获得大量力量，高风险高收益，低血流激活"
+      "path_scores": {
+        "ironclad_strength": 8,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 4
+      },
+      "synergy_tags": [
+        "strength",
+        "low_hp"
+      ],
+      "notes_zh": "HP低于50%时获得大量力量，高风险高收益，低血流激活",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "RuinedHelmet",
+      "relic_id": "RUINED_HELMET",
       "name_zh": "破损头盔",
-      "character": "Ironclad", "rarity": "Rare",
+      "character": "IRONCLAD",
+      "rarity": "Rare",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "战斗开始时增益效果"
+      "notes_zh": "战斗开始时增益效果",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "SelfFormingClay",
+      "relic_id": "SELF_FORMING_CLAY",
       "name_zh": "自塑泥土",
-      "character": "Ironclad", "rarity": "Uncommon",
+      "character": "IRONCLAD",
+      "rarity": "Uncommon",
       "base_score": 6,
-      "path_scores": { "strength_build": 4, "exhaust_build": 5, "block_build": 8, "burn_build": 4 },
-      "synergy_tags": ["block_gain", "hp_loss_trigger"],
-      "notes_zh": "受伤时获得格挡，格挡流强力遗物"
+      "path_scores": {
+        "ironclad_strength": 4,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 8
+      },
+      "synergy_tags": [
+        "block_gain",
+        "hp_loss_trigger"
+      ],
+      "notes_zh": "受伤时获得格挡，格挡流强力遗物",
+      "legacy_path_scores": {
+        "burn_build": 4
+      }
     },
     {
-      "relic_id": "Akabeko",
+      "relic_id": "AKABEKO",
       "name_zh": "赤牛",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 6,
-      "path_scores": { "strength_build": 7, "exhaust_build": 5, "block_build": 5, "burn_build": 6 },
-      "synergy_tags": ["first_attack_bonus"],
-      "notes_zh": "每场战斗第一次打出攻击牌额外8伤害"
+      "path_scores": {
+        "ironclad_strength": 7,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "first_attack_bonus"
+      ],
+      "notes_zh": "每场战斗第一次打出攻击牌额外8伤害",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "AmethystAubergine",
+      "relic_id": "AMETHYST_AUBERGINE",
       "name_zh": "紫晶茄子",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物，具体效果待测试"
+      "notes_zh": "STS2新遗物，具体效果待测试",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "Anchor",
+      "relic_id": "ANCHOR",
       "name_zh": "锚",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 6,
-      "path_scores": { "strength_build": 5, "exhaust_build": 6, "block_build": 7, "burn_build": 5 },
-      "synergy_tags": ["block_gain"],
-      "notes_zh": "战斗开始时获得10格挡"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 7
+      },
+      "synergy_tags": [
+        "block_gain"
+      ],
+      "notes_zh": "战斗开始时获得10格挡",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "ArtOfWar",
+      "relic_id": "ART_OF_WAR",
       "name_zh": "孙子兵法",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 7,
-      "path_scores": { "strength_build": 7, "exhaust_build": 6, "block_build": 6, "burn_build": 7 },
-      "synergy_tags": ["no_skill_turn"],
-      "notes_zh": "本回合不打技能牌则下回合额外1能量，高技巧高收益"
+      "path_scores": {
+        "ironclad_strength": 7,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "no_skill_turn"
+      ],
+      "notes_zh": "本回合不打技能牌则下回合额外1能量，高技巧高收益",
+      "legacy_path_scores": {
+        "burn_build": 7
+      }
     },
     {
-      "relic_id": "BagOfMarbles",
+      "relic_id": "BAG_OF_MARBLES",
       "name_zh": "弹珠袋",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 6, "block_build": 5, "burn_build": 6 },
-      "synergy_tags": ["vulnerable_apply"],
-      "notes_zh": "战斗开始时对所有敌人施加1层易伤"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "vulnerable_apply"
+      ],
+      "notes_zh": "战斗开始时对所有敌人施加1层易伤",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "BagOfPreparation",
+      "relic_id": "BAG_OF_PREPARATION",
       "name_zh": "备战袋",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 7,
-      "path_scores": { "strength_build": 7, "exhaust_build": 7, "block_build": 7, "burn_build": 7 },
-      "synergy_tags": ["draw"],
-      "notes_zh": "战斗开始时多摸2张牌，全流派通用高价值"
+      "path_scores": {
+        "ironclad_strength": 7,
+        "ironclad_infinite": 7,
+        "ironclad_defense": 7
+      },
+      "synergy_tags": [
+        "draw"
+      ],
+      "notes_zh": "战斗开始时多摸2张牌，全流派通用高价值",
+      "legacy_path_scores": {
+        "burn_build": 7
+      }
     },
     {
-      "relic_id": "BeatingRemnant",
+      "relic_id": "BEATING_REMNANT",
       "name_zh": "跳动的残余",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "Bellows",
+      "relic_id": "BELLOWS",
       "name_zh": "风箱",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 4, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 4
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "BeltBuckle",
+      "relic_id": "BELT_BUCKLE",
       "name_zh": "皮带扣",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "BloodVial",
+      "relic_id": "BLOOD_VIAL",
       "name_zh": "血瓶",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
-      "synergy_tags": ["healing"],
-      "notes_zh": "战斗开始时回复2HP"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "healing"
+      ],
+      "notes_zh": "战斗开始时回复2HP",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "BookOfFiveRings",
+      "relic_id": "BOOK_OF_FIVE_RINGS",
       "name_zh": "五轮书",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 6,
-      "path_scores": { "strength_build": 7, "exhaust_build": 5, "block_build": 5, "burn_build": 6 },
-      "synergy_tags": ["same_card_bonus"],
-      "notes_zh": "同一回合打出同名牌伤害提升"
+      "path_scores": {
+        "ironclad_strength": 7,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "same_card_bonus"
+      ],
+      "notes_zh": "同一回合打出同名牌伤害提升",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "BowlerHat",
+      "relic_id": "BOWLER_HAT",
       "name_zh": "圆顶礼帽",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "Bread",
+      "relic_id": "BREAD",
       "name_zh": "面包",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
-      "synergy_tags": ["healing"],
-      "notes_zh": "STS2新遗物，恢复HP"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "healing"
+      ],
+      "notes_zh": "STS2新遗物，恢复HP",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "BronzeScales",
+      "relic_id": "BRONZE_SCALES",
       "name_zh": "青铜鳞片",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 4, "burn_build": 6 },
-      "synergy_tags": ["thorns"],
-      "notes_zh": "受到攻击时对攻击者造成3伤害"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 4
+      },
+      "synergy_tags": [
+        "thorns"
+      ],
+      "notes_zh": "受到攻击时对攻击者造成3伤害",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "BurningSticks",
+      "relic_id": "BURNING_STICKS",
       "name_zh": "燃烧的木棍",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 4, "burn_build": 7 },
-      "synergy_tags": ["burn_apply"],
-      "notes_zh": "STS2新遗物，燃烧流相关"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 4
+      },
+      "synergy_tags": [
+        "burn_apply"
+      ],
+      "notes_zh": "STS2新遗物，燃烧流相关",
+      "legacy_path_scores": {
+        "burn_build": 7
+      }
     },
     {
-      "relic_id": "Candelabra",
+      "relic_id": "CANDELABRA",
       "name_zh": "烛台",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 6 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "CaptainsWheel",
+      "relic_id": "CAPTAINS_WHEEL",
       "name_zh": "船长之轮",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "Cauldron",
+      "relic_id": "CAULDRON",
       "name_zh": "大锅",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 5, "block_build": 5, "burn_build": 6 },
-      "synergy_tags": ["potion"],
-      "notes_zh": "购买时获得5个随机药水"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "potion"
+      ],
+      "notes_zh": "购买时获得5个随机药水",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "CentennialPuzzle",
+      "relic_id": "CENTENNIAL_PUZZLE",
       "name_zh": "百年谜题",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 7, "block_build": 6, "burn_build": 6 },
-      "synergy_tags": ["draw", "damage_taken"],
-      "notes_zh": "第一次受到伤害摸3张牌，高价值"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 7,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "draw",
+        "damage_taken"
+      ],
+      "notes_zh": "第一次受到伤害摸3张牌，高价值",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "Chandelier",
+      "relic_id": "CHANDELIER",
       "name_zh": "枝形吊灯",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 6, "block_build": 5, "burn_build": 6 },
-      "synergy_tags": ["energy"],
-      "notes_zh": "升级牌时本场战斗+1能量（每牌一次）"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "energy"
+      ],
+      "notes_zh": "升级牌时本场战斗+1能量（每牌一次）",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "ChemicalX",
+      "relic_id": "CHEMICAL_X",
       "name_zh": "X化学品",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 7,
-      "path_scores": { "strength_build": 7, "exhaust_build": 6, "block_build": 6, "burn_build": 7 },
-      "synergy_tags": ["x_cost_bonus"],
-      "notes_zh": "X费牌效果+2，Whirlwind/Cascade等X费牌必配"
+      "path_scores": {
+        "ironclad_strength": 7,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "x_cost_bonus"
+      ],
+      "notes_zh": "X费牌效果+2，Whirlwind/Cascade等X费牌必配",
+      "legacy_path_scores": {
+        "burn_build": 7
+      }
     },
     {
-      "relic_id": "CloakClasp",
+      "relic_id": "CLOAK_CLASP",
       "name_zh": "斗篷扣",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 6, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "DingyRug",
+      "relic_id": "DINGY_RUG",
       "name_zh": "旧地毯",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "DollysMirror",
+      "relic_id": "DOLLYS_MIRROR",
       "name_zh": "多莉的镜子",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "DragonFruit",
+      "relic_id": "DRAGON_FRUIT",
       "name_zh": "火龙果",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 6, "block_build": 6, "burn_build": 6 },
-      "synergy_tags": ["power_card_trigger"],
-      "notes_zh": "打出技能/力量牌后恢复HP，可持续类牌组强"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "power_card_trigger"
+      ],
+      "notes_zh": "打出技能/力量牌后恢复HP，可持续类牌组强",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "EternalFeather",
+      "relic_id": "ETERNAL_FEATHER",
       "name_zh": "永恒羽毛",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 4, "exhaust_build": 6, "block_build": 5, "burn_build": 4 },
-      "synergy_tags": ["deck_size"],
-      "notes_zh": "牌组每有5张牌，战斗开始时回复3HP，消耗流/精简流反协同"
+      "path_scores": {
+        "ironclad_strength": 4,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "deck_size"
+      ],
+      "notes_zh": "牌组每有5张牌，战斗开始时回复3HP，消耗流/精简流反协同",
+      "legacy_path_scores": {
+        "burn_build": 4
+      }
     },
     {
-      "relic_id": "FestivePopper",
+      "relic_id": "FESTIVE_POPPER",
       "name_zh": "节庆爆竹",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 7, "block_build": 6, "burn_build": 6 },
-      "synergy_tags": ["draw"],
-      "notes_zh": "每场战斗结束后摸1张牌进下局，STS2独特机制"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 7,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "draw"
+      ],
+      "notes_zh": "每场战斗结束后摸1张牌进下局，STS2独特机制",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "FresnelLens",
+      "relic_id": "FRESNEL_LENS",
       "name_zh": "菲涅尔透镜",
-      "character": "Shared", "rarity": "Event",
+      "character": "SHARED",
+      "rarity": "Event",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 4, "burn_build": 6 },
-      "synergy_tags": ["burn_apply"],
-      "notes_zh": "STS2新遗物，事件获得"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 4
+      },
+      "synergy_tags": [
+        "burn_apply"
+      ],
+      "notes_zh": "STS2新遗物，事件获得",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "FrozenEgg",
+      "relic_id": "FROZEN_EGG",
       "name_zh": "冰冻之卵",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 6,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
-      "synergy_tags": ["upgrade"],
-      "notes_zh": "获得Power牌时自动升级，力量/技能流高价值"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "upgrade"
+      ],
+      "notes_zh": "获得Power牌时自动升级，力量/技能流高价值",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "GamblingChip",
+      "relic_id": "GAMBLING_CHIP",
       "name_zh": "赌博筹码",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 6, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "GamePiece",
+      "relic_id": "GAME_PIECE",
       "name_zh": "游戏棋子",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "GhostSeed",
+      "relic_id": "GHOST_SEED",
       "name_zh": "幽灵种子",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "Girya",
+      "relic_id": "GIRYA",
       "name_zh": "壶铃",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 6,
-      "path_scores": { "strength_build": 8, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
-      "synergy_tags": ["strength", "rest_site"],
-      "notes_zh": "在营地选择举重获得力量（最多3次），力量流强力选择"
+      "path_scores": {
+        "ironclad_strength": 8,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "strength",
+        "rest_site"
+      ],
+      "notes_zh": "在营地选择举重获得力量（最多3次），力量流强力选择",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "GnarledHammer",
+      "relic_id": "GNARLED_HAMMER",
       "name_zh": "扭曲锤子",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "Gorget",
+      "relic_id": "GORGET",
       "name_zh": "护喉甲",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 6,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 7, "burn_build": 5 },
-      "synergy_tags": ["block_gain"],
-      "notes_zh": "回合开始时获得1格挡，格挡流长期累积"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 7
+      },
+      "synergy_tags": [
+        "block_gain"
+      ],
+      "notes_zh": "回合开始时获得1格挡，格挡流长期累积",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "GremlinHorn",
+      "relic_id": "GREMLIN_HORN",
       "name_zh": "哥布林号角",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "HappyFlower",
+      "relic_id": "HAPPY_FLOWER",
       "name_zh": "快乐小花",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 6, "block_build": 6, "burn_build": 6 },
-      "synergy_tags": ["energy"],
-      "notes_zh": "每3回合获得1能量，稳定能量来源"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "energy"
+      ],
+      "notes_zh": "每3回合获得1能量，稳定能量来源",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "HelicalDart",
+      "relic_id": "HELICAL_DART",
       "name_zh": "螺旋镖",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "HornCleat",
+      "relic_id": "HORN_CLEAT",
       "name_zh": "角形系绳",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "IceCream",
+      "relic_id": "ICE_CREAM",
       "name_zh": "冰淇淋",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 8,
-      "path_scores": { "strength_build": 8, "exhaust_build": 8, "block_build": 8, "burn_build": 8 },
-      "synergy_tags": ["energy_retention"],
-      "notes_zh": "能量不再在回合结束时消失，终极引擎加速，全流派顶级"
+      "path_scores": {
+        "ironclad_strength": 8,
+        "ironclad_infinite": 8,
+        "ironclad_defense": 8
+      },
+      "synergy_tags": [
+        "energy_retention"
+      ],
+      "notes_zh": "能量不再在回合结束时消失，终极引擎加速，全流派顶级",
+      "legacy_path_scores": {
+        "burn_build": 9
+      }
     },
     {
-      "relic_id": "IntimidatingHelmet",
+      "relic_id": "INTIMIDATING_HELMET",
       "name_zh": "威吓头盔",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 5, "block_build": 6, "burn_build": 6 },
-      "synergy_tags": ["weak_apply"],
-      "notes_zh": "战斗开始时对所有敌人施加虚弱"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "weak_apply"
+      ],
+      "notes_zh": "战斗开始时对所有敌人施加虚弱",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "JossPaper",
+      "relic_id": "JOSS_PAPER",
       "name_zh": "冥纸",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "JuzuBracelet",
+      "relic_id": "JUZU_BRACELET",
       "name_zh": "念珠手环",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "Kifuda",
+      "relic_id": "KIFUDA",
       "name_zh": "木制符牌",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "Kunai",
+      "relic_id": "KUNAI",
       "name_zh": "苦无",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 7,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
-      "synergy_tags": ["multi_attack"],
-      "notes_zh": "每回合打出3张攻击牌获得1敏捷，攻击流多牌组强"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "multi_attack"
+      ],
+      "notes_zh": "每回合打出3张攻击牌获得1敏捷，攻击流多牌组强",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "Kusarigama",
+      "relic_id": "KUSARIGAMA",
       "name_zh": "镰刀链",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "Lantern",
+      "relic_id": "LANTERN",
       "name_zh": "灯笼",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 6, "block_build": 6, "burn_build": 6 },
-      "synergy_tags": ["energy"],
-      "notes_zh": "第一回合额外+1能量，开局爆发"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "energy"
+      ],
+      "notes_zh": "第一回合额外+1能量，开局爆发",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "LastingCandy",
+      "relic_id": "LASTING_CANDY",
       "name_zh": "持久糖果",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
-      "synergy_tags": ["potion"],
-      "notes_zh": "药水使用后不消耗（限1次/战斗）"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "potion"
+      ],
+      "notes_zh": "药水使用后不消耗（限1次/战斗）",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "LavaLamp",
+      "relic_id": "LAVA_LAMP",
       "name_zh": "熔岩灯",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 6 },
-      "synergy_tags": ["burn_apply"],
-      "notes_zh": "STS2新遗物，燃烧相关"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "burn_apply"
+      ],
+      "notes_zh": "STS2新遗物，燃烧相关",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "LeesWaffle",
+      "relic_id": "LEES_WAFFLE",
       "name_zh": "李的华夫饼",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 7,
-      "path_scores": { "strength_build": 7, "exhaust_build": 7, "block_build": 7, "burn_build": 7 },
-      "synergy_tags": ["hp_gain", "energy"],
-      "notes_zh": "永久+10最大HP，战斗开始+1能量，全游程高价值"
+      "path_scores": {
+        "ironclad_strength": 7,
+        "ironclad_infinite": 7,
+        "ironclad_defense": 7
+      },
+      "synergy_tags": [
+        "hp_gain",
+        "energy"
+      ],
+      "notes_zh": "永久+10最大HP，战斗开始+1能量，全游程高价值",
+      "legacy_path_scores": {
+        "burn_build": 7
+      }
     },
     {
-      "relic_id": "LetterOpener",
+      "relic_id": "LETTER_OPENER",
       "name_zh": "裁信刀",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 4, "burn_build": 5 },
-      "synergy_tags": ["skill_card_trigger"],
-      "notes_zh": "每打出3张技能牌对所有敌人造成5伤害"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 4
+      },
+      "synergy_tags": [
+        "skill_card_trigger"
+      ],
+      "notes_zh": "每打出3张技能牌对所有敌人造成5伤害",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "LizardTail",
+      "relic_id": "LIZARD_TAIL",
       "name_zh": "蜥蜴尾巴",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 6, "block_build": 6, "burn_build": 6 },
-      "synergy_tags": ["death_prevent"],
-      "notes_zh": "一次濒死时保留1HP（消耗），高风险run必买保底"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "death_prevent"
+      ],
+      "notes_zh": "一次濒死时保留1HP（消耗），高风险run必买保底",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "LoomingFruit",
+      "relic_id": "LOOMING_FRUIT",
       "name_zh": "飘浮果实",
-      "character": "Shared", "rarity": "Ancient",
+      "character": "SHARED",
+      "rarity": "Ancient",
       "base_score": 7,
-      "path_scores": { "strength_build": 7, "exhaust_build": 7, "block_build": 7, "burn_build": 7 },
+      "path_scores": {
+        "ironclad_strength": 7,
+        "ironclad_infinite": 7,
+        "ironclad_defense": 7
+      },
       "synergy_tags": [],
-      "notes_zh": "古代遗物（Boss奖励），高价值"
+      "notes_zh": "古代遗物（Boss奖励），高价值",
+      "legacy_path_scores": {
+        "burn_build": 7
+      }
     },
     {
-      "relic_id": "LuckyFysh",
+      "relic_id": "LUCKY_FYSH",
       "name_zh": "幸运鱼",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "Mango",
+      "relic_id": "MANGO",
       "name_zh": "芒果",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 6, "block_build": 6, "burn_build": 6 },
-      "synergy_tags": ["hp_gain"],
-      "notes_zh": "获得时+14最大HP，强力生存遗物"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "hp_gain"
+      ],
+      "notes_zh": "获得时+14最大HP，强力生存遗物",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "MealTicket",
+      "relic_id": "MEAL_TICKET",
       "name_zh": "餐票",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
-      "synergy_tags": ["healing"],
-      "notes_zh": "进入商店时回复15HP"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "healing"
+      ],
+      "notes_zh": "进入商店时回复15HP",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "MeatOnTheBone",
+      "relic_id": "MEAT_ON_THE_BONE",
       "name_zh": "骨头上的肉",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 6, "block_build": 5, "burn_build": 6 },
-      "synergy_tags": ["healing", "low_hp"],
-      "notes_zh": "HP低于50%时，战斗结束回复12HP"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "healing",
+        "low_hp"
+      ],
+      "notes_zh": "HP低于50%时，战斗结束回复12HP",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "MembershipCard",
+      "relic_id": "MEMBERSHIP_CARD",
       "name_zh": "会员卡",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 7,
-      "path_scores": { "strength_build": 7, "exhaust_build": 7, "block_build": 7, "burn_build": 7 },
-      "synergy_tags": ["gold"],
-      "notes_zh": "商店所有物品打5折，长期收益极高"
+      "path_scores": {
+        "ironclad_strength": 7,
+        "ironclad_infinite": 7,
+        "ironclad_defense": 7
+      },
+      "synergy_tags": [
+        "gold"
+      ],
+      "notes_zh": "商店所有物品打5折，长期收益极高",
+      "legacy_path_scores": {
+        "burn_build": 7
+      }
     },
     {
-      "relic_id": "MercuryHourglass",
+      "relic_id": "MERCURY_HOURGLASS",
       "name_zh": "汞沙漏",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "MiniatureCannon",
+      "relic_id": "MINIATURE_CANNON",
       "name_zh": "微型炮",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 4, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 4
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "MiniatureTent",
+      "relic_id": "MINIATURE_TENT",
       "name_zh": "微型帐篷",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 6, "block_build": 6, "burn_build": 6 },
-      "synergy_tags": ["healing"],
-      "notes_zh": "STS2新遗物"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "healing"
+      ],
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "MoltenEgg",
+      "relic_id": "MOLTEN_EGG",
       "name_zh": "熔岩之卵",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 6,
-      "path_scores": { "strength_build": 7, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
-      "synergy_tags": ["upgrade"],
-      "notes_zh": "获得Attack牌时自动升级，攻击流强力遗物"
+      "path_scores": {
+        "ironclad_strength": 7,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "upgrade"
+      ],
+      "notes_zh": "获得Attack牌时自动升级，攻击流强力遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "MummifiedHand",
+      "relic_id": "MUMMIFIED_HAND",
       "name_zh": "木乃伊之手",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 6,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 6, "burn_build": 5 },
-      "synergy_tags": ["power_card_cost"],
-      "notes_zh": "打出Power牌后，手牌中随机一张变为0费"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "power_card_cost"
+      ],
+      "notes_zh": "打出Power牌后，手牌中随机一张变为0费",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "MysticLighter",
+      "relic_id": "MYSTIC_LIGHTER",
       "name_zh": "神秘打火机",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 4, "burn_build": 7 },
-      "synergy_tags": ["burn_apply"],
-      "notes_zh": "STS2新遗物"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 4
+      },
+      "synergy_tags": [
+        "burn_apply"
+      ],
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 7
+      }
     },
     {
-      "relic_id": "NinjaScroll",
+      "relic_id": "NINJA_SCROLL",
       "name_zh": "忍者卷轴",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 6,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 4, "burn_build": 5 },
-      "synergy_tags": ["shiv"],
-      "notes_zh": "战斗开始时获得3张飞刃，手牌数量扩充"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 4
+      },
+      "synergy_tags": [
+        "shiv"
+      ],
+      "notes_zh": "战斗开始时获得3张飞刃，手牌数量扩充",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "Nunchaku",
+      "relic_id": "NUNCHAKU",
       "name_zh": "双节棍",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 5, "block_build": 5, "burn_build": 6 },
-      "synergy_tags": ["energy", "multi_attack"],
-      "notes_zh": "每打出10张攻击牌获得1能量"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "energy",
+        "multi_attack"
+      ],
+      "notes_zh": "每打出10张攻击牌获得1能量",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "OddlySmoothStone",
+      "relic_id": "ODDLY_SMOOTH_STONE",
       "name_zh": "异常光滑的石头",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "OldCoin",
+      "relic_id": "OLD_COIN",
       "name_zh": "旧硬币",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 6, "block_build": 6, "burn_build": 6 },
-      "synergy_tags": ["gold"],
-      "notes_zh": "获得300金币，强力经济遗物"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "gold"
+      ],
+      "notes_zh": "获得300金币，强力经济遗物",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "Orichalcum",
+      "relic_id": "ORICHALCUM",
       "name_zh": "山铜",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 6,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 8, "burn_build": 5 },
-      "synergy_tags": ["block_gain", "zero_block"],
-      "notes_zh": "回合结束时若没有格挡则获得6格挡，格挡流与攻击流共用"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 8
+      },
+      "synergy_tags": [
+        "block_gain",
+        "zero_block"
+      ],
+      "notes_zh": "回合结束时若没有格挡则获得6格挡，格挡流与攻击流共用",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "OrnamentalFan",
+      "relic_id": "ORNAMENTAL_FAN",
       "name_zh": "装饰扇子",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 6,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 6, "burn_build": 5 },
-      "synergy_tags": ["multi_attack", "block_gain"],
-      "notes_zh": "每打出3张攻击牌获得4格挡"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "multi_attack",
+        "block_gain"
+      ],
+      "notes_zh": "每打出3张攻击牌获得4格挡",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "Orrery",
+      "relic_id": "ORRERY",
       "name_zh": "太阳系仪",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 7,
-      "path_scores": { "strength_build": 6, "exhaust_build": 6, "block_build": 6, "burn_build": 6 },
-      "synergy_tags": ["card_gain"],
-      "notes_zh": "添加5张Colorless牌到牌组，Colorless流或通用牌获取"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "card_gain"
+      ],
+      "notes_zh": "添加5张Colorless牌到牌组，Colorless流或通用牌获取",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "Pantograph",
+      "relic_id": "PANTOGRAPH",
       "name_zh": "缩放尺",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 6, "block_build": 6, "burn_build": 6 },
-      "synergy_tags": ["healing"],
-      "notes_zh": "进入Boss战时回复25HP，高价值生存遗物"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "healing"
+      ],
+      "notes_zh": "进入Boss战时回复25HP，高价值生存遗物",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "PaperKrane",
+      "relic_id": "PAPER_KRANE",
       "name_zh": "纸鹤",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 6,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "ParryingShield",
+      "relic_id": "PARRYING_SHIELD",
       "name_zh": "格挡盾",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 6, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 6
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "Pear",
+      "relic_id": "PEAR",
       "name_zh": "梨子",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 6, "block_build": 6, "burn_build": 6 },
-      "synergy_tags": ["hp_gain"],
-      "notes_zh": "获得时+10最大HP"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "hp_gain"
+      ],
+      "notes_zh": "获得时+10最大HP",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "Pendulum",
+      "relic_id": "PENDULUM",
       "name_zh": "钟摆",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "PenNib",
+      "relic_id": "PEN_NIB",
       "name_zh": "钢笔尖",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 6,
-      "path_scores": { "strength_build": 7, "exhaust_build": 5, "block_build": 5, "burn_build": 6 },
-      "synergy_tags": ["every_10th_attack"],
-      "notes_zh": "每打出10张攻击牌，下一张攻击牌双倍伤害"
+      "path_scores": {
+        "ironclad_strength": 7,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "every_10th_attack"
+      ],
+      "notes_zh": "每打出10张攻击牌，下一张攻击牌双倍伤害",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "Permafrost",
+      "relic_id": "PERMAFROST",
       "name_zh": "永冻土",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "PetrifiedToad",
+      "relic_id": "PETRIFIED_TOAD",
       "name_zh": "石化蟾蜍",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "Planisphere",
+      "relic_id": "PLANISPHERE",
       "name_zh": "星盘",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "Pocketwatch",
+      "relic_id": "POCKETWATCH",
       "name_zh": "怀表",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 5,
-      "path_scores": { "strength_build": 4, "exhaust_build": 4, "block_build": 4, "burn_build": 4 },
+      "path_scores": {
+        "ironclad_strength": 4,
+        "ironclad_infinite": 4,
+        "ironclad_defense": 4
+      },
       "synergy_tags": [],
-      "notes_zh": "打出3张以内的牌时摸3张，稀少触发条件"
+      "notes_zh": "打出3张以内的牌时摸3张，稀少触发条件",
+      "legacy_path_scores": {
+        "burn_build": 4
+      }
     },
     {
-      "relic_id": "PotionBelt",
+      "relic_id": "POTION_BELT",
       "name_zh": "药水腰带",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 6, "block_build": 6, "burn_build": 6 },
-      "synergy_tags": ["potion"],
-      "notes_zh": "携带药水上限+2，药水build强力"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "potion"
+      ],
+      "notes_zh": "携带药水上限+2，药水build强力",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "PrayerWheel",
+      "relic_id": "PRAYER_WHEEL",
       "name_zh": "转经轮",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "PunchDagger",
+      "relic_id": "PUNCH_DAGGER",
       "name_zh": "拳刃",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 6,
-      "path_scores": { "strength_build": 7, "exhaust_build": 5, "block_build": 5, "burn_build": 6 },
-      "synergy_tags": ["first_attack_bonus", "vulnerable_apply"],
-      "notes_zh": "每次战斗第一张攻击牌施加易伤，提升后续攻击伤害"
+      "path_scores": {
+        "ironclad_strength": 7,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "first_attack_bonus",
+        "vulnerable_apply"
+      ],
+      "notes_zh": "每次战斗第一张攻击牌施加易伤，提升后续攻击伤害",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "RainbowRing",
+      "relic_id": "RAINBOW_RING",
       "name_zh": "彩虹戒指",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "RazorTooth",
+      "relic_id": "RAZOR_TOOTH",
       "name_zh": "利齿",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "RedMask",
+      "relic_id": "RED_MASK",
       "name_zh": "红色面具",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 6, "exhaust_build": 4, "block_build": 4, "burn_build": 5 },
-      "synergy_tags": ["weak_apply"],
-      "notes_zh": "战斗开始时对全体敌人施加虚弱"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 4,
+        "ironclad_defense": 4
+      },
+      "synergy_tags": [
+        "weak_apply"
+      ],
+      "notes_zh": "战斗开始时对全体敌人施加虚弱",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "RegalPillow",
+      "relic_id": "REGAL_PILLOW",
       "name_zh": "皇家枕头",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
-      "synergy_tags": ["healing"],
-      "notes_zh": "在营地休息时多回复15HP"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "healing"
+      ],
+      "notes_zh": "在营地休息时多回复15HP",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "ReptileTrinket",
+      "relic_id": "REPTILE_TRINKET",
       "name_zh": "爬行动物小饰品",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "RingingTriangle",
+      "relic_id": "RINGING_TRIANGLE",
       "name_zh": "响铃三角铁",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "RingOfTheSnake",
+      "relic_id": "RING_OF_THE_SNAKE",
       "name_zh": "蛇之戒指",
-      "character": "Shared", "rarity": "Starter",
+      "character": "SHARED",
+      "rarity": "Starter",
       "base_score": 7,
-      "path_scores": { "strength_build": 7, "exhaust_build": 8, "block_build": 7, "burn_build": 7 },
-      "synergy_tags": ["draw"],
-      "notes_zh": "首回合多摸2张牌（仅前3次战斗？），高手牌基数确保开局稳定"
+      "path_scores": {
+        "ironclad_strength": 7,
+        "ironclad_infinite": 8,
+        "ironclad_defense": 7
+      },
+      "synergy_tags": [
+        "draw"
+      ],
+      "notes_zh": "首回合多摸2张牌（仅前3次战斗？），高手牌基数确保开局稳定",
+      "legacy_path_scores": {
+        "burn_build": 7
+      }
     },
     {
-      "relic_id": "RippleBasin",
+      "relic_id": "RIPPLE_BASIN",
       "name_zh": "涟漪水盆",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "RoyalStamp",
+      "relic_id": "ROYAL_STAMP",
       "name_zh": "皇家邮票",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "ScreamingFlagon",
+      "relic_id": "SCREAMING_FLAGON",
       "name_zh": "尖叫酒壶",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "Shovel",
+      "relic_id": "SHOVEL",
       "name_zh": "铲子",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 6, "block_build": 6, "burn_build": 6 },
-      "synergy_tags": ["rest_site"],
-      "notes_zh": "在营地时可以挖掘获得随机遗物，高期望收益"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "rest_site"
+      ],
+      "notes_zh": "在营地时可以挖掘获得随机遗物，高期望收益",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "Shuriken",
+      "relic_id": "SHURIKEN",
       "name_zh": "手里剑",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 6,
-      "path_scores": { "strength_build": 7, "exhaust_build": 5, "block_build": 5, "burn_build": 6 },
-      "synergy_tags": ["multi_attack", "strength"],
-      "notes_zh": "每打出3张攻击牌获得1力量"
+      "path_scores": {
+        "ironclad_strength": 7,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "multi_attack",
+        "strength"
+      ],
+      "notes_zh": "每打出3张攻击牌获得1力量",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "SlingOfCourage",
+      "relic_id": "SLING_OF_COURAGE",
       "name_zh": "勇气投石索",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "SneckoSkull",
+      "relic_id": "SNECKO_SKULL",
       "name_zh": "斯内克骷髅头",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 5, "block_build": 5, "burn_build": 6 },
-      "synergy_tags": ["poison_apply"],
-      "notes_zh": "STS2，施加毒素相关"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "poison_apply"
+      ],
+      "notes_zh": "STS2，施加毒素相关",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "SparklingRouge",
+      "relic_id": "SPARKLING_ROUGE",
       "name_zh": "闪亮胭脂",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "StoneCalendar",
+      "relic_id": "STONE_CALENDAR",
       "name_zh": "石制日历",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 5, "block_build": 5, "burn_build": 6 },
-      "synergy_tags": ["turn_7_bonus"],
-      "notes_zh": "第7回合结束时对全体敌人造成52伤害，适合长战斗"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "turn_7_bonus"
+      ],
+      "notes_zh": "第7回合结束时对全体敌人造成52伤害，适合长战斗",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "StoneCracker",
+      "relic_id": "STONE_CRACKER",
       "name_zh": "碎石器",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "Strawberry",
+      "relic_id": "STRAWBERRY",
       "name_zh": "草莓",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 6, "block_build": 6, "burn_build": 6 },
-      "synergy_tags": ["hp_gain"],
-      "notes_zh": "获得时+7最大HP"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "hp_gain"
+      ],
+      "notes_zh": "获得时+7最大HP",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "StrikeDummy",
+      "relic_id": "STRIKE_DUMMY",
       "name_zh": "打击假人",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 5,
-      "path_scores": { "strength_build": 6, "exhaust_build": 4, "block_build": 4, "burn_build": 5 },
-      "synergy_tags": ["strike_synergy"],
-      "notes_zh": "Strike类牌额外+3伤害"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 4,
+        "ironclad_defense": 4
+      },
+      "synergy_tags": [
+        "strike_synergy"
+      ],
+      "notes_zh": "Strike类牌额外+3伤害",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "SturdyClamp",
+      "relic_id": "STURDY_CLAMP",
       "name_zh": "结实夹子",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "TheAbacus",
+      "relic_id": "THE_ABACUS",
       "name_zh": "算盘",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 6,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 7, "burn_build": 5 },
-      "synergy_tags": ["block_gain", "shuffle"],
-      "notes_zh": "洗牌时获得6格挡，格挡流强力"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 7
+      },
+      "synergy_tags": [
+        "block_gain",
+        "shuffle"
+      ],
+      "notes_zh": "洗牌时获得6格挡，格挡流强力",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "TheCourier",
+      "relic_id": "THE_COURIER",
       "name_zh": "信使",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 7,
-      "path_scores": { "strength_build": 7, "exhaust_build": 7, "block_build": 7, "burn_build": 7 },
-      "synergy_tags": ["merchant"],
-      "notes_zh": "商店不再出售诅咒，且进入商店刷新一张牌，全程高价值"
+      "path_scores": {
+        "ironclad_strength": 7,
+        "ironclad_infinite": 7,
+        "ironclad_defense": 7
+      },
+      "synergy_tags": [
+        "merchant"
+      ],
+      "notes_zh": "商店不再出售诅咒，且进入商店刷新一张牌，全程高价值",
+      "legacy_path_scores": {
+        "burn_build": 7
+      }
     },
     {
-      "relic_id": "Tingsha",
+      "relic_id": "TINGSHA",
       "name_zh": "叮沙",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 6, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "TinyMailbox",
+      "relic_id": "TINY_MAILBOX",
       "name_zh": "小邮箱",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "Toolbox",
+      "relic_id": "TOOLBOX",
       "name_zh": "工具箱",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "ToughBandages",
+      "relic_id": "TOUGH_BANDAGES",
       "name_zh": "坚韧绷带",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 6,
-      "path_scores": { "strength_build": 5, "exhaust_build": 6, "block_build": 7, "burn_build": 5 },
-      "synergy_tags": ["block_gain", "damage_taken"],
-      "notes_zh": "受到伤害时获得3格挡，格挡流强力"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 7
+      },
+      "synergy_tags": [
+        "block_gain",
+        "damage_taken"
+      ],
+      "notes_zh": "受到伤害时获得3格挡，格挡流强力",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "ToxicEgg",
+      "relic_id": "TOXIC_EGG",
       "name_zh": "毒素之卵",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
-      "synergy_tags": ["upgrade", "poison"],
-      "notes_zh": "获得Skill牌时自动升级，技能流强力"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "upgrade",
+        "poison"
+      ],
+      "notes_zh": "获得Skill牌时自动升级，技能流强力",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "TungstenRod",
+      "relic_id": "TUNGSTEN_ROD",
       "name_zh": "钨棒",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 6, "block_build": 6, "burn_build": 6 },
-      "synergy_tags": ["damage_reduction"],
-      "notes_zh": "所有造成伤害减少1，包括敌人和友军，极强防御遗物"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "damage_reduction"
+      ],
+      "notes_zh": "所有造成伤害减少1，包括敌人和友军，极强防御遗物",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "TuningFork",
+      "relic_id": "TUNING_FORK",
       "name_zh": "音叉",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "TwistedFunnel",
+      "relic_id": "TWISTED_FUNNEL",
       "name_zh": "扭曲漏斗",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "UnceasingTop",
+      "relic_id": "UNCEASING_TOP",
       "name_zh": "不停转的陀螺",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 7,
-      "path_scores": { "strength_build": 6, "exhaust_build": 7, "block_build": 7, "burn_build": 6 },
-      "synergy_tags": ["draw", "empty_hand"],
-      "notes_zh": "手牌用完时摸1张牌，可循环触发，消耗流强力"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 7,
+        "ironclad_defense": 7
+      },
+      "synergy_tags": [
+        "draw",
+        "empty_hand"
+      ],
+      "notes_zh": "手牌用完时摸1张牌，可循环触发，消耗流强力",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "UnsettlingLamp",
+      "relic_id": "UNSETTLING_LAMP",
       "name_zh": "令人不安的灯",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "Vajra",
+      "relic_id": "VAJRA",
       "name_zh": "金刚杵",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 6,
-      "path_scores": { "strength_build": 8, "exhaust_build": 6, "block_build": 5, "burn_build": 6 },
-      "synergy_tags": ["strength"],
-      "notes_zh": "获得时永久+1力量，力量流必拿"
+      "path_scores": {
+        "ironclad_strength": 8,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "strength"
+      ],
+      "notes_zh": "获得时永久+1力量，力量流必拿",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "Vambrace",
+      "relic_id": "VAMBRACE",
       "name_zh": "臂甲",
-      "character": "Shared", "rarity": "Uncommon",
+      "character": "SHARED",
+      "rarity": "Uncommon",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 6, "burn_build": 5 },
-      "synergy_tags": ["block_gain"],
-      "notes_zh": "进入精英战时获得额外格挡"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "block_gain"
+      ],
+      "notes_zh": "进入精英战时获得额外格挡",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "VenerableTeaSet",
+      "relic_id": "VENERABLE_TEA_SET",
       "name_zh": "古典茶具",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 6, "block_build": 6, "burn_build": 6 },
-      "synergy_tags": ["healing"],
-      "notes_zh": "在营地休息时获得额外恢复，提升生存能力"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "healing"
+      ],
+      "notes_zh": "在营地休息时获得额外恢复，提升生存能力",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "VeryHotCocoa",
+      "relic_id": "VERY_HOT_COCOA",
       "name_zh": "非常热的可可",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "VexingPuzzlebox",
+      "relic_id": "VEXING_PUZZLEBOX",
       "name_zh": "烦人的谜题盒",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "WarPaint",
+      "relic_id": "WAR_PAINT",
       "name_zh": "战争油彩",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 6,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
-      "synergy_tags": ["upgrade"],
-      "notes_zh": "获得2张Skill牌时将其升级，消耗流/技能流协同"
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "upgrade"
+      ],
+      "notes_zh": "获得2张Skill牌时将其升级，消耗流/技能流协同",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "Whetstone",
+      "relic_id": "WHETSTONE",
       "name_zh": "磨刀石",
-      "character": "Shared", "rarity": "Common",
+      "character": "SHARED",
+      "rarity": "Common",
       "base_score": 6,
-      "path_scores": { "strength_build": 7, "exhaust_build": 5, "block_build": 5, "burn_build": 6 },
-      "synergy_tags": ["upgrade"],
-      "notes_zh": "获得2张Attack牌时将其升级，攻击流协同"
+      "path_scores": {
+        "ironclad_strength": 7,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "upgrade"
+      ],
+      "notes_zh": "获得2张Attack牌时将其升级，攻击流协同",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "WhiteBeastStatue",
+      "relic_id": "WHITE_BEAST_STATUE",
       "name_zh": "白兽雕像",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 6,
-      "path_scores": { "strength_build": 6, "exhaust_build": 6, "block_build": 6, "burn_build": 6 },
-      "synergy_tags": ["potion"],
-      "notes_zh": "宝箱/战利品包含更多药水，药水build强力"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "potion"
+      ],
+      "notes_zh": "宝箱/战利品包含更多药水，药水build强力",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "WhiteStar",
+      "relic_id": "WHITE_STAR",
       "name_zh": "白星",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "WingCharm",
+      "relic_id": "WING_CHARM",
       "name_zh": "翅膀护符",
-      "character": "Shared", "rarity": "Shop",
+      "character": "SHARED",
+      "rarity": "Shop",
       "base_score": 5,
-      "path_scores": { "strength_build": 5, "exhaust_build": 5, "block_build": 5, "burn_build": 5 },
+      "path_scores": {
+        "ironclad_strength": 5,
+        "ironclad_infinite": 5,
+        "ironclad_defense": 5
+      },
       "synergy_tags": [],
-      "notes_zh": "STS2新遗物"
+      "notes_zh": "STS2新遗物",
+      "legacy_path_scores": {
+        "burn_build": 5
+      }
     },
     {
-      "relic_id": "IceCream",
+      "relic_id": "ICE_CREAM",
       "name_zh": "冰淇淋",
-      "character": "Shared", "rarity": "Rare",
+      "character": "SHARED",
+      "rarity": "Rare",
       "base_score": 9,
-      "path_scores": { "strength_build": 9, "exhaust_build": 9, "block_build": 9, "burn_build": 9 },
-      "synergy_tags": ["energy_retention"],
-      "notes_zh": "能量不消散，游戏中最强遗物之一，有机会必拿"
+      "path_scores": {
+        "ironclad_strength": 9,
+        "ironclad_infinite": 9,
+        "ironclad_defense": 9
+      },
+      "synergy_tags": [
+        "energy_retention"
+      ],
+      "notes_zh": "能量不消散，游戏中最强遗物之一，有机会必拿",
+      "legacy_path_scores": {
+        "burn_build": 9
+      }
     },
     {
-      "relic_id": "SneckoEye",
+      "relic_id": "SNECKO_EYE",
       "name_zh": "斯内克之眼",
-      "character": "Shared", "rarity": "Ancient",
+      "character": "SHARED",
+      "rarity": "Ancient",
       "base_score": 7,
-      "path_scores": { "strength_build": 6, "exhaust_build": 6, "block_build": 6, "burn_build": 6 },
-      "synergy_tags": ["draw", "randomize_cost"],
-      "notes_zh": "古代遗物，多摸2张牌但费用随机化，高上限高下限"
+      "path_scores": {
+        "ironclad_strength": 6,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 6
+      },
+      "synergy_tags": [
+        "draw",
+        "randomize_cost"
+      ],
+      "notes_zh": "古代遗物，多摸2张牌但费用随机化，高上限高下限",
+      "legacy_path_scores": {
+        "burn_build": 6
+      }
     },
     {
-      "relic_id": "RunicPyramid",
+      "relic_id": "RUNIC_PYRAMID",
       "name_zh": "如尼字母金字塔",
-      "character": "Shared", "rarity": "Ancient",
+      "character": "SHARED",
+      "rarity": "Ancient",
       "base_score": 8,
-      "path_scores": { "strength_build": 8, "exhaust_build": 9, "block_build": 7, "burn_build": 8 },
-      "synergy_tags": ["hand_retention"],
-      "notes_zh": "古代遗物，手牌不在回合结束丢弃，极强引擎核心遗物"
+      "path_scores": {
+        "ironclad_strength": 8,
+        "ironclad_infinite": 9,
+        "ironclad_defense": 7
+      },
+      "synergy_tags": [
+        "hand_retention"
+      ],
+      "notes_zh": "古代遗物，手牌不在回合结束丢弃，极强引擎核心遗物",
+      "legacy_path_scores": {
+        "burn_build": 8
+      }
     },
     {
-      "relic_id": "PhilosophersStone",
+      "relic_id": "PHILOSOPHERS_STONE",
       "name_zh": "哲学家之石",
-      "character": "Shared", "rarity": "Ancient",
+      "character": "SHARED",
+      "rarity": "Ancient",
       "base_score": 7,
-      "path_scores": { "strength_build": 9, "exhaust_build": 6, "block_build": 5, "burn_build": 7 },
-      "synergy_tags": ["energy", "enemy_strength"],
-      "notes_zh": "古代遗物，+1能量但敌人+1力量，高风险高收益"
+      "path_scores": {
+        "ironclad_strength": 9,
+        "ironclad_infinite": 6,
+        "ironclad_defense": 5
+      },
+      "synergy_tags": [
+        "energy",
+        "enemy_strength"
+      ],
+      "notes_zh": "古代遗物，+1能量但敌人+1力量，高风险高收益",
+      "legacy_path_scores": {
+        "burn_build": 7
+      }
     }
   ]
 }

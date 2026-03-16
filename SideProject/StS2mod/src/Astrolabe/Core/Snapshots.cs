@@ -2,8 +2,9 @@ namespace Astrolabe.Core;
 
 /// <summary>
 /// 跑分全局状态快照（战斗外任意时刻可构建）。
-/// 所有字段使用游戏内的 ID 字符串，解耦于具体的游戏类型，便于序列化和测试。
+/// 所有字段使用游戏内 canonical ID（以 `ModelId.Entry` / `BossEncounter.Id.Entry` 为准），便于序列化和测试。
 /// </summary>
+
 public class RunSnapshot
 {
     public int HP { get; set; }
@@ -12,7 +13,8 @@ public class RunSnapshot
     public int Floor { get; set; }
     public int Act { get; set; }
 
-    /// <summary>完整牌库中所有牌的 ID（含升级标记，如 "strike+"）</summary>
+    /// <summary>完整牌库中所有牌的 ID（含升级标记，如 `STRIKE_IRONCLAD+`）</summary>
+
     public List<string> DeckCardIds { get; set; } = new();
 
     /// <summary>当前持有的遗物 ID 列表（有序，反映获取顺序）</summary>
@@ -21,10 +23,12 @@ public class RunSnapshot
     /// <summary>当前持有的药水 ID 列表</summary>
     public List<string> PotionIds { get; set; } = new();
 
-    /// <summary>当前角色 ID（如 "ironclad"、"silent"、"defect"、"watcher"）</summary>
+    /// <summary>当前角色 ID（如 "IRONCLAD"、"SILENT"、"DEFECT"）</summary>
+
     public string CharacterId { get; set; } = string.Empty;
 
-    /// <summary>当前 Act 的 Boss ID（用于路线规划时的针对性建议）</summary>
+    /// <summary>当前 Act 已分配的 Boss ID（`BossEncounter.Id.Entry`，用于路线规划时的针对性建议）</summary>
+
     public string? ActBossId { get; set; }
 
     /// <summary>快照创建时间（调试用）</summary>
