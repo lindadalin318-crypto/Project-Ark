@@ -4,18 +4,14 @@ using UnityEngine;
 namespace ProjectArk.Ship.Editor
 {
     /// <summary>
-    /// One-click editor utility to auto-assign all GGrenderdoc textures to their materials.
-    /// Menu: ProjectArk > VFX > Link Material Textures
+    /// Authority tool that assigns the active Ship / BoostTrail textures to the live material chain.
     ///
-    /// Assigns:
-    ///   mat_boost_energy_layer2 : _Tex0~3 = boost_noise_main/distort/layer3/layer4
-    ///   mat_boost_energy_layer3 : _Tex0~1 = boost_energy_noise_a / boost_energy_main
-    ///   mat_boost_energy_field  : _LUTTex = boost_field_main, _UseLUT = 1
-    ///   mat_trail_main_effect   : _Slot0~3 = trail_main_spritesheet / trail_second_spritesheet / trail_edge_glow / trail_color_lut
-    ///   mat_flame_trail         : _BaseMap = vfx_boost_techno_flame
-    ///   mat_ember_trail         : _BaseMap = vfx_ember_trail
-    ///   mat_ember_sparks        : _BaseMap = vfx_ember_sparks
-        ///   mat_trail_main          : _BaseMap = vfx_boost_techno_flame
+    /// Authority owned by this tool:
+    ///   • Current active material set only
+    ///   • Exact-path-first texture assignment inside Assets/_Art/VFX/BoostTrail/Textures
+    ///   • TrailMainEffect / BoostEnergyLayer2 / BoostEnergyLayer3 shader enforcement
+    ///
+    /// This tool does not restore dormant or legacy material chains.
     /// </summary>
     public static class MaterialTextureLinker
     {
@@ -24,9 +20,8 @@ namespace ProjectArk.Ship.Editor
         private const string TrailMainEffectShader = "ProjectArk/VFX/TrailMainEffect";
         private const string BoostEnergyLayer2Shader = "ProjectArk/VFX/BoostEnergyLayer2";
         private const string BoostEnergyLayer3Shader = "ProjectArk/VFX/BoostEnergyLayer3";
-        private const string BoostEnergyFieldShader = "ProjectArk/VFX/BoostEnergyField";
 
-        [MenuItem("ProjectArk/VFX/Link Material Textures")]
+        [MenuItem("ProjectArk/Ship/VFX/Authority/Link Active BoostTrail Material Textures")]
         public static void LinkAllMaterialTexturesMenu()
         {
             LinkAllMaterialTextures(showDialog: true);
@@ -35,20 +30,24 @@ namespace ProjectArk.Ship.Editor
         public static void LinkAllMaterialTextures(bool showDialog)
         {
             int successCount = 0;
-            int failCount    = 0;
+            int failCount = 0;
 
             // ── mat_boost_energy_layer2 ───────────────────────────────────────
             var mat2 = LoadMat("mat_boost_energy_layer2");
             if (mat2 != null)
             {
                 EnsureShader(mat2, BoostEnergyLayer2Shader, ref successCount, ref failCount);
-                AssignTex(mat2, "_Tex0", "boost_noise_main",    ref successCount, ref failCount);
+                AssignTex(mat2, "_Tex0", "boost_noise_main", ref successCount, ref failCount);
                 AssignTex(mat2, "_Tex1", "boost_noise_distort", ref successCount, ref failCount);
-                AssignTex(mat2, "_Tex2", "boost_noise_layer3",  ref successCount, ref failCount);
-                AssignTex(mat2, "_Tex3", "boost_noise_layer4",  ref successCount, ref failCount);
+                AssignTex(mat2, "_Tex2", "boost_noise_layer3", ref successCount, ref failCount);
+                AssignTex(mat2, "_Tex3", "boost_noise_layer4", ref successCount, ref failCount);
                 EditorUtility.SetDirty(mat2);
             }
-            else { failCount++; Debug.LogWarning("[MaterialTextureLinker] mat_boost_energy_layer2 not found"); }
+            else
+            {
+                failCount++;
+                Debug.LogWarning("[MaterialTextureLinker] mat_boost_energy_layer2 not found");
+            }
 
             // ── mat_boost_energy_layer3 ───────────────────────────────────────
             var mat3 = LoadMat("mat_boost_energy_layer3");
@@ -56,36 +55,14 @@ namespace ProjectArk.Ship.Editor
             {
                 EnsureShader(mat3, BoostEnergyLayer3Shader, ref successCount, ref failCount);
                 AssignTex(mat3, "_Tex0", "boost_energy_noise_a", ref successCount, ref failCount);
-                AssignTex(mat3, "_Tex1", "boost_energy_main",    ref successCount, ref failCount);
+                AssignTex(mat3, "_Tex1", "boost_energy_main", ref successCount, ref failCount);
                 EditorUtility.SetDirty(mat3);
             }
-            else { failCount++; Debug.LogWarning("[MaterialTextureLinker] mat_boost_energy_layer3 not found"); }
-
-            // ── mat_boost_energy_field ────────────────────────────────────────
-            var matField = LoadMat("mat_boost_energy_field");
-            if (matField != null)
+            else
             {
-                EnsureShader(matField, BoostEnergyFieldShader, ref successCount, ref failCount);
-                AssignTex(matField, "_LUTTex", "boost_field_main", ref successCount, ref failCount);
-                matField.SetFloat("_UseLUT", 1f);
-                EditorUtility.SetDirty(matField);
-                Debug.Log("[MaterialTextureLinker] mat_boost_energy_field: _UseLUT set to 1");
+                failCount++;
+                Debug.LogWarning("[MaterialTextureLinker] mat_boost_energy_layer3 not found");
             }
-            else { failCount++; Debug.LogWarning("[MaterialTextureLinker] mat_boost_energy_field not found"); }
-
-            // ── mat_trail_main_effect ─────────────────────────────────────────
-            var matTrailEffect = LoadMat("mat_trail_main_effect");
-            if (matTrailEffect != null)
-            {
-                EnsureShader(matTrailEffect, TrailMainEffectShader, ref successCount, ref failCount);
-                matTrailEffect.SetFloat("_UseLegacySlots", 1f);
-                AssignTex(matTrailEffect, "_Slot0", "trail_main_spritesheet",   ref successCount, ref failCount);
-                AssignTex(matTrailEffect, "_Slot1", "trail_second_spritesheet", ref successCount, ref failCount);
-                AssignTex(matTrailEffect, "_Slot2", "trail_edge_glow",          ref successCount, ref failCount);
-                AssignTex(matTrailEffect, "_Slot3", "trail_color_lut",          ref successCount, ref failCount);
-                EditorUtility.SetDirty(matTrailEffect);
-            }
-            else { failCount++; Debug.LogWarning("[MaterialTextureLinker] mat_trail_main_effect not found"); }
 
             // ── mat_flame_trail ───────────────────────────────────────────────
             var matFlame = LoadMat("mat_flame_trail");
@@ -94,7 +71,11 @@ namespace ProjectArk.Ship.Editor
                 AssignTex(matFlame, "_BaseMap", "vfx_boost_techno_flame", ref successCount, ref failCount);
                 EditorUtility.SetDirty(matFlame);
             }
-            else { failCount++; Debug.LogWarning("[MaterialTextureLinker] mat_flame_trail not found"); }
+            else
+            {
+                failCount++;
+                Debug.LogWarning("[MaterialTextureLinker] mat_flame_trail not found");
+            }
 
             // ── mat_ember_trail ───────────────────────────────────────────────
             var matEmber = LoadMat("mat_ember_trail");
@@ -103,7 +84,11 @@ namespace ProjectArk.Ship.Editor
                 AssignTex(matEmber, "_BaseMap", "vfx_ember_trail", ref successCount, ref failCount);
                 EditorUtility.SetDirty(matEmber);
             }
-            else { failCount++; Debug.LogWarning("[MaterialTextureLinker] mat_ember_trail not found"); }
+            else
+            {
+                failCount++;
+                Debug.LogWarning("[MaterialTextureLinker] mat_ember_trail not found");
+            }
 
             // ── mat_ember_sparks ──────────────────────────────────────────────
             var matSparks = LoadMat("mat_ember_sparks");
@@ -112,7 +97,11 @@ namespace ProjectArk.Ship.Editor
                 AssignTex(matSparks, "_BaseMap", "vfx_ember_sparks", ref successCount, ref failCount);
                 EditorUtility.SetDirty(matSparks);
             }
-            else { failCount++; Debug.LogWarning("[MaterialTextureLinker] mat_ember_sparks not found"); }
+            else
+            {
+                failCount++;
+                Debug.LogWarning("[MaterialTextureLinker] mat_ember_sparks not found");
+            }
 
             // ── mat_trail_main ────────────────────────────────────────────────
             // MainTrail 当前优先走更可控的火焰轮廓纹理，而不是 RenderDoc
@@ -125,7 +114,11 @@ namespace ProjectArk.Ship.Editor
                 AssignTex(matTrailMain, "_BaseMap", "vfx_boost_techno_flame", ref successCount, ref failCount);
                 EditorUtility.SetDirty(matTrailMain);
             }
-            else { failCount++; Debug.LogWarning("[MaterialTextureLinker] mat_trail_main not found"); }
+            else
+            {
+                failCount++;
+                Debug.LogWarning("[MaterialTextureLinker] mat_trail_main not found");
+            }
 
             // ── Save & Report ─────────────────────────────────────────────────
             AssetDatabase.SaveAssets();
@@ -173,26 +166,19 @@ namespace ProjectArk.Ship.Editor
         private static void AssignTex(Material mat, string propName, string texName,
                                        ref int successCount, ref int failCount)
         {
-            // Search in VFX textures directory first, then ship directory
-            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>($"{TEX_DIR}/{texName}.png");
-            if (tex == null)
-            {
-                // Fallback: search entire project
-                var guids = AssetDatabase.FindAssets($"{texName} t:Texture2D");
-                if (guids.Length > 0)
-                    tex = AssetDatabase.LoadAssetAtPath<Texture2D>(AssetDatabase.GUIDToAssetPath(guids[0]));
-            }
+            var texturePath = $"{TEX_DIR}/{texName}.png";
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath);
 
             if (tex != null)
             {
                 mat.SetTexture(propName, tex);
                 successCount++;
-                Debug.Log($"[MaterialTextureLinker] {mat.name}.{propName} = {texName}");
+                Debug.Log($"[MaterialTextureLinker] {mat.name}.{propName} = {texturePath}");
             }
             else
             {
                 failCount++;
-                Debug.LogWarning($"[MaterialTextureLinker] Texture not found: {texName}.png " +
+                Debug.LogWarning($"[MaterialTextureLinker] Texture not found at exact path: {texturePath} " +
                                  $"(for {mat.name}.{propName})");
             }
         }

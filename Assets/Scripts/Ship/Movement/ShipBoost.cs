@@ -130,24 +130,24 @@ namespace ProjectArk.Ship
         private void TryExecuteBoost()
         {
             if (IsBoosting) return;
-            ExecuteBoostAsync().Forget();
+            ExecuteBoostAsync(sustainWhileDashHeld: false).Forget();
         }
 
         /// <summary>
         /// 由 ShipDash 在 Dodge 完成后调用，强制进入 Boost 状态（不检查冷却）。
-        /// 对应 GG 的 BoosterBurnoutPower.UsePower() 在 AfterDodge 时触发的行为。
+        /// sustainWhileDashHeld=true 时，Boost 会持续到 Dash 键释放。
         /// </summary>
-        public void ForceActivate()
+        public void ForceActivate(bool sustainWhileDashHeld = false)
         {
             if (IsBoosting) return;
-            ExecuteBoostAsync().Forget();
+            ExecuteBoostAsync(sustainWhileDashHeld).Forget();
         }
 
         // ══════════════════════════════════════════════════════════════
         // Boost Execution  (对应 GG StateData.Apply() → IsBoostState)
         // ══════════════════════════════════════════════════════════════
 
-        private async UniTaskVoid ExecuteBoostAsync()
+        private async UniTaskVoid ExecuteBoostAsync(bool sustainWhileDashHeld)
         {
             if (_stats == null)
             {
@@ -170,8 +170,14 @@ namespace ProjectArk.Ship
             // ── 2. 通知 VFX（引擎粒子增强等）
             OnBoostStarted?.Invoke();
 
-            // ── 3. 持续 minTime（玩家在此期间加速可以突破正常速度上限）
-            if (_stats.BoostDuration > 0f)
+            // ── 3. Dash 长按链路：持续到松开；其他入口保留固定时长兜底
+            if (sustainWhileDashHeld)
+            {
+                await UniTask.WaitUntil(
+                    () => !_inputHandler.IsDashHeld,
+                    cancellationToken: destroyCancellationToken);
+            }
+            else if (_stats.BoostDuration > 0f)
             {
                 int ms = Mathf.RoundToInt(_stats.BoostDuration * 1000f);
                 await UniTask.Delay(ms, cancellationToken: destroyCancellationToken);

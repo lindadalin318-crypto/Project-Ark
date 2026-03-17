@@ -8,14 +8,17 @@ using UnityEngine.InputSystem;
 namespace ProjectArk.Ship.Editor
 {
     /// <summary>
-    /// One-click editor utility to build a fully configured Ship GameObject in the scene.
+    /// Bootstrap-only editor utility to build a fully configured Ship GameObject in the current scene.
     ///
-    /// Menu: ProjectArk > Ship > Build Ship
+    /// Menu: ProjectArk > Ship > Bootstrap > Build Ship Scene Setup
+    ///
+    /// This tool is not the authority for `Ship.prefab`, `BoostTrailRoot.prefab`, or scene-only BoostTrail bindings.
+    /// It only bootstraps a playable scene instance and its local references.
     ///
     /// Creates (idempotent — running multiple times is safe):
     ///   - Ship root GameObject with Rigidbody2D + CircleCollider2D
     ///   - All script components in correct RequireComponent order
-    ///   - VisualChild (SpriteRenderer) and EngineParticles (ParticleSystem) child nodes
+    ///   - `ShipVisual` root + canonical sprite layer children + `EngineParticles`
     ///   - ShipStatsSO + ShipJuiceSettingsSO assets (via ShipFeelAssetCreator if missing)
     ///   - All SerializeField references auto-wired
     ///   - WeavingStateTransition._shipTransform back-wired if UIManager exists in scene
@@ -24,20 +27,27 @@ namespace ProjectArk.Ship.Editor
     /// </summary>
     public static class ShipBuilder
     {
-        private const string SHIP_GO_NAME           = "Ship";
-        private const string VISUAL_CHILD_NAME       = "VisualChild";
-        private const string ENGINE_PARTICLES_NAME   = "EngineParticles";
+        private const string SHIP_GO_NAME                    = "Ship";
+        private const string VISUAL_CHILD_NAME               = "ShipVisual";
+        private const string ENGINE_PARTICLES_NAME           = "EngineParticles";
 
-        // 5-layer sprite structure (children of VisualChild)
-        private const string SPRITE_BACK_NAME    = "Ship_Sprite_Back";
-        private const string SPRITE_LIQUID_NAME  = "Ship_Sprite_Liquid";
-        private const string SPRITE_HL_NAME      = "Ship_Sprite_HL";
-        private const string SPRITE_SOLID_NAME   = "Ship_Sprite_Solid";
-        private const string SPRITE_CORE_NAME    = "Ship_Sprite_Core";
+        // 5-layer sprite structure (children of ShipVisual)
+        private const string SPRITE_BACK_NAME                = "Ship_Sprite_Back";
+        private const string SPRITE_LIQUID_NAME              = "Ship_Sprite_Liquid";
+        private const string SPRITE_HL_NAME                  = "Ship_Sprite_HL";
+        private const string SPRITE_SOLID_NAME               = "Ship_Sprite_Solid";
+        private const string SPRITE_CORE_NAME                = "Ship_Sprite_Core";
+        private const int SOLID_SPRITE_LAYER_INDEX           = 3;
 
-        private const string GLOW_MATERIAL_PATH  = "Assets/_Art/Ship/Glitch/ShipGlowMaterial.mat";
+        private const string GLOW_MATERIAL_PATH              = "Assets/_Art/Ship/Glitch/ShipGlowMaterial.mat";
+        private const string MAIN_REFERENCE_SPRITE_PATH      = "Assets/_Art/Ship/Glitch/Reference/GrabGun_Base_9.png";
+        private const string HL_REFERENCE_SPRITE_PATH        = "Assets/_Art/Ship/Glitch/Reference/GrabGun_Base_8.png";
+        private const string SHIP_STATS_PATH                 = "Assets/_Data/Ship/DefaultShipStats.asset";
+        private const string SHIP_JUICE_SETTINGS_PATH        = "Assets/_Data/Ship/DefaultShipJuiceSettings.asset";
+        private const string INPUT_ACTIONS_PATH              = "Assets/Input/ShipActions.inputactions";
+        private const string DASH_AFTER_IMAGE_PREFAB_PATH    = "Assets/_Prefabs/Ship/DashAfterImage.prefab";
 
-        [MenuItem("ProjectArk/Ship/Build Ship")]
+        [MenuItem("ProjectArk/Ship/Bootstrap/Build Ship Scene Setup")]
         public static void BuildShip()
         {
             var log = new List<string>();
@@ -53,15 +63,18 @@ namespace ProjectArk.Ship.Editor
             AddScriptComponents(shipGo, log);
 
             // ── Step 3: Child Nodes ────────────────────────────────────
-            var visualChild       = EnsureChild(shipGo, VISUAL_CHILD_NAME, log);
-            var spriteRenderer    = GetOrAddComponent<SpriteRenderer>(visualChild);
-            var engineParticlesGo = EnsureChild(shipGo, ENGINE_PARTICLES_NAME, log);
-            engineParticlesGo.transform.localPosition = new Vector3(0f, -0.3f, 0f);
+            var visualChild = FindOrCreateVisualRoot(shipGo, log);
+
+            // ── Step 3b: 5-layer sprite children (under ShipVisual) ────
+            var spriteLayerRenderers = EnsureSpriteLayers(visualChild, log);
+
+            var engineParent = spriteLayerRenderers != null && spriteLayerRenderers.Length > 0 && spriteLayerRenderers[0] != null
+                ? spriteLayerRenderers[0].gameObject
+                : visualChild;
+            var engineParticlesGo = EnsureChild(engineParent, ENGINE_PARTICLES_NAME, log);
+            engineParticlesGo.transform.localPosition = new Vector3(0f, 0.1f, 0f);
             var ps = GetOrAddComponent<ParticleSystem>(engineParticlesGo);
             ConfigureEngineParticles(ps, log);
-
-            // ── Step 3b: 5-layer sprite children (under VisualChild) ───
-            var spriteLayerRenderers = EnsureSpriteLayers(visualChild, log);
 
             // ── Step 4: Find / create SO assets ───────────────────────
             var statsSO  = FindOrCreateShipStatsSO(log);
@@ -71,7 +84,7 @@ namespace ProjectArk.Ship.Editor
             var inputAsset = FindInputActionAsset(log, todo);
 
             // ── Step 6: Wire all SerializeFields ──────────────────────
-            WireReferences(shipGo, visualChild, spriteRenderer, ps,
+            WireReferences(shipGo, visualChild, ps,
                 statsSO, juiceSO, inputAsset, spriteLayerRenderers, log, todo);
 
             // ── Step 7: Back-wire WeavingStateTransition ───────────────
@@ -170,6 +183,23 @@ namespace ProjectArk.Ship.Editor
         // Step 3 helpers — Child nodes
         // ════════════════════════════════════════════════════════════════
 
+        private static GameObject FindOrCreateVisualRoot(GameObject shipGo, List<string> log)
+        {
+            var canonical = shipGo.transform.Find(VISUAL_CHILD_NAME);
+            if (canonical != null)
+            {
+                log.Add($"✓ Visual root found: {VISUAL_CHILD_NAME}");
+                return canonical.gameObject;
+            }
+
+            var child = new GameObject(VISUAL_CHILD_NAME);
+            child.transform.SetParent(shipGo.transform, false);
+            child.transform.localPosition = Vector3.zero;
+            Undo.RegisterCreatedObjectUndo(child, $"Create {VISUAL_CHILD_NAME}");
+            log.Add($"✓ Created visual root: {VISUAL_CHILD_NAME}");
+            return child;
+        }
+
         private static GameObject EnsureChild(GameObject parent, string childName, List<string> log)
         {
             var existing = parent.transform.Find(childName);
@@ -192,7 +222,7 @@ namespace ProjectArk.Ship.Editor
         // ════════════════════════════════════════════════════════════════
 
         /// <summary>
-        /// Ensures the 5 sprite layer children exist under visualChild.
+        /// Ensures the 5 sprite layer children exist under `ShipVisual`.
         /// Returns array [back, liquid, hl, solid, core] SpriteRenderers.
         /// </summary>
         private static SpriteRenderer[] EnsureSpriteLayers(GameObject visualChild, List<string> log)
@@ -201,16 +231,13 @@ namespace ProjectArk.Ship.Editor
             if (glowMat == null)
                 log.Add($"⚠ ShipGlowMaterial not found at {GLOW_MATERIAL_PATH} — assign manually to Ship_Sprite_Liquid");
 
-            // Try to load reference sprites
-            var spriteGuids = AssetDatabase.FindAssets("GrabGun_Base_9 t:Sprite");
-            Sprite mainSprite = spriteGuids.Length > 0
-                ? AssetDatabase.LoadAssetAtPath<Sprite>(AssetDatabase.GUIDToAssetPath(spriteGuids[0]))
-                : null;
+            Sprite mainSprite = AssetDatabase.LoadAssetAtPath<Sprite>(MAIN_REFERENCE_SPRITE_PATH);
+            if (mainSprite == null)
+                log.Add($"⚠ Reference sprite missing at {MAIN_REFERENCE_SPRITE_PATH}");
 
-            var hlGuids = AssetDatabase.FindAssets("GrabGun_Base_8 t:Sprite");
-            Sprite hlSprite = hlGuids.Length > 0
-                ? AssetDatabase.LoadAssetAtPath<Sprite>(AssetDatabase.GUIDToAssetPath(hlGuids[0]))
-                : null;
+            Sprite hlSprite = AssetDatabase.LoadAssetAtPath<Sprite>(HL_REFERENCE_SPRITE_PATH);
+            if (hlSprite == null)
+                log.Add($"⚠ Reference sprite missing at {HL_REFERENCE_SPRITE_PATH}");
 
             // Ship_Sprite_Back: no reference sprite assigned — awaiting original art asset
             Sprite backSprite = null;
@@ -280,49 +307,37 @@ namespace ProjectArk.Ship.Editor
 
         private static ShipStatsSO FindOrCreateShipStatsSO(List<string> log)
         {
-            const string assetPath = "Assets/_Data/Ship/DefaultShipStats.asset";
-            var so = AssetDatabase.LoadAssetAtPath<ShipStatsSO>(assetPath);
+            var so = AssetDatabase.LoadAssetAtPath<ShipStatsSO>(SHIP_STATS_PATH);
             if (so != null)
             {
-                log.Add($"✓ ShipStatsSO found: {assetPath}");
+                log.Add($"✓ ShipStatsSO found: {SHIP_STATS_PATH}");
                 return so;
             }
 
-            // 委托给已有的 ShipFeelAssetCreator 创建
             ShipFeelAssetCreator.CreateOrUpdateShipStats();
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            so = AssetDatabase.LoadAssetAtPath<ShipStatsSO>(assetPath);
+            so = AssetDatabase.LoadAssetAtPath<ShipStatsSO>(SHIP_STATS_PATH);
             if (so != null)
             {
-                log.Add($"✓ ShipStatsSO created via ShipFeelAssetCreator: {assetPath}");
+                log.Add($"✓ ShipStatsSO created via ShipFeelAssetCreator: {SHIP_STATS_PATH}");
             }
             else
             {
-                // Fallback: 搜索任意 ShipStatsSO
-                var guids = AssetDatabase.FindAssets("t:ShipStatsSO");
-                if (guids.Length > 0)
-                {
-                    so = AssetDatabase.LoadAssetAtPath<ShipStatsSO>(AssetDatabase.GUIDToAssetPath(guids[0]));
-                    log.Add($"✓ ShipStatsSO found via search: {AssetDatabase.GUIDToAssetPath(guids[0])}");
-                }
-                else
-                {
-                    Debug.LogWarning("[ShipBuilder] Could not find or create ShipStatsSO. Wire manually.");
-                    log.Add("⚠ ShipStatsSO not found — wire manually");
-                }
+                Debug.LogWarning($"[ShipBuilder] Could not find or create ShipStatsSO at {SHIP_STATS_PATH}. Wire manually.");
+                log.Add($"⚠ ShipStatsSO missing at {SHIP_STATS_PATH} — wire manually");
             }
+
             return so;
         }
 
         private static ShipJuiceSettingsSO FindOrCreateShipJuiceSO(List<string> log)
         {
-            const string assetPath = "Assets/_Data/Ship/DefaultShipJuiceSettings.asset";
-            var so = AssetDatabase.LoadAssetAtPath<ShipJuiceSettingsSO>(assetPath);
+            var so = AssetDatabase.LoadAssetAtPath<ShipJuiceSettingsSO>(SHIP_JUICE_SETTINGS_PATH);
             if (so != null)
             {
-                log.Add($"✓ ShipJuiceSettingsSO found: {assetPath}");
+                log.Add($"✓ ShipJuiceSettingsSO found: {SHIP_JUICE_SETTINGS_PATH}");
                 return so;
             }
 
@@ -330,25 +345,17 @@ namespace ProjectArk.Ship.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            so = AssetDatabase.LoadAssetAtPath<ShipJuiceSettingsSO>(assetPath);
+            so = AssetDatabase.LoadAssetAtPath<ShipJuiceSettingsSO>(SHIP_JUICE_SETTINGS_PATH);
             if (so != null)
             {
-                log.Add($"✓ ShipJuiceSettingsSO created via ShipFeelAssetCreator: {assetPath}");
+                log.Add($"✓ ShipJuiceSettingsSO created via ShipFeelAssetCreator: {SHIP_JUICE_SETTINGS_PATH}");
             }
             else
             {
-                var guids = AssetDatabase.FindAssets("t:ShipJuiceSettingsSO");
-                if (guids.Length > 0)
-                {
-                    so = AssetDatabase.LoadAssetAtPath<ShipJuiceSettingsSO>(AssetDatabase.GUIDToAssetPath(guids[0]));
-                    log.Add($"✓ ShipJuiceSettingsSO found via search: {AssetDatabase.GUIDToAssetPath(guids[0])}");
-                }
-                else
-                {
-                    Debug.LogWarning("[ShipBuilder] Could not find or create ShipJuiceSettingsSO. Wire manually.");
-                    log.Add("⚠ ShipJuiceSettingsSO not found — wire manually");
-                }
+                Debug.LogWarning($"[ShipBuilder] Could not find or create ShipJuiceSettingsSO at {SHIP_JUICE_SETTINGS_PATH}. Wire manually.");
+                log.Add($"⚠ ShipJuiceSettingsSO missing at {SHIP_JUICE_SETTINGS_PATH} — wire manually");
             }
+
             return so;
         }
 
@@ -358,19 +365,15 @@ namespace ProjectArk.Ship.Editor
 
         private static InputActionAsset FindInputActionAsset(List<string> log, List<string> todo)
         {
-            var guids = AssetDatabase.FindAssets("t:InputActionAsset");
-            if (guids.Length == 0)
+            var asset = AssetDatabase.LoadAssetAtPath<InputActionAsset>(INPUT_ACTIONS_PATH);
+            if (asset == null)
             {
-                Debug.LogWarning("[ShipBuilder] No InputActionAsset found in project.");
-                todo.Add("InputHandler._inputActions: No InputActionAsset found — create one in Assets/Input/ and assign manually");
+                Debug.LogWarning($"[ShipBuilder] InputActionAsset missing at {INPUT_ACTIONS_PATH}.");
+                todo.Add($"InputHandler._inputActions: Missing InputActionAsset at {INPUT_ACTIONS_PATH} — assign manually");
                 return null;
             }
 
-            if (guids.Length > 1)
-                Debug.LogWarning($"[ShipBuilder] Multiple InputActionAssets found. Using first: {AssetDatabase.GUIDToAssetPath(guids[0])}");
-
-            var asset = AssetDatabase.LoadAssetAtPath<InputActionAsset>(AssetDatabase.GUIDToAssetPath(guids[0]));
-            log.Add($"✓ InputActionAsset found: {AssetDatabase.GUIDToAssetPath(guids[0])}");
+            log.Add($"✓ InputActionAsset found: {INPUT_ACTIONS_PATH}");
             return asset;
         }
 
@@ -381,7 +384,6 @@ namespace ProjectArk.Ship.Editor
         private static void WireReferences(
             GameObject shipGo,
             GameObject visualChild,
-            SpriteRenderer spriteRenderer,
             ParticleSystem enginePS,
             ShipStatsSO statsSO,
             ShipJuiceSettingsSO juiceSO,
@@ -460,22 +462,28 @@ namespace ProjectArk.Ship.Editor
             var spawner = shipGo.GetComponent<DashAfterImageSpawner>();
             if (spawner != null)
             {
-                WireField(spawner, "_shipSpriteRenderer", spriteRenderer, log, "DashAfterImageSpawner._shipSpriteRenderer");
+                if (spriteLayers != null && spriteLayers.Length > SOLID_SPRITE_LAYER_INDEX && spriteLayers[SOLID_SPRITE_LAYER_INDEX] != null)
+                {
+                    WireField(spawner, "_shipSpriteRenderer", spriteLayers[SOLID_SPRITE_LAYER_INDEX], log, "DashAfterImageSpawner._shipSpriteRenderer → Ship_Sprite_Solid");
+                }
+                else
+                {
+                    todo.Add("DashAfterImageSpawner._shipSpriteRenderer: Missing Ship_Sprite_Solid renderer — rebuild ShipVisual layers first");
+                }
+
                 if (statsSO != null)
                     WireField(spawner, "_stats", statsSO, log, "DashAfterImageSpawner._stats");
                 if (juiceSO != null)
                     WireField(spawner, "_juiceSettings", juiceSO, log, "DashAfterImageSpawner._juiceSettings");
 
-                // After-image prefab: try to find it
-                var prefabGuids = AssetDatabase.FindAssets("DashAfterImage t:Prefab");
-                if (prefabGuids.Length > 0)
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(DASH_AFTER_IMAGE_PREFAB_PATH);
+                if (prefab != null)
                 {
-                    var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(prefabGuids[0]));
                     WireField(spawner, "_afterImagePrefab", prefab, log, "DashAfterImageSpawner._afterImagePrefab");
                 }
                 else
                 {
-                    todo.Add("DashAfterImageSpawner._afterImagePrefab: Create a prefab with DashAfterImage + SpriteRenderer and assign manually");
+                    todo.Add($"DashAfterImageSpawner._afterImagePrefab: Missing prefab at {DASH_AFTER_IMAGE_PREFAB_PATH}");
                 }
             }
         }
@@ -503,7 +511,7 @@ namespace ProjectArk.Ship.Editor
 
             if (weavingTransition == null)
             {
-                todo.Add("WeavingStateTransition._shipTransform: UIManager not found in scene — run 'Build UI Canvas' first, then re-run Build Ship");
+                todo.Add("WeavingStateTransition._shipTransform: UIManager not found in scene — run 'Build UI Canvas' first, then re-run 'Build Ship Scene Setup'");
                 return;
             }
 
@@ -538,7 +546,7 @@ namespace ProjectArk.Ship.Editor
                 sb.AppendLine("── ALWAYS CHECK ────────────────────────────");
             }
 
-            sb.AppendLine("• Assign a Sprite to VisualChild/SpriteRenderer");
+            sb.AppendLine("• Verify ShipVisual sprite layers use the canonical ship sprites");
             sb.AppendLine("• Adjust CircleCollider2D radius to match sprite size");
             sb.AppendLine("• Verify Input Action Asset has a 'Boost' Action (Space / SouthButton)");
             sb.AppendLine("• Configure Physics 2D Layer Collision Matrix for 'Ship' layer");

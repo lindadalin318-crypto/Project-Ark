@@ -9,28 +9,32 @@ namespace ProjectArk.Ship.Editor
 {
     /// <summary>
     /// One-click scene setup for BoostTrailView scene-only references.
-    /// Menu: ProjectArk > Ship > Setup Boost Trail Scene References (GG)
+    ///
+    /// Authority owned by this tool:
+    ///   • `BoostTrailBloomVolume` scene object
+    ///   • `BoostBloomVolumeProfile.asset` assignment on the scene volume
+    ///   • `BoostTrailView._boostBloomVolume` scene-only wiring
+    ///
+    /// It does not create prefab content and should remain scene-only.
     /// </summary>
     public static class ShipBoostTrailSceneBinder
     {
-        private const string FlashOverlayName = "BoostTrailFlashOverlay";
         private const string BoostBloomVolumeName = "BoostTrailBloomVolume";
         private const string BoostBloomProfilePath = "Assets/Settings/BoostBloomVolumeProfile.asset";
         private const string VolumeTypeName = "UnityEngine.Rendering.Volume, Unity.RenderPipelines.Core.Runtime";
 
-        [MenuItem("ProjectArk/Ship/Setup Boost Trail Scene References (GG)")]
+        [MenuItem("ProjectArk/Ship/VFX/Authority/Bind BoostTrail Scene Bloom References")]
         public static void SetupBoostTrailSceneReferences()
         {
             var log = new List<string>();
             var todo = new List<string>();
 
-            RemoveLegacyFlashOverlay(log);
             var bloomVolume = FindOrCreateBoostBloomVolume(log, todo);
 
             var views = UnityEngine.Object.FindObjectsByType<BoostTrailView>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             if (views.Length == 0)
             {
-                todo.Add("Scene contains no BoostTrailView. Run the Ship boost trail replacement tool first.");
+                todo.Add("Scene contains no BoostTrailView. Ensure the Ship prefab already includes BoostTrailRoot first.");
             }
 
             foreach (var view in views)
@@ -50,44 +54,50 @@ namespace ProjectArk.Ship.Editor
             Debug.Log("[ShipBoostTrailSceneBinder] Done.\n" + summary);
         }
 
-        private static void RemoveLegacyFlashOverlay(List<string> log)
-        {
-            var flashGo = GameObject.Find(FlashOverlayName);
-            if (flashGo == null)
-                return;
-
-            Undo.DestroyObjectImmediate(flashGo);
-            log.Add("✓ Removed legacy full-screen BoostTrail flash overlay");
-        }
-
         private static Component FindOrCreateBoostBloomVolume(List<string> log, List<string> todo)
         {
-            var volumeType = Type.GetType(VolumeTypeName);
+            var volumeType = ResolveVolumeType();
             if (volumeType == null)
             {
-                todo.Add($"Volume type not found: {VolumeTypeName}");
+                todo.Add($"Volume type not found via VolumeProfile assembly: {VolumeTypeName}");
                 return null;
             }
 
-            var existing = GameObject.Find(BoostBloomVolumeName);
-            GameObject volumeGo;
-            if (existing != null)
+            Component volume = null;
+            var components = UnityEngine.Object.FindObjectsByType<Component>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (int i = 0; i < components.Length; i++)
             {
-                volumeGo = existing;
+                var candidate = components[i];
+                if (candidate != null && candidate.GetType() == volumeType && candidate.gameObject.name == BoostBloomVolumeName)
+                {
+                    volume = candidate;
+                    break;
+                }
+            }
+
+            GameObject volumeGo;
+            if (volume != null)
+            {
+                volumeGo = volume.gameObject;
                 log.Add("✓ Reusing existing BoostTrail bloom volume");
             }
             else
             {
                 volumeGo = new GameObject(BoostBloomVolumeName);
                 Undo.RegisterCreatedObjectUndo(volumeGo, "Create Boost Trail Bloom Volume");
+                volume = Undo.AddComponent(volumeGo, volumeType);
                 log.Add("✓ Created BoostTrail bloom volume");
+                log.Add("✓ Added Volume component to BoostTrail bloom volume");
             }
 
-            var volume = volumeGo.GetComponent(volumeType);
             if (volume == null)
             {
-                volume = Undo.AddComponent(volumeGo, volumeType);
-                log.Add("✓ Added Volume component to BoostTrail bloom volume");
+                volume = volumeGo.GetComponent(volumeType);
+                if (volume == null)
+                {
+                    volume = Undo.AddComponent(volumeGo, volumeType);
+                    log.Add("✓ Added Volume component to BoostTrail bloom volume");
+                }
             }
 
             var serializedVolume = new SerializedObject(volume);
@@ -151,6 +161,20 @@ namespace ProjectArk.Ship.Editor
 
             if (bloomVolume == null)
                 todo.Add($"{view.name}: bloom volume is still null.");
+        }
+
+        private static Type ResolveVolumeType()
+        {
+            var componentTypes = TypeCache.GetTypesDerivedFrom<Component>();
+            for (int i = 0; i < componentTypes.Count; i++)
+            {
+                if (componentTypes[i] != null && componentTypes[i].FullName == VolumeTypeName)
+                {
+                    return componentTypes[i];
+                }
+            }
+
+            return null;
         }
 
         private static bool WireObjectReference(

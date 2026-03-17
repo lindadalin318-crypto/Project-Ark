@@ -22,6 +22,7 @@ namespace ProjectArk.Ship
 
         private ShipMotor _motor;
         private ShipDash _dash;
+        private ShipBoost _boost;
         private ShipAiming _aiming;
 
         // ══════════════════════════════════════════════════════════════
@@ -40,6 +41,7 @@ namespace ProjectArk.Ship
         {
             _motor = GetComponent<ShipMotor>();
             _dash = GetComponent<ShipDash>();
+            _boost = GetComponent<ShipBoost>();
             _aiming = GetComponent<ShipAiming>();
 
             if (_visualChild == null)
@@ -116,6 +118,16 @@ namespace ProjectArk.Ship
             float delta = normalizedSpeed - _previousNormalizedSpeed;
             _previousNormalizedSpeed = normalizedSpeed;
 
+            // Dash/Boost 链路下不要对整船视觉根做 squash/stretch，避免船体被压窄
+            if ((_dash != null && _dash.IsDashing) || (_boost != null && _boost.IsBoosting))
+            {
+                if (_squashStretchTween.isAlive)
+                    _squashStretchTween.Stop();
+
+                _visualChild.localScale = Vector3.one;
+                return;
+            }
+
             // Only trigger on significant speed changes
             float threshold = 0.15f;
             if (Mathf.Abs(delta) < threshold) return;
@@ -143,20 +155,14 @@ namespace ProjectArk.Ship
                 cycles: 2, cycleMode: CycleMode.Yoyo);
         }
 
-        private void OnDashStarted(Vector2 dashDirection)
+        private void OnDashStarted(Vector2 _dashDirection)
         {
-            if (_juiceSettings == null || _visualChild == null) return;
+            if (_visualChild == null) return;
 
-            float intensity = _juiceSettings.SquashStretchIntensity * 2f; // Stronger for dash
-            float duration = _juiceSettings.SquashStretchDuration;
+            if (_squashStretchTween.isAlive)
+                _squashStretchTween.Stop();
 
-            // Stretch along movement axis
-            Vector3 stretchScale = new Vector3(1f - intensity, 1f + intensity, 1f);
-
-            if (_squashStretchTween.isAlive) _squashStretchTween.Stop();
-
-            _squashStretchTween = Tween.Scale(_visualChild, stretchScale, duration * 0.5f, Ease.OutQuad,
-                cycles: 2, cycleMode: CycleMode.Yoyo);
+            _visualChild.localScale = Vector3.one;
         }
     }
 }

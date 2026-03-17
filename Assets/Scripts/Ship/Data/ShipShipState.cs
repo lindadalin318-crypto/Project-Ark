@@ -2,6 +2,9 @@ namespace ProjectArk.Ship
 {
     /// <summary>
     /// Defines all possible ship states, aligned with GG's PlayerShipState enum values.
+    ///
+    /// Physical type name is currently frozen as `ShipShipState` for MVP compatibility.
+    /// Canonical terminology in docs and registry is "Ship State Enum".
     /// Normal=0 / Dash=2 / Boost=3 / MainAttack=6 / MainAttackFire=10
     /// </summary>
     public enum ShipShipState

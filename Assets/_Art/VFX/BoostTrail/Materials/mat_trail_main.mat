@@ -56,10 +56,12 @@ Material:
     - _AlphaToMask: 0
     - _Blend: 2
     - _BlendOp: 0
+    - _BoostIntensity: 1
     - _Brightness: 1.85
     - _CameraFadingEnabled: 0
     - _CameraFarFadeDistance: 2
     - _CameraNearFadeDistance: 1
+    - _Child3: 0
     - _ColorMode: 0
     - _Cull: 2
     - _Cutoff: 0.5

@@ -170,9 +170,10 @@ namespace ProjectArk.Ship
             _motor.IsDashing = false;
             OnDashEnded?.Invoke();
 
-            // ── 7. 触发 Boost 状态（GG 真实机制：Dodge 结束后自动进入 IsBoostState）
-            //       对应 BoosterBurnoutPower.UsePower() 在 AfterDodge 时被调用
-            _boost?.ForceActivate();
+            // ── 7. 若 Dash 结束时仍按住空格，则衔接持续 Boost
+            //       提前松手则不进入持续推进态
+            if (_inputHandler.IsDashHeld)
+                _boost?.ForceActivate(sustainWhileDashHeld: true);
 
             // ── 8. 进入冷却
             _isCoolingDown   = true;
