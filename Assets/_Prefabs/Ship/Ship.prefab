@@ -355,7 +355,6 @@ MonoBehaviour:
   _hlRenderer: {fileID: 4621512490560013955}
   _solidRenderer: {fileID: 87038346853009014}
   _coreRenderer: {fileID: 6476113041216810219}
-  _boostTrail: {fileID: 0}
   _boostTrailView: {fileID: 1866619832695690946}
   _boostLiquidSprite: {fileID: 1803375601408531766, guid: 66ede2a1e65d06a4eb7dc24092131cd3, type: 3}
   _normalLiquidSprite: {fileID: -9119696321562669138, guid: ac76d8d143c32f24ea92d6499d742ecb, type: 3}

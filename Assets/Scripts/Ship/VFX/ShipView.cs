@@ -7,14 +7,9 @@ namespace ProjectArk.Ship
 {
     /// <summary>
     /// Manages the ship's multi-layer sprite visual state and all VFX feedback.
-    /// Responds to ShipBoost and ShipDash events to drive:
-    ///   - Liquid/glow layer brightness ramp on Boost
-    ///   - Solid layer alpha flicker during Dash i-frames
-    ///   - Boost TrailRenderer (BoostTrail)
-    ///   - Dodge_Sprite static ghost at dash origin
-    ///   - Ship_Sprite_Back thruster pulse animation (PrimeTween)
     ///
-    /// All visual logic lives here; ShipBoost and ShipDash contain no rendering code.
+    /// Primary driver: `ShipStateController.OnStateChanged`.
+    /// This class no longer keeps legacy Boost/Dash event fallbacks; missing state wiring must fail loudly.
     /// Call ResetVFX() when returning to object pool.
     /// </summary>
     public class ShipView : MonoBehaviour
@@ -44,10 +39,7 @@ namespace ProjectArk.Ship
         // ══════════════════════════════════════════════════════════════
 
         [Header("VFX — Boost Trail")]
-        [Tooltip("TrailRenderer on BoostTrail GO (child of Ship_Sprite_Back).")]
-        [SerializeField] private TrailRenderer _boostTrail;
-
-        [Tooltip("Full Boost Trail VFX controller (BoostTrailRoot prefab). Optional — if assigned, replaces legacy TrailRenderer-only logic.")]
+        [Tooltip("Full Boost Trail VFX controller (BoostTrailRoot prefab).")]
         [SerializeField] private BoostTrailView _boostTrailView;
 
         [Header("VFX — Boost Liquid Sprite")]
@@ -72,9 +64,8 @@ namespace ProjectArk.Ship
         // Cached Components
         // ══════════════════════════════════════════════════════════════
 
-        private ShipBoost  _boost;
-        private ShipDash   _dash;
-        private ShipStateController _stateController; // primary VFX driver
+        private ShipDash _dash;
+        private ShipStateController _stateController;
 
         // Parent of Dodge_Sprite (to re-attach after dash)
         private Transform _dodgeSpriteOriginalParent;
@@ -82,9 +73,6 @@ namespace ProjectArk.Ship
         // Baseline colors captured at Awake so tweens can restore them correctly
         private Color _liquidBaseColor;
         private Color _solidBaseColor;
-
-        // Cached baseline liquid sprite (Normal state)
-        private Sprite _cachedNormalLiquidSprite;
 
         // Active tweens — killed before starting a new one to avoid conflicts
         private Tween    _liquidTween;
@@ -101,20 +89,28 @@ namespace ProjectArk.Ship
 
         private void Awake()
         {
-            _boost           = GetComponent<ShipBoost>();
-            _dash            = GetComponent<ShipDash>();
-            _stateController = GetComponent<ShipStateController>(); // optional
+            _dash = GetComponent<ShipDash>();
+            _stateController = GetComponent<ShipStateController>();
+
+            if (_stateController == null)
+            {
+                Debug.LogError("[ShipView] Missing ShipStateController. Ship VFX now requires the unified state chain and no longer falls back to ShipBoost / ShipDash events.", this);
+            }
+
+            if (_normalLiquidSprite == null)
+            {
+                Debug.LogError("[ShipView] _normalLiquidSprite is not assigned. Fix the prefab wiring instead of relying on runtime fallback.", this);
+            }
 
             if (_liquidRenderer != null)
             {
                 _liquidBaseColor = _liquidRenderer.color;
-                // Cache normal sprite at startup (fallback if _normalLiquidSprite not assigned)
-                if (_normalLiquidSprite == null)
-                    _cachedNormalLiquidSprite = _liquidRenderer.sprite;
-                else
-                    _cachedNormalLiquidSprite = _normalLiquidSprite;
             }
-            if (_solidRenderer  != null) _solidBaseColor  = _solidRenderer.color;
+
+            if (_solidRenderer != null)
+            {
+                _solidBaseColor = _solidRenderer.color;
+            }
 
             // HL layer default alpha = 0.5 (per spec)
             if (_hlRenderer != null)
@@ -133,37 +129,19 @@ namespace ProjectArk.Ship
                 dc.a = 0f;
                 _dodgeSprite.color = dc;
                 _dodgeSprite.gameObject.SetActive(false);
-            }
 
-            // Ensure BoostTrail starts off
-            if (_boostTrail != null)
-            {
-                _boostTrail.emitting = false;
-                _boostTrail.Clear();
+                if (_dodgeSprite.sprite == null)
+                {
+                    Debug.LogError("[ShipView] Dodge_Sprite has no sprite assigned. Fix the prefab wiring instead of relying on runtime fallback.", _dodgeSprite);
+                }
             }
         }
 
         private void OnEnable()
         {
-            // Primary: subscribe to ShipStateController for unified VFX dispatch
             if (_stateController != null)
             {
                 _stateController.OnStateChanged += HandleStateChanged;
-            }
-            else
-            {
-                // Legacy fallback: subscribe to individual component events
-                if (_boost != null)
-                {
-                    _boost.OnBoostStarted += HandleBoostStarted;
-                    _boost.OnBoostEnded   += HandleBoostEnded;
-                }
-
-                if (_dash != null)
-                {
-                    _dash.OnDashStarted += HandleDashStarted;
-                    _dash.OnDashEnded   += HandleDashEnded;
-                }
             }
         }
 
@@ -172,20 +150,6 @@ namespace ProjectArk.Ship
             if (_stateController != null)
             {
                 _stateController.OnStateChanged -= HandleStateChanged;
-            }
-            else
-            {
-                if (_boost != null)
-                {
-                    _boost.OnBoostStarted -= HandleBoostStarted;
-                    _boost.OnBoostEnded   -= HandleBoostEnded;
-                }
-
-                if (_dash != null)
-                {
-                    _dash.OnDashStarted -= HandleDashStarted;
-                    _dash.OnDashEnded   -= HandleDashEnded;
-                }
             }
 
             ResetVFX();
@@ -214,20 +178,13 @@ namespace ProjectArk.Ship
             if (_liquidRenderer != null) _liquidRenderer.color = _liquidBaseColor;
             if (_solidRenderer  != null) _solidRenderer.color  = _solidBaseColor;
 
-            // Reset BoostTrail (legacy)
-            if (_boostTrail != null)
-            {
-                _boostTrail.emitting = false;
-                _boostTrail.Clear();
-            }
-
-            // Reset BoostTrailView (full VFX)
+            // Reset BoostTrailView
             if (_boostTrailView != null)
                 _boostTrailView.ResetState();
 
             // Reset liquid sprite to Normal state
-            if (_liquidRenderer != null && _cachedNormalLiquidSprite != null)
-                _liquidRenderer.sprite = _cachedNormalLiquidSprite;
+            if (_liquidRenderer != null && _normalLiquidSprite != null)
+                _liquidRenderer.sprite = _normalLiquidSprite;
 
             // Reset Dodge_Sprite
             ResetDodgeSprite();
@@ -275,28 +232,36 @@ namespace ProjectArk.Ship
         {
             if (_juiceSettings == null) return;
 
-            // 1. Glow layer brightness ramp
-            if (_liquidRenderer != null)
-            {
-                _liquidTween.Stop();
-                Color target = _liquidBaseColor * _juiceSettings.BoostGlowBrightnessMultiplier;
-                target.a = _liquidBaseColor.a;
-                _liquidTween = Tween.Color(
-                    _liquidRenderer,
-                    endValue: target,
-                    duration: _juiceSettings.BoostGlowRampUpDuration,
-                    ease: Ease.OutQuad);
-            }
-
-            // 2. Liquid sprite → Boost_16
+            // 1. Liquid sprite enters Boost shape immediately so the ignition punch reads as a state change.
             if (_liquidRenderer != null && _boostLiquidSprite != null)
                 _liquidRenderer.sprite = _boostLiquidSprite;
 
-            // 3. BoostTrailView (full VFX — replaces legacy trail if assigned)
+            // 2. Glow layer performs a fast ignition punch, then settles into the sustained Boost brightness.
+            if (_liquidRenderer != null)
+            {
+                _liquidTween.Stop();
+
+                float startupDuration = Mathf.Max(0f, _juiceSettings.BoostGlowRampUpDuration) +
+                                        Mathf.Max(0f, _juiceSettings.BoostGlowSettleDuration);
+
+                if (startupDuration <= Mathf.Epsilon)
+                {
+                    _liquidRenderer.color = GetLiquidColorWithMultiplier(_juiceSettings.BoostGlowBrightnessMultiplier);
+                }
+                else
+                {
+                    _liquidTween = Tween.Custom(
+                        startValue: 0f,
+                        endValue: 1f,
+                        duration: startupDuration,
+                        onValueChange: ApplyBoostLiquidStartup,
+                        ease: Ease.Linear);
+                }
+            }
+
+            // 3. BoostTrailView startup stack
             if (_boostTrailView != null)
                 _boostTrailView.OnBoostStart();
-            else
-                StartBoostTrail(); // legacy fallback
 
             // 4. Thruster pulse
             StartThrusterPulse();
@@ -318,51 +283,76 @@ namespace ProjectArk.Ship
             }
 
             // 2. Liquid sprite → Movement_3 (Normal)
-            if (_liquidRenderer != null && _cachedNormalLiquidSprite != null)
-                _liquidRenderer.sprite = _cachedNormalLiquidSprite;
+            if (_liquidRenderer != null && _normalLiquidSprite != null)
+                _liquidRenderer.sprite = _normalLiquidSprite;
 
-            // 3. BoostTrailView (full VFX — replaces legacy trail if assigned)
+            // 3. BoostTrailView
             if (_boostTrailView != null)
                 _boostTrailView.OnBoostEnd();
-            else
-                StopBoostTrail(); // legacy fallback
 
             // 4. Stop thruster pulse
             StopThrusterPulse();
         }
 
-        // ══════════════════════════════════════════════════════════════
-        // Boost Trail — TrailRenderer
-        // ══════════════════════════════════════════════════════════════
-
-        private void StartBoostTrail()
+        private void ApplyBoostLiquidStartup(float progress)
         {
-            if (_boostTrail == null || _juiceSettings == null) return;
+            if (_liquidRenderer == null || _juiceSettings == null)
+                return;
 
-            // Apply parameters
-            _boostTrail.time               = _juiceSettings.BoostTrailTime;
-            _boostTrail.startWidth         = _juiceSettings.BoostTrailStartWidth;
-            _boostTrail.endWidth           = 0f;
-            _boostTrail.minVertexDistance  = _juiceSettings.BoostTrailMinVertexDistance;
+            float sustainMultiplier = Mathf.Max(1f, _juiceSettings.BoostGlowBrightnessMultiplier);
+            float entryMultiplier = Mathf.Max(sustainMultiplier, _juiceSettings.BoostGlowEntryBrightnessMultiplier);
+            float attackDuration = Mathf.Max(0f, _juiceSettings.BoostGlowRampUpDuration);
+            float settleDuration = Mathf.Max(0f, _juiceSettings.BoostGlowSettleDuration);
+            float totalDuration = attackDuration + settleDuration;
 
-            // Color gradient: teal → transparent
-            Color startColor = _juiceSettings.BoostTrailRendererColor;
-            Color endColor   = new Color(startColor.r, startColor.g, startColor.b, 0f);
-            Gradient gradient = new Gradient();
-            gradient.SetKeys(
-                new[] { new GradientColorKey(startColor, 0f), new GradientColorKey(endColor, 1f) },
-                new[] { new GradientAlphaKey(startColor.a, 0f), new GradientAlphaKey(0f, 1f) });
-            _boostTrail.colorGradient = gradient;
+            if (totalDuration <= Mathf.Epsilon)
+            {
+                _liquidRenderer.color = GetLiquidColorWithMultiplier(sustainMultiplier);
+                return;
+            }
 
-            _boostTrail.Clear();
-            _boostTrail.emitting = true;
+            float attackRatio = attackDuration / totalDuration;
+            float multiplier;
+
+            if (attackRatio <= Mathf.Epsilon)
+            {
+                multiplier = Mathf.Lerp(1f, sustainMultiplier, EaseOutQuad(progress));
+            }
+            else if (progress < attackRatio)
+            {
+                float t = Mathf.Clamp01(progress / attackRatio);
+                multiplier = Mathf.Lerp(1f, entryMultiplier, EaseOutCubic(t));
+            }
+            else
+            {
+                float settleRatio = 1f - attackRatio;
+                float t = settleRatio <= Mathf.Epsilon
+                    ? 1f
+                    : Mathf.Clamp01((progress - attackRatio) / settleRatio);
+                multiplier = Mathf.Lerp(entryMultiplier, sustainMultiplier, EaseOutQuad(t));
+            }
+
+            _liquidRenderer.color = GetLiquidColorWithMultiplier(multiplier);
         }
 
-        private void StopBoostTrail()
+        private Color GetLiquidColorWithMultiplier(float multiplier)
         {
-            if (_boostTrail == null) return;
-            _boostTrail.emitting = false;
-            // Existing trail fades naturally over _boostTrail.time seconds
+            Color color = _liquidBaseColor * Mathf.Max(1f, multiplier);
+            color.a = _liquidBaseColor.a;
+            return color;
+        }
+
+        private static float EaseOutQuad(float t)
+        {
+            t = Mathf.Clamp01(t);
+            return 1f - ((1f - t) * (1f - t));
+        }
+
+        private static float EaseOutCubic(float t)
+        {
+            t = Mathf.Clamp01(t);
+            float inv = 1f - t;
+            return 1f - (inv * inv * inv);
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -468,9 +458,11 @@ namespace ProjectArk.Ship
         {
             if (_dodgeSprite == null) return;
 
-            // Fallback: use solid renderer sprite if dodge sprite has none
-            if (_dodgeSprite.sprite == null && _solidRenderer != null)
-                _dodgeSprite.sprite = _solidRenderer.sprite;
+            if (_dodgeSprite.sprite == null)
+            {
+                Debug.LogError("[ShipView] Dodge_Sprite sprite is missing during dash preview. Fix the prefab wiring instead of relying on runtime fallback.", _dodgeSprite);
+                return;
+            }
 
             // Detach from parent so it stays at world position
             _dodgeSprite.transform.SetParent(null, worldPositionStays: true);

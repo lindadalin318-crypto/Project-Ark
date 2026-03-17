@@ -53,6 +53,9 @@ namespace ProjectArk.Ship
         /// <summary> Fired once when the dash button is pressed. </summary>
         public event Action OnDashPressed;
 
+        /// <summary> True while the dash button is held down. </summary>
+        public bool IsDashHeld { get; private set; }
+
         /// <summary> Fired once when the boost button is pressed (Space / South Button). </summary>
         public event Action OnBoostPressed;
 
@@ -140,7 +143,10 @@ namespace ProjectArk.Ship
                 _interactAction.performed += OnInteractActionPerformed;
 
             if (_dashAction != null)
+            {
                 _dashAction.performed += OnDashActionPerformed;
+                _dashAction.canceled  += OnDashActionCanceled;
+            }
 
             if (_boostAction != null)
                 _boostAction.performed += OnBoostActionPerformed;
@@ -291,7 +297,13 @@ namespace ProjectArk.Ship
 
         private void OnDashActionPerformed(InputAction.CallbackContext ctx)
         {
+            IsDashHeld = true;
             OnDashPressed?.Invoke();
+        }
+
+        private void OnDashActionCanceled(InputAction.CallbackContext ctx)
+        {
+            IsDashHeld = false;
         }
 
         private void OnBoostActionPerformed(InputAction.CallbackContext ctx)

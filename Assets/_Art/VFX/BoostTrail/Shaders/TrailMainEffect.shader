@@ -8,6 +8,7 @@ Shader "ProjectArk/VFX/TrailMainEffect"
         [HDR]_EdgeColor ("Edge Glow", Color) = (3.8, 2.1, 0.7, 1)
         _Brightness ("Brightness", Range(0, 8)) = 1.35
         _Alpha ("Alpha", Range(0, 2)) = 0.9
+        _BoostIntensity ("Boost Intensity", Range(0, 1)) = 1
         _NoiseScale ("Noise Scale", Range(0.1, 12)) = 2.5
         _DistortStrength ("Distort Strength", Range(0, 1)) = 0.18
         _FlowSpeed ("Flow Speed", Range(0, 8)) = 1.8
@@ -67,6 +68,7 @@ Shader "ProjectArk/VFX/TrailMainEffect"
                 float4 _EdgeColor;
                 float _Brightness;
                 float _Alpha;
+                float _BoostIntensity;
                 float _NoiseScale;
                 float _DistortStrength;
                 float _FlowSpeed;
@@ -223,13 +225,19 @@ Shader "ProjectArk/VFX/TrailMainEffect"
                 float2 baseUV = IN.baseUV;
                 float2 rawUV = IN.uv;
                 float time = _Time.y;
+                float intensity = saturate(_BoostIntensity);
+                float distortStrength = lerp(_DistortStrength * 0.35, _DistortStrength, intensity);
+                float flowSpeed = lerp(_FlowSpeed * 0.45, _FlowSpeed, intensity);
+                float brightness = lerp(_Brightness * 0.55, _Brightness, intensity);
+                float alphaScale = lerp(_Alpha * 0.25, _Alpha, intensity);
+                float edgeBoost = lerp(0.7, 1.0, intensity);
 
                 float across = rawUV.y * 2.0 - 1.0;
                 float centerMask = saturate(1.0 - abs(across));
                 float edgeMask = pow(saturate(1.0 - centerMask), max(_EdgePower, 0.001));
 
-                float2 flowA = float2(rawUV.x * 6.0 + time * (_FlowSpeed * 1.2), across * _NoiseScale + time * (_FlowSpeed * 0.45));
-                float2 flowB = float2(rawUV.x * 10.5 - time * (_FlowSpeed * 1.8), across * (_NoiseScale * 1.7) - 4.3 - time * 0.35);
+                float2 flowA = float2(rawUV.x * 6.0 + time * (flowSpeed * 1.2), across * _NoiseScale + time * (flowSpeed * 0.45));
+                float2 flowB = float2(rawUV.x * 10.5 - time * (flowSpeed * 1.8), across * (_NoiseScale * 1.7) - 4.3 - time * 0.35);
 
                 float noiseA = FBM(flowA);
                 float noiseB = FBM(flowB);
@@ -237,30 +245,30 @@ Shader "ProjectArk/VFX/TrailMainEffect"
                 float ribbon = noiseB * 2.0 - 1.0;
 
                 float2 distortion = float2(
-                    swirl * (_DistortStrength * 0.12),
-                    ribbon * (_DistortStrength * 0.42) * (0.35 + centerMask * 0.65));
+                    swirl * (distortStrength * 0.12),
+                    ribbon * (distortStrength * 0.42) * (0.35 + centerMask * 0.65));
 
                 float4 baseSample = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, baseUV + distortion);
                 float4 smearSample = SAMPLE_TEXTURE2D(
                     _BaseMap,
                     sampler_BaseMap,
-                    baseUV + distortion + float2(-_DistortStrength * 0.08 * (0.45 + noiseA), ribbon * _DistortStrength * 0.18));
+                    baseUV + distortion + float2(-distortStrength * 0.08 * (0.45 + noiseA), ribbon * distortStrength * 0.18));
 
                 float3 texColor = lerp(baseSample.rgb, smearSample.rgb, 0.35);
                 float texAlpha = max(baseSample.a, smearSample.a);
 
                 float flicker = 1.0
                     + (noiseA - 0.5) * _FlickerStrength
-                    + sin((rawUV.x - time * (_FlowSpeed * 1.6)) * 22.0) * 0.08;
+                    + sin((rawUV.x - time * (flowSpeed * 1.6)) * 22.0) * 0.08;
 
                 float hotCore = pow(centerMask, 0.55) * (0.65 + noiseB * 0.35);
                 float3 coreColor = texColor * _BaseColor.rgb * hotCore;
-                float3 edgeColor = _EdgeColor.rgb * edgeMask * (0.4 + noiseA * 0.6);
+                float3 edgeColor = _EdgeColor.rgb * edgeMask * (0.4 + noiseA * 0.6) * edgeBoost;
 
-                float3 finalColor = (coreColor + edgeColor) * _Brightness * flicker;
+                float3 finalColor = (coreColor + edgeColor) * brightness * flicker;
                 finalColor *= IN.color.rgb;
 
-                float alpha = texAlpha * _Alpha * IN.color.a;
+                float alpha = texAlpha * alphaScale * IN.color.a;
                 alpha *= saturate(0.2 + centerMask * 0.85 + edgeMask * 0.3);
 
                 return float4(finalColor, alpha);

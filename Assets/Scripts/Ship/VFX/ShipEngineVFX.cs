@@ -4,8 +4,8 @@ namespace ProjectArk.Ship
 {
     /// <summary>
     /// Controls the ship's engine exhaust particle system based on movement speed.
-    /// Implements four emission tiers matching GG Glitch ship:
-    ///   Idle (5/s) → Normal flight (0–40/s lerp) → Dash (120/s) → Boost (80/s via BoostTrailVFX)
+    /// Implements four emission tiers matching the current Ship VFX chain:
+    ///   Idle (5/s) → Normal flight (0–40/s lerp) → Dash (120/s) → Boost (80/s via BoostTrailView stack)
     /// Particle size and direction track ship rotation via Local simulation space.
     /// </summary>
     [RequireComponent(typeof(ShipMotor))]
@@ -207,7 +207,7 @@ namespace ProjectArk.Ship
         }
 
         // ══════════════════════════════════════════════════════════════
-        // Boost Tier — engine holds at max (BoostTrailVFX handles dedicated trail)
+        // Boost Tier — engine holds at max (BoostTrailView handles the dedicated boost trail stack)
         // ══════════════════════════════════════════════════════════════
 
         private void OnBoostStarted()

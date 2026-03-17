@@ -21,7 +21,9 @@ MonoBehaviour:
   _afterImageAlpha: 0.4
   _afterImageColor: {r: 0.67, g: 0, b: 1, a: 1}
   _boostGlowBrightnessMultiplier: 1.5
-  _boostGlowRampUpDuration: 0.1
+  _boostGlowEntryBrightnessMultiplier: 1.95
+  _boostGlowRampUpDuration: 0.045
+  _boostGlowSettleDuration: 0.12
   _boostGlowRampDownDuration: 0.3
   _iFrameFlashAlpha: 0.3
   _iFrameFlashInterval: 0.05
@@ -29,36 +31,12 @@ MonoBehaviour:
   # TopColor=(0.099,0.846,1.0) cyan-blue, BottomColor=(1.0,0.0,0.915) magenta
   _engineParticleColorTop: {r: 0.099, g: 0.846, b: 1.0, a: 1}
   _engineParticleColorBottom: {r: 1.0, g: 0.0, b: 0.915, a: 1}
-  _engineParticleColor: {r: 0.099, g: 0.846, b: 1.0, a: 1}
   _engineParticleMinSpeed: 0.1
   _engineIdleEmissionRate: 5
   _engineMaxEmissionRate: 40
   _engineDashEmissionRate: 120
   _engineStartSizeMin: 0.04
   _engineStartSizeMax: 0.08
-  # Boost Trail Glow — mat_boost_trail_glow
-  # Start: HDR orange-yellow (1.89,0.828,0.426), End: red (0.973,0.106,0.246)
-  _boostTrailEmissionRate: 80
-  _boostTrailLifetime: 0.3
-  _boostTrailStartSpeed: 3
-  _boostTrailStartSizeMin: 0.08
-  _boostTrailStartSizeMax: 0.15
-  _boostTrailColorStart: {r: 1.89, g: 0.828, b: 0.426, a: 1}
-  _boostTrailColorEnd: {r: 0.973, g: 0.106, b: 0.246, a: 1}
-  _boostTrailColor: {r: 1.89, g: 0.828, b: 0.426, a: 1}
-  # Boost Trail Ember — mat_boost_ember_trail
-  # Start: HDR magenta (2.0,0.0,1.083), End: deep-red (0.849,0.076,0.215)
-  _boostEmberEmissionRate: 50
-  _boostEmberLifetime: 0.25
-  _boostEmberStartSpeed: 2
-  _boostEmberStartSizeMin: 0.04
-  _boostEmberStartSizeMax: 0.10
-  _boostEmberColorStart: {r: 2.0, g: 0.0, b: 1.083, a: 1}
-  _boostEmberColorEnd: {r: 0.849, g: 0.076, b: 0.215, a: 1}
-  _boostTrailTime: 0.25
-  _boostTrailStartWidth: 0.12
-  _boostTrailMinVertexDistance: 0.05
-  _boostTrailRendererColor: {r: 1.89, g: 0.828, b: 0.426, a: 0.8}
   _boostBackScalePeak: 1.3
   _boostBackEntryPulseDuration: 0.15
   _boostBackPulsePeriod: 0.3
