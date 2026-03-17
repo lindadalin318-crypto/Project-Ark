@@ -45,7 +45,9 @@ public partial class ModEntry : Node
         CardRewardHook.Register(harmony);
         MapScreenHook.Register(harmony);
         CampfireHook.Register(harmony);
+        DeckUpgradeHook.Register(harmony);
         ShopHook.Register(harmony);
+        CombatHook.Register(harmony);
 
         // 自动扫描：扫描程序集内所有标记了 [HarmonyPatch] 的类
         harmony.PatchAll();

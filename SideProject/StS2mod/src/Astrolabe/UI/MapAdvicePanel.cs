@@ -30,31 +30,28 @@ public class MapAdvicePanel : Control
     private VBoxContainer? _container;
     private Label?         _globalNoteLabel;
 
-    public override void _Ready()
+    public MapAdvicePanel()
     {
-        // 右侧固定定位
-        Position = new Vector2(1580, 200);
-        SetSize(new Vector2(320, 400));
+        // 右侧面板，避开右上角遗物/牌堆 UI（约 80px）
+        Position = new Vector2(1570, 80);
+        SetSize(new Vector2(340, 420));
 
-        // 背景
         var bg = new StyleBoxFlat { BgColor = new Color(0f, 0f, 0f, 0.75f) };
         var panel = new Panel();
         panel.AddThemeStyleboxOverride("panel", bg);
         panel.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(panel);
 
-        // 标题
         var title = new Label
         {
-            Text                = "★ 星象仪路线规划",
-            Position            = new Vector2(12, 10),
-            Size                = new Vector2(296, 24),
+            Text     = "★ 星象仪路线规划",
+            Position = new Vector2(12, 10),
+            Size     = new Vector2(296, 24),
         };
         title.AddThemeColorOverride("font_color", new Color(1f, 1f, 0.4f));
         title.AddThemeFontSizeOverride("font_size", 14);
         AddChild(title);
 
-        // 路线建议容器
         _container = new VBoxContainer
         {
             Position = new Vector2(12, 40),
@@ -62,7 +59,6 @@ public class MapAdvicePanel : Control
         };
         AddChild(_container);
 
-        // 全局提示（如HP警告）
         _globalNoteLabel = new Label
         {
             Position     = new Vector2(12, 365),
@@ -136,9 +132,8 @@ public class CampfireAdvicePanel : Control
     private Label? _reasonLabel;
     private Label? _upgradeHintLabel;
 
-    public override void _Ready()
+    public CampfireAdvicePanel()
     {
-        // 屏幕右侧居中显示
         Position = new Vector2(1400, 350);
         SetSize(new Vector2(300, 130));
 
@@ -190,7 +185,7 @@ public class CampfireAdvicePanel : Control
     {
         if (_actionLabel == null) return;
 
-        bool isUpgrade = advice.RecommendedAction == CampfireAction.Upgrade;
+        bool isUpgrade = advice.RecommendedAction is CampfireAction.Upgrade or CampfireAction.Smith;
 
         _actionLabel.Text = advice.RecommendedAction switch
         {
@@ -208,7 +203,8 @@ public class CampfireAdvicePanel : Control
 
         if (_upgradeHintLabel != null && advice.UpgradeTargetCardId != null)
         {
-            _upgradeHintLabel.Text    = $"→ 优先升级：{advice.UpgradeTargetCardId}";
+            string displayName = advice.UpgradeTargetCardNameZh ?? advice.UpgradeTargetCardId;
+            _upgradeHintLabel.Text    = $"→ 优先升级：{displayName}";
             _upgradeHintLabel.Visible = true;
         }
         else if (_upgradeHintLabel != null)

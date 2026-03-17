@@ -32,6 +32,7 @@ public static class OverlayHUD
     private static CardAdvicePanel?     _cardAdvicePanel;
     private static MapAdvicePanel?      _mapAdvicePanel;
     private static CampfireAdvicePanel? _campfirePanel;
+    private static CombatAdvicePanel?   _combatPanel;
 
     // HUD 全局开关
     private static bool _isVisible = true;
@@ -40,18 +41,36 @@ public static class OverlayHUD
 
     public static void Initialize()
     {
-        // 通过 Harmony Hook 游戏根节点的 _Ready 方法来注入 CanvasLayer
-        // TODO: 确认游戏根节点的类名（预估：MainScene / GameRoot / NGameRoot）
-        //
-        // 注意：这里不能在 Initialize 阶段直接创建 Godot Node，
-        // 因为 Godot 引擎此时可能还未完成场景树初始化。
-        // 正确的时机是在游戏根节点 _Ready() Postfix 中创建。
         _log.Info("[OverlayHUD] Initialized. Canvas layer will be injected when root scene is ready.");
     }
 
     /// <summary>
-    /// 在游戏根节点 _Ready() 后调用此方法创建并挂载 CanvasLayer。
-    /// 应在 Harmony Postfix 中调用。
+    /// 从任意场景树中的 Node 向上找到根节点，确保 CanvasLayer 只注入一次。
+    /// 在任意 Hook 的 Postfix 中调用（需要 __instance 是有效的场景树节点）。
+    /// </summary>
+    public static void EnsureInjected(Node anySceneNode)
+    {
+        if (_canvasLayer != null) return;  // 已注入
+
+        try
+        {
+            // 向上遍历到根节点（SceneTree.Root）
+            var root = anySceneNode.GetTree()?.Root;
+            if (root == null)
+            {
+                _log.Warn("[OverlayHUD] Cannot get scene tree root.");
+                return;
+            }
+            InjectCanvasLayer(root);
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"[OverlayHUD] EnsureInjected failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 创建并挂载 CanvasLayer 到指定父节点。
     /// </summary>
     public static void InjectCanvasLayer(Node gameRootNode)
     {
@@ -76,17 +95,25 @@ public static class OverlayHUD
             _cardAdvicePanel = new CardAdvicePanel();
             _mapAdvicePanel  = new MapAdvicePanel();
             _campfirePanel   = new CampfireAdvicePanel();
+            _combatPanel     = new CombatAdvicePanel();
 
             _canvasLayer.AddChild(_buildPathPanel);
             _canvasLayer.AddChild(_cardAdvicePanel);
             _canvasLayer.AddChild(_mapAdvicePanel);
             _canvasLayer.AddChild(_campfirePanel);
+            _canvasLayer.AddChild(_combatPanel);
 
             // 初始状态：仅方案卡片常驻，其他隐藏
             _buildPathPanel.Show();
             _cardAdvicePanel.Hide();
             _mapAdvicePanel.Hide();
             _campfirePanel.Hide();
+            _combatPanel.Hide();
+
+            // 立即用当前方案数据刷新 BuildPathPanel
+            var paths = BuildPathManager.GetActivePaths();
+            if (paths.Count > 0)
+                _buildPathPanel.UpdatePaths(paths);
 
             _log.Info("[OverlayHUD] CanvasLayer injected successfully into game root.");
         }
@@ -129,6 +156,20 @@ public static class OverlayHUD
         _campfirePanel.Show();
         _cardAdvicePanel?.Hide();
         _mapAdvicePanel?.Hide();
+    }
+
+    public static void ShowCombatAdvice(CombatAdvice advice)
+    {
+        if (!_isVisible || _combatPanel == null) return;
+
+        _combatPanel.UpdateAdvice(advice);
+        _combatPanel.Show();
+        _log.Info($"[OverlayHUD] Combat advice shown: {advice.SummaryText}");
+    }
+
+    public static void HideCombatAdvice()
+    {
+        _combatPanel?.Hide();
     }
 
     public static void ShowShopAdvice(ShopAdvice advice)

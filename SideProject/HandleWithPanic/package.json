@@ -1,0 +1,22 @@
+{
+  "name": "handlewithpanic",
+  "version": "1.0.0",
+  "description": "Browser vertical slice for Handle With Panic",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "dev:client": "npm run dev --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "build": "npm run build --prefix server && npm run build --prefix client"
+  },
+  "keywords": [
+    "threejs",
+    "colyseus",
+    "rapier",
+    "demo"
+  ],
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

@@ -49,18 +49,24 @@ godot --headless --export-pack "Windows Desktop" Astrolabe.pck
 
 查看日志：`%AppData%\Roaming\SlayTheSpire2\Player.log`
 
-成功加载时应看到：
-```
+成功加载时应看到类似日志：
+```text
 === Astrolabe v0.1.0 initializing ===
-[DataLoader] Loaded 30 entries from cards.json
+[DataLoader] Loaded 87 entries from cards.core.json
+[DataLoader] Loaded 87 entries from cards.advisor.json
+[DataLoader] Merged 87 card records from cards.core.json + cards.advisor.json
 [DataLoader] Loaded 12 entries from buildpaths.json
 === Astrolabe initialized successfully ===
 ```
+
 
 ## 项目结构
 
 ```
 StS2mod/
+├── Docs/
+│   ├── STS2_Asset_ID_System.md  # 解包资产与运行时 ID 规范
+│   └── STS2_Unpack_Report.md    # StS2 解包方法与资产总览
 ├── src/
 │   └── Astrolabe/
 │       ├── Astrolabe.csproj     # 项目文件
@@ -72,11 +78,13 @@ StS2mod/
 │       ├── Data/                # JSON 数据模型 + 加载器
 │       └── pack/                # Godot 资产打包配置
 ├── data/                        # 游戏数据库 JSON
-│   ├── cards.json               # 全卡牌评分（当前：战士全卡）
+│   ├── cards.core.json          # 卡牌事实层（费用/类型/稀有度/结构化效果槽位）
+│   ├── cards.advisor.json       # 卡牌顾问层（评分/流派权重/协同标签/建议先验）
 │   ├── relics.json              # 遗物评分
 │   ├── buildpaths.json          # 构筑方案定义（4职业各3套）
 │   ├── bosses.json              # Boss 机制 + 针对建议
 │   └── events.json              # 事件选项期望值
+
 └── GDD.md                       # 策划案（完整设计文档）
 ```
 
@@ -104,11 +112,13 @@ StS2mod/
 
 ## 数据库维护
 
-`data/cards.json` 中的评分基于社区 Tier List 和高端玩家攻略。如需更新：
+`data/cards.advisor.json` 中的评分与建议先验基于社区 Tier List 和高端玩家攻略；`data/cards.core.json` 负责客观卡牌事实与结构化字段槽位。如需更新：
 
 - 参考 Reddit r/slaythespire、Steam 讨论区的 Tier List 帖子
-- 修改对应卡牌的 `base_score`、`path_scores`、`tier` 字段
+- 在 `cards.advisor.json` 中修改对应卡牌的 `base_score`、`path_scores`、`tier`、`synergy_tags`
+- 在 `cards.core.json` 中补充 `target`、`effects`、`flags` 等结构化事实字段
 - `path_scores` 中的 key 需与 `buildpaths.json` 中的 `path_id` 对应
+
 
 ## 参考资料
 

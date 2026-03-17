@@ -28,12 +28,11 @@ public class CardAdvicePanel : Control
     // 标签悬浮提示（每张卡一个，位置需要和游戏卡牌坐标对齐）
     private readonly List<CardRatingBadge> _badges = new();
 
-    public override void _Ready()
+    public CardAdvicePanel()
     {
-        // 面板覆盖整个屏幕（坐标 0,0）
         SetPosition(Vector2.Zero);
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        MouseFilter = MouseFilterEnum.Ignore; // 不拦截鼠标事件
+        MouseFilter = MouseFilterEnum.Ignore;
 
         BuildAdviceBottomPanel();
     }
@@ -205,7 +204,7 @@ public class CardRatingBadge : Control
     private Label?     _iconLabel;
     private Label?     _textLabel;
 
-    public override void _Ready()
+    public CardRatingBadge()
     {
         SetSize(new Vector2(100, 36));
         MouseFilter = MouseFilterEnum.Ignore;

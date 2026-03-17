@@ -32,11 +32,11 @@ public class BuildPathPanel : Control
     // 各方案行的引用（最多3行）
     private readonly PathRow[] _rows = new PathRow[3];
 
-    public override void _Ready()
+    public BuildPathPanel()
     {
-        // 面板定位：屏幕左上角，稍微缩进
-        SetPosition(new Vector2(20, 20));
-        SetSize(new Vector2(320, 120));
+        // 面板定位：左上角，避开 HP栏 + 遗物栏（约 140px）
+        SetPosition(new Vector2(8, 148));
+        SetSize(new Vector2(200, 90));
 
         // 背景面板
         var bg = new ColorRect
@@ -52,8 +52,8 @@ public class BuildPathPanel : Control
 
         // 方案行容器
         _container = new VBoxContainer();
-        _container.SetPosition(new Vector2(8, 8));
-        _container.SetSize(new Vector2(304, 104));
+        _container.SetPosition(new Vector2(6, 6));
+        _container.SetSize(new Vector2(188, 78));
         AddChild(_container);
 
         // 创建3行方案显示
@@ -82,7 +82,7 @@ public class BuildPathPanel : Control
         }
 
         // 根据活跃方案数调整面板高度
-        SetSize(new Vector2(320, 16 + Math.Min(activePaths.Count, 3) * 34));
+        SetSize(new Vector2(200, 10 + Math.Min(activePaths.Count, 3) * 28));
     }
 }
 
@@ -95,11 +95,10 @@ public class PathRow : HBoxContainer
     private Label?         _percentLabel;
     private Label?         _trendLabel;
 
-    public override void _Ready()
+    public PathRow()
     {
         SetCustomMinimumSize(new Vector2(0, 28));
 
-        // 方案名称标签
         _nameLabel = new Label
         {
             CustomMinimumSize = new Vector2(120, 0),
@@ -109,29 +108,26 @@ public class PathRow : HBoxContainer
         _nameLabel.AddThemeFontSizeOverride("font_size", 13);
         AddChild(_nameLabel);
 
-        // 可行性进度条
         _progressBar = new ProgressBar
         {
-            CustomMinimumSize  = new Vector2(100, 16),
-            MaxValue           = 100,
-            Value              = 0,
-            ShowPercentage     = false,
+            CustomMinimumSize   = new Vector2(100, 16),
+            MaxValue            = 100,
+            Value               = 0,
+            ShowPercentage      = false,
             SizeFlagsHorizontal = SizeFlags.Expand,
         };
         AddChild(_progressBar);
 
-        // 百分比数字
         _percentLabel = new Label
         {
-            CustomMinimumSize = new Vector2(40, 0),
-            VerticalAlignment = VerticalAlignment.Center,
+            CustomMinimumSize   = new Vector2(40, 0),
+            VerticalAlignment   = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Right,
         };
         _percentLabel.AddThemeColorOverride("font_color", new Color(1f, 1f, 1f, 0.8f));
         _percentLabel.AddThemeFontSizeOverride("font_size", 12);
         AddChild(_percentLabel);
 
-        // 趋势箭头
         _trendLabel = new Label
         {
             CustomMinimumSize = new Vector2(20, 0),

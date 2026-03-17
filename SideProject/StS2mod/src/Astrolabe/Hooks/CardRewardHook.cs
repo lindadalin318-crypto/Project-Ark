@@ -1,7 +1,9 @@
 using System.Reflection;
 using Astrolabe.Core;
+using Astrolabe.Data;
 using Astrolabe.Engine;
 using Astrolabe.UI;
+
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Logging;
@@ -93,6 +95,9 @@ public static class CardRewardHook
     {
         try
         {
+            // 首次触发时注入 CanvasLayer
+            OverlayHUD.EnsureInjected(__instance);
+
             // 方案 A：使用 ShowScreen 捕获的缓存（推荐）
             IReadOnlyList<CardCreationResult>? options = _pendingOptions;
 
@@ -112,8 +117,10 @@ public static class CardRewardHook
             }
 
             List<string> candidateCardIds = options
-                .Select(r => r.Card.IsUpgraded ? r.Card.Id.Entry + "+" : r.Card.Id.Entry)
+                .Select(r => IdNormalizer.NormalizeModelId(
+                    r.Card.IsUpgraded ? r.Card.Id.Entry + "+" : r.Card.Id.Entry))
                 .ToList();
+
 
             _log.Info($"[CardRewardHook] Card reward screen opened: {string.Join(", ", candidateCardIds)}");
 

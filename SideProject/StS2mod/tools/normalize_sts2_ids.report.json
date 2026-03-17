@@ -1,0 +1,42 @@
+{
+  "card_count": 87,
+  "relic_count": 138,
+  "buildpath_count": 12,
+  "boss_count": 9,
+  "characters": [
+    "IRONCLAD"
+  ],
+  "path_keys": [
+    "ironclad_defense",
+    "ironclad_infinite",
+    "ironclad_strength"
+  ],
+  "buildpath_ids": [
+    "ironclad_strength",
+    "ironclad_infinite",
+    "ironclad_defense",
+    "silent_poison",
+    "silent_infinite",
+    "silent_evade",
+    "defect_frost",
+    "defect_lightning",
+    "defect_mixed",
+    "watcher_divinity",
+    "watcher_retain",
+    "watcher_miracle"
+  ],
+  "boss_ids": [
+    "SLIME_BOSS",
+    "HEXAGHOST",
+    "THE_GUARDIAN",
+    "CHAMP",
+    "AUTOMATON",
+    "COLLECTOR",
+    "TIME_EATER",
+    "AWAKENED_ONE",
+    "THE_HEART"
+  ],
+  "cards_with_legacy_scores": 87,
+  "relics_with_legacy_scores": 138,
+  "notes": []
+}
