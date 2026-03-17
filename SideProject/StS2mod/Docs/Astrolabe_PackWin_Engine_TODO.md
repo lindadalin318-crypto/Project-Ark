@@ -1,9 +1,10 @@
 # Astrolabe 包赢引擎 TODO 总表
 
-**文档版本**：v1.1  
+**文档版本**：v1.2  
 **创建日期**：2026-03-17  
 **适用范围**：`SideProject/StS2mod/src/Astrolabe`  
-**核心目标**：把 Astrolabe 从“有帮助的顾问 HUD”推进为“能显著提高胜率、尽量把玩家稳定带到终盘的强引擎”。
+**核心目标**：把 Astrolabe 从“有帮助的顾问 HUD”推进为“能显著提高胜率、尽量把玩家稳定带到终盘的强引擎”。  
+**文档定位**：本文件只负责“未来要做什么 / 优先级是什么 / 先后顺序怎么排”；当前现役主链、模块边界、职责口径请以 `Docs/Astrolabe_CanonicalSpec.md` 为准；ID / canonical 规则请以 `Docs/STS2_Asset_ID_System.md` 为准。
 
 ---
 
@@ -33,13 +34,18 @@
 
 ### 1.3 当前状态判断
 
-- [x] 已有可运行主链：`Hook -> RunStateReader -> BuildPathManager -> AdvisorEngine -> HUD/UI`
+- [x] 已有可运行非战斗主链：`Hook -> RunStateReader -> AdvisorEngine -> OverlayHUD / DeckUpgradeHook`
 - [x] 已有战斗建议支线：`CombatHook -> CombatAdvisor -> OverlayHUD`
-- [x] 已有部分跨界面上下文桥接：`CampfireHook -> DeckUpgradeHook`
+- [x] 已有全局构筑状态入口：`BuildPathManager`
+- [x] 已有第一版统一决策日志：`DecisionRecord` / `DecisionRecorder`（已接入非战斗主链）
+- [x] 已有第一版统一 `AdviceEnvelope + traceId`（已接入非战斗主链）
+- [x] 已有主要非战斗场景的玩家选择回写：`CardReward / Campfire / UpgradeSelection / Shop`
+- [x] 已有部分跨界面上下文桥接：`CampfireHook -> DeckUpgradeHook`（trace 已贯通）
+- [ ] 还没有完整的“建议 -> 玩家选择 -> 后续结果”闭环。
 - [ ] 还没有整局统一策略脑。
 - [ ] 还没有真实地图搜索。
-- [ ] 还没有完整的商店 / 事件 / 宝箱 / BossRelic 决策闭环。
-- [ ] 还没有强鲁棒性的评测、回放、自动调参体系。
+- [ ] 还没有地图 / 事件 / 宝箱 / BossRelic 等更完整的决策闭环。
+- [ ] 还没有强鲁棒性的 replay / 自动评测 / 自动调参体系。
 - [ ] 还远未达到“包赢感”所需的稳定度。
 
 ---
@@ -56,6 +62,7 @@
 
 ### 2.2 工程原则
 
+- [ ] 当前现役主链、模块边界、owner 以 `Docs/Astrolabe_CanonicalSpec.md` 为唯一真相源，TODO 不再承担该职责。
 - [ ] 统一“建议输入”和“建议输出”模型，避免每个 Hook 自己拼数据。
 - [ ] 所有重要建议必须带 `confidence / risk / why / alternative`。
 - [ ] 所有重要建议必须能落日志，供回放和离线评估使用。
@@ -126,7 +133,9 @@
 ### 4.1.2 样本集与 replay 基建
 
 - [ ] 设计 `RunReplay` 数据结构：种子、职业、楼层、牌组、遗物、地图、事件、商店、战斗输入。
-- [ ] 设计 `DecisionRecord` 数据结构：场景、候选项、推荐项、理由、置信度、最终玩家选择。
+- [x] 落地 Phase 1 版 `DecisionRecord` 数据结构：场景、候选项、推荐项、理由、置信度与最小闭环字段，已接入非战斗主链。
+- [x] 已为非战斗主链的 `DecisionRecord` 接入前置 `traceId`，并让 UI / 日志共用同一 trace。
+- [ ] 为 `DecisionRecord` 补上最终玩家选择 / 后续结果回写链路。
 - [ ] 为每类决策点建立快照导出能力。
 - [ ] 支持把关键界面状态保存为离线回放样本。
 - [ ] 建立“坏局面样本库”：低血量、资源断档、烂起手、路径被迫偏斜、Boss 克制局。
@@ -163,15 +172,17 @@
 
 ### 4.2.2 统一建议输出模型
 
-- [ ] 为所有场景定义统一的 `AdviceEnvelope`：`summary / why / confidence / risk / alternatives / traceId`。
-- [ ] 为 UI 和日志共用同一份输出结构。
+- [x] 已为非战斗主链定义第一版统一 `AdviceEnvelope`：`summary / why / confidence / risk / alternatives / traceId`。
+- [x] 已让非战斗主链的 UI、日志与主要玩家选择回写共用同一份输出结构。
+- [ ] 把战斗链路、地图选路与剩余场景的玩家选择回写也并入同一输出协议。
 - [ ] 支持“强推荐 / 倾向推荐 / 风险提醒 / 不建议”四档语义。
 - [ ] 支持在输出中附带“如果你反着选，代价是什么”。
 
 ### 4.2.3 决策追踪与回溯
 
-- [ ] 为每次决策生成 `traceId`。
-- [ ] 建立“建议 -> 玩家选择 -> 后续结果”的关联链。
+- [x] 已为非战斗主链的每次决策生成 `traceId`，并让 UI / 日志共用同一 trace。
+- [x] 已为主要非战斗场景建立“建议 -> 玩家选择”的关联链。
+- [ ] 继续补完“建议 -> 玩家选择 -> 后续结果”的完整关联链。
 - [ ] 支持按 trace 回放当时的决策上下文。
 - [ ] 支持在日志中标注是哪个模块、哪条规则、哪个权重导致了当前推荐。
 
@@ -558,7 +569,7 @@
 ## 五、关键路径 Top 12
 
 - [ ] 1. 建立固定种子评测集与 replay 数据结构。
-- [ ] 2. 建立统一 `DecisionRecord` / `AdviceEnvelope`。
+- [ ] 2. 补完“玩家选择 -> 后续结果”闭环，并把剩余场景统一到 `AdviceEnvelope / DecisionRecord` 协议。
 - [ ] 3. 设计并落地 `AdviceContextBus` / `RunStrategyState`。
 - [ ] 4. 重构 `BuildPathManager`，加入成熟度 / 风险 / 缺件。
 - [ ] 5. 实现真实地图读取与路径搜索。
@@ -576,7 +587,7 @@
 
 ### Phase 1：把“能看”变成“能评”
 
-- [ ] 交付 replay 结构、DecisionRecord、评测脚本、基线报告。
+- [ ] 交付 replay 结构、`DecisionRecord` 闭环、评测脚本、基线报告。
 - [ ] 交付统一 debug dump。
 - [ ] 交付第一版关键种子样本库。
 
@@ -621,6 +632,7 @@
 - [ ] 每完成一个阶段，就把对应任务拆成更细的 implementation batch。
 - [ ] 每次只让一个大模块进入 `in_progress`，避免同时摊大饼。
 - [ ] 每完成一个模块，都要补评测样本和回归用例。
+- [ ] 新增或改动现役主链前，先检查 `Docs/Astrolabe_CanonicalSpec.md` 是否需要同步更新。
 - [ ] 任何“看起来更聪明”的新规则，若不能解释和回放验证，就不要直接上线。
 
 ---

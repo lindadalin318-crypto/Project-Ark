@@ -25,6 +25,7 @@ namespace Astrolabe.Hooks;
 public static class CardRewardHook
 {
     private static readonly Logger _log = new("Astrolabe.CardRewardHook", LogType.Generic);
+    private static readonly Dictionary<NCardRewardSelectionScreen, CardRewardSession> ActiveSessions = new();
 
     // 用于缓存最近一次 ShowScreen 的候选牌，在 _Ready postfix 中使用
     private static IReadOnlyList<CardCreationResult>? _pendingOptions;
@@ -38,6 +39,8 @@ public static class CardRewardHook
             var screenType = typeof(NCardRewardSelectionScreen);
             var readyMethod = screenType.GetMethod("_Ready",
                 BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            var exitTreeMethod = screenType.GetMethod("_ExitTree",
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
             if (readyMethod != null)
             {
@@ -50,6 +53,15 @@ public static class CardRewardHook
             else
             {
                 _log.Error("[CardRewardHook] Cannot find _Ready on NCardRewardSelectionScreen");
+            }
+
+            if (exitTreeMethod != null)
+            {
+                var exitPostfix = typeof(CardRewardHook).GetMethod(
+                    nameof(OnScreenExitTree),
+                    BindingFlags.Static | BindingFlags.NonPublic);
+                harmony.Patch(exitTreeMethod, postfix: new HarmonyMethod(exitPostfix));
+                _log.Info("[CardRewardHook] Patched NCardRewardSelectionScreen._ExitTree");
             }
 
             // Hook 2: NCardRewardSelectionScreen.ShowScreen() — 静态方法
@@ -121,20 +133,106 @@ public static class CardRewardHook
                     r.Card.IsUpgraded ? r.Card.Id.Entry + "+" : r.Card.Id.Entry))
                 .ToList();
 
-
             _log.Info($"[CardRewardHook] Card reward screen opened: {string.Join(", ", candidateCardIds)}");
 
             RunSnapshot snapshot = RunStateReader.Capture();
             BuildPathManager.UpdateViability(snapshot);
 
-            var advice = AdvisorEngine.AnalyzeCardReward(candidateCardIds, snapshot);
-            OverlayHUD.ShowCardRewardAdvice(advice);
+            var envelope = AdvisorEngine.AnalyzeCardReward(candidateCardIds, snapshot);
+            OverlayHUD.ShowCardRewardAdvice(envelope);
 
+            ActiveSessions[__instance] = new CardRewardSession(snapshot, candidateCardIds, envelope);
             _pendingOptions = null; // 清除缓存
         }
         catch (Exception ex)
         {
             _log.Error($"[CardRewardHook] OnScreenReady failed: {ex.Message}");
         }
+    }
+
+    [HarmonyPostfix]
+    private static void OnScreenExitTree(NCardRewardSelectionScreen __instance)
+    {
+        try
+        {
+            if (!ActiveSessions.TryGetValue(__instance, out var session))
+                return;
+
+            RunSnapshot exitSnapshot = RunStateReader.Capture();
+            if (!exitSnapshot.IsValid)
+                return;
+
+            string choiceId = InferPlayerChoice(session, exitSnapshot);
+            var record = DecisionRecordFactory.CreatePlayerChoiceRecord(
+                session.Envelope,
+                exitSnapshot,
+                choiceId,
+                source: "CardRewardHook.OnScreenExitTree",
+                extraMetadata: new Dictionary<string, string>
+                {
+                    ["screen"] = "card-reward",
+                    ["choiceInference"] = choiceId == "skip" ? "deck-diff-skip" : "deck-diff-added-card",
+                });
+
+            DecisionRecorder.Record(record);
+            _log.Info($"[CardRewardHook] Player choice recorded. Trace: {session.Envelope.TraceId}, Choice: {choiceId}, Followed: {record.PlayerFollowedAdvice}");
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"[CardRewardHook] OnScreenExitTree failed: {ex.Message}");
+        }
+        finally
+        {
+            ActiveSessions.Remove(__instance);
+        }
+    }
+
+    private static string InferPlayerChoice(CardRewardSession session, RunSnapshot exitSnapshot)
+    {
+        var beforeCounts = BuildCounts(session.EntrySnapshot.DeckCardIds);
+        var afterCounts = BuildCounts(exitSnapshot.DeckCardIds);
+
+        foreach (var candidateCardId in session.CandidateCardIds)
+        {
+            if (GetCount(afterCounts, candidateCardId) > GetCount(beforeCounts, candidateCardId))
+                return candidateCardId;
+        }
+
+        return "skip";
+    }
+
+    private static Dictionary<string, int> BuildCounts(IEnumerable<string> ids)
+    {
+        var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var rawId in ids)
+        {
+            string id = IdNormalizer.NormalizeModelId(rawId);
+            if (string.IsNullOrWhiteSpace(id))
+                continue;
+
+            counts[id] = GetCount(counts, id) + 1;
+        }
+
+        return counts;
+    }
+
+    private static int GetCount(IReadOnlyDictionary<string, int> counts, string id)
+        => counts.TryGetValue(id, out int count) ? count : 0;
+
+    private sealed class CardRewardSession
+    {
+        public CardRewardSession(
+            RunSnapshot entrySnapshot,
+            IReadOnlyList<string> candidateCardIds,
+            AdviceEnvelope<CardRewardAdvice> envelope)
+        {
+            EntrySnapshot = entrySnapshot;
+            CandidateCardIds = candidateCardIds;
+            Envelope = envelope;
+        }
+
+        public RunSnapshot EntrySnapshot { get; }
+        public IReadOnlyList<string> CandidateCardIds { get; }
+        public AdviceEnvelope<CardRewardAdvice> Envelope { get; }
     }
 }

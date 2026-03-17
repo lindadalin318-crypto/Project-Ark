@@ -11,7 +11,7 @@ public static class AdvisorEngine
 {
     // ── 选牌建议 ─────────────────────────────────────────────────────
 
-    public static CardRewardAdvice AnalyzeCardReward(
+    public static AdviceEnvelope<CardRewardAdvice> AnalyzeCardReward(
         IReadOnlyList<string> candidateCardIds,
         RunSnapshot snapshot)
     {
@@ -19,25 +19,46 @@ public static class AdvisorEngine
         var context = SharedDecisionContext.Create(snapshot, activePaths);
         var cardAdvices = CardAdvisor.Analyze(candidateCardIds, context);
 
-        return new CardRewardAdvice
+        var advice = new CardRewardAdvice
         {
             CardAdvices  = cardAdvices,
             ActivePaths  = activePaths,
             SkipNote     = BuildSkipNote(cardAdvices, snapshot),
         };
+
+        string traceId = DecisionTraceId.Create(DecisionKind.CardReward);
+        var record = DecisionRecordFactory.CreateCardRewardRecord(
+            traceId,
+            snapshot,
+            activePaths,
+            candidateCardIds,
+            advice);
+
+        DecisionRecorder.Record(record);
+        return AdviceEnvelope<CardRewardAdvice>.FromRecord(record, advice);
     }
 
     // ── 地图路线建议 ──────────────────────────────────────────────────
 
-    public static MapAdvice AnalyzeMapRoutes(RunSnapshot snapshot)
+    public static AdviceEnvelope<MapAdvice> AnalyzeMapRoutes(RunSnapshot snapshot)
     {
         var activePaths = BuildPathManager.GetActivePaths();
-        return MapAdvisor.Analyze(snapshot, activePaths);
+        var advice = MapAdvisor.Analyze(snapshot, activePaths);
+
+        string traceId = DecisionTraceId.Create(DecisionKind.MapRoute);
+        var record = DecisionRecordFactory.CreateMapRecord(
+            traceId,
+            snapshot,
+            activePaths,
+            advice);
+
+        DecisionRecorder.Record(record);
+        return AdviceEnvelope<MapAdvice>.FromRecord(record, advice);
     }
 
     // ── 篝火决策建议 ──────────────────────────────────────────────────
 
-    public static CampfireAdvice AnalyzeCampfire(
+    public static AdviceEnvelope<CampfireAdvice> AnalyzeCampfire(
         RunSnapshot snapshot,
         IReadOnlyCollection<string>? availableOptionIds = null)
     {
@@ -50,22 +71,23 @@ public static class AdvisorEngine
         bool canRecall = availableOptions.Contains("RECALL");
 
         var bestUpgrade = FindBestUpgradeTarget(context);
+        CampfireAdvice advice;
 
         if (context.HPRatio < 0.40f && canRest)
         {
-            return new CampfireAdvice
+            advice = new CampfireAdvice
             {
                 RecommendedAction = CampfireAction.Rest,
                 Reason = $"HP偏低（{snapshot.HP}/{snapshot.MaxHP}），当前应优先休息保命",
             };
         }
-
-        if (canUpgrade && bestUpgrade != null)
-            return BuildUpgradeAdvice(bestUpgrade);
-
-        if (!canUpgrade && bestUpgrade != null && canRest)
+        else if (canUpgrade && bestUpgrade != null)
         {
-            return new CampfireAdvice
+            advice = BuildUpgradeAdvice(bestUpgrade);
+        }
+        else if (!canUpgrade && bestUpgrade != null && canRest)
+        {
+            advice = new CampfireAdvice
             {
                 RecommendedAction = CampfireAction.Rest,
                 Reason = $"本次篝火无法锻造，但高价值升级目标是「{bestUpgrade.CardNameZh}」，先休息并把升级留给后续窗口",
@@ -73,28 +95,25 @@ public static class AdvisorEngine
                 UpgradeTargetCardNameZh = bestUpgrade.CardNameZh,
             };
         }
-
-        if (canRest && (context.HPRatio < 0.60f || context.NeedsBlock))
+        else if (canRest && (context.HPRatio < 0.60f || context.NeedsBlock))
         {
-            return new CampfireAdvice
+            advice = new CampfireAdvice
             {
                 RecommendedAction = CampfireAction.Rest,
                 Reason = "当前血量或防御厚度还不够稳，休息的容错更高",
             };
         }
-
-        if (canRecall)
+        else if (canRecall)
         {
-            return new CampfireAdvice
+            advice = new CampfireAdvice
             {
                 RecommendedAction = CampfireAction.Recall,
                 Reason = "当前没有明确的休息/升级收益，可考虑回忆保留关键资源窗口",
             };
         }
-
-        if (canRest)
+        else if (canRest)
         {
-            return new CampfireAdvice
+            advice = new CampfireAdvice
             {
                 RecommendedAction = CampfireAction.Rest,
                 Reason = context.NeedsPurge
@@ -102,21 +121,34 @@ public static class AdvisorEngine
                     : "无紧迫升级目标，休息保值",
             };
         }
-
-        return new CampfireAdvice
+        else
         {
-            RecommendedAction = canUpgrade ? CampfireAction.Upgrade : CampfireAction.Rest,
-            Reason = bestUpgrade != null
-                ? $"当前可选动作有限，若继续推进可优先处理「{bestUpgrade.CardNameZh}」的升级"
-                : "当前可选动作有限，建议保持默认选择并观察后续路线资源",
-            UpgradeTargetCardId = bestUpgrade?.CardId,
-            UpgradeTargetCardNameZh = bestUpgrade?.CardNameZh,
-        };
+            advice = new CampfireAdvice
+            {
+                RecommendedAction = canUpgrade ? CampfireAction.Upgrade : CampfireAction.Rest,
+                Reason = bestUpgrade != null
+                    ? $"当前可选动作有限，若继续推进可优先处理「{bestUpgrade.CardNameZh}」的升级"
+                    : "当前可选动作有限，建议保持默认选择并观察后续路线资源",
+                UpgradeTargetCardId = bestUpgrade?.CardId,
+                UpgradeTargetCardNameZh = bestUpgrade?.CardNameZh,
+            };
+        }
+
+        string traceId = DecisionTraceId.Create(DecisionKind.Campfire);
+        var record = DecisionRecordFactory.CreateCampfireRecord(
+            traceId,
+            snapshot,
+            activePaths,
+            availableOptions,
+            advice);
+
+        DecisionRecorder.Record(record);
+        return AdviceEnvelope<CampfireAdvice>.FromRecord(record, advice);
     }
 
     // ── 升级选牌建议 ─────────────────────────────────────────────────
 
-    public static UpgradeSelectionAdvice? AnalyzeUpgradeSelection(
+    public static AdviceEnvelope<UpgradeSelectionAdvice>? AnalyzeUpgradeSelection(
         IReadOnlyList<string> candidateCardIds,
         RunSnapshot snapshot)
     {
@@ -131,25 +163,46 @@ public static class AdvisorEngine
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var bestUpgrade = FindBestUpgradeTarget(context, candidateBaseIds);
+        string traceId = DecisionTraceId.Create(DecisionKind.UpgradeSelection);
         if (bestUpgrade == null)
+        {
+            var emptyRecord = DecisionRecordFactory.CreateUpgradeSelectionRecord(
+                traceId,
+                snapshot,
+                activePaths,
+                candidateCardIds,
+                null);
+
+            DecisionRecorder.Record(emptyRecord);
             return null;
+        }
 
         string deltaText = string.IsNullOrWhiteSpace(bestUpgrade.UpgradeDeltaZh)
             ? "升级后能稳定提高这张牌的战斗转化"
             : bestUpgrade.UpgradeDeltaZh;
 
-        return new UpgradeSelectionAdvice
+        var advice = new UpgradeSelectionAdvice
         {
             TargetCardId = bestUpgrade.CardId,
             TargetCardNameZh = bestUpgrade.CardNameZh,
             SummaryText = $"星象仪推荐：优先升级「{bestUpgrade.CardNameZh}」",
             Reason = $"{bestUpgrade.Reason}；{deltaText}",
         };
+
+        var record = DecisionRecordFactory.CreateUpgradeSelectionRecord(
+            traceId,
+            snapshot,
+            activePaths,
+            candidateCardIds,
+            advice);
+
+        DecisionRecorder.Record(record);
+        return AdviceEnvelope<UpgradeSelectionAdvice>.FromRecord(record, advice);
     }
 
     // ── 商店建议 ─────────────────────────────────────────────────────
 
-    public static ShopAdvice AnalyzeShop(ShopItems shopItems, RunSnapshot snapshot)
+    public static AdviceEnvelope<ShopAdvice> AnalyzeShop(ShopItems shopItems, RunSnapshot snapshot)
     {
         var activePaths = BuildPathManager.GetActivePaths();
         var context = SharedDecisionContext.Create(snapshot, activePaths);
@@ -201,7 +254,16 @@ public static class AdvisorEngine
             return a.Price.CompareTo(b.Price);
         });
 
-        return advice;
+        string traceId = DecisionTraceId.Create(DecisionKind.Shop);
+        var record = DecisionRecordFactory.CreateShopRecord(
+            traceId,
+            snapshot,
+            activePaths,
+            shopItems,
+            advice);
+
+        DecisionRecorder.Record(record);
+        return AdviceEnvelope<ShopAdvice>.FromRecord(record, advice);
     }
 
     // ── 内部辅助 ─────────────────────────────────────────────────────
@@ -415,7 +477,6 @@ public static class AdvisorEngine
 
         return string.Join("；", reasons);
     }
-
 }
 
 // ── 建议数据类 ────────────────────────────────────────────────────────

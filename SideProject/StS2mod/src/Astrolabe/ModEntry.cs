@@ -1,3 +1,4 @@
+using Astrolabe.Core;
 using Astrolabe.Data;
 using Astrolabe.Engine;
 using Astrolabe.Hooks;
@@ -38,6 +39,9 @@ public partial class ModEntry : Node
 
         // 2. 初始化多方案引擎
         BuildPathManager.Initialize();
+
+        // 2.5 初始化决策记录器（为 replay / 评测基线采样）
+        DecisionRecorder.Initialize();
 
         // 3. 注册所有 Harmony Hook（分为手动注册和自动扫描两类）
         var harmony = new Harmony(MOD_ID);

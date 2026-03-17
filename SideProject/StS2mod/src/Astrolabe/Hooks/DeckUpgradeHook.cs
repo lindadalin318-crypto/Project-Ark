@@ -24,9 +24,10 @@ public static class DeckUpgradeHook
 
     private static readonly Logger _log = new("Astrolabe.DeckUpgradeHook", LogType.Generic);
     private static readonly Dictionary<NDeckUpgradeSelectScreen, List<NGridCardHolder>> HighlightedHolders = new();
+    private static readonly Dictionary<NDeckUpgradeSelectScreen, UpgradeSelectionSession> ActiveSessions = new();
 
     private static IReadOnlyList<CardModel>? _pendingCards;
-    private static CampfireAdvice? _pendingCampfireAdvice;
+    private static AdviceEnvelope<CampfireAdvice>? _pendingCampfireEnvelope;
 
     public static void Register(Harmony harmony)
     {
@@ -72,14 +73,14 @@ public static class DeckUpgradeHook
         }
     }
 
-    public static void CacheCampfireAdvice(CampfireAdvice advice)
+    public static void CacheCampfireAdvice(AdviceEnvelope<CampfireAdvice> envelope)
     {
-        _pendingCampfireAdvice = advice;
+        _pendingCampfireEnvelope = envelope;
     }
 
     public static void ClearCampfireContext()
     {
-        _pendingCampfireAdvice = null;
+        _pendingCampfireEnvelope = null;
     }
 
     [HarmonyPostfix]
@@ -115,15 +116,20 @@ public static class DeckUpgradeHook
                 return;
             }
 
-            var advice = ResolveUpgradeAdvice(cards, snapshot, _pendingCampfireAdvice);
-            if (advice == null)
+            var candidateCardIds = cards
+                .Select(ToRuntimeCardId)
+                .ToList();
+
+            var envelope = ResolveUpgradeAdvice(candidateCardIds, snapshot, _pendingCampfireEnvelope);
+            if (envelope == null)
             {
                 _log.Info("[DeckUpgradeHook] No upgrade recommendation generated for current Smith candidates.");
                 return;
             }
 
-            ApplyRecommendation(__instance, cards, advice);
-            _log.Info($"[DeckUpgradeHook] Recommended upgrade target: {advice.TargetCardNameZh} ({advice.TargetCardId})");
+            ApplyRecommendation(__instance, cards, envelope.Payload);
+            ActiveSessions[__instance] = new UpgradeSelectionSession(snapshot, candidateCardIds, envelope);
+            _log.Info($"[DeckUpgradeHook] Recommended upgrade target: {envelope.Payload.TargetCardNameZh} ({envelope.Payload.TargetCardId}) / Trace: {envelope.TraceId}");
         }
         catch (Exception ex)
         {
@@ -138,7 +144,45 @@ public static class DeckUpgradeHook
     [HarmonyPostfix]
     private static void OnScreenExitTree(NDeckUpgradeSelectScreen __instance)
     {
-        CleanupRecommendation(__instance);
+        try
+        {
+            if (!ActiveSessions.TryGetValue(__instance, out var session))
+                return;
+
+            RunSnapshot exitSnapshot = RunStateReader.Capture();
+            if (!exitSnapshot.IsValid)
+                return;
+
+            string? chosenCardId = InferUpgradedCard(session, exitSnapshot);
+            if (string.IsNullOrWhiteSpace(chosenCardId))
+            {
+                _log.Info($"[DeckUpgradeHook] Upgrade screen closed without detectable deck diff. Trace: {session.Envelope.TraceId}");
+                return;
+            }
+
+            var record = DecisionRecordFactory.CreatePlayerChoiceRecord(
+                session.Envelope,
+                exitSnapshot,
+                chosenCardId,
+                source: "DeckUpgradeHook.OnScreenExitTree",
+                extraMetadata: new Dictionary<string, string>
+                {
+                    ["screen"] = "deck-upgrade",
+                    ["choiceInference"] = "deck-upgrade-diff",
+                });
+
+            DecisionRecorder.Record(record);
+            _log.Info($"[DeckUpgradeHook] Player upgrade recorded. Trace: {session.Envelope.TraceId}, Choice: {chosenCardId}, Followed: {record.PlayerFollowedAdvice}");
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"[DeckUpgradeHook] OnScreenExitTree failed: {ex.Message}");
+        }
+        finally
+        {
+            CleanupRecommendation(__instance);
+            ActiveSessions.Remove(__instance);
+        }
     }
 
     private static IReadOnlyList<CardModel>? ResolveCards(NDeckUpgradeSelectScreen screen)
@@ -152,10 +196,10 @@ public static class DeckUpgradeHook
 
     private static bool ShouldUseCampfireSmithAssist()
     {
-        if (_pendingCampfireAdvice == null)
+        if (_pendingCampfireEnvelope == null)
             return false;
 
-        if (_pendingCampfireAdvice.RecommendedAction is not (CampfireAction.Upgrade or CampfireAction.Smith))
+        if (_pendingCampfireEnvelope.Payload.RecommendedAction is not (CampfireAction.Upgrade or CampfireAction.Smith))
             return false;
 
         return NRestSiteRoom.Instance != null
@@ -163,38 +207,50 @@ public static class DeckUpgradeHook
             && NRestSiteRoom.Instance.IsVisibleInTree();
     }
 
-    private static UpgradeSelectionAdvice? ResolveUpgradeAdvice(
-        IReadOnlyList<CardModel> cards,
+    private static AdviceEnvelope<UpgradeSelectionAdvice>? ResolveUpgradeAdvice(
+        IReadOnlyList<string> candidateCardIds,
         RunSnapshot snapshot,
-        CampfireAdvice? campfireAdvice)
+        AdviceEnvelope<CampfireAdvice>? campfireEnvelope)
     {
-        if (campfireAdvice != null && !string.IsNullOrWhiteSpace(campfireAdvice.UpgradeTargetCardId))
+        if (campfireEnvelope != null && !string.IsNullOrWhiteSpace(campfireEnvelope.Payload.UpgradeTargetCardId))
         {
-            string targetBaseId = IdNormalizer.NormalizeLookupId(campfireAdvice.UpgradeTargetCardId);
-            bool targetVisible = cards.Any(card => string.Equals(
-                IdNormalizer.NormalizeLookupId(card.Id.Entry),
+            string targetBaseId = IdNormalizer.NormalizeLookupId(campfireEnvelope.Payload.UpgradeTargetCardId);
+            bool targetVisible = candidateCardIds.Any(cardId => string.Equals(
+                IdNormalizer.NormalizeLookupId(cardId),
                 targetBaseId,
                 StringComparison.OrdinalIgnoreCase));
 
             if (targetVisible)
             {
-                string targetName = string.IsNullOrWhiteSpace(campfireAdvice.UpgradeTargetCardNameZh)
-                    ? campfireAdvice.UpgradeTargetCardId
-                    : campfireAdvice.UpgradeTargetCardNameZh;
+                string targetName = string.IsNullOrWhiteSpace(campfireEnvelope.Payload.UpgradeTargetCardNameZh)
+                    ? campfireEnvelope.Payload.UpgradeTargetCardId
+                    : campfireEnvelope.Payload.UpgradeTargetCardNameZh;
 
-                return new UpgradeSelectionAdvice
+                var advice = new UpgradeSelectionAdvice
                 {
-                    TargetCardId = campfireAdvice.UpgradeTargetCardId,
+                    TargetCardId = campfireEnvelope.Payload.UpgradeTargetCardId,
                     TargetCardNameZh = targetName,
                     SummaryText = $"星象仪推荐：优先升级「{targetName}」",
-                    Reason = campfireAdvice.Reason,
+                    Reason = campfireEnvelope.Payload.Reason,
                 };
+
+                var record = DecisionRecordFactory.CreateUpgradeSelectionRecord(
+                    campfireEnvelope.TraceId,
+                    snapshot,
+                    BuildPathManager.GetActivePaths(),
+                    candidateCardIds,
+                    advice,
+                    source: "DeckUpgradeHook.ResolveCampfireUpgradeSelection",
+                    extraMetadata: new Dictionary<string, string>
+                    {
+                        ["bridgeOrigin"] = "campfire",
+                        ["campfireRecommendedAction"] = campfireEnvelope.Payload.RecommendedAction.ToString(),
+                    });
+
+                DecisionRecorder.Record(record);
+                return AdviceEnvelope<UpgradeSelectionAdvice>.FromRecord(record, advice);
             }
         }
-
-        var candidateCardIds = cards
-            .Select(ToRuntimeCardId)
-            .ToList();
 
         return AdvisorEngine.AnalyzeUpgradeSelection(candidateCardIds, snapshot);
     }
@@ -349,6 +405,62 @@ public static class DeckUpgradeHook
         HighlightedHolders.Remove(screen);
     }
 
+    private static string? InferUpgradedCard(UpgradeSelectionSession session, RunSnapshot exitSnapshot)
+    {
+        var beforeCounts = BuildCounts(session.EntrySnapshot.DeckCardIds);
+        var afterCounts = BuildCounts(exitSnapshot.DeckCardIds);
+
+        foreach (var candidateCardId in session.CandidateCardIds)
+        {
+            string baseId = IdNormalizer.NormalizeLookupId(candidateCardId);
+            string runtimeBaseId = IdNormalizer.NormalizeModelId(baseId);
+            string upgradedId = runtimeBaseId + "+";
+
+            if (GetCount(afterCounts, upgradedId) > GetCount(beforeCounts, upgradedId) &&
+                GetCount(afterCounts, runtimeBaseId) < GetCount(beforeCounts, runtimeBaseId))
+            {
+                return runtimeBaseId;
+            }
+        }
+
+        return null;
+    }
+
+    private static Dictionary<string, int> BuildCounts(IEnumerable<string> ids)
+    {
+        var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var rawId in ids)
+        {
+            string id = IdNormalizer.NormalizeModelId(rawId);
+            if (string.IsNullOrWhiteSpace(id))
+                continue;
+
+            counts[id] = GetCount(counts, id) + 1;
+        }
+
+        return counts;
+    }
+
+    private static int GetCount(IReadOnlyDictionary<string, int> counts, string id)
+        => counts.TryGetValue(id, out int count) ? count : 0;
+
     private static string ToRuntimeCardId(CardModel card)
         => IdNormalizer.NormalizeModelId(card.IsUpgraded ? card.Id.Entry + "+" : card.Id.Entry);
+
+    private sealed class UpgradeSelectionSession
+    {
+        public UpgradeSelectionSession(
+            RunSnapshot entrySnapshot,
+            IReadOnlyList<string> candidateCardIds,
+            AdviceEnvelope<UpgradeSelectionAdvice> envelope)
+        {
+            EntrySnapshot = entrySnapshot;
+            CandidateCardIds = candidateCardIds;
+            Envelope = envelope;
+        }
+
+        public RunSnapshot EntrySnapshot { get; }
+        public IReadOnlyList<string> CandidateCardIds { get; }
+        public AdviceEnvelope<UpgradeSelectionAdvice> Envelope { get; }
+    }
 }
