@@ -37,46 +37,113 @@ public static class AdvisorEngine
 
     // ── 篝火决策建议 ──────────────────────────────────────────────────
 
-    public static CampfireAdvice AnalyzeCampfire(RunSnapshot snapshot)
+    public static CampfireAdvice AnalyzeCampfire(
+        RunSnapshot snapshot,
+        IReadOnlyCollection<string>? availableOptionIds = null)
     {
         var activePaths = BuildPathManager.GetActivePaths();
         var context = SharedDecisionContext.Create(snapshot, activePaths);
+        var availableOptions = NormalizeCampfireOptionIds(availableOptionIds);
+        bool hasAvailability = availableOptions.Count > 0;
+        bool canRest = !hasAvailability || availableOptions.Contains("HEAL");
+        bool canUpgrade = !hasAvailability || availableOptions.Contains("SMITH");
+        bool canRecall = availableOptions.Contains("RECALL");
 
-        if (context.HPRatio < 0.40f)
+        var bestUpgrade = FindBestUpgradeTarget(context);
+
+        if (context.HPRatio < 0.40f && canRest)
         {
             return new CampfireAdvice
             {
                 RecommendedAction = CampfireAction.Rest,
-                Reason = $"HP偏低（{snapshot.HP}/{snapshot.MaxHP}），优先恢复30% HP",
-                UpgradeTargetCardId = null,
+                Reason = $"HP偏低（{snapshot.HP}/{snapshot.MaxHP}），当前应优先休息保命",
             };
         }
 
-        string? upgradeTarget = FindBestUpgradeTarget(context.PrimaryPathData, snapshot);
-        if (upgradeTarget != null)
+        if (canUpgrade && bestUpgrade != null)
+            return BuildUpgradeAdvice(bestUpgrade);
+
+        if (!canUpgrade && bestUpgrade != null && canRest)
         {
-            var cardData = DataLoader.GetCard(upgradeTarget);
             return new CampfireAdvice
             {
-                RecommendedAction   = CampfireAction.Upgrade,
-                Reason              = $"推荐升级「{cardData?.NameZh ?? upgradeTarget}」：{cardData?.UpgradeDeltaZh ?? "核心牌"}",
-                UpgradeTargetCardId = upgradeTarget,
+                RecommendedAction = CampfireAction.Rest,
+                Reason = $"本次篝火无法锻造，但高价值升级目标是「{bestUpgrade.CardNameZh}」，先休息并把升级留给后续窗口",
+                UpgradeTargetCardId = bestUpgrade.CardId,
+                UpgradeTargetCardNameZh = bestUpgrade.CardNameZh,
             };
         }
 
-        if (context.NeedsPurge && context.HPRatio >= 0.70f)
+        if (canRest && (context.HPRatio < 0.60f || context.NeedsBlock))
         {
             return new CampfireAdvice
             {
-                RecommendedAction = CampfireAction.Upgrade,
-                Reason = "当前血量安全，但牌组仍偏厚；若篝火没有关键升级，可优先把后续路线资源留给商店删牌",
+                RecommendedAction = CampfireAction.Rest,
+                Reason = "当前血量或防御厚度还不够稳，休息的容错更高",
+            };
+        }
+
+        if (canRecall)
+        {
+            return new CampfireAdvice
+            {
+                RecommendedAction = CampfireAction.Recall,
+                Reason = "当前没有明确的休息/升级收益，可考虑回忆保留关键资源窗口",
+            };
+        }
+
+        if (canRest)
+        {
+            return new CampfireAdvice
+            {
+                RecommendedAction = CampfireAction.Rest,
+                Reason = context.NeedsPurge
+                    ? "当前更需要商店删牌而不是硬接低价值升级，先休息保值"
+                    : "无紧迫升级目标，休息保值",
             };
         }
 
         return new CampfireAdvice
         {
-            RecommendedAction = CampfireAction.Rest,
-            Reason = "无紧迫升级目标，休息保值",
+            RecommendedAction = canUpgrade ? CampfireAction.Upgrade : CampfireAction.Rest,
+            Reason = bestUpgrade != null
+                ? $"当前可选动作有限，若继续推进可优先处理「{bestUpgrade.CardNameZh}」的升级"
+                : "当前可选动作有限，建议保持默认选择并观察后续路线资源",
+            UpgradeTargetCardId = bestUpgrade?.CardId,
+            UpgradeTargetCardNameZh = bestUpgrade?.CardNameZh,
+        };
+    }
+
+    // ── 升级选牌建议 ─────────────────────────────────────────────────
+
+    public static UpgradeSelectionAdvice? AnalyzeUpgradeSelection(
+        IReadOnlyList<string> candidateCardIds,
+        RunSnapshot snapshot)
+    {
+        if (candidateCardIds.Count == 0)
+            return null;
+
+        var activePaths = BuildPathManager.GetActivePaths();
+        var context = SharedDecisionContext.Create(snapshot, activePaths);
+        var candidateBaseIds = candidateCardIds
+            .Select(IdNormalizer.NormalizeLookupId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var bestUpgrade = FindBestUpgradeTarget(context, candidateBaseIds);
+        if (bestUpgrade == null)
+            return null;
+
+        string deltaText = string.IsNullOrWhiteSpace(bestUpgrade.UpgradeDeltaZh)
+            ? "升级后能稳定提高这张牌的战斗转化"
+            : bestUpgrade.UpgradeDeltaZh;
+
+        return new UpgradeSelectionAdvice
+        {
+            TargetCardId = bestUpgrade.CardId,
+            TargetCardNameZh = bestUpgrade.CardNameZh,
+            SummaryText = $"星象仪推荐：优先升级「{bestUpgrade.CardNameZh}」",
+            Reason = $"{bestUpgrade.Reason}；{deltaText}",
         };
     }
 
@@ -139,24 +206,124 @@ public static class AdvisorEngine
 
     // ── 内部辅助 ─────────────────────────────────────────────────────
 
-    private static string? FindBestUpgradeTarget(BuildPathData? pathData, RunSnapshot snapshot)
+    private static HashSet<string> NormalizeCampfireOptionIds(IReadOnlyCollection<string>? optionIds)
     {
-        if (pathData == null || snapshot.DeckCardIds.Count == 0)
-            return null;
+        var normalized = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (optionIds == null)
+            return normalized;
 
-        // 按优先级顺序检查，找到第一个还未升级的核心牌
-        foreach (var cardId in pathData.CampfireUpgrades)
+        foreach (var optionId in optionIds)
         {
-            bool hasUpgraded   = snapshot.DeckCardIds.Any(id =>
-                id.Equals(cardId + "+", StringComparison.OrdinalIgnoreCase));
-            bool hasUnupgraded = snapshot.DeckCardIds.Any(id =>
-                id.Equals(cardId, StringComparison.OrdinalIgnoreCase));
+            if (string.IsNullOrWhiteSpace(optionId))
+                continue;
 
-            if (hasUnupgraded && !hasUpgraded)
-                return cardId;
+            normalized.Add(optionId.Trim().ToUpperInvariant());
         }
 
-        return null;
+        return normalized;
+    }
+
+    private static CampfireAdvice BuildUpgradeAdvice(CampfireUpgradeCandidate candidate)
+    {
+        string deltaText = string.IsNullOrWhiteSpace(candidate.UpgradeDeltaZh)
+            ? "升级后能稳定提高这张牌的战斗转化"
+            : candidate.UpgradeDeltaZh;
+
+        return new CampfireAdvice
+        {
+            RecommendedAction = CampfireAction.Upgrade,
+            Reason = $"推荐升级「{candidate.CardNameZh}」：{candidate.Reason}；{deltaText}",
+            UpgradeTargetCardId = candidate.CardId,
+            UpgradeTargetCardNameZh = candidate.CardNameZh,
+        };
+    }
+
+    private static CampfireUpgradeCandidate? FindBestUpgradeTarget(
+        SharedDecisionContext context,
+        HashSet<string>? allowedBaseIds = null)
+    {
+        return context.DeckEntries
+            .Where(entry => !entry.IsUpgraded && entry.Card != null)
+            .Where(entry => allowedBaseIds == null || allowedBaseIds.Contains(entry.BaseCardId))
+            .Select(entry => EvaluateUpgradeCandidate(entry, context))
+            .OrderByDescending(candidate => candidate.Score)
+            .FirstOrDefault();
+    }
+
+    private static CampfireUpgradeCandidate EvaluateUpgradeCandidate(DeckCardEntry entry, SharedDecisionContext context)
+    {
+        var card = entry.Card!;
+        float score = card.UpgradePriorityScore;
+        var reasons = new List<string>();
+
+        if (context.PrimaryPathData != null)
+        {
+            if (context.PrimaryPathData.CampfireUpgrades.Contains(entry.BaseCardId))
+            {
+                score += 2.4f;
+                reasons.Add($"是{context.PrimaryPathData.NameZh}的优先升级位");
+            }
+            else if (context.PrimaryPathData.CoreCards.Contains(entry.BaseCardId))
+            {
+                score += 1.2f;
+                reasons.Add("属于当前主路线核心组件");
+            }
+        }
+
+        if (context.NeedsBlock && CardAdvisor.IsBlockCard(card))
+        {
+            score += 0.9f;
+            reasons.Add("能直接补当前防御缺口");
+        }
+
+        if (context.NeedsDraw && CardAdvisor.IsDrawCard(card))
+        {
+            score += 0.75f;
+            reasons.Add("升级后能改善过牌节奏");
+        }
+
+        if (context.NeedsScaling && CardAdvisor.IsScalingCard(card))
+        {
+            score += 0.75f;
+            reasons.Add("补足中后期成长能力");
+        }
+
+        if (context.NeedsFrontloadDamage && CardAdvisor.IsAttackCard(card))
+        {
+            score += 0.6f;
+            reasons.Add("能增强当前前场伤害");
+        }
+
+        if (context.NeedsAoe && CardAdvisor.IsAoeCard(card))
+        {
+            score += 0.55f;
+            reasons.Add("能补群体处理手段");
+        }
+
+        if (IdNormalizer.IsStarterStrikeOrDefend(entry.BaseCardId))
+        {
+            score -= 2.6f;
+        }
+        else if (card.Rarity.Equals("Basic", StringComparison.OrdinalIgnoreCase))
+        {
+            score -= 1.1f;
+        }
+
+        if (context.Snapshot.Act == 1 && context.HPRatio < 0.45f && card.Cost >= 2 && !CardAdvisor.IsBlockCard(card))
+            score -= 0.45f;
+
+        string reason = reasons.Count > 0
+            ? string.Join("；", reasons.Take(2))
+            : "是当前牌组里升级收益最稳的一张牌";
+
+        return new CampfireUpgradeCandidate
+        {
+            CardId = entry.BaseCardId,
+            CardNameZh = string.IsNullOrWhiteSpace(card.NameZh) ? entry.BaseCardId : card.NameZh,
+            Score = score,
+            Reason = reason,
+            UpgradeDeltaZh = card.UpgradeDeltaZh,
+        };
     }
 
     private static string? BuildSkipNote(List<CardAdvice> advices, RunSnapshot snapshot)
@@ -264,9 +431,27 @@ public class CardRewardAdvice
 
 public class CampfireAdvice
 {
-    public CampfireAction RecommendedAction   { get; set; }
-    public string         Reason              { get; set; } = string.Empty;
-    public string?        UpgradeTargetCardId { get; set; }
+    public CampfireAction RecommendedAction       { get; set; }
+    public string         Reason                  { get; set; } = string.Empty;
+    public string?        UpgradeTargetCardId     { get; set; }
+    public string?        UpgradeTargetCardNameZh { get; set; }
+}
+
+public class UpgradeSelectionAdvice
+{
+    public string TargetCardId { get; set; } = string.Empty;
+    public string TargetCardNameZh { get; set; } = string.Empty;
+    public string SummaryText { get; set; } = string.Empty;
+    public string Reason { get; set; } = string.Empty;
+}
+
+internal sealed class CampfireUpgradeCandidate
+{
+    public string CardId { get; init; } = string.Empty;
+    public string CardNameZh { get; init; } = string.Empty;
+    public float Score { get; init; }
+    public string Reason { get; init; } = string.Empty;
+    public string UpgradeDeltaZh { get; init; } = string.Empty;
 }
 
 public enum CampfireAction { Rest, Upgrade, Smith, Recall }

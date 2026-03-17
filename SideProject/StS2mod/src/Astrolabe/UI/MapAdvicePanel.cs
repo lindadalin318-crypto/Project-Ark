@@ -185,7 +185,7 @@ public class CampfireAdvicePanel : Control
     {
         if (_actionLabel == null) return;
 
-        bool isUpgrade = advice.RecommendedAction == CampfireAction.Upgrade;
+        bool isUpgrade = advice.RecommendedAction is CampfireAction.Upgrade or CampfireAction.Smith;
 
         _actionLabel.Text = advice.RecommendedAction switch
         {
@@ -203,7 +203,8 @@ public class CampfireAdvicePanel : Control
 
         if (_upgradeHintLabel != null && advice.UpgradeTargetCardId != null)
         {
-            _upgradeHintLabel.Text    = $"→ 优先升级：{advice.UpgradeTargetCardId}";
+            string displayName = advice.UpgradeTargetCardNameZh ?? advice.UpgradeTargetCardId;
+            _upgradeHintLabel.Text    = $"→ 优先升级：{displayName}";
             _upgradeHintLabel.Visible = true;
         }
         else if (_upgradeHintLabel != null)

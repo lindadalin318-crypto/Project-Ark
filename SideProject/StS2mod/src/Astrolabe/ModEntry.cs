@@ -45,6 +45,7 @@ public partial class ModEntry : Node
         CardRewardHook.Register(harmony);
         MapScreenHook.Register(harmony);
         CampfireHook.Register(harmony);
+        DeckUpgradeHook.Register(harmony);
         ShopHook.Register(harmony);
         CombatHook.Register(harmony);
 

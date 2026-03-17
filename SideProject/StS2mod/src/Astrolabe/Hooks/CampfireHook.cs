@@ -62,19 +62,43 @@ public static class CampfireHook
             RunSnapshot snapshot = RunStateReader.Capture();
             if (!snapshot.IsValid)
             {
+                DeckUpgradeHook.ClearCampfireContext();
                 _log.Warn("[CampfireHook] Invalid snapshot, skipping advice.");
                 return;
             }
 
+            OverlayHUD.EnsureInjected(__instance);
+
+            var availableOptionIds = CollectAvailableOptionIds(__instance);
             BuildPathManager.UpdateViability(snapshot);
-            var advice = AdvisorEngine.AnalyzeCampfire(snapshot);
+            var advice = AdvisorEngine.AnalyzeCampfire(snapshot, availableOptionIds);
+
+            if (advice.RecommendedAction is CampfireAction.Upgrade or CampfireAction.Smith)
+                DeckUpgradeHook.CacheCampfireAdvice(advice);
+            else
+                DeckUpgradeHook.ClearCampfireContext();
+
             OverlayHUD.ShowCampfireAdvice(advice);
 
-            _log.Info($"[CampfireHook] Campfire advice: {advice.RecommendedAction} ({advice.Reason})");
+            _log.Info($"[CampfireHook] Campfire advice: {advice.RecommendedAction} ({advice.Reason}) / Options: {string.Join(",", availableOptionIds)}");
         }
         catch (Exception ex)
         {
             _log.Error($"[CampfireHook] OnRestSiteReady failed: {ex.Message}");
         }
+    }
+
+    private static IReadOnlyList<string> CollectAvailableOptionIds(NRestSiteRoom room)
+    {
+        var available = new List<string>();
+        foreach (var option in room.Options)
+        {
+            if (option == null || !option.IsEnabled || string.IsNullOrWhiteSpace(option.OptionId))
+                continue;
+
+            available.Add(option.OptionId.Trim().ToUpperInvariant());
+        }
+
+        return available;
     }
 }
