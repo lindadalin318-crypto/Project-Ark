@@ -68,12 +68,12 @@ public static class MapScreenHook
             }
 
             BuildPathManager.UpdateViability(snapshot);
-            var advice = AdvisorEngine.AnalyzeMapRoutes(snapshot);
+            var envelope = AdvisorEngine.AnalyzeMapRoutes(snapshot);
 
             // 注入 CanvasLayer（首次触发时执行，之后幂等）
             // 必须在 ShowMapAdvice 之前注入，否则面板引用为 null
             OverlayHUD.EnsureInjected(__instance);
-            OverlayHUD.ShowMapAdvice(advice);
+            OverlayHUD.ShowMapAdvice(envelope);
 
             _log.Info($"[MapScreenHook] Map advice generated. Floor: {snapshot.Floor}, Act: {snapshot.Act}");
         }

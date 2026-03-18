@@ -2,14 +2,55 @@ import * as THREE from "three";
 import { Client, Room } from "@colyseus/sdk";
 
 type RoleType = "heavy" | "runner";
-type PhaseType = "lobby" | "playing" | "completed" | "failed";
+type ItemType = "blanket" | "cart" | "stabilizer" | "buffer";
+type PhaseType = "lobby" | "role_select" | "item_select" | "playing" | "completed" | "failed";
+type UIScreen = "start" | "connecting" | "lobby" | "role_select" | "item_select" | "playing" | "result";
 
-interface PanicDemoAppElements {
+export interface PanicDemoAppElements {
   viewport: HTMLDivElement;
+  startScreen: HTMLElement;
+  connectingScreen: HTMLElement;
+  lobbyScreen: HTMLElement;
+  roleScreen: HTMLElement;
+  itemScreen: HTMLElement;
+  resultScreen: HTMLElement;
+  gameHud: HTMLElement;
+  eventBanner: HTMLElement;
+  startGameButton: HTMLButtonElement;
+  soloDebugButton: HTMLButtonElement;
+  joinRoomButton: HTMLButtonElement;
+  cancelConnectButton: HTMLButtonElement;
+  roomCodeInput: HTMLInputElement;
   connectButton: HTMLButtonElement;
+  roomCode: HTMLElement;
+  hostStatus: HTMLElement;
+  connectingStatus: HTMLElement;
+  resultPhaseLabel: HTMLElement;
+  stageChips: HTMLElement[];
+  lobbyPlayerList: HTMLDivElement;
+  rolePlayerList: HTMLDivElement;
+  itemPlayerList: HTMLDivElement;
+  lobbyRoleHeavyButton: HTMLButtonElement;
+  lobbyRoleRunnerButton: HTMLButtonElement;
   roleHeavyButton: HTMLButtonElement;
   roleRunnerButton: HTMLButtonElement;
   readyButton: HTMLButtonElement;
+  beginRoleSelectButton: HTMLButtonElement;
+  roleLockButton: HTMLButtonElement;
+  roleAdvanceButton: HTMLButtonElement;
+  returnLobbyButton: HTMLButtonElement;
+  itemBlanketButton: HTMLButtonElement;
+  itemCartButton: HTMLButtonElement;
+  itemStabilizerButton: HTMLButtonElement;
+  itemBufferButton: HTMLButtonElement;
+  itemCountBlanket: HTMLElement;
+  itemCountCart: HTMLElement;
+  itemCountStabilizer: HTMLElement;
+  itemCountBuffer: HTMLElement;
+  selectedItemsText: HTMLParagraphElement;
+  itemConfirmButton: HTMLButtonElement;
+  startRunButton: HTMLButtonElement;
+  returnRoleSelectButton: HTMLButtonElement;
   restartButton: HTMLButtonElement;
   connectionStatus: HTMLParagraphElement;
   phaseLabel: HTMLParagraphElement;
@@ -27,8 +68,12 @@ interface PlayerSnapshot {
   name: string;
   role: RoleType;
   ready: boolean;
+  roleLocked: boolean;
   connected: boolean;
   blanketActive: boolean;
+  itemSlotA: string;
+  itemSlotB: string;
+  itemConfirmed: boolean;
   yaw: number;
   catapultCooldown: number;
   position: { x: number; y: number; z: number };
@@ -46,6 +91,13 @@ interface CargoSnapshot {
   airborne: boolean;
 }
 
+interface ItemPoolSnapshot {
+  blanket: number;
+  cart: number;
+  stabilizer: number;
+  buffer: number;
+}
+
 interface RoomSnapshot {
   players: Record<string, PlayerSnapshot>;
   cargo: CargoSnapshot;
@@ -53,6 +105,10 @@ interface RoomSnapshot {
   elapsedTime: number;
   announcement: string;
   connectedCount: number;
+  maxPlayers: number;
+  hostSessionId: string;
+  soloDebug: boolean;
+  itemPool: ItemPoolSnapshot;
 }
 
 const SERVER_URL = "ws://localhost:2567";
@@ -60,10 +116,18 @@ const CAMERA_HEIGHT = 1.7;
 const WORLD_MIN_Z = -1;
 const WORLD_MAX_Z = 31;
 const WORLD_HALF_WIDTH = 5.4;
+const FLOW_ORDER: PhaseType[] = ["lobby", "role_select", "item_select", "playing"];
 
 const playerMaterialPalette: Record<RoleType, number> = {
   heavy: 0xd58936,
   runner: 0x59c3ff,
+};
+
+const ITEM_LABELS: Record<ItemType, string> = {
+  blanket: "Blanket",
+  cart: "Fold Cart",
+  stabilizer: "Stabilizer Strap",
+  buffer: "Impact Pad",
 };
 
 export class PanicDemoApp {
@@ -84,6 +148,9 @@ export class PanicDemoApp {
 
   private localRole: RoleType = "heavy";
   private localReady = false;
+  private localRoleLocked = false;
+  private localItemConfirmed = false;
+  private localItems: ItemType[] = [];
   private room: Room | null = null;
   private sessionId = "";
   private snapshot: RoomSnapshot | null = null;
@@ -91,8 +158,9 @@ export class PanicDemoApp {
   private blanketHeld = false;
   private lastFrameTime = performance.now();
   private elapsedTime = 0;
-  private reconnectTimeoutId: number | null = null;
   private hasInitialServerPosition = false;
+  private currentScreen: UIScreen = "start";
+  private lastAnnouncement = "";
 
   constructor(elements: PanicDemoAppElements) {
     this.elements = elements;
@@ -121,9 +189,7 @@ export class PanicDemoApp {
 
     this.buildScene();
     this.bindUi();
-    this.connectToRoom().catch((error: unknown) => {
-      this.handleConnectionError(error);
-    });
+    this.setScreen("start");
 
     window.addEventListener("resize", () => this.handleResize());
     document.addEventListener("pointerlockchange", () => this.updatePointerStatus());
@@ -131,26 +197,85 @@ export class PanicDemoApp {
     document.addEventListener("keydown", (event) => this.handleKeyDown(event));
     document.addEventListener("keyup", (event) => this.handleKeyUp(event));
     this.elements.viewport.addEventListener("click", () => {
-      this.renderer.domElement.requestPointerLock();
+      if (this.snapshot?.phase === "playing") {
+        this.renderer.domElement.requestPointerLock();
+      }
     });
 
     this.animate();
   }
 
   private bindUi(): void {
-    this.elements.connectButton.addEventListener("click", () => {
-      this.connectToRoom().catch((error: unknown) => {
+    this.elements.startGameButton.addEventListener("click", () => {
+      this.connectToRoom("create").catch((error: unknown) => {
         this.handleConnectionError(error);
       });
     });
 
+    this.elements.soloDebugButton.addEventListener("click", () => {
+      this.connectToRoom("create", undefined, true).catch((error: unknown) => {
+        this.handleConnectionError(error);
+      });
+    });
+
+    this.elements.joinRoomButton.addEventListener("click", () => {
+      const roomCode = this.elements.roomCodeInput.value.trim();
+      if (!roomCode) {
+        this.elements.connectionStatus.textContent = "请输入房间码后再加入。";
+        return;
+      }
+
+      this.connectToRoom("join", roomCode).catch((error: unknown) => {
+        this.handleConnectionError(error);
+      });
+    });
+
+    this.elements.cancelConnectButton.addEventListener("click", () => {
+      this.setScreen("start");
+      this.elements.connectingStatus.textContent = "连接已取消。";
+    });
+
+    this.elements.lobbyRoleHeavyButton.addEventListener("click", () => this.setRole("heavy"));
+    this.elements.lobbyRoleRunnerButton.addEventListener("click", () => this.setRole("runner"));
     this.elements.roleHeavyButton.addEventListener("click", () => this.setRole("heavy"));
     this.elements.roleRunnerButton.addEventListener("click", () => this.setRole("runner"));
 
     this.elements.readyButton.addEventListener("click", () => {
       this.localReady = !this.localReady;
       this.room?.send("set_ready", { ready: this.localReady });
-      this.refreshRoleButtons();
+    });
+
+    this.elements.beginRoleSelectButton.addEventListener("click", () => {
+      this.room?.send("host_begin_role_select");
+    });
+
+    this.elements.roleLockButton.addEventListener("click", () => {
+      this.room?.send("lock_role", { locked: !this.localRoleLocked });
+    });
+
+    this.elements.roleAdvanceButton.addEventListener("click", () => {
+      this.room?.send("host_begin_item_select");
+    });
+
+    this.elements.returnLobbyButton.addEventListener("click", () => {
+      this.room?.send("host_return_lobby");
+    });
+
+    this.elements.itemBlanketButton.addEventListener("click", () => this.toggleItem("blanket"));
+    this.elements.itemCartButton.addEventListener("click", () => this.toggleItem("cart"));
+    this.elements.itemStabilizerButton.addEventListener("click", () => this.toggleItem("stabilizer"));
+    this.elements.itemBufferButton.addEventListener("click", () => this.toggleItem("buffer"));
+
+    this.elements.itemConfirmButton.addEventListener("click", () => {
+      this.room?.send("confirm_items", { confirmed: !this.localItemConfirmed });
+    });
+
+    this.elements.startRunButton.addEventListener("click", () => {
+      this.room?.send("host_start_match");
+    });
+
+    this.elements.returnRoleSelectButton.addEventListener("click", () => {
+      this.room?.send("host_return_role_select");
     });
 
     this.elements.restartButton.addEventListener("click", () => {
@@ -158,28 +283,36 @@ export class PanicDemoApp {
     });
   }
 
-  private async connectToRoom(): Promise<void> {
-    this.elements.connectionStatus.textContent = "Connecting to local room server...";
-    if (this.reconnectTimeoutId !== null) {
-      window.clearTimeout(this.reconnectTimeoutId);
-      this.reconnectTimeoutId = null;
-    }
+  private async connectToRoom(mode: "create" | "join", roomCode?: string, soloDebug = false): Promise<void> {
+    this.setScreen("connecting");
+    this.elements.connectingStatus.textContent =
+      mode === "create"
+        ? soloDebug
+          ? "正在创建单人调试房间，请稍候..."
+          : "正在创建房间，请稍候..."
+        : "正在加入房间，请稍候...";
+    this.elements.connectionStatus.textContent = "正在连接房间服务器...";
 
     if (this.room) {
       await this.room.leave(true);
       this.room = null;
       this.sessionId = "";
+      this.snapshot = null;
       this.hasInitialServerPosition = false;
     }
 
     const client = new Client(SERVER_URL);
-    const room = await client.joinOrCreate("panic_room", {
-      name: `Courier-${Math.floor(Math.random() * 900 + 100)}`,
-    });
+    const playerName = `Courier-${Math.floor(Math.random() * 900 + 100)}`;
+    const room =
+      mode === "create"
+        ? await client.create("panic_room", { name: playerName, soloDebug })
+        : await client.joinById(roomCode ?? "", { name: playerName });
 
     this.room = room;
     this.sessionId = room.sessionId;
-    this.elements.connectionStatus.textContent = `Connected to ${SERVER_URL}`;
+    this.elements.connectionStatus.textContent = `已连接服务器 ${SERVER_URL}`;
+    this.elements.roomCode.textContent = room.roomId;
+    this.elements.roomCodeInput.value = room.roomId;
 
     room.onStateChange((state: { toJSON?: () => unknown }) => {
       const snapshot = (state.toJSON ? state.toJSON() : state) as RoomSnapshot;
@@ -188,22 +321,27 @@ export class PanicDemoApp {
 
     room.onLeave(() => {
       this.room = null;
-      this.elements.connectionStatus.textContent = "Disconnected. Attempting to reconnect...";
-      this.queueReconnect();
+      this.snapshot = null;
+      this.elements.connectionStatus.textContent = "连接已断开，请重新进入房间。";
+      this.setScreen("start");
     });
   }
 
   private applySnapshot(snapshot: RoomSnapshot): void {
     this.snapshot = snapshot;
-    this.elements.phaseLabel.textContent = snapshot.phase.toUpperCase();
+    this.elements.phaseLabel.textContent = this.formatPhase(snapshot.phase);
     this.elements.announcement.textContent = snapshot.announcement;
-    this.elements.playerCount.textContent = `Couriers: ${snapshot.connectedCount} / 2`;
+    this.elements.playerCount.textContent = `Couriers: ${snapshot.connectedCount} / ${snapshot.maxPlayers}`;
+    this.elements.resultPhaseLabel.textContent = snapshot.phase === "completed" ? "Run Complete" : "Run Failed";
     this.updateBars(snapshot.cargo.fragility, snapshot.cargo.stability);
 
     const localPlayer = snapshot.players[this.sessionId];
     if (localPlayer) {
       this.localRole = localPlayer.role;
       this.localReady = localPlayer.ready;
+      this.localRoleLocked = localPlayer.roleLocked;
+      this.localItemConfirmed = localPlayer.itemConfirmed;
+      this.localItems = this.getPlayerItems(localPlayer);
 
       const serverPosition = new THREE.Vector3(
         localPlayer.position.x,
@@ -216,14 +354,247 @@ export class PanicDemoApp {
       }
     }
 
-    this.refreshRoleButtons();
+    this.elements.hostStatus.textContent = this.getHostLabel(snapshot);
+    this.renderPlayerLists(snapshot);
+    this.refreshControls(snapshot);
+    this.updateStageStrip(snapshot.phase);
     this.syncPlayerMeshes(snapshot);
     this.syncObjective(snapshot);
+    this.updateScreenFromPhase(snapshot.phase);
+    this.showAnnouncementBanner(snapshot.announcement, snapshot.phase === "playing");
+  }
+
+  private updateScreenFromPhase(phase: PhaseType): void {
+    switch (phase) {
+      case "lobby":
+        this.setScreen("lobby");
+        break;
+      case "role_select":
+        this.setScreen("role_select");
+        break;
+      case "item_select":
+        this.setScreen("item_select");
+        break;
+      case "playing":
+        this.setScreen("playing");
+        break;
+      case "completed":
+      case "failed":
+        this.setScreen("result");
+        break;
+    }
+  }
+
+  private updateStageStrip(phase: PhaseType): void {
+    const normalizedPhase = phase === "completed" || phase === "failed" ? "playing" : phase;
+    const currentIndex = FLOW_ORDER.indexOf(normalizedPhase);
+    for (const chip of this.elements.stageChips) {
+      const chipPhase = chip.dataset.stageChip as PhaseType;
+      const chipIndex = FLOW_ORDER.indexOf(chipPhase);
+      chip.classList.toggle("active", chipPhase === normalizedPhase);
+      chip.classList.toggle("complete", chipIndex > -1 && chipIndex < currentIndex);
+    }
+  }
+
+  private setScreen(screen: UIScreen): void {
+    this.currentScreen = screen;
+    this.elements.startScreen.classList.toggle("hidden", screen !== "start");
+    this.elements.connectingScreen.classList.toggle("hidden", screen !== "connecting");
+    this.elements.lobbyScreen.classList.toggle("hidden", screen !== "lobby");
+    this.elements.roleScreen.classList.toggle("hidden", screen !== "role_select");
+    this.elements.itemScreen.classList.toggle("hidden", screen !== "item_select");
+    this.elements.resultScreen.classList.toggle("hidden", screen !== "result");
+    this.elements.gameHud.classList.toggle("hidden", screen !== "playing");
+
+    if (screen !== "playing" && document.pointerLockElement === this.renderer.domElement) {
+      document.exitPointerLock();
+    }
+  }
+
+  private refreshControls(snapshot: RoomSnapshot): void {
+    const isHost = this.isHost(snapshot);
+    const phase = snapshot.phase;
+
+    const roleButtons = [
+      this.elements.lobbyRoleHeavyButton,
+      this.elements.lobbyRoleRunnerButton,
+      this.elements.roleHeavyButton,
+      this.elements.roleRunnerButton,
+    ];
+    for (const button of roleButtons) {
+      const isHeavyButton = button.textContent?.includes("Heavy") ?? false;
+      const active = isHeavyButton ? this.localRole === "heavy" : this.localRole === "runner";
+      button.classList.toggle("active", active);
+    }
+
+    const canChangeRole = phase === "lobby" || (phase === "role_select" && !this.localRoleLocked);
+    for (const button of roleButtons) {
+      button.disabled = !canChangeRole;
+    }
+
+    this.elements.readyButton.disabled = phase !== "lobby";
+    this.elements.readyButton.classList.toggle("active", this.localReady);
+    this.elements.readyButton.textContent = this.localReady ? "取消 Ready" : "Ready Up";
+
+    const canOpenRoleSelect = this.canEnterRoleSelect(snapshot);
+    this.elements.beginRoleSelectButton.disabled = !isHost || !canOpenRoleSelect || phase !== "lobby";
+    this.elements.beginRoleSelectButton.textContent =
+      !isHost
+        ? "等待房主开始"
+        : canOpenRoleSelect
+          ? "进入角色选择"
+          : snapshot.soloDebug
+            ? "需要自己 Ready"
+            : "需要两名玩家都 Ready";
+
+    this.elements.roleLockButton.disabled = phase !== "role_select";
+    this.elements.roleLockButton.classList.toggle("active", this.localRoleLocked);
+    this.elements.roleLockButton.textContent = this.localRoleLocked ? "取消锁定" : "锁定角色";
+
+    const canOpenItemSelect = this.canEnterItemSelect(snapshot);
+    this.elements.roleAdvanceButton.disabled = !isHost || !canOpenItemSelect || phase !== "role_select";
+    this.elements.roleAdvanceButton.textContent =
+      !isHost
+        ? "等待房主推进"
+        : canOpenItemSelect
+          ? "进入道具选取"
+          : snapshot.soloDebug
+            ? "需要锁定当前调试角色"
+            : "需要 Heavy + Runner 均锁定";
+    this.elements.returnLobbyButton.disabled = !isHost || phase !== "role_select";
+
+    this.updateItemButtons(snapshot);
+    this.elements.selectedItemsText.textContent =
+      this.localItems.length > 0 ? this.localItems.map((item) => ITEM_LABELS[item]).join(" + ") : "尚未选择道具。";
+    this.elements.itemConfirmButton.disabled = phase !== "item_select" || this.localItems.length === 0;
+    this.elements.itemConfirmButton.classList.toggle("active", this.localItemConfirmed);
+    this.elements.itemConfirmButton.textContent = this.localItemConfirmed ? "取消确认" : "确认道具";
+
+    const canStartRun = this.canStartRun(snapshot);
+    this.elements.startRunButton.disabled = !isHost || !canStartRun || phase !== "item_select";
+    this.elements.startRunButton.textContent =
+      !isHost
+        ? "等待房主进入游戏"
+        : canStartRun
+          ? "进入游戏"
+          : snapshot.soloDebug
+            ? "需要确认 1-2 件道具"
+            : "需要全员确认且队伍带 Blanket";
+    this.elements.returnRoleSelectButton.disabled = !isHost || phase !== "item_select";
+  }
+
+  private updateItemButtons(snapshot: RoomSnapshot): void {
+    const items = [
+      {
+        item: "blanket" as ItemType,
+        button: this.elements.itemBlanketButton,
+        count: this.elements.itemCountBlanket,
+        remaining: snapshot.itemPool.blanket,
+      },
+      {
+        item: "cart" as ItemType,
+        button: this.elements.itemCartButton,
+        count: this.elements.itemCountCart,
+        remaining: snapshot.itemPool.cart,
+      },
+      {
+        item: "stabilizer" as ItemType,
+        button: this.elements.itemStabilizerButton,
+        count: this.elements.itemCountStabilizer,
+        remaining: snapshot.itemPool.stabilizer,
+      },
+      {
+        item: "buffer" as ItemType,
+        button: this.elements.itemBufferButton,
+        count: this.elements.itemCountBuffer,
+        remaining: snapshot.itemPool.buffer,
+      },
+    ];
+
+    for (const entry of items) {
+      const selected = this.localItems.includes(entry.item);
+      const localFull = this.localItems.length >= 2;
+      entry.count.textContent = `x${entry.remaining}`;
+      entry.button.classList.toggle("active", selected);
+      entry.button.disabled = snapshot.phase !== "item_select" || (!selected && (entry.remaining <= 0 || localFull));
+    }
+  }
+
+  private renderPlayerLists(snapshot: RoomSnapshot): void {
+    const players = Object.values(snapshot.players);
+    this.elements.lobbyPlayerList.innerHTML = this.buildPlayerListMarkup(players, snapshot, "lobby");
+    this.elements.rolePlayerList.innerHTML = this.buildPlayerListMarkup(players, snapshot, "role");
+    this.elements.itemPlayerList.innerHTML = this.buildPlayerListMarkup(players, snapshot, "items");
+  }
+
+  private buildPlayerListMarkup(
+    players: PlayerSnapshot[],
+    snapshot: RoomSnapshot,
+    mode: "lobby" | "role" | "items",
+  ): string {
+    return players
+      .map((player) => {
+        const badges: string[] = [];
+        if (player.sessionId === snapshot.hostSessionId) {
+          badges.push("Host");
+        }
+
+        if (mode === "lobby") {
+          badges.push(player.role === "heavy" ? "Heavy" : "Runner");
+          badges.push(player.ready ? "Ready" : "Waiting");
+        } else if (mode === "role") {
+          badges.push(player.role === "heavy" ? "Heavy" : "Runner");
+          badges.push(player.roleLocked ? "Locked" : "Choosing");
+        } else {
+          const items = this.getPlayerItems(player);
+          badges.push(items.length > 0 ? items.map((item) => ITEM_LABELS[item]).join(", ") : "No Items");
+          badges.push(player.itemConfirmed ? "Confirmed" : "Picking");
+        }
+
+        return `
+          <div class="player-card ${player.sessionId === this.sessionId ? "self" : ""}">
+            <div>
+              <strong>${player.name}</strong>
+              <p>${player.sessionId === this.sessionId ? "You" : "Crew Member"}</p>
+            </div>
+            <div class="player-badges">${badges.map((badge) => `<span>${badge}</span>`).join("")}</div>
+          </div>
+        `;
+      })
+      .join("");
   }
 
   private syncObjective(snapshot: RoomSnapshot): void {
     if (snapshot.phase === "lobby") {
-      this.elements.objectiveText.textContent = "Pick Heavy Lifter or Runner, then ready up.";
+      this.elements.objectiveText.textContent = this.canEnterRoleSelect(snapshot)
+        ? snapshot.soloDebug
+          ? "Solo debug courier is ready. Open role select."
+          : "Both couriers are ready. Host can open role select."
+        : snapshot.soloDebug
+          ? "Pick a role for solo debug, then ready up."
+          : "Pick Heavy Lifter or Runner, then ready up.";
+      return;
+    }
+
+    if (snapshot.phase === "role_select") {
+      this.elements.objectiveText.textContent = this.canEnterItemSelect(snapshot)
+        ? snapshot.soloDebug
+          ? "Debug role is locked. Open the item pool."
+          : "Crew roles are locked. Host can open the item pool."
+        : snapshot.soloDebug
+          ? "Lock your solo debug role."
+          : "Lock one Heavy Lifter and one Runner.";
+      return;
+    }
+
+    if (snapshot.phase === "item_select") {
+      this.elements.objectiveText.textContent = this.canStartRun(snapshot)
+        ? snapshot.soloDebug
+          ? "Debug loadout confirmed. Enter the run when ready."
+          : "Loadouts are confirmed. Host can enter the run."
+        : snapshot.soloDebug
+          ? "Choose 1-2 items, then confirm to start solo debug."
+          : "Choose 1-2 items each. Team must bring a Blanket.";
       return;
     }
 
@@ -233,12 +604,13 @@ export class PanicDemoApp {
     }
 
     if (snapshot.phase === "failed") {
-      this.elements.objectiveText.textContent = "The cargo failed. Reset and run the route again.";
+      this.elements.objectiveText.textContent = "The cargo failed. Return to lobby and prep again.";
       return;
     }
 
     if (snapshot.cargo.position.z < 8.5) {
-      this.elements.objectiveText.textContent = "Launch the Runner across the rift, then roll the cargo onto the catapult.";
+      this.elements.objectiveText.textContent =
+        "Launch the Runner across the rift, then roll the cargo onto the catapult.";
       return;
     }
 
@@ -250,17 +622,110 @@ export class PanicDemoApp {
     this.elements.objectiveText.textContent = "Escort the recovered cargo into the delivery ring.";
   }
 
-  private refreshRoleButtons(): void {
-    this.elements.roleHeavyButton.classList.toggle("active", this.localRole === "heavy");
-    this.elements.roleRunnerButton.classList.toggle("active", this.localRole === "runner");
-    this.elements.readyButton.classList.toggle("active", this.localReady);
-    this.elements.readyButton.textContent = this.localReady ? "Cancel Ready" : "Ready Up";
+  private showAnnouncementBanner(message: string, allowVisible: boolean): void {
+    if (!allowVisible || !message || message === this.lastAnnouncement) {
+      if (!allowVisible) {
+        this.elements.eventBanner.classList.add("hidden");
+      }
+      this.lastAnnouncement = message;
+      return;
+    }
+
+    this.lastAnnouncement = message;
+    this.elements.eventBanner.textContent = message;
+    this.elements.eventBanner.classList.remove("hidden");
+    window.setTimeout(() => {
+      if (this.lastAnnouncement === message && this.currentScreen === "playing") {
+        this.elements.eventBanner.classList.add("hidden");
+      }
+    }, 2200);
   }
 
   private setRole(role: RoleType): void {
     this.localRole = role;
     this.room?.send("set_role", { role });
-    this.refreshRoleButtons();
+  }
+
+  private toggleItem(item: ItemType): void {
+    this.room?.send("toggle_item", { item });
+  }
+
+  private isHost(snapshot: RoomSnapshot): boolean {
+    return snapshot.hostSessionId === this.sessionId;
+  }
+
+  private canEnterRoleSelect(snapshot: RoomSnapshot): boolean {
+    const players = Object.values(snapshot.players);
+    return players.length >= (snapshot.soloDebug ? 1 : 2) && players.every((player) => player.ready);
+  }
+
+  private canEnterItemSelect(snapshot: RoomSnapshot): boolean {
+    const players = Object.values(snapshot.players);
+    if (players.length < (snapshot.soloDebug ? 1 : 2) || players.some((player) => !player.roleLocked)) {
+      return false;
+    }
+
+    if (snapshot.soloDebug) {
+      return true;
+    }
+
+    const hasHeavy = players.some((player) => player.role === "heavy");
+    const hasRunner = players.some((player) => player.role === "runner");
+    return hasHeavy && hasRunner;
+  }
+
+  private canStartRun(snapshot: RoomSnapshot): boolean {
+    const players = Object.values(snapshot.players);
+    if (players.length < (snapshot.soloDebug ? 1 : 2)) {
+      return false;
+    }
+
+    const teamHasBlanket = players.some((player) => this.getPlayerItems(player).includes("blanket"));
+    const allConfirmed = players.every((player) => {
+      const items = this.getPlayerItems(player);
+      return items.length >= 1 && items.length <= 2 && player.itemConfirmed;
+    });
+    return allConfirmed && (snapshot.soloDebug || teamHasBlanket);
+  }
+
+  private getPlayerItems(player: Pick<PlayerSnapshot, "itemSlotA" | "itemSlotB">): ItemType[] {
+    const items: ItemType[] = [];
+    if (this.isItemType(player.itemSlotA)) {
+      items.push(player.itemSlotA);
+    }
+    if (this.isItemType(player.itemSlotB)) {
+      items.push(player.itemSlotB);
+    }
+    return items;
+  }
+
+  private isItemType(value: string): value is ItemType {
+    return value === "blanket" || value === "cart" || value === "stabilizer" || value === "buffer";
+  }
+
+  private getHostLabel(snapshot: RoomSnapshot): string {
+    const hostPlayer = snapshot.players[snapshot.hostSessionId];
+    if (!hostPlayer) {
+      return "Waiting";
+    }
+
+    const base = hostPlayer.sessionId === this.sessionId ? `${hostPlayer.name} (You)` : hostPlayer.name;
+    return snapshot.soloDebug ? `${base} / Solo Debug` : base;
+  }
+
+  private formatPhase(phase: PhaseType): string {
+    switch (phase) {
+      case "role_select":
+        return "Role Select";
+      case "item_select":
+        return "Item Select";
+      case "completed":
+        return "Delivery Complete";
+      case "failed":
+        return "Run Failed";
+      default:
+        return phase.charAt(0).toUpperCase() + phase.slice(1);
+    }
   }
 
   private buildScene(): void {
@@ -468,6 +933,11 @@ export class PanicDemoApp {
   };
 
   private updateLocalMovement(deltaTime: number): void {
+    if (this.snapshot?.phase !== "playing") {
+      this.localPosition.y = CAMERA_HEIGHT;
+      return;
+    }
+
     const forward = new THREE.Vector3(-Math.sin(this.rotation.y), 0, -Math.cos(this.rotation.y));
     const right = new THREE.Vector3(Math.cos(this.rotation.y), 0, -Math.sin(this.rotation.y));
     const move = new THREE.Vector3();
@@ -569,7 +1039,7 @@ export class PanicDemoApp {
   }
 
   private handleMouseMove(event: MouseEvent): void {
-    if (document.pointerLockElement !== this.renderer.domElement) {
+    if (document.pointerLockElement !== this.renderer.domElement || this.snapshot?.phase !== "playing") {
       return;
     }
 
@@ -579,11 +1049,15 @@ export class PanicDemoApp {
   }
 
   private handleKeyDown(event: KeyboardEvent): void {
+    if (this.snapshot?.phase !== "playing") {
+      return;
+    }
+
     if (["KeyW", "KeyA", "KeyS", "KeyD"].includes(event.code)) {
       this.pressedKeys.add(event.code);
     }
 
-    if (event.code === "KeyQ") {
+    if (event.code === "KeyQ" && this.localItems.includes("blanket")) {
       this.blanketHeld = true;
     }
 
@@ -612,22 +1086,10 @@ export class PanicDemoApp {
   }
 
   private handleConnectionError(error: unknown): void {
-    this.elements.connectionStatus.textContent = "Connection failed. Retrying shortly...";
-    this.queueReconnect();
+    this.elements.connectionStatus.textContent = "连接失败，请返回开始界面后重试。";
+    this.elements.connectingStatus.textContent = "房间连接失败。请检查房间码或服务器状态。";
+    this.setScreen("start");
     console.error(error);
-  }
-
-  private queueReconnect(): void {
-    if (this.reconnectTimeoutId !== null) {
-      return;
-    }
-
-    this.reconnectTimeoutId = window.setTimeout(() => {
-      this.reconnectTimeoutId = null;
-      this.connectToRoom().catch((error: unknown) => {
-        this.handleConnectionError(error);
-      });
-    }, 1500);
   }
 
   private createPulseMaterial(): THREE.ShaderMaterial {

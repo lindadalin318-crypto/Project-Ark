@@ -3,7 +3,6 @@ using Astrolabe.Core;
 using Astrolabe.Data;
 using Astrolabe.Engine;
 using Astrolabe.UI;
-
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Merchant;
 using MegaCrit.Sts2.Core.Logging;
@@ -12,19 +11,13 @@ using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
 namespace Astrolabe.Hooks;
 
 /// <summary>
-/// Hook 商店界面（NMerchantInventory），触发购买建议并更新 HUD。
-///
-/// 已通过 ILSpy 确认：
-///   - 商品节点：MegaCrit.Sts2.Core.Nodes.Screens.Shops.NMerchantInventory
-///   - 数据类：MegaCrit.Sts2.Core.Entities.Merchant.MerchantInventory
-///   - 卡牌列表：MerchantInventory.CharacterCardEntries（IReadOnlyList&lt;MerchantCardEntry&gt;）
-///   - 遗物列表：MerchantInventory.RelicEntries（IReadOnlyList&lt;MerchantRelicEntry&gt;）
-///   - 药水列表：MerchantInventory.PotionEntries（IReadOnlyList&lt;MerchantPotionEntry&gt;）
-///   - MerchantCardEntry 包含 CardModel Card 和 int Price 字段
+/// Hook 商店界面（NMerchantInventory），触发购买建议并更新 HUD，
+/// 同时在商店关闭时按同一 trace 回写玩家实际购买/删牌结果。
 /// </summary>
 public static class ShopHook
 {
     private static readonly Logger _log = new("Astrolabe.ShopHook", LogType.Generic);
+    private static readonly Dictionary<NMerchantInventory, ShopSession> ActiveSessions = new();
 
     public static void Register(Harmony harmony)
     {
@@ -32,6 +25,8 @@ public static class ShopHook
         {
             var inventoryType = typeof(NMerchantInventory);
             var readyMethod = inventoryType.GetMethod("_Ready",
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            var exitTreeMethod = inventoryType.GetMethod("_ExitTree",
                 BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
             if (readyMethod != null)
@@ -45,6 +40,19 @@ public static class ShopHook
             else
             {
                 _log.Error("[ShopHook] Cannot find _Ready on NMerchantInventory");
+            }
+
+            if (exitTreeMethod != null)
+            {
+                var exitPostfix = typeof(ShopHook).GetMethod(
+                    nameof(OnMerchantInventoryExitTree),
+                    BindingFlags.Static | BindingFlags.NonPublic);
+                harmony.Patch(exitTreeMethod, postfix: new HarmonyMethod(exitPostfix));
+                _log.Info("[ShopHook] Patched NMerchantInventory._ExitTree");
+            }
+            else
+            {
+                _log.Error("[ShopHook] Cannot find _ExitTree on NMerchantInventory");
             }
         }
         catch (Exception ex)
@@ -69,7 +77,6 @@ public static class ShopHook
 
             BuildPathManager.UpdateViability(snapshot);
 
-            // 从 NMerchantInventory 中通过 Reflection 读取 MerchantInventory 数据
             MerchantInventory? merchantInventory = ExtractInventory(__instance);
             if (merchantInventory == null)
             {
@@ -78,10 +85,11 @@ public static class ShopHook
             }
 
             ShopItems shopItems = BuildShopItems(merchantInventory);
-            var advice = AdvisorEngine.AnalyzeShop(shopItems, snapshot);
-            OverlayHUD.ShowShopAdvice(advice);
+            var envelope = AdvisorEngine.AnalyzeShop(shopItems, snapshot);
+            OverlayHUD.ShowShopAdvice(envelope);
 
-            _log.Info($"[ShopHook] Shop advice generated: {advice.Summary}");
+            ActiveSessions[__instance] = new ShopSession(snapshot, shopItems, envelope);
+            _log.Info($"[ShopHook] Shop advice generated: {envelope.Payload.Summary} / Trace: {envelope.TraceId}");
         }
         catch (Exception ex)
         {
@@ -89,21 +97,181 @@ public static class ShopHook
         }
     }
 
+    [HarmonyPostfix]
+    private static void OnMerchantInventoryExitTree(NMerchantInventory __instance)
+    {
+        try
+        {
+            if (!ActiveSessions.TryGetValue(__instance, out var session))
+                return;
+
+            RunSnapshot exitSnapshot = RunStateReader.Capture();
+            if (!exitSnapshot.IsValid)
+                return;
+
+            var choiceIds = InferPlayerChoiceIds(session, exitSnapshot);
+            string playerChoiceId = choiceIds.Count == 0 ? "leave" : string.Join("|", choiceIds);
+            int goldSpent = Math.Max(0, session.EntrySnapshot.Gold - exitSnapshot.Gold);
+
+            var record = DecisionRecordFactory.CreatePlayerChoiceRecord(
+                session.Envelope,
+                exitSnapshot,
+                playerChoiceId,
+                source: "ShopHook.OnMerchantInventoryExitTree",
+                extraMetadata: new Dictionary<string, string>
+                {
+                    ["screen"] = "shop",
+                    ["choiceInference"] = choiceIds.Count == 0 ? "no-diff" : "snapshot-diff",
+                    ["goldSpent"] = goldSpent.ToString(),
+                },
+                recommendedChoiceIds: BuildRecommendedChoiceIds(session.Envelope));
+
+            DecisionRecorder.Record(record);
+            _log.Info($"[ShopHook] Player shop choices recorded. Trace: {session.Envelope.TraceId}, Choice: {playerChoiceId}, Followed: {record.PlayerFollowedAdvice}");
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"[ShopHook] OnMerchantInventoryExitTree failed: {ex.Message}");
+        }
+        finally
+        {
+            ActiveSessions.Remove(__instance);
+        }
+    }
+
+    private static List<string> InferPlayerChoiceIds(ShopSession session, RunSnapshot exitSnapshot)
+    {
+        var choiceIds = new List<string>();
+
+        AppendAddedChoices(
+            choiceIds,
+            session.EntrySnapshot.DeckCardIds,
+            exitSnapshot.DeckCardIds,
+            session.EntryShopItems.Cards.Select(card => card.CardId),
+            static cardId => BuildShopOptionId(ShopItemType.Card, cardId),
+            IdNormalizer.NormalizeModelId);
+
+        AppendAddedChoices(
+            choiceIds,
+            session.EntrySnapshot.RelicIds,
+            exitSnapshot.RelicIds,
+            session.EntryShopItems.Relics.Select(relic => relic.RelicId),
+            static relicId => BuildShopOptionId(ShopItemType.Relic, relicId),
+            IdNormalizer.NormalizeLookupId);
+
+        AppendAddedChoices(
+            choiceIds,
+            session.EntrySnapshot.PotionIds,
+            exitSnapshot.PotionIds,
+            session.EntryShopItems.Potions.Select(potion => potion.PotionId),
+            static potionId => BuildShopOptionId(ShopItemType.Potion, potionId),
+            IdNormalizer.NormalizeLookupId);
+
+        AppendRemovedDeckChoices(choiceIds, session.EntrySnapshot.DeckCardIds, exitSnapshot.DeckCardIds);
+
+        return choiceIds
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static void AppendAddedChoices(
+        List<string> choiceIds,
+        IEnumerable<string> beforeIds,
+        IEnumerable<string> afterIds,
+        IEnumerable<string> candidateIds,
+        Func<string, string> optionIdFactory,
+        Func<string, string> normalize)
+    {
+        var beforeCounts = BuildCounts(beforeIds, normalize);
+        var afterCounts = BuildCounts(afterIds, normalize);
+
+        foreach (var rawCandidateId in candidateIds)
+        {
+            string candidateId = normalize(rawCandidateId);
+            if (string.IsNullOrWhiteSpace(candidateId))
+                continue;
+
+            int addedCount = GetCount(afterCounts, candidateId) - GetCount(beforeCounts, candidateId);
+            for (int i = 0; i < addedCount; i++)
+                choiceIds.Add(optionIdFactory(candidateId));
+        }
+    }
+
+    private static void AppendRemovedDeckChoices(
+        List<string> choiceIds,
+        IEnumerable<string> beforeDeckIds,
+        IEnumerable<string> afterDeckIds)
+    {
+        var beforeCounts = BuildCounts(beforeDeckIds, IdNormalizer.NormalizeModelId);
+        var afterCounts = BuildCounts(afterDeckIds, IdNormalizer.NormalizeModelId);
+
+        foreach (var pair in beforeCounts)
+        {
+            int removedCount = pair.Value - GetCount(afterCounts, pair.Key);
+            for (int i = 0; i < removedCount; i++)
+                choiceIds.Add(BuildShopRemoveChoiceId(pair.Key));
+        }
+    }
+
+    private static List<string> BuildRecommendedChoiceIds(AdviceEnvelope<ShopAdvice> envelope)
+    {
+        var recommendedIds = new List<string>(envelope.RecommendedOptionIds);
+
+        if (envelope.Metadata.TryGetValue("removeCardId", out var removeCardId)
+            && !string.IsNullOrWhiteSpace(removeCardId))
+        {
+            recommendedIds.Add(BuildShopRemoveChoiceId(removeCardId));
+        }
+
+        return recommendedIds
+            .Where(optionId => !string.IsNullOrWhiteSpace(optionId))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static Dictionary<string, int> BuildCounts(IEnumerable<string> ids, Func<string, string> normalize)
+    {
+        var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var rawId in ids)
+        {
+            string id = normalize(rawId);
+            if (string.IsNullOrWhiteSpace(id))
+                continue;
+
+            counts[id] = GetCount(counts, id) + 1;
+        }
+
+        return counts;
+    }
+
+    private static int GetCount(IReadOnlyDictionary<string, int> counts, string id)
+        => counts.TryGetValue(id, out int count) ? count : 0;
+
+    private static string BuildShopOptionId(ShopItemType itemType, string itemId)
+        => $"{itemType.ToString().ToLowerInvariant()}:{itemId}";
+
+    private static string BuildShopRemoveChoiceId(string cardId)
+        => $"remove:{IdNormalizer.NormalizeModelId(cardId)}";
+
     private static MerchantInventory? ExtractInventory(NMerchantInventory node)
     {
         try
         {
-            // NMerchantInventory 内部持有 MerchantInventory 数据对象
-            // 字段名需要通过反编译 NMerchantInventory 确认（可能是 _inventory / Inventory 等）
+            var property = typeof(NMerchantInventory).GetProperty(
+                "Inventory",
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (property?.GetValue(node) is MerchantInventory inventoryFromProperty)
+                return inventoryFromProperty;
+
             var field = typeof(NMerchantInventory).GetField(
                 "_inventory",
                 BindingFlags.Instance | BindingFlags.NonPublic);
-            if (field == null)
-            {
-                field = typeof(NMerchantInventory).GetField(
-                    "Inventory",
-                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            }
+            if (field?.GetValue(node) is MerchantInventory inventoryFromField)
+                return inventoryFromField;
+
+            field = typeof(NMerchantInventory).GetField(
+                "Inventory",
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             return field?.GetValue(node) as MerchantInventory;
         }
         catch
@@ -116,8 +284,6 @@ public static class ShopHook
     {
         var items = new ShopItems();
 
-        // 卡牌（角色卡 + 无色卡）
-        // CreationResult?.Card 是 CardModel；IsStocked=true 表示有货，IsOnSale 表示打折
         foreach (MerchantCardEntry entry in inventory.CharacterCardEntries.Concat(inventory.ColorlessCardEntries))
         {
             if (entry.CreationResult?.Card == null) continue;
@@ -128,12 +294,10 @@ public static class ShopHook
                     card.IsUpgraded ? card.Id.Entry + "+" : card.Id.Entry),
                 Price = entry.Cost,
                 IsSale = entry.IsOnSale,
-                IsSold = !entry.IsStocked, // IsStocked=false 时已售出
+                IsSold = !entry.IsStocked,
             });
-
         }
 
-        // 遗物 — MerchantRelicEntry 继承 MerchantEntry，字段需反编译确认
         foreach (MerchantRelicEntry entry in inventory.RelicEntries)
         {
             items.Relics.Add(new ShopRelicItem
@@ -144,7 +308,6 @@ public static class ShopHook
             });
         }
 
-        // 药水 — MerchantPotionEntry 继承 MerchantEntry
         foreach (MerchantPotionEntry entry in inventory.PotionEntries)
         {
             items.Potions.Add(new ShopPotionItem
@@ -158,23 +321,22 @@ public static class ShopHook
         return items;
     }
 
-    // 通过 Reflection 获取 RelicEntry 中的 Relic ID
-    // MerchantRelicEntry.Relic 字段名需要反编译确认，此处用反射安全访问
     private static string GetRelicId(MerchantRelicEntry entry)
     {
         try
         {
-            // 尝试常见字段名
             foreach (string fieldName in new[] { "_relic", "Relic", "relic" })
             {
                 var field = typeof(MerchantRelicEntry).GetField(
                     fieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                 if (field?.GetValue(entry) is MegaCrit.Sts2.Core.Models.RelicModel relic)
                     return IdNormalizer.NormalizeLookupId(relic.Id.Entry);
-
             }
         }
-        catch { }
+        catch
+        {
+        }
+
         return "unknown_relic";
     }
 
@@ -188,10 +350,29 @@ public static class ShopHook
                     fieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                 if (field?.GetValue(entry) is MegaCrit.Sts2.Core.Models.PotionModel potion)
                     return IdNormalizer.NormalizeLookupId(potion.Id.Entry);
-
             }
         }
-        catch { }
+        catch
+        {
+        }
+
         return "unknown_potion";
+    }
+
+    private sealed class ShopSession
+    {
+        public ShopSession(
+            RunSnapshot entrySnapshot,
+            ShopItems entryShopItems,
+            AdviceEnvelope<ShopAdvice> envelope)
+        {
+            EntrySnapshot = entrySnapshot;
+            EntryShopItems = entryShopItems;
+            Envelope = envelope;
+        }
+
+        public RunSnapshot EntrySnapshot { get; }
+        public ShopItems EntryShopItems { get; }
+        public AdviceEnvelope<ShopAdvice> Envelope { get; }
     }
 }

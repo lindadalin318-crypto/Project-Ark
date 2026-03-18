@@ -1,3 +1,4 @@
+using Astrolabe.Core;
 using Astrolabe.Engine;
 using Godot;
 using HarmonyLib;
@@ -36,6 +37,9 @@ public static class OverlayHUD
 
     // HUD 全局开关
     private static bool _isVisible = true;
+
+    public static string? CurrentAdviceTraceId { get; private set; }
+    public static DecisionKind? CurrentAdviceKind { get; private set; }
 
     // ── 初始化 ───────────────────────────────────────────────────────
 
@@ -125,34 +129,41 @@ public static class OverlayHUD
 
     // ── 各界面的 HUD 刷新接口 ────────────────────────────────────────
 
-    public static void ShowCardRewardAdvice(CardRewardAdvice advice)
+    public static void ShowCardRewardAdvice(AdviceEnvelope<CardRewardAdvice> envelope)
     {
         if (!_isVisible || _cardAdvicePanel == null) return;
 
+        SetCurrentAdviceContext(envelope);
+
+        var advice = envelope.Payload;
         _buildPathPanel?.UpdatePaths(advice.ActivePaths);
         _cardAdvicePanel.UpdateAdvice(advice);
         _cardAdvicePanel.Show();
         _mapAdvicePanel?.Hide();
         _campfirePanel?.Hide();
 
-        _log.Info($"[OverlayHUD] Card reward advice shown. Skip: {advice.ShouldSkip}");
+        _log.Info($"[OverlayHUD] Card reward advice shown. Trace: {envelope.TraceId}, Skip: {advice.ShouldSkip}");
     }
 
-    public static void ShowMapAdvice(MapAdvice advice)
+    public static void ShowMapAdvice(AdviceEnvelope<MapAdvice> envelope)
     {
         if (!_isVisible || _mapAdvicePanel == null) return;
 
-        _mapAdvicePanel.UpdateAdvice(advice);
+        SetCurrentAdviceContext(envelope);
+
+        _mapAdvicePanel.UpdateAdvice(envelope.Payload);
         _mapAdvicePanel.Show();
         _cardAdvicePanel?.Hide();
         _campfirePanel?.Hide();
     }
 
-    public static void ShowCampfireAdvice(CampfireAdvice advice)
+    public static void ShowCampfireAdvice(AdviceEnvelope<CampfireAdvice> envelope)
     {
         if (!_isVisible || _campfirePanel == null) return;
 
-        _campfirePanel.UpdateAdvice(advice);
+        SetCurrentAdviceContext(envelope);
+
+        _campfirePanel.UpdateAdvice(envelope.Payload);
         _campfirePanel.Show();
         _cardAdvicePanel?.Hide();
         _mapAdvicePanel?.Hide();
@@ -172,10 +183,11 @@ public static class OverlayHUD
         _combatPanel?.Hide();
     }
 
-    public static void ShowShopAdvice(ShopAdvice advice)
+    public static void ShowShopAdvice(AdviceEnvelope<ShopAdvice> envelope)
     {
+        SetCurrentAdviceContext(envelope);
         // TODO: 商店 HUD 面板（Phase 2 实现）
-        _log.Info($"[OverlayHUD] Shop advice: {advice.PurchasePriority.Count} items evaluated.");
+        _log.Info($"[OverlayHUD] Shop advice trace: {envelope.TraceId}, {envelope.Payload.PurchasePriority.Count} items evaluated.");
     }
 
     /// <summary>
@@ -186,5 +198,11 @@ public static class OverlayHUD
         _isVisible = !_isVisible;
         _canvasLayer?.SetVisible(_isVisible);
         _log.Info($"[OverlayHUD] Visibility toggled: {_isVisible}");
+    }
+
+    private static void SetCurrentAdviceContext<T>(AdviceEnvelope<T> envelope)
+    {
+        CurrentAdviceTraceId = envelope.TraceId;
+        CurrentAdviceKind = envelope.Kind;
     }
 }
