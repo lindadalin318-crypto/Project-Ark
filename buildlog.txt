@@ -1,0 +1,37 @@
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Combat.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Combat.Editor.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Combat.Tests.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Core.Audio.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Core.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Core.Tests.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Enemy.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Heat.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Level.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Level.Editor.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Ship.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Ship.Editor.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.SpaceLife.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.SpaceLife.Editor.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.UI.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+
+生成失败。
+
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Combat.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Combat.Editor.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Combat.Tests.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Core.Audio.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Core.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Core.Tests.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Enemy.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Heat.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Level.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Level.Editor.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Ship.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.Ship.Editor.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.SpaceLife.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.SpaceLife.Editor.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+C:\Program Files\dotnet\sdk\10.0.102\NuGet.targets(519,5): error MSB3202: 未找到项目文件“f:\UnityProjects\Project-Ark\ProjectArk.UI.csproj”。 [f:\UnityProjects\Project-Ark\Project-Ark.slnx]
+    0 个警告
+    15 个错误
+
+已用时间 00:00:00.18
