@@ -1,8 +1,0 @@
-config_version=5
-
-[application]
-config/name="Astrolabe"
-config/features=PackedStringArray("4.5", "Forward Plus")
-
-[dotnet]
-project/assembly_name="Astrolabe"
