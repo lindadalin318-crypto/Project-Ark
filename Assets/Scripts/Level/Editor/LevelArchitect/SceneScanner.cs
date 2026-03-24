@@ -5,6 +5,7 @@ using UnityEngine;
 namespace ProjectArk.Level.Editor
 {
     /// <summary>
+    /// [Authority: Level CanonicalSpec §9.1 — sub-service of LevelArchitectWindow]
     /// Scans existing scene Room/Door GameObjects and constructs a new LevelScaffoldData
     /// from them. Used for migrating hand-built or legacy-tool-generated scenes
     /// into the Level Architect workflow.

@@ -87,17 +87,15 @@
 
 - [ ] **F1** ShipDash 组件已挂到飞船 Prefab
 - [ ] **F2** ShipVisualJuice 组件已配置 `_visualChild`（视觉子物体 Transform）
-- [ ] **F3** ShipEngineVFX 组件已配置 `_engineParticles`（引擎粒子 ParticleSystem）
-- [ ] **F4** DashAfterImageSpawner 已配置 `_afterImagePrefab` 和 `_shipSpriteRenderer`
-- [ ] **F5** CinemachineImpulseSource 已挂到相机并注册到 HitFeedbackService
-- [ ] **F6** 起步有加速推力感，松手有惯性滑行
-- [ ] **F7** 急转弯（>90°）明显减速
-- [ ] **F8** Space 键 Dash 冲刺，冷却约 0.3s
-- [ ] **F9** Dash 期间无敌，结束后有惯性延续
-- [ ] **F10** 受伤时 HitStop（短暂顿帧）+ 屏幕震动 + 无敌帧闪烁
-- [ ] **F11** 横移时飞船视觉倾斜
-- [ ] **F12** 引擎粒子随速度变化
-- [ ] **F13** Dash 时出现半透明残影
+- [ ] **F3** DashAfterImageSpawner 已配置 `_afterImagePrefab` 和 `_shipSpriteRenderer`
+- [ ] **F4** CinemachineImpulseSource 已挂到相机并注册到 HitFeedbackService
+- [ ] **F5** 起步有加速推力感，松手有惯性滑行
+- [ ] **F6** 急转弯（>90°）明显减速
+- [ ] **F7** Space 键 Dash 冲刺，冷却约 0.3s
+- [ ] **F8** Dash 期间无敌，结束后有惯性延续
+- [ ] **F9** 受伤时 HitStop（短暂顿帧）+ 屏幕震动 + 无敌帧闪烁
+- [ ] **F10** 横移时飞船视觉倾斜
+- [ ] **F11** Dash 时出现半透明残影
 
 ---
 

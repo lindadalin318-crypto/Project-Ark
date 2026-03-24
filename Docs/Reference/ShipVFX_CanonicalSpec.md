@@ -51,7 +51,6 @@
 Ship.prefab
 └── ShipVisual
     ├── Ship_Sprite_Back
-    │   └── EngineParticles
     ├── Ship_Sprite_Liquid
     ├── Ship_Sprite_HL
     ├── Ship_Sprite_Solid
@@ -65,17 +64,21 @@ Ship.prefab
         ├── EmberTrail
         ├── EmberSparks
         ├── BoostEnergyLayer2
-        ├── BoostEnergyLayer3
-        └── BoostActivationHalo
+        └── BoostEnergyLayer3
 ```
+
+> **注意**：`BoostActivationHalo` 已于 2026-03-22 取消（合并入 Bloom Burst + FlameCore Burst），不再是现役节点。
 
 Runtime 主驱动关系：
 
-- `ShipView`：负责飞船多层 sprite、Dash ghost、Boost 状态切换和 `BoostTrailView` 调度
-- `BoostTrailView`：负责 Boost 尾迹表现栈与 Bloom burst
-- `ShipEngineVFX`：负责常驻引擎尾焰强度
-- `ShipVisualJuice`：负责 tilt / squash / stretch 等船体 juice
-- `DashAfterImageSpawner`：负责 Dash 连续残影
+- `ShipView` (Coordinator)：轻量协调器，持有 5 层 sprite 引用（Back/Liquid/HL/Solid/Core），捕获基线颜色，订阅 `ShipStateController.OnStateChanged` + `ShipHealth.OnDamageTaken` + `ShipMotor.OnSpeedChanged` 事件，路由到对应 Worker。自身不包含任何 VFX 实现逻辑。
+  - `ShipBoostVisuals` (Worker)：Boost 状态视觉——Liquid sprite swap（Normal↔Boost 贴图）+ sortOrder 提升（Solid 下方↔上方）+ HDR 颜色 tween、HL/Core alpha ramp、推进器脉冲、`BoostTrailView` 启停委托
+  - `ShipHitVisuals` (Worker)：受击反馈——5 层同步白闪、受击后 i-frame 闪烁、Core 低血量警告脉冲
+  - `ShipDashVisuals` (Worker)：冲刺反馈——Solid/HL/Core i-frame 闪烁、Dodge_Sprite 静态残影（分离→淡出→回挂）、`DashAfterImageSpawner` 启停委托（二级 Worker）
+  - `ShipVisualJuice` (Worker)：船体 juice——移动倾斜（tilt）、急加速/减速形变（squash/stretch）；由 ShipView 注入组件引用，通过 `OnSpeedChanged()` / `OnDashStarted()` 被动接收信号
+  - `DashAfterImageSpawner` (二级 Worker)：Dash 连续残影（对象池化）；由 `ShipDashVisuals` 通过 `TriggerSpawn()` 驱动，不自行订阅事件
+- `ShipHealth`：纯游戏逻辑（HP/无敌帧计时/击退），不直接操作任何 SpriteRenderer。通过 `OnDamageTaken` 事件驱动 `ShipView` 执行受击视觉反馈。
+- `BoostTrailView`：负责 Boost 尾迹表现栈（7 层）与 Bloom burst
 - `ShipBoost` + `ShipStateController`：提供状态事件，不直接承担渲染职责
 
 Scene-only 绑定：
@@ -96,7 +99,7 @@ Scene-only 绑定：
    - `ObserveRuntime`：保留真实起手 / 持续 / 退场时序，只做图层遮罩
    - `ForceSustainPreview`：把持续层固定到指定 `Preview Intensity`，适合单独看 `FlameTrail` / `EmberTrail` / `EnergyLayer2 / Layer3`
 5. 若只想看某一层，用 `Solo Layer`
-6. 若想逐个触发 burst，用 Inspector 按钮预览 `FlameCore` / `EmberSparks` / `Activation Halo` / `Bloom`
+6. 若想逐个触发 burst，用 Inspector 按钮预览 `FlameCore` / `EmberSparks` / `Bloom`
 
 约束：
 
@@ -172,10 +175,9 @@ MVP 阶段统一采用**双层命名**：
 | `ShipSolidSprite` | `Ship_Sprite_Solid` | 船体实色层 |
 | `ShipCoreSprite` | `Ship_Sprite_Core` | 核心 / 预留层 |
 | `ShipDashGhostSprite` | `Dodge_Sprite` | Dash 静态 ghost |
-| `EngineParticles` | `EngineParticles` | 常驻引擎尾焰 |
 | `BoostTrailRoot` | `BoostTrailRoot` | Boost 尾迹 nested prefab 根节点 |
-| `RightFlameTrail` | `FlameTrail_R` | 右侧火焰拖尾 |
-| `LeftFlameTrail` | `FlameTrail_B` | 左侧火焰拖尾；`B` 不再解释为语义名 |
+| `RightFlameTrail` | `FlameTrail_R` | 右侧喷口持续火焰（Local-space，rateOverTime） |
+| `LeftFlameTrail` | `FlameTrail_B` | 左侧喷口持续火焰（Local-space，rateOverTime）；`B` 不再解释为语义名 |
 
 ## 5.4 资产命名口径
 
@@ -188,8 +190,6 @@ MVP 阶段统一采用**双层命名**：
 | `ShipSolidNormalSprite` | `Movement_10.png` | 船体实色层贴图 |
 | `ShipHighlightNormalSprite` | `Movement_21.png` | 船体高亮层贴图 |
 | `ShipDashGhostSource` | `Reference/player_test_fire.png` | Dash ghost 贴图来源 |
-| `BoostActivationHaloPrimary` | `vfx_ring_glow_uneven.png` | 现役 Halo 主纹理 |
-| `BoostActivationHaloFallback` | `vfx_magnetic_rings.png` | 现役 Halo 回退纹理 |
 
 ## 6. 路径规则
 
@@ -226,12 +226,11 @@ MVP 阶段统一采用**双层命名**：
 
 | 工具 | Canonical Role | 不负责的内容 |
 | --- | --- | --- |
-| `ShipPrefabRebuilder` | `Ship.prefab` 结构权威；负责多层 sprite、引擎节点、`BoostTrailRoot` 集成、`ShipView` 引用接线 | 不负责场景级 Bloom Volume |
-| `BoostTrailPrefabCreator` | `BoostTrailRoot.prefab` 结构权威；负责子节点、粒子、能量层、Halo 与 `BoostTrailDebugManager` 的生成与接线 | 不负责 `Ship.prefab` 集成；不负责 scene-only 引用 |
+| `ShipPrefabRebuilder` | `Ship.prefab` 唯一权威；负责根节点物理组件（Rigidbody2D / CircleCollider2D）、全部运行时脚本组件（InputHandler / ShipMotor / ShipAiming / ShipStateController / ShipHealth / ShipDash / ShipBoost）、ShipStatsSO + InputActionAsset + DashAfterImage prefab 接线、多层 sprite 层级、`BoostTrailRoot` 嵌套集成、`ShipView` (Coordinator) + Workers + 二级 Worker 组件创建与序列化引用接线 | 不负责场景级 Bloom Volume；不负责 WeavingStateTransition 跨程序集场景接线 |
+| `BoostTrailPrefabCreator` | `BoostTrailRoot.prefab` 结构权威；负责子节点、粒子、能量层与 `BoostTrailDebugManager` 的生成与接线 | 不负责 `Ship.prefab` 集成；不负责 scene-only 引用 |
 | `BoostTrailDebugManager` | Play Mode 分层调试权威；负责 Boost stack 的 solo layer、遮罩隔离、sustain preview 与 burst preview | 不负责正式状态驱动；默认必须保持 dormant |
 | `MaterialTextureLinker` | 现役材质与纹理精确路径回填；禁止 legacy 材质链回流 | 不负责 prefab / scene |
 | `ShipBoostTrailSceneBinder` | Scene-only 绑定权威；负责 `BoostTrailBloomVolume` 与 `BoostTrailView._boostBloomVolume` | 不负责 prefab 结构 |
-| `ShipBuilder` | 场景原型 / bootstrap 工具；用于快速搭建场景中的 Ship 实例 | 不负责现役 prefab 结构真相源 |
 | `CopyGGTextures.ps1` | 参考资源导入工具；只复制当前仍保留的上游纹理，不再导入已清退的 dormant 资源 | 不定义现役命名；不定义主链资产状态 |
 
 ## 8. MVP 冻结项
@@ -246,8 +245,6 @@ MVP 阶段统一采用**双层命名**：
 - `Movement_10.png`
 - `Movement_21.png`
 - `Reference/player_test_fire.png`
-- `vfx_ring_glow_uneven.png`
-- `vfx_magnetic_rings.png`
 - `ShipShipState.cs`
 - `FlameTrail_B`
 - `Ship_Sprite_HL`
@@ -263,7 +260,7 @@ MVP 阶段统一采用**双层命名**：
 | Physical Name | 当前结论 | 约束来源 | 最小安全动作 |
 | --- | --- | --- | --- |
 | `FlameTrail_B` | 需 Editor 配合 | `BoostTrailView._flameTrailB` 序列化引用 + `BoostTrailPrefabCreator` 节点名硬编码 | 先改 `BoostTrailPrefabCreator`，再在 Unity Editor 中改 `BoostTrailRoot.prefab` 节点名并复验 `Ship.prefab` / `SampleScene` |
-| `Ship_Sprite_HL` | 需 Editor 配合 | `ShipView._hlRenderer` 序列化引用 + `ShipPrefabRebuilder` / `ShipBuilder` 节点名硬编码 | 先改 `ShipPrefabRebuilder` / `ShipBuilder`，再在 Unity Editor 中改 `Ship.prefab` 节点名并复验 |
+| `Ship_Sprite_HL` | 需 Editor 配合 | `ShipView._hlRenderer` 序列化引用 + `ShipPrefabRebuilder` 节点名硬编码 | 先改 `ShipPrefabRebuilder`，再在 Unity Editor 中改 `Ship.prefab` 节点名并复验 |
 | `ShipShipState.cs` | 不可改（当前批） | Runtime 数据类型已扩散到脚本 API 与状态流 | 继续只使用 canonical alias `ShipStateEnum`，暂不做物理 rename |
 
 补充说明：

@@ -119,6 +119,13 @@ namespace ProjectArk.Level
             {
                 data.Progress.CurrentPhaseIndex = phaseManager.CurrentPhaseIndex;
             }
+
+            // RoomFlagRegistry → room-level persistent flags
+            var roomFlags = ServiceLocator.Get<RoomFlagRegistry>();
+            if (roomFlags != null)
+            {
+                roomFlags.WriteToSaveData(data.Progress);
+            }
         }
 
         private void CollectPlayerState(PlayerSaveData data)
@@ -174,6 +181,13 @@ namespace ProjectArk.Level
             if (phaseManager != null && data.Progress.CurrentPhaseIndex >= 0)
             {
                 phaseManager.SetPhaseIndex(data.Progress.CurrentPhaseIndex);
+            }
+
+            // RoomFlagRegistry → restore room-level persistent flags
+            var roomFlags = ServiceLocator.Get<RoomFlagRegistry>();
+            if (roomFlags != null)
+            {
+                roomFlags.ReadFromSaveData(data.Progress);
             }
         }
 

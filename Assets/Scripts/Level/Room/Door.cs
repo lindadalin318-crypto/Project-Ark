@@ -23,12 +23,22 @@ namespace ProjectArk.Level
         [Tooltip("Position where the player appears after passing through this door.")]
         [SerializeField] private Transform _targetSpawnPoint;
 
+        [Header("World Graph Integration")]
+        [Tooltip("此门在房间内的命名入口 ID（如 'left_1', 'boss_entrance'）。需与 WorldGraphSO 中的 GateID 一致。")]
+        [SerializeField] private string _gateID;
+
+        [Tooltip("此连接的语义类型。用于地图可视化和 Pacing 分析。")]
+        [SerializeField] private ConnectionType _connectionType = ConnectionType.Progression;
+
         [Header("State")]
         [Tooltip("Initial state when the scene loads.")]
         [SerializeField] private DoorState _initialState = DoorState.Open;
 
         [Header("Transition")]
-        [Tooltip("If true, uses longer transition effect (for floor/layer changes).")]
+        [Tooltip("过渡仪式感等级。替代旧 _isLayerTransition 布尔值，提供更细粒度的过渡演出控制。")]
+        [SerializeField] private TransitionCeremony _ceremony = TransitionCeremony.Standard;
+
+        [Tooltip("If true, uses longer transition effect (for floor/layer changes). LEGACY: 迁移期保留，新门请使用 Ceremony。")]
         [SerializeField] private bool _isLayerTransition;
 
         [Header("Lock")]
@@ -86,11 +96,33 @@ namespace ProjectArk.Level
         /// <summary> Current door state. </summary>
         public DoorState CurrentState => _currentState;
 
-        /// <summary> Whether this is a layer transition (longer fade). </summary>
+        /// <summary> Whether this is a layer transition (longer fade). LEGACY: prefer Ceremony. </summary>
         public bool IsLayerTransition => _isLayerTransition;
 
         /// <summary> Required key ID for this door (empty = no key needed). </summary>
         public string RequiredKeyID => _requiredKeyID;
+
+        /// <summary> 此门在房间内的命名入口 ID（对应 WorldGraphSO 中的 GateID）。 </summary>
+        public string GateID => _gateID;
+
+        /// <summary> 此连接的语义类型。 </summary>
+        public ConnectionType ConnectionType => _connectionType;
+
+        /// <summary> 配置的过渡仪式感等级。 </summary>
+        public TransitionCeremony Ceremony => _ceremony;
+
+        /// <summary>
+        /// 运行时实际使用的仪式感等级。
+        /// 兼容旧 _isLayerTransition：如果 Ceremony 为 Standard 但 _isLayerTransition 为 true，提升为 Layer。
+        /// </summary>
+        public TransitionCeremony EffectiveCeremony
+        {
+            get
+            {
+                if (_ceremony != TransitionCeremony.Standard) return _ceremony;
+                return _isLayerTransition ? TransitionCeremony.Layer : TransitionCeremony.Standard;
+            }
+        }
 
         // ──────────────────── Lifecycle ────────────────────
 

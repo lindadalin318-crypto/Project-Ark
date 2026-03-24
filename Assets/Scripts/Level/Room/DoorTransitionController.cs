@@ -22,12 +22,22 @@ namespace ProjectArk.Level
         [Tooltip("Full-screen Image used for the fade-to-black effect. Must be a child of a Canvas.")]
         [SerializeField] private Image _fadeImage;
 
+        [Header("World Graph")]
+        [Tooltip("世界图谱资产。如果配置了，DoorTransitionController 将优先从图谱中按 GateID 查找目标。")]
+        [SerializeField] private WorldGraphSO _worldGraph;
+
         [Header("Timing")]
         [Tooltip("Fade duration for normal door transitions (seconds).")]
         [SerializeField] private float _normalFadeDuration = 0.3f;
 
         [Tooltip("Fade duration for layer transitions (seconds). Longer for dramatic effect.")]
         [SerializeField] private float _layerFadeDuration = 0.5f;
+
+        [Tooltip("Fade duration for Boss door transitions (seconds).")]
+        [SerializeField] private float _bossFadeDuration = 0.8f;
+
+        [Tooltip("Fade duration for Heavy door transitions (seconds).")]
+        [SerializeField] private float _heavyFadeDuration = 1.0f;
 
         [Header("Layer Transition Effects")]
         [Tooltip("Optional particle system for layer transitions (e.g., descending/ascending particles).")]
@@ -44,6 +54,26 @@ namespace ProjectArk.Level
 
         [Tooltip("Camera zoom transition duration.")]
         [SerializeField] private float _layerZoomDuration = 0.3f;
+
+        [Header("Boss Transition")]
+        [Tooltip("Sound effect played during Boss door transitions (dramatic reveal).")]
+        [SerializeField] private AudioClip _bossTransitionSFX;
+
+        [Tooltip("Camera zoom-out amount during Boss door transition (more dramatic than Layer).")]
+        [SerializeField] private float _bossZoomOutAmount = 3f;
+
+        [Tooltip("Screen shake intensity for Boss door transitions.")]
+        [SerializeField] private float _bossShakeIntensity = 0.15f;
+
+        [Header("Heavy Transition")]
+        [Tooltip("Sound effect played during Heavy door transitions (mechanical / grinding).")]
+        [SerializeField] private AudioClip _heavyTransitionSFX;
+
+        [Tooltip("Screen shake intensity for Heavy door transitions (stronger than Boss).")]
+        [SerializeField] private float _heavyShakeIntensity = 0.25f;
+
+        [Tooltip("Camera zoom-out amount during Heavy door transition.")]
+        [SerializeField] private float _heavyZoomOutAmount = 4f;
 
         [Header("Camera Fallback")]
         [Tooltip("Fallback gameplay virtual camera used when CameraDirector is not present.")]
@@ -122,7 +152,12 @@ namespace ProjectArk.Level
             {
                 ResolveCameraBindings();
 
-                float fadeDuration = door.IsLayerTransition ? _layerFadeDuration : _normalFadeDuration;
+                // ── 解析目标（优先 WorldGraph，fallback _targetRoom）──
+                ResolveTarget(door, out Room targetRoom, out Transform targetSpawn);
+
+                // ── Ceremony 决定演出参数 ──
+                var ceremony = door.EffectiveCeremony;
+                float fadeDuration = GetFadeDuration(ceremony);
 
                 var inputHandler = ServiceLocator.Get<InputHandler>();
                 if (inputHandler != null)
@@ -130,29 +165,50 @@ namespace ProjectArk.Level
                     inputHandler.enabled = false;
                 }
 
-                await FadeOutAsync(fadeDuration, token);
-
-                if (door.IsLayerTransition)
+                // ── None = 瞬间切换，跳过淡黑 ──
+                if (ceremony != TransitionCeremony.None)
                 {
-                    await PlayLayerTransitionEffects(door, token);
+                    await FadeOutAsync(fadeDuration, token);
                 }
 
+                // ── 按 Ceremony 分级执行追加演出 ──
+                switch (ceremony)
+                {
+                    case TransitionCeremony.Layer:
+                        await PlayLayerTransitionEffects(door, targetRoom, token);
+                        break;
+                    case TransitionCeremony.Boss:
+                        await PlayBossTransitionEffects(door, targetRoom, token);
+                        break;
+                    case TransitionCeremony.Heavy:
+                        await PlayHeavyTransitionEffects(door, targetRoom, token);
+                        break;
+                }
+
+                // ── 传送玩家 ──
                 var ship = inputHandler != null ? inputHandler.transform : null;
-                if (ship != null && door.TargetSpawnPoint != null)
+                if (ship != null && targetSpawn != null)
                 {
-                    ship.position = door.TargetSpawnPoint.position;
+                    ship.position = targetSpawn.position;
                 }
 
+                // ── 切换房间 ──
                 var roomManager = ServiceLocator.Get<RoomManager>();
-                if (roomManager != null && door.TargetRoom != null)
+                if (roomManager != null && targetRoom != null)
                 {
-                    roomManager.EnterRoom(door.TargetRoom);
+                    roomManager.EnterRoom(targetRoom);
                     _cameraDirector?.ClearAllTriggers();
-                    HandleBGMCrossfade(door.TargetRoom);
+                    HandleBGMCrossfade(targetRoom);
                 }
 
-                await UniTask.Delay(door.IsLayerTransition ? 200 : 50, cancellationToken: token);
-                await FadeInAsync(fadeDuration, token);
+                if (ceremony != TransitionCeremony.None)
+                {
+                    bool isExtended = ceremony == TransitionCeremony.Layer
+                                   || ceremony == TransitionCeremony.Boss
+                                   || ceremony == TransitionCeremony.Heavy;
+                    await UniTask.Delay(isExtended ? 200 : 50, cancellationToken: token);
+                    await FadeInAsync(fadeDuration, token);
+                }
 
                 if (inputHandler != null)
                 {
@@ -176,11 +232,110 @@ namespace ProjectArk.Level
             }
         }
 
-        private async UniTask PlayLayerTransitionEffects(Door door, CancellationToken token)
+        // ──────────────────── Target Resolution ────────────────────
+
+        /// <summary>
+        /// 解析门的过渡目标。优先从 WorldGraphSO + GateID 查找，fallback 到 Door 自身的 _targetRoom 引用。
+        /// </summary>
+        private void ResolveTarget(Door door, out Room targetRoom, out Transform targetSpawn)
+        {
+            // 默认使用 Door 直接引用（旧路径 / fallback）
+            targetRoom = door.TargetRoom;
+            targetSpawn = door.TargetSpawnPoint;
+
+            // 尝试从 WorldGraph 查找
+            if (_worldGraph == null || string.IsNullOrEmpty(door.GateID)) return;
+
+            // 获取门所在的房间 ID
+            var ownerRoom = door.GetComponentInParent<Room>();
+            if (ownerRoom == null) return;
+
+            string fromRoomID = ownerRoom.RoomID;
+            if (string.IsNullOrEmpty(fromRoomID)) return;
+
+            if (!_worldGraph.TryGetConnectionByGate(fromRoomID, door.GateID, out var edge)) return;
+
+            // 找到 WorldGraph 中的目标房间
+            var roomManager = ServiceLocator.Get<RoomManager>();
+            if (roomManager == null) return;
+
+            Room graphTargetRoom = roomManager.FindRoomByID(edge.ToRoomID);
+            if (graphTargetRoom == null)
+            {
+                Debug.LogWarning($"[DoorTransitionController] WorldGraph 指向 '{edge.ToRoomID}' 但场景中找不到该房间，" +
+                                 $"fallback 到 Door 直接引用。");
+                return;
+            }
+
+            // 在目标房间中查找匹配 GateID 的 spawn point
+            Transform graphTargetSpawn = FindSpawnPointForGate(graphTargetRoom, edge.ToGateID);
+            if (graphTargetSpawn == null)
+            {
+                // 无法找到匹配的 spawn point，fallback 到 Door 直接引用的 spawn point
+                Debug.LogWarning($"[DoorTransitionController] 目标房间 '{edge.ToRoomID}' 中找不到 GateID '{edge.ToGateID}' " +
+                                 $"对应的 SpawnPoint，fallback 到 Door 直接引用。");
+                // 但仍使用 WorldGraph 找到的目标房间
+                targetRoom = graphTargetRoom;
+                return;
+            }
+
+            // WorldGraph 路径完全解析成功
+            targetRoom = graphTargetRoom;
+            targetSpawn = graphTargetSpawn;
+        }
+
+        /// <summary>
+        /// 在目标房间中查找与 GateID 匹配的 SpawnPoint Transform。
+        /// 命名约定：SpawnPoint_{gateID}（如 SpawnPoint_left_1）。
+        /// </summary>
+        private static Transform FindSpawnPointForGate(Room targetRoom, string gateID)
+        {
+            if (string.IsNullOrEmpty(gateID)) return null;
+
+            string expectedName = $"SpawnPoint_{gateID}";
+
+            // 查找直接子节点和深层子节点
+            foreach (Transform child in targetRoom.GetComponentsInChildren<Transform>(true))
+            {
+                if (string.Equals(child.gameObject.name, expectedName, System.StringComparison.OrdinalIgnoreCase))
+                    return child;
+            }
+
+            // 也尝试从 Door 上匹配 GateID
+            var doors = targetRoom.GetComponentsInChildren<Door>(true);
+            foreach (var d in doors)
+            {
+                if (d.GateID == gateID && d.TargetSpawnPoint != null)
+                {
+                    // 注意：这里用的是目标门自身的 spawn point 作为进入点
+                    // 但通常 spawn point 是门旁边的独立 Transform，不是门自己的 TargetSpawnPoint
+                    // 所以这个分支只作为最后的 fallback
+                }
+            }
+
+            return null;
+        }
+
+        // ──────────────────── Ceremony Timing ────────────────────
+
+        private float GetFadeDuration(TransitionCeremony ceremony)
+        {
+            return ceremony switch
+            {
+                TransitionCeremony.None => 0f,
+                TransitionCeremony.Standard => _normalFadeDuration,
+                TransitionCeremony.Layer => _layerFadeDuration,
+                TransitionCeremony.Boss => _bossFadeDuration,
+                TransitionCeremony.Heavy => _heavyFadeDuration,
+                _ => _normalFadeDuration
+            };
+        }
+
+        private async UniTask PlayLayerTransitionEffects(Door door, Room targetRoom, CancellationToken token)
         {
             var roomManager = ServiceLocator.Get<RoomManager>();
             int currentFloor = roomManager?.CurrentFloor ?? 0;
-            int targetFloor = door.TargetRoom?.Data?.FloorLevel ?? 0;
+            int targetFloor = targetRoom?.Data?.FloorLevel ?? 0;
             bool descending = targetFloor < currentFloor;
 
             if (_layerTransitionParticles != null)
@@ -214,6 +369,126 @@ namespace ProjectArk.Level
             {
                 TweenOrthoSize(baseSize + _layerZoomOutAmount, baseSize, _layerZoomDuration);
             }
+        }
+
+        /// <summary>
+        /// Boss door transition: dramatic zoom-out + dedicated SFX + screen shake.
+        /// Distinct from Layer transition to convey "you are entering something significant".
+        /// </summary>
+        private async UniTask PlayBossTransitionEffects(Door door, Room targetRoom, CancellationToken token)
+        {
+            // Particles (shared with layer for now, can be overridden later)
+            if (_layerTransitionParticles != null)
+            {
+                _layerTransitionParticles.Play();
+            }
+
+            // Boss-specific SFX (fallback to layer SFX if not assigned)
+            var audio = ServiceLocator.Get<AudioManager>();
+            var sfx = _bossTransitionSFX != null ? _bossTransitionSFX : _layerTransitionSFX;
+            if (audio != null && sfx != null)
+            {
+                audio.PlaySFX2D(sfx);
+            }
+
+            // Dramatic zoom-out (larger than layer)
+            bool hasCameraSize = TryGetCurrentOrthoSize(out float baseSize);
+            if (hasCameraSize)
+            {
+                TweenOrthoSize(baseSize, baseSize + _bossZoomOutAmount, _layerZoomDuration * 1.5f);
+            }
+
+            // Screen shake via camera
+            if (_bossShakeIntensity > 0f)
+            {
+                ApplyCameraShake(_bossShakeIntensity, 0.4f);
+            }
+
+            await UniTask.Delay(500, cancellationToken: token);
+
+            if (_layerTransitionParticles != null)
+            {
+                _layerTransitionParticles.Stop();
+            }
+
+            if (hasCameraSize)
+            {
+                TweenOrthoSize(baseSize + _bossZoomOutAmount, baseSize, _layerZoomDuration);
+            }
+        }
+
+        /// <summary>
+        /// Heavy door transition: multi-phase shake + grinding SFX + extreme zoom.
+        /// The heaviest ceremony — conveys "this world just shifted".
+        /// </summary>
+        private async UniTask PlayHeavyTransitionEffects(Door door, Room targetRoom, CancellationToken token)
+        {
+            // Particles
+            if (_layerTransitionParticles != null)
+            {
+                _layerTransitionParticles.Play();
+            }
+
+            // Heavy-specific SFX (fallback chain)
+            var audio = ServiceLocator.Get<AudioManager>();
+            var sfx = _heavyTransitionSFX != null ? _heavyTransitionSFX
+                    : _bossTransitionSFX != null ? _bossTransitionSFX
+                    : _layerTransitionSFX;
+            if (audio != null && sfx != null)
+            {
+                audio.PlaySFX2D(sfx);
+            }
+
+            // Phase 1: initial shake
+            if (_heavyShakeIntensity > 0f)
+            {
+                ApplyCameraShake(_heavyShakeIntensity * 0.5f, 0.3f);
+            }
+
+            bool hasCameraSize = TryGetCurrentOrthoSize(out float baseSize);
+            if (hasCameraSize)
+            {
+                TweenOrthoSize(baseSize, baseSize + _heavyZoomOutAmount * 0.5f, _layerZoomDuration);
+            }
+
+            await UniTask.Delay(300, cancellationToken: token);
+
+            // Phase 2: main shake + full zoom
+            if (_heavyShakeIntensity > 0f)
+            {
+                ApplyCameraShake(_heavyShakeIntensity, 0.5f);
+            }
+
+            if (hasCameraSize)
+            {
+                TweenOrthoSize(baseSize + _heavyZoomOutAmount * 0.5f, baseSize + _heavyZoomOutAmount, _layerZoomDuration);
+            }
+
+            await UniTask.Delay(400, cancellationToken: token);
+
+            if (_layerTransitionParticles != null)
+            {
+                _layerTransitionParticles.Stop();
+            }
+
+            if (hasCameraSize)
+            {
+                TweenOrthoSize(baseSize + _heavyZoomOutAmount, baseSize, _layerZoomDuration * 1.5f);
+            }
+        }
+
+        /// <summary>
+        /// Apply a simple camera shake via Cinemachine impulse or fallback position offset.
+        /// </summary>
+        private void ApplyCameraShake(float intensity, float duration)
+        {
+            // Use CameraDirector if available (it may expose shake API in the future)
+            // For now, use a simple PrimeTween position shake on the main camera
+            var cam = Camera.main;
+            if (cam == null) return;
+
+            Tween.ShakeLocalPosition(cam.transform,
+                new Vector3(intensity, intensity, 0f), duration, useUnscaledTime: true);
         }
 
         private void HandleBGMCrossfade(Room targetRoom)

@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 814b7e08c4625ff4faa3639c6eee45de, type: 3}
+  m_Name: EnemyStats_Enemy_Drill_Ceiling
+  m_EditorClassIdentifier: ProjectArk.Enemy::ProjectArk.Combat.EnemyStatsSO
+  EnemyName: "\u5929\u82B1\u677F\u94BB\u5934"
+  EnemyID: Enemy_Drill_Ceiling
+  FactionID: Neutral
+  MaxHP: 80
+  MaxPoise: 999
+  MoveSpeed: 0
+  RotationSpeed: 180
+  AttackDamage: 0
+  AttackRange: 15
+  AttackCooldown: 5
+  AttackKnockback: 0
+  TelegraphDuration: 1
+  AttackActiveDuration: 0.3
+  RecoveryDuration: 1.5
+  ProjectilePrefab: {fileID: 4255635206972869295, guid: d39bba9ed33abad40b895a5fd7d54a51, type: 3}
+  ProjectileSpeed: 15
+  ProjectileDamage: 15
+  ProjectileKnockback: 5
+  ProjectileLifetime: 8
+  ShotsPerBurst: 1
+  BurstInterval: 0
+  PreferredRange: 15
+  RetreatRange: 0
+  StaggerDuration: 1
+  SightRange: 15
+  SightAngle: 180
+  HearingRange: 0
+  LeashRange: 999
+  MemoryDuration: 0
+  HitFlashDuration: 0.1
+  BaseColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  Resist_Physical: 0.5
+  Resist_Fire: 0
+  Resist_Ice: 0
+  Resist_Lightning: 0
+  Resist_Void: 0
+  DropTableID: 
+  PlanetID: P1
+  SpawnWeight: 1
+  Attacks: []
+  FearThreshold: 50
+  FearFromAllyDeath: 10
+  FearFromPoiseBroken: 20
+  FearDecayRate: 5
+  FleeDuration: 4
+  DodgeSpeed: 8
+  DodgeDuration: 0.3
+  BlockDamageReduction: 0.7
+  BlockDuration: 1.5
+  ThreatDetectionRadius: 5
+  _transitionOverrides: []
+  BehaviorTags: []

@@ -26,7 +26,6 @@ namespace ProjectArk.Ship
 
         // ──────────────────── Cached Components ────────────────────
         private Rigidbody2D _rigidbody;
-        private SpriteRenderer _spriteRenderer;
         private InputHandler _inputHandler;
 
         // ──────────────────── Events ────────────────────
@@ -54,7 +53,6 @@ namespace ProjectArk.Ship
         private void Awake()
         {
             _rigidbody = GetComponent<Rigidbody2D>();
-            _spriteRenderer = GetComponent<SpriteRenderer>();
             _inputHandler = GetComponent<InputHandler>();
 
             ServiceLocator.Register<ShipHealth>(this);
@@ -97,10 +95,6 @@ namespace ProjectArk.Ship
             if (payload.KnockbackForce > 0f && _rigidbody != null)
                 _rigidbody.AddForce(payload.KnockbackDirection.normalized * payload.KnockbackForce, ForceMode2D.Impulse);
 
-            // Hit flash feedback
-            if (_spriteRenderer != null)
-                HitFlashAsync().Forget();
-
             // Hit-stop + screen shake feedback
             if (_stats != null)
             {
@@ -109,14 +103,14 @@ namespace ProjectArk.Ship
                 HitFeedbackService.TriggerScreenShake(shakeIntensity);
             }
 
-            // Notify listeners
+            // Notify listeners (ShipView subscribes for visual feedback: hit flash + i-frame blink)
             OnDamageTaken?.Invoke(damage, _currentHP);
 
             Debug.Log($"[ShipHealth] Took {damage} damage (type: {payload.Type}). HP: {_currentHP}/{MaxHP}");
 
-            // Start post-hit i-frames
+            // Start post-hit i-frames (gameplay — no visual; ShipView handles visuals independently)
             if (_stats != null && _stats.IFrameDuration > 0f)
-                IFrameBlinkAsync().Forget();
+                IFrameAsync().Forget();
 
             // Death check
             if (_currentHP <= 0f)
@@ -164,9 +158,9 @@ namespace ProjectArk.Ship
 
         private CancellationTokenSource _iFrameCts;
 
-        private async UniTaskVoid IFrameBlinkAsync()
+        private async UniTaskVoid IFrameAsync()
         {
-            // Cancel any existing i-frame blink
+            // Cancel any existing i-frame timer
             _iFrameCts?.Cancel();
             _iFrameCts?.Dispose();
             _iFrameCts = new CancellationTokenSource();
@@ -175,64 +169,10 @@ namespace ProjectArk.Ship
 
             _isInvulnerable = true;
 
-            float elapsed = 0f;
-            float duration = _stats.IFrameDuration;
-            float blinkInterval = _stats.IFrameBlinkInterval;
-            bool visible = true;
-
-            while (elapsed < duration)
-            {
-                if (token.IsCancellationRequested) break;
-
-                visible = !visible;
-                if (_spriteRenderer != null)
-                {
-                    Color c = _spriteRenderer.color;
-                    c.a = visible ? 1f : 0.3f;
-                    _spriteRenderer.color = c;
-                }
-
-                int delayMs = Mathf.RoundToInt(blinkInterval * 1000f);
-                await UniTask.Delay(delayMs, cancellationToken: token);
-                elapsed += blinkInterval;
-            }
-
-            // Restore visibility and end i-frames
-            if (_spriteRenderer != null)
-            {
-                Color c = _spriteRenderer.color;
-                c.a = 1f;
-                _spriteRenderer.color = c;
-            }
+            int durationMs = Mathf.RoundToInt(_stats.IFrameDuration * 1000f);
+            await UniTask.Delay(durationMs, cancellationToken: token).SuppressCancellationThrow();
 
             _isInvulnerable = false;
-        }
-
-        // ──────────────────── Visual Feedback ────────────────────
-
-        private CancellationTokenSource _flashCts;
-
-        private async UniTaskVoid HitFlashAsync()
-        {
-            // Cancel any in-flight flash
-            _flashCts?.Cancel();
-            _flashCts?.Dispose();
-            _flashCts = new CancellationTokenSource();
-            var token = CancellationTokenSource.CreateLinkedTokenSource(
-                _flashCts.Token, destroyCancellationToken).Token;
-
-            Color originalColor = _spriteRenderer.color;
-
-            // Flash to white
-            _spriteRenderer.color = Color.white;
-
-            float duration = _stats != null ? _stats.HitFlashDuration : 0.1f;
-            int delayMs = Mathf.RoundToInt(duration * 1000f);
-            await UniTask.Delay(delayMs, cancellationToken: token);
-
-            // Restore original color (if still alive)
-            if (!_isDead && _spriteRenderer != null)
-                _spriteRenderer.color = originalColor;
         }
 
         // ──────────────────── Public API ────────────────────
@@ -256,18 +196,10 @@ namespace ProjectArk.Ship
             InitializeHP();
             _isInvulnerable = false;
 
-            // Cancel any in-flight i-frame blink
+            // Cancel any in-flight i-frame timer
             _iFrameCts?.Cancel();
             _iFrameCts?.Dispose();
             _iFrameCts = null;
-
-            // Restore sprite alpha
-            if (_spriteRenderer != null)
-            {
-                Color c = _spriteRenderer.color;
-                c.a = 1f;
-                _spriteRenderer.color = c;
-            }
 
             // Re-enable input if it was disabled
             if (_inputHandler != null)

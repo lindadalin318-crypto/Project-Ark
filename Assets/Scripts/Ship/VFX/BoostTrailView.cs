@@ -17,7 +17,6 @@ namespace ProjectArk.Ship
     ///   - Layer 4: EmberTrail particle system (magenta HDR)
     ///   - Layer 5: EmberSparks one-shot burst (white HDR)
     ///   - Layer 6: BoostEnergyLayer2 / Layer3 SpriteRenderer (Shader _BoostIntensity)
-    ///   - Layer 7: Boost activation halo (local sprite burst around ship)
     ///   - Post:    URP Volume Bloom burst
     ///
     /// Call OnBoostStart() / OnBoostEnd() / ResetState() from ShipView.
@@ -57,99 +56,13 @@ namespace ProjectArk.Ship
         [Tooltip("SpriteRenderer using BoostEnergyLayer3 shader.")]
         [SerializeField] private SpriteRenderer _energyLayer3;
 
-        [Header("Activation Halo")]
-        [Tooltip("Local additive sprite burst centered on the ship. This is the primary Boost activation flash, not the full-screen overlay.")]
-        [SerializeField] private SpriteRenderer _activationHalo;
-
         [Header("Post-Processing")]
         [Tooltip("Local Volume for Boost Bloom burst (weight animated 0→1→0).")]
         [SerializeField] private Volume _boostBloomVolume;
 
-        [Header("Trail Settings")]
-        [Tooltip("Trail fade time in seconds (how long trail persists after stop).")]
-        [SerializeField] private float _trailTime = 2.2f;
-
-        [Tooltip("Trail width multiplier.")]
-        [SerializeField] private float _trailWidthMultiplier = 2.75f;
-
-        [Header("Boost Intensity Animation")]
-        [Tooltip("Duration for _BoostIntensity 0→1 on Boost start.")]
-        [SerializeField] private float _intensityRampUpDuration = 0.22f;
-
-        [Tooltip("Duration for _BoostIntensity 1→0 on Boost end.")]
-        [SerializeField] private float _intensityRampDownDuration = 0.42f;
-
-        [Header("Boost Startup Sequencing")]
-        [Tooltip("Delay before sustained flame trails start, giving the startup burst a short head start.")]
-        [SerializeField] private float _sustainFlameStartDelay = 0.045f;
-
-        [Tooltip("Delay before EmberTrail joins, so startup layers read before sustained embers take over.")]
-        [SerializeField] private float _emberTrailStartDelay = 0.07f;
-
-        [Tooltip("Delay before EmberSparks fires, so FlameCore remains the first readable ignition cue.")]
-        [SerializeField] private float _emberSparksBurstDelay = 0.018f;
-
-        [Header("Boost Sustain Layer Blending")]
-        [Tooltip("Master BoostIntensity threshold after which FlameTrail begins taking over the sustained thruster read.")]
-        [Range(0f, 1f)]
-        [SerializeField] private float _flameTrailBlendInThreshold = 0.18f;
-
-        [Tooltip("Maximum share of the master BoostIntensity granted to FlameTrail once sustain is fully established.")]
-        [Range(0f, 1f)]
-        [SerializeField] private float _flameTrailMaxIntensity = 0.78f;
-
-        [Tooltip("Master BoostIntensity threshold after which EmberTrail is allowed to join as a lighter residual layer.")]
-        [Range(0f, 1f)]
-        [SerializeField] private float _emberTrailBlendInThreshold = 0.42f;
-
-        [Tooltip("Maximum share of the master BoostIntensity granted to EmberTrail once sustain is fully established.")]
-        [Range(0f, 1f)]
-        [SerializeField] private float _emberTrailMaxIntensity = 0.32f;
-
-        [Tooltip("Master BoostIntensity threshold after which EnergyLayer2 begins reading as sustained hull charge.")]
-        [Range(0f, 1f)]
-        [SerializeField] private float _energyLayer2BlendInThreshold = 0.16f;
-
-        [Tooltip("Maximum share of the master BoostIntensity granted to EnergyLayer2.")]
-        [Range(0f, 1f)]
-        [SerializeField] private float _energyLayer2MaxIntensity = 0.62f;
-
-        [Tooltip("Master BoostIntensity threshold after which EnergyLayer3 is allowed to appear as the faintest inner charge layer.")]
-        [Range(0f, 1f)]
-        [SerializeField] private float _energyLayer3BlendInThreshold = 0.38f;
-
-        [Tooltip("Maximum share of the master BoostIntensity granted to EnergyLayer3.")]
-        [Range(0f, 1f)]
-        [SerializeField] private float _energyLayer3MaxIntensity = 0.34f;
-
-        [Header("Activation Halo Settings")]
-        [Tooltip("Peak alpha of the local Boost halo burst.")]
-        [SerializeField] private float _activationHaloPeakAlpha = 1.4f;
-
-        [Tooltip("Total duration of the local Boost halo burst.")]
-        [SerializeField] private float _activationHaloDuration = 0.12f;
-
-        [Tooltip("Scale multiplier at the beginning of the local halo burst.")]
-        [SerializeField] private float _activationHaloStartScale = 0.56f;
-
-        [Tooltip("Scale multiplier at the peak of the local halo burst.")]
-        [SerializeField] private float _activationHaloPeakScale = 0.98f;
-
-        [Tooltip("Scale multiplier after the halo flash starts collapsing.")]
-        [SerializeField] private float _activationHaloEndScale = 0.82f;
-
-        [Header("Bloom Burst Settings")]
-        [Tooltip("Peak Bloom Intensity during Boost activation.")]
-        [SerializeField] private float _bloomBurstIntensity = 2.15f;
-
-        [Tooltip("Peak local volume weight during the Boost activation burst.")]
-        [SerializeField] private float _bloomPeakWeight = 0.72f;
-
-        [Tooltip("Fast attack duration of the Bloom burst.")]
-        [SerializeField] private float _bloomAttackDuration = 0.05f;
-
-        [Tooltip("Softer release duration of the Bloom burst.")]
-        [SerializeField] private float _bloomReleaseDuration = 0.16f;
+        [Header("Settings (Data-Driven)")]
+        [Tooltip("ShipJuiceSettingsSO holds ALL Boost Trail parameters. No local hardcoded values.")]
+        [SerializeField] private ShipJuiceSettingsSO _juiceSettings;
 
         // ══════════════════════════════════════════════════════════════
         // Private State
@@ -168,7 +81,6 @@ namespace ProjectArk.Ship
         // Active tweens
         private Tween _intensityTween;
         private Tween _bloomTween;
-        private Tween _activationHaloTween;
 
         private CancellationTokenSource _boostStartupSequenceCts;
 
@@ -177,8 +89,6 @@ namespace ProjectArk.Ship
 
         // Baseline bloom intensity (restored after burst)
         private float _baselineBloomIntensity;
-        private Vector3 _activationHaloBaseScale = Vector3.one;
-        private Color _activationHaloBaseColor = Color.white;
 
         // ══════════════════════════════════════════════════════════════
         // Lifecycle
@@ -186,6 +96,10 @@ namespace ProjectArk.Ship
 
         private void Awake()
         {
+            // Validate SO reference — all Boost Trail params live here
+            if (_juiceSettings == null)
+                Debug.LogError("[BoostTrailView] _juiceSettings is null! All Boost Trail parameters will use fallback defaults.", this);
+
             // Initialize Material Property Blocks
             _mpbMainTrail = new MaterialPropertyBlock();
             _mpbLayer2 = new MaterialPropertyBlock();
@@ -197,13 +111,19 @@ namespace ProjectArk.Ship
                 _boostBloomVolume.profile.TryGet(out _bloomOverride);
                 if (_bloomOverride != null)
                     _baselineBloomIntensity = _bloomOverride.intensity.value;
+
+                Debug.Log($"[BoostTrailView] Awake Bloom init: volume={_boostBloomVolume.name}, " +
+                    $"hasProfile={_boostBloomVolume.profile != null}, " +
+                    $"bloomOverride={(_bloomOverride != null ? "OK" : "NULL")}, " +
+                    $"baseline={_baselineBloomIntensity:F2}", this);
+            }
+            else
+            {
+                Debug.LogError("[BoostTrailView] Awake: _boostBloomVolume is null! Bloom burst will not work.", this);
             }
 
-            if (_activationHalo != null)
-            {
-                _activationHaloBaseScale = _activationHalo.transform.localScale;
-                _activationHaloBaseColor = _activationHalo.color;
-            }
+            // Validate camera post-processing for Bloom to be visible
+            ValidateCameraPostProcessing();
 
             // Ensure all VFX start in reset state
             ResetState();
@@ -214,7 +134,6 @@ namespace ProjectArk.Ship
             // Stop all active tweens to prevent callbacks from accessing destroyed components
             _intensityTween.Stop();
             _bloomTween.Stop();
-            _activationHaloTween.Stop();
             CancelBoostStartupSequence();
         }
 
@@ -224,25 +143,33 @@ namespace ProjectArk.Ship
 
         /// <summary>
         /// Call when the ship enters Boost state.
-        /// Activates all trail/particle layers and triggers halo + bloom burst.
+        /// Activates all trail/particle layers and triggers bloom burst.
         /// </summary>
         public void OnBoostStart()
         {
             CancelBoostStartupSequence();
             TraceStartupSequence($"OnBoostStart() begin. intensity={_currentIntensity:F3}");
 
+            float trailTime = _juiceSettings != null ? _juiceSettings.BoostTrailTime : 2.2f;
+            float trailWidth = _juiceSettings != null ? _juiceSettings.BoostTrailWidthMultiplier : 2.75f;
+            float rampUpDuration = _juiceSettings != null ? _juiceSettings.BoostIntensityRampUpDuration : 0.22f;
+            float flameDelay = _juiceSettings != null ? _juiceSettings.BoostSustainFlameStartDelay : 0.045f;
+            float emberDelay = _juiceSettings != null ? _juiceSettings.BoostEmberTrailStartDelay : 0.07f;
+            float sparksDelay = _juiceSettings != null ? _juiceSettings.BoostEmberSparksBurstDelay : 0.018f;
+            float flameThreshold = _juiceSettings != null ? _juiceSettings.FlameTrailBlendInThreshold : 0.18f;
+            float emberThreshold = _juiceSettings != null ? _juiceSettings.EmberTrailBlendInThreshold : 0.42f;
+
             // 1. Activate TrailRenderer immediately to establish the sustained speed read.
             if (_mainTrail != null)
             {
-                _mainTrail.time = _trailTime;
-                _mainTrail.widthMultiplier = _trailWidthMultiplier;
+                _mainTrail.time = trailTime;
+                _mainTrail.widthMultiplier = trailWidth;
                 _mainTrail.Clear();
                 _mainTrail.emitting = true;
             }
 
             // 2. Trigger the immediate startup confirmation layers first.
             TriggerParticleBurst(_flameCore);
-            TriggerActivationHalo();
             TriggerBloomBurst();
 
             // 3. Animate _BoostIntensity 0 → 1 for trail + energy layers.
@@ -250,14 +177,16 @@ namespace ProjectArk.Ship
             _intensityTween = Tween.Custom(
                 startValue: _currentIntensity,
                 endValue: 1f,
-                duration: _intensityRampUpDuration,
+                duration: rampUpDuration,
                 onValueChange: SetBoostIntensity,
                 ease: Ease.InQuad);
 
             // 4. Let sparks and sustained layers join in readable phases instead of all firing at once.
             _boostStartupSequenceCts = CancellationTokenSource.CreateLinkedTokenSource(destroyCancellationToken);
-            TraceStartupSequence($"Startup sequence armed. flameDelay={_sustainFlameStartDelay:F3}, emberDelay={_emberTrailStartDelay:F3}, sparksDelay={_emberSparksBurstDelay:F3}");
-            RunBoostStartupSequenceAsync(_boostStartupSequenceCts.Token).Forget();
+            TraceStartupSequence($"Startup sequence armed. flameDelay={flameDelay:F3}, emberDelay={emberDelay:F3}, sparksDelay={sparksDelay:F3}");
+            RunBoostStartupSequenceAsync(
+                sparksDelay, flameDelay, flameThreshold, emberDelay, emberThreshold,
+                _boostStartupSequenceCts.Token).Forget();
         }
 
         /// <summary>
@@ -277,11 +206,12 @@ namespace ProjectArk.Ship
             StopParticle(_emberSparks);
 
             // 3. Let sustained flame / ember / energy layers fade down through the shared master intensity.
+            float rampDownDuration = _juiceSettings != null ? _juiceSettings.BoostIntensityRampDownDuration : 0.42f;
             _intensityTween.Stop();
             _intensityTween = Tween.Custom(
                 startValue: _currentIntensity,
                 endValue: 0f,
-                duration: _intensityRampDownDuration,
+                duration: rampDownDuration,
                 onValueChange: SetBoostIntensity,
                 ease: Ease.OutQuad)
                 .OnComplete(StopSustainParticles);
@@ -295,7 +225,6 @@ namespace ProjectArk.Ship
             // Stop all tweens
             _intensityTween.Stop();
             _bloomTween.Stop();
-            _activationHaloTween.Stop();
             CancelBoostStartupSequence();
 
             // Reset TrailRenderer
@@ -315,8 +244,6 @@ namespace ProjectArk.Ship
             // Reset _BoostIntensity to 0 immediately
             _currentIntensity = 0f;
             SetBoostIntensity(0f);
-
-            ResetActivationHalo();
 
             // Reset bloom volume
             if (_boostBloomVolume != null)
@@ -344,14 +271,16 @@ namespace ProjectArk.Ship
 
             StopAndClearParticle(_flameCore);
             StopAndClearParticle(_emberSparks);
-            ResetActivationHalo();
             ResetBloomState();
 
             if (_mainTrail != null)
             {
+                float trailTime = _juiceSettings != null ? _juiceSettings.BoostTrailTime : 2.2f;
+                float trailWidth = _juiceSettings != null ? _juiceSettings.BoostTrailWidthMultiplier : 2.75f;
+
                 _mainTrail.enabled = showMainTrail;
-                _mainTrail.time = _trailTime;
-                _mainTrail.widthMultiplier = _trailWidthMultiplier;
+                _mainTrail.time = trailTime;
+                _mainTrail.widthMultiplier = trailWidth;
 
                 if (showMainTrail && clampedIntensity > 0.001f)
                 {
@@ -392,7 +321,6 @@ namespace ProjectArk.Ship
             bool showEmberSparks,
             bool showEnergyLayer2,
             bool showEnergyLayer3,
-            bool showActivationHalo,
             bool showBloom)
         {
             if (_mainTrail != null)
@@ -426,9 +354,6 @@ namespace ProjectArk.Ship
             if (_energyLayer3 != null)
                 _energyLayer3.enabled = showEnergyLayer3;
 
-            if (!showActivationHalo)
-                ResetActivationHalo();
-
             if (!showBloom)
                 ResetBloomState();
         }
@@ -452,21 +377,114 @@ namespace ProjectArk.Ship
         }
 
         /// <summary>
-        /// Forces the activation halo burst for Inspector debugging.
-        /// </summary>
-        public void DebugPreviewActivationHalo()
-        {
-            ResetActivationHalo();
-            TriggerActivationHalo();
-        }
-
-        /// <summary>
         /// Forces the Bloom burst for Inspector debugging.
         /// </summary>
         public void DebugPreviewBloomBurst()
         {
             ResetBloomState();
             TriggerBloomBurst();
+        }
+
+        /// <summary>
+        /// Forces FlameTrail_R only into a sustained preview at full intensity.
+        /// Resets all other layers (including FlameTrail_B) so FlameTrail_R is isolated.
+        /// </summary>
+        public void DebugPreviewFlameTrailR()
+        {
+            IsolateForFlameSustainPreview();
+            StopAndClearParticle(_flameTrailB);
+            PlayParticle(_flameTrailR);
+        }
+
+        /// <summary>
+        /// Forces FlameTrail_B only into a sustained preview at full intensity.
+        /// Resets all other layers (including FlameTrail_R) so FlameTrail_B is isolated.
+        /// </summary>
+        public void DebugPreviewFlameTrailB()
+        {
+            IsolateForFlameSustainPreview();
+            StopAndClearParticle(_flameTrailR);
+            PlayParticle(_flameTrailB);
+        }
+
+        /// <summary>
+        /// Forces FlameTrail_R + FlameTrail_B into a sustained preview at full intensity.
+        /// Resets other layers so the flame trails are isolated and immediately visible.
+        /// </summary>
+        public void DebugPreviewFlameTrailBoth()
+        {
+            IsolateForFlameSustainPreview();
+            PlayParticle(_flameTrailR);
+            PlayParticle(_flameTrailB);
+        }
+
+        /// <summary>
+        /// Shared isolation setup for all FlameTrail preview variants.
+        /// Stops everything except flame trails and drives intensity to 1.
+        /// </summary>
+        private void IsolateForFlameSustainPreview()
+        {
+            CancelBoostStartupSequence();
+            _intensityTween.Stop();
+
+            if (_mainTrail != null)
+            {
+                _mainTrail.emitting = false;
+                _mainTrail.Clear();
+            }
+            StopAndClearParticle(_flameCore);
+            StopAndClearParticle(_emberTrail);
+            StopAndClearParticle(_emberSparks);
+            ResetBloomState();
+
+            SetBoostIntensity(1f);
+        }
+
+        /// <summary>
+        /// Forces EmberTrail into a sustained preview at full intensity.
+        /// Resets other layers so the ember trail is isolated and immediately visible.
+        ///
+        /// EmberTrail uses rateOverDistance (world-space), so it produces zero particles
+        /// when the ship is stationary (the typical Inspector preview scenario).
+        /// This method temporarily switches to rateOverTime for the preview so the
+        /// effect is visible without requiring actual movement.
+        /// </summary>
+        public void DebugPreviewEmberTrailSustain()
+        {
+            CancelBoostStartupSequence();
+            _intensityTween.Stop();
+
+            // Stop all other layers to isolate ember trail
+            if (_mainTrail != null)
+            {
+                _mainTrail.emitting = false;
+                _mainTrail.Clear();
+            }
+            StopAndClearParticle(_flameCore);
+            StopAndClearParticle(_flameTrailR);
+            StopAndClearParticle(_flameTrailB);
+            StopAndClearParticle(_emberSparks);
+            ResetBloomState();
+
+            // Drive intensity to 1 so the sustain logic fully activates ember trail
+            _currentIntensity = 1f;
+
+            // EmberTrail normally uses rateOverDistance which requires movement.
+            // For stationary preview, temporarily switch to rateOverTime so particles
+            // are visible immediately in the Inspector.
+            if (_emberTrail != null)
+            {
+                var emission = _emberTrail.emission;
+                float baseRate = 2.2f; // Match the authored rateOverDistance value
+                emission.rateOverDistanceMultiplier = 0f;
+                emission.rateOverTimeMultiplier = baseRate * 12f; // Approximate visual density
+            }
+
+            // Apply shader intensity for energy layers
+            SetBoostIntensityShaderOnly(1f);
+
+            // Ensure ember trail is playing
+            PlayParticle(_emberTrail);
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -487,6 +505,7 @@ namespace ProjectArk.Ship
 
         /// <summary>
         /// Sets _BoostIntensity on all energy layer shaders via MaterialPropertyBlock.
+        /// Also drives sustain particles and auto-stops them when intensity falls below threshold.
         /// </summary>
         private void SetBoostIntensity(float value)
         {
@@ -500,10 +519,30 @@ namespace ProjectArk.Ship
                 _mainTrail.SetPropertyBlock(_mpbMainTrail);
             }
 
-            ApplyFlameTrailState(_currentIntensity);
-            ApplyEmberTrailState(_currentIntensity);
+            // Read all sustain params from SO (with fallbacks)
+            float flameThreshold = _juiceSettings != null ? _juiceSettings.FlameTrailBlendInThreshold : 0.18f;
+            float flameMax = _juiceSettings != null ? _juiceSettings.FlameTrailMaxIntensity : 0.78f;
+            float emberThreshold = _juiceSettings != null ? _juiceSettings.EmberTrailBlendInThreshold : 0.42f;
+            float emberMax = _juiceSettings != null ? _juiceSettings.EmberTrailMaxIntensity : 0.32f;
+            float layer2Threshold = _juiceSettings != null ? _juiceSettings.EnergyLayer2BlendInThreshold : 0.16f;
+            float layer2Max = _juiceSettings != null ? _juiceSettings.EnergyLayer2MaxIntensity : 0.62f;
+            float layer3Threshold = _juiceSettings != null ? _juiceSettings.EnergyLayer3BlendInThreshold : 0.38f;
+            float layer3Max = _juiceSettings != null ? _juiceSettings.EnergyLayer3MaxIntensity : 0.34f;
+            float minSize = _juiceSettings != null ? _juiceSettings.SustainParticleMinSize : 0.25f;
+            float minSpeed = _juiceSettings != null ? _juiceSettings.SustainParticleMinSpeed : 0.45f;
+            float stopThreshold = _juiceSettings != null ? _juiceSettings.SustainParticleStopThreshold : 0.005f;
 
-            float layer2Intensity = EvaluateSustainLayerIntensity(_currentIntensity, _energyLayer2BlendInThreshold, _energyLayer2MaxIntensity);
+            // Sustain particles — FlameTrail
+            float flameIntensity = EvaluateSustainLayerIntensity(_currentIntensity, flameThreshold, flameMax);
+            ApplyParticleSustainState(_flameTrailR, flameIntensity, useRateOverTime: true, minSize, minSpeed, stopThreshold);
+            ApplyParticleSustainState(_flameTrailB, flameIntensity, useRateOverTime: true, minSize, minSpeed, stopThreshold);
+
+            // Sustain particles — EmberTrail
+            float emberIntensity = EvaluateSustainLayerIntensity(_currentIntensity, emberThreshold, emberMax);
+            ApplyParticleSustainState(_emberTrail, emberIntensity, useRateOverTime: false, minSize, minSpeed, stopThreshold);
+
+            // Energy layers — shader _BoostIntensity
+            float layer2Intensity = EvaluateSustainLayerIntensity(_currentIntensity, layer2Threshold, layer2Max);
             if (_energyLayer2 != null)
             {
                 _mpbLayer2.Clear();
@@ -511,7 +550,7 @@ namespace ProjectArk.Ship
                 _energyLayer2.SetPropertyBlock(_mpbLayer2);
             }
 
-            float layer3Intensity = EvaluateSustainLayerIntensity(_currentIntensity, _energyLayer3BlendInThreshold, _energyLayer3MaxIntensity);
+            float layer3Intensity = EvaluateSustainLayerIntensity(_currentIntensity, layer3Threshold, layer3Max);
             if (_energyLayer3 != null)
             {
                 _mpbLayer3.Clear();
@@ -520,17 +559,43 @@ namespace ProjectArk.Ship
             }
         }
 
-        private void ApplyFlameTrailState(float masterIntensity)
+        /// <summary>
+        /// Drives only the shader _BoostIntensity on MainTrail and EnergyLayers
+        /// without touching particle emission parameters. Used by debug preview
+        /// methods that need to set emission modes independently.
+        /// </summary>
+        private void SetBoostIntensityShaderOnly(float value)
         {
-            float flameIntensity = EvaluateSustainLayerIntensity(masterIntensity, _flameTrailBlendInThreshold, _flameTrailMaxIntensity);
-            ApplyParticleSustainState(_flameTrailR, flameIntensity, useRateOverTime: true);
-            ApplyParticleSustainState(_flameTrailB, flameIntensity, useRateOverTime: true);
-        }
+            EnsurePropertyBlocks();
+            float clampedValue = Mathf.Clamp01(value);
 
-        private void ApplyEmberTrailState(float masterIntensity)
-        {
-            float emberIntensity = EvaluateSustainLayerIntensity(masterIntensity, _emberTrailBlendInThreshold, _emberTrailMaxIntensity);
-            ApplyParticleSustainState(_emberTrail, emberIntensity, useRateOverTime: false);
+            if (_mainTrail != null)
+            {
+                _mainTrail.GetPropertyBlock(_mpbMainTrail);
+                _mpbMainTrail.SetFloat(BoostIntensityID, clampedValue);
+                _mainTrail.SetPropertyBlock(_mpbMainTrail);
+            }
+
+            float layer2Threshold = _juiceSettings != null ? _juiceSettings.EnergyLayer2BlendInThreshold : 0.16f;
+            float layer2Max = _juiceSettings != null ? _juiceSettings.EnergyLayer2MaxIntensity : 0.62f;
+            float layer3Threshold = _juiceSettings != null ? _juiceSettings.EnergyLayer3BlendInThreshold : 0.38f;
+            float layer3Max = _juiceSettings != null ? _juiceSettings.EnergyLayer3MaxIntensity : 0.34f;
+
+            float layer2Intensity = EvaluateSustainLayerIntensity(clampedValue, layer2Threshold, layer2Max);
+            if (_energyLayer2 != null)
+            {
+                _mpbLayer2.Clear();
+                _mpbLayer2.SetFloat(BoostIntensityID, layer2Intensity);
+                _energyLayer2.SetPropertyBlock(_mpbLayer2);
+            }
+
+            float layer3Intensity = EvaluateSustainLayerIntensity(clampedValue, layer3Threshold, layer3Max);
+            if (_energyLayer3 != null)
+            {
+                _mpbLayer3.Clear();
+                _mpbLayer3.SetFloat(BoostIntensityID, layer3Intensity);
+                _energyLayer3.SetPropertyBlock(_mpbLayer3);
+            }
         }
 
         private static float EvaluateSustainLayerIntensity(float masterIntensity, float blendInThreshold, float maxIntensity)
@@ -540,12 +605,32 @@ namespace ProjectArk.Ship
             return Mathf.Clamp01(maxIntensity) * EaseOutCubic(t);
         }
 
-        private static void ApplyParticleSustainState(ParticleSystem particleSystem, float intensity, bool useRateOverTime)
+        /// <summary>
+        /// Applies emission rate, start size, and start speed to a sustain particle system.
+        /// When intensity falls below stopThreshold, auto-stops the particle system
+        /// to eliminate idle "playing but emitting nothing" overhead.
+        /// </summary>
+        private static void ApplyParticleSustainState(
+            ParticleSystem particleSystem,
+            float intensity,
+            bool useRateOverTime,
+            float minSize,
+            float minSpeed,
+            float stopThreshold)
         {
             if (particleSystem == null)
                 return;
 
             float clampedIntensity = Mathf.Clamp01(intensity);
+
+            // Auto-stop: when intensity is negligible, stop the particle system entirely
+            // to avoid idle "playing but emitting nothing" overhead in the profiler.
+            if (clampedIntensity <= stopThreshold)
+            {
+                if (particleSystem.isPlaying)
+                    particleSystem.Stop(false, ParticleSystemStopBehavior.StopEmitting);
+                return;
+            }
 
             var emission = particleSystem.emission;
             if (useRateOverTime)
@@ -560,8 +645,8 @@ namespace ProjectArk.Ship
             }
 
             var main = particleSystem.main;
-            main.startSizeMultiplier = Mathf.Lerp(0.25f, 1f, clampedIntensity);
-            main.startSpeedMultiplier = Mathf.Lerp(0.45f, 1f, clampedIntensity);
+            main.startSizeMultiplier = Mathf.Lerp(minSize, 1f, clampedIntensity);
+            main.startSpeedMultiplier = Mathf.Lerp(minSpeed, 1f, clampedIntensity);
         }
 
         private void StopSustainParticles()
@@ -569,74 +654,6 @@ namespace ProjectArk.Ship
             StopParticle(_flameTrailR);
             StopParticle(_flameTrailB);
             StopParticle(_emberTrail);
-        }
-
-        /// <summary>
-        /// Triggers the local halo burst around the ship, which should carry the main Boost activation read.
-        /// </summary>
-        private void TriggerActivationHalo()
-        {
-            if (_activationHalo == null) return;
-
-            _activationHaloTween.Stop();
-            _activationHalo.enabled = true;
-            ApplyActivationHalo(0f);
-
-            _activationHaloTween = Tween.Custom(
-                startValue: 0f,
-                endValue: 1f,
-                duration: _activationHaloDuration,
-                onValueChange: ApplyActivationHalo,
-                ease: Ease.OutQuad)
-                .OnComplete(ResetActivationHalo);
-        }
-
-        private void ApplyActivationHalo(float progress)
-        {
-            if (_activationHalo == null) return;
-
-            const float peakPoint = 0.09f;
-            const float fadeStartPoint = 0.18f;
-
-            float alpha;
-            if (progress < peakPoint)
-            {
-                float t = EaseOutQuart(progress / peakPoint);
-                alpha = Mathf.Lerp(0f, _activationHaloPeakAlpha, t);
-            }
-            else if (progress < fadeStartPoint)
-            {
-                float t = EaseOutQuad((progress - peakPoint) / (fadeStartPoint - peakPoint));
-                alpha = Mathf.Lerp(_activationHaloPeakAlpha, _activationHaloPeakAlpha * 0.52f, t);
-            }
-            else
-            {
-                float t = EaseInCubic((progress - fadeStartPoint) / (1f - fadeStartPoint));
-                alpha = Mathf.Lerp(_activationHaloPeakAlpha * 0.52f, 0f, t);
-            }
-
-            float scale = progress < peakPoint
-                ? Mathf.Lerp(_activationHaloStartScale, _activationHaloPeakScale, EaseOutQuart(progress / peakPoint))
-                : Mathf.Lerp(_activationHaloPeakScale, _activationHaloEndScale, EaseOutCubic((progress - peakPoint) / (1f - peakPoint)));
-
-            _activationHalo.transform.localScale = _activationHaloBaseScale * scale;
-
-            Color color = _activationHaloBaseColor;
-            color.a = alpha;
-            _activationHalo.color = color;
-        }
-
-        private void ResetActivationHalo()
-        {
-            if (_activationHalo == null) return;
-
-            _activationHaloTween.Stop();
-            _activationHalo.transform.localScale = _activationHaloBaseScale;
-
-            Color color = _activationHaloBaseColor;
-            color.a = 0f;
-            _activationHalo.color = color;
-            _activationHalo.enabled = false;
         }
 
         private void ResetBloomState()
@@ -663,38 +680,44 @@ namespace ProjectArk.Ship
             return 1f - (inv * inv * inv);
         }
 
-        private static float EaseOutQuart(float t)
-        {
-            t = Mathf.Clamp01(t);
-            float inv = 1f - t;
-            return 1f - (inv * inv * inv * inv);
-        }
-
-        private static float EaseInCubic(float t)
-        {
-            t = Mathf.Clamp01(t);
-            return t * t * t;
-        }
-
         /// <summary>
         /// Triggers a short local Bloom lift that supports the ship-local startup layers.
         /// </summary>
         private void TriggerBloomBurst()
         {
-            if (_boostBloomVolume == null || _bloomOverride == null) return;
+            if (_boostBloomVolume == null)
+            {
+                Debug.LogError("[BoostTrailView] TriggerBloomBurst: _boostBloomVolume is null. " +
+                    "Run 'ProjectArk > Ship > VFX > Authority > Bind BoostTrail Scene Bloom References' to wire it.", this);
+                return;
+            }
+            if (_bloomOverride == null)
+            {
+                Debug.LogError("[BoostTrailView] TriggerBloomBurst: _bloomOverride is null. " +
+                    "Ensure BoostBloomVolumeProfile has a Bloom override added.", this);
+                return;
+            }
 
             _bloomTween.Stop();
 
-            float peakIntensity = Mathf.Max(_baselineBloomIntensity, _bloomBurstIntensity);
-            float peakWeight = Mathf.Clamp01(_bloomPeakWeight);
+            float bloomBurstIntensity = _juiceSettings != null ? _juiceSettings.BloomBurstIntensity : 3.2f;
+            float bloomPeakWeight = _juiceSettings != null ? _juiceSettings.BloomPeakWeight : 0.88f;
+            float bloomAttackDuration = _juiceSettings != null ? _juiceSettings.BloomAttackDuration : 0.05f;
+            float bloomSustainDuration = _juiceSettings != null ? _juiceSettings.BloomSustainDuration : 0f;
+            float bloomReleaseDuration = _juiceSettings != null ? _juiceSettings.BloomReleaseDuration : 0.22f;
+
+            float peakIntensity = Mathf.Max(_baselineBloomIntensity, bloomBurstIntensity);
+            float peakWeight = Mathf.Clamp01(bloomPeakWeight);
+            TraceBloomBurst($"TriggerBloomBurst: baseline={_baselineBloomIntensity:F2}, peak={peakIntensity:F2}, peakWeight={peakWeight:F3}, attack={bloomAttackDuration:F3}s, sustain={bloomSustainDuration:F3}s, release={bloomReleaseDuration:F3}s");
 
             _boostBloomVolume.weight = 0f;
             _bloomOverride.intensity.value = _baselineBloomIntensity;
 
+            // Phase 1: Attack — ramp up to peak
             _bloomTween = Tween.Custom(
                 startValue: 0f,
                 endValue: 1f,
-                duration: _bloomAttackDuration,
+                duration: bloomAttackDuration,
                 onValueChange: t => ApplyBloomState(
                     Mathf.Lerp(_baselineBloomIntensity, peakIntensity, EaseOutCubic(t)),
                     Mathf.Lerp(0f, peakWeight, EaseOutQuad(t))),
@@ -703,19 +726,31 @@ namespace ProjectArk.Ship
                 {
                     if (_boostBloomVolume == null || _bloomOverride == null) return;
 
-                    _bloomTween = Tween.Custom(
-                        startValue: 0f,
-                        endValue: 1f,
-                        duration: _bloomReleaseDuration,
-                        onValueChange: t => ApplyBloomState(
-                            Mathf.Lerp(peakIntensity, _baselineBloomIntensity, EaseOutQuad(t)),
-                            Mathf.Lerp(peakWeight, 0f, EaseOutCubic(t))),
-                        ease: Ease.Linear)
-                        .OnComplete(() =>
+                    // Ensure peak is fully applied during sustain
+                    ApplyBloomState(peakIntensity, peakWeight);
+
+                    // Phase 2: Sustain — hold at peak
+                    _bloomTween = Tween.Delay(
+                        duration: bloomSustainDuration,
+                        onComplete: () =>
                         {
                             if (_boostBloomVolume == null || _bloomOverride == null) return;
-                            _bloomOverride.intensity.value = _baselineBloomIntensity;
-                            _boostBloomVolume.weight = 0f;
+
+                            // Phase 3: Release — fade back to baseline
+                            _bloomTween = Tween.Custom(
+                                startValue: 0f,
+                                endValue: 1f,
+                                duration: bloomReleaseDuration,
+                                onValueChange: t => ApplyBloomState(
+                                    Mathf.Lerp(peakIntensity, _baselineBloomIntensity, EaseOutQuad(t)),
+                                    Mathf.Lerp(peakWeight, 0f, EaseOutCubic(t))),
+                                ease: Ease.Linear)
+                                .OnComplete(() =>
+                                {
+                                    if (_boostBloomVolume == null || _bloomOverride == null) return;
+                                    _bloomOverride.intensity.value = _baselineBloomIntensity;
+                                    _boostBloomVolume.weight = 0f;
+                                });
                         });
                 });
         }
@@ -726,6 +761,7 @@ namespace ProjectArk.Ship
 
             _bloomOverride.intensity.value = intensity;
             _boostBloomVolume.weight = weight;
+            TraceBloomBurst($"ApplyBloomState: intensity={intensity:F2}, weight={weight:F3}, volume.weight={_boostBloomVolume.weight:F3}");
         }
 
         private void CancelBoostStartupSequence()
@@ -738,23 +774,29 @@ namespace ProjectArk.Ship
             _boostStartupSequenceCts = null;
         }
 
-        private async UniTaskVoid RunBoostStartupSequenceAsync(CancellationToken cancellationToken)
+        private async UniTaskVoid RunBoostStartupSequenceAsync(
+            float sparksDelay,
+            float flameDelay,
+            float flameThreshold,
+            float emberDelay,
+            float emberThreshold,
+            CancellationToken cancellationToken)
         {
             float elapsed = 0f;
 
             try
             {
-                elapsed = await WaitForStartupMomentAsync(elapsed, _emberSparksBurstDelay, cancellationToken);
+                elapsed = await WaitForStartupMomentAsync(elapsed, sparksDelay, cancellationToken);
                 TraceStartupSequence($"Reached EmberSparks moment at t={elapsed:F3}");
                 TriggerParticleBurst(_emberSparks);
 
-                elapsed = await WaitForSustainLayerReadyAsync(elapsed, _sustainFlameStartDelay, _flameTrailBlendInThreshold, cancellationToken);
+                elapsed = await WaitForSustainLayerReadyAsync(elapsed, flameDelay, flameThreshold, cancellationToken);
                 TraceStartupSequence($"Reached FlameTrail moment at t={elapsed:F3}, intensity={_currentIntensity:F3}");
                 PlayParticle(_flameTrailR);
                 PlayParticle(_flameTrailB);
                 TraceStartupSequence($"Issued PlayParticle for FlameTrail_R/B. isPlayingR={(_flameTrailR != null && _flameTrailR.isPlaying)}, isPlayingB={(_flameTrailB != null && _flameTrailB.isPlaying)}");
 
-                elapsed = await WaitForSustainLayerReadyAsync(elapsed, _emberTrailStartDelay, _emberTrailBlendInThreshold, cancellationToken);
+                elapsed = await WaitForSustainLayerReadyAsync(elapsed, emberDelay, emberThreshold, cancellationToken);
                 TraceStartupSequence($"Reached EmberTrail moment at t={elapsed:F3}, intensity={_currentIntensity:F3}");
                 PlayParticle(_emberTrail);
             }
@@ -833,6 +875,36 @@ namespace ProjectArk.Ship
         {
             if (ps == null) return;
             ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        }
+
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        private static void ValidateCameraPostProcessing()
+        {
+            var cam = Camera.main;
+            if (cam == null) return;
+
+            var urpCamData = cam.GetComponent<UniversalAdditionalCameraData>();
+            if (urpCamData == null)
+            {
+                Debug.LogWarning("[BoostTrailView] Main Camera missing UniversalAdditionalCameraData. " +
+                    "Bloom burst will not be visible.", cam);
+                return;
+            }
+
+            if (!urpCamData.renderPostProcessing)
+            {
+                Debug.LogError("[BoostTrailView] Main Camera has Post Processing DISABLED. " +
+                    "Bloom burst will be invisible! Enable 'Post Processing' on the Camera's URP settings.", cam);
+            }
+        }
+
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        private void TraceBloomBurst(string message)
+        {
+            if (!Application.isPlaying)
+                return;
+
+            Debug.Log($"[BloomBurstTrace] {message} | time={Time.time:F3}", this);
         }
 
         [System.Diagnostics.Conditional("UNITY_EDITOR")]

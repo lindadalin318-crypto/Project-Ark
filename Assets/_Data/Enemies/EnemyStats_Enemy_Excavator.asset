@@ -1,0 +1,69 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 814b7e08c4625ff4faa3639c6eee45de, type: 3}
+  m_Name: EnemyStats_Enemy_Excavator
+  m_EditorClassIdentifier: ProjectArk.Enemy::ProjectArk.Combat.EnemyStatsSO
+  EnemyName: "\u6316\u6398\u80059000"
+  EnemyID: Enemy_Excavator
+  FactionID: Neutral
+  MaxHP: 1500
+  MaxPoise: 999
+  MoveSpeed: 3
+  RotationSpeed: 90
+  AttackDamage: 35
+  AttackRange: 3
+  AttackCooldown: 2
+  AttackKnockback: 15
+  TelegraphDuration: 0.8
+  AttackActiveDuration: 0.4
+  RecoveryDuration: 1.2
+  ProjectilePrefab: {fileID: 4255635206972869295, guid: d39bba9ed33abad40b895a5fd7d54a51, type: 3}
+  ProjectileSpeed: 12
+  ProjectileDamage: 25
+  ProjectileKnockback: 8
+  ProjectileLifetime: 6
+  ShotsPerBurst: 1
+  BurstInterval: 0
+  PreferredRange: 12
+  RetreatRange: 0
+  StaggerDuration: 1
+  SightRange: 25
+  SightAngle: 360
+  HearingRange: 30
+  LeashRange: 999
+  MemoryDuration: 999
+  HitFlashDuration: 0.15
+  BaseColor: {r: 0.9, g: 0.5, b: 0.1, a: 1}
+  Resist_Physical: 0.3
+  Resist_Fire: 0.3
+  Resist_Ice: 0.3
+  Resist_Lightning: 0.3
+  Resist_Void: 0
+  DropTableID: 
+  PlanetID: P1
+  SpawnWeight: 0
+  Attacks: []
+  FearThreshold: 50
+  FearFromAllyDeath: 10
+  FearFromPoiseBroken: 20
+  FearDecayRate: 5
+  FleeDuration: 4
+  DodgeSpeed: 8
+  DodgeDuration: 0.3
+  BlockDamageReduction: 0.7
+  BlockDuration: 1.5
+  ThreatDetectionRadius: 5
+  _transitionOverrides: []
+  BehaviorTags:
+  - SuperArmor
+  - AreaDenial
+  - Roamer

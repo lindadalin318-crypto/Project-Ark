@@ -1,0 +1,1563 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c9b1dfd4e9224b98889433bdba4758b, type: 3}
+  m_Name: "WorldGraph_\u793A\u5DF4\u661F___ACT1+ACT2_(Z1a\u2192Z2d)"
+  m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.WorldGraphSO
+  _graphName: "\u793A\u5DF4\u661F \xB7 ACT1+ACT2 (Z1a\u2192Z2d)"
+  _rooms:
+  - RoomID: 6940097d-e419-4f03-85b3-2d6c6c28a6ee
+    NodeType: 8
+    GateIDs:
+    - gate_east_326e4782-360b-47f0-bb5d-7f7c146b811c
+    - gate_south_f3c93282-d5c8-4ab6-9812-fa6054ede303
+    - gate_west_6940097d-e419-4f03-85b3-2d6c6c28a6ee
+    - gate_north_6940097d-e419-4f03-85b3-2d6c6c28a6ee
+    DesignerNote: "\u5760\u673A\u70B9\xB7\u6B8B\u9AB8\u533A"
+    EditorPosition: {x: 20, y: -80}
+  - RoomID: 326e4782-360b-47f0-bb5d-7f7c146b811c
+    NodeType: 0
+    GateIDs:
+    - gate_east_326e4782-360b-47f0-bb5d-7f7c146b811c
+    - gate_west_6940097d-e419-4f03-85b3-2d6c6c28a6ee
+    - gate_east_779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    - gate_west_326e4782-360b-47f0-bb5d-7f7c146b811c
+    DesignerNote: "\u5760\u673A\u70B9\xB7\u4E1C\u4FA7\u788E\u7247\u5E26"
+    EditorPosition: {x: 180, y: -80}
+  - RoomID: f3c93282-d5c8-4ab6-9812-fa6054ede303
+    NodeType: 0
+    GateIDs:
+    - gate_south_f3c93282-d5c8-4ab6-9812-fa6054ede303
+    - gate_north_6940097d-e419-4f03-85b3-2d6c6c28a6ee
+    - gate_south_9311e4fa-1a0c-48de-a82f-767c62a84a08
+    - gate_north_f3c93282-d5c8-4ab6-9812-fa6054ede303
+    DesignerNote: "\u5760\u673A\u70B9\xB7\u5357\u4FA7\u88C2\u7F1D"
+    EditorPosition: {x: 20, y: -180}
+  - RoomID: 779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    NodeType: 8
+    GateIDs:
+    - gate_east_779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    - gate_west_326e4782-360b-47f0-bb5d-7f7c146b811c
+    - gate_east_3782df51-4579-42d2-9f1d-a02ec9b2276d
+    - gate_south_fd17064a-f860-4229-b005-d48678335a05
+    - gate_west_779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    - gate_north_779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    DesignerNote: "\u51B0\u96D5\u5E7F\u573A"
+    EditorPosition: {x: 300, y: -60}
+  - RoomID: 3782df51-4579-42d2-9f1d-a02ec9b2276d
+    NodeType: 8
+    GateIDs:
+    - gate_east_3782df51-4579-42d2-9f1d-a02ec9b2276d
+    - gate_west_779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    - gate_south_f708d2a4-96ea-4942-b665-76ababc6943c
+    - gate_east_b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    - gate_north_3782df51-4579-42d2-9f1d-a02ec9b2276d
+    - gate_west_3782df51-4579-42d2-9f1d-a02ec9b2276d
+    DesignerNote: "\u51B0\u96D5\u5E7F\u573A\xB7\u6E29\u6696\u51B0\u96D5"
+    EditorPosition: {x: 460, y: -60}
+  - RoomID: fd17064a-f860-4229-b005-d48678335a05
+    NodeType: 0
+    GateIDs:
+    - gate_south_fd17064a-f860-4229-b005-d48678335a05
+    - gate_north_779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    - gate_east_ad27a7ed-130d-4ced-9bbb-31d899d07d88
+    - gate_west_fd17064a-f860-4229-b005-d48678335a05
+    DesignerNote: "\u51B0\u96D5\u5E7F\u573A\xB7\u5730\u4E0B\u9690\u7A74 [F=-1]"
+    EditorPosition: {x: 300, y: -180}
+  - RoomID: f708d2a4-96ea-4942-b665-76ababc6943c
+    NodeType: 8
+    GateIDs:
+    - gate_south_f708d2a4-96ea-4942-b665-76ababc6943c
+    - gate_north_3782df51-4579-42d2-9f1d-a02ec9b2276d
+    - gate_west_f708d2a4-96ea-4942-b665-76ababc6943c
+    DesignerNote: "\u96EA\u539F\xB7\u53EF\u9009\u63A2\u7D22\u89D2\u843D"
+    EditorPosition: {x: 460, y: -160}
+  - RoomID: b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    NodeType: 2
+    GateIDs:
+    - gate_east_b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    - gate_west_3782df51-4579-42d2-9f1d-a02ec9b2276d
+    - gate_south_ad27a7ed-130d-4ced-9bbb-31d899d07d88
+    - gate_north_05eb91e4-a726-4f52-99fb-6852fe400a54
+    - gate_east_1a599a51-511e-4973-a2a8-03983a780e2e
+    - gate_north_b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    - gate_south_b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    - gate_west_b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    DesignerNote: "\u89C9\u9192\u6218\u573A\xB7\u4E3B\u7ADE\u6280\u573A"
+    EditorPosition: {x: 580, y: -60}
+  - RoomID: ad27a7ed-130d-4ced-9bbb-31d899d07d88
+    NodeType: 0
+    GateIDs:
+    - gate_east_ad27a7ed-130d-4ced-9bbb-31d899d07d88
+    - gate_south_ad27a7ed-130d-4ced-9bbb-31d899d07d88
+    - gate_north_b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    - gate_west_fd17064a-f860-4229-b005-d48678335a05
+    DesignerNote: "\u89C9\u9192\u6218\u573A\xB7\u4FA7\u8DEF"
+    EditorPosition: {x: 580, y: -180}
+  - RoomID: 05eb91e4-a726-4f52-99fb-6852fe400a54
+    NodeType: 0
+    GateIDs:
+    - gate_north_05eb91e4-a726-4f52-99fb-6852fe400a54
+    - gate_south_b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    DesignerNote: "\u89C9\u9192\u6218\u573A\xB7\u4E0A\u5C42\u89C2\u666F\u53F0 [F=1]"
+    EditorPosition: {x: 620, y: 20}
+  - RoomID: 1a599a51-511e-4973-a2a8-03983a780e2e
+    NodeType: 0
+    GateIDs:
+    - gate_east_1a599a51-511e-4973-a2a8-03983a780e2e
+    - gate_west_b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    - gate_north_35d649a6-0391-4ac6-ac04-9bb2dce7e054
+    - gate_east_1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    - gate_south_1a599a51-511e-4973-a2a8-03983a780e2e
+    - gate_west_1a599a51-511e-4973-a2a8-03983a780e2e
+    DesignerNote: "\u97F3\u53C9\u6797\xB7\u4E2D\u5C42\u4E3B\u8DEF"
+    EditorPosition: {x: 740, y: -60}
+  - RoomID: 35d649a6-0391-4ac6-ac04-9bb2dce7e054
+    NodeType: 0
+    GateIDs:
+    - gate_north_35d649a6-0391-4ac6-ac04-9bb2dce7e054
+    - gate_south_1a599a51-511e-4973-a2a8-03983a780e2e
+    DesignerNote: "\u97F3\u53C9\u6797\xB7\u4E0A\u5C42\u6811\u51A0 [F=1]"
+    EditorPosition: {x: 740, y: 40}
+  - RoomID: 1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    NodeType: 8
+    GateIDs:
+    - gate_east_1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    - gate_west_1a599a51-511e-4973-a2a8-03983a780e2e
+    - gate_south_4cbcfa30-796a-42fd-9dc4-7a8f1d0b453c
+    - gate_south_7683010b-81d3-4c51-a891-9604de7a618d
+    - gate_north_1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    DesignerNote: "\u82B1\u56ED\xB7\u5B89\u5168\u533A"
+    EditorPosition: {x: 880, y: -80}
+  - RoomID: 4cbcfa30-796a-42fd-9dc4-7a8f1d0b453c
+    NodeType: 5
+    GateIDs:
+    - gate_south_4cbcfa30-796a-42fd-9dc4-7a8f1d0b453c
+    - gate_north_1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    - gate_west_f708d2a4-96ea-4942-b665-76ababc6943c
+    DesignerNote: "\u97F3\u53C9\u6797\xB7\u6377\u5F84\u60AC\u5D16"
+    EditorPosition: {x: 860, y: -180}
+  - RoomID: 9311e4fa-1a0c-48de-a82f-767c62a84a08
+    NodeType: 0
+    GateIDs:
+    - gate_south_9311e4fa-1a0c-48de-a82f-767c62a84a08
+    - gate_north_f3c93282-d5c8-4ab6-9812-fa6054ede303
+    - gate_east_ba63b2bf-5694-4d2b-ae98-75fc8fb9f338
+    - gate_south_cc6ba068-5ed8-45de-be84-d3e979fc58a5
+    - gate_west_9311e4fa-1a0c-48de-a82f-767c62a84a08
+    - gate_north_9311e4fa-1a0c-48de-a82f-767c62a84a08
+    DesignerNote: "\u6218\u540E\u4F59\u6CE2\xB7\u788E\u7247\u68C0\u67E5"
+    EditorPosition: {x: 140, y: -280}
+  - RoomID: ba63b2bf-5694-4d2b-ae98-75fc8fb9f338
+    NodeType: 8
+    GateIDs:
+    - gate_east_ba63b2bf-5694-4d2b-ae98-75fc8fb9f338
+    - gate_west_9311e4fa-1a0c-48de-a82f-767c62a84a08
+    - gate_east_7683010b-81d3-4c51-a891-9604de7a618d
+    - gate_west_ba63b2bf-5694-4d2b-ae98-75fc8fb9f338
+    DesignerNote: "\u6218\u540E\u4F59\u6CE2\xB7\u9053\u5FB7\u9009\u62E9"
+    EditorPosition: {x: 280, y: -280}
+  - RoomID: cc6ba068-5ed8-45de-be84-d3e979fc58a5
+    NodeType: 0
+    GateIDs:
+    - gate_south_cc6ba068-5ed8-45de-be84-d3e979fc58a5
+    - gate_north_9311e4fa-1a0c-48de-a82f-767c62a84a08
+    DesignerNote: "\u6218\u540E\u4F59\u6CE2\xB7\u652F\u7EBF\u788E\u7247\u5BC6\u5BA4
+      [F=-1]"
+    EditorPosition: {x: 140, y: -380}
+  - RoomID: 7683010b-81d3-4c51-a891-9604de7a618d
+    NodeType: 0
+    GateIDs:
+    - gate_south_7683010b-81d3-4c51-a891-9604de7a618d
+    - gate_east_7683010b-81d3-4c51-a891-9604de7a618d
+    - gate_west_ba63b2bf-5694-4d2b-ae98-75fc8fb9f338
+    - gate_east_2627414d-c9c0-49a3-a21b-7026e0e306aa
+    - gate_north_1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    - gate_west_7683010b-81d3-4c51-a891-9604de7a618d
+    DesignerNote: "\u4E0B\u884C\u901A\u9053\xB7\u7BA1\u58C1\u8D70\u5ECA"
+    EditorPosition: {x: 400, y: -280}
+  - RoomID: 2627414d-c9c0-49a3-a21b-7026e0e306aa
+    NodeType: 2
+    GateIDs:
+    - gate_east_2627414d-c9c0-49a3-a21b-7026e0e306aa
+    - gate_west_7683010b-81d3-4c51-a891-9604de7a618d
+    - gate_east_c6025efe-d59d-4a2e-ab39-ca45c4a8a648
+    - gate_west_2627414d-c9c0-49a3-a21b-7026e0e306aa
+    DesignerNote: "\u9996\u68F1\u955C\xB7\u7ADE\u6280\u573A"
+    EditorPosition: {x: 540, y: -280}
+  - RoomID: c6025efe-d59d-4a2e-ab39-ca45c4a8a648
+    NodeType: 8
+    GateIDs:
+    - gate_east_c6025efe-d59d-4a2e-ab39-ca45c4a8a648
+    - gate_west_2627414d-c9c0-49a3-a21b-7026e0e306aa
+    - gate_east_a50d7ba8-2fb6-468c-bccc-59b554dc92bc
+    - gate_west_c6025efe-d59d-4a2e-ab39-ca45c4a8a648
+    DesignerNote: "\u7F15\u62C9\u9996\u6B21\u76EE\u51FB\u70B9"
+    EditorPosition: {x: 700, y: -300}
+  - RoomID: a50d7ba8-2fb6-468c-bccc-59b554dc92bc
+    NodeType: 8
+    GateIDs:
+    - gate_east_a50d7ba8-2fb6-468c-bccc-59b554dc92bc
+    - gate_west_c6025efe-d59d-4a2e-ab39-ca45c4a8a648
+    - gate_east_1d4b5c5d-adc5-41e1-995d-20ef31114356
+    - gate_west_a50d7ba8-2fb6-468c-bccc-59b554dc92bc
+    DesignerNote: "ACT1\u51FA\u53E3\xB7\u5CE1\u8C37\u5165\u53E3"
+    EditorPosition: {x: 820, y: -300}
+  - RoomID: 1d4b5c5d-adc5-41e1-995d-20ef31114356
+    NodeType: 0
+    GateIDs:
+    - gate_east_1d4b5c5d-adc5-41e1-995d-20ef31114356
+    - gate_west_a50d7ba8-2fb6-468c-bccc-59b554dc92bc
+    - gate_north_af5d7fa5-d7b1-463c-a6ac-df396de942ea
+    - gate_east_daef1525-de58-49f5-b811-18387e5da1e8
+    - gate_south_1d4b5c5d-adc5-41e1-995d-20ef31114356
+    - gate_west_1d4b5c5d-adc5-41e1-995d-20ef31114356
+    DesignerNote: "\u7BA1\u98CE\u7434\u8D70\u5ECA\xB7\u5165\u53E3"
+    EditorPosition: {x: 920, y: -300}
+  - RoomID: af5d7fa5-d7b1-463c-a6ac-df396de942ea
+    NodeType: 0
+    GateIDs:
+    - gate_north_af5d7fa5-d7b1-463c-a6ac-df396de942ea
+    - gate_south_1d4b5c5d-adc5-41e1-995d-20ef31114356
+    - gate_east_54175eab-ed46-4a6e-ae9d-b8bfb7882b3f
+    - gate_west_af5d7fa5-d7b1-463c-a6ac-df396de942ea
+    DesignerNote: "\u7BA1\u98CE\u7434\u8D70\u5ECA\xB7\u4E0A\u5C42\u5E73\u53F0 [F=1]"
+    EditorPosition: {x: 940, y: -200}
+  - RoomID: 54175eab-ed46-4a6e-ae9d-b8bfb7882b3f
+    NodeType: 8
+    GateIDs:
+    - gate_east_54175eab-ed46-4a6e-ae9d-b8bfb7882b3f
+    - gate_west_af5d7fa5-d7b1-463c-a6ac-df396de942ea
+    DesignerNote: "\u7BA1\u98CE\u7434\u8D70\u5ECA\xB7\u4E0A\u5C42\u79D8\u5BC6 [F=1]"
+    EditorPosition: {x: 1060, y: -200}
+  - RoomID: daef1525-de58-49f5-b811-18387e5da1e8
+    NodeType: 8
+    GateIDs:
+    - gate_east_daef1525-de58-49f5-b811-18387e5da1e8
+    - gate_west_1d4b5c5d-adc5-41e1-995d-20ef31114356
+    - gate_south_2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    - gate_north_daef1525-de58-49f5-b811-18387e5da1e8
+    DesignerNote: "\u7BA1\u98CE\u7434\u8D70\u5ECA\xB7\u7F15\u62C9\u8FDC\u7A0B\u63F4\u52A9"
+    EditorPosition: {x: 1080, y: -300}
+  - RoomID: 2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    NodeType: 0
+    GateIDs:
+    - gate_south_2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    - gate_north_daef1525-de58-49f5-b811-18387e5da1e8
+    - gate_east_854307ad-8560-4593-a772-9700b1d5815b
+    - gate_south_c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    - gate_west_2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    - gate_north_2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    DesignerNote: "\u58F0\u4E4B\u8D70\u5ECA"
+    EditorPosition: {x: 1080, y: -400}
+  - RoomID: 854307ad-8560-4593-a772-9700b1d5815b
+    NodeType: 8
+    GateIDs:
+    - gate_east_854307ad-8560-4593-a772-9700b1d5815b
+    - gate_west_2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    - gate_east_76c9ecc7-70cc-4341-990b-43dc00acf256
+    - gate_west_854307ad-8560-4593-a772-9700b1d5815b
+    DesignerNote: "\u6D9F\u6F2A\u5956\u52B1\xB7\u5BC6\u5BA4"
+    EditorPosition: {x: 1240, y: -400}
+  - RoomID: 76c9ecc7-70cc-4341-990b-43dc00acf256
+    NodeType: 8
+    GateIDs:
+    - gate_east_76c9ecc7-70cc-4341-990b-43dc00acf256
+    - gate_west_854307ad-8560-4593-a772-9700b1d5815b
+    - gate_south_fadc29b3-70d1-40eb-8113-2f6b89e1e12d
+    - gate_north_76c9ecc7-70cc-4341-990b-43dc00acf256
+    DesignerNote: "\u7F15\u62C9\u9996\u6B21\u9762\u5BF9\u9762"
+    EditorPosition: {x: 1360, y: -400}
+  - RoomID: fadc29b3-70d1-40eb-8113-2f6b89e1e12d
+    NodeType: 0
+    GateIDs:
+    - gate_south_fadc29b3-70d1-40eb-8113-2f6b89e1e12d
+    - gate_north_76c9ecc7-70cc-4341-990b-43dc00acf256
+    - gate_west_c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    DesignerNote: "\u6D9F\u6F2A\u83B7\u53D6\xB7\u9690\u85CF\u8DCC\u843D\u70B9"
+    EditorPosition: {x: 1360, y: -500}
+  - RoomID: c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    NodeType: 0
+    GateIDs:
+    - gate_south_c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    - gate_west_c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    - gate_north_2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    - gate_south_d9c66958-d400-4774-acff-278ef8299e83
+    - gate_east_8b872793-1963-4cd7-94a6-fadb915ac949
+    - gate_north_c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    DesignerNote: "\u53F9\u606F\u6DF1\u8C37\xB7\u5165\u53E3"
+    EditorPosition: {x: 1180, y: -500}
+  - RoomID: d9c66958-d400-4774-acff-278ef8299e83
+    NodeType: 2
+    GateIDs:
+    - gate_south_d9c66958-d400-4774-acff-278ef8299e83
+    - gate_north_c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    - gate_east_a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    - gate_west_d9c66958-d400-4774-acff-278ef8299e83
+    DesignerNote: "\u6D9F\u6F2A\u9A8C\u8BC1\xB7\u6218\u6597\u5E94\u7528"
+    EditorPosition: {x: 1180, y: -600}
+  - RoomID: a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    NodeType: 0
+    GateIDs:
+    - gate_east_a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    - gate_west_d9c66958-d400-4774-acff-278ef8299e83
+    - gate_north_8b872793-1963-4cd7-94a6-fadb915ac949
+    - gate_east_6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    - gate_south_a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    - gate_west_a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    DesignerNote: "\u6D9F\u6F2A\u9A8C\u8BC1\xB7\u56DE\u97F3\u8DEF"
+    EditorPosition: {x: 1340, y: -600}
+  - RoomID: 8b872793-1963-4cd7-94a6-fadb915ac949
+    NodeType: 8
+    GateIDs:
+    - gate_east_8b872793-1963-4cd7-94a6-fadb915ac949
+    - gate_north_8b872793-1963-4cd7-94a6-fadb915ac949
+    - gate_west_c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    - gate_south_a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    - gate_east_6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    - gate_west_8b872793-1963-4cd7-94a6-fadb915ac949
+    DesignerNote: "\u4E16\u754C\u65F6\u949F\u9884\u5146\xB7\u9000\u6F6E\u70B9"
+    EditorPosition: {x: 1340, y: -500}
+  - RoomID: 6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    NodeType: 8
+    GateIDs:
+    - gate_east_6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    - gate_west_8b872793-1963-4cd7-94a6-fadb915ac949
+    - gate_west_a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    - gate_south_bcb82d9d-c840-46db-8f88-465939a6b327
+    - gate_north_6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    DesignerNote: "\u9891\u7387\u6807\u8BB0\u70B9"
+    EditorPosition: {x: 1480, y: -550}
+  - RoomID: bcb82d9d-c840-46db-8f88-465939a6b327
+    NodeType: 0
+    GateIDs:
+    - gate_south_bcb82d9d-c840-46db-8f88-465939a6b327
+    - gate_north_6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    - gate_east_6786a9a0-5a75-4122-9f94-8d876fc42bf3
+    - gate_west_bcb82d9d-c840-46db-8f88-465939a6b327
+    DesignerNote: "\u53F9\u606F\u5899\xB7\u524D\u5BA4"
+    EditorPosition: {x: 1480, y: -640}
+  - RoomID: 6786a9a0-5a75-4122-9f94-8d876fc42bf3
+    NodeType: 9
+    GateIDs:
+    - gate_east_6786a9a0-5a75-4122-9f94-8d876fc42bf3
+    - gate_west_bcb82d9d-c840-46db-8f88-465939a6b327
+    - gate_east_bb62e40f-9591-4cdd-b33e-9321c0e4059f
+    - gate_west_6786a9a0-5a75-4122-9f94-8d876fc42bf3
+    DesignerNote: "\u53F9\u606F\u5899\xB7Boss\u7ADE\u6280\u573A"
+    EditorPosition: {x: 1620, y: -620}
+  - RoomID: bb62e40f-9591-4cdd-b33e-9321c0e4059f
+    NodeType: 8
+    GateIDs:
+    - gate_east_bb62e40f-9591-4cdd-b33e-9321c0e4059f
+    - gate_west_6786a9a0-5a75-4122-9f94-8d876fc42bf3
+    - gate_east_fc8006bd-d7d0-402a-a026-b207ed1437c1
+    - gate_west_bb62e40f-9591-4cdd-b33e-9321c0e4059f
+    DesignerNote: "\u53F9\u606F\u5899\xB7Boss\u540E\u5956\u52B1"
+    EditorPosition: {x: 1840, y: -640}
+  - RoomID: fc8006bd-d7d0-402a-a026-b207ed1437c1
+    NodeType: 6
+    GateIDs:
+    - gate_east_fc8006bd-d7d0-402a-a026-b207ed1437c1
+    - gate_west_bb62e40f-9591-4cdd-b33e-9321c0e4059f
+    DesignerNote: "ACT2\u51FA\u53E3\xB7\u67A2\u7EBD\u5165\u53E3"
+    EditorPosition: {x: 1980, y: -660}
+  - RoomID: ROOM_039
+    NodeType: 0
+    GateIDs:
+    - gate_west_in
+    - gate_east_out
+    DesignerNote: New Room
+    EditorPosition: {x: 705.5, y: 479}
+  - RoomID: ROOM_040
+    NodeType: 0
+    GateIDs:
+    - gate_west_in
+    - gate_east_out
+    DesignerNote: New Room
+    EditorPosition: {x: 743.5, y: 462}
+  _connections:
+  - FromRoomID: 6940097d-e419-4f03-85b3-2d6c6c28a6ee
+    FromGateID: gate_east_326e4782-360b-47f0-bb5d-7f7c146b811c
+    ToRoomID: 326e4782-360b-47f0-bb5d-7f7c146b811c
+    ToGateID: gate_west_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 326e4782-360b-47f0-bb5d-7f7c146b811c
+    FromGateID: gate_west_return
+    ToRoomID: 6940097d-e419-4f03-85b3-2d6c6c28a6ee
+    ToGateID: gate_east_326e4782-360b-47f0-bb5d-7f7c146b811c
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 6940097d-e419-4f03-85b3-2d6c6c28a6ee
+    FromGateID: gate_south_f3c93282-d5c8-4ab6-9812-fa6054ede303
+    ToRoomID: f3c93282-d5c8-4ab6-9812-fa6054ede303
+    ToGateID: gate_north_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: f3c93282-d5c8-4ab6-9812-fa6054ede303
+    FromGateID: gate_north_return
+    ToRoomID: 6940097d-e419-4f03-85b3-2d6c6c28a6ee
+    ToGateID: gate_south_f3c93282-d5c8-4ab6-9812-fa6054ede303
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 326e4782-360b-47f0-bb5d-7f7c146b811c
+    FromGateID: gate_west_6940097d-e419-4f03-85b3-2d6c6c28a6ee
+    ToRoomID: 6940097d-e419-4f03-85b3-2d6c6c28a6ee
+    ToGateID: gate_east_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 6940097d-e419-4f03-85b3-2d6c6c28a6ee
+    FromGateID: gate_east_return
+    ToRoomID: 326e4782-360b-47f0-bb5d-7f7c146b811c
+    ToGateID: gate_west_6940097d-e419-4f03-85b3-2d6c6c28a6ee
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 326e4782-360b-47f0-bb5d-7f7c146b811c
+    FromGateID: gate_east_779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    ToRoomID: 779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    ToGateID: gate_west_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    FromGateID: gate_west_return
+    ToRoomID: 326e4782-360b-47f0-bb5d-7f7c146b811c
+    ToGateID: gate_east_779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: f3c93282-d5c8-4ab6-9812-fa6054ede303
+    FromGateID: gate_north_6940097d-e419-4f03-85b3-2d6c6c28a6ee
+    ToRoomID: 6940097d-e419-4f03-85b3-2d6c6c28a6ee
+    ToGateID: gate_south_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 6940097d-e419-4f03-85b3-2d6c6c28a6ee
+    FromGateID: gate_south_return
+    ToRoomID: f3c93282-d5c8-4ab6-9812-fa6054ede303
+    ToGateID: gate_north_6940097d-e419-4f03-85b3-2d6c6c28a6ee
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: f3c93282-d5c8-4ab6-9812-fa6054ede303
+    FromGateID: gate_south_9311e4fa-1a0c-48de-a82f-767c62a84a08
+    ToRoomID: 9311e4fa-1a0c-48de-a82f-767c62a84a08
+    ToGateID: gate_north_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 9311e4fa-1a0c-48de-a82f-767c62a84a08
+    FromGateID: gate_north_return
+    ToRoomID: f3c93282-d5c8-4ab6-9812-fa6054ede303
+    ToGateID: gate_south_9311e4fa-1a0c-48de-a82f-767c62a84a08
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    FromGateID: gate_west_326e4782-360b-47f0-bb5d-7f7c146b811c
+    ToRoomID: 326e4782-360b-47f0-bb5d-7f7c146b811c
+    ToGateID: gate_east_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 326e4782-360b-47f0-bb5d-7f7c146b811c
+    FromGateID: gate_east_return
+    ToRoomID: 779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    ToGateID: gate_west_326e4782-360b-47f0-bb5d-7f7c146b811c
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    FromGateID: gate_east_3782df51-4579-42d2-9f1d-a02ec9b2276d
+    ToRoomID: 3782df51-4579-42d2-9f1d-a02ec9b2276d
+    ToGateID: gate_west_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 3782df51-4579-42d2-9f1d-a02ec9b2276d
+    FromGateID: gate_west_return
+    ToRoomID: 779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    ToGateID: gate_east_3782df51-4579-42d2-9f1d-a02ec9b2276d
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    FromGateID: gate_south_fd17064a-f860-4229-b005-d48678335a05
+    ToRoomID: fd17064a-f860-4229-b005-d48678335a05
+    ToGateID: gate_north_return
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: 
+  - FromRoomID: fd17064a-f860-4229-b005-d48678335a05
+    FromGateID: gate_north_return
+    ToRoomID: 779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    ToGateID: gate_south_fd17064a-f860-4229-b005-d48678335a05
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 3782df51-4579-42d2-9f1d-a02ec9b2276d
+    FromGateID: gate_west_779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    ToRoomID: 779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    ToGateID: gate_east_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    FromGateID: gate_east_return
+    ToRoomID: 3782df51-4579-42d2-9f1d-a02ec9b2276d
+    ToGateID: gate_west_779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 3782df51-4579-42d2-9f1d-a02ec9b2276d
+    FromGateID: gate_south_f708d2a4-96ea-4942-b665-76ababc6943c
+    ToRoomID: f708d2a4-96ea-4942-b665-76ababc6943c
+    ToGateID: gate_north_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: f708d2a4-96ea-4942-b665-76ababc6943c
+    FromGateID: gate_north_return
+    ToRoomID: 3782df51-4579-42d2-9f1d-a02ec9b2276d
+    ToGateID: gate_south_f708d2a4-96ea-4942-b665-76ababc6943c
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 3782df51-4579-42d2-9f1d-a02ec9b2276d
+    FromGateID: gate_east_b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    ToRoomID: b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    ToGateID: gate_west_return
+    Type: 3
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    FromGateID: gate_west_return
+    ToRoomID: 3782df51-4579-42d2-9f1d-a02ec9b2276d
+    ToGateID: gate_east_b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    Type: 3
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: fd17064a-f860-4229-b005-d48678335a05
+    FromGateID: gate_north_779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    ToRoomID: 779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    ToGateID: gate_south_return
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: 
+  - FromRoomID: 779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    FromGateID: gate_south_return
+    ToRoomID: fd17064a-f860-4229-b005-d48678335a05
+    ToGateID: gate_north_779d8d28-0975-4c98-88c1-d6dcb37edcaf
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: (auto-reverse)
+  - FromRoomID: fd17064a-f860-4229-b005-d48678335a05
+    FromGateID: gate_east_ad27a7ed-130d-4ced-9bbb-31d899d07d88
+    ToRoomID: ad27a7ed-130d-4ced-9bbb-31d899d07d88
+    ToGateID: gate_west_return
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: 
+  - FromRoomID: ad27a7ed-130d-4ced-9bbb-31d899d07d88
+    FromGateID: gate_west_return
+    ToRoomID: fd17064a-f860-4229-b005-d48678335a05
+    ToGateID: gate_east_ad27a7ed-130d-4ced-9bbb-31d899d07d88
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: (auto-reverse)
+  - FromRoomID: f708d2a4-96ea-4942-b665-76ababc6943c
+    FromGateID: gate_north_3782df51-4579-42d2-9f1d-a02ec9b2276d
+    ToRoomID: 3782df51-4579-42d2-9f1d-a02ec9b2276d
+    ToGateID: gate_south_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 3782df51-4579-42d2-9f1d-a02ec9b2276d
+    FromGateID: gate_south_return
+    ToRoomID: f708d2a4-96ea-4942-b665-76ababc6943c
+    ToGateID: gate_north_3782df51-4579-42d2-9f1d-a02ec9b2276d
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    FromGateID: gate_west_3782df51-4579-42d2-9f1d-a02ec9b2276d
+    ToRoomID: 3782df51-4579-42d2-9f1d-a02ec9b2276d
+    ToGateID: gate_east_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 3782df51-4579-42d2-9f1d-a02ec9b2276d
+    FromGateID: gate_east_return
+    ToRoomID: b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    ToGateID: gate_west_3782df51-4579-42d2-9f1d-a02ec9b2276d
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    FromGateID: gate_south_ad27a7ed-130d-4ced-9bbb-31d899d07d88
+    ToRoomID: ad27a7ed-130d-4ced-9bbb-31d899d07d88
+    ToGateID: gate_north_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: ad27a7ed-130d-4ced-9bbb-31d899d07d88
+    FromGateID: gate_north_return
+    ToRoomID: b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    ToGateID: gate_south_ad27a7ed-130d-4ced-9bbb-31d899d07d88
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    FromGateID: gate_north_05eb91e4-a726-4f52-99fb-6852fe400a54
+    ToRoomID: 05eb91e4-a726-4f52-99fb-6852fe400a54
+    ToGateID: gate_south_return
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: 
+  - FromRoomID: 05eb91e4-a726-4f52-99fb-6852fe400a54
+    FromGateID: gate_south_return
+    ToRoomID: b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    ToGateID: gate_north_05eb91e4-a726-4f52-99fb-6852fe400a54
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: (auto-reverse)
+  - FromRoomID: b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    FromGateID: gate_east_1a599a51-511e-4973-a2a8-03983a780e2e
+    ToRoomID: 1a599a51-511e-4973-a2a8-03983a780e2e
+    ToGateID: gate_west_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 1a599a51-511e-4973-a2a8-03983a780e2e
+    FromGateID: gate_west_return
+    ToRoomID: b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    ToGateID: gate_east_1a599a51-511e-4973-a2a8-03983a780e2e
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: ad27a7ed-130d-4ced-9bbb-31d899d07d88
+    FromGateID: gate_north_b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    ToRoomID: b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    ToGateID: gate_south_return
+    Type: 3
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    FromGateID: gate_south_return
+    ToRoomID: ad27a7ed-130d-4ced-9bbb-31d899d07d88
+    ToGateID: gate_north_b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    Type: 3
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: ad27a7ed-130d-4ced-9bbb-31d899d07d88
+    FromGateID: gate_west_fd17064a-f860-4229-b005-d48678335a05
+    ToRoomID: fd17064a-f860-4229-b005-d48678335a05
+    ToGateID: gate_east_return
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: 
+  - FromRoomID: fd17064a-f860-4229-b005-d48678335a05
+    FromGateID: gate_east_return
+    ToRoomID: ad27a7ed-130d-4ced-9bbb-31d899d07d88
+    ToGateID: gate_west_fd17064a-f860-4229-b005-d48678335a05
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 05eb91e4-a726-4f52-99fb-6852fe400a54
+    FromGateID: gate_south_b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    ToRoomID: b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    ToGateID: gate_north_return
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: 
+  - FromRoomID: b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    FromGateID: gate_north_return
+    ToRoomID: 05eb91e4-a726-4f52-99fb-6852fe400a54
+    ToGateID: gate_south_b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 1a599a51-511e-4973-a2a8-03983a780e2e
+    FromGateID: gate_west_b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    ToRoomID: b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    ToGateID: gate_east_return
+    Type: 3
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    FromGateID: gate_east_return
+    ToRoomID: 1a599a51-511e-4973-a2a8-03983a780e2e
+    ToGateID: gate_west_b641b47e-bd3f-43b6-a4b8-9ac5731e7d50
+    Type: 3
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 1a599a51-511e-4973-a2a8-03983a780e2e
+    FromGateID: gate_north_35d649a6-0391-4ac6-ac04-9bb2dce7e054
+    ToRoomID: 35d649a6-0391-4ac6-ac04-9bb2dce7e054
+    ToGateID: gate_south_return
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: 
+  - FromRoomID: 35d649a6-0391-4ac6-ac04-9bb2dce7e054
+    FromGateID: gate_south_return
+    ToRoomID: 1a599a51-511e-4973-a2a8-03983a780e2e
+    ToGateID: gate_north_35d649a6-0391-4ac6-ac04-9bb2dce7e054
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 1a599a51-511e-4973-a2a8-03983a780e2e
+    FromGateID: gate_east_1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    ToRoomID: 1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    ToGateID: gate_west_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    FromGateID: gate_west_return
+    ToRoomID: 1a599a51-511e-4973-a2a8-03983a780e2e
+    ToGateID: gate_east_1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 35d649a6-0391-4ac6-ac04-9bb2dce7e054
+    FromGateID: gate_south_1a599a51-511e-4973-a2a8-03983a780e2e
+    ToRoomID: 1a599a51-511e-4973-a2a8-03983a780e2e
+    ToGateID: gate_north_return
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: 
+  - FromRoomID: 1a599a51-511e-4973-a2a8-03983a780e2e
+    FromGateID: gate_north_return
+    ToRoomID: 35d649a6-0391-4ac6-ac04-9bb2dce7e054
+    ToGateID: gate_south_1a599a51-511e-4973-a2a8-03983a780e2e
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    FromGateID: gate_west_1a599a51-511e-4973-a2a8-03983a780e2e
+    ToRoomID: 1a599a51-511e-4973-a2a8-03983a780e2e
+    ToGateID: gate_east_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 1a599a51-511e-4973-a2a8-03983a780e2e
+    FromGateID: gate_east_return
+    ToRoomID: 1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    ToGateID: gate_west_1a599a51-511e-4973-a2a8-03983a780e2e
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    FromGateID: gate_south_4cbcfa30-796a-42fd-9dc4-7a8f1d0b453c
+    ToRoomID: 4cbcfa30-796a-42fd-9dc4-7a8f1d0b453c
+    ToGateID: gate_north_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 4cbcfa30-796a-42fd-9dc4-7a8f1d0b453c
+    FromGateID: gate_north_return
+    ToRoomID: 1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    ToGateID: gate_south_4cbcfa30-796a-42fd-9dc4-7a8f1d0b453c
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    FromGateID: gate_south_7683010b-81d3-4c51-a891-9604de7a618d
+    ToRoomID: 7683010b-81d3-4c51-a891-9604de7a618d
+    ToGateID: gate_north_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 7683010b-81d3-4c51-a891-9604de7a618d
+    FromGateID: gate_north_return
+    ToRoomID: 1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    ToGateID: gate_south_7683010b-81d3-4c51-a891-9604de7a618d
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 4cbcfa30-796a-42fd-9dc4-7a8f1d0b453c
+    FromGateID: gate_north_1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    ToRoomID: 1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    ToGateID: gate_south_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    FromGateID: gate_south_return
+    ToRoomID: 4cbcfa30-796a-42fd-9dc4-7a8f1d0b453c
+    ToGateID: gate_north_1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 4cbcfa30-796a-42fd-9dc4-7a8f1d0b453c
+    FromGateID: gate_west_f708d2a4-96ea-4942-b665-76ababc6943c
+    ToRoomID: f708d2a4-96ea-4942-b665-76ababc6943c
+    ToGateID: gate_east_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: f708d2a4-96ea-4942-b665-76ababc6943c
+    FromGateID: gate_east_return
+    ToRoomID: 4cbcfa30-796a-42fd-9dc4-7a8f1d0b453c
+    ToGateID: gate_west_f708d2a4-96ea-4942-b665-76ababc6943c
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 9311e4fa-1a0c-48de-a82f-767c62a84a08
+    FromGateID: gate_north_f3c93282-d5c8-4ab6-9812-fa6054ede303
+    ToRoomID: f3c93282-d5c8-4ab6-9812-fa6054ede303
+    ToGateID: gate_south_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: f3c93282-d5c8-4ab6-9812-fa6054ede303
+    FromGateID: gate_south_return
+    ToRoomID: 9311e4fa-1a0c-48de-a82f-767c62a84a08
+    ToGateID: gate_north_f3c93282-d5c8-4ab6-9812-fa6054ede303
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 9311e4fa-1a0c-48de-a82f-767c62a84a08
+    FromGateID: gate_east_ba63b2bf-5694-4d2b-ae98-75fc8fb9f338
+    ToRoomID: ba63b2bf-5694-4d2b-ae98-75fc8fb9f338
+    ToGateID: gate_west_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: ba63b2bf-5694-4d2b-ae98-75fc8fb9f338
+    FromGateID: gate_west_return
+    ToRoomID: 9311e4fa-1a0c-48de-a82f-767c62a84a08
+    ToGateID: gate_east_ba63b2bf-5694-4d2b-ae98-75fc8fb9f338
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 9311e4fa-1a0c-48de-a82f-767c62a84a08
+    FromGateID: gate_south_cc6ba068-5ed8-45de-be84-d3e979fc58a5
+    ToRoomID: cc6ba068-5ed8-45de-be84-d3e979fc58a5
+    ToGateID: gate_north_return
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: 
+  - FromRoomID: cc6ba068-5ed8-45de-be84-d3e979fc58a5
+    FromGateID: gate_north_return
+    ToRoomID: 9311e4fa-1a0c-48de-a82f-767c62a84a08
+    ToGateID: gate_south_cc6ba068-5ed8-45de-be84-d3e979fc58a5
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: (auto-reverse)
+  - FromRoomID: ba63b2bf-5694-4d2b-ae98-75fc8fb9f338
+    FromGateID: gate_west_9311e4fa-1a0c-48de-a82f-767c62a84a08
+    ToRoomID: 9311e4fa-1a0c-48de-a82f-767c62a84a08
+    ToGateID: gate_east_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 9311e4fa-1a0c-48de-a82f-767c62a84a08
+    FromGateID: gate_east_return
+    ToRoomID: ba63b2bf-5694-4d2b-ae98-75fc8fb9f338
+    ToGateID: gate_west_9311e4fa-1a0c-48de-a82f-767c62a84a08
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: ba63b2bf-5694-4d2b-ae98-75fc8fb9f338
+    FromGateID: gate_east_7683010b-81d3-4c51-a891-9604de7a618d
+    ToRoomID: 7683010b-81d3-4c51-a891-9604de7a618d
+    ToGateID: gate_west_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 7683010b-81d3-4c51-a891-9604de7a618d
+    FromGateID: gate_west_return
+    ToRoomID: ba63b2bf-5694-4d2b-ae98-75fc8fb9f338
+    ToGateID: gate_east_7683010b-81d3-4c51-a891-9604de7a618d
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: cc6ba068-5ed8-45de-be84-d3e979fc58a5
+    FromGateID: gate_north_9311e4fa-1a0c-48de-a82f-767c62a84a08
+    ToRoomID: 9311e4fa-1a0c-48de-a82f-767c62a84a08
+    ToGateID: gate_south_return
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: 
+  - FromRoomID: 9311e4fa-1a0c-48de-a82f-767c62a84a08
+    FromGateID: gate_south_return
+    ToRoomID: cc6ba068-5ed8-45de-be84-d3e979fc58a5
+    ToGateID: gate_north_9311e4fa-1a0c-48de-a82f-767c62a84a08
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 7683010b-81d3-4c51-a891-9604de7a618d
+    FromGateID: gate_west_ba63b2bf-5694-4d2b-ae98-75fc8fb9f338
+    ToRoomID: ba63b2bf-5694-4d2b-ae98-75fc8fb9f338
+    ToGateID: gate_east_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: ba63b2bf-5694-4d2b-ae98-75fc8fb9f338
+    FromGateID: gate_east_return
+    ToRoomID: 7683010b-81d3-4c51-a891-9604de7a618d
+    ToGateID: gate_west_ba63b2bf-5694-4d2b-ae98-75fc8fb9f338
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 7683010b-81d3-4c51-a891-9604de7a618d
+    FromGateID: gate_east_2627414d-c9c0-49a3-a21b-7026e0e306aa
+    ToRoomID: 2627414d-c9c0-49a3-a21b-7026e0e306aa
+    ToGateID: gate_west_return
+    Type: 3
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 2627414d-c9c0-49a3-a21b-7026e0e306aa
+    FromGateID: gate_west_return
+    ToRoomID: 7683010b-81d3-4c51-a891-9604de7a618d
+    ToGateID: gate_east_2627414d-c9c0-49a3-a21b-7026e0e306aa
+    Type: 3
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 7683010b-81d3-4c51-a891-9604de7a618d
+    FromGateID: gate_north_1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    ToRoomID: 1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    ToGateID: gate_south_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    FromGateID: gate_south_return
+    ToRoomID: 7683010b-81d3-4c51-a891-9604de7a618d
+    ToGateID: gate_north_1e568b13-ca9a-4e7a-9874-3b7ad1c19be6
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 2627414d-c9c0-49a3-a21b-7026e0e306aa
+    FromGateID: gate_west_7683010b-81d3-4c51-a891-9604de7a618d
+    ToRoomID: 7683010b-81d3-4c51-a891-9604de7a618d
+    ToGateID: gate_east_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 7683010b-81d3-4c51-a891-9604de7a618d
+    FromGateID: gate_east_return
+    ToRoomID: 2627414d-c9c0-49a3-a21b-7026e0e306aa
+    ToGateID: gate_west_7683010b-81d3-4c51-a891-9604de7a618d
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 2627414d-c9c0-49a3-a21b-7026e0e306aa
+    FromGateID: gate_east_c6025efe-d59d-4a2e-ab39-ca45c4a8a648
+    ToRoomID: c6025efe-d59d-4a2e-ab39-ca45c4a8a648
+    ToGateID: gate_west_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: c6025efe-d59d-4a2e-ab39-ca45c4a8a648
+    FromGateID: gate_west_return
+    ToRoomID: 2627414d-c9c0-49a3-a21b-7026e0e306aa
+    ToGateID: gate_east_c6025efe-d59d-4a2e-ab39-ca45c4a8a648
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: c6025efe-d59d-4a2e-ab39-ca45c4a8a648
+    FromGateID: gate_west_2627414d-c9c0-49a3-a21b-7026e0e306aa
+    ToRoomID: 2627414d-c9c0-49a3-a21b-7026e0e306aa
+    ToGateID: gate_east_return
+    Type: 3
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 2627414d-c9c0-49a3-a21b-7026e0e306aa
+    FromGateID: gate_east_return
+    ToRoomID: c6025efe-d59d-4a2e-ab39-ca45c4a8a648
+    ToGateID: gate_west_2627414d-c9c0-49a3-a21b-7026e0e306aa
+    Type: 3
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: c6025efe-d59d-4a2e-ab39-ca45c4a8a648
+    FromGateID: gate_east_a50d7ba8-2fb6-468c-bccc-59b554dc92bc
+    ToRoomID: a50d7ba8-2fb6-468c-bccc-59b554dc92bc
+    ToGateID: gate_west_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: a50d7ba8-2fb6-468c-bccc-59b554dc92bc
+    FromGateID: gate_west_return
+    ToRoomID: c6025efe-d59d-4a2e-ab39-ca45c4a8a648
+    ToGateID: gate_east_a50d7ba8-2fb6-468c-bccc-59b554dc92bc
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: a50d7ba8-2fb6-468c-bccc-59b554dc92bc
+    FromGateID: gate_west_c6025efe-d59d-4a2e-ab39-ca45c4a8a648
+    ToRoomID: c6025efe-d59d-4a2e-ab39-ca45c4a8a648
+    ToGateID: gate_east_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: c6025efe-d59d-4a2e-ab39-ca45c4a8a648
+    FromGateID: gate_east_return
+    ToRoomID: a50d7ba8-2fb6-468c-bccc-59b554dc92bc
+    ToGateID: gate_west_c6025efe-d59d-4a2e-ab39-ca45c4a8a648
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: a50d7ba8-2fb6-468c-bccc-59b554dc92bc
+    FromGateID: gate_east_1d4b5c5d-adc5-41e1-995d-20ef31114356
+    ToRoomID: 1d4b5c5d-adc5-41e1-995d-20ef31114356
+    ToGateID: gate_west_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 1d4b5c5d-adc5-41e1-995d-20ef31114356
+    FromGateID: gate_west_return
+    ToRoomID: a50d7ba8-2fb6-468c-bccc-59b554dc92bc
+    ToGateID: gate_east_1d4b5c5d-adc5-41e1-995d-20ef31114356
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 1d4b5c5d-adc5-41e1-995d-20ef31114356
+    FromGateID: gate_west_a50d7ba8-2fb6-468c-bccc-59b554dc92bc
+    ToRoomID: a50d7ba8-2fb6-468c-bccc-59b554dc92bc
+    ToGateID: gate_east_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: a50d7ba8-2fb6-468c-bccc-59b554dc92bc
+    FromGateID: gate_east_return
+    ToRoomID: 1d4b5c5d-adc5-41e1-995d-20ef31114356
+    ToGateID: gate_west_a50d7ba8-2fb6-468c-bccc-59b554dc92bc
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 1d4b5c5d-adc5-41e1-995d-20ef31114356
+    FromGateID: gate_north_af5d7fa5-d7b1-463c-a6ac-df396de942ea
+    ToRoomID: af5d7fa5-d7b1-463c-a6ac-df396de942ea
+    ToGateID: gate_south_return
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: 
+  - FromRoomID: af5d7fa5-d7b1-463c-a6ac-df396de942ea
+    FromGateID: gate_south_return
+    ToRoomID: 1d4b5c5d-adc5-41e1-995d-20ef31114356
+    ToGateID: gate_north_af5d7fa5-d7b1-463c-a6ac-df396de942ea
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 1d4b5c5d-adc5-41e1-995d-20ef31114356
+    FromGateID: gate_east_daef1525-de58-49f5-b811-18387e5da1e8
+    ToRoomID: daef1525-de58-49f5-b811-18387e5da1e8
+    ToGateID: gate_west_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: daef1525-de58-49f5-b811-18387e5da1e8
+    FromGateID: gate_west_return
+    ToRoomID: 1d4b5c5d-adc5-41e1-995d-20ef31114356
+    ToGateID: gate_east_daef1525-de58-49f5-b811-18387e5da1e8
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: af5d7fa5-d7b1-463c-a6ac-df396de942ea
+    FromGateID: gate_south_1d4b5c5d-adc5-41e1-995d-20ef31114356
+    ToRoomID: 1d4b5c5d-adc5-41e1-995d-20ef31114356
+    ToGateID: gate_north_return
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: 
+  - FromRoomID: 1d4b5c5d-adc5-41e1-995d-20ef31114356
+    FromGateID: gate_north_return
+    ToRoomID: af5d7fa5-d7b1-463c-a6ac-df396de942ea
+    ToGateID: gate_south_1d4b5c5d-adc5-41e1-995d-20ef31114356
+    Type: 4
+    IsLayerTransition: 1
+    DesignerNote: (auto-reverse)
+  - FromRoomID: af5d7fa5-d7b1-463c-a6ac-df396de942ea
+    FromGateID: gate_east_54175eab-ed46-4a6e-ae9d-b8bfb7882b3f
+    ToRoomID: 54175eab-ed46-4a6e-ae9d-b8bfb7882b3f
+    ToGateID: gate_west_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 54175eab-ed46-4a6e-ae9d-b8bfb7882b3f
+    FromGateID: gate_west_return
+    ToRoomID: af5d7fa5-d7b1-463c-a6ac-df396de942ea
+    ToGateID: gate_east_54175eab-ed46-4a6e-ae9d-b8bfb7882b3f
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 54175eab-ed46-4a6e-ae9d-b8bfb7882b3f
+    FromGateID: gate_west_af5d7fa5-d7b1-463c-a6ac-df396de942ea
+    ToRoomID: af5d7fa5-d7b1-463c-a6ac-df396de942ea
+    ToGateID: gate_east_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: af5d7fa5-d7b1-463c-a6ac-df396de942ea
+    FromGateID: gate_east_return
+    ToRoomID: 54175eab-ed46-4a6e-ae9d-b8bfb7882b3f
+    ToGateID: gate_west_af5d7fa5-d7b1-463c-a6ac-df396de942ea
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: daef1525-de58-49f5-b811-18387e5da1e8
+    FromGateID: gate_west_1d4b5c5d-adc5-41e1-995d-20ef31114356
+    ToRoomID: 1d4b5c5d-adc5-41e1-995d-20ef31114356
+    ToGateID: gate_east_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 1d4b5c5d-adc5-41e1-995d-20ef31114356
+    FromGateID: gate_east_return
+    ToRoomID: daef1525-de58-49f5-b811-18387e5da1e8
+    ToGateID: gate_west_1d4b5c5d-adc5-41e1-995d-20ef31114356
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: daef1525-de58-49f5-b811-18387e5da1e8
+    FromGateID: gate_south_2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    ToRoomID: 2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    ToGateID: gate_north_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    FromGateID: gate_north_return
+    ToRoomID: daef1525-de58-49f5-b811-18387e5da1e8
+    ToGateID: gate_south_2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    FromGateID: gate_north_daef1525-de58-49f5-b811-18387e5da1e8
+    ToRoomID: daef1525-de58-49f5-b811-18387e5da1e8
+    ToGateID: gate_south_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: daef1525-de58-49f5-b811-18387e5da1e8
+    FromGateID: gate_south_return
+    ToRoomID: 2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    ToGateID: gate_north_daef1525-de58-49f5-b811-18387e5da1e8
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    FromGateID: gate_east_854307ad-8560-4593-a772-9700b1d5815b
+    ToRoomID: 854307ad-8560-4593-a772-9700b1d5815b
+    ToGateID: gate_west_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 854307ad-8560-4593-a772-9700b1d5815b
+    FromGateID: gate_west_return
+    ToRoomID: 2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    ToGateID: gate_east_854307ad-8560-4593-a772-9700b1d5815b
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    FromGateID: gate_south_c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    ToRoomID: c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    ToGateID: gate_north_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    FromGateID: gate_north_return
+    ToRoomID: 2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    ToGateID: gate_south_c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 854307ad-8560-4593-a772-9700b1d5815b
+    FromGateID: gate_west_2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    ToRoomID: 2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    ToGateID: gate_east_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    FromGateID: gate_east_return
+    ToRoomID: 854307ad-8560-4593-a772-9700b1d5815b
+    ToGateID: gate_west_2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 854307ad-8560-4593-a772-9700b1d5815b
+    FromGateID: gate_east_76c9ecc7-70cc-4341-990b-43dc00acf256
+    ToRoomID: 76c9ecc7-70cc-4341-990b-43dc00acf256
+    ToGateID: gate_west_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 76c9ecc7-70cc-4341-990b-43dc00acf256
+    FromGateID: gate_west_return
+    ToRoomID: 854307ad-8560-4593-a772-9700b1d5815b
+    ToGateID: gate_east_76c9ecc7-70cc-4341-990b-43dc00acf256
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 76c9ecc7-70cc-4341-990b-43dc00acf256
+    FromGateID: gate_west_854307ad-8560-4593-a772-9700b1d5815b
+    ToRoomID: 854307ad-8560-4593-a772-9700b1d5815b
+    ToGateID: gate_east_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 854307ad-8560-4593-a772-9700b1d5815b
+    FromGateID: gate_east_return
+    ToRoomID: 76c9ecc7-70cc-4341-990b-43dc00acf256
+    ToGateID: gate_west_854307ad-8560-4593-a772-9700b1d5815b
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 76c9ecc7-70cc-4341-990b-43dc00acf256
+    FromGateID: gate_south_fadc29b3-70d1-40eb-8113-2f6b89e1e12d
+    ToRoomID: fadc29b3-70d1-40eb-8113-2f6b89e1e12d
+    ToGateID: gate_north_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: fadc29b3-70d1-40eb-8113-2f6b89e1e12d
+    FromGateID: gate_north_return
+    ToRoomID: 76c9ecc7-70cc-4341-990b-43dc00acf256
+    ToGateID: gate_south_fadc29b3-70d1-40eb-8113-2f6b89e1e12d
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: fadc29b3-70d1-40eb-8113-2f6b89e1e12d
+    FromGateID: gate_north_76c9ecc7-70cc-4341-990b-43dc00acf256
+    ToRoomID: 76c9ecc7-70cc-4341-990b-43dc00acf256
+    ToGateID: gate_south_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 76c9ecc7-70cc-4341-990b-43dc00acf256
+    FromGateID: gate_south_return
+    ToRoomID: fadc29b3-70d1-40eb-8113-2f6b89e1e12d
+    ToGateID: gate_north_76c9ecc7-70cc-4341-990b-43dc00acf256
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: fadc29b3-70d1-40eb-8113-2f6b89e1e12d
+    FromGateID: gate_west_c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    ToRoomID: c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    ToGateID: gate_east_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    FromGateID: gate_east_return
+    ToRoomID: fadc29b3-70d1-40eb-8113-2f6b89e1e12d
+    ToGateID: gate_west_c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    FromGateID: gate_north_2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    ToRoomID: 2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    ToGateID: gate_south_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    FromGateID: gate_south_return
+    ToRoomID: c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    ToGateID: gate_north_2139fbc7-c0f9-447f-95e5-6f9603fa8823
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    FromGateID: gate_south_d9c66958-d400-4774-acff-278ef8299e83
+    ToRoomID: d9c66958-d400-4774-acff-278ef8299e83
+    ToGateID: gate_north_return
+    Type: 3
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: d9c66958-d400-4774-acff-278ef8299e83
+    FromGateID: gate_north_return
+    ToRoomID: c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    ToGateID: gate_south_d9c66958-d400-4774-acff-278ef8299e83
+    Type: 3
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    FromGateID: gate_east_8b872793-1963-4cd7-94a6-fadb915ac949
+    ToRoomID: 8b872793-1963-4cd7-94a6-fadb915ac949
+    ToGateID: gate_west_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 8b872793-1963-4cd7-94a6-fadb915ac949
+    FromGateID: gate_west_return
+    ToRoomID: c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    ToGateID: gate_east_8b872793-1963-4cd7-94a6-fadb915ac949
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: d9c66958-d400-4774-acff-278ef8299e83
+    FromGateID: gate_north_c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    ToRoomID: c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    ToGateID: gate_south_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    FromGateID: gate_south_return
+    ToRoomID: d9c66958-d400-4774-acff-278ef8299e83
+    ToGateID: gate_north_c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: d9c66958-d400-4774-acff-278ef8299e83
+    FromGateID: gate_east_a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    ToRoomID: a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    ToGateID: gate_west_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    FromGateID: gate_west_return
+    ToRoomID: d9c66958-d400-4774-acff-278ef8299e83
+    ToGateID: gate_east_a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    FromGateID: gate_west_d9c66958-d400-4774-acff-278ef8299e83
+    ToRoomID: d9c66958-d400-4774-acff-278ef8299e83
+    ToGateID: gate_east_return
+    Type: 3
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: d9c66958-d400-4774-acff-278ef8299e83
+    FromGateID: gate_east_return
+    ToRoomID: a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    ToGateID: gate_west_d9c66958-d400-4774-acff-278ef8299e83
+    Type: 3
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    FromGateID: gate_north_8b872793-1963-4cd7-94a6-fadb915ac949
+    ToRoomID: 8b872793-1963-4cd7-94a6-fadb915ac949
+    ToGateID: gate_south_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 8b872793-1963-4cd7-94a6-fadb915ac949
+    FromGateID: gate_south_return
+    ToRoomID: a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    ToGateID: gate_north_8b872793-1963-4cd7-94a6-fadb915ac949
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    FromGateID: gate_east_6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    ToRoomID: 6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    ToGateID: gate_west_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    FromGateID: gate_west_return
+    ToRoomID: a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    ToGateID: gate_east_6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 8b872793-1963-4cd7-94a6-fadb915ac949
+    FromGateID: gate_west_c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    ToRoomID: c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    ToGateID: gate_east_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    FromGateID: gate_east_return
+    ToRoomID: 8b872793-1963-4cd7-94a6-fadb915ac949
+    ToGateID: gate_west_c61b7ee3-526c-441d-b201-5cf8a41cd0cc
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 8b872793-1963-4cd7-94a6-fadb915ac949
+    FromGateID: gate_south_a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    ToRoomID: a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    ToGateID: gate_north_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    FromGateID: gate_north_return
+    ToRoomID: 8b872793-1963-4cd7-94a6-fadb915ac949
+    ToGateID: gate_south_a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 8b872793-1963-4cd7-94a6-fadb915ac949
+    FromGateID: gate_east_6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    ToRoomID: 6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    ToGateID: gate_west_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    FromGateID: gate_west_return
+    ToRoomID: 8b872793-1963-4cd7-94a6-fadb915ac949
+    ToGateID: gate_east_6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    FromGateID: gate_west_8b872793-1963-4cd7-94a6-fadb915ac949
+    ToRoomID: 8b872793-1963-4cd7-94a6-fadb915ac949
+    ToGateID: gate_east_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 8b872793-1963-4cd7-94a6-fadb915ac949
+    FromGateID: gate_east_return
+    ToRoomID: 6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    ToGateID: gate_west_8b872793-1963-4cd7-94a6-fadb915ac949
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    FromGateID: gate_west_a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    ToRoomID: a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    ToGateID: gate_east_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    FromGateID: gate_east_return
+    ToRoomID: 6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    ToGateID: gate_west_a0978ce7-631f-46cb-8a2c-2641134a2c5d
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    FromGateID: gate_south_bcb82d9d-c840-46db-8f88-465939a6b327
+    ToRoomID: bcb82d9d-c840-46db-8f88-465939a6b327
+    ToGateID: gate_north_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: bcb82d9d-c840-46db-8f88-465939a6b327
+    FromGateID: gate_north_return
+    ToRoomID: 6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    ToGateID: gate_south_bcb82d9d-c840-46db-8f88-465939a6b327
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: bcb82d9d-c840-46db-8f88-465939a6b327
+    FromGateID: gate_north_6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    ToRoomID: 6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    ToGateID: gate_south_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    FromGateID: gate_south_return
+    ToRoomID: bcb82d9d-c840-46db-8f88-465939a6b327
+    ToGateID: gate_north_6dce8cf0-1d84-4afd-87af-80769ba4b56a
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: bcb82d9d-c840-46db-8f88-465939a6b327
+    FromGateID: gate_east_6786a9a0-5a75-4122-9f94-8d876fc42bf3
+    ToRoomID: 6786a9a0-5a75-4122-9f94-8d876fc42bf3
+    ToGateID: gate_west_return
+    Type: 3
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 6786a9a0-5a75-4122-9f94-8d876fc42bf3
+    FromGateID: gate_west_return
+    ToRoomID: bcb82d9d-c840-46db-8f88-465939a6b327
+    ToGateID: gate_east_6786a9a0-5a75-4122-9f94-8d876fc42bf3
+    Type: 3
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 6786a9a0-5a75-4122-9f94-8d876fc42bf3
+    FromGateID: gate_west_bcb82d9d-c840-46db-8f88-465939a6b327
+    ToRoomID: bcb82d9d-c840-46db-8f88-465939a6b327
+    ToGateID: gate_east_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: bcb82d9d-c840-46db-8f88-465939a6b327
+    FromGateID: gate_east_return
+    ToRoomID: 6786a9a0-5a75-4122-9f94-8d876fc42bf3
+    ToGateID: gate_west_bcb82d9d-c840-46db-8f88-465939a6b327
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: 6786a9a0-5a75-4122-9f94-8d876fc42bf3
+    FromGateID: gate_east_bb62e40f-9591-4cdd-b33e-9321c0e4059f
+    ToRoomID: bb62e40f-9591-4cdd-b33e-9321c0e4059f
+    ToGateID: gate_west_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: bb62e40f-9591-4cdd-b33e-9321c0e4059f
+    FromGateID: gate_west_return
+    ToRoomID: 6786a9a0-5a75-4122-9f94-8d876fc42bf3
+    ToGateID: gate_east_bb62e40f-9591-4cdd-b33e-9321c0e4059f
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: bb62e40f-9591-4cdd-b33e-9321c0e4059f
+    FromGateID: gate_west_6786a9a0-5a75-4122-9f94-8d876fc42bf3
+    ToRoomID: 6786a9a0-5a75-4122-9f94-8d876fc42bf3
+    ToGateID: gate_east_return
+    Type: 3
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: 6786a9a0-5a75-4122-9f94-8d876fc42bf3
+    FromGateID: gate_east_return
+    ToRoomID: bb62e40f-9591-4cdd-b33e-9321c0e4059f
+    ToGateID: gate_west_6786a9a0-5a75-4122-9f94-8d876fc42bf3
+    Type: 3
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: bb62e40f-9591-4cdd-b33e-9321c0e4059f
+    FromGateID: gate_east_fc8006bd-d7d0-402a-a026-b207ed1437c1
+    ToRoomID: fc8006bd-d7d0-402a-a026-b207ed1437c1
+    ToGateID: gate_west_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: fc8006bd-d7d0-402a-a026-b207ed1437c1
+    FromGateID: gate_west_return
+    ToRoomID: bb62e40f-9591-4cdd-b33e-9321c0e4059f
+    ToGateID: gate_east_fc8006bd-d7d0-402a-a026-b207ed1437c1
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)
+  - FromRoomID: fc8006bd-d7d0-402a-a026-b207ed1437c1
+    FromGateID: gate_west_bb62e40f-9591-4cdd-b33e-9321c0e4059f
+    ToRoomID: bb62e40f-9591-4cdd-b33e-9321c0e4059f
+    ToGateID: gate_east_return
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: 
+  - FromRoomID: bb62e40f-9591-4cdd-b33e-9321c0e4059f
+    FromGateID: gate_east_return
+    ToRoomID: fc8006bd-d7d0-402a-a026-b207ed1437c1
+    ToGateID: gate_west_bb62e40f-9591-4cdd-b33e-9321c0e4059f
+    Type: 0
+    IsLayerTransition: 0
+    DesignerNote: (auto-reverse)

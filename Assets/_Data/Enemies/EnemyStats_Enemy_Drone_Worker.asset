@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 814b7e08c4625ff4faa3639c6eee45de, type: 3}
+  m_Name: EnemyStats_Enemy_Drone_Worker
+  m_EditorClassIdentifier: ProjectArk.Enemy::ProjectArk.Combat.EnemyStatsSO
+  EnemyName: "\u5DE5\u8702\u65E0\u4EBA\u673A"
+  EnemyID: Enemy_Drone_Worker
+  FactionID: Neutral
+  MaxHP: 20
+  MaxPoise: 5
+  MoveSpeed: 4
+  RotationSpeed: 360
+  AttackDamage: 8
+  AttackRange: 1.5
+  AttackCooldown: 3
+  AttackKnockback: 3
+  TelegraphDuration: 0.3
+  AttackActiveDuration: 0.15
+  RecoveryDuration: 0.6
+  ProjectilePrefab: {fileID: 4255635206972869295, guid: d39bba9ed33abad40b895a5fd7d54a51, type: 3}
+  ProjectileSpeed: 10
+  ProjectileDamage: 8
+  ProjectileKnockback: 2
+  ProjectileLifetime: 5
+  ShotsPerBurst: 3
+  BurstInterval: 0.2
+  PreferredRange: 10
+  RetreatRange: 5
+  StaggerDuration: 1
+  SightRange: 12
+  SightAngle: 90
+  HearingRange: 20
+  LeashRange: 25
+  MemoryDuration: 5
+  HitFlashDuration: 0.1
+  BaseColor: {r: 0.9, g: 0.7, b: 0.1, a: 1}
+  Resist_Physical: 0
+  Resist_Fire: 0
+  Resist_Ice: 0
+  Resist_Lightning: 0
+  Resist_Void: 0
+  DropTableID: 
+  PlanetID: P1
+  SpawnWeight: 1
+  Attacks: []
+  FearThreshold: 50
+  FearFromAllyDeath: 10
+  FearFromPoiseBroken: 20
+  FearDecayRate: 5
+  FleeDuration: 4
+  DodgeSpeed: 8
+  DodgeDuration: 0.3
+  BlockDamageReduction: 0.7
+  BlockDuration: 1.5
+  ThreatDetectionRadius: 5
+  _transitionOverrides: []
+  BehaviorTags: []

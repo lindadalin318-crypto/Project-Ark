@@ -6,6 +6,7 @@ using UnityEngine;
 namespace ProjectArk.Level.Editor
 {
     /// <summary>
+    /// [Authority: Level CanonicalSpec §9.1 — sub-service of LevelArchitectWindow]
     /// Maintains bidirectional binding between LevelScaffoldData and Scene Room GameObjects.
     /// Detects changes on either side and synchronizes them, keeping data consistent.
     /// </summary>
