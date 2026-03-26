@@ -8,18 +8,18 @@
 > - 记录那些“不会马上写进代码，但必须在实现时遵守”的治理原则
 > - 把高频踩坑收敛成可执行的 checklist / tips / guardrails
 >
-> 它**不是**现役链路、资产映射、Prefab/Scene owner 的真相源。涉及当前 `Ship/VFX` 主链、owner、路径、状态分类时，必须优先参考：
+> 它**不是**现役链路、资产映射、Prefab/Scene owner 的真相源。各模块的权威来源：
 >
-> - `Docs/Reference/ShipVFX_CanonicalSpec.md`
-> - `Docs/Reference/ShipVFX_AssetRegistry.md`
+> - `Ship / VFX`：`Docs/Reference/ShipVFX_CanonicalSpec.md` + `ShipVFX_AssetRegistry.md`
+> - `Level`：`Docs/Reference/Level_CanonicalSpec.md`
 >
 > 当前已启用模块：
 >
 > - `Ship / VFX`
+> - `Level`
 >
 > 后续可以继续追加：
 >
-> - `Level`
 > - `Combat`
 > - `UI`
 > - `Enemy`
@@ -271,7 +271,7 @@
 
 | 范围 | 对象 / 引用类型 | 唯一权威入口 | 明确禁止的并行写入者 | 备注 |
 | --- | --- | --- | --- | --- |
-| Prefab 结构 | `Ship.prefab` 的结构、关键节点、内部核心序列化引用 | `ShipPrefabRebuilder` | `ShipBuilder`、Runtime fallback、Debug 工具、手工 scene 修补代替 prefab 修正 | `ShipBuilder` 只允许做 bootstrap，不是 prefab 权威 |
+| Prefab 结构 | `Ship.prefab` 的结构、根节点组件、关键节点、内部核心序列化引用 | `ShipPrefabRebuilder` | Runtime fallback、Debug 工具、手工 scene 修补代替 prefab 修正 | 含物理组件、运行时脚本组件、ShipStatsSO/InputActions/DashAfterImage 接线 |
 | Prefab 结构 | `BoostTrailRoot.prefab` 的结构、子节点、内部核心序列化引用 | `BoostTrailPrefabCreator` | `ShipPrefabRebuilder` 直接改写内部结构、Runtime fallback、Debug 工具 | `ShipPrefabRebuilder` 只负责把 nested prefab 集成进 `Ship.prefab` |
 | Scene-only 接线 | `BoostTrailBloomVolume` → `BoostTrailView._boostBloomVolume` 这类 scene-only 绑定 | `ShipBoostTrailSceneBinder` | Runtime 自动补线、Debug 工具、Prefab builder 越权写 scene | 这类引用允许存在于 scene，但必须有唯一绑定入口 |
 | 现役材质贴图回填 | 现役 `BoostTrail` 材质与贴图映射 | `MaterialTextureLinker` | Prefab builder 顺手写材质、Runtime 模糊查找贴图、Debug 工具临时写回 | 仅允许维护现役材质映射，不做全项目兜底搜索 |
@@ -307,7 +307,7 @@
 
 - `Ship.prefab` 内 `ShipVisual` 及其核心子节点层级
 - `Ship.prefab` 内 `_boostTrailView`、`_hlRenderer` 等核心序列化引用
-- `BoostTrailRoot.prefab` 内 `MainTrail`、`FlameTrail_R`、`FlameTrail_B`、`FlameCore`、`EmberTrail`、`EmberSparks`、`BoostEnergyLayer2`、`BoostEnergyLayer3`、`BoostActivationHalo` 的结构与核心引用
+- `BoostTrailRoot.prefab` 内 `MainTrail`、`FlameTrail_R`、`FlameTrail_B`、`FlameCore`、`EmberTrail`、`EmberSparks`、`BoostEnergyLayer2`、`BoostEnergyLayer3` 的结构与核心引用
 - `BoostTrailView._flameTrailB` 等依赖 prefab 内节点的核心序列化引用
 - 现役材质与贴图映射
 
@@ -422,22 +422,257 @@
 
 ---
 
-## 7. 后续可追加模块（占位）
+## 7. Level 模块规则
+
+> **启用时机**：Level 模块进入 CanonicalSpec 驱动的重构阶段（Batch 1 起），工具链开始增长，需要事前设置 authority 防止重蹈 VFX 的治理困境。
+>
+> **与 VFX 的区别**：VFX 的 Authority Matrix 是"事后救火"——5+ 个 Editor 工具同时写同一个 Prefab 导致定位地狱。Level 模块工具职责天然分离（每个工具改不同对象），因此采用**轻量预防式** authority，重点是迁移纪律和 Scene 接线治理。
+>
+> **权威来源**：
+> - 目标架构 / 数据结构 / 迁移策略：`Docs/Reference/Level_CanonicalSpec.md`（权威）
+> - 实现约束 / 踩坑治理：本文档本节（执行层）
+> - 若两者冲突，以 `Level_CanonicalSpec.md` 为准
+
+### 7.1 模块边界
+
+本节适用范围以 `Level_CanonicalSpec.md` §2 为准：
+
+- Runtime
+  - `Assets/Scripts/Level/` 全部子目录（Room / Data / Checkpoint / Progression / WorldClock / DynamicWorld / Map / Camera / Narrative / GameFlow / Hazard / SaveBridge）
+  - `Assets/Scripts/Core/LevelEvents.cs`
+- Editor
+  - `Assets/Scripts/Level/Editor/` 全部文件
+- Data Assets
+  - `Assets/_Data/Level/` — 所有 SO 资产（WorldGraphSO、RoomSO、EncounterSO、WorldPhaseSO 等）
+- Scene
+  - `Assets/Scenes/SampleScene.unity`（示巴星切片）
+- 相关文档
+  - `Docs/Reference/Level_CanonicalSpec.md`
+  - `Docs/Reference/Level_Architecture_Synthesis_Minishoot_Silksong_TUNIC.md`（参考输入）
+  - `Docs/LevelModulePlan.md`（v3.0，降级为历史参考）
+
+### 7.2 模块目标
+
+Level 模块的治理目标：
+
+- **加一个新房间时，只需要创建 SO + 场景布局，不需要考古工具链执行顺序**
+- **改一扇门的连接时，只需要改 WorldGraphSO 和跑一次 DoorWiringService，不需要同时改 Runtime / Scene / 地图**
+- **迁移结束后，旧路径（RoomType 等）干净删除，不留半迁移状态**
+
+### 7.3 Authority 执行约束表
+
+> 说明：本表是 Level 模块的**轻量版 authority**，用于收口"谁可以写什么"。工具的完整职责定义以 `Level_CanonicalSpec.md` §9 为准，本表只约束执行边界。
+
+| 对象类型 | 唯一写入者 | 禁止 | 备注 |
+|---------|-----------|------|------|
+| WorldGraphSO 资产（创建） | `LevelAssetCreator` | 手动 Assets 右键创建、Runtime 回写 | 幂等：已存在则跳过 |
+| WorldGraphSO 资产（编辑） | Inspector 手动编辑 / `WorldGraphEditor` | Runtime 修改、其他 Editor 工具越权写 | 创建后数据完全可调 |
+| Room GameObject 结构 | `RoomFactory` | 手动创建子节点、Runtime 补全子节点 | 标准子节点语法由 CanonicalSpec §6 定义 |
+| Door 双向连线 | `DoorWiringService` | Runtime 自动补线、手动在 Inspector 逐个接 | GateID 仍为手动分配 |
+| SO 资产批量创建 | `LevelAssetCreator` | 手动逐个创建 | 含 RoomSO、WorldGraphSO、EncounterSO 等 |
+| 全局校验 | `LevelValidator` | 任何工具隐式修复问题 | Validator 只报告，不写入 |
+| Scene View 可视化 | `PacingOverlayRenderer` / `RoomBlockoutRenderer` | 写入场景数据 | 只读 |
+| RoomType → RoomNodeType 迁移 | `RoomNodeMigrator`（Batch 2） | 手动逐个改、Runtime 兼容分支永久保留 | 迁移完成后必须删旧路径 |
+| 房间子节点审计 | `RoomHierarchyAuditor`（Batch 2） | 隐式修复 | 只审计，不自动修正 |
+| Runtime 房间加载 / 转场 | `RoomManager` / `DoorTransitionController` | Editor 工具在 Play Mode 接管 | Runtime 只消费 WorldGraphSO 数据 |
+
+> **代码层标记**：上表中所有"唯一写入者"的类在 XML doc `<summary>` 中均已标注 `[Authority: Level CanonicalSpec §9.1]`，方便 grep 定位。
+>
+> **已删除的旧工具**（2026-03-22）：
+> - `LevelDesignerWindow`（`[Obsolete]`，被 `LevelArchitectWindow` 替代）
+> - `RoomBatchEditor`（`[Obsolete]`，被 `LevelArchitectWindow` 替代）
+> - `ShebaLevelScaffolder`（`[Obsolete]`，被 `LevelArchitectWindow` 替代）
+> - `LevelGenerator`（旧 scaffold 生成器，被 `ScaffoldToSceneGenerator` 替代）
+> - `HtmlScaffoldImporter`（一次性 HTML 导入工具，已完成使命）
+> - `Phase6AssetCreator`（Phase 6 一次性资产生成，已完成使命）
+> - `MapUIBuilder`（Map UI 一次性构建工具，已完成使命）
+> - `LevelElementLibrary`（数据类，仅被 `LevelDesignerWindow` + `LevelGenerator` 引用）
+> - 同步清理了 `LevelArchitectWindow` 中的 Legacy Tool Detection 代码段
+
+### 7.4 实现规则
+
+#### 7.4.1 迁移纪律（最高优先级）
+
+Level 重构是**增量升级**（CanonicalSpec §10），最大风险是半迁移状态。以下规则必须遵守：
+
+- 每个 Batch 结束时，必须明确标注：
+  - 哪些旧路径已被新路径替代
+  - 哪些旧路径仍需保留（写明原因 + 计划删除的 Batch）
+  - 哪些旧路径本 Batch 已删除
+- **禁止新增永久兼容分支**。若必须保留旧代码路径，必须用 `[Migration: remove in Batch N]` 注释标注，且 N ≤ 当前 Batch + 2
+- RoomType → RoomNodeType 迁移完成后（Batch 2），必须有一次收尾：删除旧 `RoomType` 枚举及所有引用
+
+#### 7.4.2 Runtime 不回写设计时数据
+
+- `WorldGraphSO` 是设计时离线数据（CanonicalSpec §7），Runtime 严禁修改
+- Runtime 需要的可变状态（房间解锁、门状态）走 `RoomFlagRegistry`（Batch 3），不走 SO
+
+#### 7.4.3 工具执行模式
+
+与 VFX 一致的原则（CanonicalSpec §9.3）：
+
+- 工具默认为 **Audit / Preview** 模式，显式操作才 **Apply**
+- 所有工具执行后必须输出"改了什么 / 没改什么 / 缺了什么"
+- 禁止工具在 `OnValidate`、`Awake`、`OnEnable`、Play Mode 启动流程中隐式写回资产或 scene
+
+#### 7.4.4 禁止 Silent No-Op
+
+Level 关键链路缺引用时，禁止静默 return：
+
+- `RoomManager` 找不到 WorldGraphSO → `Debug.LogError`
+- `Door` 的 `_targetRoom` 为 null → `Debug.LogError`（不静默跳过转场）
+- `LevelValidator` 发现不一致 → 必须报告，不静默通过
+
+#### 7.4.5 Scene 接线白名单
+
+**允许的 Scene-only 数据**（必须在场景中手动或工具配置，不存在于 Prefab 中）：
+
+- Door 的 `_targetRoom` / `_targetSpawnPoint` 引用（由 `DoorWiringService` 或手动配置）
+- Room 的 Cinemachine Confiner bounds
+- Room 的 Tilemap 内容
+- Checkpoint 位置
+- 环境装饰 / Hazard 布局
+
+**必须跟随 SO / 工具生成，不允许场景漂移的数据**：
+
+- WorldGraphSO 中的房间列表和连接关系（权威数据源）
+- Room 的 RoomNodeType（由 SO 驱动，不在场景实例上手动改）
+- Door 的 GateID / ConnectionType（由 WorldGraphSO 定义，场景中的 Door 组件必须与 SO 一致）
+
+### 7.5 踩坑总结
+
+> 本节当前为骨架，后续 Batch 遇到实际问题时增量追加。
+
+#### 7.5.1 （预防性）半迁移状态
+
+- **风险**：RoomType 和 RoomNodeType 并存期间，部分代码走旧枚举、部分走新枚举，导致行为不一致
+- **防御**：Batch 2 的 `RoomNodeMigrator` 必须是原子操作——一次迁移所有房间，不允许"先迁移一半"
+
+#### 7.5.2 （预防性）WorldGraphSO 与场景不一致
+
+- **风险**：WorldGraphSO 描述了 7 个房间的连接关系，但场景中 Door 的实际接线不匹配
+- **防御**：`LevelValidator` 的核心校验规则就是"WorldGraphSO ↔ Scene Door 一致性"。每次改完连接关系后必须跑一次 Validator
+
+### 7.6 验收清单
+
+#### 每个 Batch 结束时
+
+1. `LevelValidator` 是否通过（0 error）？
+2. 本 Batch 新增的工具是否写入了 Authority 执行约束表？
+3. 本 Batch 的迁移是否标注了旧路径处置（保留/已删/计划删）？
+4. Runtime 是否有回写 SO 的行为？（禁止）
+5. 新增的 Editor 工具是否遵循"执行后输出报告"原则？
+
+#### 常规改动验收
+
+1. 改动是否只涉及 Authority 表中允许的写入者？
+2. 是否新增了 fallback / 兼容分支？若是，是否标注了退役计划？
+3. WorldGraphSO 与场景 Door 是否仍然一致？（跑 Validator）
+4. 是否有 silent no-op？（关键引用缺失必须报错）
+
+### 7.7 推荐工作流
+
+#### 新房间 / 新连接
+
+1. 在 WorldGraphSO 中添加 RoomNode / ConnectionEdge
+2. 用 `RoomFactory` 在场景中创建 Room GameObject
+3. 用 `DoorWiringService` 自动连线
+4. 跑 `LevelValidator` 确认一致性
+5. 补 `ImplementationLog`
+
+#### 难定位 bug
+
+1. 先跑 `LevelValidator` — 大部分问题是 WorldGraphSO ↔ Scene 不一致
+2. 确认 Runtime 有没有回写 SO 数据（运行时数据隔离原则）
+3. 确认是否有旧路径（RoomType）仍在参与行为
+4. 若问题根因是工具职责不清，优先补 Authority 约束，而非叠保护逻辑
+
+---
+
+## 8. 后续可追加模块（占位）
 
 后续可按同样结构追加：
 
-- `Level`
 - `Combat`
 - `UI`
 - `Enemy`
 - `Save`
 - `Core / Infrastructure`
 
-建议统一模板：
+新模块首次追加时，**不要求一开始就补齐全部章节**。按需启用，逐步沉淀。
 
-- 模块边界
-- 模块目标
-- 实现规则
-- 踩坑总结
-- 验收清单
-- 推荐工作流
+---
+
+## 9. 通用模块规则模板
+
+> 本节定义当新模块需要在 `Implement_rules.md` 中追加规则时，应遵循的统一结构。
+>
+> **触发条件**（满足任一即应追加）：
+> - 同类 bug 在该模块连续出现两次以上
+> - 多个入口（Runtime / Editor / Scene / Debug）同时改同一条链路
+> - 排查时间明显长于实现时间
+> - Editor 工具 ≥3 个且职责开始重叠
+> - 新功能开发时需要先"考古"才能动手
+>
+> **与架构速写的关系**：
+> - `Docs/Reference/{ModuleName}_ArchBrief.md`：描述模块**是什么**——结构、职责、驱动关系
+> - `Implement_rules.md` 中的模块规则：描述模块**怎么改更不容易烂**——实现约束、踩坑防御、验收清单
+> - 两者互补，不重复。架构速写回答"谁管什么"，实现规则回答"改的时候要注意什么"
+
+### 9.1 模块规则统一结构
+
+每个模块追加到 `Implement_rules.md` 时，应包含以下章节（按需启用，不必一次写全）：
+
+```markdown
+## N. {模块名} 模块规则
+
+### N.1 模块边界
+本规则适用范围：管哪些目录 / prefab / scene / doc
+（应与架构速写的「模块边界」保持一致，此处引用而非复制）
+
+### N.2 模块目标
+这个模块的治理目标是什么（1-3 句话）
+不是功能目标，而是"怎么让迭代更快、改动更稳"
+
+### N.3 实现规则
+按条目列出，每条规则都应包含：
+- 规则内容（做什么 / 不做什么）
+- 根因（为什么有这条规则）
+- 适用范围（哪些场景触发）
+
+### N.4 踩坑总结
+已踩过的坑，简述：
+- 现象
+- 根因
+- 防御措施
+
+### N.5 验收清单
+改完后至少检查什么（3-7 条 checklist）
+
+### N.6 推荐工作流
+- 新需求怎么做
+- 难定位 bug 怎么查
+```
+
+### 9.2 规则质量标准
+
+- **可执行**：每条规则都能转化为具体检查动作，禁止模糊表述（如"注意代码质量"）
+- **有根因**：每条规则都要说明"为什么"，没有根因的规则不写
+- **不重复**：与 `CLAUDE.md` 的架构原则 / 代码规范不重复；此处只写该模块特有的约束
+- **不过时**：定期审查，已不再适用的规则标记 `[已废弃]` 并说明原因，不要静默删除
+
+### 9.3 模块规则与架构速写的联动
+
+| 时机 | 架构速写 (`_ArchBrief.md`) | 模块规则 (`Implement_rules.md`) |
+|------|---------------------------|--------------------------------|
+| 新模块开发前 | ✅ 必须产出（工作流第 4 步） | ❌ 不需要，还没踩坑 |
+| 首次踩坑后 | 可能需要更新驱动关系 | ✅ 追加踩坑总结 + 对应防御规则 |
+| 模块复杂度增长 | Lv.1 → Lv.2 → 完整 Spec | 按需追加实现规则、工具矩阵 |
+| 多人 / 多 AI session 协作 | 确保结构描述准确 | ✅ 追加协作约束（如 authority matrix） |
+| 架构重构后 | 重写或大幅更新 | 清理过时规则，补新规则 |
+
+### 9.4 已有模块的规则参考
+
+- **Ship / VFX**：见本文档 Section 2-6（当前最完整的模块规则范例）
+- **Level**：见本文档 Section 7（轻量预防式 authority）
+- **Combat / UI / Enemy / Save**：待追加（见 Section 8 占位）

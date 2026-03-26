@@ -31,11 +31,10 @@ namespace ProjectArk.Ship.Editor
             SerializedProperty showEmberSparksProp = serializedObject.FindProperty("_showEmberSparks");
             SerializedProperty showEnergyLayer2Prop = serializedObject.FindProperty("_showEnergyLayer2");
             SerializedProperty showEnergyLayer3Prop = serializedObject.FindProperty("_showEnergyLayer3");
-            SerializedProperty showActivationHaloProp = serializedObject.FindProperty("_showActivationHalo");
             SerializedProperty showBloomProp = serializedObject.FindProperty("_showBloom");
 
             EditorGUILayout.HelpBox(
-                "用途：在 Play Mode 下隔离 `MainTrail / FlameTrail / EmberTrail / EnergyLayer2 / EnergyLayer3 / Halo / Bloom`。\n" +
+                "用途：在 Play Mode 下隔离 `MainTrail / FlameTrail / EmberTrail / EnergyLayer2 / EnergyLayer3 / Bloom`。\n" +
                 "该面板现在只做显式预览，不再自动代理到 runtime，也不会被动接管 live chain。",
                 MessageType.Info);
 
@@ -88,7 +87,6 @@ namespace ProjectArk.Ship.Editor
                     EditorGUILayout.PropertyField(showEmberSparksProp);
                     EditorGUILayout.PropertyField(showEnergyLayer2Prop);
                     EditorGUILayout.PropertyField(showEnergyLayer3Prop);
-                    EditorGUILayout.PropertyField(showActivationHaloProp);
                     EditorGUILayout.PropertyField(showBloomProp);
                 }
             }
@@ -148,12 +146,24 @@ namespace ProjectArk.Ship.Editor
                     if (GUILayout.Button("Preview EmberSparks Burst"))
                         inspectedTarget.PreviewEmberSparksBurst();
 
-                    if (GUILayout.Button("Preview Activation Halo"))
-                        inspectedTarget.PreviewActivationHaloBurst();
-
                     if (GUILayout.Button("Preview Bloom Burst"))
                         inspectedTarget.PreviewBloomBurst();
                 }
+
+                EditorGUILayout.Space(4f);
+                EditorGUILayout.LabelField("Sustain Layer Preview", EditorStyles.miniLabel);
+
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("FlameTrail_R"))
+                    inspectedTarget.PreviewFlameTrailR();
+                if (GUILayout.Button("FlameTrail_B"))
+                    inspectedTarget.PreviewFlameTrailB();
+                if (GUILayout.Button("Both"))
+                    inspectedTarget.PreviewFlameTrailBoth();
+                EditorGUILayout.EndHorizontal();
+
+                if (GUILayout.Button("Preview EmberTrail Sustain"))
+                    inspectedTarget.PreviewEmberTrailSustain();
             }
         }
 

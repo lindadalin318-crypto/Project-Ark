@@ -2,20 +2,27 @@
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace ProjectArk.Ship.Editor
 {
     /// <summary>
-    /// Rebuilds the live Ship prefab structure and its managed visual integrations.
+    /// The sole authority for Ship.prefab structure, components, and serialized wiring.
     ///
     /// Authority owned by this tool:
+    ///   • Root-level physics components (Rigidbody2D, CircleCollider2D)
+    ///   • Root-level runtime script components (InputHandler, ShipMotor, ShipAiming,
+    ///     ShipStateController, ShipHealth, ShipDash, ShipBoost, and all VFX workers)
+    ///   • ShipStatsSO wiring on all gameplay components
+    ///   • InputActionAsset wiring on InputHandler
+    ///   • DashAfterImage prefab wiring on DashAfterImageSpawner
     ///   • Multi-layer ship sprite hierarchy under ShipVisual
-    ///   • EngineParticles child under Ship_Sprite_Back
     ///   • Nested BoostTrailRoot prefab integration under ShipVisual
-    ///   • Serialized wiring on ShipView / ShipEngineVFX / DashAfterImageSpawner
+    ///   • Serialized wiring on ShipView / ShipBoostVisuals / ShipHitVisuals / ShipDashVisuals
+    ///   • Serialized wiring on ShipVisualJuice / DashAfterImageSpawner
     ///
     /// Two modes:
-    ///   • Rebuild (idempotent) — creates missing nodes, updates existing ones, wires all managed fields.
+    ///   • Rebuild (idempotent) — creates missing nodes/components, updates existing ones, wires all managed fields.
     ///   • Force Rebuild       — destroys ALL managed child nodes first, then rebuilds from scratch.
     ///
     /// Scene-only references remain outside this tool and are owned by ShipBoostTrailSceneBinder.
@@ -26,11 +33,13 @@ namespace ProjectArk.Ship.Editor
         private const string PREFAB_PATH = "Assets/_Prefabs/Ship/Ship.prefab";
         private const string BOOST_TRAIL_PREFAB_PATH = "Assets/_Prefabs/VFX/BoostTrailRoot.prefab";
         private const string GLOW_MATERIAL_PATH = "Assets/_Art/Ship/Glitch/ShipGlowMaterial.mat";
-        private const string SHIP_LIQUID_BOOST_SPRITE_PATH = "Assets/_Art/Ship/Glitch/Boost_16.png";
         private const string SHIP_LIQUID_NORMAL_SPRITE_PATH = "Assets/_Art/Ship/Glitch/Movement_3.png";
         private const string SHIP_SOLID_SPRITE_PATH = "Assets/_Art/Ship/Glitch/Movement_10.png";
         private const string SHIP_HIGHLIGHT_SPRITE_PATH = "Assets/_Art/Ship/Glitch/Movement_21.png";
         private const string SHIP_JUICE_SETTINGS_PATH = "Assets/_Data/Ship/DefaultShipJuiceSettings.asset";
+        private const string SHIP_STATS_PATH = "Assets/_Data/Ship/DefaultShipStats.asset";
+        private const string INPUT_ACTIONS_PATH = "Assets/Input/ShipActions.inputactions";
+        private const string DASH_AFTER_IMAGE_PREFAB_PATH = "Assets/_Prefabs/Ship/DashAfterImage.prefab";
 
         // ── Node names ─────────────────────────────────────────────────
         private const string VISUAL_CHILD_NAME = "ShipVisual";
@@ -44,11 +53,7 @@ namespace ProjectArk.Ship.Editor
         private const string DODGE_SPRITE_NAME = "Dodge_Sprite";
         private const string BOOST_TRAIL_ROOT_NAME = "BoostTrailRoot";
 
-        // VFX nodes (children of Ship_Sprite_Back)
-        private const string ENGINE_PARTICLES_NAME = "EngineParticles";
-
         // Sprite asset aliases (physical names remain frozen during MVP)
-        private const string SHIP_LIQUID_BOOST_SPRITE_NAME = "Boost_16";
         private const string SHIP_LIQUID_NORMAL_SPRITE_NAME = "Movement_3";
         private const string SHIP_SOLID_SPRITE_NAME = "Movement_10";
         private const string SHIP_HIGHLIGHT_SPRITE_NAME = "Movement_21";
@@ -67,12 +72,6 @@ namespace ProjectArk.Ship.Editor
             SPRITE_CORE_NAME,
             DODGE_SPRITE_NAME,
             BOOST_TRAIL_ROOT_NAME
-        };
-
-        // All managed node names under Ship_Sprite_Back (for force-delete)
-        private static readonly string[] MANAGED_BACK_CHILDREN =
-        {
-            ENGINE_PARTICLES_NAME
         };
 
         // ══════════════════════════════════════════════════════════════
@@ -109,7 +108,7 @@ namespace ProjectArk.Ship.Editor
             {
                 EditorUtility.DisplayDialog(
                     "Error",
-                    $"Ship prefab not found at:\n{PREFAB_PATH}\n\nPlease run 'ProjectArk > Ship > Bootstrap > Build Ship Scene Setup' first.",
+                    $"Ship prefab not found at:\n{PREFAB_PATH}\n\nPlease create the prefab asset first (e.g. via Unity Editor: right-click in Project > Create > Prefab).",
                     "OK");
                 return;
             }
@@ -118,11 +117,43 @@ namespace ProjectArk.Ship.Editor
             {
                 var root = scope.prefabContentsRoot;
 
+                // ── Pre-pass: strip any Missing Script components ──
+                // (e.g. a deleted MonoBehaviour whose serialized reference
+                //  still lingers in the prefab — Unity refuses to save.)
+                StripMissingScripts(root, log);
+
                 if (forceRebuild)
                 {
                     ForceDeleteManagedNodes(root, log);
                     ForceDeleteManagedComponents(root, log);
                 }
+
+                // ══════════════════════════════════════════════════════════
+                // Phase 0: Root-level physics components
+                // ══════════════════════════════════════════════════════════
+                EnsurePhysicsComponents(root, log);
+
+                // ══════════════════════════════════════════════════════════
+                // Phase 1: Root-level runtime script components
+                //   Order matters for RequireComponent dependencies.
+                // ══════════════════════════════════════════════════════════
+                EnsureComponent<InputHandler>(root, log, "InputHandler");
+                EnsureComponent<ShipMotor>(root, log, "ShipMotor");
+                EnsureComponent<ShipAiming>(root, log, "ShipAiming");
+                EnsureComponent<ShipStateController>(root, log, "ShipStateController");
+                EnsureComponent<ShipHealth>(root, log, "ShipHealth");
+                EnsureComponent<ShipDash>(root, log, "ShipDash");
+                EnsureComponent<ShipBoost>(root, log, "ShipBoost");
+                // VFX workers are ensured later in Phase 3
+
+                // ══════════════════════════════════════════════════════════
+                // Phase 1b: Wire ShipStatsSO + InputActions to root components
+                // ══════════════════════════════════════════════════════════
+                WireRootComponentReferences(root, log, todo);
+
+                // ══════════════════════════════════════════════════════════
+                // Phase 2: Visual hierarchy
+                // ══════════════════════════════════════════════════════════
 
                 var visualTf = root.transform.Find(VISUAL_CHILD_NAME);
                 if (visualTf == null)
@@ -154,7 +185,6 @@ namespace ProjectArk.Ship.Editor
                 Sprite solidSprite = LoadSpriteAtPath(SHIP_SOLID_SPRITE_PATH);
                 Sprite liquidSprite = LoadSpriteAtPath(SHIP_LIQUID_NORMAL_SPRITE_PATH);
                 Sprite hlSprite = LoadSpriteAtPath(SHIP_HIGHLIGHT_SPRITE_PATH);
-                Sprite boostLiquidSprite = LoadSpriteAtPath(SHIP_LIQUID_BOOST_SPRITE_PATH);
                 if (solidSprite == null)
                 {
                     todo.Add($"{SHIP_SOLID_SPRITE_NAME} sprite not found — import {SHIP_SOLID_SPRITE_PATH} first");
@@ -166,10 +196,6 @@ namespace ProjectArk.Ship.Editor
                 if (hlSprite == null)
                 {
                     todo.Add($"{SHIP_HIGHLIGHT_SPRITE_NAME} sprite not found — import {SHIP_HIGHLIGHT_SPRITE_PATH} first");
-                }
-                if (boostLiquidSprite == null)
-                {
-                    todo.Add($"{SHIP_LIQUID_BOOST_SPRITE_NAME} sprite not found — import {SHIP_LIQUID_BOOST_SPRITE_PATH} first");
                 }
 
                 var back = EnsureSpriteLayer(visualTf, SPRITE_BACK_NAME, -3, null, null, log);
@@ -195,14 +221,89 @@ namespace ProjectArk.Ship.Editor
 
                 var boostTrailView = EnsureBoostTrailRoot(visualTf, log, todo);
 
-                var backTf = back != null ? back.transform : visualTf;
-                var enginePs = EnsureParticleSystemChild(
-                    backTf,
-                    ENGINE_PARTICLES_NAME,
-                    new Vector3(0f, 0.1f, 0f),
-                    glowMat,
-                    log);
+                // ── ShipBoostVisuals ──
+                var boostVisuals = EnsureComponent<ShipBoostVisuals>(root, log, "ShipBoostVisuals");
+                var boostVisualsSO = new SerializedObject(boostVisuals);
+                WireField(boostVisualsSO, "_liquidRenderer", liquid, log, "ShipBoostVisuals._liquidRenderer");
+                WireField(boostVisualsSO, "_hlRenderer", hl, log, "ShipBoostVisuals._hlRenderer");
+                WireField(boostVisualsSO, "_coreRenderer", core, log, "ShipBoostVisuals._coreRenderer");
+                if (back != null)
+                {
+                    var backTransformProp = boostVisualsSO.FindProperty("_backSpriteTransform");
+                    if (backTransformProp != null && backTransformProp.objectReferenceValue != (Object)back.transform)
+                    {
+                        backTransformProp.objectReferenceValue = back.transform;
+                        log.Add("✓ ShipBoostVisuals._backSpriteTransform wired");
+                    }
+                    else if (backTransformProp != null)
+                    {
+                        log.Add("✓ ShipBoostVisuals._backSpriteTransform (already wired)");
+                    }
+                }
+                WireField(boostVisualsSO, "_boostTrailView", boostTrailView, log, "ShipBoostVisuals._boostTrailView");
+                WireJuiceSettings(boostVisualsSO, "_juiceSettings", log, "ShipBoostVisuals._juiceSettings", todo);
+                boostVisualsSO.ApplyModifiedProperties();
 
+                // ── ShipHitVisuals ──
+                var hitVisuals = EnsureComponent<ShipHitVisuals>(root, log, "ShipHitVisuals");
+                var hitVisualsSO = new SerializedObject(hitVisuals);
+                WireField(hitVisualsSO, "_backRenderer", back, log, "ShipHitVisuals._backRenderer");
+                WireField(hitVisualsSO, "_liquidRenderer", liquid, log, "ShipHitVisuals._liquidRenderer");
+                WireField(hitVisualsSO, "_hlRenderer", hl, log, "ShipHitVisuals._hlRenderer");
+                WireField(hitVisualsSO, "_solidRenderer", solid, log, "ShipHitVisuals._solidRenderer");
+                WireField(hitVisualsSO, "_coreRenderer", core, log, "ShipHitVisuals._coreRenderer");
+                WireJuiceSettings(hitVisualsSO, "_juiceSettings", log, "ShipHitVisuals._juiceSettings", todo);
+                hitVisualsSO.ApplyModifiedProperties();
+
+                // ── ShipDashVisuals ──
+                var dashVisuals = EnsureComponent<ShipDashVisuals>(root, log, "ShipDashVisuals");
+                var dashVisualsSO = new SerializedObject(dashVisuals);
+                WireField(dashVisualsSO, "_solidRenderer", solid, log, "ShipDashVisuals._solidRenderer");
+                WireField(dashVisualsSO, "_hlRenderer", hl, log, "ShipDashVisuals._hlRenderer");
+                WireField(dashVisualsSO, "_coreRenderer", core, log, "ShipDashVisuals._coreRenderer");
+                WireField(dashVisualsSO, "_dodgeSprite", dodgeSr, log, "ShipDashVisuals._dodgeSprite");
+                WireJuiceSettings(dashVisualsSO, "_juiceSettings", log, "ShipDashVisuals._juiceSettings", todo);
+
+                // ── DashAfterImageSpawner ──
+                var afterImageSpawner = EnsureComponent<DashAfterImageSpawner>(root, log, "DashAfterImageSpawner");
+                var afterImageSpawnerSO = new SerializedObject(afterImageSpawner);
+                WireField(afterImageSpawnerSO, "_shipSpriteRenderer", solid, log, "DashAfterImageSpawner._shipSpriteRenderer → Ship_Sprite_Solid");
+                WireJuiceSettings(afterImageSpawnerSO, "_juiceSettings", log, "DashAfterImageSpawner._juiceSettings", todo);
+                WireShipStats(afterImageSpawnerSO, "_stats", log, "DashAfterImageSpawner._stats", todo);
+                // Wire DashAfterImage prefab
+                var afterImagePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(DASH_AFTER_IMAGE_PREFAB_PATH);
+                if (afterImagePrefab != null)
+                {
+                    WireField(afterImageSpawnerSO, "_afterImagePrefab", afterImagePrefab, log, "DashAfterImageSpawner._afterImagePrefab");
+                }
+                else
+                {
+                    todo.Add($"DashAfterImageSpawner._afterImagePrefab: Missing prefab at {DASH_AFTER_IMAGE_PREFAB_PATH}");
+                }
+                afterImageSpawnerSO.ApplyModifiedProperties();
+
+                // Wire DashAfterImageSpawner into ShipDashVisuals
+                WireField(dashVisualsSO, "_afterImageSpawner", afterImageSpawner, log, "ShipDashVisuals._afterImageSpawner");
+                dashVisualsSO.ApplyModifiedProperties();
+
+                // ── ShipVisualJuice ──
+                var juiceVisuals = EnsureComponent<ShipVisualJuice>(root, log, "ShipVisualJuice");
+                var juiceVisualsSO = new SerializedObject(juiceVisuals);
+                // Wire _visualChild to ShipVisual transform
+                var visualChildProp = juiceVisualsSO.FindProperty("_visualChild");
+                if (visualChildProp != null && visualChildProp.objectReferenceValue != (Object)visualTf)
+                {
+                    visualChildProp.objectReferenceValue = visualTf;
+                    log.Add("✓ ShipVisualJuice._visualChild wired → ShipVisual");
+                }
+                else if (visualChildProp != null)
+                {
+                    log.Add("✓ ShipVisualJuice._visualChild (already wired)");
+                }
+                WireJuiceSettings(juiceVisualsSO, "_juiceSettings", log, "ShipVisualJuice._juiceSettings", todo);
+                juiceVisualsSO.ApplyModifiedProperties();
+
+                // ── ShipView (Coordinator) ──
                 var shipView = EnsureComponent<ShipView>(root, log, "ShipView");
                 var shipViewSO = new SerializedObject(shipView);
                 WireField(shipViewSO, "_backRenderer", back, log, "ShipView._backRenderer");
@@ -210,43 +311,13 @@ namespace ProjectArk.Ship.Editor
                 WireField(shipViewSO, "_hlRenderer", hl, log, "ShipView._hlRenderer");
                 WireField(shipViewSO, "_solidRenderer", solid, log, "ShipView._solidRenderer");
                 WireField(shipViewSO, "_coreRenderer", core, log, "ShipView._coreRenderer");
-                WireField(shipViewSO, "_boostTrailView", boostTrailView, log, "ShipView._boostTrailView");
-                WireField(shipViewSO, "_normalLiquidSprite", liquidSprite, log, "ShipView._normalLiquidSprite");
-                WireField(shipViewSO, "_boostLiquidSprite", boostLiquidSprite, log, "ShipView._boostLiquidSprite");
-                WireField(shipViewSO, "_dodgeSprite", dodgeSr, log, "ShipView._dodgeSprite");
-                if (back != null)
-                {
-                    var backTransformProp = shipViewSO.FindProperty("_backSpriteTransform");
-                    if (backTransformProp != null && backTransformProp.objectReferenceValue != (Object)back.transform)
-                    {
-                        backTransformProp.objectReferenceValue = back.transform;
-                        log.Add("✓ ShipView._backSpriteTransform wired");
-                    }
-                    else if (backTransformProp != null)
-                    {
-                        log.Add("✓ ShipView._backSpriteTransform (already wired)");
-                    }
-                }
+                WireField(shipViewSO, "_boostVisuals", boostVisuals, log, "ShipView._boostVisuals");
+                WireField(shipViewSO, "_hitVisuals", hitVisuals, log, "ShipView._hitVisuals");
+                WireField(shipViewSO, "_dashVisuals", dashVisuals, log, "ShipView._dashVisuals");
+                WireField(shipViewSO, "_juiceVisuals", juiceVisuals, log, "ShipView._juiceVisuals");
+                WireField(shipViewSO, "_afterImageSpawner", afterImageSpawner, log, "ShipView._afterImageSpawner");
                 WireJuiceSettings(shipViewSO, "_juiceSettings", log, "ShipView._juiceSettings", todo);
                 shipViewSO.ApplyModifiedProperties();
-
-                var engineVfx = EnsureComponent<ShipEngineVFX>(root, log, "ShipEngineVFX");
-                var engineVfxSO = new SerializedObject(engineVfx);
-                WireField(engineVfxSO, "_engineParticles", enginePs, log, "ShipEngineVFX._engineParticles");
-                WireJuiceSettings(engineVfxSO, "_juiceSettings", log, "ShipEngineVFX._juiceSettings", todo);
-                engineVfxSO.ApplyModifiedProperties();
-
-                var spawner = root.GetComponent<DashAfterImageSpawner>();
-                if (spawner != null && solid != null)
-                {
-                    var spawnerSO = new SerializedObject(spawner);
-                    WireField(spawnerSO, "_shipSpriteRenderer", solid, log, "DashAfterImageSpawner._shipSpriteRenderer → Ship_Sprite_Solid");
-                    spawnerSO.ApplyModifiedProperties();
-                }
-                else if (spawner == null)
-                {
-                    log.Add("ℹ DashAfterImageSpawner not found on root — skipped");
-                }
             }
 
             var summary = new System.Text.StringBuilder();
@@ -287,20 +358,6 @@ namespace ProjectArk.Ship.Editor
                 return;
             }
 
-            var backTf = visualTf.Find(SPRITE_BACK_NAME);
-            if (backTf != null)
-            {
-                foreach (var name in MANAGED_BACK_CHILDREN)
-                {
-                    var child = backTf.Find(name);
-                    if (child != null)
-                    {
-                        Object.DestroyImmediate(child.gameObject);
-                        log.Add($"✗ Deleted '{name}' (force rebuild)");
-                    }
-                }
-            }
-
             foreach (var name in MANAGED_VISUAL_CHILDREN)
             {
                 var child = visualTf.Find(name);
@@ -314,19 +371,36 @@ namespace ProjectArk.Ship.Editor
 
         private static void ForceDeleteManagedComponents(GameObject root, List<string> log)
         {
-            TryDestroyComponent<ShipEngineVFX>(root, log);
             // Note: ShipView and DashAfterImageSpawner are NOT force-deleted
             // because they may have other manually-set fields we don't manage.
         }
 
-        private static void TryDestroyComponent<T>(GameObject go, List<string> log) where T : Component
+        // ══════════════════════════════════════════════════════════════
+        // Missing Script Cleanup
+        // ══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Recursively scans root and all children for components with missing scripts
+        /// (e.g. a deleted MonoBehaviour still serialized in the prefab) and removes them.
+        /// Must run BEFORE any EnsureComponent / wiring to avoid Unity's
+        /// "saving Prefab with a missing script" error.
+        /// </summary>
+        private static void StripMissingScripts(GameObject root, List<string> log)
         {
-            var component = go.GetComponent<T>();
-            if (component != null)
-            {
-                Object.DestroyImmediate(component);
-                log.Add($"✗ Removed {typeof(T).Name} (force rebuild)");
-            }
+            int totalRemoved = 0;
+            StripMissingScriptsRecursive(root, ref totalRemoved);
+
+            if (totalRemoved > 0)
+                log.Add($"⚠ Removed {totalRemoved} missing-script component(s) from prefab");
+        }
+
+        private static void StripMissingScriptsRecursive(GameObject go, ref int totalRemoved)
+        {
+            int removed = GameObjectUtility.RemoveMonoBehavioursWithMissingScript(go);
+            totalRemoved += removed;
+
+            for (int i = 0; i < go.transform.childCount; i++)
+                StripMissingScriptsRecursive(go.transform.GetChild(i).gameObject, ref totalRemoved);
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -335,6 +409,19 @@ namespace ProjectArk.Ship.Editor
 
         private static T EnsureComponent<T>(GameObject go, List<string> log, string label) where T : Component
         {
+            // GetComponents (plural) to detect duplicates — GetComponent only returns the first.
+            var all = go.GetComponents<T>();
+
+            if (all.Length > 1)
+            {
+                // Keep the first, destroy extras
+                for (int i = 1; i < all.Length; i++)
+                {
+                    Object.DestroyImmediate(all[i]);
+                }
+                log.Add($"⚠ {label}: removed {all.Length - 1} duplicate(s) — kept first instance");
+            }
+
             var component = go.GetComponent<T>();
             if (component == null)
             {
@@ -389,55 +476,6 @@ namespace ProjectArk.Ship.Editor
             }
 
             return sr;
-        }
-
-        private static ParticleSystem EnsureParticleSystemChild(
-            Transform parent,
-            string childName,
-            Vector3 localPos,
-            Material mat,
-            List<string> log)
-        {
-            var existing = parent.Find(childName);
-            GameObject go;
-            if (existing != null)
-            {
-                go = existing.gameObject;
-                log.Add($"✓ '{childName}' (PS) updated");
-            }
-            else
-            {
-                go = new GameObject(childName);
-                go.transform.SetParent(parent, false);
-                go.transform.localPosition = localPos;
-                go.transform.localRotation = Quaternion.identity;
-                log.Add($"✓ Created '{childName}' (ParticleSystem) at {localPos}");
-            }
-
-            var ps = go.GetComponent<ParticleSystem>();
-            if (ps == null)
-            {
-                ps = go.AddComponent<ParticleSystem>();
-            }
-
-            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-            var emission = ps.emission;
-            emission.enabled = true;
-            emission.rateOverTime = 0f;
-
-            if (mat != null)
-            {
-                var renderer = go.GetComponent<ParticleSystemRenderer>();
-                if (renderer == null)
-                {
-                    renderer = go.AddComponent<ParticleSystemRenderer>();
-                }
-
-                renderer.sharedMaterial = mat;
-                log.Add($"  → {childName}.ParticleSystemRenderer.sharedMaterial = ShipGlowMaterial");
-            }
-
-            return ps;
         }
 
         private static SpriteRenderer EnsureDodgeSpriteChild(
@@ -523,6 +561,106 @@ namespace ProjectArk.Ship.Editor
         // ══════════════════════════════════════════════════════════════
         // Sprite Finder / Prefab Integration
         // ══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Ensures Rigidbody2D and CircleCollider2D exist on the Ship root.
+        /// </summary>
+        private static void EnsurePhysicsComponents(GameObject root, List<string> log)
+        {
+            var rb = root.GetComponent<Rigidbody2D>();
+            if (rb == null)
+            {
+                rb = root.AddComponent<Rigidbody2D>();
+                rb.mass = 1f;
+                rb.linearDamping = 3f;
+                rb.angularDamping = 0f;
+                rb.gravityScale = 0f;
+                rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+                rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+                rb.constraints = RigidbodyConstraints2D.None;
+                log.Add("✓ Rigidbody2D added + configured");
+            }
+            else
+            {
+                log.Add("✓ Rigidbody2D already present");
+            }
+
+            var col = root.GetComponent<CircleCollider2D>();
+            if (col == null)
+            {
+                col = root.AddComponent<CircleCollider2D>();
+                col.radius = 0.4f;
+                log.Add("✓ CircleCollider2D added (radius=0.4)");
+            }
+            else
+            {
+                log.Add("✓ CircleCollider2D already present");
+            }
+        }
+
+        /// <summary>
+        /// Wires ShipStatsSO and InputActionAsset to all root-level gameplay components.
+        /// </summary>
+        private static void WireRootComponentReferences(GameObject root, List<string> log, List<string> todo)
+        {
+            // ── ShipStatsSO ──
+            var statsSO = AssetDatabase.LoadAssetAtPath<ShipStatsSO>(SHIP_STATS_PATH);
+            if (statsSO == null)
+            {
+                todo.Add($"ShipStatsSO missing at {SHIP_STATS_PATH} — run 'ProjectArk > Ship > Create Ship Stats Asset' first");
+            }
+            else
+            {
+                // Wire _stats to all consumers
+                WireStatsToComponent<ShipMotor>(root, "_stats", statsSO, log, "ShipMotor._stats");
+                WireStatsToComponent<ShipAiming>(root, "_stats", statsSO, log, "ShipAiming._stats");
+                WireStatsToComponent<ShipStateController>(root, "_stats", statsSO, log, "ShipStateController._stats");
+                WireStatsToComponent<ShipHealth>(root, "_stats", statsSO, log, "ShipHealth._stats");
+                WireStatsToComponent<ShipDash>(root, "_stats", statsSO, log, "ShipDash._stats");
+                WireStatsToComponent<ShipBoost>(root, "_stats", statsSO, log, "ShipBoost._stats");
+            }
+
+            // ── InputActionAsset ──
+            var inputAsset = AssetDatabase.LoadAssetAtPath<InputActionAsset>(INPUT_ACTIONS_PATH);
+            if (inputAsset == null)
+            {
+                todo.Add($"InputActionAsset missing at {INPUT_ACTIONS_PATH} — assign manually");
+            }
+            else
+            {
+                var inputHandler = root.GetComponent<InputHandler>();
+                if (inputHandler != null)
+                {
+                    var so = new SerializedObject(inputHandler);
+                    WireField(so, "_inputActions", inputAsset, log, "InputHandler._inputActions");
+                    so.ApplyModifiedProperties();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Helper: wire a ShipStatsSO to a specific component's field via SerializedObject.
+        /// </summary>
+        private static void WireStatsToComponent<T>(GameObject root, string propertyPath, ShipStatsSO stats, List<string> log, string label) where T : Component
+        {
+            var comp = root.GetComponent<T>();
+            if (comp == null) return;
+            var so = new SerializedObject(comp);
+            WireField(so, propertyPath, stats, log, label);
+            so.ApplyModifiedProperties();
+        }
+
+        private static void WireShipStats(SerializedObject so, string propertyPath, List<string> log, string label, List<string> todo)
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<ShipStatsSO>(SHIP_STATS_PATH);
+            if (asset == null)
+            {
+                todo.Add($"{label}: Missing ShipStatsSO at {SHIP_STATS_PATH}");
+                return;
+            }
+
+            WireField(so, propertyPath, asset, log, label);
+        }
 
         private static BoostTrailView EnsureBoostTrailRoot(Transform visualTf, List<string> log, List<string> todo)
         {

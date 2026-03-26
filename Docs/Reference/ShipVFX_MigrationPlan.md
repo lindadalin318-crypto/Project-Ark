@@ -22,7 +22,7 @@ MVP 原则：
 5. **先锁读感，不锁实现**：`MainTrail` 当前满意的是**主观效果**，不是具体实现；若其结构、流程或技术栈不够干净，应直接改到更符合规范，只需保持同类读感
 6. **优先复用成熟原则，不盲从现实现状**：后续 `Ship VFX` 重构优先参考 `MainTrail` 当前想保留的读感目标与 clean 原则，而不是把它此刻的节点形态、脚本结构或技术选型当成不可质疑的模板
 7. **单特效推进**：体验重构阶段一次只讨论一个特效或一个紧耦合效果簇，避免多层一起动导致判断失真
-8. **玩家读感优先**：每次讨论都以“玩家此刻应该感受到什么”为准，而不是先看工程实现是否精巧
+8. **玩家读感优先**：每次讨论都以"玩家此刻应该感受到什么"为准，而不是先看工程实现是否精巧
 
 ## 3. 批次拆分
 
@@ -45,11 +45,11 @@ MVP 原则：
 
 目标：
 
-- `ShipPrefabRebuilder` 正式接管 `Ship.prefab` 结构与 `BoostTrailRoot` 集成
+- `ShipPrefabRebuilder` 正式接管 `Ship.prefab` 全部结构、组件、接线（含原 `ShipBuilder` 职责）
 - `BoostTrailPrefabCreator` 明确只负责 `BoostTrailRoot.prefab`
 - `MaterialTextureLinker` 只维护现役材质并优先精确路径回填
 - `ShipBoostTrailSceneBinder` 明确只处理 scene-only 引用
-- `ShipBuilder` 退为场景 bootstrap 工具
+- `ShipBuilder` 已删除（2026-03-21），职责已合并到 `ShipPrefabRebuilder`
 
 完成标准：
 
@@ -99,15 +99,15 @@ MVP 原则：
 目标：
 
 - 明确 `FlameTrail_B`、`Ship_Sprite_HL`、`ShipShipState` 的当前风险等级
-- 把“可改 / 不可改 / 需 Editor 配合”结论写回规范层，避免后续重复审计
+- 把"可改 / 不可改 / 需 Editor 配合"结论写回规范层，避免后续重复审计
 - 把 prefab 节点改名与纹理 / 材质迁移拆开，避免一次性联动过大
 - 为下一批真正的物理 rename 准备最小安全动作清单
 
 完成标准：
 
-- `FlameTrail_B` 明确标记为“需 Editor 配合”，并写清 `BoostTrailPrefabCreator` + `_flameTrailB` 依赖
-- `Ship_Sprite_HL` 明确标记为“需 Editor 配合”，并写清 `ShipPrefabRebuilder` / `ShipBuilder` + `_hlRenderer` 依赖
-- `ShipShipState` 明确标记为“不可改（当前批）”
+- `FlameTrail_B` 明确标记为"需 Editor 配合"，并写清 `BoostTrailPrefabCreator` + `_flameTrailB` 依赖
+- `Ship_Sprite_HL` 明确标记为"需 Editor 配合"，并写清 `ShipPrefabRebuilder` + `_hlRenderer` 依赖
+- `ShipShipState` 明确标记为"不可改（当前批）"
 - 文档中明确 `Ship_Sprite_HL` 当前 live prefab 使用共享默认材质链，不与 `ShipGlowMaterial.mat` 绑定迁移
 
 ## Batch 6 — Ship VFX 体验重构 Backlog（当前执行批）
@@ -116,12 +116,12 @@ MVP 原则：
 
 - 把 `MainTrail` 定位为**当前满意读感参考**，而不是不可碰的冻结基线；若本体存在结构冗余、流程不规范或实现过重，允许直接精简、重构或替换
 - 把全部现役 `Ship VFX`（包含 `MainTrail`）整理成可逐项讨论、逐项决策、逐项验收的 backlog
-- 让 `Ship_VFX_Player_Perception_Reference.md` 继续负责“玩家看到了什么”，而本计划负责“我们接下来按什么顺序改”
+- 让 `Ship_VFX_Player_Perception_Reference.md` 继续负责"玩家看到了什么"，而本计划负责"我们接下来按什么顺序改"
 - 为后续逐项重构提供统一决策位：**保留 / 重做 / 合并 / 删除 / 延后**
 
 完成标准：
 
-- `MainTrail` 被明确标记为“满意读感参考 / 可重构”
+- `MainTrail` 被明确标记为"满意读感参考 / 可重构"
 - 全部现役 `Ship VFX` 均进入 backlog 清单，`MainTrail` 不再被排除在外
 - backlog 以玩家体验阶段分组，并附带建议优先级
 - 后续每次讨论都能直接从本节选一项推进，而不需要重新盘点现役效果
@@ -134,14 +134,14 @@ MVP 原则：
 
 #### 6.1.1 `MainTrail` 读感与 clean 结构参考原则
 
-后续文档里所有“**沿用 `MainTrail` 方案**”的表述，都应理解为：**优先参考它想保留的主观读感与 clean 结构原则，而不是把当前实现细节视为固定模板**。
+后续文档里所有"**沿用 `MainTrail` 方案**"的表述，都应理解为：**优先参考它想保留的主观读感与 clean 结构原则，而不是把当前实现细节视为固定模板**。
 
 默认优先参考的是以下原则：
 
 1. **清晰的单一主载体**：先确定一个真正承担主读感的载体（例如 `TrailRenderer`、`ParticleSystem`、`SpriteRenderer`），避免多个层同时争主角。
 2. **材质 / Shader 驱动优先**：优先把风格塑形放进材质和 Shader，而不是靠堆很多节点或很多一次性小特效去拼。
 3. **少量关键运行时参数驱动**：参考 `MainTrail` 当前读感里最有效的关键参数驱动方式，尽量避免同一效果拆成很多互相独立的开关。
-4. **单一现役主链**：优先保持一个明确的 live 材质 / 贴图 / prefab 链路，避免重新引入“现役链 + 兼容链 + fallback 链”并存的结构复杂度。
+4. **单一现役主链**：优先保持一个明确的 live 材质 / 贴图 / prefab 链路，避免重新引入"现役链 + 兼容链 + fallback 链"并存的结构复杂度。
 5. **Editor 装配与 Runtime 播放分离**：Prefab 结构和材质接线归 Editor 工具，运行时脚本只负责播放、过渡和参数驱动。
 6. **先做可调 MVP，再加细节层**：先做一条能在 Play Mode 里稳定成立的主效果，再决定是否需要辅层，而不是一开始就把层数铺满。
 7. **效果相似优先于实现相似**：只要玩家读到的持续推进感、受控高能感、主尾迹权重仍成立，就允许替换当前节点结构、材质写法、脚本组织甚至主载体技术。
@@ -179,14 +179,14 @@ MVP 原则：
 | Dash | `Static Ghost` | `ShipView` | 待重构 | 重做 | `P2` |
 | Dash | `After-Images` | `DashAfterImageSpawner` | 待重构 | 重做 | `P2` |
 | Dash | `Dash Engine Burst` | `ShipEngineVFX` | 待重构 | 重做 | `P2` |
-| Boost 起手 | `Activation Halo` | `BoostTrailView` | 实现中 | 重做 | `P1` |
-| Boost 起手 | `Bloom Burst` | `BoostTrailView` + Scene Volume | 实现中 | 重做 | `P1` |
-| Boost 起手 | `FlameCore Burst` | `BoostTrailView` | 实现中 | 重做 | `P1` |
-| Boost 起手 | `EmberSparks Burst` | `BoostTrailView` | 实现中 | 重做 | `P1` |
-| Boost 起手 | `Liquid Boost State`（亮度 + Sprite 切换） | `ShipView` | 实现中 | 重做 | `P1` |
-| Boost 起手 | `Thruster Entry Pulse` | `ShipView` | 待重构 | 重做 | `P2` |
-| Boost 持续 | `FlameTrail_R / FlameTrail_B` | `BoostTrailView` | 实现中 | 重做 | `P1` |
-| Boost 持续 | `EmberTrail` | `BoostTrailView` | 实现中 | 重做 | `P1` |
+| Boost 起手 | `Activation Halo` | ~~`BoostTrailView`~~ | **已取消** ❌ | 取消（合并入 Bloom/FlameCore 强化） | — |
+| Boost 起手 | `Bloom Burst` | `BoostTrailView` + Scene Volume | **已验收** ✅ | 重做 | `P1` |
+| Boost 起手 | `FlameCore Burst` | `BoostTrailView` | **已验收** ✅ | 重做 | `P1` |
+| Boost 起手 | `EmberSparks Burst` | `BoostTrailView` | **已验收** ✅ | 重做 | `P1` |
+| Boost 起手 | `Liquid Boost State`（亮度 + Sprite 切换 + SortOrder） | `ShipBoostVisuals` | **已验收** ✅ | 重做 | `P1` |
+| Boost 起手 | `Thruster Entry Pulse` | `ShipBoostVisuals` | 待重构 | 重做 | `P2` |
+| Boost 持续 | `FlameTrail_R / FlameTrail_B` | `BoostTrailView` | **已验收** ✅ | 重做 | `P1` |
+| Boost 持续 | `EmberTrail` | `BoostTrailView` | **已验收** ✅ | 重做 | `P1` |
 | Boost 持续 | `BoostEnergyLayer2 / Layer3` | `BoostTrailView` | 实现中 | 重做 | `P1` |
 | Boost 持续 | `Boost Engine Hold / Loop Pulse` | `ShipEngineVFX` + `ShipView` | 待重构 | 重做 | `P2` |
 | Boost 收尾 | `Boost Outro Restore` | `BoostTrailView` + `ShipView` | 待重构 | 重做 | `P2` |
@@ -194,86 +194,55 @@ MVP 原则：
 ### 6.4 当前 list 的使用方式
 
 - 每次只从表里挑 **一个条目** 或 **一个强耦合小簇** 来讨论
-- 若某条目最终不值得保留，就把“建议处理”从 `重做` 改成 `删除` 或 `合并`
+- 若某条目最终不值得保留，就把"建议处理"从 `重做` 改成 `删除` 或 `合并`
 - 若某条目需要依附别的层存在，就在讨论时把它降级为辅层，而不要抢主读感
 - 每完成一项，就在本表里把状态更新成：`已定方向` / `实现中` / `已验收`
 
-### 6.5 当前推进项：`Activation Halo`
+### 6.5 已取消推进项：`Activation Halo` ❌
 
-#### 当前结论
+#### 最终结论
 
-- **状态**：`已定方向，待实现`
-- **决策**：`重做`
-- **定位**：Boost 起手的**局部主确认层**
-- **关系**：它应该先于 `Bloom Burst` 被定调；`Bloom Burst` 是辅层放大器，不能反过来替代它
+- **状态**：`已取消`（2026-03-22）
+- **决策**：`取消（合并入 Bloom Burst + FlameCore Burst 强化）`
+- **原始定位**：Boost 起手的局部主确认层
 
-#### 目标（玩家此刻应该感受到什么）
+#### 取消原因
 
-当玩家按下 Boost 成功进入高能态时，第一眼应该感受到的不是“屏幕亮了一下”，而是：
+实机测试后发现 `Activation Halo` 不适合作为独立层保留：
 
-- **飞船本体周围瞬间被点燃**
-- **有一次明确的、贴身的、高能启动确认**
-- **这一下短、狠、集中，而不是拖沓或像 UI 点击波纹**
-- **它和 `MainTrail` 属于同一视觉语系**：科技感、压缩感、能量受控释放，而不是松散烟雾
+1. **肉眼几乎不可见**：duration 仅 0.12s 的 ring sprite scale + alpha 动画，在实际 Boost 起手时完全被 `Bloom Burst` 和 `FlameCore Burst` 盖住
+2. **维护成本过高**：实现跨 7 个文件（`BoostTrailView` / `BoostTrailPrefabCreator` / `ShipJuiceSettingsSO` / `BoostTrailDebugManager` / `BoostTrailDebugManagerEditor` / `ShipVfxValidator` / `MaterialTextureLinker`），投入产出比极低
+3. **职责已被现有层覆盖**：强化后的 `Bloom Burst`（全局能量放大）+ `FlameCore Burst`（喷口根部点火核心）已经充分提供了 Boost 起手确认读感，不需要额外的 ring sprite 层
 
-#### 当前问题（按现版本默认假设）
+#### 替代方案
 
-在进入逐项实机验收前，先按以下问题假设推进：
+Boost 起手确认职责由以下已验收层共同承担：
 
-- 当前 `Halo` 更像一张**本地 ring sprite 做 alpha + scale 动画**，点火读感可能偏弱
-- 它容易和 `Bloom Burst` 职责重叠，导致“主确认层”不清，最后变成只觉得亮了一下
-- 若缩放扩张太像圆环波纹，会更像 UI 命中反馈，而不是推进系统点火
-- 如果持续时间稍长，起手会显得拖；如果过亮但没有实体感，又会显得空
+- `Bloom Burst` ✅：全局能量抬升，短促放大器
+- `FlameCore Burst` ✅：喷口根部点火核心，近身实体感
+- `EmberSparks Burst` ✅：边缘火星强调
+- `Liquid Boost State` ✅：船体高能态切换
 
-#### 范围
+#### 清理范围
 
-本项默认允许改动：
+以下代码和配置已在取消时一并删除：
 
-- `BoostTrailRoot.prefab` 中 `BoostActivationHalo` 的表现方式
-- `BoostTrailPrefabCreator` 对 `Halo` 的生成参数与默认材质 / 贴图选择
-- `BoostTrailView` 中 `TriggerActivationHalo()` / `ApplyActivationHalo()` 的时序、曲线、缩放、透明度逻辑
-- 必要时微调 `Halo` 与 `Bloom Burst` 的先后关系
+- `BoostTrailView`：移除 `_activationHalo` 字段、`TriggerActivationHalo()` / `ApplyActivationHalo()` 方法
+- `BoostTrailPrefabCreator`：移除 `ConfigureActivationHalo()` 相关生成逻辑
+- `ShipJuiceSettingsSO`：移除 Halo 相关配置参数
+- `BoostTrailDebugManager` / `BoostTrailDebugManagerEditor`：移除 Halo 预览入口
+- `BoostTrailRoot.prefab`：移除 `BoostActivationHalo` 子节点
 
-本项默认**不**改动：
-
-- `MainTrail` 本体
-- `FlameTrail_R / FlameTrail_B`、`EmberTrail`、`EmberSparks` 的持续层设计
-- 大范围的共享材质命名与物理迁移
-
-#### MVP 方向
-
-先做一个**近身、短促、压缩感强**的版本，不追求层数多：
-
-- `Halo` 只承担 **Boost 成功点火确认**，不承担持续发光职责
-- 动作曲线偏“先猛亮、立刻收”，避免均匀淡入淡出
-- 缩放更像**能量瞬间撑开一下**，不是平滑圆环扩散
-- 视觉中心贴紧船体，不要做成远离本体的大圈提示
-- 如果 `Halo` 和 `Bloom` 同时存在，必须保证玩家首先读到的是“船被点燃”，不是“屏幕泛白”
-
-#### 验收标准
-
-满足以下条件视为本项完成：
-
-- 玩家在 `SampleScene` 中第一次进入 Boost 时，**不看尾迹也能明确知道“点火成功了”**
-- `Halo` 的主读感来自**飞船本体附近**，而不是来自屏幕整体亮度变化
-- 该效果在主观上是**短促、集中、带冲击**，不会拖成第二段持续特效
-- 它不会抢走 `MainTrail` 的持续主读感，只负责起手那一下
-- 关闭 `Bloom Burst` 后，`Halo` 仍然能独立完成“Boost 起手确认”的核心职责
-
-#### 未来增强（先不做）
-
-- 结合方向或速度做非对称形变
-- 让 `Halo` 与 `FlameCore Burst` 做更紧的节奏编排
-- 引入更复杂的 shader 驱动而非单纯 sprite burst
+> **注意**：Halo 相关的纹理资产（`vfx_ring_glow_uneven.png` / `vfx_magnetic_rings.png`）暂保留在仓库中，状态从 `Live` 降级为 `Dormant`，待后续 Batch 4 dormant 清理时统一处理。
 
 ### 6.6 当前推进项：`Bloom Burst`
 
 #### 当前结论
 
-- **状态**：`已定方向，待实现`
+- **状态**：`已验收` ✅
 - **决策**：`重做（降级为辅层）`
 - **定位**：Boost 起手的**全局辅层放大器**
-- **关系**：它只能放大 `Activation Halo` / `FlameCore Burst` 已经建立的点火读感，不能单独承担“Boost 成功确认”
+- **关系**：它只能放大 `FlameCore Burst` 已经建立的点火读感，不能单独承担"Boost 成功确认"
 
 #### 目标（玩家此刻应该感受到什么）
 
@@ -281,7 +250,7 @@ MVP 原则：
 
 - **画面整体有一次短促抬升**，让人感觉能量瞬间冲上来
 - **玩家第一眼仍然先读到飞船本体和推进器被点燃**，而不是只感觉屏幕发白
-- **它和 `MainTrail` 属于同一高能科技语系**，但职责是“放大器”，不是“主读感载体”
+- **它和 `MainTrail` 属于同一高能科技语系**，但职责是"放大器"，不是"主读感载体"
 - **它必须给本地层让位**：船体局部读感优先，后处理只负责托举
 
 #### 当前问题（基于现实现链路）
@@ -290,9 +259,9 @@ MVP 原则：
 
 基于这条现役链，当前主要风险是：
 
-- **后处理感太强**：容易把读感做成“屏幕亮了一下”，而不是“飞船被点燃了”
-- **职责容易篡位**：如果峰值过高或持续时间过长，`Bloom` 会盖过 `Activation Halo` 和 `FlameCore Burst`
-- **节奏偏平均**：当前对称 `up/down` 结构更像一个泛用亮度脉冲，未必足够像“点火瞬间先顶一下、立刻回让”
+- **后处理感太强**：容易把读感做成"屏幕亮了一下"，而不是"飞船被点燃了"
+- **职责容易篡位**：如果峰值过高或持续时间过长，`Bloom` 会盖过 `FlameCore Burst`
+- **节奏偏平均**：当前对称 `up/down` 结构更像一个泛用亮度脉冲，未必足够像"点火瞬间先顶一下、立刻回让"
 - **场景依赖明显**：这层依赖 `ShipBoostTrailSceneBinder` 绑定的 `BoostTrailBloomVolume` 与 `BoostBloomVolumeProfile.asset`，天然更适合做辅层，而不是主确认层
 
 #### 技术参考（是否沿用 `MainTrail` 方案）
@@ -304,7 +273,7 @@ MVP 原则：
 1. **单一现役主链**：只保留 `BoostTrailView` → `_boostBloomVolume` → `BoostBloomVolumeProfile.asset` 这一条 live chain。
 2. **少量关键参数驱动**：优先用少数几个参数控制峰值、attack、release，不把 Bloom 拆成多套并行补丁。
 3. **Editor 装配与 Runtime 播放分离**：scene volume 继续由 `ShipBoostTrailSceneBinder` 负责接线，运行时只负责时序驱动。
-4. **让位于本地主读感**：像 `MainTrail` 一样先明确“谁是主角”，Bloom 在这里不能争主载体位置。
+4. **让位于本地主读感**：像 `MainTrail` 一样先明确"谁是主角"，Bloom 在这里不能争主载体位置。
 
 #### 范围
 
@@ -313,22 +282,21 @@ MVP 原则：
 - `BoostTrailView.TriggerBloomBurst()` 的时序、峰值、attack / release 曲线与 weight 使用方式
 - `BoostBloomVolumeProfile.asset` 的 Bloom 默认参数
 - `ShipBoostTrailSceneBinder` 对 scene-only Bloom Volume 的约束说明
-- 必要时调整它与 `Activation Halo` / `FlameCore Burst` 的相对先后关系
+- 必要时调整它与 `FlameCore Burst` 的相对先后关系
 
 本项默认**不**改动：
 
 - `MainTrail` 本体
-- `Activation Halo` 的本地主确认职责
 - `FlameCore Burst` / `EmberSparks Burst` 的本体点火表现
 - 持续层的 `FlameTrail_R / FlameTrail_B` 与 `EmberTrail`
 
 #### MVP 方向
 
-先做一个**前置、短促、迅速回让**的版本，不追求“存在感最大化”：
+先做一个**前置、短促、迅速回让**的版本，不追求"存在感最大化"：
 
-- `Bloom` 只承担 **全局能量放大**，不承担“Boost 是否成功”的第一确认职责
+- `Bloom` 只承担 **全局能量放大**，不承担"Boost 是否成功"的第一确认职责
 - attack 应明显快于 release，避免均速脉冲感
-- 峰值以“托举本体点火”为目标，而不是追求强烈泛白
+- 峰值以"托举本体点火"为目标，而不是追求强烈泛白
 - 如果必须在冲击和可读性之间取舍，优先保住船体本地层的可读性
 - 关闭 `Bloom` 后，`Halo` 与本地点火层必须仍然能独立成立
 
@@ -338,9 +306,9 @@ MVP 原则：
 
 - 玩家在 `SampleScene` 中进入 Boost 时，会感觉到**整体能量被抬起来一下**，但第一眼仍然先读到船体和推进器被点燃
 - `Bloom Burst` 不会把飞船轮廓、喷口根部和本地起手层洗白到看不清
-- 关闭 `Bloom Burst` 后，玩家仍能明确判断“Boost 点火成功了”
+- 关闭 `Bloom Burst` 后，玩家仍能明确判断"Boost 点火成功了"
 - 它的主观读感是**短促放大器**，而不是第二个持续特效
-- 它不会抢走 `Activation Halo` 作为主确认层的职责
+- 它不会抢走 `FlameCore Burst` 作为主确认层的职责
 
 #### 未来增强（先不做）
 
@@ -352,10 +320,10 @@ MVP 原则：
 
 #### 当前结论
 
-- **状态**：`实现中，待实机验收`
+- **状态**：`已验收` ✅
 - **决策**：`重做`
 - **定位**：Boost 起手的**推进器根部点火核心层**
-- **关系**：`Activation Halo` 负责整船局部确认，`FlameCore Burst` 负责喷口根部“核心被点燃”的实体读感；`EmberSparks Burst` 只能做边缘强调，`FlameTrail_R / FlameTrail_B` 则负责后续持续输出
+- **关系**：`FlameCore Burst` 负责喷口根部"核心被点燃"的实体读感，是 Boost 起手的**主确认层**（原 `Activation Halo` 已取消并入此层）；`EmberSparks Burst` 只能做边缘强调，`FlameTrail_R / FlameTrail_B` 则负责后续持续输出
 
 #### 目标（玩家此刻应该感受到什么）
 
@@ -372,8 +340,8 @@ MVP 原则：
 
 - `BoostTrailPrefabCreator.ConfigureFlameCore()` 中 `main.loop = true`，`emission.rateOverTime = 42`，这意味着它当前不是一次性 burst，而是持续喷发
 - `BoostTrailView.OnBoostStart()` 与 `OnBoostEnd()` 直接对 `_flameCore` 执行 `PlayParticle()` / `StopParticle()`，生命周期几乎与持续层一起走
-- 它当前和 `FlameTrail_R / FlameTrail_B` 一样都使用火焰粒子语汇，容易职责重叠，导致“点火核心层”和“持续喷火层”边界不清
-- 由于它不是显式的 start-only 节奏层，玩家未必能明确读到“推进器核心先被点燃，再进入持续输出”的过程
+- 它当前和 `FlameTrail_R / FlameTrail_B` 一样都使用火焰粒子语汇，容易职责重叠，导致"点火核心层"和"持续喷火层"边界不清
+- 由于它不是显式的 start-only 节奏层，玩家未必能明确读到"推进器核心先被点燃，再进入持续输出"的过程
 
 #### 技术参考（是否沿用 `MainTrail` 方案）
 
@@ -381,7 +349,7 @@ MVP 原则：
 
 这里应重点复用 `MainTrail` 的 5 个原则：
 
-1. **清晰的单一主载体**：`FlameCore Burst` 自己承担“核心点火”主读感，不再和持续火焰混成一层。
+1. **清晰的单一主载体**：`FlameCore Burst` 自己承担"核心点火"主读感，不再和持续火焰混成一层。
 2. **单一现役主链**：优先保持一个明确的 `FlameCore` live material / prefab / runtime chain，避免为同一职责叠多套兼容实现。
 3. **少量关键参数驱动**：把 burst 强度、持续时间、尺寸节奏收束到少数关键参数，而不是多层粒子同时乱堆。
 4. **Editor 装配与 Runtime 播放分离**：默认形态与材质选择归 `BoostTrailPrefabCreator`，运行时只负责何时触发、何时结束。
@@ -399,7 +367,6 @@ MVP 原则：
 本项默认**不**改动：
 
 - `MainTrail` 本体
-- `Activation Halo` 的整船局部确认职责
 - `Bloom Burst` 的全局放大职责
 - 持续层 `EmberTrail` 的空间余烬表现
 
@@ -420,7 +387,7 @@ MVP 原则：
 - 玩家在 `SampleScene` 中进入 Boost 时，能明确读到**喷口根部先点火**，而不是只有持续火焰直接出现
 - `FlameCore Burst` 的主观持续时间足够短，不会和 `FlameTrail_R / FlameTrail_B` 混成同一条持续层
 - 即使关闭 `Bloom Burst`，玩家仍能清楚感受到推进器核心被点亮的瞬间
-- 它不会抢走 `Activation Halo` 的整船确认职责，也不会干扰 `MainTrail` 的持续主读感
+- 它不会干扰 `MainTrail` 的持续主读感，也不会和 `EmberSparks Burst` 抢主次
 - 它和 `EmberSparks Burst` 形成主次分明的关系：核心火焰是主体，火星只是陪衬
 
 #### 未来增强（先不做）
@@ -433,7 +400,7 @@ MVP 原则：
 
 #### 当前结论
 
-- **状态**：`实现中，待实机验收`
+- **状态**：`已验收` ✅
 - **决策**：`重做`
 - **定位**：Boost 起手的**边缘火星强调层**
 - **关系**：它只能跟在 `FlameCore Burst` 之后补一记边缘甩火，不能抢先成为第一点火读感，更不能和 `FlameTrail_R / FlameTrail_B` 混成持续喷发
@@ -453,7 +420,7 @@ MVP 原则：
 
 - `BoostTrailView.OnBoostStart()` 之前与 `FlameCore` 同帧触发，读感上容易和核心点火抢第一眼
 - `BoostTrailPrefabCreator.ConfigureEmberSparks()` 现有 `Circle + radial velocity` 更像**全向炸开**，不够贴喷口、也不够像边缘甩火
-- 起始速度和亮度偏高时，`EmberSparks` 会从“边缘强调”漂移成“另一个主 burst”
+- 起始速度和亮度偏高时，`EmberSparks` 会从"边缘强调"漂移成"另一个主 burst"
 - 若它持续太长或太散，玩家会更像看到一次烟花，而不是受控推进系统点火
 
 #### 技术参考（是否沿用 `MainTrail` 方案）
@@ -477,7 +444,7 @@ MVP 原则：
 
 本项默认**不**改动：
 
-- `Activation Halo` 的整船局部确认职责
+- `FlameCore Burst` 的喷口点火主确认职责
 - `Bloom Burst` 的全局放大职责
 - `FlameTrail_R / FlameTrail_B` 的持续层主输出
 - `MainTrail` 本体
@@ -488,7 +455,7 @@ MVP 原则：
 
 - `EmberSparks` 相对 `FlameCore` 略延后一拍，保证核心点火先被读到
 - 形态从**径向炸开**收口成**定向甩火**，减少烟花感
-- 粒子数量、持续时间和亮度都以“补边”为上限，不追求存在感最大化
+- 粒子数量、持续时间和亮度都以"补边"为上限，不追求存在感最大化
 - 它结束后应快速消失，把视觉主导权自然交给持续层
 
 #### 验收标准
@@ -498,7 +465,7 @@ MVP 原则：
 - 玩家在 `SampleScene` 中进入 Boost 时，会先读到 `FlameCore Burst`，然后才感知到 `EmberSparks` 的边缘强调
 - `EmberSparks` 的主观读感是**短促、定向、边缘化**，而不是一次全向爆炸
 - 即使临时关闭 `EmberSparks`，Boost 起手主确认仍成立；说明它确实是辅层而非主体
-- 它不会把 `FlameCore`、`Activation Halo` 或 `MainTrail` 的主读感洗掉
+- 它不会把 `FlameCore` 或 `MainTrail` 的主读感洗掉
 
 #### 未来增强（先不做）
 
@@ -510,83 +477,48 @@ MVP 原则：
 
 #### 当前结论
 
-- **状态**：`实现中，待实机验收`
+- **状态**：`已验收` ✅
 - **决策**：`重做`
 - **定位**：Boost 起手到持续阶段的**船体高能态切换层**
-- **关系**：它负责让玩家感到“船体液态能量层进入高能态”，但不能替代 `Activation Halo` / `FlameCore Burst` 的瞬时点火职责，也不能拖成另一个独立特效
+- **关系**：它负责让玩家感到"船体液态能量层进入高能态"，但不能替代 `FlameCore Burst` 的瞬时点火职责，也不能拖成另一个独立特效
 
-#### 目标（玩家此刻应该感受到什么）
+#### 实现总结
 
-当玩家进入 Boost 时，船体的液态/发光层应该表现为：
+由 `ShipBoostVisuals`（Worker）驱动，三管齐下解决了 Liquid 层在 Boost 时完全不可见的问题：
 
-- **状态被顶进更高能的运行档位**，而不是只换了一张图
-- **先有一次短促冲高**，随后才稳定停在持续 Boost 亮度
-- **换图、提亮、持续态** 应该属于同一条读感链，而不是三个彼此割裂的动作
-- **退出 Boost 时能顺畅回常态**，不会留下残光或突兀的 sprite pop
+1. **Sprite Swap**：Boost 时从 `Movement_3.png` 切换到 `Boost_16.png`，退出时恢复
+2. **SortOrder 提升**：Boost 时 `sortingOrder` 从 `-2` 提升到 `1`（Solid 层之上），退出时恢复
+3. **HDR 高强度颜色 tween**：颜色从基线 `(0.15, 0.25, 0.3)` tween 到 `(3, 4, 5, 1)` HDR 值
 
-#### 当前问题（基于现实现链路）
+所有参数数据驱动，配置在 `ShipJuiceSettingsSO`：
+- `_boostLiquidSprite`：Boost 专用 Sprite
+- `_boostLiquidSortOverride` / `_boostLiquidSortOrder`：SortOrder 覆盖开关与值
+- `_boostLiquidColor`：HDR 目标颜色
+- `_boostLiquidRampUpDuration` / `_boostLiquidRampDownDuration`：过渡时长
 
-当前 `ShipView.HandleBoostStarted()` / `HandleBoostEnded()` 对液态层的处理仍然比较直给：
+基线状态在 `Initialize()` 中捕获，`ResetState()` 完整恢复（防对象池状态泄漏）。
 
-- 起手是**单段亮度 ramp + 立即换图**，更像参数切换，而不是一次进入高能态的启动过程
-- 亮度提升直接落在持续值上，缺少“点火冲高 → 回落到稳态”的节奏层次
-- `Liquid Boost State` 作为船体本体层，理论上很重要，但当前容易被 `Halo` / `Bloom` / `FlameCore` 抢走所有关注，自己又没有形成足够清晰的状态切换读感
-- 退出 Boost 时若只做简单恢复，也容易显得“开的时候太直、关的时候太平”
+#### 验收结果
 
-#### 技术参考（是否沿用 `MainTrail` 方案）
-
-`Liquid Boost State` **应部分沿用 `MainTrail` 的技术思路**，但主载体仍然是 `ShipView` 上的 `SpriteRenderer`：
-
-1. **单一主载体**：由 `_liquidRenderer` 明确承担船体高能态切换表现。
-2. **少量关键参数驱动**：用少数亮度乘数与时长参数控制起手和持续态，而不是临时堆多个补丁 tween。
-3. **单一现役链**：`ShipView` + `ShipJuiceSettingsSO` + `Boost/Normal` 两张 sprite 构成唯一 live chain。
-4. **让位给起手主确认层**：它是状态切换层，不应抢走 `Halo` / `FlameCore` 的瞬时确认职责。
-
-#### 范围
-
-本项默认允许改动：
-
-- `ShipView` 中 Boost 进入 / 退出时对 `_liquidRenderer` 的换图与颜色驱动逻辑
-- `ShipJuiceSettingsSO` 的液态 Boost 起手 / 持续亮度参数
-- `DefaultShipJuiceSettings.asset` 的默认调参
-
-本项默认**不**改动：
-
-- `BoostTrailView` 中各粒子层的具体形态
-- `MainTrail` 本体
-- `Thruster Entry Pulse` 的单独节奏设计
-
-#### MVP 方向
-
-先做一个**单一 SpriteRenderer 上的两段式高能切换**：
-
-- 进入 Boost 时先把液态层**推到更高的 ignition peak**
-- 紧接着回落到一个略低但稳定的**sustain brightness**
-- 换图仍保持简单直接，但必须与亮度节奏一起读成“进入高能态”
-- 退出时保持当前恢复链简单，先确保进入态足够成立，再考虑更复杂的退场编排
-
-#### 验收标准
-
-满足以下条件视为本项完成：
-
-- 玩家在 `SampleScene` 中进入 Boost 时，能明确感觉到**船体液态层先被冲亮，再稳定停在高能态**
-- `Liquid Boost State` 与 `Activation Halo` / `FlameCore Burst` 叠在一起时，不会互相打架；它像状态切换层，而不是第四个 burst 主角
-- 关闭 `Bloom Burst` 后，液态层仍然能帮助玩家感知“飞船已进入高能态”
-- 退出 Boost 后，液态层能够平顺回到常态，没有残留状态泄漏
+- ✅ 进入 Boost 时，Liquid 层从 Solid 下方提升到上方，以 HDR 高亮色覆盖船体，明确感知"高能态"
+- ✅ 与 `FlameCore Burst` / `Bloom Burst` 叠加时层次分明，不互相打架
+- ✅ 退出 Boost 后，sprite / sortOrder / 颜色完整恢复到基线状态，无残留泄漏
+- ✅ 所有参数数据驱动，可在 SO 中无代码调参
 
 #### 未来增强（先不做）
 
 - 让液态层亮度与热量或速度挂钩，形成更连续的高能反馈
 - 为 Boost 贴图切换增加更细的过渡噪声或 shader 扰动
-- 把退场恢复也升级为明确的“收束”节奏，而不是简单回色
+- 把退场恢复也升级为明确的"收束"节奏，而不是简单回色
+- 加入 ignition peak → sustain 的两段式节奏（当前单段 ramp 已足够成立）
 
 ### 6.10 当前推进项：`FlameTrail_R / FlameTrail_B` + `EmberTrail`
 
 #### 当前结论
 
-- **状态**：`实现中，待实机验收`
+- **状态**：`已验收` ✅
 - **决策**：`重做`
-- **定位**：Boost 持续阶段的**推进器实体层**（`FlameTrail`）与**残余余烬层**（`EmberTrail`）
+- **定位**：Boost 持续阶段的**推进器实体层**（`FlameTrail`，Local-space 喷口持续火焰）与**残余余烬层**（`EmberTrail`，World-space rateOverDistance 移动散落碎屑）
 - **关系**：`MainTrail` 必须继续作为唯一主尾迹；`FlameTrail` 负责让玩家读到喷口持续全开，`EmberTrail` 只负责在主尾迹后面补一层更轻的热余烬
 
 #### 目标（玩家此刻应该感受到什么）
@@ -598,14 +530,14 @@ MVP 原则：
 - **主尾迹之外还有轻微余烬残留**，帮助拉出热量层次，但不形成第二条主尾迹
 - **整条持续链是受控的**，像高能推进系统稳定输出，而不是一堆粒子一起乱喷
 
-#### 当前问题（基于现实现链路）
+#### 当前问题（已解决）
 
-当前持续层的主要问题是：
+以下问题在本轮重做中已全部修复：
 
-- `FlameTrail_R / FlameTrail_B` 之前更接近**世界空间拖尾粒子**，容易和 `MainTrail` 抢同一类“后方拉尾”读感
-- `EmberTrail` 之前偏**大、散、团状**，更像脏烟或糊开的彩色气团，而不是轻盈的热余烬
-- 持续层在运行时几乎是**一开就满**，缺少“主尾迹先成立，其他层再接管”的读感秩序
-- Boost 结束时如果直接停粒子，会让持续态从“稳定巡航”突然掉成“硬切断电”
+- ~~`FlameTrail_R / FlameTrail_B` 之前更接近**世界空间拖尾粒子**，容易和 `MainTrail` 抢同一类"后方拉尾"读感~~ → 已改为 Local-space `rateOverTime` 喷口持续火焰，紧贴船体
+- ~~`EmberTrail` 之前偏**大、散、团状**，更像脏烟或糊开的彩色气团~~ → 已改为 World-space `rateOverDistance` 微小余烬碎屑，稀疏、极短命、半透明
+- ~~持续层在运行时几乎是**一开就满**，缺少"主尾迹先成立，其他层再接管"的读感秩序~~ → 已通过 blend-in threshold 分层接管（FlameTrail 0.18 → EmberTrail 0.42）
+- ~~Boost 结束时如果直接停粒子，会让持续态从"稳定巡航"突然掉成"硬切断电"~~ → 已由 master intensity ramp-down 自然淡出
 
 #### 技术参考（是否沿用 `MainTrail` 方案）
 
@@ -627,7 +559,7 @@ MVP 原则：
 本项默认**不**改动：
 
 - `MainTrail` 本体
-- 起手层 `Activation Halo` / `Bloom Burst` / `FlameCore Burst` / `EmberSparks Burst`
+- 起手层 `Bloom Burst` / `FlameCore Burst` / `EmberSparks Burst`
 - `ShipEngineVFX` 的引擎 Hold / Loop Pulse
 
 #### MVP 方向
@@ -661,7 +593,7 @@ MVP 原则：
 - **状态**：`实现中，待实机验收`
 - **决策**：`重做`
 - **定位**：Boost 持续阶段的**机体充能维持层**
-- **关系**：它们必须服务于“飞船仍处于高能巡航态”这个读感，但不能在持续段里抢走 `MainTrail` 或喷口火焰的主体位置
+- **关系**：它们必须服务于"飞船仍处于高能巡航态"这个读感，但不能在持续段里抢走 `MainTrail` 或喷口火焰的主体位置
 
 #### 目标（玩家此刻应该感受到什么）
 
@@ -678,7 +610,7 @@ MVP 原则：
 
 - 它们之前和 `MainTrail` 共享同一个 1:1 `_BoostIntensity`，很容易一起**同步冲满**
 - 若两层同时进入、同时满强度，就会把船体读感洗得过亮，削弱推进器与尾迹的层次关系
-- 它们缺少“哪一层先建立、哪一层只做弱补充”的顺序治理，容易变成纯参数叠加
+- 它们缺少"哪一层先建立、哪一层只做弱补充"的顺序治理，容易变成纯参数叠加
 
 #### 技术参考（是否沿用 `MainTrail` 方案）
 
@@ -719,7 +651,7 @@ MVP 原则：
 - 玩家在稳定 Boost 中仍能感到船体维持在高能档位，而不是只靠尾迹判断
 - `BoostEnergyLayer2 / Layer3` 不会把机体洗成持续爆闪白板
 - `Layer2` 与 `Layer3` 的层次关系清楚：前者更早、更明显；后者更晚、更弱
-- 它们在视觉上是“维持高能态”，而不是“持续抢戏”
+- 它们在视觉上是"维持高能态"，而不是"持续抢戏"
 
 #### 未来增强（先不做）
 
@@ -746,7 +678,7 @@ MVP 原则：
 | 模糊搜索误绑 | `FindAssets` 可能命中错误同名资源 | 对现役材质与关键 sprite 优先精确路径 |
 | 文档口径漂移 | 参考文档继续被当成现役规范 | 建立 canonical spec + registry 双文档 |
 | 历史物理名扩散 | `Boost_16` / `Movement_3` 等继续被当语义名使用 | 先统一 canonical alias |
-| Editor 重建回写 | 手工改 `FlameTrail_B` / `Ship_Sprite_HL` 后，又被 `BoostTrailPrefabCreator` / `ShipPrefabRebuilder` / `ShipBuilder` 用旧名重建覆盖 | 先改 Editor 工具常量，再在 Unity Editor 中执行节点改名与引用复验 |
+| Editor 重建回写 | 手工改 `FlameTrail_B` / `Ship_Sprite_HL` 后，又被 `BoostTrailPrefabCreator` / `ShipPrefabRebuilder` 用旧名重建覆盖 | 先改 Editor 工具常量，再在 Unity Editor 中执行节点改名与引用复验 |
 | 共享材质误判 | 把 `Ship_Sprite_HL` 误认为专属 glow 材质链，导致一次性联动过多 | 节点改名与材质 / 贴图迁移拆开处理，先单独验证当前 shared default material 现状 |
 
 ## 6. 验证方式
@@ -764,5 +696,5 @@ MVP 原则：
 - 项目里第一次出现正式的 **Ship VFX 规范层**
 - 现役资产、dormant 资产、参考资料不再混为一谈
 - 已验证 Play Mode 主链稳定，并完成首批 dormant 资源清退
-- `FlameTrail_B` / `Ship_Sprite_HL` / `ShipShipState` 已完成改名前风险分类，可直接进入“最小安全动作”阶段
+- `FlameTrail_B` / `Ship_Sprite_HL` / `ShipShipState` 已完成改名前风险分类，可直接进入"最小安全动作"阶段
 - 后续即使不马上 rename 资源，团队也能用统一语言讨论和维护这条链路

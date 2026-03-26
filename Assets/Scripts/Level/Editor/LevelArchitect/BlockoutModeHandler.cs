@@ -4,6 +4,7 @@ using UnityEngine;
 namespace ProjectArk.Level.Editor
 {
     /// <summary>
+    /// [Authority: Level CanonicalSpec §9.1 — sub-service of LevelArchitectWindow]
     /// Handles the Blockout Mode tools: rectangle brush, corridor brush, chain drawing.
     /// Provides rapid room placement via drag-to-draw in SceneView.
     /// </summary>

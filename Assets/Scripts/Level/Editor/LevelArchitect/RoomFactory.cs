@@ -5,6 +5,7 @@ using ProjectArk.Combat.Enemy;
 namespace ProjectArk.Level.Editor
 {
     /// <summary>
+    /// [Authority: Level CanonicalSpec §9.1]
     /// Factory for creating fully-configured Room GameObjects from RoomPresetSO templates.
     /// Handles creation of all required child objects (Confiner, SpawnPoints, Doors, Spawner).
     /// </summary>
@@ -15,6 +16,12 @@ namespace ProjectArk.Level.Editor
         private const string ROOM_DATA_PATH = "Assets/_Data/Level/Rooms/";
         private const string ROOM_PRESET_PATH = "Assets/_Data/Level/RoomPresets/";
         private const int IGNORE_RAYCAST_LAYER = 2; // Unity built-in "Ignore Raycast" layer
+        private const string NAVIGATION_ROOT_NAME = "Navigation";
+        private const string ELEMENTS_ROOT_NAME = "Elements";
+        private const string ENCOUNTERS_ROOT_NAME = "Encounters";
+        private const string HAZARDS_ROOT_NAME = "Hazards";
+        private const string DECORATION_ROOT_NAME = "Decoration";
+        private const string TRIGGERS_ROOT_NAME = "Triggers";
 
         // ──────────────────── Public API ────────────────────
 
@@ -53,20 +60,27 @@ namespace ProjectArk.Level.Editor
             boxCollider.isTrigger = true;
             boxCollider.size = preset.DefaultSize;
 
+            // ── Standard hierarchy roots (Batch 2) ──
+            var navigationRoot = CreateChildObject(roomGO.transform, NAVIGATION_ROOT_NAME);
+            CreateChildObject(roomGO.transform, ELEMENTS_ROOT_NAME);
+            var encountersRoot = CreateChildObject(roomGO.transform, ENCOUNTERS_ROOT_NAME);
+            CreateChildObject(roomGO.transform, HAZARDS_ROOT_NAME);
+            CreateChildObject(roomGO.transform, DECORATION_ROOT_NAME);
+            CreateChildObject(roomGO.transform, TRIGGERS_ROOT_NAME);
+
             // ── Camera Confiner Child ──
-            var confinerGO = new GameObject("CameraConfiner");
-            Undo.RegisterCreatedObjectUndo(confinerGO, "Create Confiner");
-            confinerGO.transform.SetParent(roomGO.transform, false);
+            var confinerGO = CreateChildObject(roomGO.transform, "CameraConfiner");
             confinerGO.layer = IGNORE_RAYCAST_LAYER;
 
             var polyCollider = confinerGO.AddComponent<PolygonCollider2D>();
             SetConfinerBounds(polyCollider, preset.DefaultSize);
 
-            // ── SpawnPoints Container ──
-            var spawnPointsGO = new GameObject("SpawnPoints");
-            Undo.RegisterCreatedObjectUndo(spawnPointsGO, "Create SpawnPoints");
-            spawnPointsGO.transform.SetParent(roomGO.transform, false);
+            // ── Standard Navigation placeholders ──
+            CreateChildObject(navigationRoot.transform, "Doors");
+            CreateChildObject(navigationRoot.transform, "SpawnPoints");
 
+            // ── SpawnPoints Container ──
+            var spawnPointsGO = CreateChildObject(encountersRoot.transform, "SpawnPoints");
             Transform[] spawnPoints = CreateSpawnPoints(spawnPointsGO.transform, preset);
 
             // ── ArenaController (for Arena/Boss) ──
@@ -79,10 +93,7 @@ namespace ProjectArk.Level.Editor
             EnemySpawner spawner = null;
             if (preset.IncludeEnemySpawner)
             {
-                var spawnerGO = new GameObject("EnemySpawner");
-                Undo.RegisterCreatedObjectUndo(spawnerGO, "Create EnemySpawner");
-                spawnerGO.transform.SetParent(roomGO.transform, false);
-
+                var spawnerGO = CreateChildObject(encountersRoot.transform, "EnemySpawner");
                 spawner = spawnerGO.AddComponent<EnemySpawner>();
             }
 
@@ -220,6 +231,14 @@ namespace ProjectArk.Level.Editor
             return $"Room_{prefix}_{timestamp}";
         }
 
+        private static GameObject CreateChildObject(Transform parent, string name)
+        {
+            var child = new GameObject(name);
+            Undo.RegisterCreatedObjectUndo(child, $"Create {name}");
+            child.transform.SetParent(parent, false);
+            return child;
+        }
+
         private static void SetConfinerBounds(PolygonCollider2D poly, Vector2 size)
         {
             // Slightly smaller than room bounds to keep camera inside
@@ -270,6 +289,8 @@ namespace ProjectArk.Level.Editor
             serialized.FindProperty("_roomID").stringValue = roomName;
             serialized.FindProperty("_displayName").stringValue = roomName;
             serialized.FindProperty("_type").enumValueIndex = (int)preset.RoomTypeValue;
+            serialized.FindProperty("_nodeType").enumValueIndex = (int)RoomSO.MapLegacyTypeToNodeType(preset.RoomTypeValue);
+            serialized.FindProperty("_useLegacyTypeMapping").boolValue = false;
             serialized.FindProperty("_floorLevel").intValue = 0;
 
             if (preset.DefaultEncounter != null)

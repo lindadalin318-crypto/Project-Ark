@@ -165,10 +165,16 @@ namespace ProjectArk.Ship.Editor
 
         private static Type ResolveVolumeType()
         {
+            // First try: exact Assembly-Qualified Name lookup (fastest)
+            var type = Type.GetType(VolumeTypeName);
+            if (type != null) return type;
+
+            // Fallback: search by FullName only (without assembly qualifier)
+            const string volumeFullName = "UnityEngine.Rendering.Volume";
             var componentTypes = TypeCache.GetTypesDerivedFrom<Component>();
             for (int i = 0; i < componentTypes.Count; i++)
             {
-                if (componentTypes[i] != null && componentTypes[i].FullName == VolumeTypeName)
+                if (componentTypes[i] != null && componentTypes[i].FullName == volumeFullName)
                 {
                     return componentTypes[i];
                 }

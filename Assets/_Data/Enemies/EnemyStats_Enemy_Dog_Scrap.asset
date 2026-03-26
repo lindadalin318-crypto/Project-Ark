@@ -1,0 +1,68 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 814b7e08c4625ff4faa3639c6eee45de, type: 3}
+  m_Name: EnemyStats_Enemy_Dog_Scrap
+  m_EditorClassIdentifier: ProjectArk.Enemy::ProjectArk.Combat.EnemyStatsSO
+  EnemyName: "\u673A\u68B0\u730E\u72AC"
+  EnemyID: Enemy_Dog_Scrap
+  FactionID: Neutral
+  MaxHP: 45
+  MaxPoise: 12
+  MoveSpeed: 5.5
+  RotationSpeed: 540
+  AttackDamage: 14
+  AttackRange: 1.5
+  AttackCooldown: 1.2
+  AttackKnockback: 5
+  TelegraphDuration: 0.3
+  AttackActiveDuration: 0.15
+  RecoveryDuration: 0.5
+  ProjectilePrefab: {fileID: 0}
+  ProjectileSpeed: 8
+  ProjectileDamage: 8
+  ProjectileKnockback: 3
+  ProjectileLifetime: 4
+  ShotsPerBurst: 3
+  BurstInterval: 0.25
+  PreferredRange: 10
+  RetreatRange: 5
+  StaggerDuration: 1
+  SightRange: 10
+  SightAngle: 75
+  HearingRange: 18
+  LeashRange: 25
+  MemoryDuration: 4
+  HitFlashDuration: 0.1
+  BaseColor: {r: 0.5, g: 0.3, b: 0.3, a: 1}
+  Resist_Physical: 0
+  Resist_Fire: 0.2
+  Resist_Ice: 0
+  Resist_Lightning: 0
+  Resist_Void: 0
+  DropTableID: 
+  PlanetID: P2
+  SpawnWeight: 1
+  Attacks: []
+  FearThreshold: 50
+  FearFromAllyDeath: 10
+  FearFromPoiseBroken: 20
+  FearDecayRate: 5
+  FleeDuration: 4
+  DodgeSpeed: 8
+  DodgeDuration: 0.3
+  BlockDamageReduction: 0.7
+  BlockDuration: 1.5
+  ThreatDetectionRadius: 5
+  _transitionOverrides: []
+  BehaviorTags:
+  - Flanker
+  - SelfDestruct

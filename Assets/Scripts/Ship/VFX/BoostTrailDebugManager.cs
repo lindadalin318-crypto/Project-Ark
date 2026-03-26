@@ -29,7 +29,6 @@ namespace ProjectArk.Ship
             EmberSparks,
             EnergyLayer2,
             EnergyLayer3,
-            ActivationHalo,
             Bloom
         }
 
@@ -59,7 +58,6 @@ namespace ProjectArk.Ship
         [SerializeField] private bool _showEmberSparks = true;
         [SerializeField] private bool _showEnergyLayer2 = true;
         [SerializeField] private bool _showEnergyLayer3 = true;
-        [SerializeField] private bool _showActivationHalo = true;
         [SerializeField] private bool _showBloom = true;
 
         /// <summary>
@@ -160,21 +158,6 @@ namespace ProjectArk.Ship
         }
 
         /// <summary>
-        /// Replays the activation halo only.
-        /// </summary>
-        public void PreviewActivationHaloBurst()
-        {
-            if (!CanPreview())
-                return;
-
-            _boostTrailView.ResetState();
-            _boostTrailView.DebugPreviewActivationHalo();
-
-            if (_enableInspectorDebug)
-                ApplyVisibilityOnly(BuildVisibilityState());
-        }
-
-        /// <summary>
         /// Replays the Bloom burst only.
         /// </summary>
         public void PreviewBloomBurst()
@@ -189,6 +172,56 @@ namespace ProjectArk.Ship
                 ApplyVisibilityOnly(BuildVisibilityState());
         }
 
+        /// <summary>
+        /// Forces FlameTrail_R only into sustained preview, isolating it from all other layers.
+        /// </summary>
+        public void PreviewFlameTrailR()
+        {
+            if (!CanPreview())
+                return;
+
+            _boostTrailView.ResetState();
+            _boostTrailView.DebugPreviewFlameTrailR();
+        }
+
+        /// <summary>
+        /// Forces FlameTrail_B only into sustained preview, isolating it from all other layers.
+        /// </summary>
+        public void PreviewFlameTrailB()
+        {
+            if (!CanPreview())
+                return;
+
+            _boostTrailView.ResetState();
+            _boostTrailView.DebugPreviewFlameTrailB();
+        }
+
+        /// <summary>
+        /// Forces FlameTrail_R + FlameTrail_B into sustained preview at full intensity,
+        /// isolating them from all other layers for quick visual check.
+        /// </summary>
+        public void PreviewFlameTrailBoth()
+        {
+            if (!CanPreview())
+                return;
+
+            _boostTrailView.ResetState();
+            _boostTrailView.DebugPreviewFlameTrailBoth();
+        }
+
+        /// <summary>
+        /// Forces EmberTrail into sustained preview at full intensity,
+        /// isolating it from all other layers for quick visual check.
+        /// </summary>
+        public void PreviewEmberTrailSustain()
+        {
+            if (!CanPreview())
+                return;
+
+            _boostTrailView.ResetState();
+            _boostTrailView.DebugPreviewEmberTrailSustain();
+        }
+
         private void ApplyVisibilityOnly(LayerVisibilityState visibility)
         {
             _boostTrailView.DebugApplyVisibilityMask(
@@ -199,7 +232,6 @@ namespace ProjectArk.Ship
                 visibility.ShowEmberSparks,
                 visibility.ShowEnergyLayer2,
                 visibility.ShowEnergyLayer3,
-                visibility.ShowActivationHalo,
                 visibility.ShowBloom);
         }
 
@@ -218,7 +250,6 @@ namespace ProjectArk.Ship
                 ResolveVisibility(SoloLayer.EmberSparks, _showEmberSparks),
                 ResolveVisibility(SoloLayer.EnergyLayer2, _showEnergyLayer2),
                 ResolveVisibility(SoloLayer.EnergyLayer3, _showEnergyLayer3),
-                ResolveVisibility(SoloLayer.ActivationHalo, _showActivationHalo),
                 ResolveVisibility(SoloLayer.Bloom, _showBloom));
         }
 
@@ -238,7 +269,6 @@ namespace ProjectArk.Ship
             public readonly bool ShowEmberSparks;
             public readonly bool ShowEnergyLayer2;
             public readonly bool ShowEnergyLayer3;
-            public readonly bool ShowActivationHalo;
             public readonly bool ShowBloom;
 
             public LayerVisibilityState(
@@ -249,7 +279,6 @@ namespace ProjectArk.Ship
                 bool showEmberSparks,
                 bool showEnergyLayer2,
                 bool showEnergyLayer3,
-                bool showActivationHalo,
                 bool showBloom)
             {
                 ShowMainTrail = showMainTrail;
@@ -259,7 +288,6 @@ namespace ProjectArk.Ship
                 ShowEmberSparks = showEmberSparks;
                 ShowEnergyLayer2 = showEnergyLayer2;
                 ShowEnergyLayer3 = showEnergyLayer3;
-                ShowActivationHalo = showActivationHalo;
                 ShowBloom = showBloom;
             }
         }

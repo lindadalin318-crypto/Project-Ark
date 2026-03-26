@@ -10,6 +10,7 @@ using ProjectArk.Combat.Enemy;
 namespace ProjectArk.Level.Editor
 {
     /// <summary>
+    /// [Authority: Level CanonicalSpec §9.1 — one-shot tool]
     /// One-click level generator: reads a LevelScaffoldData asset and produces
     /// a complete, playable scene hierarchy with Room GameObjects, RoomSO assets,
     /// Door bi-directional connections, Checkpoints, EnemySpawners, ArenaControllers,
@@ -63,7 +64,7 @@ namespace ProjectArk.Level.Editor
 
         // ──────────────────── Menu Entry ────────────────────
 
-        [MenuItem("Window/ProjectArk/Generate Level From Scaffold")]
+        [MenuItem("ProjectArk/Level/Authority/Generate Level From Scaffold")]
         public static void ShowWindow()
         {
             var window = GetWindow<ScaffoldToSceneGenerator>("Scaffold → Scene");

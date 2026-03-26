@@ -153,5 +153,19 @@ namespace ProjectArk.Core
         {
             OnWorldStageChanged?.Invoke(newStage);
         }
+
+        // ──────────────────── Room Flag Events ────────────────────
+
+        /// <summary>
+        /// Broadcast when a room-level persistent flag changes value.
+        /// Params: roomID, flagKey, newValue.
+        /// Published by RoomFlagRegistry, consumed by DestroyableObject / Door / UI / Save.
+        /// </summary>
+        public static event Action<string, string, bool> OnRoomFlagChanged;
+
+        public static void RaiseRoomFlagChanged(string roomID, string flagKey, bool newValue)
+        {
+            OnRoomFlagChanged?.Invoke(roomID, flagKey, newValue);
+        }
     }
 }

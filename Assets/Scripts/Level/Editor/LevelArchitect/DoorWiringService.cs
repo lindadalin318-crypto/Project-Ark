@@ -5,6 +5,7 @@ using UnityEngine;
 namespace ProjectArk.Level.Editor
 {
     /// <summary>
+    /// [Authority: Level CanonicalSpec §9.1]
     /// Smart door connection service. Automatically creates, updates, and removes
     /// bidirectional Door pairs between rooms based on spatial adjacency.
     /// </summary>
@@ -383,7 +384,10 @@ namespace ProjectArk.Level.Editor
             var doorGO = new GameObject(doorName);
             Undo.RegisterCreatedObjectUndo(doorGO, "Create Door");
 
-            doorGO.transform.SetParent(ownerRoom.transform);
+            var navigationDoorsRoot = ownerRoom.transform.Find("Navigation/Doors");
+            var navigationRoot = ownerRoom.transform.Find("Navigation");
+            var parent = navigationDoorsRoot != null ? navigationDoorsRoot : (navigationRoot != null ? navigationRoot : ownerRoom.transform);
+            doorGO.transform.SetParent(parent);
             doorGO.transform.position = position;
 
             // Add collider for trigger detection

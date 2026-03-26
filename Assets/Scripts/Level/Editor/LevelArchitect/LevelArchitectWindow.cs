@@ -6,6 +6,7 @@ using UnityEngine;
 namespace ProjectArk.Level.Editor
 {
     /// <summary>
+    /// [Authority: Level CanonicalSpec §9.1]
     /// Main entry point for the Level Architect Tool.
     /// Integrates with SceneView to provide a Scene-View-First editing experience.
     /// Manages tool modes, SceneView overlay, and side control panel.
@@ -15,7 +16,7 @@ namespace ProjectArk.Level.Editor
         // ──────────────────── Constants ────────────────────
 
         private const string WINDOW_TITLE = "Level Architect";
-        private const string MENU_PATH = "Window/ProjectArk/Level Architect";
+        private const string MENU_PATH = "ProjectArk/Level/Authority/Level Architect";
         private const float SIDE_PANEL_WIDTH = 260f;
         private const float SIDE_PANEL_MARGIN = 10f;
         private const float TOOLBAR_HEIGHT = 30f;
@@ -37,6 +38,7 @@ namespace ProjectArk.Level.Editor
         [SerializeField] private bool _showPacingOverlay;
         [SerializeField] private bool _showCriticalPath;
         [SerializeField] private bool _showLockKeyGraph;
+        [SerializeField] private bool _showConnectionTypes;
         [SerializeField] private int _activeFloorLevel = int.MinValue; // MinValue = show all
 
         // ──────────────────── Runtime State ────────────────────
@@ -84,6 +86,9 @@ namespace ProjectArk.Level.Editor
         /// <summary> Whether lock-key graph overlay is enabled. </summary>
         public bool ShowLockKeyGraph => _showLockKeyGraph;
 
+        /// <summary> Whether connection type color overlay is enabled. </summary>
+        public bool ShowConnectionTypes => _showConnectionTypes;
+
         // ──────────────────── Menu Item ────────────────────
 
         [MenuItem(MENU_PATH)]
@@ -130,9 +135,6 @@ namespace ProjectArk.Level.Editor
             {
                 _scaffoldBinder.Initialize(_scaffoldData);
             }
-
-            // Detect legacy tools and suggest migration
-            CheckLegacyTools();
 
             SceneView.RepaintAll();
         }
@@ -236,6 +238,7 @@ namespace ProjectArk.Level.Editor
             _showPacingOverlay = EditorGUILayout.Toggle("Pacing Overlay", _showPacingOverlay);
             _showCriticalPath = EditorGUILayout.Toggle("Critical Path", _showCriticalPath);
             _showLockKeyGraph = EditorGUILayout.Toggle("Lock-Key Graph", _showLockKeyGraph);
+            _showConnectionTypes = EditorGUILayout.Toggle("Connection Types", _showConnectionTypes);
 
             if (GUI.changed)
             {
@@ -276,6 +279,14 @@ namespace ProjectArk.Level.Editor
 
             if (GUILayout.Button("Validate All", GUILayout.Height(24)))
             {
+                LevelValidator.ValidateAll();
+                Repaint();
+            }
+
+            if (GUILayout.Button("Migrate Scene NodeTypes", GUILayout.Height(22)))
+            {
+                int migratedCount = BatchEditPanel.MigrateSceneRoomsToExplicitNodeType();
+                Debug.Log($"[LevelArchitect] Migrated {migratedCount} room(s) from legacy NodeType mapping to explicit NodeType.");
                 LevelValidator.ValidateAll();
                 Repaint();
             }
@@ -471,7 +482,7 @@ namespace ProjectArk.Level.Editor
 
                     // Color indicator
                     var prevColor = GUI.color;
-                    GUI.color = GetRoomTypeColor(room.Type);
+                    GUI.color = GetRoomNodeTypeColor(room.NodeType);
                     GUILayout.Label("■", GUILayout.Width(14));
                     GUI.color = prevColor;
 
@@ -608,12 +619,21 @@ namespace ProjectArk.Level.Editor
             EditorGUILayout.BeginVertical("HelpBox");
 
             GUILayout.Label($"ID: {room.RoomID}");
-            GUILayout.Label($"Type: {room.Type}");
+            GUILayout.Label($"Node Type: {room.NodeType}");
+            GUILayout.Label($"Legacy Type: {room.Type}");
 
             if (room.Data != null)
             {
+                GUILayout.Label($"Node Source: {(room.Data.UseLegacyTypeMapping ? "Legacy Mapping" : "Explicit")}");
+                GUILayout.Label($"Explicit Node: {room.Data.ExplicitNodeType}");
+                GUILayout.Label($"Mapped Node: {room.Data.LegacyMappedNodeType}");
                 GUILayout.Label($"Floor: {room.Data.FloorLevel}");
                 GUILayout.Label($"SO: {room.Data.name}");
+
+                if (room.Data.UseLegacyTypeMapping && GUILayout.Button("Make NodeType Explicit", GUILayout.Height(20)))
+                {
+                    BatchEditPanel.MigrateRoomNodeTypeToExplicit(room);
+                }
 
                 if (room.Data.Encounter != null)
                 {
@@ -793,6 +813,38 @@ namespace ProjectArk.Level.Editor
             }
         }
 
+        /// <summary>
+        /// Returns the display color for a RoomNodeType.
+        /// Kept aligned with WorldGraph editor colors for pacing readability.
+        /// </summary>
+        public static Color GetRoomNodeTypeColor(RoomNodeType nodeType)
+        {
+            switch (nodeType)
+            {
+                case RoomNodeType.Transit:    return new Color(0.5f, 0.5f, 0.5f, 0.5f);
+                case RoomNodeType.Pressure:   return new Color(0.9f, 0.7f, 0.2f, 0.5f);
+                case RoomNodeType.Resolution: return new Color(0.9f, 0.3f, 0.2f, 0.5f);
+                case RoomNodeType.Reward:     return new Color(0.2f, 0.8f, 0.4f, 0.5f);
+                case RoomNodeType.Anchor:     return new Color(0.2f, 0.6f, 0.9f, 0.5f);
+                case RoomNodeType.Loop:       return new Color(0.7f, 0.4f, 0.9f, 0.5f);
+                case RoomNodeType.Hub:        return new Color(0.9f, 0.5f, 0.9f, 0.5f);
+                case RoomNodeType.Threshold:  return new Color(1f, 0.45f, 0.15f, 0.5f);
+                case RoomNodeType.Safe:       return new Color(0.2f, 0.9f, 0.6f, 0.5f);
+                case RoomNodeType.Boss:       return new Color(0.8f, 0.1f, 0.1f, 0.5f);
+                default:                      return new Color(0.5f, 0.5f, 0.5f, 0.5f);
+            }
+        }
+
+        /// <summary>
+        /// Returns the outline color for a RoomNodeType (full opacity).
+        /// </summary>
+        public static Color GetRoomNodeTypeOutlineColor(RoomNodeType nodeType)
+        {
+            var color = GetRoomNodeTypeColor(nodeType);
+            color.a = 1f;
+            return color;
+        }
+
         // ──────────────────── Callbacks ────────────────────
 
         private void OnHierarchyChanged()
@@ -811,68 +863,5 @@ namespace ProjectArk.Level.Editor
             SceneView.RepaintAll();
         }
 
-        // ──────────────────── Legacy Tool Detection ────────────────────
-
-        private void CheckLegacyTools()
-        {
-            bool hasLegacy = false;
-
-            if (HasOpenInstances<RoomBatchEditor>())
-            {
-                hasLegacy = true;
-            }
-
-            // Check for LevelDesignerWindow if it exists
-            var ldwType = Type.GetType("ProjectArk.Level.Editor.LevelDesignerWindow, ProjectArk.Level.Editor");
-            if (ldwType != null)
-            {
-                var method = typeof(EditorWindow).GetMethod("HasOpenInstances");
-                if (method != null)
-                {
-                    var generic = method.MakeGenericMethod(ldwType);
-                    if ((bool)generic.Invoke(null, null))
-                    {
-                        hasLegacy = true;
-                    }
-                }
-            }
-
-            if (hasLegacy)
-            {
-                bool switchNow = EditorUtility.DisplayDialog(
-                    "Legacy Level Tools Detected",
-                    "The Level Architect replaces RoomBatchEditor and LevelDesignerWindow.\n\n" +
-                    "It's recommended to close the legacy tools to avoid conflicts.",
-                    "Close Legacy Tools",
-                    "Keep Both Open"
-                );
-
-                if (switchNow)
-                {
-                    CloseLegacyTools();
-                }
-            }
-        }
-
-        private void CloseLegacyTools()
-        {
-            // Close RoomBatchEditor
-            if (HasOpenInstances<RoomBatchEditor>())
-            {
-                var rbe = GetWindow<RoomBatchEditor>();
-                if (rbe != null) rbe.Close();
-            }
-
-            // Close LevelDesignerWindow via reflection
-            var ldwType = Type.GetType("ProjectArk.Level.Editor.LevelDesignerWindow, ProjectArk.Level.Editor");
-            if (ldwType != null)
-            {
-                var windows = Resources.FindObjectsOfTypeAll(ldwType);
-                foreach (var w in windows)
-                {
-                    if (w is EditorWindow ew) ew.Close();
-                }
-            }
-        }
     }
 }

@@ -41,10 +41,10 @@ namespace ProjectArk.Ship.Editor
                 $"  (Movement + Curves + Dash + Hit Feedback)\n\n" +
                 $"── Juice Settings ──\n" +
                 $"  {SHIP_DATA_DIR}/{JUICE_ASSET_NAME}.asset\n" +
-                $"  (Tilt + Squash/Stretch + After-Image + Engine VFX)\n\n" +
+                $"  (Tilt + Squash/Stretch + After-Image)\n\n" +
                 "Next steps:\n" +
                 "1. Drag ShipStatsSO onto ShipMotor / ShipDash / ShipHealth components\n" +
-                "2. Drag ShipJuiceSettingsSO onto ShipVisualJuice / ShipEngineVFX / DashAfterImageSpawner\n" +
+                "2. Drag ShipJuiceSettingsSO onto ShipVisualJuice / DashAfterImageSpawner\n" +
                 "3. Tweak values in Inspector during Play Mode for live tuning",
                 "OK"
             );

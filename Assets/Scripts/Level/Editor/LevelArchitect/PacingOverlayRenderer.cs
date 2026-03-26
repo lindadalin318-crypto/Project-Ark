@@ -5,6 +5,7 @@ using UnityEngine;
 namespace ProjectArk.Level.Editor
 {
     /// <summary>
+    /// [Authority: Level CanonicalSpec §9.1]
     /// Renders pacing visualization overlays on the SceneView:
     /// - Pacing Overlay: combat intensity color gradient + door lock icons
     /// - Critical Path: BFS shortest path from entry to boss
@@ -36,26 +37,24 @@ namespace ProjectArk.Level.Editor
             {
                 DrawLockKeyGraph(rooms);
             }
+
+            if (window.ShowConnectionTypes)
+            {
+                DrawConnectionTypeOverlay(rooms);
+            }
         }
 
         // ──────────────────── Pacing Overlay ────────────────────
 
         private static void DrawPacingOverlay(Room[] rooms)
         {
-            // Calculate max intensity for normalization
-            float maxIntensity = 0f;
             var intensityMap = new Dictionary<Room, float>();
 
             foreach (var room in rooms)
             {
                 if (room == null) continue;
-
-                float intensity = CalculateCombatIntensity(room);
-                intensityMap[room] = intensity;
-                if (intensity > maxIntensity) maxIntensity = intensity;
+                intensityMap[room] = CalculateCombatIntensity(room);
             }
-
-            if (maxIntensity <= 0) maxIntensity = 1f;
 
             foreach (var room in rooms)
             {
@@ -65,25 +64,9 @@ namespace ProjectArk.Level.Editor
                 if (box == null) continue;
 
                 Rect worldRect = LevelArchitectWindow.GetRoomWorldRect(room, box);
-
-                // Intensity color gradient (green → yellow → red)
-                float normalizedIntensity = intensityMap.ContainsKey(room) ?
-                    intensityMap[room] / maxIntensity : 0f;
-
-                Color intensityColor = Color.Lerp(
-                    new Color(0.2f, 0.8f, 0.2f, 0.3f),    // green (safe)
-                    new Color(0.9f, 0.2f, 0.1f, 0.3f),     // red (intense)
-                    normalizedIntensity
-                );
-
-                if (normalizedIntensity > 0.3f && normalizedIntensity < 0.7f)
-                {
-                    intensityColor = Color.Lerp(
-                        new Color(0.2f, 0.8f, 0.2f, 0.3f),
-                        new Color(0.9f, 0.9f, 0.2f, 0.3f),
-                        normalizedIntensity * 2f
-                    );
-                }
+                Color nodeTypeColor = LevelArchitectWindow.GetRoomNodeTypeColor(room.NodeType);
+                Color fillColor = nodeTypeColor;
+                fillColor.a = 0.22f;
 
                 Vector3[] corners = new Vector3[]
                 {
@@ -93,25 +76,35 @@ namespace ProjectArk.Level.Editor
                     new Vector3(worldRect.xMin, worldRect.yMax, 0)
                 };
 
-                Handles.DrawSolidRectangleWithOutline(corners, intensityColor, Color.clear);
-
-                // Intensity label
-                if (intensityMap.ContainsKey(room) && intensityMap[room] > 0)
-                {
-                    var labelStyle = new GUIStyle(EditorStyles.miniLabel)
-                    {
-                        alignment = TextAnchor.MiddleCenter,
-                        fontSize = 10,
-                        normal = { textColor = Color.white }
-                    };
-
-                    string intensityText = $"⚔ {intensityMap[room]:F0}";
-                    Handles.Label(new Vector3(worldRect.center.x, worldRect.center.y - 1f, 0), intensityText, labelStyle);
-                }
+                Handles.DrawSolidRectangleWithOutline(corners, fillColor, Color.clear);
+                DrawNodeTypeLabel(room, worldRect, intensityMap.TryGetValue(room, out var intensity) ? intensity : 0f, nodeTypeColor);
 
                 // Door lock icons
                 DrawDoorLockIcons(room);
             }
+        }
+
+        private static void DrawNodeTypeLabel(Room room, Rect worldRect, float intensity, Color nodeTypeColor)
+        {
+            var labelStyle = new GUIStyle(EditorStyles.miniLabel)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = 10,
+                normal = { textColor = Color.white }
+            };
+
+            string intensitySuffix = intensity > 0f ? $" · ⚔ {intensity:F0}" : string.Empty;
+            string labelText = $"{room.NodeType}{intensitySuffix}";
+
+            Handles.Label(new Vector3(worldRect.center.x, worldRect.center.y - 1f, 0), labelText, labelStyle);
+
+            Handles.color = nodeTypeColor;
+            Handles.DrawAAPolyLine(
+                2f,
+                new Vector3(worldRect.xMin, worldRect.yMin, 0),
+                new Vector3(worldRect.xMin, worldRect.yMax, 0),
+                new Vector3(worldRect.xMax, worldRect.yMax, 0));
+            Handles.color = Color.white;
         }
 
         private static float CalculateCombatIntensity(Room room)
@@ -328,7 +321,154 @@ namespace ProjectArk.Level.Editor
             Handles.color = Color.white;
         }
 
-        // ──────────────────── Graph Utilities ────────────────────
+        // ──────────────────── Connection Type Overlay ────────────────────
+
+        /// <summary>
+        /// [B4.1] Draws door connection lines colored by ConnectionType.
+        /// Data source: Door.ConnectionType field (scene MonoBehaviour).
+        /// Color mapping: ConnectionGraphEdge.GetConnectionTypeColor().
+        /// Layer transitions use thicker solid lines; normal connections use dotted lines.
+        /// When this overlay is active, it replaces the default gray connections
+        /// drawn by RoomBlockoutRenderer.DrawDoorConnections().
+        /// </summary>
+        private static void DrawConnectionTypeOverlay(Room[] rooms)
+        {
+            var drawnPairs = new HashSet<string>();
+
+            foreach (var room in rooms)
+            {
+                if (room == null) continue;
+                var doors = room.GetComponentsInChildren<Door>(true);
+
+                foreach (var door in doors)
+                {
+                    if (door == null || door.TargetRoom == null) continue;
+
+                    // Avoid duplicate lines for bidirectional door pairs
+                    string pairKey = GetPairKey(room, door.TargetRoom);
+                    if (drawnPairs.Contains(pairKey)) continue;
+                    drawnPairs.Add(pairKey);
+
+                    // Get color from ConnectionType
+                    Color lineColor = ConnectionGraphEdge.GetConnectionTypeColor(door.ConnectionType);
+
+                    Vector3 fromPos = room.transform.position;
+                    Vector3 toPos = door.TargetRoom.transform.position;
+
+                    if (door.IsLayerTransition)
+                    {
+                        // Layer transitions: thick solid line with higher alpha
+                        lineColor.a = 0.9f;
+                        Handles.color = lineColor;
+                        Handles.DrawAAPolyLine(4f, fromPos, toPos);
+                    }
+                    else
+                    {
+                        // Normal connections: dotted line with moderate alpha
+                        lineColor.a = 0.7f;
+                        Handles.color = lineColor;
+                        Handles.DrawDottedLine(fromPos, toPos, 4f);
+                    }
+
+                    // Draw ConnectionType label at midpoint
+                    Vector3 midPoint = (fromPos + toPos) / 2f;
+                    string typeLabel = GetConnectionTypeShortLabel(door.ConnectionType);
+
+                    var labelStyle = new GUIStyle(EditorStyles.miniLabel)
+                    {
+                        alignment = TextAnchor.MiddleCenter,
+                        fontSize = 9,
+                        normal = { textColor = lineColor }
+                    };
+                    Handles.Label(midPoint + Vector3.up * 0.4f, typeLabel, labelStyle);
+                }
+            }
+
+            Handles.color = Color.white;
+
+            // Draw legend in top-right corner of SceneView
+            DrawConnectionTypeLegend();
+        }
+
+        private static string GetConnectionTypeShortLabel(ConnectionType type)
+        {
+            switch (type)
+            {
+                case ConnectionType.Progression: return "PROG";
+                case ConnectionType.Return:      return "RET";
+                case ConnectionType.Ability:     return "ABL";
+                case ConnectionType.Challenge:   return "CHAL";
+                case ConnectionType.Identity:    return "IDENT";
+                case ConnectionType.Scheduled:   return "SCHED";
+                default:                         return "?";
+            }
+        }
+
+        /// <summary>
+        /// Draws a compact color legend in the SceneView for ConnectionType colors.
+        /// </summary>
+        private static void DrawConnectionTypeLegend()
+        {
+            Handles.BeginGUI();
+
+            var sceneView = SceneView.lastActiveSceneView;
+            if (sceneView == null) { Handles.EndGUI(); return; }
+
+            float legendWidth = 130f;
+            float lineHeight = 16f;
+            float padding = 6f;
+
+            var types = new[]
+            {
+                (ConnectionType.Progression, "Progression"),
+                (ConnectionType.Return,      "Return"),
+                (ConnectionType.Ability,     "Ability"),
+                (ConnectionType.Challenge,   "Challenge"),
+                (ConnectionType.Identity,    "Identity"),
+                (ConnectionType.Scheduled,   "Scheduled"),
+            };
+
+            float legendHeight = types.Length * lineHeight + padding * 2 + lineHeight; // +1 for header
+            float legendX = sceneView.position.width - legendWidth - 12f;
+            float legendY = 50f;
+
+            // Background
+            Rect bgRect = new Rect(legendX, legendY, legendWidth, legendHeight);
+            EditorGUI.DrawRect(bgRect, new Color(0.12f, 0.12f, 0.12f, 0.88f));
+
+            // Header
+            var headerStyle = new GUIStyle(EditorStyles.miniLabel)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = Color.white }
+            };
+            GUI.Label(new Rect(legendX, legendY + padding, legendWidth, lineHeight), "Connection Types", headerStyle);
+
+            // Entries
+            float y = legendY + padding + lineHeight;
+            var entryStyle = new GUIStyle(EditorStyles.miniLabel)
+            {
+                fontSize = 10
+            };
+
+            foreach (var (connType, label) in types)
+            {
+                Color c = ConnectionGraphEdge.GetConnectionTypeColor(connType);
+
+                // Color swatch
+                Rect swatchRect = new Rect(legendX + padding, y + 3f, 10f, 10f);
+                EditorGUI.DrawRect(swatchRect, c);
+
+                // Label
+                entryStyle.normal.textColor = c;
+                GUI.Label(new Rect(legendX + padding + 14f, y, legendWidth - padding * 2 - 14f, lineHeight), label, entryStyle);
+
+                y += lineHeight;
+            }
+
+            Handles.EndGUI();
+        }
 
         private static Dictionary<Room, List<Room>> BuildAdjacencyGraph(Room[] rooms)
         {
@@ -395,7 +535,12 @@ namespace ProjectArk.Level.Editor
                 if (startingRoom != null) return startingRoom;
             }
 
-            // Fallback: first Safe room
+            // Fallback: first Safe node, then legacy Safe room
+            foreach (var room in rooms)
+            {
+                if (room != null && room.NodeType == RoomNodeType.Safe) return room;
+            }
+
             foreach (var room in rooms)
             {
                 if (room != null && room.Type == RoomType.Safe) return room;
@@ -409,8 +554,14 @@ namespace ProjectArk.Level.Editor
         {
             foreach (var room in rooms)
             {
+                if (room != null && room.NodeType == RoomNodeType.Boss) return room;
+            }
+
+            foreach (var room in rooms)
+            {
                 if (room != null && room.Type == RoomType.Boss) return room;
             }
+
             return null;
         }
 

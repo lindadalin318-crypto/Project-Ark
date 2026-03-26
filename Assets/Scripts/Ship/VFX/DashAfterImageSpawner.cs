@@ -1,3 +1,4 @@
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using ProjectArk.Core;
@@ -6,9 +7,11 @@ namespace ProjectArk.Ship
 {
     /// <summary>
     /// Spawns dash after-image ghosts during a dash.
-    /// Listens to ShipDash events and spawns from the object pool.
+    /// Driven by ShipDashVisuals (Worker pattern, second-level delegation).
+    ///
+    /// Does NOT subscribe to events directly — ShipDashVisuals calls TriggerSpawn()
+    /// when ShipView routes a Dash-started signal.
     /// </summary>
-    [RequireComponent(typeof(ShipDash))]
     public class DashAfterImageSpawner : MonoBehaviour
     {
         [Header("References")]
@@ -27,57 +30,73 @@ namespace ProjectArk.Ship
 
         private ShipDash _dash;
         private GameObjectPool _pool;
+        private CancellationTokenSource _spawnCts;
 
         private const int POOL_INITIAL_SIZE = 5;
         private const int POOL_MAX_SIZE = 20;
 
         // ══════════════════════════════════════════════════════════════
-        // Lifecycle
+        // Initialization (called by ShipDashVisuals or ShipView)
         // ══════════════════════════════════════════════════════════════
 
-        private void Awake()
+        /// <summary>
+        /// Called during setup to inject the ShipDash reference needed for IsDashing check.
+        /// </summary>
+        public void Initialize(ShipDash dash)
         {
-            _dash = GetComponent<ShipDash>();
-
-            if (_afterImagePrefab == null)
-            {
-                Debug.LogWarning("[DashAfterImageSpawner] No after-image prefab assigned. Disabling.");
-                enabled = false;
-                return;
-            }
+            _dash = dash;
         }
 
         private void Start()
         {
+            if (_afterImagePrefab == null)
+            {
+                Debug.LogError("[DashAfterImageSpawner] No after-image prefab assigned. After-images will not work.", this);
+                return;
+            }
+
             // Pre-warm the pool
             var poolManager = PoolManager.Instance;
             if (poolManager != null)
                 _pool = poolManager.GetPool(_afterImagePrefab, POOL_INITIAL_SIZE, POOL_MAX_SIZE);
         }
 
-        private void OnEnable()
-        {
-            if (_dash != null) _dash.OnDashStarted += OnDashStarted;
-        }
-
-        private void OnDisable()
-        {
-            if (_dash != null) _dash.OnDashStarted -= OnDashStarted;
-        }
-
         // ══════════════════════════════════════════════════════════════
-        // Dash → Spawn After-Images
+        // Public API — called by ShipDashVisuals
         // ══════════════════════════════════════════════════════════════
 
-        private void OnDashStarted(Vector2 direction)
+        /// <summary>
+        /// Triggers the after-image spawn sequence. Call when Dash starts.
+        /// </summary>
+        public void TriggerSpawn()
         {
             if (_pool == null || _juiceSettings == null || _stats == null) return;
             if (_shipSpriteRenderer == null) return;
 
-            SpawnAfterImagesAsync().Forget();
+            CancelSpawning();
+            _spawnCts = new CancellationTokenSource();
+            SpawnAfterImagesAsync(_spawnCts.Token).Forget();
         }
 
-        private async UniTaskVoid SpawnAfterImagesAsync()
+        /// <summary>
+        /// Cancels any in-progress spawn sequence.
+        /// Called by ShipDashVisuals.ResetState() for clean pool return.
+        /// </summary>
+        public void CancelSpawning()
+        {
+            if (_spawnCts != null)
+            {
+                _spawnCts.Cancel();
+                _spawnCts.Dispose();
+                _spawnCts = null;
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // Spawn Sequence
+        // ══════════════════════════════════════════════════════════════
+
+        private async UniTaskVoid SpawnAfterImagesAsync(CancellationToken ct)
         {
             int count = _juiceSettings.DashAfterImageCount;
             if (count <= 0) return;
@@ -93,7 +112,8 @@ namespace ProjectArk.Ship
 
             for (int i = 0; i < count; i++)
             {
-                if (!_dash.IsDashing) break;
+                if (ct.IsCancellationRequested) break;
+                if (_dash != null && !_dash.IsDashing) break;
 
                 // Spawn after-image at current position
                 var instance = _pool.Get(transform.position, transform.rotation);
@@ -111,7 +131,8 @@ namespace ProjectArk.Ship
                 // Wait before spawning next
                 if (i < count - 1)
                 {
-                    await UniTask.Delay(intervalMs, cancellationToken: destroyCancellationToken);
+                    await UniTask.Delay(intervalMs, cancellationToken: ct).SuppressCancellationThrow();
+                    if (ct.IsCancellationRequested) break;
                 }
             }
         }

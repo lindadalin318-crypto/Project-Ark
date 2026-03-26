@@ -5,6 +5,7 @@ using UnityEngine;
 namespace ProjectArk.Level.Editor
 {
     /// <summary>
+    /// [Authority: Level CanonicalSpec §9.1]
     /// Handles rendering room blockout rectangles in SceneView and all room interaction
     /// (selection, dragging, snapping, box-selection).
     /// Driven by LevelArchitectWindow's SceneView callback.
@@ -87,7 +88,7 @@ namespace ProjectArk.Level.Editor
             if (box == null) return;
 
             Rect worldRect = LevelArchitectWindow.GetRoomWorldRect(room, box);
-            RoomType type = room.Type;
+            RoomNodeType nodeType = room.NodeType;
 
             // Floor level filter — dim non-active floors
             float alphaMultiplier = 1f;
@@ -101,10 +102,10 @@ namespace ProjectArk.Level.Editor
             }
 
             // ── Fill ──
-            Color fillColor = LevelArchitectWindow.GetRoomTypeColor(type);
+            Color fillColor = LevelArchitectWindow.GetRoomNodeTypeColor(nodeType);
             fillColor.a *= alphaMultiplier;
 
-            Color outlineColor = LevelArchitectWindow.GetRoomTypeOutlineColor(type);
+            Color outlineColor = LevelArchitectWindow.GetRoomNodeTypeOutlineColor(nodeType);
             outlineColor.a *= alphaMultiplier;
 
             Vector3[] corners = RectToCorners(worldRect);
@@ -155,7 +156,7 @@ namespace ProjectArk.Level.Editor
             );
 
             string label = room.RoomID;
-            string typeTag = room.Type.ToString().Substring(0, 1); // N/A/B/S
+            string typeTag = GetNodeTypeTag(room.NodeType);
 
             var style = new GUIStyle(EditorStyles.boldLabel)
             {
@@ -165,6 +166,24 @@ namespace ProjectArk.Level.Editor
             };
 
             Handles.Label(labelPos, $"[{typeTag}] {label}", style);
+        }
+
+        private static string GetNodeTypeTag(RoomNodeType nodeType)
+        {
+            switch (nodeType)
+            {
+                case RoomNodeType.Transit:    return "TR";
+                case RoomNodeType.Pressure:   return "PR";
+                case RoomNodeType.Resolution: return "RS";
+                case RoomNodeType.Reward:     return "RW";
+                case RoomNodeType.Anchor:     return "AN";
+                case RoomNodeType.Loop:       return "LP";
+                case RoomNodeType.Hub:        return "HB";
+                case RoomNodeType.Threshold:  return "TH";
+                case RoomNodeType.Safe:       return "SF";
+                case RoomNodeType.Boss:       return "BS";
+                default:                      return "??";
+            }
         }
 
         private static void DrawDoorIcons(Room room, float alpha)
@@ -221,6 +240,11 @@ namespace ProjectArk.Level.Editor
 
         private static void DrawDoorConnections(Room[] rooms)
         {
+            // When ConnectionType overlay is active, skip default gray lines
+            // to avoid visual conflict — PacingOverlayRenderer draws colored lines instead.
+            var window = LevelArchitectWindow.Instance;
+            if (window != null && window.ShowConnectionTypes) return;
+
             var drawnPairs = new HashSet<string>();
 
             foreach (var room in rooms)

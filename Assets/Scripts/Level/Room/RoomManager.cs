@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using ProjectArk.Core;
 using ProjectArk.Combat.Enemy;
@@ -77,18 +78,27 @@ namespace ProjectArk.Level
         // ──────────────────── Room Subscription ────────────────────
 
         private Room[] _allRooms;
+        private Dictionary<string, Room> _roomLookup;
 
         private void SubscribeToAllRooms()
         {
             _allRooms = FindObjectsByType<Room>(FindObjectsSortMode.None);
+            _roomLookup = new Dictionary<string, Room>(_allRooms.Length);
 
             foreach (var room in _allRooms)
             {
                 room.OnPlayerEntered += HandlePlayerEnteredRoom;
                 room.OnPlayerExited += HandlePlayerExitedRoom;
+
+                // Build RoomID → Room lookup
+                string id = room.RoomID;
+                if (!string.IsNullOrEmpty(id))
+                {
+                    _roomLookup.TryAdd(id, room);
+                }
             }
 
-            Debug.Log($"[RoomManager] Subscribed to {_allRooms.Length} rooms.");
+            Debug.Log($"[RoomManager] Subscribed to {_allRooms.Length} rooms, lookup built with {_roomLookup.Count} entries.");
         }
 
         private void UnsubscribeFromAllRooms()
@@ -118,6 +128,18 @@ namespace ProjectArk.Level
         }
 
         // ──────────────────── Core API ────────────────────
+
+        /// <summary>
+        /// 按 RoomID 查找场景中的 Room。运行时使用字典缓存，O(1)。
+        /// 供 DoorTransitionController 从 WorldGraphSO 解析目标时使用。
+        /// </summary>
+        public Room FindRoomByID(string roomID)
+        {
+            if (string.IsNullOrEmpty(roomID)) return null;
+            if (_roomLookup == null) return null;
+            _roomLookup.TryGetValue(roomID, out var room);
+            return room;
+        }
 
         /// <summary>
         /// Set the given room as the current room. Handles all side effects:

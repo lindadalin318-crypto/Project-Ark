@@ -2,6 +2,1081 @@
 
 ---
 
+## 关卡模块 Batch 4：节奏验证工具 + 示巴星首切片落地（验证层） — 2026-03-24 18:30
+
+### 新建文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/ShebaSliceBuilder.cs` — 一键构建示巴星 7 房间首切片的 Editor 自动化脚本
+
+### 修改文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/PacingOverlayRenderer.cs` — 新增 `DrawConnectionTypeOverlay()` 方法，渲染 ConnectionType 语义色连接线 + 类型标签 + 右上角颜色图例
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs` — 新增 `ShowConnectionTypes` toggle 开关
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomBlockoutRenderer.cs` — ConnectionType overlay 激活时跳过默认灰色连接线，避免视觉冲突
+
+### 内容
+
+**B4.1 PacingOverlayRenderer ConnectionType 可视化**
+- 直接从场景 Door MonoBehaviour 读取 `_connectionType` 字段（而非查询 WorldGraphSO），Door 作为连接类型的 single source of truth
+- 颜色映射复用 `ConnectionGraphEdge.GetConnectionTypeColor()`：Progression=浅灰, Return=紫色, Ability=青色, Challenge=红色, Identity=金色, Scheduled=绿色
+- 普通连接画虚线，层间过渡画粗实线
+- 连接中点显示简称标签（PROG/RET/ABL/CHAL/IDENT/SCHED）
+- SceneView 右上角渲染颜色图例面板
+- `RoomBlockoutRenderer.DrawDoorConnections()` 在 ConnectionType overlay 激活时 early return，避免灰色线与语义色线叠加
+
+**B4.2 ShebaSliceBuilder 一键构建脚本**
+- 菜单入口：`ProjectArk > Level > Build Sheba 7-Room Slice`
+- 自动创建 7 个 RoomSO 资产（`Assets/_Data/Level/Rooms/Sheba/SH-R{01-07}_Data.asset`），全部使用 `_useLegacyTypeMapping = false` 显式指定 NodeType
+- 自动创建 1 个 EncounterSO 占位资产（`SH-R04_Encounter`，Closed 模式，空 waves）
+- 在场景中创建 7 个 Room GameObject，遵循 RoomFactory 标准层级（Navigation/Elements/Encounters/Hazards/Decoration/Triggers + CameraConfiner）
+- 自动创建双向 Door 对 + SpawnPoint，共 7 条连接（14 扇门）：
+  - SH-R01→R02 (Progression), R02→R03 (Progression), R03→R04 (Challenge)
+  - R04→R05 (Progression), R05→R06 (Progression), R06→R01 (Return/loop)
+  - R06→R07 (Progression)
+- 支持 Undo 一键撤销，已有同名资产自动覆盖
+- Resolution 房间（SH-R04）自带 ArenaController + 4 个 SpawnPoints
+
+### 目的
+- B4.1：为 Level Architect 工具增加 ConnectionType 语义色可视化，让关卡设计师在 SceneView 中一眼看到连接关系的节奏含义
+- B4.2：用自动化脚本一键搭建 Sheba 首切片的全部关卡基础设施，为 Play Mode 闭环验证做准备
+
+### 技术
+- SerializedObject API 设置所有 MonoBehaviour 和 SO 字段（与 RoomFactory 模式一致）
+- 两遍式 Door 接线：第一遍创建所有 Door + SpawnPoint，第二遍交叉引用 `_targetRoom` 和 `_targetSpawnPoint`
+- Undo 分组 + try/catch 保护，失败时自动回滚
+
+---
+
+## 关卡模块 Batch 3：房间级持久状态 + 互动件标准化（状态层） — 2026-03-24 15:00
+
+### 新建文件
+- `Assets/Scripts/Level/Room/RoomFlagRegistry.cs` — 房间级持久 Flag 系统（ServiceLocator 注册 + SaveBridge 集成）
+- `Assets/Scripts/Level/Room/DestroyableObject.cs` — 可破坏环境物件基类（IDamageable + RoomFlagRegistry 死亡联动）
+
+### 修改文件
+- `Assets/Scripts/Core/LevelEvents.cs` — 新增 `OnRoomFlagChanged(string roomID, string flagKey, bool newValue)` 静态事件
+- `Assets/Scripts/Level/SaveBridge.cs` — Collect/Distribute 流程中接入 RoomFlagRegistry 的 WriteToSaveData / ReadFromSaveData
+- `Assets/Scripts/Level/Room/Room.cs` — Awake 自动收集 DestroyableObject（从 Elements/ 优先根），暴露 Destroyables 属性
+- `Assets/Scripts/Level/Room/DoorTransitionController.cs` — Boss/Heavy 门独立演出分支（拆分自共用的 PlayLayerTransitionEffects）
+
+### 内容
+
+**B3.1 RoomFlagRegistry**
+- 嵌套字典 `roomID → { flagKey → bool }` 内存结构
+- `SetFlag()` 自动去重 + 广播 `LevelEvents.OnRoomFlagChanged`
+- `WriteToSaveData()` / `ReadFromSaveData()` 复用 `ProgressSaveData.Flags`（`List<SaveFlag>`），key 格式 `room_{roomID}_{flagKey}`
+- 接口约定完全对齐 `KeyInventory` 的 WriteToSaveData / ReadFromSaveData 模式
+
+**B3.2 DestroyableObject**
+- 实现 `IDamageable`，支持 `DamagePayload` 伤害管线
+- 被打碎后通过 `RoomFlagRegistry.SetFlag()` 持久化
+- `Start()` 中从 Registry 检查是否已被破坏，自动恢复已破坏视觉状态
+- 支持自定义破坏 Sprite、VFX、SFX；无 Sprite 时 fallback 为关闭 Collider + 隐藏 SpriteRenderer
+- Room.Awake 从 `Elements/` 子节点自动收集 DestroyableObject 数组
+
+**B3.3 Boss/Heavy 门独立演出**
+- `PlayBossTransitionEffects()`：Boss 专属 SFX（fallback 到 Layer SFX）、更大缩放（3 单位 vs Layer 的 2）、PrimeTween 震屏
+- `PlayHeavyTransitionEffects()`：两阶段演出（Phase 1 轻震 + 半缩放 → Phase 2 强震 + 全缩放）、专属 SFX（三级 fallback 链）
+- `ApplyCameraShake()` 使用 PrimeTween `ShakeLocalPosition` 实现
+- `ExecuteTransition()` 内的 ceremony 分支从旧的 `isLayerish` 布尔判断改为 `switch(ceremony)` 精确路由
+
+**B3.4 LevelEvents.OnRoomFlagChanged**
+- 签名：`Action<string, string, bool>`（roomID, flagKey, newValue）
+- 对应 Raise 方法：`RaiseRoomFlagChanged()`
+- XML doc 标注 Publisher（RoomFlagRegistry）和 Consumer（DestroyableObject / Door / UI / Save）
+
+### 目的
+- 实现 Level_CanonicalSpec.md Batch 3 的全部 4 项任务（B3.1 - B3.4）
+- 让房间内的互动件能写入持久状态，形成"空间被改写"的体验
+- Boss/Heavy 门有了区别于普通门的独立视觉演出，强化仪式感分级
+- 为 Batch 4 的示巴星切片落地准备了"打碎后不复原"的持久化基础
+
+### 技术
+- ServiceLocator 注册/注销模式（RoomFlagRegistry）
+- SaveBridge Collect/Distribute 模式（复用 ProgressSaveData.Flags + SaveFlag）
+- IDamageable 接口实现 + DamagePayload 伤害管线
+- LevelEvents 静态事件总线模式
+- PrimeTween ShakeLocalPosition 震屏
+- Room.CollectComponentsFromPreferredRoot 子节点优先收集模式
+- 编译验证：`dotnet build Project-Ark.slnx`，0 error / 0 新增 warning
+
+---
+
+## 关卡模块 Batch 2：Level Architect 迁移入口修补 — 2026-03-23 17:18
+
+### 修改文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs` — 将 `Migrate Scene NodeTypes` 入口真正挂回 `Level Architect` 主窗口 `Actions` 区与侧栏 `Validate` 区
+
+### 内容
+- 修复了“整场景 NodeType 迁移方法已存在，但主窗口按钮缺失”的 UI 暴露问题。
+- 现在在 `Level Architect` 顶部 `Actions` 区可以直接点击 `Migrate Scene NodeTypes`，执行整场景 `legacy → explicit` 迁移。
+- SceneView 侧栏底部的验证区也同步增加了同名按钮，避免入口只藏在多选房间的批量编辑面板里。
+- 迁移执行后会立即跑一次 `Validate All` 并刷新窗口，方便当场确认还有哪些房间残留 legacy 映射告警。
+- `dotnet build Project-Ark.slnx` 编译通过，0 warning / 0 error。
+
+### 目的
+- 把已经实现的整场景迁移能力真正变成可见、可点、可验证的编辑器工作流，而不是只停留在代码方法和隐蔽入口里。
+- 降低旧房间清理的使用门槛，避免使用者误以为迁移按钮不存在或功能未完成。
+
+### 技术
+- EditorWindow UI 补口：在 `LevelArchitectWindow` 两个验证入口区挂载同一个整场景迁移调用。
+- 迁移后即时校验：按钮点击后串联 `BatchEditPanel.MigrateSceneRoomsToExplicitNodeType()` 与 `LevelValidator.ValidateAll()`，形成更短的验证回路。
+- 编译验证：`dotnet build Project-Ark.slnx`。
+
+## 关卡模块 Batch 2：RoomNodeType 迁移工具化 — 2026-03-23 13:27
+
+### 修改文件
+- `Assets/Scripts/Level/Data/RoomSO.cs` — 暴露 `ExplicitNodeType` / `LegacyMappedNodeType` 只读属性，便于编辑器区分 authored 值与 legacy 映射值
+- `Assets/Scripts/Level/Editor/LevelArchitect/BatchEditPanel.cs` — 新增批量 `Apply Node`、`Migrate Legacy→Explicit`、单房间/整场景显式化迁移入口，并让 `Apply Type` 同步写入显式 `NodeType`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs` — 主窗口新增 `Migrate Scene NodeTypes` 快捷入口，单房间面板显示 `NodeType` 来源并支持一键显式化
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs` — 新增“房间仍在使用 legacy RoomType→NodeType 映射”告警与 AutoFix
+
+### 内容
+- 把 `RoomNodeType` 的迁移从“代码层兜底”推进到“编辑器可操作”：现在可以对所选房间、单个房间、甚至整场景房间执行 `legacy → explicit` 显式化迁移。
+- `BatchEditPanel` 现在同时支持批量设置 `RoomType` 和 `NodeType`，并在应用 `RoomType` 时同步写入显式 `NodeType`，避免工具继续制造半迁移数据。
+- `LevelArchitectWindow` 的单房间视图会直接显示 `Node Source / Explicit Node / Mapped Node`，让迁移状态不再是隐藏信息。
+- `LevelValidator` 会把仍依赖 legacy 映射的房间列为 Warning，并提供一键修复，方便集中清理旧房间资产。
+- `dotnet build Project-Ark.slnx` 编译通过，0 error（保留项目既有 warning）。
+
+### 目的
+- 让 Batch 2 不只是“新房间语法已标准化”，还具备把旧房间逐步迁移到显式 `RoomNodeType` 的低成本路径。
+- 减少后续做节奏语义微调时对 legacy `RoomType` 隐式映射的依赖，避免可视化、校验、authoring 三层出现语义漂移。
+- 为后续 Batch 3/4 的房间状态与节奏验证工作先清掉一层数据债。
+
+### 技术
+- 渐进式数据迁移：保留 legacy 运行时类型，同时提供显式 `NodeType` 批量落盘入口。
+- 编辑器闭环：`BatchEditPanel` / `LevelArchitectWindow` / `LevelValidator` 三处同时提供迁移与校验入口。
+- 数据可观测性：将 `NodeType` 的来源状态显式暴露在编辑器 UI 中，降低“看起来一样、其实来源不同”的排查成本。
+- 编译验证：`dotnet build Project-Ark.slnx`。
+
+## 关卡模块 Batch 2：房间语法标准化（骨架接入） — 2026-03-23 12:15
+
+### 修改文件
+- `Assets/Scripts/Level/Data/RoomSO.cs` — 新增 `RoomNodeType`、legacy→node 映射兜底与迁移字段
+- `Assets/Scripts/Level/Room/Room.cs` — `Awake()` 优先按标准层级收集 Door / Encounter / SpawnPoint，并保留旧结构 fallback
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomFactory.cs` — 新建房间时自动生成 `Navigation/Elements/Encounters/Hazards/Decoration/Triggers` 六层骨架
+- `Assets/Scripts/Level/Editor/LevelArchitect/DoorWiringService.cs` — 自动创建的 Door / SpawnPoint 优先挂到 `Navigation` 标准层级
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs` — 新增标准房间层级校验与一键补全
+- `Assets/Scripts/Level/Editor/LevelArchitect/PacingOverlayRenderer.cs` — 用 `RoomNodeType` 颜色显示房间节奏语义，并保留战斗强度标签
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomBlockoutRenderer.cs` — SceneView 房间块、标签、Tooltip 切到 `RoomNodeType` 语义展示
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs` — 房间列表和单房间面板接入 `RoomNodeType` 可视化信息
+
+### 内容
+- 为 `RoomSO` 增加新的 `RoomNodeType` authored 数据入口，同时保留旧 `RoomType` 到新语义的映射兜底，避免现有房间资产在迁移期被静默改写。
+- 将 `Room.Awake()` 升级为“优先走标准子节点路径，找不到再回退旧结构”的双路径收集逻辑，兼容当前场景与后续规范化房间。
+- 让 `RoomFactory`、`DoorWiringService`、`LevelValidator` 三条编辑器链路统一对齐到标准层级，保证“新建 / 自动连门 / 自动修复”不会把数据重新写回旧结构。
+- 将 SceneView 与 Level Architect 面板中的主要节奏可视化统一到 `RoomNodeType`，让 `WorldGraph` 语义真正进入日常关卡编辑视图。
+- `dotnet build Project-Ark.slnx` 编译通过，0 error。
+
+### 目的
+- 正式落地 `Level_CanonicalSpec.md` Batch 2 的骨架层目标：让房间具备固定语法、工具链围绕同一套层级说话。
+- 在不破坏现有 Arena/Boss/Safe 运行时逻辑的前提下，把 authoring 语义从旧 `RoomType` 平滑迁移到新 `RoomNodeType`。
+- 缩短后续 Batch 2/3 的改动路径，避免新工具继续往房间根节点随意落对象，导致层级再次发散。
+
+### 技术
+- 渐进式迁移：`RoomSO` 同时保留 legacy `RoomType` 与新 `RoomNodeType`，并提供映射兜底。
+- 标准层级治理：`Navigation/Elements/Encounters/Hazards/Decoration/Triggers` 六层骨架 + 编辑器 AutoFix。
+- 编辑器一致性收口：`RoomFactory` / `DoorWiringService` / `LevelValidator` / `PacingOverlayRenderer` / `RoomBlockoutRenderer` / `LevelArchitectWindow` 全链路统一语义。
+- 编译验证：`dotnet build Project-Ark.slnx`。
+
+---
+
+## WorldGraphEditor 画布平移操纵器 (SpacePanManipulator) — 2026-03-23 23:30
+
+### 新建文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/SpacePanManipulator.cs`
+
+### 修改文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/WorldGraphView.cs` — 注册 SpacePanManipulator
+
+### 内容
+为 WorldGraphEditor 添加 Figma 风格的画布平移操作：按住空格键 + 鼠标左键拖拽可自由移动画布。同时支持鼠标中键拖拽平移（无需按空格）。
+
+### 目的
+原始 GraphView 的 `ContentDragger` 仅支持 Alt+LMB 或 MMB 拖拽平移，不符合 Figma/Photoshop 用户习惯。添加 Space+LMB 的交互模式提升编辑体验。
+
+### 技术
+- 继承 `Manipulator`，使用 `TrickleDown` 模式注册键盘和鼠标事件确保优先级
+- 通过 `GraphView.viewTransform.position` 增量修改画布位置（GraphView 标准 API）
+- 用 `CaptureMouse()` / `ReleaseMouse()` 管理鼠标捕获状态
+- `#pragma warning disable CS0618` 消除 Unity 尚未迁移的 `ITransform.position` 过时警告
+
+---
+
+## WorldGraphEditor 节点图编辑器 + ScaffoldToWorldGraphBuilder — 2026-03-23 21:30
+
+**新建文件：**
+- `Assets/Scripts/Level/Editor/LevelArchitect/WorldGraphEditorWindow.cs` — 完整版 GraphView 节点图编辑器宿主窗口
+- `Assets/Scripts/Level/Editor/LevelArchitect/WorldGraphView.cs` — GraphView 子类，渲染和编辑 WorldGraphSO
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomGraphNode.cs` — GraphView 节点元素（房间节点，按 RoomNodeType 着色）
+- `Assets/Scripts/Level/Editor/LevelArchitect/ConnectionGraphEdge.cs` — GraphView 连线元素（按 ConnectionType 着色）
+- `Assets/Scripts/Level/Editor/LevelArchitect/WorldGraphSOEditor.cs` — WorldGraphSO 的 Custom Inspector（含 "Open in Graph Editor" 按钮）
+- `Assets/Scripts/Level/Editor/LevelArchitect/ScaffoldToWorldGraphBuilder.cs` — Authority Builder，从 LevelScaffoldData 自动生成 WorldGraphSO
+
+**修改文件：**
+- `Assets/Scripts/Level/Data/RoomNodeData.cs` — 添加 `EditorPosition (Vector2)` 字段供 GraphView 存储节点布局坐标
+
+**内容：**
+实现了 Batch 1 的两个核心工具：
+1. **WorldGraphEditor**：基于 Unity `GraphView` API 的完整节点图编辑器。支持：
+   - 可拖拽房间节点 + 可视化连线，类似 Shader Graph 交互体验
+   - 按 RoomNodeType 着色节点（10 种颜色映射），按 ConnectionType 着色连线（6 种）
+   - 右键创建新节点（支持全部 10 种 RoomNodeType）
+   - 从端口拖拽创建新连接
+   - 删除节点/连接
+   - Inspector 侧面板编辑选中节点的详细属性（NodeType、DesignerNote、连接列表）
+   - 力导向自动布局算法（50 次迭代，含斥力/引力/阻尼）
+   - 底部图例条显示颜色编码含义
+   - 自动保存（关闭窗口时持久化回 WorldGraphSO）
+   - 菜单路径：`ProjectArk/Level/Authority/World Graph Editor`
+
+2. **ScaffoldToWorldGraphBuilder**：Authority Builder，从 LevelScaffoldData 一键生成 WorldGraphSO：
+   - RoomType → RoomNodeType 映射表（优先使用 DisplayName 关键字精确匹配，fallback 到枚举映射）
+   - ScaffoldDoorConnection → 双向 ConnectionEdge 自动生成
+   - GateID 从门方向 + 目标房间自动推导
+   - ConnectionType 从 DoorState / 目标房间类型自动推断
+   - EditorPosition 从 ScaffoldRoom.Position 缩放推导
+   - 菜单路径：`ProjectArk/Level/Authority/Build WorldGraph from Scaffold`
+
+**目的：** 闭环 Batch 1 验收标准中的 B1.6（WorldGraphEditor）和 B1.7（示巴星 WorldGraphSO 资产生成）。
+
+**技术：** Unity GraphView API (`UnityEditor.Experimental.GraphView`)、SerializedObject API、力导向布局算法、策略模式映射表。
+
+---
+
+## 删除一次性 LevelAssetCreator — 2026-03-23
+
+**删除文件：**
+- `Assets/Scripts/Level/Editor/LevelAssetCreator.cs` + `.meta`
+
+**内容：**
+- 该文件包含 4 个硬编码的 Phase 2 SO 资产创建菜单（Create Phase 2 Assets / Checkpoint / Key / WorldStage），资产早已创建完毕
+- 一次性脚本不应留在 Authority 菜单中，清理后 Authority 菜单只保留真正的长期工具
+
+**目的：**
+- 确保 `ProjectArk/Level/Authority/` 菜单下只有 CanonicalSpec §9.1 定义的正式 Authority Builder，不含过期的一次性脚本
+
+**技术：**
+- 删除 `.cs` + `.meta`，清理 `.csproj` 缓存引用，编译验证通过（0 error）
+
+---
+
+## Level Editor 菜单路径统一到 Authority 前缀 — 2026-03-23
+
+**修改文件：**
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs` — 菜单从 `Window/ProjectArk/Level Architect` → `ProjectArk/Level/Authority/Level Architect`
+- `Assets/Scripts/Level/Editor/ScaffoldToSceneGenerator.cs` — 菜单从 `Window/ProjectArk/Generate Level From Scaffold` → `ProjectArk/Level/Authority/Generate Level From Scaffold`
+- `Assets/Scripts/Level/Editor/LevelAssetCreator.cs` — 4 个菜单从 `ProjectArk/Level/...` → `ProjectArk/Level/Authority/...`
+
+**目的：**
+- 与 Ship/VFX 模块统一菜单命名约定（`ProjectArk/{Module}/Authority/...`）
+- 所有 CanonicalSpec §9.1 定义的官方 builder 在 Unity 菜单中集中到同一个 `Authority` 子菜单下，一目了然
+
+**技术：**
+- 只修改 `[MenuItem]` 字符串和 `MENU_PATH` 常量，无逻辑变更
+- 编译验证通过（0 error）
+
+---
+
+## Level Editor 工具链 Authority 标记 + 旧工具清理 — 2026-03-22
+
+**修改文件：**
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs` — 加 `[Authority]` 标记 + 删除 Legacy Tool Detection 代码段
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomFactory.cs` — 加 `[Authority]` 标记
+- `Assets/Scripts/Level/Editor/LevelArchitect/DoorWiringService.cs` — 加 `[Authority]` 标记
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs` — 加 `[Authority]` 标记
+- `Assets/Scripts/Level/Editor/LevelArchitect/PacingOverlayRenderer.cs` — 加 `[Authority]` 标记
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomBlockoutRenderer.cs` — 加 `[Authority]` 标记
+- `Assets/Scripts/Level/Editor/LevelArchitect/BatchEditPanel.cs` — 加 `[Authority]` 标记
+- `Assets/Scripts/Level/Editor/LevelArchitect/BlockoutModeHandler.cs` — 加 `[Authority]` 标记
+- `Assets/Scripts/Level/Editor/LevelArchitect/ScaffoldSceneBinder.cs` — 加 `[Authority]` 标记
+- `Assets/Scripts/Level/Editor/LevelArchitect/SceneScanner.cs` — 加 `[Authority]` 标记
+- `Assets/Scripts/Level/Editor/ScaffoldToSceneGenerator.cs` — 加 `[Authority]` 标记（one-shot tool）
+- `Assets/Scripts/Level/Editor/LevelAssetCreator.cs` — 加 `[Authority]` 标记
+- `Implement_rules.md` — §7.3 追加已删除工具清单 + 代码层标记说明
+
+**删除文件：**
+- `Assets/Scripts/Level/Editor/LevelDesignerWindow.cs`（`[Obsolete]`，被 LevelArchitectWindow 替代）
+- `Assets/Scripts/Level/Editor/RoomBatchEditor.cs`（`[Obsolete]`，被 LevelArchitectWindow 替代）
+- `Assets/Scripts/Level/Editor/ShebaLevelScaffolder.cs`（`[Obsolete]`，被 LevelArchitectWindow 替代）
+- `Assets/Scripts/Level/Editor/LevelGenerator.cs`（旧 scaffold 生成器，被 ScaffoldToSceneGenerator 替代）
+- `Assets/Scripts/Level/Editor/HtmlScaffoldImporter.cs`（一次性 HTML 导入工具，已完成使命）
+- `Assets/Scripts/Level/Editor/Phase6AssetCreator.cs`（Phase 6 一次性资产生成，已完成使命）
+- `Assets/Scripts/Level/Editor/MapUIBuilder.cs`（Map UI 一次性构建工具，已完成使命）
+- `Assets/Scripts/Level/Data/LevelElementLibrary.cs`（数据类，仅被已删除的工具引用）
+
+**目的：**
+- 给 CanonicalSpec §9.1 定义的所有官方 builder 在代码层加 `[Authority: Level CanonicalSpec §9.1]` 标记，使 authority 可 grep 追溯
+- 删除所有已废弃（`[Obsolete]`）和已完成使命的一次性工具，减少菜单项混乱和维护负担
+- 清理 LevelArchitectWindow 中检测已删除旧工具的 Legacy Tool Detection 代码段
+
+**技术：**
+- `[Authority]` 标记写入 XML doc `<summary>` 中，不影响编译，可通过 `grep -r "Authority.*CanonicalSpec"` 检索
+- 编译验证通过（0 error）
+
+---
+
+## Level 模块 Authority 执行约束表 — 2026-03-22
+
+**修改文件：**
+- `Implement_rules.md` — 新增 Section 7 "Level 模块规则"（含 Authority 执行约束表），更新文档头部已启用模块列表，原 Section 8 通用模板调整为 Section 9
+
+**内容：**
+- 在 Implement_rules.md 中追加 Level 模块的轻量预防式 Authority 骨架
+- 包含：模块边界（§7.1）、模块目标（§7.2）、Authority 执行约束表（§7.3，10 行工具→对象映射）、实现规则（§7.4，含迁移纪律/Runtime 数据隔离/工具执行模式/禁止 Silent No-Op/Scene 接线白名单）、预防性踩坑总结（§7.5）、验收清单（§7.6）、推荐工作流（§7.7）
+
+**目的：**
+- 在 Level 重构阶段开始前事前设置 authority，防止重蹈 VFX 模块"事后救火"的治理困境
+- 与 VFX 的重度 Authority Matrix 不同，Level 采用轻量形式——工具职责天然分离，重点约束迁移纪律和 Scene 接线治理
+
+**技术：**
+- 遵循 Implement_rules.md §8（现 §9）的通用模块规则模板结构
+- Authority 执行约束表严格对齐 Level_CanonicalSpec.md §9 工具矩阵，只做执行约束层补充
+- 预留增量追加机制：后续 Batch 遇到实际问题时按 §7.5 追加踩坑总结
+
+---
+
+## 关卡模块 Batch 1：世界图谱 + 门语义升级（骨架层） — 2026-03-22
+
+**新建文件：**
+- `Assets/Scripts/Level/Data/RoomNodeType.cs` — 10 种节奏节点类型枚举
+- `Assets/Scripts/Level/Data/ConnectionType.cs` — 6 种连接语义枚举
+- `Assets/Scripts/Level/Data/TransitionCeremony.cs` — 5 级过渡仪式感枚举
+- `Assets/Scripts/Level/Data/RoomNodeData.cs` — 世界图谱中的房间节点数据结构
+- `Assets/Scripts/Level/Data/ConnectionEdge.cs` — 世界图谱中的连接边数据结构
+- `Assets/Scripts/Level/Data/WorldGraphSO.cs` — 显式世界图谱 ScriptableObject（关卡拓扑单一真相源）
+
+**修改文件：**
+- `Assets/Scripts/Level/Room/Door.cs` — 新增 `_gateID`、`_connectionType`、`_ceremony` 字段和 `EffectiveCeremony` 属性（兼容旧 `_isLayerTransition`）
+- `Assets/Scripts/Level/Room/DoorTransitionController.cs` — 新增 `_worldGraph` 引用、Ceremony-based timing、`ResolveTarget` 方法（优先 WorldGraphSO + GateID 定位，fallback 到 `_targetRoom`）
+- `Assets/Scripts/Level/Room/RoomManager.cs` — 新增 `_roomLookup` 字典和 `FindRoomByID()` 公开方法
+- `Assets/Scripts/Level/Map/MinimapManager.cs` — 新增 `_worldGraph` 引用，`GatherSceneData` 拆为 `GatherConnectionsFromWorldGraph`（新路径）和 `GatherConnectionsFromDoors`（旧 fallback）
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs` — 新增 3 条 WorldGraphSO 校验规则（Rule 9: RoomID 场景缺失、Rule 10: GateID 不匹配、Rule 11: 孤立房间）
+
+**内容：**
+- 实现 Level_CanonicalSpec.md 中 Batch 1 的全部 7 项任务（B1.1 - B1.7，B1.7 的资产创建留待 Unity Editor 内操作）
+- WorldGraphSO 包含运行时字典缓存（O(1) 查找）、GateID 连接查找、邻接查询和校验辅助方法
+- DoorTransitionController 的目标解析支持双路径：WorldGraphSO + GateID（新） → Door._targetRoom（旧 fallback）
+- MinimapManager 邻接关系读取支持双路径：WorldGraphSO（新） → Door 运行时推导（旧 fallback）
+- 所有新增枚举/数据结构遵循 Spec 中的精确定义
+
+**目的：**
+- 让关卡连接关系从"运行时推导"变成"显式数据 + 运行时校验"
+- 为后续 Batch 2（房间语法标准化）和 Batch 3（房间级持久状态）提供骨架
+
+**技术：**
+- 增量升级策略：所有改动保留旧路径 fallback，零破坏性
+- WorldGraphSO 使用 OnEnable/OnValidate 清缓存 + 惰性重建模式
+- Door.EffectiveCeremony 兼容旧 _isLayerTransition（Ceremony=Standard + _isLayerTransition=true → Layer）
+- DoorTransitionController.ResolveTarget 使用 SpawnPoint_{gateID} 命名约定查找生成点
+- LevelValidator 新增的 3 条规则会自动扫描项目中所有 WorldGraphSO 资产
+- `dotnet build Project-Ark.slnx` 编译通过，0 错误
+
+---
+
+## 关卡模块重构规范文档：Level_CanonicalSpec.md v1.0 — 2026-03-22
+
+**新建文件：**
+- `Docs/Reference/Level_CanonicalSpec.md`
+
+**内容：**
+- 建立关卡模块重构的唯一目标架构规范文档
+- 定义五层目标架构模型（世界图谱层 → 房间容器层 → 连接缝合层 → 节奏内容层 → 导演引导层）
+- 设计核心数据结构：WorldGraphSO、RoomNodeData、ConnectionEdge、RoomNodeType（10 种节点类型）、ConnectionType（6 种连接语义）、TransitionCeremony（5 级仪式感）、GateID 命名规范、RoomFlagRegistry
+- 定义房间标准化子节点语法（Navigation/Elements/Encounters/Hazards/Decoration/Triggers）
+- 绘制运行时权威数据流向图
+- 明确模块边界与跨模块依赖矩阵
+- 划分 Editor 工具链职责（轻量版 Authority Matrix）
+- 制定增量迁移策略（RoomType → RoomNodeType 映射表、Door 字段迁移、MinimapManager 兼容策略）
+- 拆分 4 个 Batch 执行计划，每个 Batch 含任务清单和验收标准
+- 附录：示巴星切片 7 房间参考表
+
+**目的：**
+- 为关卡模块大重构提供"事前定义"式的目标架构文档，避免 VFX 模块"先乱了再收口"的教训
+- 以 Minishoot 工程化关卡思维为基底，保留 Ark 差异化优势（世界时钟、动态阶段、热量战斗核心）
+- 作为 Batch 1-4 全部实现工作的执行契约和北极星
+
+**技术：**
+- 参考 ShipVFX_CanonicalSpec.md 的文档体系，但侧重"目标架构定义"而非"权限收口治理"
+- 基于 Level_Architecture_Synthesis_Minishoot_Silksong_TUNIC.md 的分析结论
+- 兼容当前 ~6,900 行运行时代码 + 19 个 Editor 工具脚本的增量升级路径
+
+---
+
+## 文档更新：Activation Halo 标记为已取消 — 2026-03-23 00:10
+
+**修改文件：**
+- `Docs/Reference/ShipVFX_MigrationPlan.md`
+- `Docs/Reference/ShipVFX_CanonicalSpec.md`
+- `Docs/Reference/ShipVFX_AssetRegistry.md`
+
+**内容：**
+- 将 `Activation Halo` 从 backlog 总表状态更新为 `已取消 ❌`
+- 将 6.5 节整体重写为取消说明，记录取消原因（肉眼不可见、维护成本过高、职责已被覆盖）、替代方案和清理范围
+- 从 CanonicalSpec 现役结构树中移除 `BoostActivationHalo` 节点，添加取消注释
+- BoostTrailView 层数描述从 `7+1` 更新为 `7`
+- AssetRegistry 中 Halo 纹理（`vfx_ring_glow_uneven.png` / `vfx_magnetic_rings.png`）状态从 `Live` 降级为 `Dormant`
+- CanonicalSpec 冻结项列表中移除已不再需要冻结的 Halo 纹理
+- 清理 MigrationPlan 中其他推进项（Bloom Burst / FlameCore Burst / EmberSparks / Liquid Boost State / FlameTrail）对已取消 Halo 的过时引用，统一改为引用 `FlameCore Burst` 作为起手主确认层
+
+**目的：** 同步文档与代码现实——Activation Halo 代码已被删除（替代方案为强化 Bloom Burst + FlameCore Burst），但三份规范文档仍停留在"实现中"状态，需要对齐。
+
+**技术：** 纯文档维护，无代码变更。
+
+---
+
+## 文档更正：FlameTrail / EmberTrail 描述与验收状态 — 2026-03-22 23:45
+
+**修改文件：**
+- `Docs/Reference/ShipVFX_CanonicalSpec.md`
+- `Docs/Reference/ShipVFX_MigrationPlan.md`
+- `Docs/Reference/ShipVFX_Player_Perception_Reference.md`
+
+**内容：**
+- **CanonicalSpec**：FlameTrail_R / FlameTrail_B 的命名表说明从"火焰拖尾"更正为"喷口持续火焰（Local-space，rateOverTime）"
+- **MigrationPlan backlog**：FlameTrail_R / FlameTrail_B 和 EmberTrail 状态从"实现中"更新为"已验收 ✅"
+- **MigrationPlan 6.10 节**：状态从"实现中，待实机验收"改为"已验收 ✅"；定位描述补充技术细节（Local-space / World-space rateOverDistance）；"当前问题"段标注为"已解决"并逐项说明修复方式
+- **Perception Reference**：FlameTrail 从"两侧火焰稳定输出"更正为"喷口根部左右两侧持续喷出贴身火焰，跟随船体移动"；EmberTrail 从"更散更轻的余烬轨迹"更正为"飞船移动时路径上散落的微小余烬碎屑，静止则无粒子"
+
+**目的：** 使文档准确反映当前实现：FlameTrail 已从世界空间拖尾粒子改为本地空间喷口持续火焰，EmberTrail 已从大散团状改为 rateOverDistance 微小碎屑，两者均已完成验收
+
+**技术：** 纯文档更正，无代码变更
+
+---
+
+## 修复 EmberTrail 静止预览无粒子输出 — 2026-03-22 23:15
+
+**修改文件：**
+- `Assets/Scripts/Ship/VFX/BoostTrailView.cs`
+
+**内容：**
+- 修复 `DebugPreviewEmberTrailSustain()` 点击后完全看不到任何粒子的 bug
+
+**根因：**
+- EmberTrail 配置为 `rateOverDistance=2.2`、`rateOverTime=0`（World Space 模拟）
+- 粒子只在飞船移动时沿距离发射，静止时一个粒子都不会出现
+- Inspector 预览按钮是在飞船静止状态下使用的，所以永远看不到效果
+- 同时 `SetBoostIntensity()` 在内部调用 `ApplyParticleSustainState()` 时对 EmberTrail 传入 `useRateOverTime: false`，会把 `rateOverTimeMultiplier` 强制设为 0，即使手动启动粒子系统也不会发射
+
+**修复：**
+- `DebugPreviewEmberTrailSustain()` 现在临时将 EmberTrail 从 `rateOverDistance` 切换到 `rateOverTime` 模式
+- 新增 `SetBoostIntensityShaderOnly()` 方法：只驱动 MainTrail + EnergyLayer 的 shader `_BoostIntensity`，不修改粒子发射参数，避免覆盖预览时的临时 rateOverTime 设置
+- 直接设置 `_currentIntensity = 1f` 而非调用 `SetBoostIntensity(1f)`，防止 sustain 逻辑覆盖预览配置
+
+**技术：** ParticleSystem.emission rateOverTime/rateOverDistance 模式切换 + 预览/运行时职责隔离
+
+---
+
+## FlameTrail Preview 拆分为 R / B / Both — 2026-03-22 22:45
+
+**修改文件：**
+- `Assets/Scripts/Ship/VFX/BoostTrailView.cs`
+- `Assets/Scripts/Ship/VFX/BoostTrailDebugManager.cs`
+- `Assets/Scripts/Ship/Editor/BoostTrailDebugManagerEditor.cs`
+
+**内容：**
+- 将原来的 `DebugPreviewFlameTrailSustain()` 拆分为三个方法：`DebugPreviewFlameTrailR()` / `DebugPreviewFlameTrailB()` / `DebugPreviewFlameTrailBoth()`
+- 共享 isolation 逻辑提取到 `IsolateForFlameSustainPreview()` 私有方法
+- DebugManager 对应拆为 `PreviewFlameTrailR()` / `PreviewFlameTrailB()` / `PreviewFlameTrailBoth()`
+- Editor Inspector 的 Sustain Layer Preview 区域改为水平三按钮布局：`FlameTrail_R` | `FlameTrail_B` | `Both`
+
+**目的：**
+- 用户反馈 preview 时无法区分 FlameTrail_R（红/橙焰尾）和 FlameTrail_B（紫色电光）的各自表现，需要独立隔离查看
+
+**技术：**
+- 提取共享 isolation 逻辑为 private 方法，减少重复代码
+- 三个按钮用 `EditorGUILayout.BeginHorizontal()` 水平排列，节省 Inspector 垂直空间
+
+---
+
+## FlameTrail / EmberTrail Quick Preview 按钮 — 2026-03-22 22:30
+
+**修改文件：**
+- `Assets/Scripts/Ship/VFX/BoostTrailView.cs`
+- `Assets/Scripts/Ship/VFX/BoostTrailDebugManager.cs`
+- `Assets/Scripts/Ship/Editor/BoostTrailDebugManagerEditor.cs`
+
+**内容：**
+- 在 `BoostTrailView` 新增 `DebugPreviewFlameTrailSustain()` 和 `DebugPreviewEmberTrailSustain()` 两个独立 preview 方法
+- 每个方法的逻辑：Reset 所有其他层 → 将 master intensity 设为 1.0 → 只播放目标 sustain 粒子系统
+- 在 `BoostTrailDebugManager` 新增 `PreviewFlameTrailSustain()` 和 `PreviewEmberTrailSustain()` 入口方法
+- 在 `BoostTrailDebugManagerEditor` 的 Quick Preview 区域新增 "Sustain Layer Preview" 子标签，下挂两个按钮
+
+**目的：**
+- 此前 FlameTrail_R/B 和 EmberTrail 是持续层（sustain particles），只能通过 ForceSustainPreview + Solo Layer 组合操作才能单独预览，步骤繁琐
+- 新增独立 Quick Preview 按钮后，一键即可隔离查看单层 sustain 效果
+
+**技术：**
+- 复用已有的 `ResetState()` + `SetBoostIntensity()` + `PlayParticle()` 内部方法
+- sustain preview 按钮放在 burst 按钮的 `DisabledScope` 之外，因为它们不依赖 ForceSustainPreview 模式
+- 遵循 debug 工具纪律：只做显式预览，不接管正式运行链
+
+---
+
+## BoostTrailView 参数数据驱动迁移 + 衰减尾声自动停止 — 2026-03-22 17:45
+
+**修改文件：**
+- `Assets/Scripts/Ship/Data/ShipJuiceSettingsSO.cs`
+- `Assets/Scripts/Ship/VFX/BoostTrailView.cs`
+- `Assets/Scripts/Ship/Editor/BoostTrailPrefabCreator.cs`
+- `Assets/Scripts/Ship/Editor/ShipVfxValidator.cs`
+
+**内容：**
+1. **参数数据驱动迁移**：将 `BoostTrailView` 中 25+ 个硬编码 `[SerializeField]` 参数全部迁移到 `ShipJuiceSettingsSO`。包括：
+   - Startup Sequencing（3 个 delay 参数）
+   - FlameTrail/EmberTrail/EnergyLayer2/EnergyLayer3 Sustain（各 2 个：blendInThreshold + maxIntensity，共 8 个）
+   - Particle Sustain Curve（minSize + minSpeed + stopThreshold，3 个新参数）
+   - Intensity Animation（rampUp + rampDown，2 个）
+   - TrailRenderer（trailTime + widthMultiplier，2 个）
+   - Bloom Burst（5 个参数）
+2. **衰减尾声自动停止**：新增 `_sustainParticleStopThreshold`（默认 0.005），`ApplyParticleSustainState` 在 intensity 低于此阈值时主动调用 `Stop()`，消除 "playing but emitting nothing" 的空闲 profiler 开销。
+3. **BoostTrailPrefabCreator 更新**：删除旧的 17 行 `FindProperty("_xxx").floatValue = ...` 硬编码参数设置，替换为 `_juiceSettings` SO 引用接线。
+4. **ShipVfxValidator 更新**：
+   - `AllowedBoostTrailViewSceneOverrides` 白名单增加 `_juiceSettings`
+   - 新增 `_juiceSettings` 为空的 prefab 级验证检查
+
+**目的：** 遵循架构原则"数据驱动"——所有游戏数值必须放在 ScriptableObject 中，策划可以不碰代码就调参。同时消除衰减尾声的微量 profiler 开销。
+
+**技术：** SO getter + 内联 fallback 默认值（防止 SO 未接线时运行时崩溃）。`ApplyParticleSustainState` 新增 early-return Stop 逻辑。
+
+---
+
+## Liquid Boost State 验收 + MigrationPlan/CanonicalSpec/AssetRegistry 文档更新 — 2026-03-22 01:30
+
+### 修改文件
+- `Docs/Reference/ShipVFX_MigrationPlan.md`
+- `Docs/Reference/ShipVFX_CanonicalSpec.md`
+- `Docs/Reference/ShipVFX_AssetRegistry.md`
+
+### 内容
+`Liquid Boost State` 已通过实机验收，更新三份规范文档：
+1. **MigrationPlan**：backlog 总表中该条目状态从"实现中"更新为"已验收 ✅"；owner 从 `ShipView` 更正为 `ShipBoostVisuals`；推进项 §6.9 的详细卡片替换为实现总结与验收结果；同步更正 `Thruster Entry Pulse` 的 owner
+2. **CanonicalSpec**：`ShipBoostVisuals` Worker 职责描述更新，反映 Liquid sprite swap + sortOrder + HDR 颜色 tween
+3. **AssetRegistry**：`ShipBoostVisuals` / `ShipJuiceSettingsSO` / `Boost_16.png` 的 Notes 和 Owner 更新
+
+### 目的
+保持三份规范文档与实际代码、验收状态一致，避免认知漂移。
+
+### 技术
+纯文档更新，无代码变更。
+
+---
+
+## Liquid 层 Boost 可见性增强（Sprite Swap + SortOrder + HDR 颜色）— 2026-03-22 01:15
+
+### 修改文件
+- `Assets/Scripts/Ship/Data/ShipJuiceSettingsSO.cs`
+- `Assets/Scripts/Ship/VFX/ShipBoostVisuals.cs`
+- `Assets/_Data/Ship/DefaultShipJuiceSettings.asset`
+
+### 内容
+Liquid 层在 Boost 时完全不可见的问题修复：
+1. **ShipJuiceSettingsSO** 新增三个数据驱动字段：
+   - `_boostLiquidSprite`（Sprite）：Boost 时替换的 Sprite（设为 Boost_16.png）
+   - `_boostLiquidSortOverride`（bool）+ `_boostLiquidSortOrder`（int）：Boost 时将 Liquid 的 sortOrder 从 -2 提升到 1（在 Solid 之上）
+   - `_boostLiquidColor` 默认值从 `(0.6, 0.85, 1.0)` 改为 HDR `(3, 4, 5, 1)`
+2. **ShipBoostVisuals** 在 `OnBoostStarted()` / `OnBoostEnded()` / `ResetState()` 中实现：
+   - Sprite swap（Boost 时换成 Boost_16.png，结束时恢复 Movement_3.png）
+   - SortOrder 提升（Boost 时 sortOrder=1 在 Solid 之上，结束时恢复 -2）
+   - 基线 sprite 和 sortOrder 在 `Initialize()` 中捕获
+
+### 目的
+Liquid 层使用 Additive 材质 + sortOrder -2（在 Solid 之下），且基线颜色极暗 `(0.15, 0.25, 0.3)`，即使 tween 到 `(1, 0, 0.8)` 也因被 Solid 层完全遮盖而不可见。通过三管齐下（更亮的 sprite、提升到 Solid 之上、HDR 高强度颜色）确保 Boost 时 Liquid 层可见。
+
+### 技术
+- 数据驱动（所有参数在 SO 中配置），运行时不 hardcode
+- PrimeTween `Tween.Color` 做 HDR 颜色过渡
+- 基线状态在 `Initialize()` 捕获，`ResetState()` 完整恢复（防对象池状态泄漏）
+
+---
+
+## 清理重复 ShipStateController + Rebuilder 防重复加固 — 2026-03-22 09:00
+
+**修改文件：**
+- `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs`
+- `Assets/Scenes/SampleScene.unity`（通过 MCP 保存）
+
+**内容：**
+- 通过 MCP `manage_components(remove)` 删除了 Ship GameObject 上多余的第二个 `ShipStateController` 组件（scene override 残留，instanceID: 63378），保存场景
+- 加固 `ShipPrefabRebuilder.EnsureComponent<T>()` 方法：使用 `GetComponents<T>()` (复数) 检测同类型重复组件，如果发现多个则保留第一个、`DestroyImmediate` 其余重复项，并在日志中输出 `⚠ removed N duplicate(s)` 警告
+
+**目的：**
+- 修复历史遗留的重复组件问题（`GetComponent` 只返回第一个，无法感知第二个的存在）
+- 防止未来任何原因（手动添加、scene override 漂移）再次出现同类型组件重复
+
+**技术：**
+- `GetComponents<T>()` vs `GetComponent<T>()` 的区别：前者返回数组包含所有同类型组件，后者只返回第一个
+
+---
+
+## Liquid Boost State 重构：删除 Sprite Swap，改用颜色 Tween — 2026-03-22 08:30
+
+**修改文件：**
+- `Assets/_Art/Ship/Glitch/Boost_16.png.meta` — 修复 PPU 从 100 → 320（与其他 sprite 一致）
+- `Assets/Scripts/Ship/VFX/ShipBoostVisuals.cs` — 完全重写
+- `Assets/Scripts/Ship/Data/ShipJuiceSettingsSO.cs` — 替换参数
+- `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs` — 移除 Boost sprite 接线
+- `Assets/Scripts/Ship/Editor/ShipVfxValidator.cs` — 移除已删字段的验证
+
+**问题根因：** `Boost_16.png` 的 Pixels Per Unit = 100，而 `Movement_3.png` = 320。Boost 时切换 sprite 导致 Liquid 层瞬间变大 3.2 倍，加上 Additive 材质黑底，表现为"比飞船大一倍的黑色 sprite"。
+
+**删除的逻辑：**
+- Liquid Sprite Swap（`_boostLiquidSprite` / `_normalLiquidSprite` / `_enableLiquidSwap`）
+- 三段式 Glow 亮度包络（Attack-Settle-Sustain，含 `BoostGlowBrightnessMultiplier` / `BoostGlowEntryBrightnessMultiplier` / `BoostGlowRampUpDuration` / `BoostGlowSettleDuration` / `BoostGlowRampDownDuration` 共 5 个参数）
+- 手写 easing 辅助函数（`EaseOutQuad` / `EaseOutCubic`）
+
+**新方案：**
+- 用 `Tween.Color()` 直接从基线色 tween 到可配置的 `BoostLiquidColor`（默认浅蓝 `0.6, 0.85, 1.0`）
+- 参数简化为 3 个：`BoostLiquidColor` / `BoostLiquidRampUpDuration` / `BoostLiquidRampDownDuration`
+- 使用 PrimeTween 内置缓动（`OutCubic` 上升 / `InQuad` 下降），删除手写 easing
+- Boost_16.png 保留但修复 PPU，未来可用于其他用途
+
+**技术：** PrimeTween `Tween.Color()`，数据驱动 `ShipJuiceSettingsSO`
+
+---
+
+## 全局 DepthOfField 导致画面模糊 — 关闭默认 DoF — 2026-03-22 07:15
+
+### 修改文件
+- `Assets/Settings/GlobalVolumeProfile.asset` — 将 DepthOfField 组件的 `active` 从 `1` 改为 `0`
+
+### 内容
+- **根因**：`GlobalVolumeProfile.asset` 中启用了 DepthOfField（Bokeh 模式，focusDistance=5，focalLength=50）。在相机开启 Post Processing 之前此效果不生效，开启后 DoF 对所有画面产生景深模糊
+- **症状**：开启 Post Processing 修复 Bloom Burst 后，整个画面变得模糊
+- **分析**：对 2D 俯视角游戏来说，全局 DoF 几乎不应常开——所有 Sprite 在同一 Z 平面，DoF 只会产生不可控模糊。编织态（Weaving）过渡需要的 DoF 由 `WeavingStateTransition.cs` 动态控制，不依赖全局默认值
+- **修复**：将 GlobalVolumeProfile 中 DepthOfField 的 `active` 设为 `0`（默认关闭），保留 Bloom 和 Vignette
+
+### 目的
+消除 2D 游戏中不必要的全局景深模糊，保持画面清晰锐利，特效后处理（Bloom/Vignette）继续正常工作
+
+### 技术
+- URP Volume Profile 后处理组件 `active` 开关控制
+- DoF 仅在编织态等特定时刻由代码动态启用
+
+---
+
+## Bloom Burst 不可见 — Camera Post Processing 未开启 — 2026-03-22 06:50
+
+### 修改文件
+- `Assets/Scenes/SampleScene.unity` — Main Camera 的 `UniversalAdditionalCameraData.renderPostProcessing` 从 `false` 改为 `true`
+- `Assets/Scripts/Ship/VFX/BoostTrailView.cs` — 新增 `ValidateCameraPostProcessing()` 防御性检查方法
+
+### 内容
+- **根因**：Main Camera 上的 URP Additional Camera Data 组件的 `renderPostProcessing` 为 `false`，导致 URP 渲染管线完全跳过后处理（包括 Bloom），Bloom Burst 的 Volume weight 和 intensity 被正确动画化但视觉上完全不可见
+- **症状**：Preview Bloom Burst 按钮点击后无任何视觉反应，但 FlameCore Burst 和 EmberSparks Burst 正常工作（它们是粒子系统，不依赖后处理）
+- **修复**：通过 MCP 将 `m_RenderPostProcessing` 设为 `true` 并保存场景
+- **防御**：在 `BoostTrailView.Awake()` 中新增 `ValidateCameraPostProcessing()` 方法（`Conditional("UNITY_EDITOR")`），启动时主动检查主相机是否开启后处理，缺失时输出 `LogError`
+
+### 目的
+使 Bloom burst 后处理效果在运行时可见，并防止未来因相机配置遗漏导致同类 silent failure
+
+### 技术
+- URP `UniversalAdditionalCameraData.renderPostProcessing` 配置
+- `[System.Diagnostics.Conditional("UNITY_EDITOR")]` 防御性校验（仅 Editor 生效，不影响 Release build 性能）
+
+---
+
+## ShipBuilder 删除 + ShipPrefabRebuilder 升级为全权威 — 2026-03-22 03:15
+
+### 修改文件
+
+- `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs` — 扩展为 Ship.prefab 唯一全权威
+- `Assets/Scripts/Ship/Editor/ShipVfxValidator.cs` — 移除对已删除 ShipBuilder 的审计检查
+- `Docs/Reference/ShipVFX_CanonicalSpec.md` — 更新工具职责表
+- `Docs/Reference/ShipVFX_AssetRegistry.md` — 删除 ShipBuilder 条目、更新引用
+- `Docs/Reference/ShipVFX_MigrationPlan.md` — 记录 ShipBuilder 已合并删除
+- `Implement_rules.md` — Authority Matrix 更新
+
+### 删除文件
+
+- `Assets/Scripts/Ship/Editor/ShipBuilder.cs` — 已被 ShipPrefabRebuilder 完全取代
+
+### 内容
+
+Phase A 治理后续收口：消除 ShipBuilder（Bootstrap 工具）与 ShipPrefabRebuilder（Authority 工具）的职责重叠。
+
+**ShipPrefabRebuilder 新增能力**（从 ShipBuilder 吸收）：
+1. 根节点物理组件 ensure（Rigidbody2D + CircleCollider2D）
+2. 根节点全部运行时脚本组件 ensure（InputHandler → ShipMotor → ShipAiming → ShipStateController → ShipHealth → ShipDash → ShipBoost），按 RequireComponent 依赖顺序
+3. ShipStatsSO 接线到所有 6 个消费组件
+4. InputActionAsset 接线到 InputHandler
+5. DashAfterImage prefab + ShipStatsSO 接线到 DashAfterImageSpawner
+
+**未转移的能力**（因属于场景级而非 prefab 级）：
+- WeavingStateTransition 跨程序集场景接线 — 需手动或后续创建 ShipSceneBinder 处理
+
+### 目的
+
+实现 Phase A "只跑 Authority 菜单" 的工作流承诺：`ProjectArk > Ship > Authority > Rebuild Ship Prefab` 一个入口即可覆盖 Ship.prefab 的所有组件和接线，不再需要额外跑 Bootstrap 工具。
+
+### 技术
+
+- 使用 `PrefabUtility.EditPrefabContentsScope` 在 prefab 编辑上下文中操作
+- 通过 `SerializedObject` + `FindProperty` 实现跨组件序列化字段接线
+- 新增 `WireStatsToComponent<T>` 泛型辅助方法避免重复代码
+
+---
+
+## Halo 彻底删除 + Bloom/FlameCore 增强替代 — 2026-03-22 01:30
+
+**修改文件：**
+- `Assets/Scripts/Ship/VFX/BoostTrailView.cs`
+- `Assets/Scripts/Ship/Editor/BoostTrailPrefabCreator.cs`
+- `Assets/Scripts/Ship/Data/ShipJuiceSettingsSO.cs`
+- `Assets/Scripts/Ship/VFX/ShipBoostVisuals.cs`
+- `Implement_rules.md`
+- `Docs/Reference/ShipVFX_CanonicalSpec.md`
+
+**内容：**
+1. **彻底删除 BoostActivationHalo**（之前 00:25 的删除未被 commit，代码回退后又复活）：
+   - `BoostTrailView`：移除 `_activationHalo` / `_juiceSettings` 字段、`_haloSequence` 状态、Awake/OnDestroy/OnBoostStart/ResetState 中的 Halo 逻辑、整个 `TriggerActivationHalo()` 方法
+   - `BoostTrailPrefabCreator`：移除 `BoostActivationHalo` 子节点创建、`_activationHalo` + `_juiceSettings` 接线
+   - `ShipJuiceSettingsSO`：移除 `_haloPulseDuration` / `_haloPeakAlpha` / `_haloColor` 3 个字段和 3 个 Getter
+   - `ShipBoostVisuals`：更新 Tooltip 移除 "halo" 字样
+2. **替代方案——强化现有 Bloom burst + FlameCore burst**（不新增任何节点/组件/字段）：
+   - Bloom burst：`_bloomBurstIntensity` 2.15→3.2、`_bloomPeakWeight` 0.72→0.88、`_bloomAttackDuration` 0.05→0.035（更快 attack = 更 punch）、`_bloomReleaseDuration` 0.16→0.22（更自然衰减）
+   - FlameCore：`maxParticles` 48→64、`startSize` 0.28-0.52→0.32-0.62、burst count 16→22
+   - 同步更新 `BoostTrailPrefabCreator` 中的对应默认值
+3. **文档更新**：`Implement_rules.md` 和 `ShipVFX_CanonicalSpec.md` 移除所有 Halo 引用
+
+**目的：** Halo 层 duration=0.25s 且与 Bloom burst 职能完全重叠，维护成本远高于视觉收益。通过强化已有的 Bloom 和 FlameCore，用零新增代码实现同等甚至更好的"起手确认感"。
+
+**技术：** 纯参数调优，无新增类/字段/节点。BoostTrailRoot 从 8 层降到 7 层。
+
+---
+
+## Boost Activation Halo 简化重构（选项 B 后半部分） — 2026-03-21 23:55
+
+**修改文件：**
+- `Assets/Scripts/Ship/Data/ShipJuiceSettingsSO.cs`
+- `Assets/Scripts/Ship/VFX/BoostTrailView.cs`
+- `Assets/Scripts/Ship/Editor/BoostTrailPrefabCreator.cs`
+
+**内容：**
+- 在 `ShipJuiceSettingsSO` 中新增 3 个 Halo 参数：`_haloPulseDuration`（0.25s）、`_haloPeakAlpha`（0.65）、`_haloColor`（HDR 暖橙）
+- 在 `BoostTrailView` 中新增 `_activationHalo`（SpriteRenderer）和 `_juiceSettings`（ShipJuiceSettingsSO）引用
+- 新增 `TriggerActivationHalo()` 方法：用 PrimeTween Sequence 实现 alpha: 0→peak→0 + scale: 0.3→1.2→0.85 的脉冲动画
+- 在 `OnBoostStart()` 中调用 `TriggerActivationHalo()`，紧跟 FlameCore burst 和 Bloom burst 之后
+- `ResetState()` 和 `OnDestroy()` 中正确停止 `_haloSequence` 并重置 alpha/scale
+- `Awake()` 中初始化 halo 为透明+零尺寸
+- 在 `BoostTrailPrefabCreator` 中新增 `BoostActivationHalo` 子节点创建逻辑（SpriteRenderer, sortingOrder=4, 初始透明）
+- Prefab 构建时自动接线 `_activationHalo` 和 `_juiceSettings`（从 `Assets/_Data/Ship/DefaultShipJuiceSettings.asset` 加载）
+
+**目的：**
+- 实现选项 B 方案的后半部分——用数据驱动的简化方式替代之前被删除的复杂 Halo 系统
+- 3 个 SO 参数替代原来的 6 个字段 + 3 个方法，大幅简化维护成本
+
+**技术：**
+- PrimeTween Sequence（`Sequence.Create().Group().Chain().Group()`）实现并行 alpha + scale 动画
+- ShipJuiceSettingsSO 数据驱动，策划可直接调参不碰代码
+- 遵循 Ship/VFX Authority Matrix：Prefab 结构由 BoostTrailPrefabCreator 唯一负责
+
+---
+
+## 删除 BoostActivationHalo（选项 B 精简重构） — 2026-03-22 00:25
+
+**修改文件：**
+- `Assets/Scripts/Ship/VFX/BoostTrailView.cs`
+- `Assets/Scripts/Ship/VFX/BoostTrailDebugManager.cs`
+- `Assets/Scripts/Ship/Editor/BoostTrailDebugManagerEditor.cs`
+- `Assets/Scripts/Ship/Editor/BoostTrailPrefabCreator.cs`
+- `Assets/Scripts/Ship/Editor/ShipVfxValidator.cs`
+
+**内容：**
+完全移除 `BoostActivationHalo`（Layer 7）的全部代码。一个"boost 启动时闪 0.12 秒橙光环"的效果原本涉及 7 个文件（PrefabCreator / Rebuilder / MaterialCreator / BoostTrailView / DebugManager / DebugEditor / Validator）协作，属于典型过度工程。
+
+**具体删除项：**
+- `BoostTrailView`：移除 `_activationHalo` 引用字段、5 个调参字段（peakAlpha / duration / startScale / peakScale / endScale）、`_activationHaloTween` / `_activationHaloBaseScale` / `_activationHaloBaseColor` 私有状态、`TriggerActivationHalo()` / `ApplyActivationHalo()` / `ResetActivationHalo()` / `DebugPreviewActivationHalo()` 方法、仅 halo 使用的 `EaseOutQuart()` / `EaseInCubic()` ease 函数、`DebugApplyVisibilityMask` 签名中的 `showActivationHalo` 参数
+- `BoostTrailDebugManager`：移除 `SoloLayer.ActivationHalo` 枚举值、`_showActivationHalo` 字段、`PreviewActivationHaloBurst()` 方法、`LayerVisibilityState` 中的 `ShowActivationHalo` 成员
+- `BoostTrailDebugManagerEditor`：移除 halo 属性绘制和 "Preview Activation Halo" 按钮
+- `BoostTrailPrefabCreator`：移除 halo sprite 路径常量（4 个）、`BoostActivationHalo` GO 创建代码、halo 接线和调参 SerializedProperty 设置、`FindActivationHaloSprite()` 方法、`ShipGlowMaterialPath` 常量（仅 halo 使用）
+- `ShipVfxValidator`：从 `BoostTrailRequiredChildren` 移除 `"BoostActivationHalo"`、移除 halo SpriteRenderer 查找和验证行
+
+**目的：**
+消除过度工程化的 VFX 层。该效果 duration=0.12 秒、peakPoint=0.09 秒，实际肉眼几乎不可见，却需要跨 7 个文件维护。删除后 BoostTrail 从 8 层降为 7 层，代码减少约 120 行，工具链更简洁。
+
+**技术：**
+纯删除重构，无新增代码。编译 0 错误通过。后续需在 Unity Editor 中重建 BoostTrailRoot prefab（运行 `ProjectArk > Ship > VFX > Authority > Rebuild BoostTrailRoot Prefab`）以移除场景中残留的 BoostActivationHalo 子节点。
+
+---
+
+## 清理 EngineParticles / ShipEngineVFX 文档与代码残留 — 2026-03-21 23:05
+
+**修改文件：**
+- `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs` — 移除注释中对已删除 `ShipEngineVFX` 的具体引用（两处），改为通用描述
+- `Assets/Scripts/Ship/Editor/ShipFeelAssetCreator.cs` — 对话框文字移除 `Engine VFX` 和 `ShipEngineVFX` 引用
+- `Docs/VerificationChecklist.md` — 移除 F3（ShipEngineVFX 配置）和 F12（引擎粒子随速度变化），删除组件③ ShipEngineVFX 配置段落，重新编号
+
+**确认结果：**
+- `ShipPrefabRebuilder.cs` 功能性代码已干净，不会生成 `EngineParticles` 节点
+- `Ship.prefab` 内无 `EngineParticles` 残留
+- `SampleScene.unity` 中仍残留一个场景级 `EngineParticles` GameObject（fileID: 520920091）和一条 `_engineParticles` scene override（指向 missing script 字段），需用户在 Unity Editor 中手动删除
+
+**目的：** 彻底清除已删除 `ShipEngineVFX` 系统在代码注释、Editor 工具对话框和验证文档中的残留引用，避免后续维护者产生困惑。
+
+**技术：** 文本替换 + 文档同步。
+
+---
+
+## 收编体制外孤岛：ShipVisualJuice + DashAfterImageSpawner 纳入 Worker 体系 — 2026-03-21 21:30
+
+**修改文件：**
+- `Assets/Scripts/Ship/VFX/ShipVisualJuice.cs` — 移除 `[RequireComponent]`、`Awake` 中的 `GetComponent` 自获取、`OnEnable/OnDisable` 事件订阅（`ShipMotor.OnSpeedChanged` + `ShipDash.OnDashStarted`）。改为被动 Worker 模式：新增 `Initialize(motor, dash, boost, aiming)` 由 ShipView 注入引用，`OnSpeedChanged(float)` / `OnDashStarted()` 改为公有方法由 ShipView 路由调用，新增 `ResetState()` 供池回收，新增 `_enableAll` / `_enableMoveTilt` / `_enableSquashStretch` Inspector toggles
+- `Assets/Scripts/Ship/VFX/DashAfterImageSpawner.cs` — 移除 `[RequireComponent]`、`Awake` 中的 `GetComponent` 自获取、`OnEnable/OnDisable` 事件订阅（`ShipDash.OnDashStarted`）。改为被动调用模式：新增 `Initialize(dash)` 注入引用，`TriggerSpawn()` 公有方法替代原内部 `OnDashStarted`，新增 `CancelSpawning()` 供重置，spawn 序列使用独立 `CancellationTokenSource` 管理
+- `Assets/Scripts/Ship/VFX/ShipDashVisuals.cs` — 新增 `[SerializeField] DashAfterImageSpawner _afterImageSpawner` 引用 + `_enableAfterImages` toggle。`OnDashStarted()` 中新增 `_afterImageSpawner.TriggerSpawn()` 调用，`ResetState()` 中新增 `_afterImageSpawner.CancelSpawning()` 调用
+- `Assets/Scripts/Ship/VFX/ShipView.cs` — 新增 `ShipVisualJuice _juiceVisuals` + `DashAfterImageSpawner _afterImageSpawner` 序列化引用 + `_enableJuiceVFX` toggle。新增 `ShipMotor`/`ShipBoost`/`ShipAiming` 缓存。`OnEnable` 新增 `ShipMotor.OnSpeedChanged` 订阅（`OnDisable` 对应取消）。`InitializeWorkers()` 新增两者的初始化调用。`HandleStateChanged()` 中 Dash 分支新增 `_juiceVisuals.OnDashStarted()` 路由。新增 `HandleSpeedChanged()` 方法路由到 `_juiceVisuals.OnSpeedChanged()`。`ResetVFX()` 新增 `_juiceVisuals.ResetState()` 调用
+- `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs` — 新增 `ShipVisualJuice` 组件 `EnsureComponent` + `_visualChild` 接线 + `_juiceSettings` 接线。`DashAfterImageSpawner` 由原"被动检查"改为主动 `EnsureComponent` + 完整接线（`_shipSpriteRenderer` + `_juiceSettings` + wired into `ShipDashVisuals._afterImageSpawner`）。ShipView 新增 `_juiceVisuals` + `_afterImageSpawner` 两个字段的接线
+- `Docs/Reference/ShipVFX_CanonicalSpec.md` — Runtime 主驱动关系更新：ShipVisualJuice 和 DashAfterImageSpawner 标注为 Worker / 二级 Worker；ShipView 订阅事件列表新增 `ShipMotor.OnSpeedChanged`；工具职责表更新
+- `Docs/Reference/ShipVFX_AssetRegistry.md` — Runtime Scripts 表中 ShipVisualJuice / DashAfterImageSpawner 的 Canonical Name 从 Controller 改为 Worker，Notes 更新为 Worker 身份描述；ShipView Notes 更新；ShipPrefabRebuilder Notes 更新
+
+**目的：** 消除 Ship/VFX 模块中最后两个"体制外孤岛"。改造前：`ShipVisualJuice` 直接订阅 `ShipMotor.OnSpeedChanged` + `ShipDash.OnDashStarted`，`DashAfterImageSpawner` 直接订阅 `ShipDash.OnDashStarted`——两者均绕过 ShipView 的统一事件路由，不受 `_enableXxxVFX` 主开关控制，不在 `ResetVFX()` 清理范围内。改造后：所有 VFX 组件统一通过 `ShipView → Worker` 体系管理，零体制外孤岛。
+
+**技术：** Worker 被动调用模式（Initialize 注入引用 + 公有方法接收信号，不自行订阅事件）。DashAfterImageSpawner 采用"二级 Worker"模式（由 ShipDashVisuals 委托驱动，与 BoostTrailView 被 ShipBoostVisuals 委托的模式一致）。ShipView 新增 `ShipMotor.OnSpeedChanged` 订阅作为速度信号路由源。
+
+---
+
+## 清除体制外遗留 ShipEngineVFX + EngineParticles — 2026-03-21 20:15
+
+**删除文件：**
+- `Assets/Scripts/Ship/VFX/ShipEngineVFX.cs`（+ `.meta`）
+
+**修改文件：**
+- `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs` — 移除 EngineParticles 节点创建、ShipEngineVFX 组件创建/接线、MANAGED_BACK_CHILDREN 数组、EnsureParticleSystemChild helper、ForceDelete 相关逻辑
+- `Assets/Scripts/Ship/Editor/ShipBuilder.cs` — 移除 ShipEngineVFX 组件添加、EngineParticles 子节点创建、ConfigureEngineParticles 方法、WireReferences 中 engineVFX 接线
+- `Assets/Scripts/Ship/Editor/ShipVfxValidator.cs` — 移除 ValidateShipEngineVfxWiring 方法及其调用
+- `Assets/Scripts/Ship/Data/ShipJuiceSettingsSO.cs` — 移除 Engine Particles 全部 8 个序列化字段和对应 public getters
+- `Docs/Reference/ShipVFX_CanonicalSpec.md` — 从现役链路树、Runtime 驱动列表、工具职责表、节点命名表中移除 ShipEngineVFX / EngineParticles
+- `Docs/Reference/ShipVFX_AssetRegistry.md` — 从 Runtime Scripts 表和 Prefabs 表中移除相关条目
+
+**目的：** `ShipEngineVFX` 是 Worker 架构建立前的遗留组件，从未纳入 `ShipView → Worker` 统一管理体系。它绕过 ShipView 的事件路由，直接订阅 ShipMotor/ShipDash/ShipBoost 事件，没有 toggle 控制，且管理的 EngineParticles 节点本身没有 Sprite（实际视觉贡献为零）。清除后：权威入口更干净、toggle 体系完整、Prefab 结构更简洁。
+
+**技术：** 直接删除脚本 + 从 3 个 Editor 工具中移除所有引用 + 从 SO 数据层中移除参数字段 + 同步 2 份规范文档。
+
+**后续用户操作：**
+- 在 Unity Editor 中运行 `ProjectArk > Ship > Authority > FORCE Rebuild Ship Prefab` 清除 Prefab 中残留的 EngineParticles 节点和 ShipEngineVFX 组件
+
+---
+
+## VFX Worker Enable Toggle — Inspector 细粒度开关统一 — 2026-03-21 19:00
+
+**修改文件：**
+- `Assets/Scripts/Ship/VFX/ShipBoostVisuals.cs`
+- `Assets/Scripts/Ship/VFX/ShipHitVisuals.cs`
+- `Assets/Scripts/Ship/VFX/ShipDashVisuals.cs`
+- `Assets/Scripts/Ship/VFX/ShipView.cs`
+
+**内容：**
+为三个 VFX Worker 统一添加了 Inspector 可见的 Enable Toggle 开关体系，风格与 BoostTrailView 的 DebugApplyVisibilityMask 保持一致：
+
+1. **ShipBoostVisuals** — 新增 7 个 toggle：
+   - `_enableAll`（总开关）
+   - `_enableLiquidSwap`（Liquid sprite Normal↔Boost 切换）
+   - `_enableLiquidGlow`（Liquid glow 亮度渐变）
+   - `_enableHLRamp`（HL 层 alpha 渐变）
+   - `_enableCoreRamp`（Core 层 alpha 渐变）
+   - `_enableThrusterPulse`（推进器脉冲动画）
+   - `_enableBoostTrail`（BoostTrailView 启停代理）
+
+2. **ShipHitVisuals** — 新增 4 个 toggle：
+   - `_enableAll`（总开关）
+   - `_enableHitFlash`（多层白闪）
+   - `_enableIFrameBlink`（受击无敌闪烁）
+   - `_enableLowHPPulse`（Core 层低血量红色脉冲）
+
+3. **ShipDashVisuals** — 新增 3 个 toggle：
+   - `_enableAll`（总开关）
+   - `_enableIFrameFlicker`（冲刺无敌闪烁）
+   - `_enableDodgeGhost`（冲刺残影幽灵）
+
+4. **ShipView** — 新增 3 个 Worker 级总开关：
+   - `_enableBoostVFX`（路由层控制是否向 BoostVisuals 派发事件）
+   - `_enableHitVFX`（路由层控制是否向 HitVisuals 派发事件）
+   - `_enableDashVFX`（路由层控制是否向 DashVisuals 派发事件）
+
+**目的：** 统一 VFX 子系统的开关控制模式，策划可在 Inspector 中精细地开关任何一个子特效，无需改代码或断开引用。
+
+**技术：** SerializeField bool toggle + 守卫检查模式，所有 toggle 默认 true（不影响已有行为），两层控制——ShipView 级总开关 + Worker 级细粒度开关。
+
+---
+
+## Ship VFX Phase A 治理收尾 — Prefab 验证与文档同步 — 2026-03-21 15:00
+
+### 修改文件
+
+- `Docs/Reference/ShipVFX_CanonicalSpec.md` — §3 Runtime 主驱动关系更新为 Coordinator+Worker 架构描述；§7 工具职责边界表更新 `ShipPrefabRebuilder` 包含 Worker 创建与接线
+- `Docs/Reference/ShipVFX_AssetRegistry.md` — §2 新增 3 个 Worker 条目（ShipBoostVisuals/ShipHitVisuals/ShipDashVisuals）；§3 新增 ShipVfxAuditTool + BoostTrailDebugInspector 条目；§8 新增 Phase A 治理状态（5 条全部通过）+ 7 项持续关注项
+
+### 内容
+
+**Phase A 治理验收——五条标准全部通过：**
+
+1. ✅ 唯一权威：`ShipPrefabRebuilder` / `BoostTrailPrefabCreator` / `ShipBoostTrailSceneBinder` / `MaterialTextureLinker` 各司其职，无交叉写入
+2. ✅ 无双轨主链：16 项 legacy 代码模式（FindAssets/FindSpriteExactOrByName/VisualChild/DODGE_SPRITE_SRC_PATH 等）全部确认已清理
+3. ✅ Debug 不接管主链：`BoostTrailDebugManager` 无 Awake/OnValidate/Reset/LateUpdate/AutoAssignReferences，纯预览组件
+4. ✅ Override 白名单化：`ShipVfxValidator` 白名单仅允许 `_boostBloomVolume`
+5. ✅ 无静默失败：关键引用缺失时有 Debug.LogError/LogWarning，ShipVfxValidator 1088 行审计全覆盖
+
+**Prefab 验证：**
+
+- 首次运行 ShipVfxValidator 发现 6 个 Error（Ship.prefab 缺少 ShipBoostVisuals/ShipHitVisuals/ShipDashVisuals 组件及接线）
+- 运行 `ShipPrefabRebuilder`（菜单 ProjectArk > Ship > Authority > Rebuild Ship Prefab）成功修复
+- 通过 MCP `manage_prefabs` 直接验证：Ship.prefab 根节点包含 19 个组件（含 ShipView + 3 Workers），ShipVisual 下 7 个子节点，BoostTrailRoot 下 9 个子节点——全部正确
+
+### 目的
+
+完成 Ship/VFX 模块 Phase A authority 收口治理的最终验证与文档同步，使该模块的权威来源、工具边界、debug 约束全部有据可查。
+
+### 技术
+
+MCP `manage_prefabs` (get_info + get_hierarchy) 替代 Console 读取做 Prefab 结构验证；静态代码审计覆盖 16 项反回归检查模式
+
+### 备注
+
+MCP `execute_menu_item` + `read_console` 存在时序问题：执行菜单后 Console 始终返回 0 条，多次重试均失败。根因可能是 Unity domain reload 后 Console 清空，或 MCP 读取时序与 Unity 日志写入不同步。已通过 `manage_prefabs` 直接检查 Prefab 绕过此问题。
+
+---
+
+## ShipView Coordinator + Worker 拆分重构 — 2026-03-20 23:30
+
+### 新建文件
+
+- `Assets/Scripts/Ship/VFX/ShipBoostVisuals.cs` — Boost 态全部视觉反馈 Worker（液态精灵切换、辉光亮度包络、HL/Core alpha ramp、推进器脉冲、BoostTrailView 委托）
+- `Assets/Scripts/Ship/VFX/ShipHitVisuals.cs` — 受击视觉反馈 Worker（白闪、i-frame 闪烁、Core 低血量警告脉冲）
+- `Assets/Scripts/Ship/VFX/ShipDashVisuals.cs` — Dash 态视觉反馈 Worker（i-frame 闪烁、Dodge_Sprite 鬼影）
+
+### 修改文件
+
+- `Assets/Scripts/Ship/VFX/ShipView.cs` — 从 898 行单体重写为 ~170 行轻量级 Coordinator（持有 5 层 sprite 引用 + 3 个 worker 引用；捕获 baseline colors 并分发给 worker；订阅 ShipStateController.OnStateChanged + ShipHealth.OnDamageTaken 路由到 worker）
+- `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs` — 新增 ShipBoostVisuals / ShipHitVisuals / ShipDashVisuals 的 EnsureComponent + 字段接线；ShipView 接线精简为 Coordinator 模式（5 层 renderer + 3 worker + juiceSettings）
+- `Assets/Scripts/Ship/Editor/ShipBuilder.cs` — AddScriptComponents 新增 3 个 worker 组件；WireReferences 新增 3 个 worker 字段接线 + ShipView worker 引用接线
+- `Assets/Scripts/Ship/Editor/ShipVfxValidator.cs` — ValidateShipViewWiring 重写为验证 Coordinator + Worker 架构（验证 3 个 worker 组件存在性 + ShipView worker 引用 + 各 worker 内部 renderer 接线）；移除旧的 ShipView fallback/legacy 代码审计检查
+
+### 架构决策
+
+- **Presentation Layer vs Feel Layer 分离**：VFX（视觉反馈）由 ShipView Coordinator + Worker 管理；Feel（非视觉反馈如顿帧、屏幕震动、倾斜变形）由 ShipVisualJuice 管理
+- **Coordinator + Worker 模式**：ShipView 只做事件路由和 baseline color 分发，不包含任何 VFX 实现逻辑；Worker 不直接订阅事件，由 Coordinator 路由调用
+- **baseline color 同步**：多个 worker 共享相同 SpriteRenderer 引用，通过 Initialize() 接收 baseline colors，确保各 worker 的颜色恢复互不冲突
+- **无 fallback / legacy path**：所有旧 ShipView 内联逻辑已完全删除，不保留兼容路径
+
+### 目的
+
+- 单一职责：每个 Worker 只负责一种状态的视觉反馈
+- 可维护性：新增 VFX 只需创建新 Worker + 在 Coordinator 中添加路由
+- Editor 工具链统一更新：ShipPrefabRebuilder / ShipBuilder / ShipVfxValidator 全部同步支持新架构
+
+---
+
+## 模块归属决策规则 — 2026-03-20 22:45
+
+### 修改文件
+
+- `CLAUDE.md`
+- `.trae/rules/claude.md`
+
+### 内容
+
+在「模块架构速写」章节的「触发条件」之前，新增「模块归属判断（先于触发条件）」小节。定义 4 步决策流程：检查核心模块表 → 检查命名空间归属 → 独立性测试 → 问用户。核心倾向为"宁可归入已有模块"。
+
+### 目的
+
+解决"收到新功能需求时，AI 无法自主判断该归入已有模块还是起新模块"的问题。之前规则体系定义了已有模块边界，但缺乏跨模块的归属决策标准。
+
+### 技术
+
+4 步瀑布式判断流程，偏向收敛（减少不必要的新模块 / 新文档），只有通过独立性测试才起新模块。
+
+---
+
+## 模块架构速写 (Module Architecture Brief) 规则植入 — 2026-03-20 22:30
+
+### 修改文件
+
+- `CLAUDE.md`
+- `.trae/rules/claude.md`
+- `Implement_rules.md`
+
+### 内容
+
+在 Feature 开发工作流中植入「模块架构速写」作为强制产出物，采用渐进式设计（Lv.1 → Lv.2 → 完整 Spec）。
+
+**CLAUDE.md / .trae/rules/claude.md 改动：**
+- 工作流从 8 步扩展为 9 步：第 4 步从「架构设计」改为「架构速写」（强制产出），新增第 8 步「更新架构文档」
+- 追加「模块架构速写」完整章节：触发条件、Lv.1 最小版本模板、Lv.2 完整版本模板、产出与演进规则
+
+**Implement_rules.md 改动：**
+- Section 7 占位微调（说明不要求一开始补齐全部章节）
+- 新增 Section 8「通用模块规则模板」：统一结构（6 节）、质量标准、与架构速写的联动矩阵
+
+### 目的
+
+解决"行为约束有但产出约束缺失"的问题——之前规则体系告诉 AI 怎么想、怎么做，但没定义必须产出什么文档。新规则确保每个新模块开发前都有最低限度的架构记录，避免 Ship/VFX 式的事后补文档。
+
+### 技术
+
+渐进式文档演进（Brief → Spec → CanonicalSpec + AssetRegistry），双文档互补（架构速写回答"是什么"，实现规则回答"怎么改"）。
+
+---
+
+## 开发哲学规则更新（Architecture-First 哲学） — 2026-03-20 18:00
+
+**修改文件：**
+- `CLAUDE.md`
+- `.trae/rules/claude.md`
+
+**内容：** 对项目规则文档做了 6 处同步修改，将开发哲学从"先 work 再 right 再 fast"转向"第一次就做对"：
+
+1. **行为准则**：从"先让它 work"改为"以长期可维护的架构为基础，第一次就把架构做对"
+2. **垂直切片（第3条）**：新增"切片内部必须架构正确——范围可以小，但职责划分不能妥协"
+3. **迭代速度（第4条）**：数据驱动既为调参效率也为职责清晰，两者同等重要
+4. **新增第7条"第一次就做对"**：架构决策编码前完成、一脚本一职责、一SO一关注点
+5. **MVP 拆分**：MVP = 功能范围小但架构完整的版本，不是临时方案
+6. **Feature 工作流**：从 7 步扩展为 8 步，新增"架构设计"步骤（第4步），验收标准须含架构质量项
+
+**目的：** 项目已进入规模化阶段，返工成本远高于前期设计成本。确保所有 AI agent 在首次实现时就遵循正确的架构约束，而非事后补救。
+
+**技术：** 文档规范更新，两份规则文件（CodeBuddy 用 `CLAUDE.md` + Trae 用 `.trae/rules/claude.md`）同步修改保持一致。
+
+---
+
+## Ship VFX 全层脚本覆盖 — 2026-03-20 12:00
+
+### 修改文件
+
+- `Assets/Scripts/Ship/VFX/ShipView.cs` — 大幅扩展
+- `Assets/Scripts/Ship/Combat/ShipHealth.cs` — 重构
+- `Assets/Scripts/Ship/Data/ShipJuiceSettingsSO.cs` — 扩展
+- `Docs/Reference/ShipVFX_CanonicalSpec.md` — 更新
+
+### 内容
+
+#### P0: ShipHealth 受击 VFX 链路修复
+- **问题**：`ShipHealth.Awake()` 用 `GetComponent<SpriteRenderer>()` 从 Ship 根节点获取 renderer，但所有 SpriteRenderer 都在子节点上（Back/Liquid/HL/Solid/Core），根节点本身没有 SpriteRenderer → 受击白闪和受击 i-frame 闪烁**完全静默失效**
+- **方案**：将所有视觉反馈从 `ShipHealth` 迁移到 `ShipView`。`ShipHealth` 现在是纯游戏逻辑（HP 管理 + 无敌帧计时 + 击退），通过 `OnDamageTaken` 事件驱动 `ShipView` 执行多层联动白闪 + i-frame 闪烁
+- **结果**：受击白闪覆盖全部 5 层（Back/Liquid/HL/Solid/Core），受击 i-frame 闪烁覆盖全部 5 层
+
+#### P1: Ship_Sprite_HL 高亮层动态化
+- **问题**：HL 层仅在 Awake 时设置 alpha=0.5，之后完全静态
+- **方案**：HL 层响应 Boost（alpha 从 0.5 ramp 到 0.85）、Dash（参与 i-frame 闪烁）、受击（参与白闪 + i-frame blink）
+- 参数通过 `ShipJuiceSettingsSO` 数据驱动
+
+#### P2: Ship_Sprite_Core 核心层行为分配
+- **问题**：Core 层有序列化引用但 546 行代码中从未使用
+- **方案**：
+  - **Boost 能量响应**：alpha 从 0.3 ramp 到 0.9（座舱能量涌动）
+  - **低血量警告脉冲**：HP ≤ 30% 时 Core 层切换为红色脉冲（0.3~0.9 alpha 交替），给玩家持续的危险感
+  - **Dash**：参与 i-frame 闪烁
+  - **受击**：参与白闪 + i-frame blink
+- 所有阈值和颜色通过 `ShipJuiceSettingsSO` 数据驱动
+
+### 目的
+- 实现 Ship VFX 的 100% 脚本覆盖率（从 90.5% → 100%）
+- 修复一个自立项以来一直静默失效的 P0 bug（受击视觉反馈）
+- 遵循"手感优先于功能"原则，让受击反馈从"无感知"变为"全船联动白闪"
+
+### 技术
+- 事件驱动解耦：`ShipHealth.OnDamageTaken` → `ShipView.HandleDamageTaken()`
+- PrimeTween：HL/Core alpha ramp、Core 低血量脉冲
+- UniTask：受击白闪 + i-frame 闪烁的异步循环
+- 数据驱动：所有新参数在 `ShipJuiceSettingsSO` 中暴露
+
 ## StarChart UI Review — Bug修复 2026-02-28 22:30
 
 ### 新建/修改文件

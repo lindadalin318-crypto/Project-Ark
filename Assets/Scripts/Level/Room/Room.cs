@@ -48,6 +48,7 @@ namespace ProjectArk.Level
         private EnemySpawner _spawner;
         private WaveSpawnStrategy _waveStrategy;
         private OpenEncounterTrigger[] _openEncounters;
+        private DestroyableObject[] _destroyables;
         private RoomVariantSO _activeVariant; // currently active variant (null = default)
 
         // ──────────────────── Events ────────────────────
@@ -66,8 +67,11 @@ namespace ProjectArk.Level
         /// <summary> Unique room ID (from SO). </summary>
         public string RoomID => _data != null ? _data.RoomID : gameObject.name;
 
-        /// <summary> Room type (from SO). </summary>
+        /// <summary> Legacy room type (from SO). </summary>
         public RoomType Type => _data != null ? _data.Type : RoomType.Normal;
+
+        /// <summary> Pacing node type (from SO). </summary>
+        public RoomNodeType NodeType => _data != null ? _data.NodeType : RoomNodeType.Transit;
 
         /// <summary> Camera confiner bounds collider. </summary>
         public Collider2D ConfinerBounds => _confinerBounds;
@@ -78,21 +82,23 @@ namespace ProjectArk.Level
         /// <summary> All doors belonging to this room. </summary>
         public Door[] Doors => _doors;
 
+        /// <summary> All destroyable objects in this room. </summary>
+        public DestroyableObject[] Destroyables => _destroyables;
+
         /// <summary> Current runtime state. </summary>
         public RoomState State => _state;
 
         // ──────────────────── Lifecycle ────────────────────
 
+        private const string NAVIGATION_ROOT_NAME = "Navigation";
+        private const string ENCOUNTERS_ROOT_NAME = "Encounters";
+        private const string ELEMENTS_ROOT_NAME = "Elements";
+        private const string LEGACY_SPAWN_POINTS_ROOT_NAME = "SpawnPoints";
+        private const string NAMED_SPAWN_POINT_PREFIX = "SpawnPoint_";
+
         private void Awake()
         {
-            // Auto-collect Door components from children
-            _doors = GetComponentsInChildren<Door>(true);
-
-            // Auto-find EnemySpawner on this room (if any)
-            _spawner = GetComponentInChildren<EnemySpawner>(true);
-
-            // Auto-collect OpenEncounterTrigger components from children
-            _openEncounters = GetComponentsInChildren<OpenEncounterTrigger>(true);
+            CollectSceneReferences();
 
             // Validate trigger collider
             var boxCollider = GetComponent<BoxCollider2D>();
@@ -106,6 +112,107 @@ namespace ProjectArk.Level
             if (_data == null)
             {
                 Debug.LogError($"[Room] {gameObject.name}: RoomSO reference is missing! Assign a RoomSO asset.");
+            }
+        }
+
+        private void CollectSceneReferences()
+        {
+            _doors = CollectComponentsFromPreferredRoot<Door>(NAVIGATION_ROOT_NAME);
+            _spawner = FindComponentInPreferredRoot<EnemySpawner>(ENCOUNTERS_ROOT_NAME);
+            _openEncounters = CollectComponentsFromPreferredRoot<OpenEncounterTrigger>(ENCOUNTERS_ROOT_NAME);
+            _destroyables = CollectComponentsFromPreferredRoot<DestroyableObject>(ELEMENTS_ROOT_NAME);
+            _spawnPoints = CollectSpawnPoints();
+        }
+
+        private T[] CollectComponentsFromPreferredRoot<T>(string rootName) where T : Component
+        {
+            var preferredRoot = transform.Find(rootName);
+            if (preferredRoot != null)
+            {
+                var preferredComponents = preferredRoot.GetComponentsInChildren<T>(true);
+                if (preferredComponents != null && preferredComponents.Length > 0)
+                {
+                    return preferredComponents;
+                }
+            }
+
+            var fallbackComponents = GetComponentsInChildren<T>(true);
+            return fallbackComponents ?? Array.Empty<T>();
+        }
+
+        private T FindComponentInPreferredRoot<T>(string rootName) where T : Component
+        {
+            var preferredRoot = transform.Find(rootName);
+            if (preferredRoot != null)
+            {
+                var preferredComponent = preferredRoot.GetComponentInChildren<T>(true);
+                if (preferredComponent != null)
+                {
+                    return preferredComponent;
+                }
+            }
+
+            return GetComponentInChildren<T>(true);
+        }
+
+        private Transform[] CollectSpawnPoints()
+        {
+            var encounterSpawnRoot = transform.Find($"{ENCOUNTERS_ROOT_NAME}/{LEGACY_SPAWN_POINTS_ROOT_NAME}");
+            var encounterSpawnPoints = CollectDirectChildTransforms(encounterSpawnRoot);
+            if (encounterSpawnPoints.Length > 0)
+            {
+                return encounterSpawnPoints;
+            }
+
+            var legacySpawnRoot = transform.Find(LEGACY_SPAWN_POINTS_ROOT_NAME);
+            var legacySpawnPoints = CollectDirectChildTransforms(legacySpawnRoot);
+            if (legacySpawnPoints.Length > 0)
+            {
+                return legacySpawnPoints;
+            }
+
+            var navigationRoot = transform.Find(NAVIGATION_ROOT_NAME);
+            if (navigationRoot != null)
+            {
+                var navigationSpawnPoints = new System.Collections.Generic.List<Transform>();
+                CollectNamedSpawnPointsRecursive(navigationRoot, navigationSpawnPoints);
+                if (navigationSpawnPoints.Count > 0)
+                {
+                    return navigationSpawnPoints.ToArray();
+                }
+            }
+
+            return _spawnPoints ?? Array.Empty<Transform>();
+        }
+
+        private static Transform[] CollectDirectChildTransforms(Transform root)
+        {
+            if (root == null || root.childCount == 0)
+            {
+                return Array.Empty<Transform>();
+            }
+
+            var results = new Transform[root.childCount];
+            for (int i = 0; i < root.childCount; i++)
+            {
+                results[i] = root.GetChild(i);
+            }
+
+            return results;
+        }
+
+        private static void CollectNamedSpawnPointsRecursive(Transform root, System.Collections.Generic.List<Transform> results)
+        {
+            if (root == null || results == null) return;
+
+            if (root.name.StartsWith(NAMED_SPAWN_POINT_PREFIX, StringComparison.Ordinal))
+            {
+                results.Add(root);
+            }
+
+            for (int i = 0; i < root.childCount; i++)
+            {
+                CollectNamedSpawnPointsRecursive(root.GetChild(i), results);
             }
         }
 

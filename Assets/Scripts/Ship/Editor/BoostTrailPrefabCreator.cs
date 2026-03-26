@@ -8,7 +8,7 @@ namespace ProjectArk.Ship.Editor
     ///
     /// Authority owned by this tool:
     ///   • BoostTrailRoot prefab hierarchy
-    ///   • MainTrail / flame / ember / energy layer / halo child creation
+    ///   • MainTrail / flame / ember / energy layer child creation
     ///   • BoostTrailView serialized references inside the standalone prefab
     ///
     /// Ship.prefab integration is owned by ShipPrefabRebuilder.
@@ -18,15 +18,11 @@ namespace ProjectArk.Ship.Editor
     {
         private const string PREFAB_PATH = "Assets/_Prefabs/VFX/BoostTrailRoot.prefab";
         private const string MAT_DIR     = "Assets/_Art/VFX/BoostTrail/Materials";
-        private const string ShipGlowMaterialPath = "Assets/_Art/Ship/Glitch/ShipGlowMaterial.mat";
+        private const string SHIP_JUICE_SETTINGS_PATH = "Assets/_Data/Ship/DefaultShipJuiceSettings.asset";
         private const string BoostLiquidSpritePath = "Assets/_Art/Ship/Glitch/Boost_16.png";
         private const string NormalLiquidSpritePath = "Assets/_Art/Ship/Glitch/Movement_3.png";
-        private const string ActivationHaloPrimarySpritePath = "Assets/_Art/VFX/BoostTrail/Textures/vfx_ring_glow_uneven.png";
-        private const string ActivationHaloFallbackSpritePath = "Assets/_Art/VFX/BoostTrail/Textures/vfx_magnetic_rings.png";
         private const string BoostLiquidSpriteName = "Boost_16";
         private const string NormalLiquidSpriteName = "Movement_3";
-        private const string ActivationHaloPrimarySpriteName = "vfx_ring_glow_uneven";
-        private const string ActivationHaloFallbackSpriteName = "vfx_magnetic_rings";
 
         [MenuItem("ProjectArk/Ship/VFX/Authority/Rebuild BoostTrailRoot Prefab")]
         public static void CreateBoostTrailRootPrefab()
@@ -93,19 +89,8 @@ namespace ProjectArk.Ship.Editor
             layer3SR.sortingOrder = 3;
             layer3SR.color = Color.white;
 
-            // ── BoostActivationHalo (local ship-centered flash) ──────
-            var activationHaloGO = new GameObject("BoostActivationHalo");
-            activationHaloGO.transform.SetParent(root.transform, false);
-            activationHaloGO.transform.localPosition = new Vector3(0f, -0.01f, 0f);
-            activationHaloGO.transform.localScale = new Vector3(0.78f, 0.56f, 1f);
-            var activationHaloSR = activationHaloGO.AddComponent<SpriteRenderer>();
-            activationHaloSR.sprite = FindActivationHaloSprite();
-            activationHaloSR.sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ShipGlowMaterialPath);
-            activationHaloSR.sortingOrder = 4;
-            activationHaloSR.color = new Color(5.3f, 3.1f, 1.28f, 0f);
-            activationHaloSR.enabled = false;
-
-            // ── Wire BoostTrailView references + default tuning ───────
+            // ── Wire BoostTrailView references ─────────────────────────
+            // All tuning parameters now live in ShipJuiceSettingsSO (data-driven).
             var so = new SerializedObject(boostTrailView);
             so.FindProperty("_mainTrail").objectReferenceValue       = trailRenderer;
             so.FindProperty("_flameTrailR").objectReferenceValue     = flameTrailR;
@@ -115,29 +100,19 @@ namespace ProjectArk.Ship.Editor
             so.FindProperty("_emberSparks").objectReferenceValue     = emberSparks;
             so.FindProperty("_energyLayer2").objectReferenceValue    = layer2SR;
             so.FindProperty("_energyLayer3").objectReferenceValue    = layer3SR;
-            so.FindProperty("_activationHalo").objectReferenceValue  = activationHaloSR;
-            so.FindProperty("_intensityRampUpDuration").floatValue   = 0.22f;
-            so.FindProperty("_intensityRampDownDuration").floatValue = 0.42f;
-            so.FindProperty("_sustainFlameStartDelay").floatValue    = 0.045f;
-            so.FindProperty("_emberTrailStartDelay").floatValue      = 0.07f;
-            so.FindProperty("_emberSparksBurstDelay").floatValue     = 0.018f;
-            so.FindProperty("_flameTrailBlendInThreshold").floatValue = 0.18f;
-            so.FindProperty("_flameTrailMaxIntensity").floatValue     = 0.78f;
-            so.FindProperty("_emberTrailBlendInThreshold").floatValue = 0.42f;
-            so.FindProperty("_emberTrailMaxIntensity").floatValue     = 0.32f;
-            so.FindProperty("_energyLayer2BlendInThreshold").floatValue = 0.16f;
-            so.FindProperty("_energyLayer2MaxIntensity").floatValue     = 0.62f;
-            so.FindProperty("_energyLayer3BlendInThreshold").floatValue = 0.38f;
-            so.FindProperty("_energyLayer3MaxIntensity").floatValue     = 0.34f;
-            so.FindProperty("_activationHaloPeakAlpha").floatValue   = 1.4f;
-            so.FindProperty("_activationHaloDuration").floatValue    = 0.12f;
-            so.FindProperty("_activationHaloStartScale").floatValue  = 0.56f;
-            so.FindProperty("_activationHaloPeakScale").floatValue   = 0.98f;
-            so.FindProperty("_activationHaloEndScale").floatValue    = 0.82f;
-            so.FindProperty("_bloomBurstIntensity").floatValue       = 2.15f;
-            so.FindProperty("_bloomPeakWeight").floatValue           = 0.72f;
-            so.FindProperty("_bloomAttackDuration").floatValue       = 0.05f;
-            so.FindProperty("_bloomReleaseDuration").floatValue      = 0.16f;
+
+            // Wire ShipJuiceSettingsSO — all Boost Trail parameters are data-driven from this SO
+            var juiceSettings = AssetDatabase.LoadAssetAtPath<ShipJuiceSettingsSO>(SHIP_JUICE_SETTINGS_PATH);
+            if (juiceSettings != null)
+            {
+                so.FindProperty("_juiceSettings").objectReferenceValue = juiceSettings;
+            }
+            else
+            {
+                Debug.LogWarning($"[BoostTrailPrefabCreator] ShipJuiceSettingsSO not found at {SHIP_JUICE_SETTINGS_PATH}. " +
+                    "BoostTrailView will use fallback defaults until wired.");
+            }
+
             // NOTE: _boostBloomVolume is a scene object and cannot be pre-wired in a Prefab.
             so.ApplyModifiedProperties();
 
@@ -154,7 +129,6 @@ namespace ProjectArk.Ship.Editor
             debugSO.FindProperty("_showEmberSparks").boolValue = true;
             debugSO.FindProperty("_showEnergyLayer2").boolValue = true;
             debugSO.FindProperty("_showEnergyLayer3").boolValue = true;
-            debugSO.FindProperty("_showActivationHalo").boolValue = true;
             debugSO.FindProperty("_showBloom").boolValue = true;
             debugSO.ApplyModifiedProperties();
 
@@ -298,10 +272,10 @@ namespace ProjectArk.Ship.Editor
             var main = ps.main;
             main.loop            = false;
             main.playOnAwake     = false;
-            main.maxParticles    = 48;
+            main.maxParticles    = 64;
             main.startLifetime   = new ParticleSystem.MinMaxCurve(0.06f, 0.11f);
             main.startSpeed      = new ParticleSystem.MinMaxCurve(0.5f, 1.6f);
-            main.startSize       = new ParticleSystem.MinMaxCurve(0.28f, 0.52f);
+            main.startSize       = new ParticleSystem.MinMaxCurve(0.32f, 0.62f);
             main.startRotation   = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
             main.simulationSpace = ParticleSystemSimulationSpace.Local;
             main.startColor      = new Color(8.2f, 3.8f, 1.45f, 1f); // HDR hot core
@@ -311,7 +285,7 @@ namespace ProjectArk.Ship.Editor
             emission.rateOverTime = 0f;
             emission.SetBursts(new[]
             {
-                new ParticleSystem.Burst(0f, 16)
+                new ParticleSystem.Burst(0f, 22)
             });
 
             var shape = ps.shape;
@@ -574,20 +548,6 @@ namespace ProjectArk.Ship.Editor
             }
 
             return normalSprite;
-        }
-
-        private static Sprite FindActivationHaloSprite()
-        {
-            var haloSprite = LoadSpriteAtPath(ActivationHaloPrimarySpritePath);
-            if (haloSprite != null)
-                return haloSprite;
-
-            haloSprite = LoadSpriteAtPath(ActivationHaloFallbackSpritePath);
-            if (haloSprite != null)
-                return haloSprite;
-
-            Debug.LogWarning($"[BoostTrailPrefabCreator] Activation halo sprite missing at '{ActivationHaloPrimarySpritePath}' and '{ActivationHaloFallbackSpritePath}'. Falling back to overlay sprite.");
-            return FindOverlaySprite();
         }
 
         private static Sprite LoadSpriteAtPath(string assetPath)
