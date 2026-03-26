@@ -1,0 +1,533 @@
+<!DOCTYPE html><html lang="en" class="no-js">
+<head>
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<script type="text/javascript" src="https://cdn.cookielaw.org/scripttemplates/otSDKStub.js" charset="UTF-8" data-domain-script="6e91be4c-3145-4ea2-aa64-89d716064836" data-dLayer-ignore="true" data-document-language="true"></script><script type="text/javascript">function OptanonWrapper() {}</script><script>window.dataLayer = window.dataLayer || []; dataLayer.push({ event: 'dataLayer-initialized', user: { user_unity_id: undefined, user_logged_in: 'no' }, environment: { environment_locale: 'en-us', environment_currency: undefined }});</script><script>var offline=(location.href.indexOf('docs.unity3d.com')==-1)?true:false;if(!offline){(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0], j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=   'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);  })(window,document,'script','dataLayer','GTM-5V25JL6');}</script><link href="https://fonts.googleapis.com/css?family=Roboto&amp;display=swap" rel="stylesheet">
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unity - Manual: Create a custom build script</title>
+<meta property="og:image" content="https://unity3d.com/files/images/ogimg.jpg">
+<meta name="author" content="Unity Technologies">
+<meta property="relative-path-to-manual" content="">
+<meta property="version-switcher-versions-with-this-page" content="Versions with this page:">
+<meta property="version-switcher-versions-without-this-page" content="Versions without this page:">
+<meta property="version-switcher-supported" content="Supported">
+<meta property="version-switcher-legacy" content="Legacy">
+<link rel="shortcut icon" href="https://unity.com/themes/contrib/unity_base/images/favicons/favicon.ico">
+<link rel="icon" type="image/png" href="../StaticFilesManual/images/favicons/favicon.png">
+<link rel="apple-touch-icon-precomposed" sizes="152x152" href="../StaticFilesManual/images/favicons/apple-touch-icon-152x152.png">
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="../StaticFilesManual/images/favicons/apple-touch-icon-144x144.png">
+<link rel="apple-touch-icon-precomposed" sizes="120x120" href="../StaticFilesManual/images/favicons/apple-touch-icon-120x120.png">
+<link rel="apple-touch-icon-precomposed" sizes="114x114" href="../StaticFilesManual/images/favicons/apple-touch-icon-114x114.png">
+<link rel="apple-touch-icon-precomposed" sizes="72x72" href="../StaticFilesManual/images/favicons/apple-touch-icon-72x72.png">
+<link rel="apple-touch-icon-precomposed" href="../StaticFilesManual/images/favicons/apple-touch-icon.png">
+<link rel="canonical" href="https://docs.unity3d.com/6000.4/Documentation/Manual/build-script-build.html">
+<meta name="msapplication-TileColor" content="#222c37">
+<meta name="msapplication-TileImage" content="../StaticFilesManual/images/favicons/tileicon-144x144.png">
+<script type="text/javascript" src="/StaticFilesConfig/UnityVersionsInfo.js"></script><script type="text/javascript" src="../StaticFilesManual/js/jquery.js?ts=20260323"></script><script type="text/javascript" src="../StaticFilesManual/js/core.js?ts=20260323"></script><script type="text/javascript" src="../StaticFilesManual/js/image-comp.js?ts=20260323"></script><script type="text/javascript" src="docdata/toc.js?ts=20260323"></script><script type="text/javascript" src="docdata/global_toc.js?ts=20260323"></script><link rel="stylesheet" type="text/css" href="../StaticFilesManual/css/core.css?ts=20260323">
+<link rel="stylesheet" type="text/css" href="../StaticFilesManual/css/icons.css?ts=20260323">
+<link rel="stylesheet" href="../StaticFilesManual/css/prism.css">
+<script src="../StaticFilesManual/js/prism.js"></script><script src="/StaticFilesConfig/feedback/feedback.js"></script><script src="../StaticFilesManual/js/jquery.sidebar.min.js"></script><link rel="stylesheet" href="../StaticFilesManual/css/mobileoptimisation.css">
+<script src="../StaticFilesManual/js/mobileoptimisation.js"></script>
+</head>
+<body>
+<div id="DocsAnalyticsData" data-area="none" data-pagetype="manual"></div>
+<div class="header-wrapper">
+<div id="header" class="header"><div class="content">
+<div class="spacer"><div class="menu">
+<div id="nav-open" for="nav-input"><span></span></div>
+<div class="logo"><a aria-label="go to the homepage" href="https://docs.unity3d.com"></a></div>
+<div class="search-form"><form action="30_search.html" method="get" class="apisearch">
+<input type="text" name="q" aria-label="Search manual documentation" placeholder="Search manual..." autosave="Unity Reference" results="5" class="sbox field" id="q"><input type="submit" class="submit">
+</form></div>
+<ul>
+<li><a href="index.html" class="selected">Manual</a></li>
+<li><a href="../ScriptReference/index.html">Scripting API</a></li>
+</ul>
+</div></div>
+<div class="more">
+<div class="filler"></div>
+<ul><li><a href="https://unity.com/">unity.com</a></li></ul>
+</div>
+</div></div>
+<div class="toolbar"><div class="content">
+<div class="toggle version-number" id="VersionNumber" data-target=".otherversionscontent">
+                                Version: <b>Unity 6.4</b> (6000.4)
+                                <div class="otherversionscontent" id="OtherVersionsContent" style="display: none;">
+<ul id="OtherVersionsContentUl"></ul>
+<div id="otherVersionsLegend"><ul>
+<li>
+<div id="supportedColour" class="legendBox"></div>Supported</li>
+<li>
+<div id="notFoundColour" class="legendBox"></div>Legacy</li>
+</ul></div>
+</div>
+<div id="VersionSwitcherArrow" class="arrow versionSwitcherArrow"></div>
+</div>
+<div class="lang-switcher"><div class="current toggle" data-target=".lang-list">
+<div class="lbl">Language
+:                <span class="b">English</span>
+</div>
+<div class="arrow"></div>
+<div class="lang-list" style="display:none;"><ul>
+<li><a href="/Manual/build-script-build.html">English</a></li>
+<li><a href="/cn/current/Manual/build-script-build.html">中文</a></li>
+<li><a href="/ja/current/Manual/build-script-build.html">日本語</a></li>
+<li><a href="/kr/current/Manual/build-script-build.html">한국어</a></li>
+</ul></div>
+</div></div>
+</div></div>
+<div class="mobileLogo"><a aria-label="go to the homepage" href="https://docs.unity3d.com"></a></div>
+</div>
+<div id="master-wrapper" class="master-wrapper clear">
+<div id="sidebar" class="sidebar"><div class="sidebar-wrap"><div class="content"><div class="sidebar-menu"><div class="toc" id="customScrollbar">
+<h2>Unity Manual</h2>
+<div class="search-form sidebar-search-form"><form action="30_search.html" method="get" class="apisearch">
+<input type="text" name="q" aria-label="Search manual documentation" placeholder="Search manual..." autosave="Unity Reference" results="5" class="sbox field" id="q"><input type="submit" id="mobileSearchBtn" class="submit" value="Search">
+</form></div>
+<div class="toggle version-number sidebar-version-switcher" id="VersionNumber" data-target=".otherversionscontent"><form id="otherVersionsContentMobileForm"><div class="ui-field-contain">
+<label for="select-native-4">Version: Unity 6.4</label><select name="select-native-4" id="versionsSelectMobile"><option>Select a different version</option>
+<optgroup id="versionsWithThisPageMobile" label="Versions with this page"></optgroup>
+<optgroup id="versionsWithoutThisPageMobile" label="Versions without this page"></optgroup></select>
+</div></form></div>
+<div class="lang-switcher"><div class="current toggle" data-target=".lang-list">
+<div class="lbl">Language
+:                <span class="b">English</span>
+</div>
+<div class="arrow"></div>
+<div class="lang-list" style="display:none;"><ul>
+<li><a href="/Manual/build-script-build.html">English</a></li>
+<li><a href="/cn/current/Manual/build-script-build.html">中文</a></li>
+<li><a href="/ja/current/Manual/build-script-build.html">日本語</a></li>
+<li><a href="/kr/current/Manual/build-script-build.html">한국어</a></li>
+</ul></div>
+</div></div>
+</div></div></div></div></div>
+<div id="content-wrap" class="content-wrap"><div class="content-block"><div class="content">
+<div class="section">
+<div class="breadcrumbs clear"><ul>
+<li><a href="building-and-publishing.html">Building and publishing</a></li>
+<li><a href="build-customize-build-pipeline.html">Customize the build pipeline</a></li>
+<li>Create a custom build script</li>
+</ul></div>
+<div class="mb20"><div class="nextprev clear">
+<div class="icon tt left mr1" data-distance="-40|-30|top">
+<span class="prev"><a aria-label="go to the previous page" href="BuildPlayerPipeline.html"></a></span><div class="tip">Introduction to customizing the build pipeline</div>
+</div>
+<div class="icon tt right" data-distance="-40|-30|top">
+<span class="next"><a aria-label="go to the next page" href="build-command-line.html"></a></span><div class="tip">Build a player from the command line</div>
+</div>
+</div></div>
+<div id="_leavefeedback"></div>
+<h1>Create a custom build script</h1>
+<!--BeginSwitchLink--><!--EndSwitchLink-->
+<div class="clear"></div>
+
+<p>To customize how Unity makes a build, use <a href="../ScriptReference/BuildPipeline.html"><code>BuildPipeline</code></a> to perform a build, along with any pre-build and post-build steps that you need for your project.</p>
+
+<p>Launching a Player build from the <a href="build-profiles-reference.html">Build Profiles window</a> doesn’t trigger custom build <span class="tooltip" tabindex="0" ><strong>scripts</strong><span class="tooltiptext">A piece of code that allows you to create your own Components, trigger game events, modify Component properties over time and respond to user input in any way you like. <a class="tooltipMoreInfoLink" aria-label="Navigate to more info about creating-scripts.html" href="creating-scripts.html">More info</a><br/><span class="tooltipGlossaryLink">See in <a href="Glossary.html#Scripts" aria-label="Go to glossary anchor for Scripts">Glossary</a></span></span></span>. You need to provide a way to invoke your script. The most common way to invoke a build script is from the <a href="build-command-line.html">command line</a>, but you can also expose your script as a menu item or invoke it from a custom Unity Editor window.</p>
+
+<p>The following examples use the <a href="../ScriptReference/BuildPipeline.BuildPlayer.html"><code>BuildPipeline.BuildPlayer</code></a> API to perform a Player build. To use the scripts, place them in the <a href="SpecialFolders.html"><code>Editor</code> folder</a> of your project, or create an <a href="assembly-definitions-creating.html">Editor assembly asset</a>. </p>
+
+<h2>Create a basic build script with menu item</h2>
+
+<p>This example demonstrates a simple custom build script that builds a Windows player, copies a <code>README</code> file to the build folder, and automatically launches the built Player.</p>
+
+<p>It uses the <a href="../ScriptReference/MenuItem.html"><code>MenuItem</code></a> attribute to add a <strong>Build &gt; Build Windows Player With Readme</strong> menu item to the Unity Editor, which allows you to start the build from the Editor.</p>
+
+<pre><code class="lang-cs">using System.IO;
+using UnityEditor.Build.Reporting;
+using UnityEditor;
+using UnityEngine;
+
+public class CustomBuild
+{
+    [MenuItem(&quot;Build/Build Windows Player With Readme&quot;)]
+    public static void BuildWindowsPlayer()
+    {
+        // Define build options
+        string path = EditorUtility.SaveFolderPanel(&quot;Choose Location of Built Game&quot;, &quot;&quot;, &quot;&quot;);
+
+        var buildOptions = new BuildPlayerOptions()
+        {
+            // Adjust scene list based on your project
+            scenes = new string[] { &quot;Assets/Scenes/Scene1.unity&quot;, &quot;Assets/Scenes/Scene2.unity&quot; },
+            locationPathName = path + &quot;/MyGame.exe&quot;,
+            target = BuildTarget.StandaloneWindows64,
+            options = BuildOptions.AutoRunPlayer
+        };
+
+        // Build the Player
+        var buildReport = BuildPipeline.BuildPlayer(buildOptions);
+
+        if (buildReport.summary.result != BuildResult.Succeeded)
+        {
+            Debug.Log(&quot;Build failed!\n\n&quot; + buildReport.SummarizeErrors());
+            return;
+        }
+
+        // Post-process: Copy README file to the build folder
+        File.Copy(&quot;Assets/Documentation/README.txt&quot;, path + &quot;/README.txt&quot;, true);
+    }
+}
+</code></pre>
+
+<p>This example has the following limitations:</p>
+
+<ul>
+<li>It only works for one platform.</li>
+<li>The list of <span class="tooltip" tabindex="0" ><strong>scenes</strong><span class="tooltiptext">A Scene contains the environments and menus of your game. Think of each unique Scene file as a unique level. In each Scene, you place your environments, obstacles, and decorations, essentially designing and building your game in pieces. <a class="tooltipMoreInfoLink" aria-label="Navigate to more info about CreatingScenes.html" href="CreatingScenes.html">More info</a><br/><span class="tooltipGlossaryLink">See in <a href="Glossary.html#Scene" aria-label="Go to glossary anchor for Scene">Glossary</a></span></span></span> is hard coded directly in the script.</li>
+<li>It bypasses many of the build settings configured in the <a href="build-profiles-reference.html">Build Profiles window</a>.</li>
+<li>You can’t use it in an automated build pipeline, because it requires user input to select the output folder each time it runs.</li>
+</ul>
+
+<h2>Create a build script for multiple platforms</h2>
+
+<p>This example demonstrates a custom build script that supports building for multiple platforms: Windows, macOS, and Android. You can run these builds by selecting the platform from the <strong>Build</strong> menu in the Unity Editor, or by invoking the script from the command line.</p>
+
+<pre><code class="lang-cs">using UnityEditor;
+using UnityEditor.Build.Reporting;
+
+public static class BuildScripts
+{
+    // Helper to get all enabled scenes in Build Settings
+    static string[] GetEnabledScenes()
+    {
+        // Get all enabled scenes from Build Settings
+        var scenesInSettings = EditorBuildSettings.scenes;
+        var enabledScenes = new System.Collections.Generic.List&lt;string&gt;();
+
+        // Iterate through all scenes and add the enabled ones
+        for (int i = 0; i &lt; scenesInSettings.Length; i++)
+        {
+            if (scenesInSettings[i].enabled)
+                enabledScenes.Add(scenesInSettings[i].path);
+        }
+
+        return enabledScenes.ToArray();
+    }
+
+    // General build method
+    static void BuildForTarget(BuildTarget target, string outputPath)
+    {
+        string[] scenes = GetEnabledScenes();
+
+        // Platform-specific settings
+        if (target == BuildTarget.Android)
+        {
+            // Basic Android PlayerSettings (optional)
+            PlayerSettings.applicationIdentifier = &quot;com.company.mygame&quot;;
+            PlayerSettings.bundleVersion = &quot;1.0.0&quot;;
+            PlayerSettings.Android.bundleVersionCode = 1;
+            EditorUserBuildSettings.buildAppBundle = true; // Use AAB for Play Store
+        }
+
+        // Build player options
+        BuildPlayerOptions options = new BuildPlayerOptions
+        {
+            scenes = scenes,
+            locationPathName = outputPath,
+            target = target,
+            options = BuildOptions.None
+        };
+
+        // Execute the build
+        BuildReport report = BuildPipeline.BuildPlayer(options);
+        CheckBuildResult(report, outputPath);
+    }
+
+    [MenuItem(&quot;Build/Windows&quot;)]
+    public static void BuildWindows()
+    {
+        BuildForTarget(BuildTarget.StandaloneWindows64, &quot;Builds/Windows/MyGame.exe&quot;);
+    }
+
+    [MenuItem(&quot;Build/macOS&quot;)]
+    public static void BuildMacOS()
+    {
+        BuildForTarget(BuildTarget.StandaloneOSX, &quot;Builds/MacOS/MyGame.app&quot;);
+    }
+
+    [MenuItem(&quot;Build/Android (AAB)&quot;)]
+    public static void BuildAndroidAAB()
+    {
+        BuildForTarget(BuildTarget.Android, &quot;Builds/Android/MyGame.aab&quot;);
+    }
+
+    // Helper to validate and log the build result
+    static void CheckBuildResult(BuildReport report, string outputPath)
+    {
+        // Log the build summary
+        var summary = report.summary;
+        if (summary.result == BuildResult.Succeeded)
+        {
+            UnityEngine.Debug.Log(&quot;Build succeeded at: &quot; + outputPath + &quot; (&quot; + summary.totalSize + &quot; bytes)&quot;);
+        }
+        else
+        {
+            throw new System.Exception(&quot;Build failed: &quot; + report.SummarizeErrors());
+        }
+    }
+}
+</code></pre>
+
+<p>You can invoke this script from the <a href="build-command-line.html">command line</a> using one of the following commands:</p>
+
+<table>
+<colgroup>
+<col style="text-align:left;">
+<col style="text-align:left;">
+</colgroup>
+
+<thead>
+<tr>
+	<th style="text-align:left;"><strong>Platform</strong></th>
+	<th style="text-align:left;"><strong>Command</strong></th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+	<td style="text-align:left;"><strong>Windows</strong></td>
+	<td style="text-align:left;"><code>-executeMethod BuildScripts.BuildWindows -buildTarget StandaloneWindows64 -quit -batchmode</code></td>
+</tr>
+<tr>
+	<td style="text-align:left;"><strong>macOS</strong></td>
+	<td style="text-align:left;"><code>-executeMethod BuildScripts.BuildMacOS -buildTarget StandaloneOSX -quit -batchmode</code></td>
+</tr>
+<tr>
+	<td style="text-align:left;"><strong>Android</strong></td>
+	<td style="text-align:left;"><code>-executeMethod BuildScripts.BuildAndroidAAB -buildTarget Android -quit -batchmode</code></td>
+</tr>
+</tbody>
+</table>
+
+<p>This example is an improvement on the previous example in the following ways:</p>
+
+<ul>
+<li>It retrieves a list of enabled scenes from <a href="../ScriptReference/EditorBuildSettings.html"><code>EditorBuildSettings</code></a>.</li>
+<li>It configures global settings that influence the behavior of the Player build. In this case, it sets Android options on the <a href="../ScriptReference/PlayerSettings.html"><code>PlayerSettings</code></a> and <a href="../ScriptReference/EditorUserBuildSettings.html"><code>EditorUserBuildSettings</code></a> objects.</li>
+<li>It supports multiple platforms through a single shared <code>BuildForTarget</code> method.</li>
+</ul>
+
+<p>However, it has limitations because it only supports three platforms, and the output paths are hard coded.</p>
+
+<h2>Create an advanced build script with build profiles and AssetBundles</h2>
+
+<p>This example demonstrates a custom build script that introduces several advanced concepts:</p>
+
+<ul>
+<li>
+<strong>Using the active build profile</strong>: This script automatically sets the scene list, flags, and settings based on the <a href="build-profile-scene-list.html">active build profile</a>. Before using this script, you configure the builds by creating and saving <span class="tooltip" tabindex="0" ><a href="create-build-profile.html">build profiles</a><span class="tooltiptext">A set of customizable configuration settings to use when creating a build for your target platform. <a class="tooltipMoreInfoLink" aria-label="Navigate to more info about build-profiles.html" href="build-profiles.html">More info</a><br/><span class="tooltipGlossaryLink">See in <a href="Glossary.html#buildprofile" aria-label="Go to glossary anchor for buildprofile">Glossary</a></span></span></span> in the Build Profiles window.</li>
+<li>
+<strong>Dynamic output paths</strong>: The script uses a naming convention for the output path based on the profile name and timestamp, similar to what a basic build server might do.</li>
+<li>
+<strong>AssetBundle builds</strong>: The script performs an <a href="AssetBundlesIntro.html">AssetBundle</a> build followed by a Player build.</li>
+<li>
+<strong>Type preservation</strong>: The script provides type information from the AssetBundle build as an input to the Player build, so that <a href="managed-code-stripping-content.html">managed code stripping</a> doesn’t remove types used in the AssetBundles.</li>
+<li>
+<strong>Build callbacks</strong>: The script uses a <a href="../ScriptReference/BuildPlayerProcessor.html"><code>BuildPlayerProcessor</code></a> <a href="build-callbacks.html">build callback</a> to inject the AssetBundle build into the <a href="StreamingAssets.html"><code>StreamingAssets</code> folder</a> of the Player build.</li>
+</ul>
+
+<pre><code class="lang-cs">using UnityEngine;
+using System.IO;
+using UnityEditor;
+using UnityEditor.Build;
+using UnityEditor.Build.Reporting;
+using UnityEditor.Build.Profile;
+
+// Example BuildScript that supports building the current build profile.
+//
+//
+// It builds AssetBundles and includes them in the player build.
+// Each time it runs it builds into a new directory derived from the
+// current build profile and timestamp.
+public class BuildScript
+{
+    public const string kBuildRootPath = &quot;Build&quot;; // All builds are inside this top level project folder
+    public const string kAssetBundleDirectory = &quot;AssetBundles&quot;;
+    public const string kPlayerDirectory = &quot;Player&quot;;
+    public const string kAppName = &quot;MyGame&quot;;
+    public const string kTextureSourceDirectory = &quot;Assets/Textures&quot;;
+    public const string kTextureSearchPattern = &quot;*.png&quot;;
+
+    // Global variable so that RegisterContentForPlayer can find the correct AssetBundles to include in the player build
+    public static string gCurrentBuildRootPath = null;
+
+    [MenuItem(&quot;Build/Build Active Profile&quot;)]
+    public static void BuildPlayerAndBundles()
+    {
+        var profile = BuildProfile.GetActiveBuildProfile();
+        if (profile == null)
+            throw new BuildFailedException(&quot;No active build profile is set.&quot; +
+                &quot;Use the Build Profiles window or the `-activeBuildProfile` cli argument&quot;);
+
+        // Use a timestamp so that each build goes to a unique output folder
+        var timeStamp = System.DateTime.Now.ToString(&quot;yyyy-MM-dd_HH-mm-ss&quot;);
+        gCurrentBuildRootPath = $&quot;{kBuildRootPath}/{profile.name}/{timeStamp}&quot;;
+
+        // Build AssetBundles so that they can be shipped inside the player
+        var assetBundleBuildPath = BuildAssetBundles(gCurrentBuildRootPath);
+
+        // To preserve types used by the AssetBundles
+        var assetBundleManifestPath = assetBundleBuildPath + &quot;/AssetBundles.manifest&quot;;
+
+        // Build the player
+        var playerBuildOptions = new BuildPlayerWithProfileOptions()
+        {
+            buildProfile = profile,
+            locationPathName = CreatePlayerOutputPath(gCurrentBuildRootPath),
+            assetBundleManifestPath = assetBundleManifestPath,
+
+            // These options can be adjusted as needed.
+            // Note: the development and compression flags come from the build profile
+            options = BuildOptions.CleanBuildCache | BuildOptions.StrictMode
+        };
+
+        // Convenient for manual testing
+        if (!Application.isBatchMode)
+            playerBuildOptions.options |= BuildOptions.AutoRunPlayer;
+
+        var report = BuildPipeline.BuildPlayer(playerBuildOptions);
+
+        gCurrentBuildRootPath = null;
+
+        if (report.summary.result != BuildResult.Succeeded)
+            throw new BuildFailedException(&quot;Player build failed, see Editor log for details&quot;);
+
+        Debug.Log($&quot;Completed build to {playerBuildOptions.locationPathName}&quot;);
+    }
+
+    private static string BuildAssetBundles(string buildRootDirectory)
+    {
+        var assetBundlePath = buildRootDirectory + &quot;/&quot; + kAssetBundleDirectory;
+
+        if (!Directory.Exists(assetBundlePath))
+            Directory.CreateDirectory(assetBundlePath);
+
+        // For simplicity in this example, define a single AssetBundle,
+        // containing all the textures found inside a hard-coded directory in the project
+        string[] texturePaths = Directory.GetFiles(kTextureSourceDirectory, kTextureSearchPattern, SearchOption.AllDirectories);
+
+        var assetBundleContents = new AssetBundleBuild()
+        {
+            assetBundleName = &quot;textures.bundle&quot;,
+            assetNames = texturePaths
+        };
+
+        // The target platform will be automatically set based on the active build profile
+        var assetBundleBuildOptions = new BuildAssetBundlesParameters()
+        {
+            outputPath = assetBundlePath,
+            bundleDefinitions = new AssetBundleBuild[] { assetBundleContents }
+        };
+
+        AssetBundleManifest manifest = BuildPipeline.BuildAssetBundles(assetBundleBuildOptions);
+
+        if (manifest == null)
+            throw new BuildFailedException(&quot;AssetBundle build failed, see Editor log for details&quot;);
+
+        return assetBundlePath;
+    }
+
+    private static string CreatePlayerOutputPath(string buildRootDirectory)
+    {
+        var playerOutputFolder = $&quot;{buildRootDirectory}/{kPlayerDirectory}&quot;;
+
+        if (!Directory.Exists(playerOutputFolder))
+            Directory.CreateDirectory(playerOutputFolder);
+
+        var playerPath = $&quot;{playerOutputFolder}/{kAppName}&quot;;
+
+        // This property will match the target in the active build profile
+        var target = EditorUserBuildSettings.activeBuildTarget;
+
+        // See &quot;Build path requirements for target platforms&quot; in the Unity Manual
+        if ((target == BuildTarget.StandaloneWindows64) ||
+            (target == BuildTarget.StandaloneWindows))
+            playerPath += &quot;.exe&quot;;
+        else if (target == BuildTarget.StandaloneOSX)
+            playerPath += &quot;.app&quot;;
+        else if (target == BuildTarget.StandaloneLinux64)
+            playerPath += &quot;.x86_64&quot;;
+        else if (target == BuildTarget.Android)
+            playerPath += &quot;.aab&quot;;
+
+        return playerPath;
+    }
+}
+
+// Put the AssetBundle build directory into the StreamingAssets folder of the player output.
+// This approach keeps built content separate from the source project, avoiding clutter in &quot;Assets/StreamingAssets&quot;.
+public class RegisterContentForPlayer : BuildPlayerProcessor
+{
+    public override void PrepareForBuild(BuildPlayerContext buildPlayerContext)
+    {
+        var currentBuildPath = BuildScript.gCurrentBuildRootPath;
+
+        if (string.IsNullOrEmpty(currentBuildPath))
+            // Do not do anything if we are not in a build initiated by BuildScript
+            return;
+
+        buildPlayerContext.AddAdditionalPathToStreamingAssets(currentBuildPath + &quot;/&quot; + BuildScript.kAssetBundleDirectory);
+    }
+
+    public override int callbackOrder =&gt; 1;
+}
+
+</code></pre>
+
+<h3>Using the script in the Editor</h3>
+
+<p>To use this script in the Unity Editor:</p>
+
+<ol>
+<li>Select the desired build profile in the Build Profiles window.</li>
+<li>Select <strong>Build &gt; Build Active Profile</strong> from the menu.</li>
+</ol>
+
+<h3>Using the script from the command line</h3>
+
+<p>You can also invoke this script from the command line. On Windows, the command is as follows:</p>
+
+<pre><code>.\Unity.exe -batchmode -projectPath &quot;C:\UnityProjects\CLIBuildExample&quot; -activeBuildProfile &quot;Assets\Settings\Build Profiles\MyWindowsProfile.asset&quot; -executeMethod BuildScript.BuildPlayerAndBundles -logFile C:\logs\buildlog.txt -quit
+</code></pre>
+
+<p>An equivalent command on macOS is as follows:</p>
+
+<pre><code>Unity -batchmode -projectPath &quot;~/UnityProjects/CLIBuildExample&quot; -activeBuildProfile &quot;Assets/Settings/Build Profiles/MyWeb - Desktop - Development.asset&quot; -executeMethod BuildScript.BuildPlayerAndBundles -logFile &quot;~/logs/buildlog.txt&quot; -quit
+</code></pre>
+
+<p>
+<strong>Note</strong>: Adjust the paths in the command lines in the previous examples to match the configuration of your device and path to your Unity project. For more information about command line arguments, refer to <a href="build-command-line.html">Build a player from the command line</a>.</p>
+
+<h2>Additional resources</h2>
+
+<ul>
+<li><a href="../ScriptReference/BuildPipeline.BuildPlayer.html"><code>BuildPipeline.BuildPlayer</code> API reference</a></li>
+<li><a href="../ScriptReference/BuildPlayerOptions.html"><code>BuildPlayerOptions</code> API reference</a></li>
+<li><a href="../ScriptReference/Build.Reporting.BuildReport.html"><code>BuildReport</code> API reference</a></li>
+<li><a href="build-command-line.html">Build a player from the command line</a></li>
+<li><a href="build-callbacks.html">Build callbacks</a></li>
+<li><a href="build-path-requirements.html">Build path requirements for target platforms</a></li>
+</ul>
+<div id="_content"></div>
+<div class="nextprev clear">
+<div class="icon tt left mr1" data-distance="-40|-30|top">
+<span class="prev"><a aria-label="go to the previous page" href="BuildPlayerPipeline.html"></a></span><div class="tip">Introduction to customizing the build pipeline</div>
+</div>
+<div class="icon tt right" data-distance="-40|-30|top">
+<span class="next"><a aria-label="go to the next page" href="build-command-line.html"></a></span><div class="tip">Build a player from the command line</div>
+</div>
+</div>
+</div>
+<div class="footer-wrapper"><div class="footer clear">
+<div class="copy">Copyright ©2005-2026 Unity Technologies. All rights reserved. Built from job ID 65343837. Built on: 2026-03-23.</div>
+<div class="menu">
+<a href="https://learn.unity.com/">Tutorials</a><a href="https://answers.unity3d.com">Community Answers</a><a href="https://support.unity3d.com/hc/en-us">Knowledge Base</a><a href="https://forum.unity3d.com">Forums</a><a href="https://unity3d.com/asset-store">Asset Store</a><a href="https://docs.unity3d.com/Manual/TermsOfUse.html">Terms of use</a><a href="https://unity.com/legal">Legal</a><a href="https://unity.com/legal/privacy-policy">Privacy Policy</a><a href="https://unity.com/legal/cookie-policy">Cookies</a><a href="https://unity.com/legal/do-not-sell-my-personal-information">Do Not Sell or Share My Personal Information</a><div id="ot-sdk-btn-container"><a id="ot-sdk-btn" class="ot-sdk-show-settings" href="javascript:void(0);">Your Privacy Choices (Cookie Settings)</a></div>
+</div>
+</div></div>
+</div></div></div>
+</div>
+</body>
+</html>
