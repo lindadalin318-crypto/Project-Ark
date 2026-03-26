@@ -1,0 +1,318 @@
+<!DOCTYPE html><html lang="en" class="no-js">
+<head>
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<script type="text/javascript" src="https://cdn.cookielaw.org/scripttemplates/otSDKStub.js" charset="UTF-8" data-domain-script="6e91be4c-3145-4ea2-aa64-89d716064836" data-dLayer-ignore="true" data-document-language="true"></script><script type="text/javascript">function OptanonWrapper() {}</script><script>window.dataLayer = window.dataLayer || []; dataLayer.push({ event: 'dataLayer-initialized', user: { user_unity_id: undefined, user_logged_in: 'no' }, environment: { environment_locale: 'en-us', environment_currency: undefined }});</script><script>var offline=(location.href.indexOf('docs.unity3d.com')==-1)?true:false;if(!offline){(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0], j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=   'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);  })(window,document,'script','dataLayer','GTM-5V25JL6');}</script><link href="https://fonts.googleapis.com/css?family=Roboto&amp;display=swap" rel="stylesheet">
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unity - Manual: Import a texture into a render pass in URP</title>
+<meta property="og:image" content="https://unity3d.com/files/images/ogimg.jpg">
+<meta name="author" content="Unity Technologies">
+<meta property="relative-path-to-manual" content="../">
+<meta property="version-switcher-versions-with-this-page" content="Versions with this page:">
+<meta property="version-switcher-versions-without-this-page" content="Versions without this page:">
+<meta property="version-switcher-supported" content="Supported">
+<meta property="version-switcher-legacy" content="Legacy">
+<link rel="shortcut icon" href="https://unity.com/themes/contrib/unity_base/images/favicons/favicon.ico">
+<link rel="icon" type="image/png" href="../../StaticFilesManual/images/favicons/favicon.png">
+<link rel="apple-touch-icon-precomposed" sizes="152x152" href="../../StaticFilesManual/images/favicons/apple-touch-icon-152x152.png">
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="../../StaticFilesManual/images/favicons/apple-touch-icon-144x144.png">
+<link rel="apple-touch-icon-precomposed" sizes="120x120" href="../../StaticFilesManual/images/favicons/apple-touch-icon-120x120.png">
+<link rel="apple-touch-icon-precomposed" sizes="114x114" href="../../StaticFilesManual/images/favicons/apple-touch-icon-114x114.png">
+<link rel="apple-touch-icon-precomposed" sizes="72x72" href="../../StaticFilesManual/images/favicons/apple-touch-icon-72x72.png">
+<link rel="apple-touch-icon-precomposed" href="../../StaticFilesManual/images/favicons/apple-touch-icon.png">
+<link rel="canonical" href="https://docs.unity3d.com/6000.4/Documentation/Manual/urp/render-graph-import-a-texture.html">
+<meta name="msapplication-TileColor" content="#222c37">
+<meta name="msapplication-TileImage" content="../../StaticFilesManual/images/favicons/tileicon-144x144.png">
+<script type="text/javascript" src="/StaticFilesConfig/UnityVersionsInfo.js"></script><script type="text/javascript" src="../../StaticFilesManual/js/jquery.js?ts=20260323"></script><script type="text/javascript" src="../../StaticFilesManual/js/core.js?ts=20260323"></script><script type="text/javascript" src="../../StaticFilesManual/js/image-comp.js?ts=20260323"></script><script type="text/javascript" src="../docdata/toc.js?ts=20260323"></script><script type="text/javascript" src="../docdata/global_toc.js?ts=20260323"></script><link rel="stylesheet" type="text/css" href="../../StaticFilesManual/css/core.css?ts=20260323">
+<link rel="stylesheet" type="text/css" href="../../StaticFilesManual/css/icons.css?ts=20260323">
+<link rel="stylesheet" href="../../StaticFilesManual/css/prism.css">
+<script src="../../StaticFilesManual/js/prism.js"></script><script src="/StaticFilesConfig/feedback/feedback.js"></script><script src="../../StaticFilesManual/js/jquery.sidebar.min.js"></script><link rel="stylesheet" href="../../StaticFilesManual/css/mobileoptimisation.css">
+<script src="../../StaticFilesManual/js/mobileoptimisation.js"></script>
+</head>
+<body>
+<div id="DocsAnalyticsData" data-area="none" data-pagetype="manual"></div>
+<div class="header-wrapper">
+<div id="header" class="header"><div class="content">
+<div class="spacer"><div class="menu">
+<div id="nav-open" for="nav-input"><span></span></div>
+<div class="logo"><a aria-label="go to the homepage" href="https://docs.unity3d.com"></a></div>
+<div class="search-form"><form action="../30_search.html" method="get" class="apisearch">
+<input type="text" name="q" aria-label="Search manual documentation" placeholder="Search manual..." autosave="Unity Reference" results="5" class="sbox field" id="q"><input type="submit" class="submit">
+</form></div>
+<ul>
+<li><a href="../index.html" class="selected">Manual</a></li>
+<li><a href="../../ScriptReference/index.html">Scripting API</a></li>
+</ul>
+</div></div>
+<div class="more">
+<div class="filler"></div>
+<ul><li><a href="https://unity.com/">unity.com</a></li></ul>
+</div>
+</div></div>
+<div class="toolbar"><div class="content">
+<div class="toggle version-number" id="VersionNumber" data-target=".otherversionscontent">
+                                Version: <b>Unity 6.4</b> (6000.4)
+                                <div class="otherversionscontent" id="OtherVersionsContent" style="display: none;">
+<ul id="OtherVersionsContentUl"></ul>
+<div id="otherVersionsLegend"><ul>
+<li>
+<div id="supportedColour" class="legendBox"></div>Supported</li>
+<li>
+<div id="notFoundColour" class="legendBox"></div>Legacy</li>
+</ul></div>
+</div>
+<div id="VersionSwitcherArrow" class="arrow versionSwitcherArrow"></div>
+</div>
+<div class="lang-switcher"><div class="current toggle" data-target=".lang-list">
+<div class="lbl">Language
+:                <span class="b">English</span>
+</div>
+<div class="arrow"></div>
+<div class="lang-list" style="display:none;"><ul>
+<li><a href="/Manual/urp/render-graph-import-a-texture.html">English</a></li>
+<li><a href="/cn/current/Manual/urp/render-graph-import-a-texture.html">中文</a></li>
+<li><a href="/ja/current/Manual/urp/render-graph-import-a-texture.html">日本語</a></li>
+<li><a href="/kr/current/Manual/urp/render-graph-import-a-texture.html">한국어</a></li>
+</ul></div>
+</div></div>
+</div></div>
+<div class="mobileLogo"><a aria-label="go to the homepage" href="https://docs.unity3d.com"></a></div>
+</div>
+<div id="master-wrapper" class="master-wrapper clear">
+<div id="sidebar" class="sidebar"><div class="sidebar-wrap"><div class="content"><div class="sidebar-menu"><div class="toc" id="customScrollbar">
+<h2>Unity Manual</h2>
+<div class="search-form sidebar-search-form"><form action="30_search.html" method="get" class="apisearch">
+<input type="text" name="q" aria-label="Search manual documentation" placeholder="Search manual..." autosave="Unity Reference" results="5" class="sbox field" id="q"><input type="submit" id="mobileSearchBtn" class="submit" value="Search">
+</form></div>
+<div class="toggle version-number sidebar-version-switcher" id="VersionNumber" data-target=".otherversionscontent"><form id="otherVersionsContentMobileForm"><div class="ui-field-contain">
+<label for="select-native-4">Version: Unity 6.4</label><select name="select-native-4" id="versionsSelectMobile"><option>Select a different version</option>
+<optgroup id="versionsWithThisPageMobile" label="Versions with this page"></optgroup>
+<optgroup id="versionsWithoutThisPageMobile" label="Versions without this page"></optgroup></select>
+</div></form></div>
+<div class="lang-switcher"><div class="current toggle" data-target=".lang-list">
+<div class="lbl">Language
+:                <span class="b">English</span>
+</div>
+<div class="arrow"></div>
+<div class="lang-list" style="display:none;"><ul>
+<li><a href="/Manual/urp/render-graph-import-a-texture.html">English</a></li>
+<li><a href="/cn/current/Manual/urp/render-graph-import-a-texture.html">中文</a></li>
+<li><a href="/ja/current/Manual/urp/render-graph-import-a-texture.html">日本語</a></li>
+<li><a href="/kr/current/Manual/urp/render-graph-import-a-texture.html">한국어</a></li>
+</ul></div>
+</div></div>
+</div></div></div></div></div>
+<div id="content-wrap" class="content-wrap"><div class="content-block"><div class="content">
+<div class="section">
+<div class="breadcrumbs clear"><ul>
+<li><a href="../render-pipelines.html">Render pipelines</a></li>
+<li><a href="../universal-render-pipeline.html">Using the Universal Render Pipeline</a></li>
+<li><a href="../urp/customizing-urp.html">Custom rendering and post-processing in URP</a></li>
+<li><a href="../urp/render-graph.html">Render graph system in URP</a></li>
+<li><a href="../urp/working-with-textures.html">Textures in the Render Graph system in URP</a></li>
+<li><a href="../urp/render-graph-pass-textures-between-passes.html">Use a texture in multiple render passes in URP</a></li>
+<li>Import a texture into a render pass in URP</li>
+</ul></div>
+<div class="mb20"><div class="nextprev clear">
+<div class="icon tt left mr1" data-distance="-40|-30|top">
+<span class="prev"><a aria-label="go to the previous page" href="../urp/render-graph-create-global-texture.html"></a></span><div class="tip">Create a texture as a global texture in URP</div>
+</div>
+<div class="icon tt right" data-distance="-40|-30|top">
+<span class="next"><a aria-label="go to the next page" href="../urp/render-graph-frame-data.html"></a></span><div class="tip">Frame data in the render graph system in URP</div>
+</div>
+</div></div>
+<div id="_leavefeedback"></div>
+<h1>Import a texture into a render pass in URP</h1>
+<!--BeginSwitchLink--><!--EndSwitchLink-->
+<div class="clear"></div>
+
+<p>To make a texture available across frames and <span class="tooltip" tabindex="0" ><strong>cameras</strong><span class="tooltiptext">A component which creates an image of a particular viewpoint in your scene. The output is either drawn to the screen or captured as a texture. <a class="tooltipMoreInfoLink" aria-label="Navigate to more info about CamerasOverview.html" href="../CamerasOverview.html">More info</a><br/><span class="tooltipGlossaryLink">See in <a href="../Glossary.html#Camera" aria-label="Go to glossary anchor for Camera">Glossary</a></span></span></span>, create it outside the render graph system, then point a render graph to it using the <code>ImportTexture</code> API.</p>
+
+<p>The render graph system doesn’t manage the lifetime of imported textures, so it can’t optimize using the texture, and there might be memory leaks. Where possible, <a href="render-graph-create-a-texture.html">Create a temporary texture for a single frame</a> instead, so the render graph system manages its lifetime.</p>
+
+<p>To fetch textures created by URP instead of your own code, for example the camera color and depth textures, refer to <a href="render-graph-frame-data.html">Frame data in the render graph system</a>.</p>
+
+<h2>Create a render texture</h2>
+
+<p>To create a texture once but use it across multiple frames, create it before you call <code>AddRasterRenderPass</code>. For example:</p>
+
+<ol>
+<li>
+<p>Declare the texture using the <a href="https://docs.unity3d.com/Packages/com.unity.render-pipelines.core@17.0/api/UnityEngine.Rendering.RTHandle.html">RTHandle</a> API.</p>
+
+<p>For example:</p>
+
+<pre><code class="lang-cs">public RTHandle renderTextureHandle;
+</code></pre>
+</li>
+<li><p>Create a <a href="xref:UnityEngine.Rendering.RenderGraphModule.TextureDesc"><code>TextureDesc</code></a> object with the texture properties you need.</p></li>
+<li>
+<p>Allocate the <span class="tooltip" tabindex="0" ><strong>render texture</strong><span class="tooltiptext">A special type of Texture that is created and updated at runtime. To use them, first create a new Render Texture and designate one of your Cameras to render into it. Then you can use the Render Texture in a Material just like a regular Texture. <a class="tooltipMoreInfoLink" aria-label="Navigate to more info about class-RenderTexture.html" href="../class-RenderTexture.html">More info</a><br/><span class="tooltipGlossaryLink">See in <a href="../Glossary.html#RenderTexture" aria-label="Go to glossary anchor for RenderTexture">Glossary</a></span></span></span> using the <a href="https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@17.4/api/UnityEngine.Rendering.Universal.RenderingUtils.html#UnityEngine_Rendering_Universal_RenderingUtils_ReAllocateHandleIfNeeded_UnityEngine_Rendering_RTHandle__UnityEngine_RenderTextureDescriptor__UnityEngine_FilterMode_UnityEngine_TextureWrapMode_System_Int32_System_Single_System_String_">ReAllocateHandleIfNeeded</a> API. This method checks if the render texture already exists, so it only creates the render texture once.</p>
+
+<p>For example:</p>
+
+<pre><code class="lang-cs">RenderingUtils.ReAllocateHandleIfNeeded(ref renderTextureHandle, textureDesc, name: &quot;My render texture&quot;);
+</code></pre>
+</li>
+</ol>
+
+<h2>Point the render graph to the texture</h2>
+
+<p>To use the texture after you call <code>AddRasterRenderPass</code>, use the <code>ImportTexture</code> API to get a handle to the render texture that render graph can use. For example:</p>
+
+<pre><code class="lang-cs">TextureHandle texture = renderGraph.ImportTexture(renderTextureHandle);
+</code></pre>
+
+<p>You can then use the <code>TextureHandle</code> object to <a href="render-graph-read-write-texture.html">read from or write to the render texture</a>, and the texture won’t be disposed of at the end of the render pass.</p>
+
+<p><a name="dispose-of-a-render-texture" aria-hidden="true"></a></p>
+
+<h2>Dispose of the render texture</h2>
+
+<p>At the end of rendering, you must free the memory a render texture uses at the end of a render pass.</p>
+
+<p>For example, you can create the following <code>Dispose</code> method in your <code>ScriptableRendererFeature</code> class.</p>
+
+<pre><code class="lang-cs">public void Dispose()
+{
+    renderTexture.Release();
+}
+</code></pre>
+
+<h2>Example</h2>
+
+<p>The following Scriptable Renderer Feature creates a texture outside the render graph system, then uses it in a render pass to draw a random triangle each frame. To see the texture, open the <a href="https://docs.unity3d.com/Manual/FrameDebugger.html">Frame Debugger</a> and select the <strong>Test render pass</strong> item.</p>
+
+<pre><code class="lang-cs">using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.RenderGraphModule;
+using UnityEngine.Rendering.RenderGraphModule.Util;
+using UnityEngine.Rendering.Universal;
+using UnityEngine.Experimental.Rendering;
+
+public class RandomTriangles : ScriptableRendererFeature
+{
+    class DrawRandomTriangles : ScriptableRenderPass
+    {
+
+        RTHandle destinationTexture;
+
+        class PassData
+        {
+            public TextureHandle destination;
+            public Material material;
+        }
+
+        public DrawRandomTriangles(RTHandle externalTexture)
+        {
+            destinationTexture = externalTexture;
+        }
+
+        public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameContext)
+        {
+
+            using (var builder = renderGraph.AddRasterRenderPass&lt;PassData&gt;(&quot;Test render pass&quot;, out var passData))
+            {
+                // Make sure the render graph system keeps the render pass, even if it's not used in the final frame.
+                // Don't use this in production code, because it prevents the render graph system from removing the render pass if it's not needed.
+                builder.AllowPassCulling(false);
+
+                // Create a material for drawing a mesh.
+                passData.material = new Material(Shader.Find(&quot;Unlit/Texture&quot;));
+
+                // Point the render graph to the external texture.
+                passData.destination = renderGraph.ImportTexture(destinationTexture);
+                builder.SetRenderAttachment(passData.destination, 0, AccessFlags.Write);
+
+                builder.SetRenderFunc(static (PassData data, RasterGraphContext context) =&gt;
+                    {
+                        // Create a triangle mesh.
+                        Mesh mesh = new Mesh();
+
+                        Vector3[] vertices = new Vector3[3]
+                        {
+                            new Vector3(0, 0, 0),
+                            new Vector3(1f, 0, 0),
+                            new Vector3(0, 1f, 0),
+                        };
+
+                        int[] triangles = new int[3]
+                        {
+                            0, 2, 1,
+                        };
+
+                        mesh.vertices = vertices;
+                        mesh.triangles = triangles;
+
+                        // Draw the triangle mesh at a random position.
+                        Vector3 randomPos = new Vector3(Random.Range(-10, 10), Random.Range(-10, 10), 0);
+                        Matrix4x4 trs = Matrix4x4.TRS(randomPos, Quaternion.Euler(0, 0, 0), Vector3.one);
+                        context.cmd.DrawMesh(mesh, trs, data.material, 0);
+                    });
+            }
+        }
+    }
+
+    DrawRandomTriangles renderPass;
+    public RTHandle myRenderTexture;
+    public override void Create()
+    {
+        // Allocate a render texture outside the shader graph
+        TextureDesc textureDesc = new TextureDesc(Vector2.one)
+        {
+            colorFormat = GraphicsFormat.R8G8B8A8_UNorm,
+            width = 256,
+            height = 256,
+            clearBuffer = true,
+            clearColor = Color.red,
+            name = &quot;My temporary texture&quot;
+        };
+        RenderingUtils.ReAllocateHandleIfNeeded(ref myRenderTexture, textureDesc, name: &quot;My render texture&quot;);
+
+        // Create the render pass and pass in the render texture
+        renderPass = new DrawRandomTriangles(myRenderTexture);
+        renderPass.renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
+    }
+
+    public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
+    {
+        renderer.EnqueuePass(renderPass);
+    }
+
+    public new void Dispose()
+    {
+        myRenderTexture.Release();
+    }    
+
+}
+</code></pre>
+
+<h2>Additional resources</h2>
+
+<ul>
+<li><a href="https://docs.unity3d.com/Packages/com.unity.render-pipelines.core@17.4/manual/rthandle-system-using.html">Using the RTHandle system</a></li>
+<li><span class="tooltip" tabindex="0" ><a href="https://docs.unity3d.com/Manual/Textures.html">Textures</a><span class="tooltiptext">An image used when rendering a GameObject, Sprite, or UI element. Textures are often applied to the surface of a mesh to give it visual detail. <a class="tooltipMoreInfoLink" aria-label="Navigate to more info about class-TextureImporter.html" href="../class-TextureImporter.html">More info</a><br/><span class="tooltipGlossaryLink">See in <a href="../Glossary.html#texture" aria-label="Go to glossary anchor for texture">Glossary</a></span></span></span></li>
+<li><a href="https://docs.unity3d.com/Manual/class-RenderTexture.html">Render Texture assets</a></li>
+<li><a href="https://docs.unity3d.com/Manual/class-CustomRenderTexture.html">Custom Render Texture assets</a></li>
+</ul>
+<div id="_content"></div>
+<div class="nextprev clear">
+<div class="icon tt left mr1" data-distance="-40|-30|top">
+<span class="prev"><a aria-label="go to the previous page" href="../urp/render-graph-create-global-texture.html"></a></span><div class="tip">Create a texture as a global texture in URP</div>
+</div>
+<div class="icon tt right" data-distance="-40|-30|top">
+<span class="next"><a aria-label="go to the next page" href="../urp/render-graph-frame-data.html"></a></span><div class="tip">Frame data in the render graph system in URP</div>
+</div>
+</div>
+</div>
+<div class="footer-wrapper"><div class="footer clear">
+<div class="copy">Copyright ©2005-2026 Unity Technologies. All rights reserved. Built from job ID 65343837. Built on: 2026-03-23.</div>
+<div class="menu">
+<a href="https://learn.unity.com/">Tutorials</a><a href="https://answers.unity3d.com">Community Answers</a><a href="https://support.unity3d.com/hc/en-us">Knowledge Base</a><a href="https://forum.unity3d.com">Forums</a><a href="https://unity3d.com/asset-store">Asset Store</a><a href="https://docs.unity3d.com/Manual/TermsOfUse.html">Terms of use</a><a href="https://unity.com/legal">Legal</a><a href="https://unity.com/legal/privacy-policy">Privacy Policy</a><a href="https://unity.com/legal/cookie-policy">Cookies</a><a href="https://unity.com/legal/do-not-sell-my-personal-information">Do Not Sell or Share My Personal Information</a><div id="ot-sdk-btn-container"><a id="ot-sdk-btn" class="ot-sdk-show-settings" href="javascript:void(0);">Your Privacy Choices (Cookie Settings)</a></div>
+</div>
+</div></div>
+</div></div></div>
+</div>
+</body>
+</html>
