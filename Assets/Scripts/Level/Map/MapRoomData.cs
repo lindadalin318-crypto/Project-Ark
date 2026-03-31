@@ -24,8 +24,8 @@ namespace ProjectArk.Level
         /// <summary> Floor level (0 = surface, -1 = underground). </summary>
         public int FloorLevel;
 
-        /// <summary> Room type — determines node color on the map. </summary>
-        public RoomType Type;
+        /// <summary> Room pacing node type — determines node color on the map. </summary>
+        public RoomNodeType NodeType;
 
         /// <summary> Optional map icon override (from RoomSO). </summary>
         public Sprite MapIcon;

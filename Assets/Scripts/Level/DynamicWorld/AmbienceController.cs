@@ -28,14 +28,8 @@ namespace ProjectArk.Level
         [SerializeField] private float _postProcessTransitionDuration = 2f;
 
         [Header("Vignette")]
-        [Tooltip("Default vignette intensity (used when phase has no special vignette).")]
+        [Tooltip("Default vignette intensity used when the active phase has no VignetteIntensityOverride set.")]
         [SerializeField] private float _defaultVignetteIntensity = 0.2f;
-
-        [Tooltip("Storm phase vignette intensity (darker edges for oppressive feel).")]
-        [SerializeField] private float _stormVignetteIntensity = 0.45f;
-
-        [Tooltip("Radiation phase vignette intensity.")]
-        [SerializeField] private float _radiationVignetteIntensity = 0.35f;
 
         [Header("Environment Particles")]
         [Tooltip("Particle systems for each phase index. Array index matches phase index. Null entries = no particles for that phase.")]
@@ -74,6 +68,15 @@ namespace ProjectArk.Level
             CancelTransition();
             ServiceLocator.Unregister(this);
         }
+
+        // ──────────────────── Public Properties ────────────────────
+
+        /// <summary>
+        /// The global post-processing volume managed by this controller.
+        /// Exposed so BiomeTrigger can obtain the Volume reference via ServiceLocator
+        /// instead of using the forbidden FindAnyObjectByType pattern.
+        /// </summary>
+        public Volume PostProcessVolume => _postProcessVolume;
 
         // ──────────────────── Volume Cache ────────────────────
 
@@ -194,15 +197,10 @@ namespace ProjectArk.Level
 
         private float GetVignetteIntensityForPhase(WorldPhaseSO phase)
         {
-            // 根据阶段名关键字匹配特定 vignette 强度
-            if (phase.PhaseName != null)
-            {
-                string name = phase.PhaseName.ToLowerInvariant();
-                if (name.Contains("storm") || name.Contains("风暴"))
-                    return _stormVignetteIntensity;
-                if (name.Contains("radiation") || name.Contains("辐射"))
-                    return _radiationVignetteIntensity;
-            }
+            // Data-driven: read vignette intensity directly from the phase SO.
+            // If the phase has no override (value < 0), fall back to the default.
+            if (phase.HasVignetteOverride)
+                return phase.VignetteIntensityOverride;
 
             return _defaultVignetteIntensity;
         }

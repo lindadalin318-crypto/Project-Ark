@@ -126,10 +126,11 @@ namespace ProjectArk.Level
 
         private void HandleWavesCleared()
         {
-            // 取消订阅
+            // 取消订阅并释放 CTS
             if (_waveStrategy != null)
             {
                 _waveStrategy.OnEncounterComplete -= HandleWavesCleared;
+                _waveStrategy.Dispose();
                 _waveStrategy = null;
             }
 
@@ -182,9 +183,22 @@ namespace ProjectArk.Level
             if (_rewardPrefab == null) return;
 
             Vector3 spawnPos = transform.position + _rewardOffset;
-            Instantiate(_rewardPrefab, spawnPos, Quaternion.identity);
 
-            Debug.Log($"[ArenaController] {_room.RoomID}: Reward spawned at {spawnPos}");
+            // Use PoolManager to avoid Instantiate in combat (architecture principle #4)
+            var poolManager = ServiceLocator.Get<PoolManager>();
+            if (poolManager != null)
+            {
+                var pool = poolManager.GetPool(_rewardPrefab);
+                pool.Get(spawnPos, Quaternion.identity);
+                Debug.Log($"[ArenaController] {_room.RoomID}: Reward spawned (pooled) at {spawnPos}");
+            }
+            else
+            {
+                // Fallback: PoolManager not available — log error and use Instantiate as last resort
+                Debug.LogError("[ArenaController] PoolManager not found. Falling back to Instantiate for reward spawn. " +
+                               "Ensure PoolManager is registered in ServiceLocator.");
+                Instantiate(_rewardPrefab, spawnPos, Quaternion.identity);
+            }
         }
 
         // ──────────────────── Audio Helper ────────────────────

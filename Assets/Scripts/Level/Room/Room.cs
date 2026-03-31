@@ -67,9 +67,6 @@ namespace ProjectArk.Level
         /// <summary> Unique room ID (from SO). </summary>
         public string RoomID => _data != null ? _data.RoomID : gameObject.name;
 
-        /// <summary> Legacy room type (from SO). </summary>
-        public RoomType Type => _data != null ? _data.Type : RoomType.Normal;
-
         /// <summary> Pacing node type (from SO). </summary>
         public RoomNodeType NodeType => _data != null ? _data.NodeType : RoomNodeType.Transit;
 
@@ -93,7 +90,6 @@ namespace ProjectArk.Level
         private const string NAVIGATION_ROOT_NAME = "Navigation";
         private const string ENCOUNTERS_ROOT_NAME = "Encounters";
         private const string ELEMENTS_ROOT_NAME = "Elements";
-        private const string LEGACY_SPAWN_POINTS_ROOT_NAME = "SpawnPoints";
         private const string NAMED_SPAWN_POINT_PREFIX = "SpawnPoint_";
 
         private void Awake()
@@ -157,18 +153,11 @@ namespace ProjectArk.Level
 
         private Transform[] CollectSpawnPoints()
         {
-            var encounterSpawnRoot = transform.Find($"{ENCOUNTERS_ROOT_NAME}/{LEGACY_SPAWN_POINTS_ROOT_NAME}");
+            var encounterSpawnRoot = transform.Find($"{ENCOUNTERS_ROOT_NAME}/SpawnPoints");
             var encounterSpawnPoints = CollectDirectChildTransforms(encounterSpawnRoot);
             if (encounterSpawnPoints.Length > 0)
             {
                 return encounterSpawnPoints;
-            }
-
-            var legacySpawnRoot = transform.Find(LEGACY_SPAWN_POINTS_ROOT_NAME);
-            var legacySpawnPoints = CollectDirectChildTransforms(legacySpawnRoot);
-            if (legacySpawnPoints.Length > 0)
-            {
-                return legacySpawnPoints;
             }
 
             var navigationRoot = transform.Find(NAVIGATION_ROOT_NAME);

@@ -125,16 +125,41 @@ namespace ProjectArk.Level
             // Broadcast
             LevelEvents.RaiseWorldStageChanged(newStage);
 
-            // Apply stage effects (unlock doors, etc.)
+            // Apply stage effects: unlock doors
             var stage = _stages[newStage];
             if (stage != null && stage.UnlockDoorIDs != null)
             {
-                // TODO: Find doors by ID and unlock them
-                // This requires a Door registry or RoomManager.FindDoorByID()
-                // For now, log the intended unlocks
-                foreach (var doorID in stage.UnlockDoorIDs)
+                var roomManager = ServiceLocator.Get<RoomManager>();
+                if (roomManager == null)
                 {
-                    Debug.Log($"[WorldProgressManager] Stage {newStage} would unlock door: {doorID}");
+                    Debug.LogError("[WorldProgressManager] RoomManager not found — cannot unlock doors for stage advance.");
+                    return;
+                }
+
+                foreach (var doorEntry in stage.UnlockDoorIDs)
+                {
+                    // Expected format: "roomID::gateID" (e.g., "SH_R05::boss_exit")
+                    int sep = doorEntry.IndexOf("::", System.StringComparison.Ordinal);
+                    if (sep <= 0)
+                    {
+                        Debug.LogWarning($"[WorldProgressManager] Invalid door entry format '{doorEntry}'. " +
+                                         "Expected 'roomID::gateID'.");
+                        continue;
+                    }
+
+                    string roomID = doorEntry.Substring(0, sep);
+                    string gateID = doorEntry.Substring(sep + 2);
+
+                    var door = roomManager.FindDoorByGateID(roomID, gateID);
+                    if (door != null)
+                    {
+                        door.SetState(DoorState.Open);
+                        Debug.Log($"[WorldProgressManager] Stage {newStage}: Unlocked door '{gateID}' in room '{roomID}'.");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[WorldProgressManager] Stage {newStage}: Door '{gateID}' not found in room '{roomID}'.");
+                    }
                 }
             }
         }

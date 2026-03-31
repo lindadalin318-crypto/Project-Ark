@@ -169,7 +169,7 @@ namespace ProjectArk.Level.Editor
 
             var serialized = new SerializedObject(preset);
             serialized.FindProperty("_presetName").stringValue = presetName;
-            serialized.FindProperty("_roomType").enumValueIndex = (int)room.Type;
+            serialized.FindProperty("_nodeType").enumValueIndex = (int)room.NodeType;
 
             var box = room.GetComponent<BoxCollider2D>();
             if (box != null)
@@ -226,7 +226,7 @@ namespace ProjectArk.Level.Editor
 
         private static string GenerateRoomName(RoomPresetSO preset)
         {
-            string prefix = preset.RoomTypeValue.ToString();
+            string prefix = preset.NodeTypeValue.ToString();
             string timestamp = System.DateTime.Now.ToString("HHmmss");
             return $"Room_{prefix}_{timestamp}";
         }
@@ -288,9 +288,7 @@ namespace ProjectArk.Level.Editor
             var serialized = new SerializedObject(roomSO);
             serialized.FindProperty("_roomID").stringValue = roomName;
             serialized.FindProperty("_displayName").stringValue = roomName;
-            serialized.FindProperty("_type").enumValueIndex = (int)preset.RoomTypeValue;
-            serialized.FindProperty("_nodeType").enumValueIndex = (int)RoomSO.MapLegacyTypeToNodeType(preset.RoomTypeValue);
-            serialized.FindProperty("_useLegacyTypeMapping").boolValue = false;
+            serialized.FindProperty("_nodeType").enumValueIndex = (int)preset.NodeTypeValue;
             serialized.FindProperty("_floorLevel").intValue = 0;
 
             if (preset.DefaultEncounter != null)

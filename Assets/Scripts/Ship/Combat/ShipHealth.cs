@@ -205,5 +205,21 @@ namespace ProjectArk.Ship
             if (_inputHandler != null)
                 _inputHandler.enabled = true;
         }
+
+        /// <summary>
+        /// Set health to a specific value. Used when restoring from save data.
+        /// Clamped to [0, MaxHP]. Does not trigger death or damage events.
+        /// </summary>
+        /// <param name="hp">The HP value to restore.</param>
+        public void SetHP(float hp)
+        {
+            _currentHP = Mathf.Clamp(hp, 0f, MaxHP);
+            _isDead = _currentHP <= 0f;
+
+            // Notify HUD listeners so health bar updates immediately
+            OnDamageTaken?.Invoke(0f, _currentHP);
+
+            Debug.Log($"[ShipHealth] HP restored from save: {_currentHP}/{MaxHP}");
+        }
     }
 }

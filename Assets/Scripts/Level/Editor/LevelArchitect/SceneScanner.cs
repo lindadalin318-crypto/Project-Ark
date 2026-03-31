@@ -151,7 +151,7 @@ namespace ProjectArk.Level.Editor
             var serialized = new SerializedObject(roomSO);
             serialized.FindProperty("_roomID").stringValue = room.gameObject.name;
             serialized.FindProperty("_displayName").stringValue = room.gameObject.name;
-            serialized.FindProperty("_type").enumValueIndex = (int)room.Type;
+            serialized.FindProperty("_nodeType").enumValueIndex = (int)room.NodeType;
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             string path = $"{ROOM_DATA_PATH}{roomSO.name}.asset";
@@ -195,7 +195,7 @@ namespace ProjectArk.Level.Editor
             roomProp.FindPropertyRelative("_roomID").stringValue = roomID;
             roomProp.FindPropertyRelative("_displayName").stringValue =
                 room.Data != null ? room.Data.DisplayName : room.gameObject.name;
-            roomProp.FindPropertyRelative("_roomType").enumValueIndex = (int)room.Type;
+                roomProp.FindPropertyRelative("_nodeType").enumValueIndex = (int)room.NodeType;
             roomProp.FindPropertyRelative("_position").vector3Value = room.transform.position;
             roomProp.FindPropertyRelative("_size").vector2Value = size;
             roomProp.FindPropertyRelative("_roomSO").objectReferenceValue = roomSO;
@@ -214,7 +214,9 @@ namespace ProjectArk.Level.Editor
 
             connection.TargetRoomID = targetRoomID;
             connection.DoorPosition = door.transform.localPosition;
-            connection.IsLayerTransition = door.IsLayerTransition;
+                connection.Ceremony = door.Ceremony >= TransitionCeremony.Layer
+                    ? TransitionCeremony.Layer
+                    : TransitionCeremony.Standard;
 
             // Calculate direction from door to target
             if (door.TargetRoom != null)

@@ -122,7 +122,7 @@ namespace ProjectArk.Level
                     WorldCenter = center,
                     WorldSize = size,
                     FloorLevel = room.Data.FloorLevel,
-                    Type = room.Data.Type,
+                    NodeType = room.Data.NodeType,
                     MapIcon = room.Data.MapIcon,
                     IsVisited = false,
                     IsCurrent = false
@@ -209,7 +209,7 @@ namespace ProjectArk.Level
                             FromRoomID = fromID,
                             ToRoomID = toID,
                             Midpoint = (fromData.WorldCenter + toData.WorldCenter) * 0.5f,
-                            IsLayerTransition = door.IsLayerTransition
+                            IsLayerTransition = door.Ceremony >= TransitionCeremony.Layer
                         });
                     }
                 }

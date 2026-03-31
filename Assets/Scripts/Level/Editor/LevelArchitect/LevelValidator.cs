@@ -63,7 +63,6 @@ namespace ProjectArk.Level.Editor
                 ValidateBoxColliderTrigger(room);
                 ValidateCameraConfiner(room);
                 ValidateStandardRoomHierarchy(room);
-                ValidateRoomNodeTypeMigration(room);
                 ValidateArenaBossConfig(room);
             }
 
@@ -167,9 +166,7 @@ namespace ProjectArk.Level.Editor
                         var serializedSO = new SerializedObject(roomSO);
                         serializedSO.FindProperty("_roomID").stringValue = room.gameObject.name;
                         serializedSO.FindProperty("_displayName").stringValue = room.gameObject.name;
-                        serializedSO.FindProperty("_type").enumValueIndex = (int)RoomType.Normal;
-                        serializedSO.FindProperty("_nodeType").enumValueIndex = (int)RoomSO.MapLegacyTypeToNodeType(RoomType.Normal);
-                        serializedSO.FindProperty("_useLegacyTypeMapping").boolValue = false;
+                        serializedSO.FindProperty("_nodeType").enumValueIndex = (int)RoomNodeType.Transit;
                         serializedSO.ApplyModifiedPropertiesWithoutUndo();
 
                         string path = $"Assets/_Data/Level/Rooms/{roomSO.name}.asset";
@@ -327,32 +324,7 @@ namespace ProjectArk.Level.Editor
             });
         }
 
-        // Rule 3.6: NodeType migration state
-        private static void ValidateRoomNodeTypeMigration(Room room)
-        {
-            if (room.Data == null || !room.Data.UseLegacyTypeMapping)
-            {
-                return;
-            }
-
-            _lastResults.Add(new ValidationResult
-            {
-                Severity = Severity.Warning,
-                Message = $"Room '{room.RoomID}' still derives NodeType from legacy RoomType '{room.Type}'. Migrate it to explicit NodeType before grammar tuning.",
-                TargetObject = room.Data,
-                CanAutoFix = true,
-                FixAction = () =>
-                {
-                    Undo.RecordObject(room.Data, "Make Room NodeType Explicit");
-
-                    var serialized = new SerializedObject(room.Data);
-                    serialized.FindProperty("_nodeType").enumValueIndex = (int)room.Data.NodeType;
-                    serialized.FindProperty("_useLegacyTypeMapping").boolValue = false;
-                    serialized.ApplyModifiedProperties();
-                    EditorUtility.SetDirty(room.Data);
-                }
-            });
-        }
+        // Rule 3.6: NodeType migration state — removed (all rooms now use explicit NodeType)
 
         // Rule 4: Door connections not bidirectional
         private static void ValidateDoorBidirectional(Room[] rooms)
@@ -400,10 +372,10 @@ namespace ProjectArk.Level.Editor
             }
         }
 
-        // Rule 5: Arena/Boss rooms missing ArenaController or EncounterSO
+        // Rule 5: Resolution/Boss rooms missing ArenaController or EncounterSO
         private static void ValidateArenaBossConfig(Room room)
         {
-            if (room.Type != RoomType.Arena && room.Type != RoomType.Boss) return;
+            if (room.NodeType != RoomNodeType.Resolution && room.NodeType != RoomNodeType.Boss) return;
 
             var arenaController = room.GetComponent<ArenaController>();
             if (arenaController == null)
@@ -411,7 +383,7 @@ namespace ProjectArk.Level.Editor
                 _lastResults.Add(new ValidationResult
                 {
                     Severity = Severity.Warning,
-                    Message = $"Room '{room.RoomID}' ({room.Type}) is missing ArenaController.",
+                    Message = $"Room '{room.RoomID}' ({room.NodeType}) is missing ArenaController.",
                     TargetObject = room,
                     CanAutoFix = true,
                     FixAction = () =>
@@ -427,7 +399,7 @@ namespace ProjectArk.Level.Editor
                 _lastResults.Add(new ValidationResult
                 {
                     Severity = Severity.Warning,
-                    Message = $"Room '{room.RoomID}' ({room.Type}) has no EncounterSO configured.",
+                    Message = $"Room '{room.RoomID}' ({room.NodeType}) has no EncounterSO configured.",
                     TargetObject = room.Data,
                     CanAutoFix = false,
                     FixAction = null
@@ -440,7 +412,7 @@ namespace ProjectArk.Level.Editor
                 _lastResults.Add(new ValidationResult
                 {
                     Severity = Severity.Warning,
-                    Message = $"Room '{room.RoomID}' ({room.Type}) is missing EnemySpawner child.",
+                    Message = $"Room '{room.RoomID}' ({room.NodeType}) is missing EnemySpawner child.",
                     TargetObject = room,
                     CanAutoFix = true,
                     FixAction = () =>

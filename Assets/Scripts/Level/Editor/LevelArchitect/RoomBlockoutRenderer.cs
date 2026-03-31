@@ -263,7 +263,7 @@ namespace ProjectArk.Level.Editor
 
                     // Draw connection line
                     Color lineColor = new Color(0.8f, 0.8f, 0.8f, 0.4f);
-                    if (door.IsLayerTransition)
+            if (door.Ceremony >= TransitionCeremony.Layer)
                         lineColor = new Color(0.6f, 0.3f, 0.9f, 0.6f);
 
                     Handles.color = lineColor;
@@ -605,7 +605,7 @@ namespace ProjectArk.Level.Editor
             // Build tooltip text
             var lines = new List<string>();
             lines.Add($"<b>{room.RoomID}</b>");
-            lines.Add($"Type: {room.Type}");
+                lines.Add($"NodeType: {room.NodeType}");
 
             if (room.Data != null)
             {

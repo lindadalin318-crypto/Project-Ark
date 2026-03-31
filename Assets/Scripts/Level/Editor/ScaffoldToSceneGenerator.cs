@@ -193,7 +193,7 @@ namespace ProjectArk.Level.Editor
                     // ── 需求2：房间尺寸 Fallback ──
                     if (sr.Size.x <= 0 || sr.Size.y <= 0)
                     {
-                        Vector2 fallback = GetFallbackSize(sr.RoomType);
+                        Vector2 fallback = GetFallbackSize(sr.NodeType);
                         Debug.LogWarning($"{LOG_TAG} ⚠️ Room '{sr.DisplayName}' has zero/invalid Size, using fallback {fallback.x}×{fallback.y}");
                         sr.Size = fallback;
                         stats.FallbackRooms.Add(sr.DisplayName);
@@ -411,21 +411,19 @@ namespace ProjectArk.Level.Editor
         }
 
         /// <summary>
-        /// 需求2：根据 RoomType 返回预设默认尺寸。
+        /// 需扸2：根据 RoomNodeType 返回预设默认尺寸。
         /// </summary>
-        private static Vector2 GetFallbackSize(RoomType type)
+        private static Vector2 GetFallbackSize(RoomNodeType type)
         {
             return type switch
             {
-                RoomType.Normal    => new Vector2(20f, 15f),
-                RoomType.Arena     => new Vector2(30f, 20f),
-                RoomType.Boss      => new Vector2(40f, 30f),
-                RoomType.Corridor  => new Vector2(20f, 8f),
-                RoomType.Shop      => new Vector2(15f, 12f),
-                _                  => new Vector2(20f, 15f),
+                RoomNodeType.Transit    => new Vector2(20f, 15f),
+                RoomNodeType.Resolution => new Vector2(30f, 20f),
+                RoomNodeType.Boss       => new Vector2(40f, 30f),
+                RoomNodeType.Safe       => new Vector2(15f, 12f),
+                _                       => new Vector2(20f, 15f),
             };
         }
-
         // ══════════════════════════════════════════════════════════════
         //  PHASE 2: ROOMSO CREATION
         // ══════════════════════════════════════════════════════════════
@@ -447,7 +445,7 @@ namespace ProjectArk.Level.Editor
             serialized.FindProperty("_displayName").stringValue = sr.DisplayName;
             serialized.FindProperty("_floorLevel").intValue =
                 sr.Position.z != 0 ? Mathf.RoundToInt(sr.Position.z) : 0;
-            serialized.FindProperty("_type").enumValueIndex = (int)sr.RoomType;
+            serialized.FindProperty("_nodeType").enumValueIndex = (int)sr.NodeType;
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             return so;
@@ -718,13 +716,13 @@ ScaffoldElementType.Door        => new Vector2(1f, 1f),   // matches BoxCollider
 
                     // ── Wire forward door ──
                     WireDoor(fwdDoor, target.room, fwdSpawn.transform,
-                        conn.IsLayerTransition, DoorState.Open, playerLayerMask);
+                        conn.Ceremony, DoorState.Open, playerLayerMask);
 
                     // ── Wire reverse door ──
-                    bool revIsLayerTransition = reverseConn?.IsLayerTransition ?? conn.IsLayerTransition;
+                    TransitionCeremony revCeremony = reverseConn?.Ceremony ?? conn.Ceremony;
 
                     WireDoor(revDoor, source.room, revSpawn.transform,
-                        revIsLayerTransition, DoorState.Open, playerLayerMask);
+                        revCeremony, DoorState.Open, playerLayerMask);
 
                     // Store forward door by connectionID for DoorConfig overlay
                     doorLookup[conn.ConnectionID] = fwdDoor;
@@ -739,12 +737,12 @@ ScaffoldElementType.Door        => new Vector2(1f, 1f),   // matches BoxCollider
         }
 
         private void WireDoor(Door door, Room targetRoom, Transform spawnPoint,
-            bool isLayerTransition, DoorState initialState, int playerLayerMask)
+            TransitionCeremony ceremony, DoorState initialState, int playerLayerMask)
         {
             var serialized = new SerializedObject(door);
             serialized.FindProperty("_targetRoom").objectReferenceValue = targetRoom;
             serialized.FindProperty("_targetSpawnPoint").objectReferenceValue = spawnPoint;
-            serialized.FindProperty("_isLayerTransition").boolValue = isLayerTransition;
+            serialized.FindProperty("_ceremony").enumValueIndex = (int)ceremony;
             serialized.FindProperty("_initialState").enumValueIndex = (int)initialState;
             serialized.FindProperty("_playerLayer").intValue = playerLayerMask;
             serialized.ApplyModifiedPropertiesWithoutUndo();
@@ -869,7 +867,7 @@ ScaffoldElementType.Door        => new Vector2(1f, 1f),   // matches BoxCollider
         {
             foreach (var sr in scaffoldLookup.Values)
             {
-                if (sr.RoomType != RoomType.Arena && sr.RoomType != RoomType.Boss) continue;
+                if (sr.NodeType != RoomNodeType.Resolution && sr.NodeType != RoomNodeType.Boss) continue;
 
                 var (go, room) = roomGOMap[sr.RoomID];
 
@@ -902,7 +900,7 @@ ScaffoldElementType.Door        => new Vector2(1f, 1f),   // matches BoxCollider
                 string safeName = SanitizeName(sr.DisplayName);
                 string encPath = $"{_encounterDir}/{safeName}_[DEFAULT]_Encounter.asset";
                 var typeIDs = roomEnemyTypeIDs.TryGetValue(sr.RoomID, out var ids) ? ids : new List<string>();
-                var encSO = CreateEncounterSO(encPath, sr.RoomType, enemyPrefab, typeIDs, ref stats);
+                var encSO = CreateEncounterSO(encPath, sr.NodeType, enemyPrefab, typeIDs, ref stats);
                 stats.EncounterSOCount++;
 
                 // Assign to RoomSO
@@ -930,7 +928,7 @@ ScaffoldElementType.Door        => new Vector2(1f, 1f),   // matches BoxCollider
         {
             foreach (var sr in scaffoldLookup.Values)
             {
-                if (sr.RoomType != RoomType.Normal) continue;
+                if (sr.NodeType != RoomNodeType.Transit) continue;
 
                 var spawnTransforms = roomEnemySpawns[sr.RoomID];
                 if (spawnTransforms.Count == 0) continue; // No EnemySpawns → skip
@@ -1015,7 +1013,7 @@ ScaffoldElementType.Door        => new Vector2(1f, 1f),   // matches BoxCollider
             return result;
         }
 
-        private EncounterSO CreateEncounterSO(string path, RoomType roomType, GameObject enemyPrefab,
+        private EncounterSO CreateEncounterSO(string path, RoomNodeType nodeType, GameObject enemyPrefab,
             List<string> typeIDs, ref GenerationStats stats)
         {
             var so = AssetDatabase.LoadAssetAtPath<EncounterSO>(path);
@@ -1030,7 +1028,7 @@ ScaffoldElementType.Door        => new Vector2(1f, 1f),   // matches BoxCollider
             var serialized = new SerializedObject(so);
             var wavesProp = serialized.FindProperty("_waves");
 
-            if (roomType == RoomType.Arena)
+            if (nodeType == RoomNodeType.Resolution)
             {
                 // 1 wave, entries per type (count=3 per type)
                 wavesProp.arraySize = 1;
@@ -1133,10 +1131,10 @@ ScaffoldElementType.Door        => new Vector2(1f, 1f),   // matches BoxCollider
             // Check Arena/Boss rooms for missing EnemySpawn
             foreach (var sr in scaffoldLookup.Values)
             {
-                if (sr.RoomType != RoomType.Arena && sr.RoomType != RoomType.Boss) continue;
+                if (sr.NodeType != RoomNodeType.Resolution && sr.NodeType != RoomNodeType.Boss) continue;
                 if (roomEnemySpawns.TryGetValue(sr.RoomID, out var spawns) && spawns.Count == 0)
                 {
-                    Debug.LogWarning($"{LOG_TAG} ⚠️ {sr.RoomType} room '{sr.DisplayName}' has NO EnemySpawn elements!");
+                    Debug.LogWarning($"{LOG_TAG} ⚠️ {sr.NodeType} room '{sr.DisplayName}' has NO EnemySpawn elements!");
                 }
             }
 

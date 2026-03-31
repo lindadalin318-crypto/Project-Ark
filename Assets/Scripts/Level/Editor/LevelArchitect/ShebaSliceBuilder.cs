@@ -33,7 +33,6 @@ namespace ProjectArk.Level.Editor
             public string ID;
             public string DisplayName;
             public RoomNodeType NodeType;
-            public RoomType LegacyType;
             public Vector2 Size;
             public bool HasEncounter;
         }
@@ -43,46 +42,45 @@ namespace ProjectArk.Level.Editor
             new RoomDef
             {
                 ID = "SH-R01", DisplayName = "示巴星 · 入口",
-                NodeType = RoomNodeType.Safe, LegacyType = RoomType.Safe,
+                NodeType = RoomNodeType.Safe,
                 Size = DEFAULT_ROOM_SIZE, HasEncounter = false
             },
             new RoomDef
             {
                 ID = "SH-R02", DisplayName = "示巴星 · 通道A",
-                NodeType = RoomNodeType.Pressure, LegacyType = RoomType.Normal,
+                NodeType = RoomNodeType.Pressure,
                 Size = DEFAULT_ROOM_SIZE, HasEncounter = false
             },
             new RoomDef
             {
                 ID = "SH-R03", DisplayName = "示巴星 · 信标台",
-                NodeType = RoomNodeType.Anchor, LegacyType = RoomType.Normal,
+                NodeType = RoomNodeType.Anchor,
                 Size = DEFAULT_ROOM_SIZE, HasEncounter = false
             },
             new RoomDef
             {
                 ID = "SH-R04", DisplayName = "示巴星 · 竞技场",
-                NodeType = RoomNodeType.Resolution, LegacyType = RoomType.Arena,
+                NodeType = RoomNodeType.Resolution,
                 Size = RESOLUTION_ROOM_SIZE, HasEncounter = true
             },
             new RoomDef
             {
                 ID = "SH-R05", DisplayName = "示巴星 · 宝藏室",
-                NodeType = RoomNodeType.Reward, LegacyType = RoomType.Normal,
+                NodeType = RoomNodeType.Reward,
                 Size = DEFAULT_ROOM_SIZE, HasEncounter = false
             },
             new RoomDef
             {
-                ID = "SH-R06", DisplayName = "示巴星 · 回廊",
-                NodeType = RoomNodeType.Loop, LegacyType = RoomType.Normal,
+                ID = "SH-R06", DisplayName = "示巴星 · 回廈",
+                NodeType = RoomNodeType.Loop,
                 Size = DEFAULT_ROOM_SIZE, HasEncounter = false
             },
             new RoomDef
             {
                 ID = "SH-R07", DisplayName = "示巴星 · 闸口",
-                NodeType = RoomNodeType.Safe, LegacyType = RoomType.Safe,
+                NodeType = RoomNodeType.Safe,
                 Size = DEFAULT_ROOM_SIZE, HasEncounter = false
-            },
-        };
+            },        };
 
         // Door connection definitions: (fromIndex, toIndex, connectionType, gateIDSuffix)
         private struct DoorConnectionDef
@@ -269,9 +267,7 @@ namespace ProjectArk.Level.Editor
             var so = new SerializedObject(roomSO);
             so.FindProperty("_roomID").stringValue = def.ID;
             so.FindProperty("_displayName").stringValue = def.DisplayName;
-            so.FindProperty("_type").enumValueIndex = (int)def.LegacyType;
             so.FindProperty("_nodeType").enumValueIndex = (int)def.NodeType;
-            so.FindProperty("_useLegacyTypeMapping").boolValue = false; // 新房间显式指定 NodeType
             so.FindProperty("_floorLevel").intValue = 0;
 
             if (encounter != null)

@@ -1,8 +1,6 @@
 using System.Threading;
 using UnityEngine;
-using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
-using PrimeTween;
 using ProjectArk.Core;
 using ProjectArk.Core.Audio;
 using ProjectArk.Core.Save;
@@ -15,15 +13,11 @@ namespace ProjectArk.Level
     /// Top-level game flow manager handling death, respawn, and scene-level transitions.
     /// Subscribes to ShipHealth.OnDeath and orchestrates the full death→respawn sequence.
     /// 
-    /// Place on a persistent manager GameObject. Uses the same fade overlay as DoorTransitionController.
+    /// Place on a persistent manager GameObject. Delegates all fade effects to DoorTransitionController.
     /// </summary>
     public class GameFlowManager : MonoBehaviour
     {
         // ──────────────────── Configuration ────────────────────
-
-        [Header("Fade Overlay")]
-        [Tooltip("Full-screen fade Image. Share with DoorTransitionController or assign a separate one.")]
-        [SerializeField] private Image _fadeImage;
 
         [Header("Death Timing")]
         [Tooltip("Fade to black duration on death (seconds).")]
@@ -56,13 +50,6 @@ namespace ProjectArk.Level
         private void Awake()
         {
             ServiceLocator.Register(this);
-
-            // Start fully transparent
-            if (_fadeImage != null)
-            {
-                _fadeImage.color = new Color(0f, 0f, 0f, 0f);
-                _fadeImage.raycastTarget = false;
-            }
         }
 
         private void Start()
@@ -130,26 +117,16 @@ namespace ProjectArk.Level
                     audio.PlaySFX2D(_deathSFX);
 
                 // ── 3. Fade to black ──
+                // Require DoorTransitionController for fade — no silent fallback.
                 var fadeController = ServiceLocator.TryGet<DoorTransitionController>();
-                ResolveFadeImage(fadeController);
-
-                if (fadeController != null && fadeController.FadeImage != null)
+                if (fadeController == null || fadeController.FadeImage == null)
+                {
+                    Debug.LogError("[GameFlowManager] DoorTransitionController (or its FadeImage) not found. " +
+                                   "Death fade will be skipped. Ensure DoorTransitionController is registered.");
+                }
+                else
                 {
                     await fadeController.FadeOutAsync(_deathFadeDuration, token);
-                }
-                else if (_fadeImage != null)
-                {
-                    _fadeImage.raycastTarget = true;
-                    _ = Tween.Custom(_fadeImage.color.a, 1f, _deathFadeDuration, useUnscaledTime: true,
-                        onValueChange: v =>
-                        {
-                            if (_fadeImage != null)
-                                _fadeImage.color = new Color(0f, 0f, 0f, v);
-                        },
-                        ease: Ease.InQuad);
-
-                    int fadeMs = Mathf.RoundToInt(_deathFadeDuration * 1000f);
-                    await UniTask.Delay(fadeMs, cancellationToken: token);
                 }
 
                 // ── 4. Hold on black screen ──
@@ -211,30 +188,20 @@ namespace ProjectArk.Level
                     audio.PlaySFX2D(_respawnSFX);
 
                 // ── 11. Fade in ──
-                if (fadeController != null && fadeController.FadeImage != null)
+                var fadeControllerIn = ServiceLocator.TryGet<DoorTransitionController>();
+                if (fadeControllerIn != null && fadeControllerIn.FadeImage != null)
                 {
-                    await fadeController.FadeInAsync(_respawnFadeDuration, token);
+                    await fadeControllerIn.FadeInAsync(_respawnFadeDuration, token);
                 }
-                else if (_fadeImage != null)
+                else
                 {
-                    _ = Tween.Custom(_fadeImage.color.a, 0f, _respawnFadeDuration, useUnscaledTime: true,
-                        onValueChange: v =>
-                        {
-                            if (_fadeImage != null)
-                                _fadeImage.color = new Color(0f, 0f, 0f, v);
-                        },
-                        ease: Ease.OutQuad);
-
-                    int respawnFadeMs = Mathf.RoundToInt(_respawnFadeDuration * 1000f);
-                    await UniTask.Delay(respawnFadeMs, cancellationToken: token);
+                    Debug.LogError("[GameFlowManager] DoorTransitionController (or its FadeImage) not found. " +
+                                   "Respawn fade-in will be skipped.");
                 }
 
                 // ── 12. Re-enable input ──
                 if (inputHandler != null)
                     inputHandler.enabled = true;
-
-                if (_fadeImage != null)
-                    _fadeImage.raycastTarget = false;
 
                 // ── 13. Save ──
                 var saveBridgeRef = ServiceLocator.Get<SaveBridge>();
@@ -253,10 +220,11 @@ namespace ProjectArk.Level
             catch (System.OperationCanceledException)
             {
                 // Respawn cancelled — restore clean state
-                if (_fadeImage != null)
+                var fadeControllerCancel = ServiceLocator.TryGet<DoorTransitionController>();
+                if (fadeControllerCancel?.FadeImage != null)
                 {
-                    _fadeImage.color = new Color(0f, 0f, 0f, 0f);
-                    _fadeImage.raycastTarget = false;
+                    fadeControllerCancel.FadeImage.color = new Color(0f, 0f, 0f, 0f);
+                    fadeControllerCancel.FadeImage.raycastTarget = false;
                 }
 
                 var inputHandler = ServiceLocator.Get<InputHandler>();
@@ -267,19 +235,6 @@ namespace ProjectArk.Level
             {
                 _isRespawning = false;
                 linkedCts.Dispose();
-            }
-        }
-
-        private void ResolveFadeImage(DoorTransitionController fadeController)
-        {
-            if (_fadeImage == null && fadeController != null)
-            {
-                _fadeImage = fadeController.FadeImage;
-            }
-
-            if (_fadeImage != null)
-            {
-                _fadeImage.color = new Color(0f, 0f, 0f, _fadeImage.color.a);
             }
         }
 

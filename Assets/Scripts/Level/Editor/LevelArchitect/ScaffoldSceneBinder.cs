@@ -150,7 +150,7 @@ namespace ProjectArk.Level.Editor
 
             roomProp.FindPropertyRelative("_roomID").stringValue = room.RoomID;
             roomProp.FindPropertyRelative("_displayName").stringValue = room.RoomID;
-            roomProp.FindPropertyRelative("_roomType").enumValueIndex = (int)room.Type;
+                roomProp.FindPropertyRelative("_nodeType").enumValueIndex = (int)room.NodeType;
             roomProp.FindPropertyRelative("_position").vector3Value = room.transform.position;
             roomProp.FindPropertyRelative("_size").vector2Value = size;
 

@@ -138,11 +138,10 @@ namespace ProjectArk.Level
 
         private async UniTaskVoid PlayConsumeAnimation()
         {
-            // Shrink to zero (fire-and-forget — UniTask.Delay handles the timing)
-            _ = Tween.Scale(transform, Vector3.zero, _consumeAnimDuration, Ease.InBack);
-
-            int delayMs = Mathf.RoundToInt(_consumeAnimDuration * 1000f);
-            await UniTask.Delay(delayMs, cancellationToken: destroyCancellationToken);
+            // Await the shrink tween so SetActive is called exactly when the animation ends.
+            // Using ToUniTask ensures cancellation (e.g., object destroyed mid-animation) is handled cleanly.
+            await Tween.Scale(transform, Vector3.zero, _consumeAnimDuration, Ease.InBack)
+                       .ToUniTask(cancellationToken: destroyCancellationToken);
 
             // Deactivate (or return to pool if pooled)
             gameObject.SetActive(false);

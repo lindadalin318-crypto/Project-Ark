@@ -142,6 +142,30 @@ namespace ProjectArk.Level
         }
 
         /// <summary>
+        /// Find a Door by its GateID within a specific room.
+        /// Used by WorldProgressManager to unlock doors when world stage advances.
+        /// </summary>
+        /// <param name="roomID">The room containing the door.</param>
+        /// <param name="gateID">The GateID of the door to find.</param>
+        /// <returns>The matching Door, or null if not found.</returns>
+        public Door FindDoorByGateID(string roomID, string gateID)
+        {
+            if (string.IsNullOrEmpty(gateID)) return null;
+
+            var room = FindRoomByID(roomID);
+            if (room == null) return null;
+
+            var doors = room.GetComponentsInChildren<Door>(true);
+            foreach (var door in doors)
+            {
+                if (door.GateID == gateID)
+                    return door;
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// Set the given room as the current room. Handles all side effects:
         /// state transitions, event broadcasting, enemy activation, director token cleanup.
         /// Called by Room triggers and DoorTransitionController.
@@ -191,7 +215,7 @@ namespace ProjectArk.Level
             // ArenaController owns the full encounter flow (lock doors → delay → spawn waves → unlock).
             // Do NOT call ActivateEnemies() for these rooms — it would create a WaveSpawnStrategy that
             // gets immediately Reset() when ArenaController calls SetStrategy() moments later.
-            if (room.Type == RoomType.Arena || room.Type == RoomType.Boss)
+            if (room.NodeType == RoomNodeType.Resolution || room.NodeType == RoomNodeType.Boss)
             {
                 if (room.State != RoomState.Cleared)
                 {
@@ -210,7 +234,7 @@ namespace ProjectArk.Level
             }
             else
             {
-                // Normal / Safe / Corridor rooms: activate enemies directly
+                // Transit / Safe / Reward / Hub rooms: activate enemies directly
                 _currentRoom.ActivateEnemies();
             }
 
@@ -218,7 +242,7 @@ namespace ProjectArk.Level
             LevelEvents.RaiseRoomEntered(room.RoomID);
             OnCurrentRoomChanged?.Invoke(room);
 
-            Debug.Log($"[RoomManager] Entered room: {room.RoomID} (Type: {room.Type}, State: {room.State})");
+            Debug.Log($"[RoomManager] Entered room: {room.RoomID} (NodeType: {room.NodeType}, State: {room.State})");
         }
 
         /// <summary>

@@ -83,9 +83,22 @@ namespace ProjectArk.Level
 
         private void CachePostProcessing()
         {
-            // Find the global volume — prefer finding it through AmbienceController to stay consistent
-            _postProcessVolume = FindAnyObjectByType<Volume>();
-            if (_postProcessVolume != null && _postProcessVolume.profile != null)
+            // Obtain the global post-processing volume through AmbienceController (ServiceLocator),
+            // avoiding the forbidden FindAnyObjectByType pattern.
+            var ambience = ServiceLocator.Get<AmbienceController>();
+            if (ambience != null)
+            {
+                _postProcessVolume = ambience.PostProcessVolume;
+            }
+
+            if (_postProcessVolume == null)
+            {
+                Debug.LogWarning($"[BiomeTrigger] {gameObject.name}: Could not obtain PostProcessVolume from AmbienceController. " +
+                                 "Post-processing overrides will be skipped.");
+                return;
+            }
+
+            if (_postProcessVolume.profile != null)
             {
                 _postProcessVolume.profile.TryGet(out _vignette);
                 _postProcessVolume.profile.TryGet(out _colorAdjustments);

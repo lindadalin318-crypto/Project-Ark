@@ -7,7 +7,7 @@ namespace ProjectArk.Level
     /// <summary>
     /// UI element representing a single room node on the map.
     /// Used by both MapPanel (full-screen) and MinimapHUD (corner).
-    /// Displays a colored rectangle based on RoomType, an optional icon, and a "current" highlight ring.
+    /// Displays a colored rectangle based on RoomNodeType, an optional icon, and a "current" highlight ring.
     /// </summary>
     public class MapRoomWidget : MonoBehaviour
     {
@@ -54,7 +54,7 @@ namespace ProjectArk.Level
             // Background color based on room type
             if (_background != null)
             {
-                _background.color = GetTypeColor(_data.Type);
+                _background.color = GetTypeColor(_data.NodeType);
             }
 
             // Icon overlay
@@ -121,13 +121,13 @@ namespace ProjectArk.Level
 
         // ──────────────────── Helpers ────────────────────
 
-        private static Color GetTypeColor(RoomType type)
+        private static Color GetTypeColor(RoomNodeType type)
         {
             return type switch
             {
-                RoomType.Arena => COLOR_ARENA,
-                RoomType.Boss => COLOR_BOSS,
-                RoomType.Safe => COLOR_SAFE,
+                RoomNodeType.Resolution => COLOR_ARENA,
+                RoomNodeType.Boss => COLOR_BOSS,
+                RoomNodeType.Safe => COLOR_SAFE,
                 _ => COLOR_NORMAL
             };
         }

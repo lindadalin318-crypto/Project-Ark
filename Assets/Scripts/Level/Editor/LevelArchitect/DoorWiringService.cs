@@ -424,7 +424,7 @@ namespace ProjectArk.Level.Editor
             // Check floor level difference for layer transition
             int ownerFloor = ownerRoom.Data != null ? ownerRoom.Data.FloorLevel : 0;
             int targetFloor = targetRoomForFloorCheck.Data != null ? targetRoomForFloorCheck.Data.FloorLevel : 0;
-            serialized.FindProperty("_isLayerTransition").boolValue = ownerFloor != targetFloor;
+            serialized.FindProperty("_ceremony").enumValueIndex = (int)(ownerFloor != targetFloor ? TransitionCeremony.Layer : TransitionCeremony.Standard);
 
             // Set player layer
             int playerLayer = LayerMask.NameToLayer("Player");

@@ -1,4 +1,4 @@
- # Implementation Log — Project Ark
+﻿ # Implementation Log — Project Ark
 
 ---
 
@@ -12180,3 +12180,120 @@ Secondary 轨道的 SAIL/SAT 格子现在显示为无效放置目标（红色高
 - 避免后续继续追加日志时基于错位段落操作，导致时间线进一步污染。
 
 **技术：** Markdown 冲突块手工合并、基于时间戳的日志重排、Git 历史反查缺失标题、最小化结构修复。
+
+---
+
+## Level: 清理所有 legacy/obsolete 代码 — 2026-04-01 00:46
+
+**修改文件：**
+- `Assets/Scripts/Level/Data/RoomSO.cs`
+- `Assets/Scripts/Level/Data/RoomType.cs`
+- `Assets/Scripts/Level/Data/RoomPresetSO.cs`
+- `Assets/Scripts/Level/Data/LevelScaffoldData.cs`
+- `Assets/Scripts/Level/Room/Room.cs`
+- `Assets/Scripts/Level/Room/Door.cs`
+- `Assets/Scripts/Level/Room/DoorTransitionController.cs`
+- `Assets/Scripts/Level/Room/RoomManager.cs`
+- `Assets/Scripts/Level/Map/MapRoomData.cs`
+- `Assets/Scripts/Level/Map/MapRoomWidget.cs`
+- `Assets/Scripts/Level/Map/MinimapManager.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/BatchEditPanel.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomFactory.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/PacingOverlayRenderer.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/BlockoutModeHandler.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/SceneScanner.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/ScaffoldSceneBinder.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/ScaffoldToWorldGraphBuilder.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/DoorWiringService.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomBlockoutRenderer.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/ShebaSliceBuilder.cs`
+- `Assets/Scripts/Level/Editor/ScaffoldToSceneGenerator.cs`
+- `Assets/Scripts/UI/AreaTitleDisplay.cs`
+
+**内容：**
+1. **RoomSO.cs**：删除 `_useLegacyTypeMapping`、`UseLegacyTypeMapping`、`LegacyMappedNodeType`、`MapLegacyTypeToNodeType`、`_type`/`Type` 等所有 legacy 迁移字段和方法；`NodeType` 直接返回 `_nodeType`。
+2. **RoomType.cs**：添加 `[System.Obsolete]` 标记，保留枚举供已有 SO 资产序列化兼容，但标记为废弃。
+3. **Room.cs**：删除 `Type` 属性（返回 `RoomType`）、`LEGACY_SPAWN_POINTS_ROOT_NAME` 常量、legacy SpawnPoints 根节点查找分支。
+4. **Door.cs**：删除 `_isLayerTransition` 字段、`IsLayerTransition` 属性、`EffectiveCeremony` 兼容属性；统一使用 `Ceremony`；更新 Tooltip 注释。
+5. **MapRoomData.cs**：`Type` 字段（`RoomType`）改为 `NodeType`（`RoomNodeType`）。
+6. **MapRoomWidget.cs**：颜色映射从 `RoomType` 改为 `RoomNodeType`。
+7. **MinimapManager.cs**：`MapRoomData` 构建改用 `NodeType`；`GatherConnectionsFromDoors` 中 `IsLayerTransition` 改用 `door.Ceremony >= Layer`。
+8. **RoomManager.cs**：`room.Type == RoomType.Arena/Boss` 改为 `room.NodeType == RoomNodeType.Resolution/Boss`；日志输出改用 `NodeType`。
+9. **BatchEditPanel.cs**：删除所有 `RoomType` 相关字段、`ApplyBatchRoomType`、`MigrateRoomNodeTypesToExplicit` 等迁移方法；统一使用 `RoomNodeType`。
+10. **LevelArchitectWindow.cs**：删除 Migrate 按钮、legacy 信息行；`GetRoomTypeColor/GetRoomTypeOutlineColor` 参数改为 `RoomNodeType`；`preset.RoomTypeValue` 改为 `preset.NodeTypeValue`。
+11. **LevelValidator.cs**：删除 Rule 3.6 `ValidateRoomNodeTypeMigration` 方法及其调用；Rule 5 改用 `NodeType`；自动修复 RoomSO 时去掉 `_type`/`_useLegacyTypeMapping` 设置。
+12. **RoomFactory.cs**：`GenerateRoomName` 改用 `NodeTypeValue`；`CreateRoomSOForPreset` 去掉 `_type`/`_useLegacyTypeMapping` 设置；`SaveRoomAsPreset` 改用 `room.NodeType`。
+13. **RoomPresetSO.cs**：`_roomType`（`RoomType`）改为 `_nodeType`（`RoomNodeType`）；`RoomTypeValue` 改为 `NodeTypeValue`。
+14. **LevelScaffoldData.cs**：`ScaffoldRoom._roomType` 改为 `_nodeType`，`RoomType` 改为 `NodeType`；`ScaffoldDoorConnection._isLayerTransition` 改为 `_ceremony`（`TransitionCeremony`），`IsLayerTransition` 改为 `Ceremony`。
+15. **ScaffoldToSceneGenerator.cs**：`WireDoor` 参数从 `bool isLayerTransition` 改为 `TransitionCeremony ceremony`，设置 `_ceremony` 字段；`SetupArenaBossRoomCombat` 改用 `NodeType`；`SetupNormalRoomCombat` 改用 `NodeType.Transit`；`CreateEncounterSO` 参数改为 `RoomNodeType`；日志输出改用 `NodeType`。
+16. **ScaffoldToWorldGraphBuilder.cs**：删除 `MapRoomTypeToNodeType` 方法；`BuildNodes` 直接用 `room.NodeType`；`BuildEdges` 中 `IsLayerTransition` 改用 `conn.Ceremony >= Layer`；`InferConnectionType` 中 `RoomType.Boss/Arena` 改为 `NodeType.Boss/Resolution`，`conn.IsLayerTransition` 改为 `conn.Ceremony >= Layer`。
+17. **BlockoutModeHandler.cs**：`FindDefaultPreset` 改用 `NodeTypeValue == Transit`；`CreateBuiltInPresets` 改用 `RoomNodeType`；`CreatePresetIfMissing` 参数改为 `RoomNodeType`，设置 `_nodeType` 字段。
+18. **ShebaSliceBuilder.cs**：删除 `RoomDef.LegacyType` 字段；`CreateRoomSO` 去掉 `_type`/`_useLegacyTypeMapping` 设置，直接用 `_nodeType`。
+19. **DoorWiringService.cs**：`_isLayerTransition` 改为设置 `_ceremony`（层间过渡时设为 `Layer`，否则 `Standard`）。
+20. **RoomBlockoutRenderer.cs**：`door.IsLayerTransition` 改为 `door.Ceremony >= Layer`；`room.Type` 改为 `room.NodeType`。
+21. **SceneScanner.cs**：`room.Type` 改为 `room.NodeType`；`_type`/`_roomType` 改为 `_nodeType`；`ScaffoldDoorConnection.IsLayerTransition` 改为 `Ceremony`。
+22. **ScaffoldSceneBinder.cs**：`room.Type` 改为 `room.NodeType`，`_roomType` 改为 `_nodeType`。
+23. **PacingOverlayRenderer.cs**：`door.IsLayerTransition` 改为 `door.Ceremony >= Layer`；`room.Type` 改为 `room.NodeType`。
+24. **DoorTransitionController.cs**：`door.EffectiveCeremony` 改为 `door.Ceremony`。
+25. **AreaTitleDisplay.cs**：`room.Type == RoomType.Corridor` 改为 `room.NodeType == RoomNodeType.Transit`。
+
+**目的：**
+- 彻底清除 `RoomType` 枚举的运行时使用，统一使用 `RoomNodeType`（世界图谱语法节点类型）。
+- 彻底清除 `Door._isLayerTransition` 布尔值，统一使用 `TransitionCeremony` 枚举。
+- 消除所有 legacy 迁移路径（双轨映射、兼容属性、迁移方法），让代码路径单一清晰。
+- 编译验证：0 个错误，62 个警告（全部为 Unity 6 API 过时警告，与本次改动无关）。
+
+**技术：** 全局 grep 扫描 → 逐文件 multi_replace → dotnet build 编译验证闭环。
+
+
+---
+
+## 关卡模块代码审查修复（全部 10 项）— 2026-04-01 01:19
+
+### 修改文件
+- Assets/Scripts/Level/Room/RoomFlagRegistry.cs — C1：修复 flag key 解析歧义 Bug
+- Assets/Scripts/Level/DynamicWorld/BiomeTrigger.cs — M1：移除 FindAnyObjectByType
+- Assets/Scripts/Level/DynamicWorld/AmbienceController.cs — M1/m3：添加 PostProcessVolume 属性；移除字符串匹配，改为数据驱动
+- Assets/Scripts/Level/Data/WorldPhaseSO.cs — m3：添加 VignetteIntensityOverride 字段
+- Assets/Scripts/Level/Room/RoomManager.cs — M2：添加 FindDoorByGateID 方法
+- Assets/Scripts/Level/Progression/WorldProgressManager.cs — M2：实现门解锁功能
+- Assets/Scripts/Level/Room/ArenaController.cs — M3/m4：SpawnReward 改用 PoolManager；HandleWavesCleared 调用 Dispose
+- Assets/Scripts/Level/GameFlow/GameFlowManager.cs — M4：移除双轨 Fade fallback，强制依赖 DoorTransitionController
+- Assets/Scripts/Ship/Combat/ShipHealth.cs — M5：添加 SetHP 方法
+- Assets/Scripts/Level/SaveBridge.cs — M5：DistributePlayerState 调用 SetHP 恢复存档 HP
+- Assets/Scripts/Level/Room/Door.cs — m2：添加 ResetGlobalTransitionCooldown 静态方法
+- Assets/Scripts/Level/Room/DoorTransitionController.cs — m2：OnDestroy 中重置静态冷却字段
+- Assets/Scripts/Level/Room/WaveSpawnStrategy.cs — m4：实现 IDisposable，添加 Dispose 方法
+- Assets/Scripts/Level/Pickup/PickupBase.cs — m6：PlayConsumeAnimation 改用 await Tween.ToUniTask
+
+### 内容
+
+修复关卡模块代码审查发现的全部 10 项问题（1 个 Critical、5 个 Major、4 个 Minor）。
+
+**C1** RoomFlagRegistry flag key 分隔符从 _ 改为 ::，防止 roomID 含下划线时存档数据损坏。
+
+**M1** BiomeTrigger 移除 FindAnyObjectByType，改为通过 ServiceLocator.Get<AmbienceController>() 获取 Volume；AmbienceController 添加 PostProcessVolume 属性。
+
+**M2** RoomManager 添加 FindDoorByGateID 方法；WorldProgressManager.AdvanceToStage 实现真正的门解锁逻辑，UnlockDoorIDs 格式为 roomID::gateID。
+
+**M3** ArenaController.SpawnReward 改用 poolManager.GetPool(prefab).Get(pos, rot)，PoolManager 不存在时 LogError。
+
+**M4** GameFlowManager 移除 _fadeImage 字段、ResolveFadeImage 方法及所有 fallback Fade 路径，强制依赖 DoorTransitionController，缺失时 LogError。
+
+**M5** ShipHealth 添加 SetHP(float hp) 方法；SaveBridge.DistributePlayerState 调用 SetHP 恢复存档 HP。
+
+**m2** Door 添加 ResetGlobalTransitionCooldown 静态方法；DoorTransitionController.OnDestroy 调用以防跨场景污染。
+
+**m3** WorldPhaseSO 添加 VignetteIntensityOverride 字段；AmbienceController 移除字符串匹配，改为读取 SO 字段，移除 _stormVignetteIntensity/_radiationVignetteIntensity。
+
+**m4** WaveSpawnStrategy 实现 System.IDisposable；ArenaController.HandleWavesCleared 调用 Dispose。
+
+**m6** PickupBase.PlayConsumeAnimation 改用 await Tween.ToUniTask，移除 fire-and-forget + 手动 Delay 双轨写法。
+
+### 目的
+消除存档数据损坏风险、功能缺失（门解锁/HP恢复）、架构违规（FindAnyObjectByType/Instantiate/双轨Fade）和潜在内存泄漏。
+
+### 技术
+代码审查 → 逐文件 multi_replace/replace_in_file → dotnet build 编译验证（0 个错误）。

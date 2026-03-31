@@ -117,7 +117,7 @@ namespace ProjectArk.UI
             if (string.IsNullOrEmpty(displayName)) return;
 
             // Skip safe/corridor rooms unless they have explicit display names
-            if (room.Type == RoomType.Corridor) return;
+            if (room.NodeType == RoomNodeType.Transit) return;
 
             _shownRoomIDs.Add(roomID);
 

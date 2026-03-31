@@ -18,8 +18,8 @@ namespace ProjectArk.Level
         [SerializeField] private string _description;
 
         [Header("Room Configuration")]
-        [Tooltip("Default room type for rooms created from this preset.")]
-        [SerializeField] private RoomType _roomType = RoomType.Normal;
+        [Tooltip("Default room pacing node type for rooms created from this preset.")]
+        [SerializeField] private RoomNodeType _nodeType = RoomNodeType.Transit;
 
         [Tooltip("Default room size (width, height) in world units.")]
         [SerializeField] private Vector2 _defaultSize = new Vector2(20, 15);
@@ -51,8 +51,8 @@ namespace ProjectArk.Level
         /// <summary> Description. </summary>
         public string Description => _description;
 
-        /// <summary> Default room type. </summary>
-        public RoomType RoomTypeValue => _roomType;
+        /// <summary> Default room node type. </summary>
+        public RoomNodeType NodeTypeValue => _nodeType;
 
         /// <summary> Default size. </summary>
         public Vector2 DefaultSize => _defaultSize;

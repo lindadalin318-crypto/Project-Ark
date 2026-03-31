@@ -289,7 +289,7 @@ namespace ProjectArk.Level.Editor
             var presets = RoomFactory.FindAllPresets();
             foreach (var p in presets)
             {
-                if (p != null && p.RoomTypeValue == RoomType.Normal)
+                if (p != null && p.NodeTypeValue == RoomNodeType.Transit)
                     return p;
             }
 
@@ -316,28 +316,28 @@ namespace ProjectArk.Level.Editor
             // Safe room
             normalPreset = CreatePresetIfMissing(path, "Preset_Safe", "Safe Room",
                 "A safe zone with no enemies. May contain checkpoint, shop, or NPC.",
-                RoomType.Safe, new Vector2(15, 12), 2, false, false);
+                RoomNodeType.Safe, new Vector2(15, 12), 2, false, false);
 
             // Normal room
             var normal = CreatePresetIfMissing(path, "Preset_Normal", "Normal Room",
                 "Standard room with optional enemies.",
-                RoomType.Normal, new Vector2(20, 15), 4, false, false);
+                RoomNodeType.Transit, new Vector2(20, 15), 4, false, false);
             if (normal != null) normalPreset = normal;
 
             // Arena room
             CreatePresetIfMissing(path, "Preset_Arena", "Arena Room",
                 "Combat arena — doors lock on entry, unlock after all waves cleared.",
-                RoomType.Arena, new Vector2(25, 20), 6, true, true);
+                RoomNodeType.Resolution, new Vector2(25, 20), 6, true, true);
 
             // Boss room
             CreatePresetIfMissing(path, "Preset_Boss", "Boss Room",
                 "Boss encounter room — larger than arena, special rewards on clear.",
-                RoomType.Boss, new Vector2(35, 25), 6, true, true);
+                RoomNodeType.Boss, new Vector2(35, 25), 6, true, true);
 
             // Corridor
             CreatePresetIfMissing(path, "Preset_Corridor", "Corridor",
                 "Narrow connecting passage between rooms.",
-                RoomType.Normal, new Vector2(15, 3), 0, false, false);
+                RoomNodeType.Transit, new Vector2(15, 3), 0, false, false);
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -346,7 +346,7 @@ namespace ProjectArk.Level.Editor
         }
 
         private static RoomPresetSO CreatePresetIfMissing(string basePath, string fileName, string presetName,
-            string description, RoomType roomType, Vector2 defaultSize, int spawnPoints,
+            string description, RoomNodeType nodeType, Vector2 defaultSize, int spawnPoints,
             bool includeArena, bool includeSpawner)
         {
             string fullPath = $"{basePath}{fileName}.asset";
@@ -358,7 +358,7 @@ namespace ProjectArk.Level.Editor
             var serialized = new SerializedObject(preset);
             serialized.FindProperty("_presetName").stringValue = presetName;
             serialized.FindProperty("_description").stringValue = description;
-            serialized.FindProperty("_roomType").enumValueIndex = (int)roomType;
+            serialized.FindProperty("_nodeType").enumValueIndex = (int)nodeType;
             serialized.FindProperty("_defaultSize").vector2Value = defaultSize;
             serialized.FindProperty("_spawnPointCount").intValue = spawnPoints;
             serialized.FindProperty("_includeArenaController").boolValue = includeArena;

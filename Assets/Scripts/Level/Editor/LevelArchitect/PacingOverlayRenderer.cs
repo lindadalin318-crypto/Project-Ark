@@ -355,7 +355,7 @@ namespace ProjectArk.Level.Editor
                     Vector3 fromPos = room.transform.position;
                     Vector3 toPos = door.TargetRoom.transform.position;
 
-                    if (door.IsLayerTransition)
+            if (door.Ceremony >= TransitionCeremony.Layer)
                     {
                         // Layer transitions: thick solid line with higher alpha
                         lineColor.a = 0.9f;
@@ -535,7 +535,7 @@ namespace ProjectArk.Level.Editor
                 if (startingRoom != null) return startingRoom;
             }
 
-            // Fallback: first Safe node, then legacy Safe room
+            // Fallback: first Safe node, then NodeType.Safe room
             foreach (var room in rooms)
             {
                 if (room != null && room.NodeType == RoomNodeType.Safe) return room;
@@ -543,7 +543,7 @@ namespace ProjectArk.Level.Editor
 
             foreach (var room in rooms)
             {
-                if (room != null && room.Type == RoomType.Safe) return room;
+            if (room != null && room.NodeType == RoomNodeType.Safe) return room;
             }
 
             // Fallback: first room
@@ -559,7 +559,7 @@ namespace ProjectArk.Level.Editor
 
             foreach (var room in rooms)
             {
-                if (room != null && room.Type == RoomType.Boss) return room;
+            if (room != null && room.NodeType == RoomNodeType.Boss) return room;
             }
 
             return null;

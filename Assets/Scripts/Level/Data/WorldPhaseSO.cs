@@ -48,6 +48,10 @@ namespace ProjectArk.Level
         [Tooltip("Low-pass cutoff frequency (Hz). Only used if _applyLowPassFilter is true.")]
         [SerializeField] private float _lowPassCutoffHz = 800f;
 
+        [Header("Post-Processing")]
+        [Tooltip("Override vignette intensity for this phase. Set to -1 to use AmbienceController's default.")]
+        [SerializeField] private float _vignetteIntensityOverride = -1f;
+
         // ──────────────────── Gameplay Modifiers ────────────────────
 
         [Header("Gameplay Modifiers")]
@@ -85,6 +89,15 @@ namespace ProjectArk.Level
 
         /// <summary> Low-pass cutoff frequency. </summary>
         public float LowPassCutoffHz => _lowPassCutoffHz;
+
+        /// <summary>
+        /// Vignette intensity override for this phase.
+        /// Returns -1 if no override is set (AmbienceController will use its default).
+        /// </summary>
+        public float VignetteIntensityOverride => _vignetteIntensityOverride;
+
+        /// <summary> Whether this phase has a custom vignette intensity. </summary>
+        public bool HasVignetteOverride => _vignetteIntensityOverride >= 0f;
 
         /// <summary> Enemy damage multiplier. </summary>
         public float EnemyDamageMultiplier => _enemyDamageMultiplier;

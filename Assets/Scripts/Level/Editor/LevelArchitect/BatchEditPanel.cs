@@ -14,7 +14,6 @@ namespace ProjectArk.Level.Editor
     {
         // ──────────────────── Batch Edit State ────────────────────
 
-        private static RoomType _batchRoomType = RoomType.Normal;
         private static RoomNodeType _batchNodeType = RoomNodeType.Transit;
         private static int _batchFloorLevel;
         private static RoomSO _batchRoomSO;
@@ -22,7 +21,6 @@ namespace ProjectArk.Level.Editor
 
         // ──────────────────── Copy/Paste State ────────────────────
 
-        private static RoomType _copiedRoomType;
         private static RoomNodeType _copiedNodeType;
         private static int _copiedFloorLevel;
         private static Vector2 _copiedSize;
@@ -41,56 +39,39 @@ namespace ProjectArk.Level.Editor
 
             EditorGUILayout.BeginVertical("HelpBox");
 
-            _batchRoomType = (RoomType)EditorGUILayout.EnumPopup("Room Type", _batchRoomType);
             _batchNodeType = (RoomNodeType)EditorGUILayout.EnumPopup("Node Type", _batchNodeType);
             _batchFloorLevel = EditorGUILayout.IntField("Floor Level", _batchFloorLevel);
             _batchSize = EditorGUILayout.Vector2Field("Size", _batchSize);
             _batchRoomSO = (RoomSO)EditorGUILayout.ObjectField("RoomSO", _batchRoomSO, typeof(RoomSO), false);
 
-            EditorGUILayout.HelpBox("Apply Node 与 Migrate Legacy→Explicit 都会写入显式 NodeType，并关闭 legacy 映射模式。", MessageType.None);
             GUILayout.Space(4);
 
             EditorGUILayout.BeginHorizontal();
-
-            if (GUILayout.Button("Apply Type", GUILayout.Height(22)))
-            {
-                ApplyBatchRoomType(selectedRooms, _batchRoomType);
-            }
 
             if (GUILayout.Button("Apply Node", GUILayout.Height(22)))
             {
                 ApplyBatchNodeType(selectedRooms, _batchNodeType);
             }
 
-            EditorGUILayout.EndHorizontal();
-
-            EditorGUILayout.BeginHorizontal();
-
             if (GUILayout.Button("Apply Floor", GUILayout.Height(22)))
             {
                 ApplyBatchFloorLevel(selectedRooms, _batchFloorLevel);
             }
+
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal();
 
             if (GUILayout.Button("Apply Size", GUILayout.Height(22)))
             {
                 ApplyBatchSize(selectedRooms, _batchSize);
             }
 
-            EditorGUILayout.EndHorizontal();
-
-            EditorGUILayout.BeginHorizontal();
-
             if (GUILayout.Button("Apply All", GUILayout.Height(22)))
             {
-                ApplyBatchRoomType(selectedRooms, _batchRoomType);
                 ApplyBatchNodeType(selectedRooms, _batchNodeType);
                 ApplyBatchFloorLevel(selectedRooms, _batchFloorLevel);
                 ApplyBatchSize(selectedRooms, _batchSize);
-            }
-
-            if (GUILayout.Button("Migrate Legacy→Explicit", GUILayout.Height(22)))
-            {
-                MigrateRoomNodeTypesToExplicit(selectedRooms);
             }
 
             EditorGUILayout.EndHorizontal();
@@ -112,13 +93,10 @@ namespace ProjectArk.Level.Editor
             {
                 var room = selectedRooms[0];
                 menu.AddItem(new GUIContent("Set as Entry Room"), false, () => SetAsEntryRoom(room));
-                menu.AddItem(new GUIContent("Set as Boss Room"), false, () => SetRoomType(room, RoomType.Boss));
-                menu.AddItem(new GUIContent("Set as Arena Room"), false, () => SetRoomType(room, RoomType.Arena));
-                menu.AddItem(new GUIContent("Set as Safe Room"), false, () => SetRoomType(room, RoomType.Safe));
-                menu.AddItem(new GUIContent("Set as Normal Room"), false, () => SetRoomType(room, RoomType.Normal));
-                menu.AddSeparator("");
-
-                menu.AddItem(new GUIContent("Migrate NodeType From Legacy"), false, () => MigrateRoomNodeTypeToExplicit(room));
+                menu.AddItem(new GUIContent("Set as Boss Room"), false, () => SetNodeType(room, RoomNodeType.Boss));
+                menu.AddItem(new GUIContent("Set as Arena Room"), false, () => SetNodeType(room, RoomNodeType.Resolution));
+                menu.AddItem(new GUIContent("Set as Safe Room"), false, () => SetNodeType(room, RoomNodeType.Safe));
+                menu.AddItem(new GUIContent("Set as Transit Room"), false, () => SetNodeType(room, RoomNodeType.Transit));
                 menu.AddSeparator("");
 
                 menu.AddItem(new GUIContent("Assign EncounterSO..."), false, () => ShowEncounterPicker(room));
@@ -140,10 +118,7 @@ namespace ProjectArk.Level.Editor
 
             menu.AddSeparator("");
 
-            menu.AddItem(new GUIContent("Migrate NodeType From Legacy"), false, () => MigrateRoomNodeTypesToExplicit(selectedRooms));
-            menu.AddSeparator("");
-
-            menu.AddItem(new GUIContent("Resize to Default (Normal)"), false,
+            menu.AddItem(new GUIContent("Resize to Default (Transit)"), false,
                 () => ApplyBatchSize(selectedRooms, new Vector2(20, 15)));
             menu.AddItem(new GUIContent("Resize to Default (Arena)"), false,
                 () => ApplyBatchSize(selectedRooms, new Vector2(25, 20)));
@@ -158,50 +133,7 @@ namespace ProjectArk.Level.Editor
             menu.ShowAsContext();
         }
 
-        /// <summary>
-        /// Migrates every room in the current scene to an explicit NodeType.
-        /// </summary>
-        public static int MigrateSceneRoomsToExplicitNodeType()
-        {
-            var rooms = new List<Room>(Object.FindObjectsByType<Room>(FindObjectsSortMode.None));
-            return MigrateRoomNodeTypesToExplicit(rooms);
-        }
-
-        /// <summary>
-        /// Migrates a single room to an explicit NodeType.
-        /// </summary>
-        public static bool MigrateRoomNodeTypeToExplicit(Room room)
-        {
-            if (room == null) return false;
-            return MigrateRoomNodeTypesToExplicit(new List<Room> { room }) > 0;
-        }
-
         // ──────────────────── Batch Apply ────────────────────
-
-        private static void ApplyBatchRoomType(List<Room> rooms, RoomType type)
-        {
-            var objects = CollectRoomDataObjects(rooms);
-            if (objects.Count == 0) return;
-
-            Undo.RecordObjects(objects.ToArray(), "Batch Set Room Type");
-
-            RoomNodeType mappedNodeType = RoomSO.MapLegacyTypeToNodeType(type);
-
-            foreach (var room in rooms)
-            {
-                if (room == null || room.Data == null) continue;
-
-                var serialized = new SerializedObject(room.Data);
-                serialized.FindProperty("_type").enumValueIndex = (int)type;
-                serialized.FindProperty("_nodeType").enumValueIndex = (int)mappedNodeType;
-                serialized.FindProperty("_useLegacyTypeMapping").boolValue = false;
-                serialized.ApplyModifiedProperties();
-                EditorUtility.SetDirty(room.Data);
-            }
-
-            Debug.Log($"[BatchEdit] Set {objects.Count} room(s) to type '{type}' and synced explicit NodeType to '{mappedNodeType}'.");
-            SceneView.RepaintAll();
-        }
 
         private static void ApplyBatchNodeType(List<Room> rooms, RoomNodeType nodeType)
         {
@@ -216,12 +148,11 @@ namespace ProjectArk.Level.Editor
 
                 var serialized = new SerializedObject(room.Data);
                 serialized.FindProperty("_nodeType").enumValueIndex = (int)nodeType;
-                serialized.FindProperty("_useLegacyTypeMapping").boolValue = false;
                 serialized.ApplyModifiedProperties();
                 EditorUtility.SetDirty(room.Data);
             }
 
-            Debug.Log($"[BatchEdit] Set {objects.Count} room(s) to explicit NodeType '{nodeType}'.");
+            Debug.Log($"[BatchEdit] Set {objects.Count} room(s) to NodeType '{nodeType}'.");
             SceneView.RepaintAll();
         }
 
@@ -295,38 +226,6 @@ namespace ProjectArk.Level.Editor
             SceneView.RepaintAll();
         }
 
-        private static int MigrateRoomNodeTypesToExplicit(List<Room> rooms)
-        {
-            var objects = CollectRoomDataObjects(rooms);
-            if (objects.Count == 0) return 0;
-
-            Undo.RecordObjects(objects.ToArray(), "Migrate Room NodeTypes To Explicit");
-
-            int migratedFromLegacy = 0;
-            foreach (var room in rooms)
-            {
-                if (room == null || room.Data == null) continue;
-
-                RoomNodeType resolvedNodeType = room.Data.NodeType;
-                bool wasUsingLegacyMapping = room.Data.UseLegacyTypeMapping;
-
-                var serialized = new SerializedObject(room.Data);
-                serialized.FindProperty("_nodeType").enumValueIndex = (int)resolvedNodeType;
-                serialized.FindProperty("_useLegacyTypeMapping").boolValue = false;
-                serialized.ApplyModifiedProperties();
-                EditorUtility.SetDirty(room.Data);
-
-                if (wasUsingLegacyMapping)
-                {
-                    migratedFromLegacy++;
-                }
-            }
-
-            Debug.Log($"[BatchEdit] Explicitized NodeType for {objects.Count} room(s); {migratedFromLegacy} room(s) were migrated from legacy mapping.");
-            SceneView.RepaintAll();
-            return migratedFromLegacy;
-        }
-
         private static List<Object> CollectRoomDataObjects(List<Room> rooms)
         {
             var objects = new List<Object>();
@@ -343,21 +242,19 @@ namespace ProjectArk.Level.Editor
 
         // ──────────────────── Context Actions ────────────────────
 
-        private static void SetRoomType(Room room, RoomType type)
+        private static void SetNodeType(Room room, RoomNodeType nodeType)
         {
             if (room == null || room.Data == null) return;
 
-            Undo.RecordObject(room.Data, "Set Room Type");
+            Undo.RecordObject(room.Data, "Set Room NodeType");
 
             var serialized = new SerializedObject(room.Data);
-            serialized.FindProperty("_type").enumValueIndex = (int)type;
-            serialized.FindProperty("_nodeType").enumValueIndex = (int)RoomSO.MapLegacyTypeToNodeType(type);
-            serialized.FindProperty("_useLegacyTypeMapping").boolValue = false;
+            serialized.FindProperty("_nodeType").enumValueIndex = (int)nodeType;
             serialized.ApplyModifiedProperties();
             EditorUtility.SetDirty(room.Data);
 
-            // Add/remove ArenaController based on type
-            if (type == RoomType.Arena || type == RoomType.Boss)
+            // Add ArenaController for combat rooms
+            if (nodeType == RoomNodeType.Resolution || nodeType == RoomNodeType.Boss)
             {
                 if (room.GetComponent<ArenaController>() == null)
                 {
@@ -396,8 +293,6 @@ namespace ProjectArk.Level.Editor
 
             EditorGUIUtility.ShowObjectPicker<EncounterSO>(room.Data.Encounter, false, "", 0);
 
-            // Note: The user would pick the encounter in the Object Picker that opens.
-            // We register a callback to handle the selection.
             EditorApplication.update += OnEncounterPickerUpdate;
             _encounterPickerTargetRoom = room;
         }
@@ -446,8 +341,7 @@ namespace ProjectArk.Level.Editor
         {
             if (room == null) return;
 
-            _copiedRoomType = room.Type;
-            _copiedNodeType = room.Data != null ? room.Data.NodeType : RoomSO.MapLegacyTypeToNodeType(room.Type);
+            _copiedNodeType = room.Data != null ? room.Data.NodeType : RoomNodeType.Transit;
             _copiedFloorLevel = room.Data != null ? room.Data.FloorLevel : 0;
 
             var box = room.GetComponent<BoxCollider2D>();
@@ -461,7 +355,6 @@ namespace ProjectArk.Level.Editor
         {
             if (!_hasCopiedConfig) return;
 
-            ApplyBatchRoomType(rooms, _copiedRoomType);
             ApplyBatchNodeType(rooms, _copiedNodeType);
             ApplyBatchFloorLevel(rooms, _copiedFloorLevel);
             ApplyBatchSize(rooms, _copiedSize);

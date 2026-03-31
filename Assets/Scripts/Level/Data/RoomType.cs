@@ -4,6 +4,11 @@ namespace ProjectArk.Level
     /// Categorizes rooms for gameplay logic (door locking, encounter triggering, map display).
     /// See also: ShebaRoomGrammar.md § 2.2 for the 8-type design-side taxonomy.
     /// </summary>
+    /// <remarks>
+    /// Obsolete: use <see cref="RoomNodeType"/> instead.
+    /// This enum is retained only for legacy asset data that has not yet been migrated.
+    /// </remarks>
+    [System.Obsolete("Use RoomNodeType instead. RoomType will be removed after all assets are migrated.")]
     public enum RoomType
     {
         /// <summary> Standard room with optional enemies. Can leave freely. </summary>

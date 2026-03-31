@@ -193,9 +193,17 @@ namespace ProjectArk.Level
 
         private void DistributePlayerState(PlayerSaveData data)
         {
-            // ShipHealth → HP (restore to saved HP)
-            // Note: ShipHealth.ResetHealth() resets to max; we may need a SetHP method.
-            // For now, log a note — the actual HP restore happens in GameFlowManager's respawn.
+            // ShipHealth → restore HP to saved value
+            var shipHealth = ServiceLocator.Get<ShipHealth>();
+            if (shipHealth != null)
+            {
+                shipHealth.SetHP(data.PlayerState.CurrentHP);
+            }
+            else
+            {
+                Debug.LogWarning("[SaveBridge] ShipHealth not found — HP will not be restored from save.");
+            }
+
             Debug.Log($"[SaveBridge] Loaded player state: HP={data.PlayerState.CurrentHP}/{data.PlayerState.MaxHP}, " +
                       $"Checkpoint={data.PlayerState.LastCheckpointID}");
         }

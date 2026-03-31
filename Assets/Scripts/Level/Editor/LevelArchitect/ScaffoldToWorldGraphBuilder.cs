@@ -217,7 +217,7 @@ namespace ProjectArk.Level.Editor
                 var node = new RoomNodeData
                 {
                     RoomID = room.RoomID,
-                    NodeType = MapRoomTypeToNodeType(room.RoomType, room.DisplayName),
+                    NodeType = room.NodeType,
                     GateIDs = gateIDs.ToArray(),
                     DesignerNote = room.DisplayName,
                     EditorPosition = new Vector2(room.Position.x, room.Position.y) * 10f // 缩放到编辑器坐标
@@ -265,8 +265,7 @@ namespace ProjectArk.Level.Editor
                             ToRoomID = toID,
                             ToGateID = toGateID,
                             Type = connType,
-                            IsLayerTransition = conn.IsLayerTransition,
-                            DesignerNote = ""
+                        IsLayerTransition = conn.Ceremony >= TransitionCeremony.Layer,
                         });
                         processedPairs.Add(forwardKey);
                     }
@@ -282,7 +281,7 @@ namespace ProjectArk.Level.Editor
                             ToRoomID = fromID,
                             ToGateID = fromGateID,
                             Type = connType,
-                            IsLayerTransition = conn.IsLayerTransition,
+                            IsLayerTransition = conn.Ceremony >= TransitionCeremony.Layer,
                             DesignerNote = "(auto-reverse)"
                         });
                         processedPairs.Add(reverseKey);
@@ -295,47 +294,7 @@ namespace ProjectArk.Level.Editor
 
         // ──────────────────── Mapping Tables ────────────────────
 
-        /// <summary>
-        /// Maps the old RoomType enum to the new RoomNodeType enum.
-        /// Uses room display name as hint for ambiguous cases.
-        /// </summary>
-        private static RoomNodeType MapRoomTypeToNodeType(RoomType roomType, string displayName)
-        {
-            // 先根据显示名称中的关键字做精确匹配
-            string lower = (displayName ?? "").ToLowerInvariant();
-
-            if (lower.Contains("锚点") || lower.Contains("anchor"))
-                return RoomNodeType.Anchor;
-            if (lower.Contains("回路") || lower.Contains("loop") || lower.Contains("shortcut") || lower.Contains("捷径"))
-                return RoomNodeType.Loop;
-            if (lower.Contains("门槛") || lower.Contains("threshold") || lower.Contains("gate"))
-                return RoomNodeType.Threshold;
-            if (lower.Contains("压力") || lower.Contains("pressure"))
-                return RoomNodeType.Pressure;
-            if (lower.Contains("清算") || lower.Contains("resolution") || lower.Contains("arena"))
-                return RoomNodeType.Resolution;
-            if (lower.Contains("回报") || lower.Contains("reward"))
-                return RoomNodeType.Reward;
-            if (lower.Contains("收束") || lower.Contains("hub") || lower.Contains("枢纽"))
-                return RoomNodeType.Hub;
-            if (lower.Contains("transit") || lower.Contains("引导") || lower.Contains("过路"))
-                return RoomNodeType.Transit;
-
-            // Fallback: 基于 RoomType 枚举
-            switch (roomType)
-            {
-                case RoomType.Safe:     return RoomNodeType.Safe;
-                case RoomType.Normal:   return RoomNodeType.Transit;
-                case RoomType.Arena:    return RoomNodeType.Resolution;
-                case RoomType.Boss:     return RoomNodeType.Boss;
-                case RoomType.Corridor: return RoomNodeType.Transit;
-                case RoomType.Shop:     return RoomNodeType.Safe;
-                case RoomType.Hub:      return RoomNodeType.Hub;
-                case RoomType.Gate:     return RoomNodeType.Threshold;
-                default:                return RoomNodeType.Transit;
-            }
-        }
-
+        // MapRoomTypeToNodeType removed — ScaffoldRoom now uses NodeType directly.
         /// <summary>
         /// Infers ConnectionType from scaffold connection data and room context.
         /// </summary>
@@ -343,7 +302,7 @@ namespace ProjectArk.Level.Editor
             LevelScaffoldData scaffold)
         {
             // 层间过渡 → Identity（空间章节分割）
-            if (conn.IsLayerTransition)
+            if (conn.Ceremony >= TransitionCeremony.Layer)
                 return ConnectionType.Identity;
 
             // 从 DoorElement 的配置推断
@@ -369,9 +328,9 @@ namespace ProjectArk.Level.Editor
             var targetRoom = scaffold.Rooms.FirstOrDefault(r => r.RoomID == conn.TargetRoomID);
             if (targetRoom != null)
             {
-                if (targetRoom.RoomType == RoomType.Boss)
+                if (targetRoom.NodeType == RoomNodeType.Boss)
                     return ConnectionType.Challenge;
-                if (targetRoom.RoomType == RoomType.Arena)
+                if (targetRoom.NodeType == RoomNodeType.Resolution)
                     return ConnectionType.Challenge;
             }
 

@@ -283,10 +283,8 @@ namespace ProjectArk.Level.Editor
                 Repaint();
             }
 
-            if (GUILayout.Button("Migrate Scene NodeTypes", GUILayout.Height(22)))
+            if (GUILayout.Button("Validate Scene", GUILayout.Height(22)))
             {
-                int migratedCount = BatchEditPanel.MigrateSceneRoomsToExplicitNodeType();
-                Debug.Log($"[LevelArchitect] Migrated {migratedCount} room(s) from legacy NodeType mapping to explicit NodeType.");
                 LevelValidator.ValidateAll();
                 Repaint();
             }
@@ -545,7 +543,7 @@ namespace ProjectArk.Level.Editor
                     EditorGUILayout.BeginHorizontal();
 
                     var prevColor = GUI.color;
-                    GUI.color = LevelArchitectWindow.GetRoomTypeColor(preset.RoomTypeValue);
+                    GUI.color = LevelArchitectWindow.GetRoomTypeColor(preset.NodeTypeValue);
                     GUILayout.Label("■", GUILayout.Width(14));
                     GUI.color = prevColor;
 
@@ -620,20 +618,12 @@ namespace ProjectArk.Level.Editor
 
             GUILayout.Label($"ID: {room.RoomID}");
             GUILayout.Label($"Node Type: {room.NodeType}");
-            GUILayout.Label($"Legacy Type: {room.Type}");
 
             if (room.Data != null)
             {
-                GUILayout.Label($"Node Source: {(room.Data.UseLegacyTypeMapping ? "Legacy Mapping" : "Explicit")}");
-                GUILayout.Label($"Explicit Node: {room.Data.ExplicitNodeType}");
-                GUILayout.Label($"Mapped Node: {room.Data.LegacyMappedNodeType}");
+                GUILayout.Label($"Explicit Node: {room.Data.NodeType}");
                 GUILayout.Label($"Floor: {room.Data.FloorLevel}");
                 GUILayout.Label($"SO: {room.Data.name}");
-
-                if (room.Data.UseLegacyTypeMapping && GUILayout.Button("Make NodeType Explicit", GUILayout.Height(20)))
-                {
-                    BatchEditPanel.MigrateRoomNodeTypeToExplicit(room);
-                }
 
                 if (room.Data.Encounter != null)
                 {
@@ -784,32 +774,32 @@ namespace ProjectArk.Level.Editor
         }
 
         /// <summary>
-        /// Returns the display color for a room type.
+        /// Returns the display color for a RoomNodeType (fill).
         /// </summary>
-        public static Color GetRoomTypeColor(RoomType type)
+        public static Color GetRoomTypeColor(RoomNodeType type)
         {
             switch (type)
             {
-                case RoomType.Normal: return new Color(0.3f, 0.5f, 0.9f, 0.5f);   // Blue
-                case RoomType.Arena:  return new Color(0.9f, 0.6f, 0.2f, 0.5f);   // Orange
-                case RoomType.Boss:   return new Color(0.9f, 0.2f, 0.2f, 0.5f);   // Red
-                case RoomType.Safe:   return new Color(0.2f, 0.8f, 0.3f, 0.5f);   // Green
-                default:              return new Color(0.5f, 0.5f, 0.5f, 0.5f);   // Gray
+                case RoomNodeType.Transit:    return new Color(0.3f, 0.5f, 0.9f, 0.5f);   // Blue
+                case RoomNodeType.Resolution: return new Color(0.9f, 0.6f, 0.2f, 0.5f);   // Orange
+                case RoomNodeType.Boss:       return new Color(0.9f, 0.2f, 0.2f, 0.5f);   // Red
+                case RoomNodeType.Safe:       return new Color(0.2f, 0.8f, 0.3f, 0.5f);   // Green
+                default:                      return new Color(0.5f, 0.5f, 0.5f, 0.5f);   // Gray
             }
         }
 
         /// <summary>
-        /// Returns the outline color for a room type (full opacity).
+        /// Returns the outline color for a RoomNodeType (full opacity).
         /// </summary>
-        public static Color GetRoomTypeOutlineColor(RoomType type)
+        public static Color GetRoomTypeOutlineColor(RoomNodeType type)
         {
             switch (type)
             {
-                case RoomType.Normal: return new Color(0.3f, 0.5f, 0.9f, 1f);
-                case RoomType.Arena:  return new Color(0.9f, 0.6f, 0.2f, 1f);
-                case RoomType.Boss:   return new Color(0.9f, 0.2f, 0.2f, 1f);
-                case RoomType.Safe:   return new Color(0.2f, 0.8f, 0.3f, 1f);
-                default:              return new Color(0.5f, 0.5f, 0.5f, 1f);
+                case RoomNodeType.Transit:    return new Color(0.3f, 0.5f, 0.9f, 1f);
+                case RoomNodeType.Resolution: return new Color(0.9f, 0.6f, 0.2f, 1f);
+                case RoomNodeType.Boss:       return new Color(0.9f, 0.2f, 0.2f, 1f);
+                case RoomNodeType.Safe:       return new Color(0.2f, 0.8f, 0.3f, 1f);
+                default:                      return new Color(0.5f, 0.5f, 0.5f, 1f);
             }
         }
 

@@ -10,8 +10,9 @@ namespace ProjectArk.Level
     /// Wave-based spawn strategy driven by EncounterSO data.
     /// Spawns enemies wave-by-wave; each wave starts after the previous wave is fully cleared.
     /// Fires OnEncounterComplete when all waves are defeated.
+    /// Implements IDisposable to ensure the internal CancellationTokenSource is always released.
     /// </summary>
-    public class WaveSpawnStrategy : ISpawnStrategy
+    public class WaveSpawnStrategy : ISpawnStrategy, System.IDisposable
     {
         private readonly EncounterSO _encounter;
         private EnemySpawner _spawner;
@@ -74,6 +75,17 @@ namespace ProjectArk.Level
             _currentWaveIndex = 0;
             _aliveInWave = 0;
             _isComplete = false;
+        }
+
+        /// <summary>
+        /// Release the internal CancellationTokenSource.
+        /// Call this when the strategy is no longer needed (e.g., ArenaController cleanup).
+        /// </summary>
+        public void Dispose()
+        {
+            _cts?.Cancel();
+            _cts?.Dispose();
+            _cts = null;
         }
 
         private async UniTaskVoid SpawnCurrentWave()

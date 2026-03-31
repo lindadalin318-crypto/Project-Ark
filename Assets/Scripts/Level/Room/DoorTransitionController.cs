@@ -96,6 +96,8 @@ namespace ProjectArk.Level
         private void OnDestroy()
         {
             CancelTransition();
+            // Reset the static door cooldown so it doesn't bleed into the next scene load
+            Door.ResetGlobalTransitionCooldown();
             ServiceLocator.Unregister(this);
         }
 
@@ -156,7 +158,7 @@ namespace ProjectArk.Level
                 ResolveTarget(door, out Room targetRoom, out Transform targetSpawn);
 
                 // ── Ceremony 决定演出参数 ──
-                var ceremony = door.EffectiveCeremony;
+                var ceremony = door.Ceremony;
                 float fadeDuration = GetFadeDuration(ceremony);
 
                 var inputHandler = ServiceLocator.Get<InputHandler>();

@@ -237,8 +237,8 @@ namespace ProjectArk.Level
         [Tooltip("Display name for this room")]
         [SerializeField] private string _displayName = "New Room";
 
-        [Tooltip("Type of room")]
-        [SerializeField] private RoomType _roomType = RoomType.Normal;
+        [Tooltip("Pacing node type of this room")]
+        [SerializeField] private RoomNodeType _nodeType = RoomNodeType.Transit;
 
         [Tooltip("Position in world space")]
         [SerializeField] private Vector3 _position = Vector3.zero;
@@ -263,10 +263,10 @@ namespace ProjectArk.Level
             get => _displayName;
             set => _displayName = value;
         }
-        public RoomType RoomType
+        public RoomNodeType NodeType
         {
-            get => _roomType;
-            set => _roomType = value;
+            get => _nodeType;
+            set => _nodeType = value;
         }
         public Vector3 Position
         {
@@ -327,8 +327,8 @@ namespace ProjectArk.Level
         [Tooltip("Direction the door faces (towards the target room)")]
         [SerializeField] private Vector2 _doorDirection;
 
-        [Tooltip("Is this a layer transition (longer fade)")]
-        [SerializeField] private bool _isLayerTransition;
+        [Tooltip("Transition ceremony level for this connection")]
+        [SerializeField] private TransitionCeremony _ceremony = TransitionCeremony.Standard;
 
         [Tooltip("Custom spawn offset derived from door element position in level designer (zero = use default edge midpoint)")]
         [SerializeField] private Vector3 _spawnOffset;
@@ -351,10 +351,10 @@ namespace ProjectArk.Level
             get => _doorDirection;
             set => _doorDirection = value;
         }
-        public bool IsLayerTransition
+        public TransitionCeremony Ceremony
         {
-            get => _isLayerTransition;
-            set => _isLayerTransition = value;
+            get => _ceremony;
+            set => _ceremony = value;
         }
         public Vector3 SpawnOffset
         {

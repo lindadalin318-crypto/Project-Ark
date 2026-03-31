@@ -12,7 +12,8 @@ namespace ProjectArk.Level
     /// "this specific door was permanently opened".
     ///
     /// Persisted via <see cref="SaveBridge"/> ↔ <see cref="ProgressSaveData.Flags"/>
-    /// using key format: room_{roomID}_{flagKey}.
+    /// using key format: room_{roomID}::{flagKey}.
+    /// The '::' separator avoids ambiguity when roomID contains underscores (e.g., "SH_R01").
     ///
     /// Registers with <see cref="ServiceLocator"/> in Awake.
     /// </summary>
@@ -123,7 +124,8 @@ namespace ProjectArk.Level
                 {
                     if (value) // Only persist true flags to save space
                     {
-                        data.Flags.Add(new SaveFlag($"{FLAG_PREFIX}{roomID}_{flagKey}", true));
+                        // Use '::' as separator to avoid ambiguity with underscores in roomID
+                        data.Flags.Add(new SaveFlag($"{FLAG_PREFIX}{roomID}::{flagKey}", true));
                     }
                 }
             }
@@ -144,19 +146,15 @@ namespace ProjectArk.Level
             {
                 if (!flag.Key.StartsWith(FLAG_PREFIX) || !flag.Value) continue;
 
-                // Parse: "room_{roomID}_{flagKey}"
-                // We need to split after the prefix to get roomID and flagKey.
-                // Format: room_SH-R01_crystal_wall_01
-                // Strategy: roomID is up to the first '_' after "room_",
-                // but roomID itself can contain '-'. flagKey is everything after roomID + '_'.
-                // Since roomIDs are well-defined (e.g., "SH-R01") and don't contain '_',
-                // we split on the SECOND '_' after prefix removal.
-                string remainder = flag.Key.Substring(FLAG_PREFIX.Length); // "SH-R01_crystal_wall_01"
-                int separatorIndex = remainder.IndexOf('_');
-                if (separatorIndex <= 0 || separatorIndex >= remainder.Length - 1) continue;
+                // Parse: "room_{roomID}::{flagKey}"
+                // The '::' separator is unambiguous even when roomID contains underscores.
+                // Format: room_SH_R01::crystal_wall_01
+                string remainder = flag.Key.Substring(FLAG_PREFIX.Length); // "SH_R01::crystal_wall_01"
+                int separatorIndex = remainder.IndexOf("::", System.StringComparison.Ordinal);
+                if (separatorIndex <= 0 || separatorIndex >= remainder.Length - 2) continue;
 
                 string roomID = remainder.Substring(0, separatorIndex);
-                string flagKey = remainder.Substring(separatorIndex + 1);
+                string flagKey = remainder.Substring(separatorIndex + 2); // skip '::'
 
                 if (!_flags.TryGetValue(roomID, out var roomFlags))
                 {
