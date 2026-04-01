@@ -12297,3 +12297,48 @@ Secondary 轨道的 SAIL/SAT 格子现在显示为无效放置目标（红色高
 
 ### 技术
 代码审查 → 逐文件 multi_replace/replace_in_file → dotnet build 编译验证（0 个错误）。
+
+---
+
+## 关卡模块全面代码审计与清理 — 2026-04-01 09:44
+
+### 修改文件
+- `Assets/Scripts/Level/WorldClock/WorldClock.cs`
+- `Assets/Scripts/Level/DynamicWorld/ScheduledBehaviour.cs`
+- `Assets/Scripts/Level/DynamicWorld/WorldEventTrigger.cs`
+- `Assets/Scripts/Level/Room/DoorTransitionController.cs`
+- `Assets/Scripts/Level/Data/RoomNodeType.cs`
+- `Assets/Scripts/Level/Data/RoomType.cs` ← **已删除**
+- `Assets/Scripts/Level/Editor/LevelArchitect/ScaffoldToWorldGraphBuilder.cs`
+- `Assets/Scripts/Level/Room/RoomManager.cs`
+- `Assets/Scripts/Level/Map/MinimapManager.cs`
+- `Assets/Scripts/Level/Camera/CameraDirector.cs`
+- `Assets/Scripts/Level/Camera/CameraTrigger.cs`
+- `Assets/Scripts/Level/Hazard/ContactHazard.cs`
+- `Assets/Scripts/Level/Hazard/DamageZone.cs`
+- `Assets/Scripts/Level/Hazard/TimedHazard.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomBlockoutRenderer.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/DoorWiringService.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/ScaffoldSceneBinder.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/SceneScanner.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/BlockoutModeHandler.cs`
+- `ProjectArk.Level.csproj`
+
+### 内容
+1. **删除 `RoomType.cs`**：已标记 `[System.Obsolete]` 的枚举，Level 模块内已无任何代码引用，彻底移除。同步更新 `RoomNodeType.cs` 注释和 `ScaffoldToWorldGraphBuilder.cs` 注释。
+2. **删除死代码**：`DoorTransitionController.FindSpawnPointForGate()` 中一段只有注释没有实际逻辑的空 `foreach` 分支。
+3. **删除未使用变量**：`WorldClock.Update()` 中声明但从未读取的 `previousNormalized` 局部变量。
+4. **删除未使用字段**：`ScheduledBehaviour` 中声明但从未读取的 `_initialized` 字段。
+5. **简化空方法**：`WorldEventTrigger.SaveTriggeredState()` 调用了一个完全空的 `SetFlagInSaveData()` 方法（注释说"will be picked up"但实际无任何操作），删除该空方法，简化调用链。
+6. **修复过时 API（16 处）**：将 Level 模块所有 `FindObjectsByType<T>(FindObjectsSortMode.None)` 替换为 `FindObjectsByType<T>()`（Unity 6 新 API）。
+7. **修复过时 API（1 处）**：`CameraDirector` 中 `FindFirstObjectByType` → `FindAnyObjectByType`。
+8. **修复过时 API（6 处）**：`ContactHazard`、`DamageZone`、`TimedHazard` 中 `GetInstanceID()` → 改用 `Dictionary<GameObject, float>` 作为 key，完全避免 ID 问题。
+9. **消除 CS4014 警告**：`CameraDirector` 中 `Tween.Custom` 返回值用 `_ =` 丢弃。
+
+### 目的
+精简逻辑、删除 obsolete 功能、消除过时 API 警告，提升代码可读性和可维护性。
+
+### 技术
+全面代码审计 → grep 搜索定位问题 → replace_in_file/multi_replace/terminal sed 批量修复 → dotnet build 验证（0 错误，警告从 41 降至 20）。

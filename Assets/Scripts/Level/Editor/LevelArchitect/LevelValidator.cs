@@ -53,7 +53,7 @@ namespace ProjectArk.Level.Editor
             _lastResults.Clear();
             _fatalRoomInstanceIDs.Clear();
 
-            var rooms = UnityEngine.Object.FindObjectsByType<Room>(FindObjectsSortMode.None);
+            var rooms = UnityEngine.Object.FindObjectsByType<Room>();
 
             foreach (var room in rooms)
             {
@@ -98,7 +98,7 @@ namespace ProjectArk.Level.Editor
         {
             _fatalRoomInstanceIDs.Clear();
 
-            var rooms = UnityEngine.Object.FindObjectsByType<Room>(FindObjectsSortMode.None);
+            var rooms = UnityEngine.Object.FindObjectsByType<Room>();
             foreach (var room in rooms)
             {
                 if (room == null) continue;

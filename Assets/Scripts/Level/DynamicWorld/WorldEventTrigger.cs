@@ -125,23 +125,14 @@ namespace ProjectArk.Level
             var saveBridge = ServiceLocator.Get<SaveBridge>();
             if (saveBridge != null)
             {
-                // 先把 flag 写入当前存档数据
-                SetFlagInSaveData();
                 saveBridge.SaveAll();
+                return;
             }
-            else
-            {
-                // Fallback: 直接局部保存
-                SetFlagInSaveData();
-                var data = SaveManager.Load(0) ?? new PlayerSaveData();
-                SetFlagOnData(data);
-                SaveManager.Save(data, 0);
-            }
-        }
 
-        private void SetFlagInSaveData()
-        {
-            // This will be picked up by SaveBridge.SaveAll() which reads flags
+            // Fallback: SaveBridge 不可用时直接写入
+            var data = SaveManager.Load(0) ?? new PlayerSaveData();
+            SetFlagOnData(data);
+            SaveManager.Save(data, 0);
         }
 
         private void SetFlagOnData(PlayerSaveData data)

@@ -55,7 +55,7 @@ namespace ProjectArk.Level.Editor
             UnregisteredRooms.Clear();
             MissingRooms.Clear();
 
-            var sceneRooms = Object.FindObjectsByType<Room>(FindObjectsSortMode.None);
+            var sceneRooms = Object.FindObjectsByType<Room>();
 
             // Build scene room lookup
             var sceneRoomByID = new Dictionary<string, Room>();

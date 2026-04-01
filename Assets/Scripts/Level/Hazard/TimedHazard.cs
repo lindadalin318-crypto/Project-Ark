@@ -42,7 +42,7 @@ namespace ProjectArk.Level
 
         private float _cycleTimer;
         private bool _isActive;
-        private readonly Dictionary<int, float> _cooldownExpiry = new();
+        private readonly Dictionary<GameObject, float> _cooldownExpiry = new();
 
         // ──────────────────── Lifecycle ────────────────────
 
@@ -119,21 +119,21 @@ namespace ProjectArk.Level
             if (!_isActive) return;
             if (!IsValidTarget(other.gameObject)) return;
 
-            int id = other.gameObject.GetInstanceID();
+            GameObject target = other.gameObject;
             float now = Time.time;
 
             // 每目标冷却
-            if (_cooldownExpiry.TryGetValue(id, out float expiry) && now < expiry)
+            if (_cooldownExpiry.TryGetValue(target, out float expiry) && now < expiry)
                 return;
 
-            ApplyDamage(other.gameObject);
-            _cooldownExpiry[id] = now + _hitCooldown;
+            ApplyDamage(target);
+            _cooldownExpiry[target] = now + _hitCooldown;
         }
 
         private void OnTriggerExit2D(Collider2D other)
         {
             if (!IsValidTarget(other.gameObject)) return;
-            _cooldownExpiry.Remove(other.gameObject.GetInstanceID());
+            _cooldownExpiry.Remove(other.gameObject);
         }
 
         private void OnDisable()

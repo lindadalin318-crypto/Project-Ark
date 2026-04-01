@@ -303,18 +303,6 @@ namespace ProjectArk.Level
                     return child;
             }
 
-            // 也尝试从 Door 上匹配 GateID
-            var doors = targetRoom.GetComponentsInChildren<Door>(true);
-            foreach (var d in doors)
-            {
-                if (d.GateID == gateID && d.TargetSpawnPoint != null)
-                {
-                    // 注意：这里用的是目标门自身的 spawn point 作为进入点
-                    // 但通常 spawn point 是门旁边的独立 Transform，不是门自己的 TargetSpawnPoint
-                    // 所以这个分支只作为最后的 fallback
-                }
-            }
-
             return null;
         }
 

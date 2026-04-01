@@ -27,10 +27,6 @@ namespace ProjectArk.Level
         [Tooltip("If true, inverts the logic: target is DISABLED during active phases and ENABLED otherwise.")]
         [SerializeField] private bool _invertLogic;
 
-        // ──────────────────── Runtime State ────────────────────
-
-        private bool _initialized;
-
         // ──────────────────── Lifecycle ────────────────────
 
         private void Start()
@@ -44,7 +40,6 @@ namespace ProjectArk.Level
                 ApplyState(phaseManager.CurrentPhaseIndex);
             }
 
-            _initialized = true;
         }
 
         private void OnDestroy()

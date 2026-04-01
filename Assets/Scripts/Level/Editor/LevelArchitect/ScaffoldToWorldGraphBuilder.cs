@@ -11,7 +11,7 @@ namespace ProjectArk.Level.Editor
     /// Authority Builder: generates a WorldGraphSO asset from a LevelScaffoldData asset.
     /// 
     /// Mapping rules:
-    /// - ScaffoldRoom → RoomNodeData (with RoomType → RoomNodeType mapping)
+    /// - ScaffoldRoom → RoomNodeData (NodeType directly from ScaffoldRoom.NodeType)
     /// - ScaffoldDoorConnection → bidirectional ConnectionEdge pairs
     /// - GateIDs auto-generated from connections (format: "gate_{direction}_{targetRoomID}")
     /// - EditorPosition derived from ScaffoldRoom.Position

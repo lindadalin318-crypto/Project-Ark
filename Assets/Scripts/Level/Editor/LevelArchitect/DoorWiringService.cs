@@ -155,7 +155,7 @@ namespace ProjectArk.Level.Editor
             if (box == null) return adjacent;
 
             Rect roomRect = LevelArchitectWindow.GetRoomWorldRect(room, box);
-            var allRooms = Object.FindObjectsByType<Room>(FindObjectsSortMode.None);
+            var allRooms = Object.FindObjectsByType<Room>();
 
             foreach (var other in allRooms)
             {
@@ -293,7 +293,7 @@ namespace ProjectArk.Level.Editor
                 case EventType.MouseDown:
                     if (e.button == 0)
                     {
-                        var rooms = Object.FindObjectsByType<Room>(FindObjectsSortMode.None);
+                        var rooms = Object.FindObjectsByType<Room>();
                         var hitRoom = GetRoomAtPosition(worldPos, rooms);
 
                         if (hitRoom != null)
@@ -318,7 +318,7 @@ namespace ProjectArk.Level.Editor
                 case EventType.MouseUp:
                     if (_isConnecting && e.button == 0)
                     {
-                        var rooms = Object.FindObjectsByType<Room>(FindObjectsSortMode.None);
+                        var rooms = Object.FindObjectsByType<Room>();
                         var targetRoom = GetRoomAtPosition(worldPos, rooms);
 
                         if (targetRoom != null && targetRoom != _connectSourceRoom)
@@ -353,7 +353,7 @@ namespace ProjectArk.Level.Editor
                 Handles.DrawAAPolyLine(3f, startPos, endPos);
 
                 // Draw target highlight
-                var allRooms = Object.FindObjectsByType<Room>(FindObjectsSortMode.None);
+                var allRooms = Object.FindObjectsByType<Room>();
                 var hoverTarget = GetRoomAtPosition(worldPos, allRooms);
                 if (hoverTarget != null && hoverTarget != _connectSourceRoom)
                 {

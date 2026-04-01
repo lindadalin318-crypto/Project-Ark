@@ -458,7 +458,7 @@ namespace ProjectArk.Level.Editor
             // ── Room List ──
             GUILayout.Label("Rooms in Scene", EditorStyles.boldLabel);
 
-            var rooms = FindObjectsByType<Room>(FindObjectsSortMode.None);
+            var rooms = FindObjectsByType<Room>();
             if (rooms.Length == 0)
             {
                 GUILayout.Label("No rooms found in scene.", EditorStyles.miniLabel);
@@ -677,7 +677,7 @@ namespace ProjectArk.Level.Editor
             Vector2 worldPos = ray.origin;
 
             _hoveredRoom = null;
-            var rooms = FindObjectsByType<Room>(FindObjectsSortMode.None);
+            var rooms = FindObjectsByType<Room>();
 
             foreach (var room in rooms)
             {

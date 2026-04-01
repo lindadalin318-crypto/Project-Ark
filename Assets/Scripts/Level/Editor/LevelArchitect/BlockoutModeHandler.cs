@@ -77,7 +77,7 @@ namespace ProjectArk.Level.Editor
 
                         if (_isChainDraw)
                         {
-                            var rooms = Object.FindObjectsByType<Room>(FindObjectsSortMode.None);
+                            var rooms = Object.FindObjectsByType<Room>();
                             _chainSourceRoom = GetNearestRoomEdge(worldPos, rooms, out _drawStartWorld);
                         }
 

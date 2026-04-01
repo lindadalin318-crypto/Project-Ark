@@ -99,7 +99,7 @@ namespace ProjectArk.Level
             _roomDataCache.Clear();
             _connections.Clear();
 
-            var allRooms = FindObjectsByType<Room>(FindObjectsSortMode.None);
+            var allRooms = FindObjectsByType<Room>();
 
             // Build room lookup and data cache
             foreach (var room in allRooms)

@@ -15,7 +15,7 @@ namespace ProjectArk.Level
         [SerializeField] private float _hitCooldown = 1.0f;
 
         // 追踪每个目标的冷却到期时间
-        private readonly Dictionary<int, float> _cooldownExpiry = new();
+        private readonly Dictionary<GameObject, float> _cooldownExpiry = new();
 
         private void OnTriggerEnter2D(Collider2D other)
         {
@@ -35,21 +35,21 @@ namespace ProjectArk.Level
         {
             if (!IsValidTarget(other.gameObject)) return;
 
-            int id = other.gameObject.GetInstanceID();
+            GameObject target = other.gameObject;
             float now = Time.time;
 
             // 检查冷却
-            if (_cooldownExpiry.TryGetValue(id, out float expiry) && now < expiry)
+            if (_cooldownExpiry.TryGetValue(target, out float expiry) && now < expiry)
                 return;
 
-            ApplyDamage(other.gameObject);
-            _cooldownExpiry[id] = now + _hitCooldown;
+            ApplyDamage(target);
+            _cooldownExpiry[target] = now + _hitCooldown;
         }
 
         private void OnTriggerExit2D(Collider2D other)
         {
             if (!IsValidTarget(other.gameObject)) return;
-            _cooldownExpiry.Remove(other.gameObject.GetInstanceID());
+            _cooldownExpiry.Remove(other.gameObject);
         }
 
         private void OnDisable()

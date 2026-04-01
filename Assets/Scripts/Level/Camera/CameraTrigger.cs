@@ -211,7 +211,7 @@ namespace ProjectArk.Level
 
         private static int ReturnAllToPool<T>() where T : Component
         {
-            var items = Object.FindObjectsByType<T>(FindObjectsSortMode.None);
+            var items = Object.FindObjectsByType<T>();
             int count = 0;
 
             for (int i = 0; i < items.Length; i++)

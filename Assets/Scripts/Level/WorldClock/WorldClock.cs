@@ -69,8 +69,6 @@ namespace ProjectArk.Level
             if (_isPaused) return;
             if (_cycleDuration <= 0f) return;
 
-            float previousNormalized = NormalizedTime;
-
             _currentTime += Time.deltaTime * _timeSpeed;
 
             // Cycle wrap

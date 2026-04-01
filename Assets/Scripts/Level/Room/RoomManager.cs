@@ -82,7 +82,7 @@ namespace ProjectArk.Level
 
         private void SubscribeToAllRooms()
         {
-            _allRooms = FindObjectsByType<Room>(FindObjectsSortMode.None);
+            _allRooms = FindObjectsByType<Room>();
             _roomLookup = new Dictionary<string, Room>(_allRooms.Length);
 
             foreach (var room in _allRooms)

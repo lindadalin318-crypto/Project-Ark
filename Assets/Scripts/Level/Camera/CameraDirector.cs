@@ -268,7 +268,7 @@ namespace ProjectArk.Level
 
             if (!Mathf.Approximately(startSize, targetSize))
             {
-                Tween.Custom(startSize, targetSize, transDuration,
+                _ = Tween.Custom(startSize, targetSize, transDuration,
                     useUnscaledTime: true,
                     ease: _defaultEase,
                     onValueChange: SetLensOrthoSize);
@@ -433,7 +433,7 @@ namespace ProjectArk.Level
         {
             if (_vcam == null)
             {
-                _vcam = FindFirstObjectByType<CinemachineCamera>();
+            _vcam = FindAnyObjectByType<CinemachineCamera>();
             }
 
             if (_fadeCanvasGroup == null)

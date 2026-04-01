@@ -24,7 +24,7 @@ namespace ProjectArk.Level.Editor
         /// </summary>
         public static LevelScaffoldData ScanScene()
         {
-            var rooms = Object.FindObjectsByType<Room>(FindObjectsSortMode.None);
+            var rooms = Object.FindObjectsByType<Room>();
 
             if (rooms.Length == 0)
             {

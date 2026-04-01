@@ -45,7 +45,7 @@ namespace ProjectArk.Level.Editor
             var window = LevelArchitectWindow.Instance;
             if (window == null || !window.IsActive) return;
 
-            var rooms = Object.FindObjectsByType<Room>(FindObjectsSortMode.None);
+            var rooms = Object.FindObjectsByType<Room>();
             if (rooms.Length == 0) return;
 
             // Draw all room blockouts
@@ -491,7 +491,7 @@ namespace ProjectArk.Level.Editor
             bool snappedX = false;
             bool snappedY = false;
 
-            var allRooms = Object.FindObjectsByType<Room>(FindObjectsSortMode.None);
+            var allRooms = Object.FindObjectsByType<Room>();
 
             foreach (var other in allRooms)
             {

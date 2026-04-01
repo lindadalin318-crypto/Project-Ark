@@ -15,27 +15,27 @@ namespace ProjectArk.Level
         [SerializeField] private float _tickInterval = 0.5f;
 
         // 追踪每个目标的下次伤害时间
-        private readonly Dictionary<int, float> _nextDamageTime = new();
+        private readonly Dictionary<GameObject, float> _nextDamageTime = new();
 
         private void OnTriggerStay2D(Collider2D other)
         {
             if (!IsValidTarget(other.gameObject)) return;
 
-            int id = other.gameObject.GetInstanceID();
+            GameObject target = other.gameObject;
             float now = Time.time;
 
             // 如果是第一次进入或已到达下次伤害时间
-            if (!_nextDamageTime.TryGetValue(id, out float nextTime) || now >= nextTime)
+            if (!_nextDamageTime.TryGetValue(target, out float nextTime) || now >= nextTime)
             {
-                ApplyDamage(other.gameObject);
-                _nextDamageTime[id] = now + _tickInterval;
+                ApplyDamage(target);
+                _nextDamageTime[target] = now + _tickInterval;
             }
         }
 
         private void OnTriggerExit2D(Collider2D other)
         {
             if (!IsValidTarget(other.gameObject)) return;
-            _nextDamageTime.Remove(other.gameObject.GetInstanceID());
+            _nextDamageTime.Remove(other.gameObject);
         }
 
         /// <summary>

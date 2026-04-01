@@ -6,8 +6,6 @@ namespace ProjectArk.Level
     /// 
     /// 设计原则：不要说"我要做 8 个房间"，而要说"我要 2 个 Transit + 2 个 Pressure + 
     /// 1 个 Resolution + 1 个 Reward + 1 个 Anchor + 1 个 Loop"。
-    /// 
-    /// 替代旧 <see cref="RoomType"/>，两者并存过渡后将废弃 RoomType。
     /// </summary>
     public enum RoomNodeType
     {
