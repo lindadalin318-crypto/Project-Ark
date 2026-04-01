@@ -7,8 +7,9 @@ namespace ProjectArk.Level.Editor
 {
     /// <summary>
     /// [Authority: Level CanonicalSpec §9.1 — sub-service of LevelArchitectWindow]
-    /// Maintains bidirectional binding between LevelScaffoldData and Scene Room GameObjects.
-    /// Detects changes on either side and synchronizes them, keeping data consistent.
+    /// One-way binder: Scene → LevelScaffoldData.
+    /// Detects Transform/Size changes in scene Room GameObjects and syncs them into the ScaffoldData asset.
+    /// The scene is always the source of truth; ScaffoldData is a snapshot/export target.
     /// </summary>
     public class ScaffoldSceneBinder
     {
@@ -18,9 +19,7 @@ namespace ProjectArk.Level.Editor
         private Dictionary<string, Room> _idToSceneRoom = new Dictionary<string, Room>();
         private Dictionary<string, Vector3> _lastKnownPositions = new Dictionary<string, Vector3>();
         private Dictionary<string, Vector2> _lastKnownSizes = new Dictionary<string, Vector2>();
-        private double _lastSyncTime;
 
-        private const float SYNC_INTERVAL = 0.5f; // seconds between Scaffold→Scene checks
         private const float POSITION_EPSILON = 0.01f;
         private const float SIZE_EPSILON = 0.01f;
 
@@ -57,38 +56,31 @@ namespace ProjectArk.Level.Editor
 
             var sceneRooms = Object.FindObjectsByType<Room>();
 
-            // Build scene room lookup
             var sceneRoomByID = new Dictionary<string, Room>();
             foreach (var room in sceneRooms)
             {
                 if (room == null) continue;
                 string id = room.RoomID;
                 if (!sceneRoomByID.ContainsKey(id))
-                {
                     sceneRoomByID[id] = room;
-                }
             }
 
             if (_scaffoldData == null)
             {
-                // No scaffold — all scene rooms are "unregistered"
                 UnregisteredRooms.AddRange(sceneRooms.Where(r => r != null));
                 return;
             }
 
-            // Match scaffold rooms to scene rooms
             var matchedSceneIDs = new HashSet<string>();
 
             foreach (var scaffoldRoom in _scaffoldData.Rooms)
             {
                 string id = scaffoldRoom.RoomID;
-
                 if (sceneRoomByID.TryGetValue(id, out var sceneRoom))
                 {
                     _idToSceneRoom[id] = sceneRoom;
                     matchedSceneIDs.Add(id);
 
-                    // Cache current state
                     _lastKnownPositions[id] = sceneRoom.transform.position;
                     var box = sceneRoom.GetComponent<BoxCollider2D>();
                     _lastKnownSizes[id] = box != null ? box.size : Vector2.one;
@@ -99,35 +91,22 @@ namespace ProjectArk.Level.Editor
                 }
             }
 
-            // Find unregistered scene rooms
             foreach (var room in sceneRooms)
             {
                 if (room == null) continue;
                 if (!matchedSceneIDs.Contains(room.RoomID))
-                {
                     UnregisteredRooms.Add(room);
-                }
             }
         }
 
         /// <summary>
         /// Tick the sync loop. Call every SceneView frame.
-        /// Performs Scene→Scaffold sync (immediate) and Scaffold→Scene sync (periodic).
+        /// Performs Scene→Scaffold sync only (scene is the source of truth).
         /// </summary>
         public void Tick()
         {
             if (_scaffoldData == null) return;
-
-            // Scene → Scaffold (every frame, detect Transform changes)
             SyncSceneToScaffold();
-
-            // Scaffold → Scene (periodic)
-            double now = EditorApplication.timeSinceStartup;
-            if (now - _lastSyncTime >= SYNC_INTERVAL)
-            {
-                _lastSyncTime = now;
-                SyncScaffoldToScene();
-            }
         }
 
         /// <summary>
@@ -140,37 +119,30 @@ namespace ProjectArk.Level.Editor
             var box = room.GetComponent<BoxCollider2D>();
             Vector2 size = box != null ? box.size : new Vector2(20, 15);
 
-            var scaffoldRoom = new ScaffoldRoom();
+            // Directly populate ScaffoldRoom via SerializedObject on the actual asset
+            Undo.RecordObject(_scaffoldData, "Register Room to Scaffold");
 
-            // Set fields via SerializedObject (since fields are private)
-            var tempSO = ScriptableObject.CreateInstance<LevelScaffoldData>();
-            tempSO.AddRoom(scaffoldRoom);
-            var serialized = new SerializedObject(tempSO);
-            var roomProp = serialized.FindProperty("_rooms").GetArrayElementAtIndex(0);
+            var scaffoldRoom = new ScaffoldRoom();
+            _scaffoldData.AddRoom(scaffoldRoom);
+
+            // Now write fields via SerializedObject on the real asset
+            var serialized = new SerializedObject(_scaffoldData);
+            int lastIndex = _scaffoldData.Rooms.Count - 1;
+            var roomProp = serialized.FindProperty("_rooms").GetArrayElementAtIndex(lastIndex);
 
             roomProp.FindPropertyRelative("_roomID").stringValue = room.RoomID;
             roomProp.FindPropertyRelative("_displayName").stringValue = room.RoomID;
-                roomProp.FindPropertyRelative("_nodeType").enumValueIndex = (int)room.NodeType;
+            roomProp.FindPropertyRelative("_nodeType").enumValueIndex = (int)room.NodeType;
             roomProp.FindPropertyRelative("_position").vector3Value = room.transform.position;
             roomProp.FindPropertyRelative("_size").vector2Value = size;
 
             if (room.Data != null)
-            {
                 roomProp.FindPropertyRelative("_roomSO").objectReferenceValue = room.Data;
-            }
 
             serialized.ApplyModifiedPropertiesWithoutUndo();
-
-            // Now add to real scaffold data
-            Undo.RecordObject(_scaffoldData, "Register Room to Scaffold");
-            _scaffoldData.AddRoom(tempSO.Rooms[0]);
             EditorUtility.SetDirty(_scaffoldData);
 
-            Object.DestroyImmediate(tempSO);
-
-            // Rebuild mapping
             RebuildMapping();
-
             Debug.Log($"[ScaffoldSceneBinder] Registered room '{room.RoomID}' to scaffold.");
         }
 
@@ -186,11 +158,10 @@ namespace ProjectArk.Level.Editor
             EditorUtility.SetDirty(_scaffoldData);
 
             RebuildMapping();
-
             Debug.Log($"[ScaffoldSceneBinder] Removed room '{scaffoldRoom.RoomID}' from scaffold.");
         }
 
-        // ──────────────────── Sync Logic ────────────────────
+        // ──────────────────── Sync Logic (Scene → Scaffold only) ────────────────────
 
         private void SyncSceneToScaffold()
         {
@@ -229,38 +200,6 @@ namespace ProjectArk.Level.Editor
                     }
 
                     EditorUtility.SetDirty(_scaffoldData);
-                }
-            }
-        }
-
-        private void SyncScaffoldToScene()
-        {
-            foreach (var scaffoldRoom in _scaffoldData.Rooms)
-            {
-                if (!_idToSceneRoom.TryGetValue(scaffoldRoom.RoomID, out var sceneRoom))
-                    continue;
-                if (sceneRoom == null) continue;
-
-                Vector3 scenePos = sceneRoom.transform.position;
-                var box = sceneRoom.GetComponent<BoxCollider2D>();
-                Vector2 sceneSize = box != null ? box.size : Vector2.one;
-
-                // Check if scaffold data differs from scene (external change via Inspector)
-                bool possDiffers = Vector3.Distance(scaffoldRoom.Position, scenePos) > POSITION_EPSILON;
-                bool sizeDiffers = Vector2.Distance(scaffoldRoom.Size, sceneSize) > SIZE_EPSILON;
-
-                if (possDiffers)
-                {
-                    Undo.RecordObject(sceneRoom.transform, "Sync Scaffold → Scene Position");
-                    sceneRoom.transform.position = scaffoldRoom.Position;
-                    _lastKnownPositions[scaffoldRoom.RoomID] = scaffoldRoom.Position;
-                }
-
-                if (sizeDiffers && box != null)
-                {
-                    Undo.RecordObject(box, "Sync Scaffold → Scene Size");
-                    box.size = scaffoldRoom.Size;
-                    _lastKnownSizes[scaffoldRoom.RoomID] = scaffoldRoom.Size;
                 }
             }
         }

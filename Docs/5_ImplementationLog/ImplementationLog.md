@@ -2,6 +2,102 @@
 
 ---
 
+## 关卡工作流权威文档 — 2026-04-01 16:10
+
+### 新建文件
+- `Docs/2_Design/Level/Level_WorkflowSpec.md` — 关卡工作流权威规范文档
+
+### 内容
+全面扫描关卡模块所有文件（脚本 72 个、Editor 工具 11 个、SO 资产 97 个、文档 14 个），构建了完整的权威工作流文档。
+
+文档涵盖：
+- **两条搭建路径**的完整步骤（HTML 设计器导入 + SceneView 手绘）
+- **6 大核心枚举**的完整定义和语义说明（RoomNodeType 10 种 / ConnectionType 6 种 / TransitionCeremony 5 种 / DoorState 5 种 / EncounterMode 2 种）
+- **10 种 ScriptableObject 数据类型**的字段表（RoomSO / EncounterSO / CheckpointSO / KeyItemSO / WorldPhaseSO / WorldProgressStageSO / RoomVariantSO / RoomAmbienceSO / RoomPresetSO / LevelScaffoldData）
+- **Room 标准层级结构**（Tilemaps / Elements / Encounters / Decoration / Triggers / ActivationGroups）
+- **Editor 工具链 + Runtime 脚本**完整清单（61 个运行时 + 11 个编辑器）
+- **已有数据资产目录**（12 个早期 Sheba 房间 + 38 个 JSON 导入房间 + 17 个 Encounter + 19 个 Checkpoint + 2 个 Key + 4 个 WorldPhase + 2 个 WorldStage）
+- **JSON 导入格式规范**（type/connectionType 字段映射表）
+- **已知限制与待办**清单
+
+### 目的
+建立关卡模块的单一真相源文档，让任何参与者都能快速理解完整工作流和已有资产，减少考古成本。
+
+### 技术
+文档编写，基于代码扫描和文件结构分析，无代码变更。
+
+---
+
+## LevelDesigner.html 对齐 Unity 关卡模块 — 2026-04-01 15:45
+
+### 修改文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelSliceBuilder.cs` — 补全 `ParseNodeType()` 和 `ParseConnectionType()` 的映射；更新 `RoomJson`/`ConnectionJson` 注释
+- `Tools/LevelDesigner.html` — 房间类型、连接类型、CSS 样式、颜色配置、标签函数全面对齐 Unity
+
+### 内容
+
+**原则确立：Unity 关卡模块代码是唯一权威来源，HTML 工具是消费者。**
+
+**LevelSliceBuilder.cs — ParseNodeType() 补全：**
+- `"arena"` → `Resolution`（最关键缺口：修复后导入 arena 房间时会自动创建 ArenaController + EncounterSO）
+- `"normal"` → `Pressure`
+- `"narrative"` → `Anchor`
+- `"puzzle"` → `Reward`
+- `"corridor"` → `Transit`（显式声明，原为默认兜底）
+- 新增全部 10 种 RoomNodeType 的规范字符串映射（transit/pressure/resolution/reward/anchor/loop/hub/threshold/safe/boss）
+
+**LevelSliceBuilder.cs — ParseConnectionType() 补全：**
+- `"tidal"` → `Scheduled`（潮汐门 = 时间控制门）
+- `"locked"` → `Ability`（钥匙锁门 = 银河城能力门）
+- `"one_way"` → `Progression`（单向通道 = 推进连接）
+- 保留 `"secret"` → `Ability` 兼容映射
+- 新增全部 6 种 ConnectionType 的规范字符串映射
+
+**LevelDesigner.html 同步更新：**
+- 左侧拖拽预设面板：7 种旧类型 → 10 种 RoomNodeType 正规类型
+- 属性面板类型下拉框：同步替换
+- 连接类型下拉框：4 种旧类型 → 6 种 ConnectionType 正规类型（value 值用规范字符串）
+- CONN_TYPE_CONFIG 颜色配置：对齐新连接类型
+- SVG arrow markers：新增 gray/purple/green 三色
+- getTypeLabel()：对齐新房间类型标签
+- CSS 房间颜色类：新增 10 种规范类型，旧 5 种类型保留为向后兼容 alias
+
+### 目的
+消除 HTML 设计器导入工作流中的类型映射缺口，确保从 HTML 设计 → JSON 导出 → Unity 场景生成的完整流程中，类型语义不丢失。
+
+### 技术
+`ParseNodeType`/`ParseConnectionType` 使用 C# switch expression 扩展映射表；HTML 旧类型 CSS 保留为 legacy alias，旧 JSON 文件向后兼容。编译零 error。
+
+---
+
+## 移除 WorldGraphSO — 2026-04-01 15:30
+
+### 删除文件
+- `Assets/Scripts/Level/Data/WorldGraphSO.cs` — 世界图谱 SO 核心类
+- `Assets/Scripts/Level/Data/RoomNodeData.cs` — 只服务于 WorldGraphSO 的房间节点数据结构
+- `Assets/Scripts/Level/Data/ConnectionEdge.cs` — 只服务于 WorldGraphSO 的连接边数据结构
+
+### 修改文件
+- `Assets/Scripts/Level/Room/DoorTransitionController.cs` — 删除 `_worldGraph` 字段、`ResolveTarget()` 方法、`FindSpawnPointForGate()` 方法；目标解析改为直接读取 `Door._targetRoom` / `Door._targetSpawnPoint`
+- `Assets/Scripts/Level/Map/MinimapManager.cs` — 删除 `_worldGraph` 字段、`GatherConnectionsFromWorldGraph()` 方法；连接关系构建固定走 `GatherConnectionsFromDoors()`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs` — 删除规则 9-11（WorldGraph 一致性校验：RoomID 存在性、GateID 匹配、孤立节点）及所有相关方法
+- `Assets/Scripts/Level/Room/Door.cs` — Header 从 "World Graph Integration" 改为 "Gate & Connection"，属性注释去掉 WorldGraphSO 引用
+- `Assets/Scripts/Level/Room/RoomManager.cs` — `FindRoomByID()` 注释去掉 WorldGraphSO 引用
+- `ProjectArk.Level.csproj` — 删除三个已删除文件的 `<Compile>` 条目
+
+### 内容
+决策背景：WorldGraphSO 是一个离线拓扑快照，运行时 DoorTransitionController 和 MinimapManager 本来就在走 fallback 路径（直接读 Door 引用），WorldGraphSO 仅被 LevelValidator 的规则 9-11 消费。现阶段关卡搭建不需要手动维护此资产，删除可减少认知负担并简化工作流。
+
+保留内容：`GateID`（Door 字段，工具链写入）、`ConnectionType`（PacingOverlay 可视化）、`TransitionCeremony`（DoorTransitionController 分级演出）——这三者均独立于 WorldGraphSO。
+
+### 目的
+简化关卡工作流，消除"规划了但未落地"的半成品接口，让搭建场景时无需考虑 WorldGraphSO 资产维护。
+
+### 技术
+纯删除，零架构变更；DoorTransitionController/MinimapManager 运行时行为完全不变（删的是从未生效的 WorldGraph 路径）。编译零 error。
+
+---
+
 ## 关卡模块 Batch 4：节奏验证工具 + 示巴星首切片落地（验证层） — 2026-03-24 18:30
 
 ### 新建文件
@@ -12342,3 +12438,144 @@ Secondary 轨道的 SAIL/SAT 格子现在显示为无效放置目标（红色高
 
 ### 技术
 全面代码审计 → grep 搜索定位问题 → replace_in_file/multi_replace/terminal sed 批量修复 → dotnet build 验证（0 错误，警告从 41 降至 20）。
+
+---
+
+## 删除 WorldGraph Editor — 工具链精简 2026-04-01 12:57
+
+### 修改文件
+
+**删除文件：**
+- `Assets/Scripts/Level/Editor/LevelArchitect/WorldGraphEditorWindow.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/WorldGraphView.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/WorldGraphSOEditor.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/ScaffoldToWorldGraphBuilder.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomGraphNode.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/ConnectionGraphEdge.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/SpacePanManipulator.cs`
+
+**修改文件：**
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`（新增 `GetConnectionTypeColor` 静态方法）
+- `Assets/Scripts/Level/Editor/LevelArchitect/PacingOverlayRenderer.cs`（将 `ConnectionGraphEdge.GetConnectionTypeColor` 引用替换为 `LevelArchitectWindow.GetConnectionTypeColor`）
+
+### 内容
+删除 WorldGraph Editor（节点图可视化编辑器）的全部 Editor UI 代码，保留 `WorldGraphSO` 数据类及其在运行时的使用（`DoorTransitionController`、`MinimapManager`）。将 `ConnectionGraphEdge.GetConnectionTypeColor()` 静态方法迁移到 `LevelArchitectWindow`，确保 `PacingOverlayRenderer` 的连接类型颜色叠加层功能不受影响。
+
+### 目的
+精简关卡编辑工具链，消除 WorldGraph Editor 与 Level Architect 之间的职责重叠。决策依据：
+1. `WorldGraphSO` 的节点图可视化功能已被 `LevelDesigner.html`（浏览器工具）覆盖，且后者功能更强（含张力曲线、Act 分组、叙事设计等）
+2. Level Architect 直接操作场景 GameObject，是游戏的真相源；WorldGraph Editor 操作数据资产，需要额外同步步骤，是维护负担
+3. 符合 Implement_rules.md 原则：同一类任务只保留一个官方入口
+
+### 技术
+grep 搜索确认依赖关系 → 迁移 `GetConnectionTypeColor` 静态方法 → 删除 7 个 Editor 文件 → dotnet build 验证（0 错误）。
+
+---
+
+## 关卡工作流重构 Phase 1：清理冗余工具链 — 2026-04-01 13:13
+
+### 删除文件
+- `Assets/Scripts/Level/Editor/ScaffoldToSceneGenerator.cs` — 1287 行怪物文件，与 ShebaSliceBuilder 职责完全重叠，无外部引用，直接删除
+- `Assets/Scripts/Level/Editor/LevelArchitect/ShebaSliceBuilder.cs` — 硬编码示巴星 7 房间的一次性脚本，功能已被通用化的 LevelSliceBuilder 替代
+
+### 新建文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelSliceBuilder.cs` — 通用关卡切片构建器，直接读取 LevelDesigner.html 导出的 JSON，生成完整场景骨架
+
+### 修改文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/BlockoutModeHandler.cs` — 删除 `CreateBuiltInPresets()` 等方法（迁移到 RoomFactory），只保留 SceneView 输入处理逻辑
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomFactory.cs` — 新增 `CreateBuiltInPresets()` 和 `CreatePresetIfMissing()`，成为预设资产创建的唯一权威入口
+- `Assets/Scripts/Level/Editor/LevelArchitect/ScaffoldSceneBinder.cs` — 去掉双向同步，改为单向 Scene→Scaffold。场景是真相源，ScaffoldData 是快照目标
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs` — `BlockoutModeHandler.CreateBuiltInPresets()` 改为 `RoomFactory.CreateBuiltInPresets()`
+- `ProjectArk.Level.Editor.csproj` — 删除已删除文件的 Compile 引用，添加 LevelSliceBuilder.cs 引用
+
+### 内容
+
+**Phase 1A：删除 ScaffoldToSceneGenerator.cs**
+确认无任何外部引用后直接删除，该文件与 ShebaSliceBuilder 职责完全重叠。
+
+**Phase 1B+2B 合并：LevelSliceBuilder（通用 JSON 导入器）**
+- 菜单入口：`ProjectArk/Level/Import from LevelDesigner JSON...`
+- 解析 LevelDesigner.html 导出 JSON，生成 RoomSO 资产 + Room GameObject + Door 连接
+- HTML connectionType 映射到项目 ConnectionType 枚举；Y 轴翻转处理；完整 Undo 支持
+
+**Phase 1C：BlockoutModeHandler 职责清理**
+CreateBuiltInPresets 系列方法迁移到 RoomFactory，BlockoutModeHandler 只保留 SceneView 输入处理。
+
+**Phase 1D：ScaffoldSceneBinder 单向化**
+去掉 Scaffold→Scene 自动同步，保留 Scene→Scaffold 实时检测。
+
+### 目的
+方案 B 关卡工作流重构 Phase 1：清理工具链冗余和职责混乱，为 Phase 2（LevelArchitectWindow 三 Tab 重构）奠定基础。
+
+### 技术
+JsonUtility.FromJson 零依赖解析 → 复用 ShebaSliceBuilder 成熟的场景生成模式 → dotnet build 验证：0 错误，0 警告。
+
+---
+
+## 关卡工作流重构 Phase 2：打通设计层→实现层 — 2026-04-01 14:40
+
+### 修改文件
+- `Tools/LevelDesigner.html` — 新增关卡名称输入框 + 一键导出文件按钮
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs` — 重构为三 Tab 布局（Design / Build / Validate）
+
+### 内容
+
+**Phase 2A：LevelDesigner.html 改进**
+- 右侧面板顶部新增"关卡名称"输入框（`#level-name-input`），默认值 `NewLevel`
+- 工具栏新增 **💾 导出文件** 按钮（绿色高亮），一键直接下载 JSON，无需弹出 Modal
+- `getExportData()` 改为读取 `getLevelName()` 函数，不再硬编码 `'New Level'`
+- `downloadJson()` 改为使用 `getLevelName()` 作为文件名（`{levelName}.json`）
+- 新增 `saveJsonToFile()` 函数：直接生成 JSON 并触发浏览器下载，带 1.5s 视觉反馈
+
+**Phase 2C：LevelArchitectWindow 三 Tab 重构**
+- 新增 `Tab` 枚举（Design / Build / Validate）和 `_activeTab` 序列化字段
+- `OnGUI()` 改为 Tab 路由：`DrawDesignTab()` / `DrawBuildTab()` / `DrawValidateTab()`
+- **Design Tab**：🌐 Open LevelDesigner.html + 📂 Import JSON + 6 步工作流说明
+- **Build Tab**：Mode Selector + Overlay Toggles + Floor Level + Scan/Presets/QuickPlay
+- **Validate Tab**：完整验证结果列表 + Fix 按钮 + Auto-Fix All
+- SceneView 侧边栏 Validate 部分改为简洁摘要（"see Validate tab"）
+
+### 目的
+方案 B 关卡工作流重构 Phase 2：打通 LevelDesigner.html（设计层）→ LevelSliceBuilder（导入层）→ LevelArchitectWindow（实现层）的完整链路。
+
+### 技术
+HTML 使用 `URL.createObjectURL` + `<a>` 触发浏览器下载；Unity 使用 `Application.OpenURL("file://...")` 打开本地 HTML；`GUILayout.Toolbar` 实现 Tab 切换；dotnet build 验证：0 错误，0 警告。
+
+---
+
+## 关卡工作流审计与 Bug 修复 — 2026-04-01 14:51
+
+### 修改文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/ScaffoldSceneBinder.cs` — 修复 RegisterRoomToScaffold 的 tempSO 静默失败 bug
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs` — 修复 DrawModeButton 无效 style 赋值、DrawDesignTab 未使用变量、缩进错误（×2）
+- `Assets/Scripts/Level/Editor/LevelArchitect/ShebaSliceBuilder.cs` — 删除（仅含注释的空文件）
+
+### 内容
+
+对整套关卡工作流进行全面审计，检查代码精简度、数据字段对应关系、以及全流程可跑通性。
+
+**数据层审计（全部通过）**：
+- HTML `getExportData()` → `LevelJson` 字段映射完全正确
+- `RoomJson.position/size` 格式（`[x/GRID, y/GRID]`）与 `JsonPosToWorld/JsonSizeToWorld` 完全匹配，Y 轴翻转逻辑正确
+- `RoomSO` 字段名（`_roomID/_displayName/_nodeType/_floorLevel/_encounter`）全部正确
+- `Door` 字段名（`_gateID/_connectionType/_initialState/_ceremony/_targetRoom/_targetSpawnPoint`）全部正确
+- `EncounterSO._mode` 字段名正确
+- `DoorTransitionController` 支持 `_targetRoom` 直接引用 fallback，与 LevelSliceBuilder 接线方式兼容
+
+**修复的 Bug**：
+
+1. **严重 — ScaffoldSceneBinder.RegisterRoomToScaffold tempSO 静默失败**：原实现创建临时 `LevelScaffoldData` tempSO，通过 `SerializedObject` 写字段后，将 `tempSO.Rooms[0]` 复制给真实 `_scaffoldData`。但 tempSO 从未被 `AssetDatabase.CreateAsset`，`SerializedObject` 操作不会持久化到 `ScaffoldRoom` 对象，导致所有字段写入静默失败（roomID/displayName/nodeType/position/size/roomSO 全部为默认值）。修复：直接在真实 `_scaffoldData` 上操作 `SerializedObject`，先 `AddRoom` 再通过 `serialized.FindProperty("_rooms").GetArrayElementAtIndex(lastIndex)` 写字段。
+
+2. **中 — DrawModeButton style 变量无效赋值**：`var style = isActive ? "Button" : "Button"` 两边完全相同，style 从未被使用。删除无效变量。
+
+3. **中 — DrawDesignTab 未使用变量**：`var style = new GUIStyle(EditorStyles.helpBox)` 声明后从未使用。删除。
+
+4. **轻微 — RoomFactory.CreateBuiltInPresets() 缩进丢失（×2 处）**：`DrawBuildActions` 和 `DrawSidePanelContent` 中各有一处缩进丢失。补回正确缩进。
+
+5. **轻微 — ShebaSliceBuilder.cs 空文件**：仅含 3 行注释，无实际代码。删除文件及 .meta。
+
+### 目的
+确保关卡工作流 HTML→JSON→Unity 导入→场景生成 全链路数据对得上、代码无隐患、可全流程跑通。
+
+### 技术
+dotnet build 验证：0 错误，0 警告。

@@ -69,12 +69,9 @@ namespace ProjectArk.Level.Editor
             ValidateDoorBidirectional(rooms);
             ValidateDoorPlayerLayer(rooms);
             ValidateDoorTargetSpawnPoint(rooms);
-            ValidateOrphanRooms(rooms);
+        ValidateOrphanRooms(rooms);
 
-            // World Graph validation (new in Batch 1)
-            ValidateWorldGraph(rooms);
-
-            int errors = 0, warnings = 0, infos = 0;
+        int errors = 0, warnings = 0, infos = 0;
             foreach (var r in _lastResults)
             {
                 switch (r.Severity)
@@ -520,137 +517,5 @@ namespace ProjectArk.Level.Editor
             }
         }
 
-        // ──────────────────── World Graph Validation (Rules 9-11) ────────────────────
-
-        /// <summary>
-        /// Validate WorldGraphSO consistency with the scene.
-        /// Searches for all WorldGraphSO assets and validates each.
-        /// </summary>
-        private static void ValidateWorldGraph(Room[] rooms)
-        {
-            // Find all WorldGraphSO assets in the project
-            var graphGuids = AssetDatabase.FindAssets("t:WorldGraphSO");
-            if (graphGuids.Length == 0) return; // No world graph configured — skip
-
-            // Build scene room lookup
-            var sceneRoomIDs = new HashSet<string>();
-            var sceneRoomDoorGateIDs = new Dictionary<string, HashSet<string>>(); // roomID → set of gateIDs
-
-            foreach (var room in rooms)
-            {
-                if (room == null || room.Data == null) continue;
-
-                string id = room.RoomID;
-                sceneRoomIDs.Add(id);
-
-                var gateSet = new HashSet<string>();
-                var doors = room.GetComponentsInChildren<Door>(true);
-                foreach (var door in doors)
-                {
-                    if (door != null && !string.IsNullOrEmpty(door.GateID))
-                    {
-                        gateSet.Add(door.GateID);
-                    }
-                }
-                sceneRoomDoorGateIDs[id] = gateSet;
-            }
-
-            // Validate each WorldGraphSO
-            foreach (var guid in graphGuids)
-            {
-                string assetPath = AssetDatabase.GUIDToAssetPath(guid);
-                var graph = AssetDatabase.LoadAssetAtPath<WorldGraphSO>(assetPath);
-                if (graph == null) continue;
-
-                ValidateWorldGraph_RoomIDsExist(graph, sceneRoomIDs);
-                ValidateWorldGraph_GateIDsMatch(graph, sceneRoomDoorGateIDs);
-                ValidateWorldGraph_IsolatedRooms(graph);
-            }
-        }
-
-        // Rule 9: WorldGraph RoomID not found in scene
-        private static void ValidateWorldGraph_RoomIDsExist(WorldGraphSO graph, HashSet<string> sceneRoomIDs)
-        {
-            foreach (var roomID in graph.GetAllRoomIDs())
-            {
-                if (!sceneRoomIDs.Contains(roomID))
-                {
-                    _lastResults.Add(new ValidationResult
-                    {
-                        Severity = Severity.Error,
-                        Message = $"[WorldGraph '{graph.GraphName}'] RoomID '{roomID}' is defined in the graph but not found in the scene.",
-                        TargetObject = graph,
-                        CanAutoFix = false,
-                        FixAction = null
-                    });
-                }
-            }
-        }
-
-        // Rule 10: WorldGraph GateID mismatch (graph defines a gate but no Door in scene has it)
-        private static void ValidateWorldGraph_GateIDsMatch(
-            WorldGraphSO graph,
-            Dictionary<string, HashSet<string>> sceneRoomDoorGateIDs)
-        {
-            foreach (var conn in graph.Connections)
-            {
-                // Check FromGateID
-                if (!string.IsNullOrEmpty(conn.FromGateID))
-                {
-                    if (sceneRoomDoorGateIDs.TryGetValue(conn.FromRoomID, out var fromGates))
-                    {
-                        if (!fromGates.Contains(conn.FromGateID))
-                        {
-                            _lastResults.Add(new ValidationResult
-                            {
-                                Severity = Severity.Warning,
-                                Message = $"[WorldGraph '{graph.GraphName}'] GateID '{conn.FromGateID}' in room '{conn.FromRoomID}' " +
-                                          $"is defined in the graph but no Door in the scene has this GateID.",
-                                TargetObject = graph,
-                                CanAutoFix = false,
-                                FixAction = null
-                            });
-                        }
-                    }
-                }
-
-                // Check ToGateID
-                if (!string.IsNullOrEmpty(conn.ToGateID))
-                {
-                    if (sceneRoomDoorGateIDs.TryGetValue(conn.ToRoomID, out var toGates))
-                    {
-                        if (!toGates.Contains(conn.ToGateID))
-                        {
-                            _lastResults.Add(new ValidationResult
-                            {
-                                Severity = Severity.Warning,
-                                Message = $"[WorldGraph '{graph.GraphName}'] GateID '{conn.ToGateID}' in room '{conn.ToRoomID}' " +
-                                          $"is defined in the graph but no Door in the scene has this GateID.",
-                                TargetObject = graph,
-                                CanAutoFix = false,
-                                FixAction = null
-                            });
-                        }
-                    }
-                }
-            }
-        }
-
-        // Rule 11: WorldGraph isolated rooms (no connections)
-        private static void ValidateWorldGraph_IsolatedRooms(WorldGraphSO graph)
-        {
-            var isolatedIDs = graph.GetIsolatedRoomIDs();
-            foreach (var roomID in isolatedIDs)
-            {
-                _lastResults.Add(new ValidationResult
-                {
-                    Severity = Severity.Warning,
-                    Message = $"[WorldGraph '{graph.GraphName}'] Room '{roomID}' has no connections (isolated node).",
-                    TargetObject = graph,
-                    CanAutoFix = false,
-                    FixAction = null
-                });
-            }
-        }
     }
 }

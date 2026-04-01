@@ -8,8 +8,10 @@ namespace ProjectArk.Level.Editor
     /// <summary>
     /// [Authority: Level CanonicalSpec §9.1]
     /// Main entry point for the Level Architect Tool.
-    /// Integrates with SceneView to provide a Scene-View-First editing experience.
-    /// Manages tool modes, SceneView overlay, and side control panel.
+    /// Three-tab layout: Design | Build | Validate.
+    /// - Design: LevelDesigner.html shortcut + JSON import
+    /// - Build:  SceneView modes (Select/Blockout/Connect) + room list + add room
+    /// - Validate: validation results + auto-fix
     /// </summary>
     public class LevelArchitectWindow : EditorWindow
     {
@@ -20,6 +22,12 @@ namespace ProjectArk.Level.Editor
         private const float SIDE_PANEL_WIDTH = 260f;
         private const float SIDE_PANEL_MARGIN = 10f;
         private const float TOOLBAR_HEIGHT = 30f;
+
+        // ──────────────────── Tab ────────────────────
+
+        private enum Tab { Design, Build, Validate }
+        private static readonly string[] TAB_LABELS = { "🎨 Design", "🔨 Build", "✅ Validate" };
+        [SerializeField] private Tab _activeTab = Tab.Build;
 
         // ──────────────────── Tool Modes ────────────────────
 
@@ -158,13 +166,148 @@ namespace ProjectArk.Level.Editor
             DrawWindowHeader();
             DrawScaffoldDataField();
             EditorGUILayout.Space(4);
+
+            // ── Tab Bar ──
+            _activeTab = (Tab)GUILayout.Toolbar((int)_activeTab, TAB_LABELS, GUILayout.Height(26));
+            EditorGUILayout.Space(4);
+
+            switch (_activeTab)
+            {
+                case Tab.Design:   DrawDesignTab();   break;
+                case Tab.Build:    DrawBuildTab();    break;
+                case Tab.Validate: DrawValidateTab(); break;
+            }
+        }
+
+        // ──────────────────── Design Tab ────────────────────
+
+        private void DrawDesignTab()
+        {
+            EditorGUILayout.LabelField("Level Designer", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "Use LevelDesigner.html to plan your level topology, then export JSON and import it here.",
+                MessageType.Info);
+
+            EditorGUILayout.Space(4);
+
+            if (GUILayout.Button("🌐 Open LevelDesigner.html", GUILayout.Height(30)))
+            {
+                string htmlPath = System.IO.Path.Combine(
+                    System.IO.Path.GetDirectoryName(Application.dataPath),
+                    "Tools", "LevelDesigner.html");
+                Application.OpenURL("file://" + htmlPath.Replace("\\", "/"));
+            }
+
+            EditorGUILayout.Space(8);
+            EditorGUILayout.LabelField("Import from JSON", EditorStyles.boldLabel);
+
+            if (GUILayout.Button("📂 Import LevelDesigner JSON...", GUILayout.Height(28)))
+            {
+                LevelSliceBuilder.ImportFromJson();
+            }
+
+            EditorGUILayout.Space(8);
+            EditorGUILayout.LabelField("Workflow", EditorStyles.boldLabel);
+
+            EditorGUILayout.LabelField(
+                "1. Open LevelDesigner.html in browser\n" +
+                "2. Design room topology & connections\n" +
+                "3. Set Level Name in the right panel\n" +
+                "4. Click 💾 Export File to save JSON\n" +
+                "5. Click Import LevelDesigner JSON here\n" +
+                "6. Switch to Build tab to refine in scene",
+                EditorStyles.helpBox);
+        }
+
+        // ──────────────────── Build Tab ────────────────────
+
+        private void DrawBuildTab()
+        {
             DrawModeSelector();
             EditorGUILayout.Space(4);
             DrawOverlayToggles();
             EditorGUILayout.Space(4);
             DrawFloorLevelSelector();
             EditorGUILayout.Space(8);
-            DrawQuickActions();
+            DrawBuildActions();
+        }
+
+        // ──────────────────── Validate Tab ────────────────────
+
+        private void DrawValidateTab()
+        {
+            EditorGUILayout.LabelField("Validation", EditorStyles.boldLabel);
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Validate All", GUILayout.Height(24)))
+            {
+                LevelValidator.ValidateAll();
+                Repaint();
+            }
+            if (GUILayout.Button("Validate Scene", GUILayout.Height(24)))
+            {
+                LevelValidator.ValidateAll();
+                Repaint();
+            }
+            EditorGUILayout.EndHorizontal();
+
+            var results = LevelValidator.LastResults;
+            if (results.Count > 0)
+            {
+                int errors = 0, warnings = 0;
+                foreach (var r in results)
+                {
+                    if (r.Severity == LevelValidator.Severity.Error) errors++;
+                    else if (r.Severity == LevelValidator.Severity.Warning) warnings++;
+                }
+
+                EditorGUILayout.HelpBox($"{errors} error(s), {warnings} warning(s)",
+                    errors > 0 ? MessageType.Error : MessageType.Warning);
+
+                if (GUILayout.Button("Auto-Fix All", GUILayout.Height(20)))
+                {
+                    LevelValidator.AutoFixAll();
+                    Repaint();
+                }
+
+                EditorGUILayout.Space(4);
+                EditorGUILayout.LabelField("Results", EditorStyles.boldLabel);
+
+                _sidePanelScroll = EditorGUILayout.BeginScrollView(_sidePanelScroll);
+                foreach (var result in results)
+                {
+                    EditorGUILayout.BeginHorizontal();
+                    Color iconColor = result.Severity == LevelValidator.Severity.Error ? Color.red :
+                        result.Severity == LevelValidator.Severity.Warning ? Color.yellow : Color.cyan;
+                    var prevColor = GUI.color;
+                    GUI.color = iconColor;
+                    GUILayout.Label("●", GUILayout.Width(12));
+                    GUI.color = prevColor;
+                    GUILayout.Label(result.Message, EditorStyles.miniLabel);
+                    if (result.CanAutoFix && result.FixAction != null)
+                    {
+                        if (GUILayout.Button("Fix", GUILayout.Width(30)))
+                        {
+                            result.FixAction();
+                            LevelValidator.ValidateAll();
+                        }
+                    }
+                    else if (result.TargetObject != null)
+                    {
+                        if (GUILayout.Button("→", GUILayout.Width(20)))
+                        {
+                            Selection.activeObject = result.TargetObject;
+                            SceneView.lastActiveSceneView?.FrameSelected();
+                        }
+                    }
+                    EditorGUILayout.EndHorizontal();
+                }
+                EditorGUILayout.EndScrollView();
+            }
+            else
+            {
+                EditorGUILayout.HelpBox("No validation results yet. Click Validate All.", MessageType.None);
+            }
         }
 
         private void DrawWindowHeader()
@@ -218,7 +361,6 @@ namespace ProjectArk.Level.Editor
         private bool DrawModeButton(string label, ToolMode mode, string iconName)
         {
             var isActive = _currentMode == mode;
-            var style = isActive ? "Button" : "Button";
 
             var prevBg = GUI.backgroundColor;
             if (isActive) GUI.backgroundColor = new Color(0.4f, 0.7f, 1f);
@@ -273,42 +415,10 @@ namespace ProjectArk.Level.Editor
             EditorGUILayout.EndHorizontal();
         }
 
-        private void DrawQuickActions()
+        private void DrawBuildActions()
         {
             EditorGUILayout.LabelField("Actions", EditorStyles.boldLabel);
 
-            if (GUILayout.Button("Validate All", GUILayout.Height(24)))
-            {
-                LevelValidator.ValidateAll();
-                Repaint();
-            }
-
-            if (GUILayout.Button("Validate Scene", GUILayout.Height(22)))
-            {
-                LevelValidator.ValidateAll();
-                Repaint();
-            }
-
-            // Show results summary
-            var results = LevelValidator.LastResults;
-            if (results.Count > 0)
-            {
-                int errors = 0, warnings = 0;
-                foreach (var r in results)
-                {
-                    if (r.Severity == LevelValidator.Severity.Error) errors++;
-                    else if (r.Severity == LevelValidator.Severity.Warning) warnings++;
-                }
-
-                EditorGUILayout.HelpBox($"{errors} error(s), {warnings} warning(s)", 
-                    errors > 0 ? MessageType.Error : MessageType.Warning);
-
-                if (GUILayout.Button("Auto-Fix All", GUILayout.Height(20)))
-                {
-                    LevelValidator.AutoFixAll();
-                    Repaint();
-                }
-            }
             if (GUILayout.Button("Scan Scene", GUILayout.Height(24)))
             {
                 var scannedData = SceneScanner.ScanScene();
@@ -321,7 +431,7 @@ namespace ProjectArk.Level.Editor
             }
             if (GUILayout.Button("Create Built-in Presets", GUILayout.Height(22)))
             {
-                BlockoutModeHandler.CreateBuiltInPresets();
+                RoomFactory.CreateBuiltInPresets();
                 Debug.Log("[LevelArchitect] Built-in presets created/verified.");
             }
             EditorGUILayout.Space(4);
@@ -531,7 +641,7 @@ namespace ProjectArk.Level.Editor
             {
                 if (GUILayout.Button("Create Built-in Presets First", GUILayout.Height(24)))
                 {
-                    BlockoutModeHandler.CreateBuiltInPresets();
+                    RoomFactory.CreateBuiltInPresets();
                 }
             }
             else
@@ -563,50 +673,25 @@ namespace ProjectArk.Level.Editor
 
             GUILayout.Space(8);
 
-            // ── Validate ──
-            if (GUILayout.Button("Validate All", GUILayout.Height(22)))
+            // ── Quick Validate (compact) ──
+            if (GUILayout.Button("✅ Validate All", GUILayout.Height(22)))
             {
                 LevelValidator.ValidateAll();
                 var window = LevelArchitectWindow.Instance;
                 if (window != null) window.Repaint();
             }
 
-            // Show compact validation results
             var validationResults = LevelValidator.LastResults;
             if (validationResults.Count > 0)
             {
-                foreach (var result in validationResults)
+                int errors = 0, warnings = 0;
+                foreach (var r in validationResults)
                 {
-                    EditorGUILayout.BeginHorizontal();
-
-                    Color iconColor = result.Severity == LevelValidator.Severity.Error ? Color.red :
-                        result.Severity == LevelValidator.Severity.Warning ? Color.yellow : Color.cyan;
-                    var prevColor2 = GUI.color;
-                    GUI.color = iconColor;
-                    GUILayout.Label("●", GUILayout.Width(12));
-                    GUI.color = prevColor2;
-
-                    GUILayout.Label(result.Message, EditorStyles.miniLabel);
-
-                    if (result.CanAutoFix && result.FixAction != null)
-                    {
-                        if (GUILayout.Button("Fix", GUILayout.Width(30)))
-                        {
-                            result.FixAction();
-                            LevelValidator.ValidateAll();
-                        }
-                    }
-                    else if (result.TargetObject != null)
-                    {
-                        if (GUILayout.Button("→", GUILayout.Width(20)))
-                        {
-                            Selection.activeObject = result.TargetObject;
-                            SceneView.lastActiveSceneView?.FrameSelected();
-                        }
-                    }
-
-                    EditorGUILayout.EndHorizontal();
+                    if (r.Severity == LevelValidator.Severity.Error) errors++;
+                    else if (r.Severity == LevelValidator.Severity.Warning) warnings++;
                 }
+                EditorGUILayout.HelpBox($"{errors} error(s), {warnings} warning(s) — see Validate tab",
+                    errors > 0 ? MessageType.Error : MessageType.Warning);
             }
         }
 
@@ -833,6 +918,24 @@ namespace ProjectArk.Level.Editor
             var color = GetRoomNodeTypeColor(nodeType);
             color.a = 1f;
             return color;
+        }
+
+        /// <summary>
+        /// Returns the display color for a ConnectionType.
+        /// Migrated from ConnectionGraphEdge (WorldGraph Editor removed).
+        /// </summary>
+        public static Color GetConnectionTypeColor(ConnectionType type)
+        {
+            switch (type)
+            {
+                case ConnectionType.Progression: return new Color(0.7f, 0.7f, 0.7f);   // Light gray
+                case ConnectionType.Return:      return new Color(0.5f, 0.3f, 0.8f);   // Purple
+                case ConnectionType.Ability:     return new Color(0.2f, 0.7f, 0.9f);   // Cyan
+                case ConnectionType.Challenge:   return new Color(0.9f, 0.3f, 0.2f);   // Red
+                case ConnectionType.Identity:    return new Color(0.9f, 0.7f, 0.2f);   // Gold
+                case ConnectionType.Scheduled:   return new Color(0.3f, 0.9f, 0.5f);   // Green
+                default:                         return new Color(0.5f, 0.5f, 0.5f);   // Gray
+            }
         }
 
         // ──────────────────── Callbacks ────────────────────

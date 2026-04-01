@@ -285,7 +285,7 @@ namespace ProjectArk.Level.Editor
 
         private static RoomPresetSO FindDefaultPreset()
         {
-            // Try to find an existing Normal preset
+            // Try to find an existing Transit preset
             var presets = RoomFactory.FindAllPresets();
             foreach (var p in presets)
             {
@@ -293,82 +293,13 @@ namespace ProjectArk.Level.Editor
                     return p;
             }
 
-            // If no presets exist, create one on the fly
+            // If no presets exist, create built-in presets via RoomFactory
             if (presets.Length == 0)
             {
-                return CreateBuiltInPresets();
+                return RoomFactory.CreateBuiltInPresets();
             }
 
             return presets[0];
-        }
-
-        /// <summary>
-        /// Create the 5 built-in presets if they don't exist.
-        /// Returns the Normal preset.
-        /// </summary>
-        public static RoomPresetSO CreateBuiltInPresets()
-        {
-            string path = "Assets/_Data/Level/RoomPresets/";
-            EnsureDirectoryExists(path);
-
-            RoomPresetSO normalPreset = null;
-
-            // Safe room
-            normalPreset = CreatePresetIfMissing(path, "Preset_Safe", "Safe Room",
-                "A safe zone with no enemies. May contain checkpoint, shop, or NPC.",
-                RoomNodeType.Safe, new Vector2(15, 12), 2, false, false);
-
-            // Normal room
-            var normal = CreatePresetIfMissing(path, "Preset_Normal", "Normal Room",
-                "Standard room with optional enemies.",
-                RoomNodeType.Transit, new Vector2(20, 15), 4, false, false);
-            if (normal != null) normalPreset = normal;
-
-            // Arena room
-            CreatePresetIfMissing(path, "Preset_Arena", "Arena Room",
-                "Combat arena — doors lock on entry, unlock after all waves cleared.",
-                RoomNodeType.Resolution, new Vector2(25, 20), 6, true, true);
-
-            // Boss room
-            CreatePresetIfMissing(path, "Preset_Boss", "Boss Room",
-                "Boss encounter room — larger than arena, special rewards on clear.",
-                RoomNodeType.Boss, new Vector2(35, 25), 6, true, true);
-
-            // Corridor
-            CreatePresetIfMissing(path, "Preset_Corridor", "Corridor",
-                "Narrow connecting passage between rooms.",
-                RoomNodeType.Transit, new Vector2(15, 3), 0, false, false);
-
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-
-            return normalPreset;
-        }
-
-        private static RoomPresetSO CreatePresetIfMissing(string basePath, string fileName, string presetName,
-            string description, RoomNodeType nodeType, Vector2 defaultSize, int spawnPoints,
-            bool includeArena, bool includeSpawner)
-        {
-            string fullPath = $"{basePath}{fileName}.asset";
-            var existing = AssetDatabase.LoadAssetAtPath<RoomPresetSO>(fullPath);
-            if (existing != null) return existing;
-
-            var preset = ScriptableObject.CreateInstance<RoomPresetSO>();
-
-            var serialized = new SerializedObject(preset);
-            serialized.FindProperty("_presetName").stringValue = presetName;
-            serialized.FindProperty("_description").stringValue = description;
-            serialized.FindProperty("_nodeType").enumValueIndex = (int)nodeType;
-            serialized.FindProperty("_defaultSize").vector2Value = defaultSize;
-            serialized.FindProperty("_spawnPointCount").intValue = spawnPoints;
-            serialized.FindProperty("_includeArenaController").boolValue = includeArena;
-            serialized.FindProperty("_includeEnemySpawner").boolValue = includeSpawner;
-            serialized.ApplyModifiedPropertiesWithoutUndo();
-
-            AssetDatabase.CreateAsset(preset, fullPath);
-            Debug.Log($"[BlockoutMode] Created built-in preset: {fullPath}");
-
-            return preset;
         }
 
         // ──────────────────── Preview Drawing ────────────────────
@@ -458,22 +389,5 @@ namespace ProjectArk.Level.Editor
             return nearestRoom;
         }
 
-        private static void EnsureDirectoryExists(string path)
-        {
-            if (!AssetDatabase.IsValidFolder(path.TrimEnd('/')))
-            {
-                var parts = path.TrimEnd('/').Split('/');
-                string current = parts[0];
-                for (int i = 1; i < parts.Length; i++)
-                {
-                    string next = current + "/" + parts[i];
-                    if (!AssetDatabase.IsValidFolder(next))
-                    {
-                        AssetDatabase.CreateFolder(current, parts[i]);
-                    }
-                    current = next;
-                }
-            }
-        }
     }
 }

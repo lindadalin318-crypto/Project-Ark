@@ -326,7 +326,7 @@ namespace ProjectArk.Level.Editor
         /// <summary>
         /// [B4.1] Draws door connection lines colored by ConnectionType.
         /// Data source: Door.ConnectionType field (scene MonoBehaviour).
-        /// Color mapping: ConnectionGraphEdge.GetConnectionTypeColor().
+        /// Color mapping: LevelArchitectWindow.GetConnectionTypeColor().
         /// Layer transitions use thicker solid lines; normal connections use dotted lines.
         /// When this overlay is active, it replaces the default gray connections
         /// drawn by RoomBlockoutRenderer.DrawDoorConnections().
@@ -350,7 +350,7 @@ namespace ProjectArk.Level.Editor
                     drawnPairs.Add(pairKey);
 
                     // Get color from ConnectionType
-                    Color lineColor = ConnectionGraphEdge.GetConnectionTypeColor(door.ConnectionType);
+                    Color lineColor = LevelArchitectWindow.GetConnectionTypeColor(door.ConnectionType);
 
                     Vector3 fromPos = room.transform.position;
                     Vector3 toPos = door.TargetRoom.transform.position;
@@ -454,7 +454,7 @@ namespace ProjectArk.Level.Editor
 
             foreach (var (connType, label) in types)
             {
-                Color c = ConnectionGraphEdge.GetConnectionTypeColor(connType);
+                Color c = LevelArchitectWindow.GetConnectionTypeColor(connType);
 
                 // Color swatch
                 Rect swatchRect = new Rect(legendX + padding, y + 3f, 10f, 10f);

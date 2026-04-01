@@ -23,8 +23,8 @@ namespace ProjectArk.Level
         [Tooltip("Position where the player appears after passing through this door.")]
         [SerializeField] private Transform _targetSpawnPoint;
 
-        [Header("World Graph Integration")]
-        [Tooltip("此门在房间内的命名入口 ID（如 'left_1', 'boss_entrance'）。需与 WorldGraphSO 中的 GateID 一致。")]
+        [Header("Gate & Connection")]
+        [Tooltip("此门的命名入口 ID（如 'left_1', 'boss_entrance'）。用于工具链连线和 Pacing 可视化。")]
         [SerializeField] private string _gateID;
 
         [Tooltip("此连接的语义类型。用于地图可视化和 Pacing 分析。")]
@@ -96,7 +96,7 @@ namespace ProjectArk.Level
         /// <summary> Required key ID for this door (empty = no key needed). </summary>
         public string RequiredKeyID => _requiredKeyID;
 
-        /// <summary> 此门在房间内的命名入口 ID（对应 WorldGraphSO 中的 GateID）。 </summary>
+        /// <summary> 此门的命名入口 ID。用于工具链连线和 Pacing 可视化。 </summary>
         public string GateID => _gateID;
 
         /// <summary> 此连接的语义类型。 </summary>

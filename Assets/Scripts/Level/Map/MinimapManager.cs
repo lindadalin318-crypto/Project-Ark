@@ -16,10 +16,6 @@ namespace ProjectArk.Level
     {
         // ──────────────────── Configuration ────────────────────
 
-        [Header("World Graph")]
-        [Tooltip("世界图谱资产。如果配置了，邻接关系将从图谱读取而非运行时 Door 推导。")]
-        [SerializeField] private WorldGraphSO _worldGraph;
-
         [Header("Save")]
         [Tooltip("Save slot index for persisting visited rooms.")]
         [SerializeField] private int _saveSlot = 0;
@@ -129,56 +125,14 @@ namespace ProjectArk.Level
                 };
             }
 
-            // Build connections: prefer WorldGraphSO, fallback to Door references
-            if (_worldGraph != null && _worldGraph.ConnectionCount > 0)
-            {
-                GatherConnectionsFromWorldGraph();
-            }
-            else
-            {
-                GatherConnectionsFromDoors(allRooms);
-            }
+            // Build connections from Door references
+            GatherConnectionsFromDoors(allRooms);
 
-            Debug.Log($"[MinimapManager] Gathered {_roomDataCache.Count} rooms, {_connections.Count} connections" +
-                       $" (source: {(_worldGraph != null && _worldGraph.ConnectionCount > 0 ? "WorldGraph" : "Door references")}).");
+            Debug.Log($"[MinimapManager] Gathered {_roomDataCache.Count} rooms, {_connections.Count} connections.");
         }
 
         /// <summary>
-        /// 从 WorldGraphSO 读取连接关系（新路径）。
-        /// 去重：双向边只保留一条 MapConnection。
-        /// </summary>
-        private void GatherConnectionsFromWorldGraph()
-        {
-            var processedPairs = new HashSet<string>();
-
-            foreach (var edge in _worldGraph.Connections)
-            {
-                if (string.IsNullOrEmpty(edge.FromRoomID) || string.IsNullOrEmpty(edge.ToRoomID))
-                    continue;
-
-                // Deduplicate bidirectional connections
-                string pairKey = string.Compare(edge.FromRoomID, edge.ToRoomID, StringComparison.Ordinal) < 0
-                    ? $"{edge.FromRoomID}|{edge.ToRoomID}"
-                    : $"{edge.ToRoomID}|{edge.FromRoomID}";
-
-                if (!processedPairs.Add(pairKey)) continue;
-
-                if (_roomDataCache.TryGetValue(edge.FromRoomID, out var fromData) &&
-                    _roomDataCache.TryGetValue(edge.ToRoomID, out var toData))
-                {
-                    _connections.Add(new MapConnection
-                    {
-                        FromRoomID = edge.FromRoomID,
-                        ToRoomID = edge.ToRoomID,
-                        Midpoint = (fromData.WorldCenter + toData.WorldCenter) * 0.5f,
-                        IsLayerTransition = edge.IsLayerTransition
-                    });
-                }
-            }
-        }
-
-        /// <summary>
-        /// 从场景中 Door 引用运行时推导连接关系（旧路径 / fallback）。
+        /// 从场景中 Door 引用运行时推导连接关系。
         /// </summary>
         private void GatherConnectionsFromDoors(Room[] allRooms)
         {

@@ -22,10 +22,6 @@ namespace ProjectArk.Level
         [Tooltip("Full-screen Image used for the fade-to-black effect. Must be a child of a Canvas.")]
         [SerializeField] private Image _fadeImage;
 
-        [Header("World Graph")]
-        [Tooltip("世界图谱资产。如果配置了，DoorTransitionController 将优先从图谱中按 GateID 查找目标。")]
-        [SerializeField] private WorldGraphSO _worldGraph;
-
         [Header("Timing")]
         [Tooltip("Fade duration for normal door transitions (seconds).")]
         [SerializeField] private float _normalFadeDuration = 0.3f;
@@ -154,8 +150,9 @@ namespace ProjectArk.Level
             {
                 ResolveCameraBindings();
 
-                // ── 解析目标（优先 WorldGraph，fallback _targetRoom）──
-                ResolveTarget(door, out Room targetRoom, out Transform targetSpawn);
+                // ── 解析目标（直接使用 Door 引用）──
+                Room targetRoom = door.TargetRoom;
+                Transform targetSpawn = door.TargetSpawnPoint;
 
                 // ── Ceremony 决定演出参数 ──
                 var ceremony = door.Ceremony;
@@ -232,78 +229,6 @@ namespace ProjectArk.Level
                 _isTransitioning = false;
                 onComplete?.Invoke();
             }
-        }
-
-        // ──────────────────── Target Resolution ────────────────────
-
-        /// <summary>
-        /// 解析门的过渡目标。优先从 WorldGraphSO + GateID 查找，fallback 到 Door 自身的 _targetRoom 引用。
-        /// </summary>
-        private void ResolveTarget(Door door, out Room targetRoom, out Transform targetSpawn)
-        {
-            // 默认使用 Door 直接引用（旧路径 / fallback）
-            targetRoom = door.TargetRoom;
-            targetSpawn = door.TargetSpawnPoint;
-
-            // 尝试从 WorldGraph 查找
-            if (_worldGraph == null || string.IsNullOrEmpty(door.GateID)) return;
-
-            // 获取门所在的房间 ID
-            var ownerRoom = door.GetComponentInParent<Room>();
-            if (ownerRoom == null) return;
-
-            string fromRoomID = ownerRoom.RoomID;
-            if (string.IsNullOrEmpty(fromRoomID)) return;
-
-            if (!_worldGraph.TryGetConnectionByGate(fromRoomID, door.GateID, out var edge)) return;
-
-            // 找到 WorldGraph 中的目标房间
-            var roomManager = ServiceLocator.Get<RoomManager>();
-            if (roomManager == null) return;
-
-            Room graphTargetRoom = roomManager.FindRoomByID(edge.ToRoomID);
-            if (graphTargetRoom == null)
-            {
-                Debug.LogWarning($"[DoorTransitionController] WorldGraph 指向 '{edge.ToRoomID}' 但场景中找不到该房间，" +
-                                 $"fallback 到 Door 直接引用。");
-                return;
-            }
-
-            // 在目标房间中查找匹配 GateID 的 spawn point
-            Transform graphTargetSpawn = FindSpawnPointForGate(graphTargetRoom, edge.ToGateID);
-            if (graphTargetSpawn == null)
-            {
-                // 无法找到匹配的 spawn point，fallback 到 Door 直接引用的 spawn point
-                Debug.LogWarning($"[DoorTransitionController] 目标房间 '{edge.ToRoomID}' 中找不到 GateID '{edge.ToGateID}' " +
-                                 $"对应的 SpawnPoint，fallback 到 Door 直接引用。");
-                // 但仍使用 WorldGraph 找到的目标房间
-                targetRoom = graphTargetRoom;
-                return;
-            }
-
-            // WorldGraph 路径完全解析成功
-            targetRoom = graphTargetRoom;
-            targetSpawn = graphTargetSpawn;
-        }
-
-        /// <summary>
-        /// 在目标房间中查找与 GateID 匹配的 SpawnPoint Transform。
-        /// 命名约定：SpawnPoint_{gateID}（如 SpawnPoint_left_1）。
-        /// </summary>
-        private static Transform FindSpawnPointForGate(Room targetRoom, string gateID)
-        {
-            if (string.IsNullOrEmpty(gateID)) return null;
-
-            string expectedName = $"SpawnPoint_{gateID}";
-
-            // 查找直接子节点和深层子节点
-            foreach (Transform child in targetRoom.GetComponentsInChildren<Transform>(true))
-            {
-                if (string.Equals(child.gameObject.name, expectedName, System.StringComparison.OrdinalIgnoreCase))
-                    return child;
-            }
-
-            return null;
         }
 
         // ──────────────────── Ceremony Timing ────────────────────

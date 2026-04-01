@@ -131,7 +131,6 @@ namespace ProjectArk.Level
 
         /// <summary>
         /// 按 RoomID 查找场景中的 Room。运行时使用字典缓存，O(1)。
-        /// 供 DoorTransitionController 从 WorldGraphSO 解析目标时使用。
         /// </summary>
         public Room FindRoomByID(string roomID)
         {
