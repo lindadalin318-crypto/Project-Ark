@@ -2,6 +2,184 @@
 
 ---
 
+## LevelValidator 第二批层级与 ActivationGroup 校验扩展 — 2026-04-01 23:06
+
+### 修改文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidatorTests.cs`
+
+### 内容
+- 在 `LevelValidator.cs` 中新增 `ValidateActivationGroups()`：补上 `ActivationGroup` 不在 `Room` 下、没有任何成员/子节点、`_members` 中有空引用、引用了其他房间成员 等高价值警告。
+- 在 `ValidateAll()` 主链接入第二批规则，并新增 `ValidatePreferredAuthoringRoots()`，把房间元素的官方挂点契约显式化：`Lock` / `Checkpoint` / `DestroyableObject` → `Elements`，`OpenEncounterTrigger` → `Encounters`，`BiomeTrigger` / `HiddenAreaMask` / `ScheduledBehaviour` / `WorldEventTrigger` → `Triggers`，`EnvironmentHazard` → `Hazards`，`ActivationGroup` → `Triggers` 或 `ActivationGroups`。
+- 扩展 `LevelValidatorTests.cs`，新增第二批测试覆盖：`ActivationGroup` 无 `Room` 父级、空成员、挂错根节点，以及 `Lock` / `BiomeTrigger` 挂错官方根节点的失败场景。
+- 通过 `dotnet build ProjectArk.Level.Editor.csproj -nologo -clp:ErrorsOnly` 验证当前改动编译通过（39 warnings / 0 errors）；再次探测 `dotnet test` 后，命令行仍未稳定返回 NUnit 用例执行结果，因此当前只确认到“测试文件已编译并纳入程序集”，未把 CLI 测试执行结果作为可信验收来源。
+
+### 目的
+- 把 `Level_WorkflowSpec.md` 中“新元素必须同步补固定挂点校验”的规则真正落到编辑器护栏上，避免组件虽然存在但因挂错根节点而悄悄偏离 `Room` 的运行时主链。
+- 补足 `ActivationGroup` 这类 Trigger / Director 元素的最低可工作性检查，让“场景里摆了组但永远不响应房间切换”这种静默错误在编辑期就暴露出来。
+
+### 技术
+- 语义校验扩展：通过 `TryGetImmediateRoomRoot()` 提取组件位于 `Room` 下的一级根节点名称，将运行时的 preferred-root 假设升级为统一编辑期警告。
+- Trigger / Director 护栏：用 `SerializedObject` 读取 `ActivationGroup._members`，在不猜测策划语义的前提下，只校验会导致行为失效或明显越界的数据问题。
+- 测试先行：先把第二批错误场景补入 `LevelValidatorTests.cs`，再落生产代码；在当前 CLI 测试链不稳定的约束下，以“测试用例已落地 + 编辑器程序集编译通过”作为本轮可验证边界。
+
+---
+
+## LevelValidator 首批房间元素校验扩展 — 2026-04-01 22:57
+
+
+### 修改文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidatorTests.cs`
+- `ProjectArk.Level.Editor.csproj`
+
+### 内容
+- 在 `LevelValidator.cs` 中把首批新增元素规则接入 `ValidateAll()` 主链，新增对 `Lock`、`Checkpoint`、`HiddenAreaMask`、`BiomeTrigger`、`ScheduledBehaviour` 的统一扫描与校验。
+- 为 `Lock`、`Checkpoint`、`BiomeTrigger` 补入关键引用缺失错误：`_requiredKey`、`_targetDoor`、`_data`、`_ambiencePreset` 缺失时直接报错，避免场景能摆但交互静默失效。
+- 为上述交互/触发类对象补入通用 Trigger / LayerMask 校验，并允许对缺失 Trigger 与空 `_playerLayer` 做有限 Auto-Fix；同时为 `HiddenAreaMask` 增加“无 SpriteRenderer”警告，为 `ScheduledBehaviour` 增加“空相位数组 / 无目标也无子物体”警告。
+- 新建 `LevelValidatorTests.cs`，先用测试固定 4 个高优先级失效模式：`Lock` 缺 key、`Checkpoint` 缺 `CheckpointSO`、`BiomeTrigger` 缺 `RoomAmbienceSO`、`ScheduledBehaviour` 空相位。
+- 将 `LevelValidatorTests.cs` 纳入 `ProjectArk.Level.Editor.csproj`，并通过 `dotnet build ProjectArk.Level.Editor.csproj -nologo -clp:ErrorsOnly` 验证当前改动编译通过（35 warnings / 0 errors）。
+
+### 目的
+- 把上一轮文档里定义的“新增元素必须进入 Validator 护栏”真正落到代码上，先覆盖最容易导致主链交互失效的房间元素家族。
+- 让 `Level` 模块新增互动件和触发器时，不再只有运行时自检日志，而是能在编辑期集中暴露缺引用、空 Layer、错误 Trigger 这类高频配置问题。
+
+### 技术
+- Editor 校验扩展：在 `LevelValidator` 中新增场景级 `FindObjectsByType(..., FindObjectsInactive.Include, ...)` 扫描，把非 `Room` 主链对象纳入统一校验入口。
+- 通用规则抽取：复用 `ValidateTriggerCollider()` 与 `ValidateLayerMask()` 处理交互件共享的 Trigger / `_playerLayer` 约束，保持错误消息和 Auto-Fix 边界一致。
+- 测试先行：先写 `LevelValidatorTests.cs` 固定目标行为，再补生产代码；当前命令行 `dotnet test` 输出链不稳定，但新增测试文件已随程序集成功编译。
+
+---
+
+## Level 新增房间元素接入协议收口 — 2026-04-01 22:51
+
+
+### 修改文件
+- `Docs/2_Design/Level/Level_CanonicalSpec.md`
+- `Docs/2_Design/Level/Level_WorkflowSpec.md`
+
+### 内容
+- 在 `Level_CanonicalSpec.md` 中新增“新增房间元素接入协议（严格版）”，把新元素接入前必须回答的 6 个维度正式写成现役规范：模板家族、场景挂点、运行时 owner、状态通道、触发来源、Validator 契约。
+- 在 `Level_CanonicalSpec.md` 中补入 6 类现役模板家族矩阵，明确 `Door / Gate`、`Interact Anchor`、`Persistent Room Element`、`Encounter Element`、`Hazard Element`、`Trigger / Director` 的默认挂点、authority、状态通道和 Validator 关注点。
+- 在 `Level_CanonicalSpec.md` 中补入“新增元素的 LevelValidator 接入规则”，明确何时必须扩校验、严重度如何划分，以及 Auto-Fix 只能修结构默认值、不能猜语义字段。
+- 在 `Level_WorkflowSpec.md` 中新增“新增元素的 Validator 接入规则”和“新增房间元素接入 SOP（严格版）”，把日常 authoring 的执行顺序收口为：选模板 → 定挂点 → 定 owner → 定状态通道 → 判断是否接 `Room` 主链 → 判断是否扩编辑期模型 → 补校验与验收。
+- 在 `Level_WorkflowSpec.md` 中补入六类模板落位速查表，方便后续每次增加新互动件、新机关或新触发器时直接按模板接入，而不是重新考古整个 Level 模块。
+
+### 目的
+- 把“新增房间元素如何并入现有流程”从口头讨论收口为现役规范，降低后续增加互动件、机关、触发器时的接入分歧。
+- 明确新元素接入时的 authority、持久化、Room 集成和 Validator 责任边界，避免再出现新元素能跑但没有统一接入路径、没有校验护栏的问题。
+
+### 技术
+- 文档架构设计：将协议层写入 `CanonicalSpec`，将执行 SOP 与校验入口写入 `WorkflowSpec`，保持“谁说了算”与“怎么落地”分层。
+- 代码事实对齐：以 `Room.CollectSceneReferences()`、`RoomFlagRegistry`、`SaveBridge`、`Lock`、`Checkpoint`、`OpenEncounterTrigger`、`BiomeTrigger`、`ScheduledBehaviour`、`ActivationGroup` 的现役行为为依据组织模板。
+- Validator 治理：将严重度、Auto-Fix 边界与“何时必须扩 `LevelValidator`”规则显式化，避免后续新增模板进入标准流程时缺少校验约束。
+
+---
+
+## Level 文档收口为现役规范版 — 2026-04-01 22:22
+
+
+### 修改文件
+- `Docs/2_Design/Level/Level_CanonicalSpec.md`
+- `Docs/2_Design/Level/Level_WorkflowSpec.md`
+
+### 内容
+- 将 `Level_CanonicalSpec.md` 重写为现役规范文档，只保留架构总览、核心声明、房间语法、运行时 authority、模块边界、Editor 工具链 authority 与校验基线。
+- 删除正文中的迁移策略、Batch 计划、版本记录、历史 Appendix，以及“已移除 / 已完成 / 待证实”这类阶段性描述，避免文档继续混合现役规则与历史过程。
+- 将 `Level_WorkflowSpec.md` 收口为现役操作手册，只保留搭建入口、统一工作流、验证边界、标准 authoring 结构、`LevelScaffoldData` 定位与 `LevelSliceBuilder` JSON Schema。
+- 删除 Workflow 中的历史兼容说明、过程性优化展望和版本降级语气，让文档直接回答“现在怎么搭、哪里是 authority、参数长什么样”。
+
+### 目的
+- 让 `Level` 文档体系只承载现役真相，降低阅读时的历史噪声和认知分叉。
+- 把迁移、阶段、版本等过程信息统一收口到 `ImplementationLog`，让规范文档回到“声明当前规则”的职责。
+
+### 技术
+- 文档治理：按“架构 / 参数 / 声明 / authority”四类信息重组 `CanonicalSpec` 与 `WorkflowSpec`。
+- 内容裁剪：去掉历史迁移、Batch 状态、版本追溯、兼容别名与未来优化段落，只保留现役 authoring 和 runtime 口径。
+- 细节修正：同步修正文档中残留的历史措辞与 Markdown 反引号排版问题。
+
+---
+
+## 关卡 Batch 状态复核 + Level 工程文件收尾 — 2026-04-01 22:08
+
+### 修改文件
+- `Docs/2_Design/Level/Level_CanonicalSpec.md`
+- `ProjectArk.Level.csproj`
+- `ProjectArk.Level.Editor.csproj`
+
+### 内容
+- 复核 `Level_CanonicalSpec.md` 的 Batch 2 / 3 / 4 状态，按当前代码事实重写批次状态：`Batch 2`、`Batch 3` 收口为已完成，`Batch 4` 改为“工具侧已完成，场景验证待证实”。
+- 在复核过程中实际运行 `dotnet build Project-Ark.slnx`，发现解决方案并未通过：`ProjectArk.Level.csproj` 与 `ProjectArk.Level.Editor.csproj` 仍残留对已删除 `WorldGraphSO` / `RoomNodeData` / `ConnectionEdge` / `RoomType` 以及旧 `WorldGraph` / `Scaffold` 编辑器脚本的源码引用。
+- 清理 `ProjectArk.Level.csproj` 中 4 个失效源码条目，清理 `ProjectArk.Level.Editor.csproj` 中 9 个退役编辑器脚本条目，并补上现役 `LevelSliceBuilder.cs`。
+- 再次执行 `dotnet build Project-Ark.slnx`，结果恢复为 **25 warnings / 0 errors**，确认当前文档里“编译通过”类验收项重新具备事实支撑。
+
+### 目的
+- 让 `Level_CanonicalSpec.md` 的批次状态只陈述“能被代码和构建结果直接证明”的事实，避免把工具完成误写成场景落地完成。
+- 补完 WorldGraph 迁移后的工程文件收尾，消除“文档已经删干净，但解决方案还在引用旧文件”的隐性断链。
+
+### 技术
+- 代码锚点复核：对照 `RoomFactory`、`Room.cs`、`LevelValidator`、`PacingOverlayRenderer`、`RoomFlagRegistry`、`DestroyableObject`、`DoorTransitionController`、`SaveBridge`、`LevelEvents` 判定 Batch 状态。
+- 构建验证：两轮 `dotnet build Project-Ark.slnx` 识别并回归验证失效引用问题。
+- 文本编辑策略：同一文件改用串行替换，避免并行替换覆盖导致 `csproj` 和文档条目回滚。
+
+---
+
+## Implement_rules.md 同步更新（移除 WorldGraphSO 引用） — 2026-04-01 21:36
+
+### 修改文件
+- `Implement_rules.md`
+
+### 内容
+- 全面清理 Level 模块规则（§7）中的 11 处 WorldGraphSO 引用，与 2026-04-01 15:30 的代码删除和 Level_CanonicalSpec.md v1.1 更新保持一致。
+- §7.1 模块边界：Data Assets 列表去掉 WorldGraphSO。
+- §7.2 模块目标：改门连接的工作流改为直接改 Door 引用。
+- §7.3 Authority 执行约束表：删除 WorldGraphSO 创建/编辑两行；SO 批量创建去掉 WorldGraphSO；Runtime 消费改为 Door 引用数据。
+- §7.4.2：设计时离线数据从 WorldGraphSO 改为 RoomSO 等通用 SO。
+- §7.4.4：RoomManager 错误条件从"找不到 WorldGraphSO"改为"找不到注册的 Room"。
+- §7.4.5 Scene 接线白名单：去掉 WorldGraphSO 作为权威数据源的条目，改为 RoomSO + Door-based。
+- §7.5.2 踩坑预防：从"WorldGraphSO ↔ Scene 不一致"改为"Door 连接引用不完整"。
+- §7.6 验收清单：一致性校验改为 Door 连接完整性检查。
+- §7.7 推荐工作流：新房间/新连接和难定位 bug 的流程全部改为 Door-based。
+- 最终验证：文件内 `WorldGraphSO` / `WorldGraph` 搜索结果为 0，彻底清理完成。
+
+### 目的
+- 消除实现规则文档与代码实际状态之间的不一致，确保 `Implement_rules.md` 中的 Level 模块规则反映当前 Door-based 连接拓扑方案。
+- 与 `Level_CanonicalSpec.md` v1.1 保持同步。
+
+### 技术
+- Markdown 文档逐处精确替换，共修改 11 处
+- 修改后全文搜索验证零残留
+
+---
+
+## Level_CanonicalSpec.md 同步更新（移除 WorldGraphSO 引用） — 2026-04-01 21:28
+
+### 修改文件
+- `Docs/2_Design/Level/Level_CanonicalSpec.md`
+
+### 内容
+- 将文档从 v1.0 更新到 v1.1，全面移除已于 2026-04-01 15:30 删除的 WorldGraphSO、RoomNodeData、ConnectionEdge 相关内容。
+- §1 文档目的：核心数据结构列表改为 GateID / ConnectionType / TransitionCeremony / RoomNodeType / RoomFlagRegistry。
+- §4 五层模型：Layer 5 从"WorldGraphSO 显式房间网络"改为"Door-based 连接拓扑（Door 是连接关系的 Single Source of Truth）"。
+- §5 数据结构定义：WorldGraphSO（§5.1）、RoomNodeData（§5.2）、ConnectionEdge（§5.4）的代码定义替换为"已移除"说明，保留移除原因和保留内容的记录。
+- §5.6 GateID 命名规范：去掉 WorldGraphSO 端点标识引用，改为工具链连线和 Pacing 可视化用途。
+- §5.7 Door 升级字段：Header 从 "World Graph Integration" 改为 "Gate & Connection"，与当前代码一致。
+- §7 运行时数据流：数据源从 WorldGraphSO 改为 Door._targetRoom 直接引用；MinimapManager 路径改为固定走 GatherConnectionsFromDoors。
+- §9 Editor 工具链：WorldGraphEditor 标记为已移除；LevelValidator 描述改为 Door 连接完整性校验。
+- §10 迁移策略：6 项任务全部标注完成/移除状态；MinimapManager 迁移标记为已完成。
+- §11 Batch 1：标记为已完成，WorldGraphSO 相关任务标记为已移除，验收标准更新为实际通过项。
+- §12 校验规则：去掉 WorldGraphSO 一致性校验条目，改为 Door-based 检查（GateID 重复、引用非空）。
+
+### 目的
+- 消除设计文档与代码实际状态之间的不一致，避免后续开发者按照已删除的 WorldGraphSO 架构搭建关卡。
+- 让 Level_CanonicalSpec.md 重新成为可信赖的"唯一目标架构规范"。
+
+### 技术
+- Markdown 文档增量更新，逐章节精确替换
+- 基于 ImplementationLog 中 "移除 WorldGraphSO — 2026-04-01 15:30" 记录的事实进行同步
+
+---
+
 ## 关卡工作流权威文档 — 2026-04-01 16:10
 
 ### 新建文件
@@ -12579,3 +12757,53 @@ HTML 使用 `URL.createObjectURL` + `<a>` 触发浏览器下载；Unity 使用 `
 
 ### 技术
 dotnet build 验证：0 错误，0 警告。
+
+---
+
+## 关卡工作流文档职责重组 — 2026-04-01 21:52
+
+### 修改文件
+- `Docs/2_Design/Level/Level_WorkflowSpec.md` — 重构为操作手册，明确 authority 边界并修正过期内容
+
+### 内容
+
+将 `Level_WorkflowSpec.md` 从“混合型权威文档”重构为**关卡搭建操作手册**，不再在正文里承担运行时架构、脚本盘点、资产目录快照等高漂移职责，重点收束为“怎么搭、怎么验、谁说了算”。
+
+**本次重组的关键调整：**
+- 新增 `WorkflowSpec` 与 `Level_CanonicalSpec` 的职责分工，明确 Scene / Door / SO / JSON / `LevelScaffoldData` 的 authority 边界
+- 将主流程重组为：**入口路径 A/B → 结构搭建 Pass → 语义标注 Pass → Overlay 检查 → Validate → Quick Play → 完整 Play Mode 验收**
+- 修正 `LevelSliceBuilder` 的真实 JSON schema：改为顶层 `connections[]`、房间 `position/size` 数组、连接方向 `fromDir/toDir = east/west/north/south`
+- 修正当前官方最小房间结构：以 `Navigation / Elements / Encounters / Hazards / Decoration / Triggers + CameraConfiner` 为准，不再把历史 `Tilemaps / ActivationGroups` 误写为当前必需根节点
+- 明确 `Quick Play` 的定位是**结构 smoke test**，不再将其表述为完整切片验收
+- 明确 `LevelScaffoldData` 当前是 **Scene → Scaffold** 单向同步的编辑期快照/导出层，不是运行时权威，也不是 JSON 导入必经层
+- 精简正文中高频过期的信息，把文档重心收回到实际 authoring 流程与验证边界
+
+### 目的
+让 `Level_WorkflowSpec.md` 真正成为当前关卡生产流程的可执行手册，减少“工作流说明、架构规范、资产盘点”混写导致的认知噪音和文档漂移，缩短新切片从规划到落地的迭代回路。
+
+### 技术
+以现行工具链实现为锚点，对照 `LevelArchitectWindow`、`LevelSliceBuilder`、`LevelValidator`、`RoomFactory`、`ScaffoldSceneBinder` 与 `Level_CanonicalSpec.md` 进行文档职责收口与字段对齐。
+
+---
+
+## 关卡 CanonicalSpec 职责收口与现役口径同步 — 2026-04-01 22:00
+
+### 修改文件
+- `Docs/2_Design/Level/Level_CanonicalSpec.md` — 收口与 `Level_WorkflowSpec.md` 的职责边界，修正残留的旧迁移口径与文档路径
+
+### 内容
+
+继续对关卡文档体系做第二轮治理，重点不是重写 `CanonicalSpec`，而是把**会直接误导执行**的旧口径清掉，让它和新版 `WorkflowSpec` 形成“一个管架构、一个管落地”的稳定分工。
+
+**本次同步的关键调整：**
+- 修正 `CanonicalSpec` 中的文档路径与关系表，明确 `Level_WorkflowSpec.md` 是执行侧手册，冲突时以 `CanonicalSpec` 为准
+- 修正 `GateID` 章节，把 `LevelValidator` 尚未实现的重复校验从“既成事实”改为“当前空缺 + 需要人工自查”
+- 将 `Room` 标准层级改写为与 `RoomFactory`、`Room.cs`、`LevelValidator` 一致的现役口径：六个标准根节点 + `Navigation/Doors`、`Navigation/SpawnPoints`、`Encounters/SpawnPoints`、`CameraConfiner`
+- 更新 Editor 工具矩阵，去掉已过期的 `ScaffoldToSceneGenerator` / `RoomNodeMigrator` / `WorldGraphEditor` 口径，改为 `LevelSliceBuilder`、`ScaffoldSceneBinder` 与审计类工具的现役/后续分工
+- 删除 `WorldGraphSO fallback` 残留迁移说明，明确 Door 目标引用就是当前运行时传送链真相源，`MinimapManager` 固定从 Door 推导邻接关系
+
+### 目的
+让 `Level_CanonicalSpec.md` 不再同时混杂“已完成迁移”和“已废弃历史口径”，避免新同学或未来自己在看文档时误以为当前仍存在双轨拓扑、旧 `RoomType` 迁移链或已实现的 GateID 审计能力。
+
+### 技术
+以现行代码为锚点，对照 `RoomFactory`、`Room.cs`、`LevelValidator`、`LevelSliceBuilder`、`MinimapManager`、`RoomManager` 与 `WorldProgressManager` 做文档事实校准；编辑过程中识别并规避了同文件并行替换导致的覆盖风险，改为串行收口。

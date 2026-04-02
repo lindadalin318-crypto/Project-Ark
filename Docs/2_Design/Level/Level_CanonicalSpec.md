@@ -2,827 +2,537 @@
 
 ## 1. 文档目的
 
-这份文档是关卡模块重构的**唯一目标架构规范**。
+这份文档是 `Level` 模块的**现役架构规范**。
 
-它负责定义：
+它只负责定义以下内容：
 
-- 重构后的关卡模块长什么样（目标架构）
-- 核心数据结构的精确定义（WorldGraphSO / RoomNode / ConnectionEdge / GateID）
-- 运行时数据的权威流向（谁生产、谁消费）
-- 模块边界与跨模块依赖
-- Editor 工具链的职责划分（轻量版 Authority）
-- 从当前架构到目标架构的迁移策略
-- 每个 Batch 的验收标准
+- 模块的现役架构与层次划分
+- 核心类型与关键字段声明
+- 运行时 authority 与数据流向
+- Editor 工具链的职责边界
+- 模块边界、跨模块依赖与校验基线
 
-> **设计哲学基底**：以 Minishoot 的工程化关卡思维为骨架（标准化场景容器 + 显式世界图 + 门语义分级 + 节点类型分级），保留 Ark 的差异化优势（世界时钟 + 动态阶段 + 混合层间结构 + 类魂叙事氛围）。
+> **设计哲学基底**：以 Minishoot 的工程化关卡思维为骨架（标准化场景容器 + 门语义分级 + 节点类型分级 + 轻量验证工具），保留 Ark 的差异化优势（世界时钟 + 动态阶段 + 混合层间结构 + 类魂叙事氛围）。
 >
-> 完整的参考分析见 `Docs/Reference/Level_Architecture_Synthesis_Minishoot_Silksong_TUNIC.md`。
+> 参考分析见 `Docs/Reference/Level_Architecture_Synthesis_Minishoot_Silksong_TUNIC.md`。
 
-> **本文档不负责**：
->
-> - 具体关卡内容设计（示巴星房间表、敌人配置、叙事脚本）
-> - 美术规范（Tilemap 调色板、环境装饰标准）
-> - GDD 级别的玩家体验描述
->
-> 本文档优先级高于 `LevelModulePlan.md`（v3.0）中与本文档冲突的内容。`LevelModulePlan.md` 作为历史参考保留。
+### 1.1 本文档不负责
+
+- 具体区域内容设计（房间表、敌人配置、叙事脚本）
+- 美术规范（Tilemap 调色板、装饰标准、光照风格）
+- 过程性变更记录（实现日志、版本追踪、阶段说明）
 
 ---
 
 ## 2. 适用范围
 
-当前纳入重构治理的范围：
-
-### Runtime
+### 2.1 Runtime
 
 - `Assets/Scripts/Level/` 全部子目录
-  - `Room/` — Room, RoomManager, Door, DoorTransitionController, ArenaController, WaveSpawnStrategy, OpenEncounterTrigger, ActivationGroup, HiddenAreaMask
-  - `Data/` — RoomSO, EncounterSO, RoomType, EncounterMode, DoorState, RoomVariantSO, WorldPhaseSO, WorldProgressStageSO, KeyItemSO
-  - `Checkpoint/` — Checkpoint, CheckpointManager
-  - `Progression/` — Lock, KeyInventory, WorldProgressManager
-  - `WorldClock/` — WorldClock, WorldPhaseManager
-  - `DynamicWorld/` — ScheduledBehaviour, WorldEventTrigger, AmbienceController, BiomeTrigger, TilemapVariantSwitcher
-  - `Map/` — MinimapManager, MapPanel, MapRoomData, MapConnection, MapConnectionLine
-  - `Camera/` — CameraDirector, CameraTrigger
-  - `Narrative/` — NarrativeFallTrigger
-  - `GameFlow/` — GameFlowManager
-  - `Hazard/` — EnvironmentHazard, DamageZone, ContactHazard, TimedHazard
+  - `Room/` — `Room`、`RoomManager`、`Door`、`DoorTransitionController`
+  - `Data/` — `RoomSO`、`EncounterSO`、`RoomVariantSO`、`WorldPhaseSO`、`WorldProgressStageSO`、`KeyItemSO` 与相关枚举
+  - `Checkpoint/` — `Checkpoint`、`CheckpointManager`
+  - `Progression/` — `Lock`、`KeyInventory`、`WorldProgressManager`
+  - `WorldClock/` — `WorldClock`、`WorldPhaseManager`
+  - `DynamicWorld/` — `ScheduledBehaviour`、`WorldEventTrigger`、`AmbienceController`、`BiomeTrigger`、`TilemapVariantSwitcher`
+  - `Map/` — `MinimapManager`、`MapPanel`、`MapRoomData`、`MapConnection`
+  - `Camera/` — `CameraDirector`、`CameraTrigger`
+  - `Narrative/` — `NarrativeFallTrigger`
+  - `GameFlow/` — `GameFlowManager`
+  - `Hazard/` — `EnvironmentHazard`、`DamageZone`、`ContactHazard`、`TimedHazard`
   - `SaveBridge.cs`
-- `Assets/Scripts/Core/LevelEvents.cs` — 跨程序集事件总线
+- `Assets/Scripts/Core/LevelEvents.cs`
 
-### Editor
+### 2.2 Editor
 
-- `Assets/Scripts/Level/Editor/` 全部文件（19 个 .cs）
+- `Assets/Scripts/Level/Editor/LevelArchitect/`
+  - `LevelArchitectWindow`
+  - `LevelSliceBuilder`
+  - `RoomFactory`
+  - `DoorWiringService`
+  - `LevelValidator`
+  - `PacingOverlayRenderer`
+  - `RoomBlockoutRenderer`
+  - `BlockoutModeHandler`
+  - `BatchEditPanel`
+  - `SceneScanner`
+  - `ScaffoldSceneBinder`
 
-### Data Assets
+### 2.3 Data Assets
 
-- `Assets/_Data/Level/` — 所有 SO 资产
+- `Assets/_Data/Level/` 下所有关卡 SO 资产
 
-### Scenes
+### 2.4 Scenes
 
-- `Assets/Scenes/SampleScene.unity` — 关卡实例
+- `Assets/Scenes/SampleScene.unity`
 
-### Docs
+### 2.5 Docs
 
-- `Docs/Reference/Level_CanonicalSpec.md` — 本文档（权威）
-- `Docs/Reference/Level_Architecture_Synthesis_Minishoot_Silksong_TUNIC.md` — 参考分析
-- `Docs/LevelModulePlan.md` — 历史计划（v3.0，降级为参考）
+- `Docs/2_Design/Level/Level_CanonicalSpec.md`
+- `Docs/2_Design/Level/Level_WorkflowSpec.md`
+- `Docs/Reference/Level_Architecture_Synthesis_Minishoot_Silksong_TUNIC.md`
+- `Implement_rules.md`
 
-### Assembly Definitions
+### 2.6 Assembly Definitions
 
 - `Assets/Scripts/Level/ProjectArk.Level.asmdef`
 - `Assets/Scripts/Level/Editor/ProjectArk.Level.Editor.asmdef`
 
 ---
 
-## 3. 模块设计哲学
+## 3. 模块设计原则
 
-### 3.1 核心原则：先定义关卡语法，再大规模生产内容
+### 3.1 标准语法先于内容量
 
-> 来源：Minishoot 最值得学习的不是某个神来之笔，而是它的**工程化关卡思维**——世界分块清楚、连接规则清楚、房间节奏清楚、导演工具轻量、状态持久稳定、性能策略内建。
+先定义房间标准件、连接语义和校验规则，再扩张内容规模。关卡的复杂度应该来自**标准件组合**，而不是来自特殊 case 的堆叠。
 
-关卡模块的首要目标不是"做出很多房间"，而是：
+### 3.2 节奏闭环先于地图大小
 
-1. **定义一套标准件**（8-12 种），让每种关卡设计意图都有对应的标准化部件
-2. **复杂度来自组合**，不来自定制——标准件在不同空间关系中的组合方式产生丰富体验
-3. **让下一个房间比上一个房间更容易搭**——迭代速度是最重要的架构指标
+任何可玩切片都必须能组织出：**进入 → 施压 → 证明 → 回报 → 回路 → 收束**。
 
-### 3.2 Ark 的差异化优势（不可丢弃）
+### 3.3 场景对象与 SO 分权
 
-以下系统在 Minishoot 中不存在或更简单，是 Ark 的独有维度：
+- **Scene 中的 `Room` / `Door`** 负责空间事实与连接事实
+- **SO** 负责元数据、节奏类型、遭遇配置、阶段配置
+- **运行时状态** 不写回 SO，统一交给运行时组件与存档桥接层
 
-| 系统 | Ark 独有点 | 在重构中的定位 |
-|------|-----------|---------------|
-| 世界时钟 + 动态阶段 | 周期性环境变化（辐射潮/平静期/风暴期/寂静时） | 保留并增强，作为房间变体系统的驱动源 |
-| 混合层间结构 | 日常淡黑传送 + 极少数叙事级无缝掉落 | 保留，不改动 |
-| 类魂叙事氛围 | 世界观不靠文本，靠空间改写和环境叙事 | 重构应让环境叙事件更容易被 author |
-| 热量 + 散热战斗核心 | 战斗 = 散热窗口 | 关卡节奏设计必须考虑热量压力曲线 |
-| 开放骚扰 + 封门清算双模遭遇 | 比 Minishoot 更完善（宽限期、despawn、respawn） | 保留，不重构 |
+### 3.4 Editor 工具只做 authoring 与 audit
 
-### 3.3 节奏闭环优先于内容量
-
-> 来源：Minishoot 分析 1.26 — "一个切片是否成立，取决于它有没有完成一条节奏闭环"
-
-任何可玩切片必须完成：**进入 → 施压 → 证明 → 回报 → 回路 → 收束**。
-
-只要这 6 件事完整，哪怕地图不大，玩家也会觉得"这是一段真的游戏内容"。
+Editor 工具负责创建、连线、可视化、校验、导入导出；**不接管运行时 authority**。
 
 ---
 
-## 4. 目标架构总览
+## 4. 现役架构总览
 
 ### 4.1 五层模型
 
-重构后的关卡模块遵循 Minishoot 式的五层模型，适配 Ark 的单场景 + Tilemap 架构：
-
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
-│  Layer 5: 世界图谱层 (World Graph)                           │
-│  WorldGraphSO — 显式房间网络 + 连接语义 + 离线校验            │
+│ Layer 5: 连接拓扑层 (Connection Topology)                  │
+│ Door._targetRoom / Door._targetSpawnPoint                  │
+│ Scene 中 Door 直接定义房间连接关系                         │
 └───────────────────────────┬─────────────────────────────────┘
                             │
 ┌───────────────────────────▼─────────────────────────────────┐
-│  Layer 4: 房间容器层 (Room Container)                        │
-│  Room — 标准化子节点语法 + 节点类型语义 + 变体支持            │
+│ Layer 4: 房间容器层 (Room Container)                       │
+│ Room + RoomSO + 标准子节点语法 + CameraConfiner            │
 └───────────────────────────┬─────────────────────────────────┘
                             │
 ┌───────────────────────────▼─────────────────────────────────┐
-│  Layer 3: 连接缝合层 (Connection / Transition)               │
-│  Door — GateID + ConnectionType + 仪式感分级 + 过渡演出      │
+│ Layer 3: 连接缝合层 (Connection / Transition)              │
+│ GateID + ConnectionType + TransitionCeremony               │
+│ DoorTransitionController 负责过渡执行                       │
 └───────────────────────────┬─────────────────────────────────┘
                             │
 ┌───────────────────────────▼─────────────────────────────────┐
-│  Layer 2: 节奏内容层 (Pacing Content)                        │
-│  Encounter(Open/Close) + Hazard + Lock + Checkpoint          │
-│  + DestroyableObject + InteractableObject                    │
+│ Layer 2: 节奏内容层 (Pacing Content)                       │
+│ Encounter + Hazard + Lock + Checkpoint + DestroyableObject │
+│ RoomFlagRegistry 负责房间级细粒度状态                      │
 └───────────────────────────┬─────────────────────────────────┘
                             │
 ┌───────────────────────────▼─────────────────────────────────┐
-│  Layer 1: 导演引导层 (Director / Guidance)                    │
-│  CameraTrigger + BiomeTrigger + AmbienceController           │
-│  + WorldClock + WorldPhaseManager + WorldProgressManager     │
+│ Layer 1: 导演引导层 (Director / Guidance)                  │
+│ CameraTrigger + BiomeTrigger + AmbienceController          │
+│ WorldClock + WorldPhaseManager + WorldProgressManager      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### 4.2 与当前架构的对应关系
+### 4.2 Authority 矩阵
 
-| 目标层 | 当前已有 | 重构内容 |
-|--------|---------|---------|
-| Layer 5 世界图谱 | ❌ 不存在（MinimapManager 运行时动态推导邻接） | **新建** WorldGraphSO + RoomNode + ConnectionEdge |
-| Layer 4 房间容器 | ✅ Room + RoomManager + RoomSO | **升级** 子节点语法规范 + 节点类型语义化 |
-| Layer 3 连接缝合 | ✅ Door + DoorTransitionController + DoorState | **升级** GateID + ConnectionType + 仪式感分级 |
-| Layer 2 节奏内容 | ✅ 遭遇系统完整、Hazard 完整、Lock/Checkpoint 完整 | **新增** RoomFlagRegistry + DestroyableObject + 统一解锁器 |
-| Layer 1 导演引导 | ✅ CameraDirector + CameraTrigger + BiomeTrigger + WorldClock 全套 | **无需重构**，保留 |
+| 层 | 真相源 | 生产者 | 主要消费者 | 说明 |
+|----|--------|--------|-----------|------|
+| Layer 5 连接拓扑 | Scene 中 `Door` 目标引用 | Authoring + `DoorWiringService` | `DoorTransitionController`、`MinimapManager` | Door 是连接关系的唯一真相源 |
+| Layer 4 房间容器 | Scene 中 `Room` + `RoomSO` | `RoomFactory` + 手工精修 | `RoomManager`、`CameraDirector`、`MinimapManager` | `Room` 管空间，`RoomSO` 管元数据 |
+| Layer 3 连接语义 | `Door._gateID` / `_connectionType` / `_ceremony` | Authoring | Overlay、过渡演出、进度系统 | 语义层不替代目标引用 |
+| Layer 2 节奏内容 | 场景子节点 + 运行时组件 | Authoring + 运行时系统 | `Room`、`RoomManager`、`SaveBridge` | 互动件状态由 `RoomFlagRegistry` 管理 |
+| Layer 1 导演引导 | 场景触发器 + SO + 世界状态 | Authoring + 世界管理器 | `CameraDirector`、`AmbienceController`、动态世界系统 | 驱动节奏感、氛围和阶段变化 |
 
 ---
 
-## 5. 核心数据结构定义
+## 5. 核心声明
 
-### 5.1 WorldGraphSO — 世界图谱
-
-```csharp
-namespace ProjectArk.Level
-{
-    /// <summary>
-    /// 显式的世界房间网络图谱。定义所有房间节点和它们之间的连接关系。
-    /// 这是关卡拓扑结构的 Single Source of Truth。
-    /// </summary>
-    [CreateAssetMenu(menuName = "ProjectArk/Level/World Graph")]
-    public class WorldGraphSO : ScriptableObject
-    {
-        [SerializeField] private string _graphName;
-        [SerializeField] private RoomNodeData[] _rooms;
-        [SerializeField] private ConnectionEdge[] _connections;
-
-        public string GraphName => _graphName;
-        public ReadOnlySpan<RoomNodeData> Rooms => _rooms;
-        public ReadOnlySpan<ConnectionEdge> Connections => _connections;
-
-        /// <summary>按 RoomID 查找节点（Editor 用，运行时应缓存为字典）</summary>
-        public RoomNodeData? FindRoom(string roomID) { ... }
-
-        /// <summary>获取指定房间的所有出边</summary>
-        public IEnumerable<ConnectionEdge> GetOutgoingConnections(string roomID) { ... }
-
-        /// <summary>获取指定房间的所有入边</summary>
-        public IEnumerable<ConnectionEdge> GetIncomingConnections(string roomID) { ... }
-    }
-}
-```
-
-### 5.2 RoomNodeData — 房间节点数据
-
-```csharp
-namespace ProjectArk.Level
-{
-    /// <summary>
-    /// 世界图谱中的一个房间节点。
-    /// 这是纯拓扑数据，不包含空间信息（空间信息由场景中的 Room MonoBehaviour 持有）。
-    /// </summary>
-    [System.Serializable]
-    public struct RoomNodeData
-    {
-        [Tooltip("必须与场景中 Room 的 RoomSO.RoomID 一致")]
-        public string RoomID;
-
-        [Tooltip("房间在关卡节奏中的职责类型")]
-        public RoomNodeType NodeType;
-
-        [Tooltip("该房间暴露的所有命名入口")]
-        public string[] GateIDs;
-
-        [Tooltip("Editor 备注，不影响运行时")]
-        public string DesignerNote;
-    }
-}
-```
-
-### 5.3 RoomNodeType — 房间节点类型
+### 5.1 `RoomNodeType` — 房间节奏类型
 
 ```csharp
 namespace ProjectArk.Level
 {
     /// <summary>
     /// 房间在关卡节奏中的职责类型。
-    /// 来源：Minishoot 分析 1.21 的 6 种节点分级 + Ark 扩展。
-    /// 
-    /// 设计原则：不要说"我要做 8 个房间"，而要说"我要 2 个 Transit + 2 个 Pressure + 
-    /// 1 个 Resolution + 1 个 Reward + 1 个 Anchor + 1 个 Loop"。
     /// </summary>
     public enum RoomNodeType
     {
-        /// <summary>过路节点：保持移动，连接相邻区域，不承载太重信息。可能有少量 EncounterOpen。</summary>
         Transit,
-
-        /// <summary>压力节点：不打断流程但增加消耗和警惕。1-3 组开放敌人，可边打边走。</summary>
         Pressure,
-
-        /// <summary>清算节点：用封闭战斗验证玩家是否掌握当前区段规则。EncounterClose + 波次/Boss。</summary>
         Resolution,
-
-        /// <summary>回报节点：紧张后给认知/资源/氛围缓冲。Checkpoint、宝箱、景观房。</summary>
         Reward,
-
-        /// <summary>锚点节点：帮助玩家建立脑内地图。明显地标、特殊 CameraTrigger、独特 Biome。</summary>
         Anchor,
-
-        /// <summary>回路节点：把单向推进转化成结构性掌控。解锁门、反向通路、回旧 Checkpoint 的捷径。</summary>
         Loop,
-
-        /// <summary>枢纽节点：多条路径的交汇点，提供导航选择。通常是大区域的中心。</summary>
         Hub,
-
-        /// <summary>门槛节点：章节边界，进入后世界发生不可逆变化。Boss 前厅、关键剧情触发点。</summary>
         Threshold,
-
-        /// <summary>安全节点：完全没有敌意的休息区。Safe Room、商店。</summary>
         Safe,
-
-        /// <summary>Boss 节点：Boss 竞技场，独立演出流程。</summary>
         Boss
     }
 }
 ```
 
-### 5.4 ConnectionEdge — 连接边
+**语义要求**：
 
-```csharp
-namespace ProjectArk.Level
-{
-    /// <summary>
-    /// 世界图谱中的一条连接边。
-    /// 每条边描述从一个房间的某个 Gate 到另一个房间的某个 Gate 的单向连接。
-    /// 双向门应建模为两条方向相反的边。
-    /// </summary>
-    [System.Serializable]
-    public struct ConnectionEdge
-    {
-        [Tooltip("起点房间 ID")]
-        public string FromRoomID;
+- `Transit`：过路与连接
+- `Pressure`：移动中的持续压力
+- `Resolution`：封闭验证 / 清算
+- `Reward`：资源、认知或情绪回报
+- `Anchor`：地图记忆点与地标
+- `Loop`：回路、捷径、结构兑现
+- `Hub`：多路径分发
+- `Threshold`：章节门槛 / 不可逆分界
+- `Safe`：完整安全区
+- `Boss`：Boss 竞技场
 
-        [Tooltip("起点 Gate ID（如 'left1', 'door_boss', 'shortcut_south'）")]
-        public string FromGateID;
-
-        [Tooltip("终点房间 ID")]
-        public string ToRoomID;
-
-        [Tooltip("终点 Gate ID")]
-        public string ToGateID;
-
-        [Tooltip("连接的语义类型")]
-        public ConnectionType Type;
-
-        [Tooltip("是否为层间连接（不同 FloorLevel）")]
-        public bool IsLayerTransition;
-
-        [Tooltip("Editor 备注")]
-        public string DesignerNote;
-    }
-}
-```
-
-### 5.5 ConnectionType — 连接语义类型
+### 5.2 `ConnectionType` — 连接语义类型
 
 ```csharp
 namespace ProjectArk.Level
 {
     /// <summary>
     /// 门/通道连接的语义类型。
-    /// 来源：Minishoot 分析 1.23 的 5 类连接关系。
-    /// 
-    /// 每次连接都在回答一个问题：
-    /// - Progression: "我还能往前走吗？"
-    /// - Return: "我如果回头，会不会更快？"
-    /// - Ability: "这里先记住，以后拿到能力再回来。"
-    /// - Challenge: "你现在有没有资格进入更高压内容？"
-    /// - Identity: "你刚刚进入了什么类型的地方？"
     /// </summary>
     public enum ConnectionType
     {
-        /// <summary>推进连接：主路线推进，通常连接压力段或新区域</summary>
         Progression,
-
-        /// <summary>回返连接：捷径，重新连接旧安全点</summary>
         Return,
-
-        /// <summary>能力连接：银河城能力门，暂时性视觉钩子</summary>
         Ability,
-
-        /// <summary>挑战连接：Arena/Boss 前厅/支线挑战房</summary>
         Challenge,
-
-        /// <summary>身份连接：Biome 切换、空间章节分割</summary>
         Identity,
-
-        /// <summary>时间连接：由 WorldPhase 控制开关（Ark 特有）</summary>
         Scheduled
     }
 }
 ```
 
-### 5.6 GateID 命名规范
+**语义要求**：
 
-GateID 是 Door 组件上的唯一标识字符串，用于在 WorldGraphSO 中精确定位连接端点。
+- `Progression`：主路线推进
+- `Return`：回返 / 捷径兑现
+- `Ability`：能力门 / 暂时阻断
+- `Challenge`：挑战段 / Arena / Boss 前厅
+- `Identity`：Biome 或章节气质切换
+- `Scheduled`：受世界阶段控制的连接
 
-**命名规则**：
+### 5.3 `GateID` 命名规范
 
-```
-{方位}_{编号}     — 标准门：left_1, right_1, top_1, bottom_1
-{语义}_{编号}     — 语义门：boss_entrance, shortcut_south, rift_down_1
-{特殊}            — 特殊门：elevator_up, fall_trigger
+`GateID` 是 `Door` 上的命名 ID，用于工具连线、进度语义和可视化标注。
+
+```text
+{方位}_{编号}   -> left_1, right_1, top_1, bottom_1
+{语义}_{编号}   -> boss_entrance, shortcut_south, rift_down_1
+{特殊名称}      -> elevator_up, fall_trigger
 ```
 
 **约束**：
 
-- 同一个 Room 内的 GateID **必须唯一**
-- GateID 在 WorldGraphSO 中作为 ConnectionEdge 的端点标识
-- LevelValidator 必须能检出 GateID 重复和不匹配
+- 同一个 `Room` 内的 `GateID` 必须唯一
+- `GateID` 服务于工具链和语义表达，不替代 Door 的目标引用
+- 依赖 `GateID` 的 authoring 内容必须通过 `LevelValidator` 与人工走图共同复核
 
-### 5.7 Door 升级字段
-
-在现有 `Door` 组件基础上新增的字段：
+### 5.4 `Door` 关键字段
 
 ```csharp
-// 新增字段（在现有 Door.cs 基础上追加）
-[Header("World Graph Integration")]
-[SerializeField] private string _gateID;           // 命名入口 ID
+[Header("Gate & Connection")]
+[SerializeField] private string _gateID;
 [SerializeField] private ConnectionType _connectionType = ConnectionType.Progression;
 
-[Header("Ceremony")]
+[Header("Transition")]
 [SerializeField] private TransitionCeremony _ceremony = TransitionCeremony.Standard;
 ```
 
-### 5.8 TransitionCeremony — 过渡仪式感分级
+**Authority**：
+
+- `_targetRoom` / `_targetSpawnPoint`：空间连接 authority
+- `_gateID`：命名语义 authority
+- `_connectionType`：连线语义 authority
+- `_ceremony`：过渡表现 authority
+
+### 5.5 `TransitionCeremony` — 过渡仪式感分级
 
 ```csharp
 namespace ProjectArk.Level
 {
     /// <summary>
-    /// 门过渡的仪式感等级。不同等级对应不同的过渡演出时长、VFX、镜头行为。
+    /// 门过渡的仪式感等级。
     /// </summary>
     public enum TransitionCeremony
     {
-        /// <summary>无过渡，瞬间切换（同房间内的隐藏通道等）</summary>
         None,
-
-        /// <summary>标准过渡：短淡黑（0.3s），适用于大部分普通门</summary>
         Standard,
-
-        /// <summary>层间过渡：长淡黑（0.5s）+ 下坠粒子 + 环境音切换</summary>
         Layer,
-
-        /// <summary>Boss 门过渡：特写演出 + 禁用玩家 + 独立音效</summary>
         Boss,
-
-        /// <summary>重型门过渡：多段联动 + 震屏 + 粒子 + 长演出</summary>
         Heavy
     }
 }
 ```
 
-### 5.9 RoomFlagRegistry — 房间级持久状态
+**分级要求**：
+
+- `None`：隐藏通路或无感切换
+- `Standard`：普通门的短淡黑过渡
+- `Layer`：层间切换，带更强的空间感
+- `Boss`：Boss 前后门的独立演出
+- `Heavy`：重型门、多段反馈、大动作转换
+
+### 5.6 `RoomFlagRegistry` — 房间级细粒度状态
 
 ```csharp
 namespace ProjectArk.Level
 {
     /// <summary>
-    /// 通用的房间级 Flag 系统。
-    /// 用于追踪细粒度的空间状态："这个隐藏区被发现了"、"这个火炬被点亮了"、
-    /// "这个可破坏物被打碎了"、"这个特定门被永久打开了"。
-    /// 
-    /// 通过 SaveBridge 持久化到 ProgressSaveData.Flags（key 格式：room_{roomID}_{flagKey}）。
+    /// 房间级 Flag 系统。
     /// </summary>
-    public class RoomFlagRegistry : MonoBehaviour  // ServiceLocator 注册
+    public class RoomFlagRegistry : MonoBehaviour
     {
-        /// <summary>设置 Flag（自动持久化）</summary>
         public void SetFlag(string roomID, string flagKey, bool value = true) { ... }
-
-        /// <summary>查询 Flag</summary>
         public bool GetFlag(string roomID, string flagKey) { ... }
-
-        /// <summary>获取某房间的所有已设置 Flag</summary>
         public IReadOnlyDictionary<string, bool> GetRoomFlags(string roomID) { ... }
-
-        /// <summary>写入存档</summary>
         public void WriteToSaveData(ProgressSaveData data) { ... }
-
-        /// <summary>从存档恢复</summary>
         public void ReadFromSaveData(ProgressSaveData data) { ... }
     }
 }
 ```
 
+**职责**：
+
+- 记录房间内可破坏物、隐藏区、永久开门、机关状态
+- 与 `SaveBridge` 对接，把细粒度空间状态持久化到存档
+- 不承担 SO 配置职责，不承担场景结构职责
+
 ---
 
-## 6. 房间标准化子节点语法
+## 6. 房间标准化语法
 
-### 6.1 规范定义
+### 6.1 最小 `Room` 层级
 
-重构后，每个 `Room` GameObject 下必须遵循以下固定 Hierarchy 结构：
-
-```
-Room_XXX (Room MonoBehaviour + BoxCollider2D Trigger)
-├── Navigation/          — 门、出生点、GateID 标记
-│   ├── Door_left_1
-│   ├── Door_right_1
-│   ├── SpawnPoint_left_1
-│   └── SpawnPoint_right_1
-├── Elements/            — 功能物件（锁、解锁器、拾取物、可破坏物、开关、NPC）
-│   ├── Lock_RedDoor
-│   ├── Pickup_HealthOrb
-│   └── Destroyable_CrystalWall
-├── Encounters/          — 遭遇触发器（Open/Close）
-│   ├── OpenEncounter_Patrol
-│   └── ClosedEncounter_Wave
-├── Hazards/             — 环境危害（DamageZone、ContactHazard、TimedHazard）
-│   ├── AcidPool_01
-│   └── LaserFence_01
-├── Decoration/          — 纯氛围（不影响 gameplay 的视觉/粒子/光效）
-│   ├── Ambient_Particles
-│   └── Background_Detail
-└── Triggers/            — 导演触发器（Camera、Biome、Activation、HiddenArea）
-    ├── CameraTrigger_Zoom
-    ├── BiomeTrigger_Cave
-    └── HiddenAreaMask_Secret
+```text
+Room_[ID]
+├── Navigation
+│   ├── Doors
+│   └── SpawnPoints
+├── Elements
+├── Encounters
+│   ├── SpawnPoints          (可选)
+│   ├── EnemySpawner         (战斗房常见)
+│   └── ArenaController      (Resolution / Boss 常见)
+├── Hazards
+├── Decoration
+├── Triggers
+└── CameraConfiner
 ```
 
 ### 6.2 子节点职责矩阵
 
-| 子节点 | 包含内容 | 查询者 | 激活策略 |
-|--------|---------|--------|---------|
-| `Navigation/` | Door, SpawnPoint, LayerTransitionMarker | RoomManager, DoorTransitionController, MinimapManager | 始终激活 |
-| `Elements/` | Lock, KeyPickup, DestroyableObject, Interactable, NPC | Room (Awake 收集), RoomFlagRegistry | 按房间进出 + 持久状态 |
-| `Encounters/` | OpenEncounterTrigger, ArenaController + EnemySpawner | Room, RoomManager | 按房间进出 |
-| `Hazards/` | EnvironmentHazard 子类 | 独立运行（物理触发） | 按房间进出 |
-| `Decoration/` | ParticleSystem, SpriteRenderer, Light2D | 无逻辑查询 | 按房间进出（性能优化） |
-| `Triggers/` | CameraTrigger, BiomeTrigger, ActivationGroup, HiddenAreaMask | CameraDirector, AmbienceController | 始终激活（触发器必须在玩家进入前就就绪） |
+| 子节点 | 内容 | 查询者 | 激活策略 |
+|--------|------|--------|---------|
+| `Navigation` | Door、进出点、层间导航点 | `Room`、`RoomManager`、`DoorTransitionController`、`MinimapManager` | 始终激活 |
+| `Elements` | 锁、拾取物、互动件、可破坏物、NPC | `Room`、`RoomFlagRegistry` | 按房间激活 + 持久状态 |
+| `Encounters` | 遭遇触发器、波次生成、Arena 骨架 | `Room`、`RoomManager` | 按房间激活 |
+| `Hazards` | 环境伤害与危险物 | 物理系统 / 触发系统 | 按房间激活 |
+| `Decoration` | 纯视觉内容 | 无逻辑查询 | 按房间激活 |
+| `Triggers` | Camera、Biome、事件、隐藏区域触发器 | `CameraDirector`、`AmbienceController`、世界系统 | 始终激活 |
+| `CameraConfiner` | 镜头边界 | `Room`、`CameraDirector` | 始终激活 |
 
-### 6.3 Room.cs Awake 自动收集
+### 6.3 Authoring 约束
 
-重构后 `Room.Awake()` 将按子节点路径自动收集：
+- 所有可通行门默认放在 `Navigation/Doors`
+- 导航生成点默认放在 `Navigation/SpawnPoints`
+- 战斗生成点优先放在 `Encounters/SpawnPoints`
+- `CameraConfiner` 必须作为房间根下的独立子节点存在
+- `Triggers` 用于在玩家进入前就必须就绪的感知类对象
+- 房间结构扩展可以增加额外内容层，但不得替代标准根节点职责
 
-```csharp
-// Room.cs (伪代码)
-private void Awake()
-{
-    // 自动从 Navigation/ 收集
-    _doors = GetComponentsInChildren<Door>(navigationRoot);
-    _spawnPoints = CollectTransforms(navigationRoot, "SpawnPoint_*");
+### 6.4 新增房间元素接入协议（严格版）
 
-    // 自动从 Encounters/ 收集
-    _arenaController = GetComponentInChildren<ArenaController>(encountersRoot);
-    _openEncounters = GetComponentsInChildren<OpenEncounterTrigger>(encountersRoot);
+新增任何房间元素前，必须先在设计说明、任务描述或实现文档中回答以下 6 项：
 
-    // 自动从 Elements/ 收集
-    _destroyables = GetComponentsInChildren<DestroyableObject>(elementsRoot);
+| 维度 | 必须回答的问题 | 现役收口点 |
+|------|----------------|------------|
+| 模板家族 | 它属于哪一类现役模板 | 先复用模板，再考虑新增家族 |
+| 场景挂点 | 它放在 `Navigation / Elements / Encounters / Hazards / Triggers` 的哪一层 | Scene 是空间 authority |
+| 运行时 owner | 谁驱动它的启停、交互或状态切换 | 组件自身、`Room`、`RoomManager`、`WorldPhaseManager` 或其他管理器 |
+| 状态通道 | 它是会话态、房间持久态，还是世界级进度态 | 房间级走 `RoomFlagRegistry`，世界级走对应 manager |
+| 触发来源 | 它由重叠触发、交互键、房间切换、世界阶段、世界进度中的哪一种驱动 | 只能有一个主驱动 |
+| Validator 契约 | 缺什么会坏，哪些字段/层级必须校验 | 阻塞型问题进入 `LevelValidator` |
 
-    // 现有收集逻辑保持兼容
-}
-```
+**协议要求：**
 
-### 6.4 兼容策略
+1. **先归类，后实现**：新增元素默认必须先归入现役模板，不能直接发明新的“特殊 case 家族”。
+2. **空间事实留在 Scene**：位置、朝向、层级、目标引用等空间事实只存在于场景对象；只有当元素需要复用配置或策划调参时，才引入 SO。
+3. **房间级持久化统一走 `RoomFlagRegistry`**：凡是“同一个房间内被打开 / 打碎 / 触发后应长期保持”的状态，一律写入 `RoomFlagRegistry`，并通过 `SaveBridge` 进入存档；禁止把运行时结果写回 SO。
+4. **只在需要时扩 `Room` 的收集链**：当前 `Room` 只主动收集 `Door`、`EnemySpawner`、`OpenEncounterTrigger`、`DestroyableObject` 和 SpawnPoint。只有当新元素需要被 `Room` / `RoomManager` 查询、重置或统一调度时，才允许扩展 `CollectSceneReferences()`；否则应保持组件自治。
+5. **按主触发机制决定挂点**：导航事实进 `Navigation`，互动件进 `Elements`，战斗编排进 `Encounters`，环境伤害进 `Hazards`，必须在玩家进房前就绪的感知/导演类对象进 `Triggers`。
+6. **编辑期模型按需扩展**：只有当新元素需要参与 `LevelScaffoldData`、HTML 导入导出、Overlay 或批量 authoring 工具时，才扩展编辑期 schema；纯场景手工 authoring 的运行时细节，不应反向污染 Scaffold 模型。
 
-- **已有房间**不需要立即重构子节点结构
-- `Room.Awake()` 保留现有的 `GetComponentsInChildren<Door>()` 作为 fallback
-- 新建房间由 `RoomFactory` 自动生成标准子节点结构
-- `LevelValidator` 检测不符合规范的房间并输出警告（不阻塞）
+### 6.5 现役模板家族
+
+| 模板家族 | 代表类型 | 默认挂点 | 运行时 authority | 状态通道 | Validator 关注点 |
+|---------|----------|----------|------------------|----------|------------------|
+| `Door / Gate` | `Door`、层间过渡门、时间门 | `Navigation` | `Door._targetRoom` / `_targetSpawnPoint` + 语义字段 | `Door` 本体 + 世界阶段 / 进度系统 | 双向连接、出生点、`_playerLayer`、门控字段 |
+| `Interact Anchor` | `Lock`、`Checkpoint`、`PickupBase` 派生物 | `Elements` | 组件自身 + 可选 SO / manager | 会话态或 manager 持有 | 触发器、`_playerLayer`、必需引用、输入订阅 |
+| `Persistent Room Element` | `DestroyableObject`、房间内永久机关、一次性揭示物 | `Elements` | 场景组件 + `RoomFlagRegistry` flag | `RoomFlagRegistry` ↔ `SaveBridge` | 父 `Room`、flag key、持久状态一致性 |
+| `Encounter Element` | `OpenEncounterTrigger`、`ArenaController`、`EnemySpawner` | `Encounters` | `EncounterSO` + 运行时波次策略 | 房间战斗状态 / 房间清除状态 | `EncounterSO`、Spawner、房型语义匹配 |
+| `Hazard Element` | `EnvironmentHazard` 及其子类 | `Hazards` | 危险物组件自身 | 通常为会话态；若永久关闭再接 `RoomFlagRegistry` | 碰撞器、Layer、伤害配置、可选 owner room |
+| `Trigger / Director` | `BiomeTrigger`、`HiddenAreaMask`、`ScheduledBehaviour`、`ActivationGroup`、`WorldEventTrigger` | `Triggers`（或显式扩展内容层） | 世界事件、`RoomManager`、`AmbienceController` 或组件自身 | 会话态 / 世界阶段态 / 世界进度态 | 触发器、phase 配置、target 引用、manager 依赖 |
+
+**补充规则：**
+
+- `ActivationGroup`、`ScheduledBehaviour` 这类“控制其他对象”的组件，可以放在独立扩展层，但它们不能替代标准根节点职责。
+- `HiddenAreaMask` 这类靠玩家触发感知的遮罩类对象，若需要在玩家进入房间前就可生效，应优先归入 `Triggers`。
+- 若一个新元素同时满足多个模板，以**主驱动 authority** 为准；不要让同一个元素同时挂两条主流程。
 
 ---
 
-## 7. 运行时数据流
+## 7. 运行时 authority 与数据流
 
-### 7.1 权威数据流向图
 
-```
-WorldGraphSO (设计时 · 离线数据)
-    │
-    │ 启动时加载
-    ▼
-RoomManager (运行时 · 缓存为字典)
-    │
-    ├── Room.OnPlayerEntered → RoomManager.EnterRoom()
-    │       │
-    │       ├── 激活/休眠敌人
-    │       ├── 通知 EnemyDirector 清空令牌
-    │       ├── 通知 MinimapManager.MarkVisited()
-    │       └── 广播 LevelEvents.OnRoomEntered
-    │
-    ├── Door.OnPlayerEnteredDoor → DoorTransitionController
-    │       │
-    │       ├── 从 Door._gateID 定位目标（优先 WorldGraphSO，fallback 到 _targetRoom）
-    │       ├── 按 TransitionCeremony 执行过渡演出
-    │       └── 传送玩家 → RoomManager.EnterRoom()
-    │
-    └── MinimapManager (消费者)
-            │
-            ├── 优先从 WorldGraphSO 读取邻接关系（新路径）
-            └── Fallback 从场景 Door 运行时推导（兼容旧路径）
+### 7.1 数据流向图
 
-WorldClock (运行时 · 每帧)
+```text
+Door._targetRoom / Door._targetSpawnPoint
     │
-    └── OnTimeChanged → WorldPhaseManager
-                            │
-                            └── OnPhaseChanged → ScheduledBehaviour / Door / AmbienceController / Room (变体切换)
+    ├── DoorTransitionController 读取目标并执行过渡
+    └── MinimapManager 从场景 Door 推导邻接关系
 
-WorldProgressManager (运行时 · 里程碑事件)
+Room / RoomSO
     │
-    └── OnWorldStageChanged → WorldEventTrigger / Door / 永久世界改变
+    ├── RoomManager 管理房间进入、激活与缓存
+    ├── CameraDirector 读取房间边界与镜头限制
+    └── Encounter / Hazard / Trigger 在房间语境内运作
 
-RoomFlagRegistry (运行时 · 细粒度状态)
+WorldClock
+    │
+    └── WorldPhaseManager
+            └── ScheduledBehaviour / Door / AmbienceController / RoomVariant
+
+WorldProgressManager
+    │
+    └── WorldEventTrigger / Door / 永久世界改变
+
+RoomFlagRegistry
     │
     └── SaveBridge ↔ ProgressSaveData.Flags
 ```
 
-### 7.2 关键数据流规则
+### 7.2 关键规则
 
-1. **WorldGraphSO 是拓扑真相源**：运行时 RoomManager/MinimapManager 从 WorldGraphSO 读取房间连接关系，不自行推导
-2. **Room 是空间真相源**：房间边界、生成点位置、Confiner 碰撞体等空间信息由场景中的 Room MonoBehaviour 持有
-3. **RoomSO 是元数据真相源**：RoomID、显示名、楼层、类型等非空间元数据由 ScriptableObject 持有
-4. **RoomFlagRegistry 是细粒度状态真相源**：房间内互动件的持久状态（破坏/点亮/发现）通过 Registry 管理
-5. **LevelEvents 是跨模块通信渠道**：所有跨系统通知走静态事件总线，禁止跨系统直接引用
+1. **Door 是连接拓扑真相源**：传送与地图连线都从 Door 读事实
+2. **Room 是空间真相源**：房间边界、导航点、镜头限制存在于场景对象
+3. **RoomSO 是房间元数据真相源**：ID、名称、楼层、节点类型、附加配置来自 SO
+4. **RoomFlagRegistry 是细粒度状态真相源**：互动件的持久状态统一收口到 Registry
+5. **LevelEvents 是跨模块通知渠道**：跨系统通信走事件，不走直接引用
 
 ---
 
 ## 8. 模块边界与跨模块依赖
 
-### 8.1 Level 模块对外依赖
+### 8.1 对外依赖
 
-| 外部模块 | 依赖方式 | 具体依赖点 |
-|---------|---------|-----------|
-| `ProjectArk.Core` | 程序集引用 | ServiceLocator, PoolManager, DamagePayload, IDamageable, LevelEvents, CombatEvents |
-| `ProjectArk.Core.Audio` | 程序集引用 | AudioManager（过渡音效、BGM crossfade） |
-| `ProjectArk.Core.Save` | 程序集引用 | SaveManager, PlayerSaveData, ProgressSaveData |
-| `ProjectArk.Combat` | 程序集引用 | EnemySpawner（WaveSpawnStrategy 注入） |
-| `ProjectArk.Ship` | 程序集引用 | ShipHealth（死亡事件）, InputHandler（过渡禁用输入）, HeatSystem（Checkpoint 恢复） |
-| `ProjectArk.Enemy` | 程序集引用 | EnemyEntity.OnAnyEnemyDeath, EnemyDirector（令牌清空） |
-| `ProjectArk.Heat` | 程序集引用 | HeatSystem（Checkpoint 恢复热量） |
+| 外部模块 | 依赖方式 | 依赖点 |
+|---------|---------|-------|
+| `ProjectArk.Core` | 程序集引用 | `ServiceLocator`、`IDamageable`、`DamagePayload`、`LevelEvents` |
+| `ProjectArk.Core.Audio` | 程序集引用 | `AudioManager` |
+| `ProjectArk.Core.Save` | 程序集引用 | `SaveManager`、`PlayerSaveData`、`ProgressSaveData` |
+| `ProjectArk.Combat` | 程序集引用 | `EnemySpawner`、遭遇注入链 |
+| `ProjectArk.Ship` | 程序集引用 | 玩家过渡输入、死亡与复位链 |
+| `ProjectArk.Enemy` | 程序集引用 | `EnemyDirector`、敌人死亡广播 |
+| `ProjectArk.Heat` | 程序集引用 | Checkpoint 恢复热量 |
 
-### 8.2 Level 模块对外暴露
+### 8.2 对外暴露
 
 | 暴露内容 | 消费者 | 暴露方式 |
 |---------|--------|---------|
-| `LevelEvents.OnRoomEntered` | UI / Save / Audio | Core 层静态事件 |
-| `LevelEvents.OnRoomCleared` | UI / Save | Core 层静态事件 |
-| `LevelEvents.OnBossDefeated` | UI / Save / WorldProgress | Core 层静态事件 |
-| `LevelEvents.OnCheckpointActivated` | UI / Save | Core 层静态事件 |
-| `LevelEvents.OnPhaseChanged` | UI / Audio / VFX | Core 层静态事件 |
-| `LevelEvents.OnWorldStageChanged` | UI / Save | Core 层静态事件 |
-| `RoomManager` (via ServiceLocator) | 任何需要当前房间信息的系统 | ServiceLocator.Get |
-| `WorldClock` (via ServiceLocator) | UI 时钟显示 | ServiceLocator.Get |
+| `LevelEvents.OnRoomEntered` | UI / Save / Audio | Core 静态事件 |
+| `LevelEvents.OnRoomCleared` | UI / Save | Core 静态事件 |
+| `LevelEvents.OnBossDefeated` | UI / Save / WorldProgress | Core 静态事件 |
+| `LevelEvents.OnCheckpointActivated` | UI / Save | Core 静态事件 |
+| `LevelEvents.OnPhaseChanged` | UI / Audio / VFX | Core 静态事件 |
+| `LevelEvents.OnWorldStageChanged` | UI / Save | Core 静态事件 |
+| `RoomManager` | 任何需要当前房间信息的系统 | `ServiceLocator.Get` |
+| `WorldClock` | UI / 事件系统 | `ServiceLocator.Get` |
 
 ### 8.3 禁止的依赖方向
 
-- **禁止** Level 模块引用 UI 程序集（通过事件解耦）
-- **禁止** Core 层引用 Level 程序集（LevelEvents 放在 Core 层）
-- **禁止** 运行时使用 `FindAnyObjectByType` / `FindObjectOfType`
+- 禁止 `Level` 模块直接引用 UI 程序集
+- 禁止 Core 层反向依赖 `Level` 程序集
+- 禁止运行时使用 `FindAnyObjectByType` / `FindObjectOfType`
+- 禁止把 Editor 快照或导入源当成运行时 authority
 
 ---
 
-## 9. Editor 工具链职责划分
+## 9. Editor 工具链 authority
 
 ### 9.1 工具矩阵
 
 | 工具 | 职责 | 不负责 |
 |------|------|--------|
-| `LevelArchitectWindow` | 主 Editor 窗口，统一入口 | 不直接修改场景，委托给子服务 |
-| `RoomFactory` | 创建 Room GameObject 时自动生成标准子节点结构 | 不负责已有房间的子节点补全 |
-| `DoorWiringService` | Door 的自动连线（双向 _targetRoom + _targetSpawnPoint） | 不负责 GateID 分配（手动） |
-| `LevelValidator` | 全局校验：WorldGraphSO 一致性、GateID 匹配、孤立房间、缺失引用、子节点规范 | 不修复问题，只报告 |
-| `PacingOverlayRenderer` | Scene View 可视化：房间节点类型颜色 + 连接类型颜色 + 节奏位置 | 只读，不写入 |
-| `RoomBlockoutRenderer` | 房间白盒布局可视化 | 只读，不写入 |
-| `ScaffoldToSceneGenerator` | 从 HTML 脚手架生成场景 | 一次性工具 |
-| `LevelAssetCreator` | 批量创建 SO 资产 | 不负责运行时 |
+| `LevelArchitectWindow` | `Design / Build / Validate / Quick Play` 统一入口 | 不承担运行时 authority |
+| `LevelSliceBuilder` | 从 `LevelDesigner.html` JSON 导入 Room / RoomSO / Door 骨架 | 不作为运行时真相源 |
+| `RoomFactory` | 创建标准房间根节点、导航节点、相机边界与战斗骨架 | 不替代已有场景的语义设计 |
+| `DoorWiringService` | Door 双向目标引用连线 | 不规划节奏语义 |
+| `LevelValidator` | 结构、引用、门连接、战斗房配置校验 | 不替代完整试玩 |
+| `PacingOverlayRenderer` | 房间类型与连接语义可视化 | 只读，不写入 |
+| `RoomBlockoutRenderer` | 白盒布局显示 | 只读，不写入 |
+| `BlockoutModeHandler` | 白盒编辑交互 | 不承担数据权威 |
+| `BatchEditPanel` | 批量编辑房间基础属性 | 不修改运行时逻辑 |
+| `SceneScanner` | 扫描房间、门与场景结构 | 不自动修复设计语义 |
+| `ScaffoldSceneBinder` | 将 Scene 骨架同步到 `LevelScaffoldData` 快照 | 不反向驱动 Scene |
 
-### 9.2 新增工具（待实现）
+### 9.2 工具执行原则
 
-| 工具 | 职责 | 优先级 |
-|------|------|--------|
-| `WorldGraphEditor` | WorldGraphSO 的 Inspector 可视化编辑器（节点拖拽 + 连线） | Batch 1 |
-| `RoomNodeMigrator` | 将已有房间的旧 RoomType 映射到新 RoomNodeType | Batch 2 |
-| `RoomHierarchyAuditor` | 审计房间子节点是否符合标准语法 | Batch 2 |
-
-### 9.3 工具使用原则
-
-- **同一类任务只保留一个官方入口**
-- 工具默认为 **Audit / Preview** 模式，显式操作才 **Apply**
-- 所有工具执行后必须输出"改了什么 / 没改什么 / 缺了什么"
-- 禁止工具在 `OnValidate`、`Awake`、`OnEnable`、Play Mode 启动流程中隐式写回资产
+- 同一类任务只保留一个官方入口
+- 工具默认优先 `Audit / Preview`，显式操作才 `Apply`
+- 工具执行后必须说明：改了什么、没改什么、缺了什么
+- 禁止在 `OnValidate`、`Awake`、`OnEnable`、Play Mode 启动流程中隐式写回资产
 
 ---
 
-## 10. 迁移策略
+## 10. 校验基线
 
-### 10.1 总体原则
+每次对 `Level` 模块做出结构性改动后，至少要满足：
 
-**增量升级，不推倒重来。**
+1. `dotnet build Project-Ark.slnx` 通过
+2. `LevelValidator` 没有阻塞型 `Error`
+3. 每个 `Room` 内 `GateID` 唯一
+4. `Door._targetRoom` 与 `Door._targetSpawnPoint` 非空
+5. `MinimapManager` 能正确推导邻接关系
+6. `SaveBridge` 的存读链不中断
+7. `Quick Play` 仅作为结构 smoke test，完整试玩仍需手动验证
 
-理由：
+### 10.1 新增元素的 `LevelValidator` 接入规则
 
-1. 遭遇系统（OpenEncounterTrigger + ArenaController + WaveSpawnStrategy）已比 Minishoot 更完善——不动
-2. 世界时钟 + 动态世界是 Ark 差异化优势——不动
-3. 存档桥 + ServiceLocator + LevelEvents 事件总线干净——不动
-4. Editor 工具链已经很强——只升级，不重写
-5. CameraDirector + CameraTrigger + BiomeTrigger——不动
+当一个新元素进入**标准 authoring 流程**后，只要满足以下任一条件，就必须扩展 `LevelValidator`：
 
-**真正需要改的只有 3 件事 + 3 件新增事：**
+- 缺失引用会直接导致流程中断、存档失效、门链断开、战斗无法启动或交互静默失效
+- 元素依赖固定根节点、固定层级、固定 LayerMask、固定命名约定
+- 元素与特定 `RoomNodeType`、`ConnectionType`、世界阶段或世界进度存在必需搭配关系
+- Editor 工具会自动创建它的骨架，因此工具链必须能检测“骨架已生成但语义未补齐”的状态
 
-| 类别 | 内容 |
+**严重度约束：**
+
+- **`Error`**：缺失后会破坏可玩主链、存档链、关键交互链
+- **`Warning`**：功能还能运行，但语义不完整、反馈缺失、推荐接线缺失
+- **`Info`**：可读性、组织性、命名一致性问题
+
+**Auto-Fix 边界：**
+
+- 可以自动修：标准根节点、Trigger 勾选、标准 Layer、可推导的空骨架
+- 不可以自动猜：`EncounterSO`、目标门、关键 SO 资产、flag key 语义、策划意图字段
+
+---
+
+## 11. 相关文档
+
+
+| 文档 | 职责 |
 |------|------|
-| 改动 | `Room.cs` 增加子节点语法收集 |
-| 改动 | `Door.cs` 增加 GateID + ConnectionType + TransitionCeremony |
-| 改动 | `MinimapManager.cs` 优先从 WorldGraphSO 读邻接 |
-| 新增 | `WorldGraphSO` + `RoomNodeData` + `ConnectionEdge` + 相关枚举 |
-| 新增 | `RoomFlagRegistry` 房间级持久状态 |
-| 新增 | `LevelValidator` 升级（WorldGraphSO 校验规则） |
-
-### 10.2 RoomType 迁移映射
-
-| 旧 RoomType | 新 RoomNodeType | 说明 |
-|-------------|----------------|------|
-| `Normal` | `Transit` 或 `Pressure` | 需逐房间判断 |
-| `Arena` | `Resolution` | 封门清算 |
-| `Boss` | `Boss` | 保持 |
-| `Safe` | `Safe` | 保持 |
-| `Corridor` | `Transit` | 过路 |
-| `Shop` | `Safe` 或 `Reward` | 视具体功能 |
-| `Hub` | `Hub` | 保持 |
-| `Gate` | `Threshold` | 章节门槛 |
-
-**策略**：旧 `RoomType` 枚举保留为 `[Obsolete]`，`RoomSO` 新增 `RoomNodeType` 字段，两者并存过渡期后删除旧枚举。
-
-### 10.3 Door 迁移策略
-
-1. `Door.cs` 新增 `_gateID`、`_connectionType`、`_ceremony` 字段，默认值为空/Progression/Standard
-2. 已有 Door 的 `_targetRoom` + `_targetSpawnPoint` 引用保留，作为 WorldGraphSO 未配置时的 fallback
-3. `DoorTransitionController` 优先用 WorldGraphSO 查目标，fallback 到 `_targetRoom`
-4. 完成 WorldGraphSO 全配置后，`_targetRoom` 引用可选择性保留或清除
-
-### 10.4 MinimapManager 迁移策略
-
-1. `MinimapManager.GatherSceneData()` 增加分支：如果 WorldGraphSO 存在且有效，优先从中读取邻接数据
-2. 如果 WorldGraphSO 不存在或为空，fallback 到当前的运行时 Door 推导逻辑
-3. 完成迁移后，运行时推导逻辑标记为 `[Obsolete]`
-
----
-
-## 11. Batch 执行计划与验收标准
-
-### Batch 1：世界图谱 + 门语义升级（骨架层）
-
-**目标**：让关卡连接关系从"运行时推导"变成"显式数据 + 运行时校验"
-
-**任务清单**：
-
-| ID | 任务 | 涉及文件 |
-|----|------|---------|
-| B1.1 | 新建 `WorldGraphSO` + `RoomNodeData` + `ConnectionEdge` 数据结构 | 新建 3 个 .cs |
-| B1.2 | 新建 `RoomNodeType` + `ConnectionType` + `TransitionCeremony` 枚举 | 新建 3 个 .cs |
-| B1.3 | `Door.cs` 增加 `_gateID` + `_connectionType` + `_ceremony` 字段 | 修改 Door.cs |
-| B1.4 | `DoorTransitionController.cs` 支持按 GateID 定位目标（优先 WorldGraphSO，fallback 到 _targetRoom） | 修改 DoorTransitionController.cs |
-| B1.5 | `LevelValidator` 新增 WorldGraphSO 校验规则 | 修改 LevelValidator.cs |
-| B1.6 | `MinimapManager` 适配：优先从 WorldGraphSO 读邻接关系 | 修改 MinimapManager.cs |
-| B1.7 | 创建示巴星切片的 `WorldGraphSO` 资产（7 房间 + 连接关系） | 新建 .asset |
-
-**验收标准**：
-
-- [ ] `WorldGraphSO` 资产在 Inspector 中可编辑，描述 7 个房间和它们的连接
-- [ ] `Door` 组件在 Inspector 中显示 GateID、ConnectionType、TransitionCeremony 字段
-- [ ] `LevelValidator` 能检出"WorldGraphSO 中的 RoomID 在场景中不存在"
-- [ ] `LevelValidator` 能检出"GateID 不匹配"（图谱定义了但场景中 Door 没有）
-- [ ] `LevelValidator` 能检出"孤立房间"（没有任何 ConnectionEdge）
-- [ ] 地图系统（MinimapManager + MapPanel）仍然正常工作
-- [ ] 编译零错误，现有功能无回退
-- [ ] `dotnet build Project-Ark.slnx` 通过
-
-### Batch 2：房间语法标准化（内容层）
-
-**目标**：让每个 Room 都遵循固定的子节点结构规范
-
-**任务清单**：
-
-| ID | 任务 | 涉及文件 |
-|----|------|---------|
-| B2.1 | 新建 `RoomNodeType` 替代旧 `RoomType`，`RoomSO` 新增 `_nodeType` 字段 | 修改 RoomSO.cs，新建枚举 |
-| B2.2 | `Room.Awake()` 按子节点路径自动收集（兼容旧结构 fallback） | 修改 Room.cs |
-| B2.3 | `RoomFactory` 创建房间时自动生成标准子节点结构 | 修改 RoomFactory.cs |
-| B2.4 | `LevelValidator` 新增房间子节点规范检查 | 修改 LevelValidator.cs |
-| B2.5 | `PacingOverlayRenderer` 升级：用 RoomNodeType 颜色可视化 | 修改 PacingOverlayRenderer.cs |
-
-**验收标准**：
-
-- [ ] 新建房间自动带 `Navigation/Elements/Encounters/Hazards/Decoration/Triggers` 子层
-- [ ] `LevelValidator` 能检出"房间缺少标准子节点"（警告级别，不阻塞）
-- [ ] Scene View 中可通过 `PacingOverlayRenderer` 看到不同 RoomNodeType 的颜色区分
-- [ ] 已有房间不受影响（Awake fallback 正常工作）
-- [ ] 编译零错误，现有功能无回退
-
-### Batch 3：房间级持久状态 + 互动件标准化（状态层）
-
-**目标**：让房间内的互动件能写入持久状态，形成"空间被改写"的体验
-
-**任务清单**：
-
-| ID | 任务 | 涉及文件 |
-|----|------|---------|
-| B3.1 | 新建 `RoomFlagRegistry`（ServiceLocator 注册 + SaveBridge 集成） | 新建 .cs，修改 SaveBridge.cs |
-| B3.2 | 新建 `DestroyableObject` 基类（IDamageable + RoomFlagRegistry + 死亡联动） | 新建 .cs |
-| B3.3 | `Door` 增加 `TransitionCeremony` 行为差异（Boss/Heavy 门独立演出） | 修改 Door.cs + DoorTransitionController.cs |
-| B3.4 | `LevelEvents` 补充 `OnRoomFlagChanged` 事件 | 修改 LevelEvents.cs |
-
-**验收标准**：
-
-- [ ] 打碎一个 `DestroyableObject` → 重进房间仍然是碎的
-- [ ] Boss 门打开有独立演出（区别于普通门的 0.3s 淡黑）
-- [ ] `RoomFlagRegistry` 存档后正确恢复
-- [ ] 编译零错误，现有功能无回退
-
-### Batch 4：节奏验证工具 + 示巴星首切片落地（验证层）
-
-**目标**：用工具辅助搭建和验证切片节奏
-
-**任务清单**：
-
-| ID | 任务 | 涉及文件 |
-|----|------|---------|
-| B4.1 | `PacingOverlayRenderer` 升级：显示 ConnectionType 连线颜色 | 修改 PacingOverlayRenderer.cs |
-| B4.2 | 示巴星 7 房间切片搭建（R01-R07） | 场景配置 |
-| B4.3 | 闭环验证：进入 → 施压 → 证明 → 回报 → 回路 → 收束 | Play Mode 测试 |
-
-**验收标准**：
-
-- [ ] Scene View 中可视化显示完整的房间节点类型 + 连接语义颜色
-- [ ] 7 个房间全部可进入、可通过、门正确连接
-- [ ] 至少一条回路捷径被打开后永久生效
-- [ ] 至少一场封门清算正确运行
-- [ ] Checkpoint 正确保存和恢复
-- [ ] 节奏闭环完整：进入 → 施压 → 证明 → 回报 → 回路 → 收束
-
----
-
-## 12. 校验规则
-
-每次改动后至少检查：
-
-1. `dotnet build Project-Ark.slnx` 编译通过
-2. `LevelValidator` 无 Error 级别报告（Warning 可接受）
-3. WorldGraphSO 中的所有 RoomID 在场景中有对应 Room
-4. WorldGraphSO 中的所有 GateID 在对应 Room 的 Door 上有匹配
-5. 没有孤立房间（至少有一条 ConnectionEdge）
-6. MinimapManager 仍能正确构建拓扑图
-7. SaveBridge 存读流程不中断
-8. 已有遭遇系统（Open/Close）不受影响
-
----
-
-## 13. 与其他文档的关系
-
-| 文档 | 职责 | 与本文档的关系 |
-|------|------|--------------|
-| `Level_CanonicalSpec.md`（本文档） | 目标架构定义、数据结构、迁移策略、验收标准 | 权威 |
-| `Level_Architecture_Synthesis_Minishoot_Silksong_TUNIC.md` | 参考游戏的关卡架构分析 | 设计输入，不直接约束实现 |
-| `LevelModulePlan.md` (v3.0) | 历史实现计划 | 降级为参考，冲突时以本文档为准 |
-| `Implement_rules.md` | 模块级实现规则 / 协作约束 | 后续需补充 Level 模块规则段落 |
-| `Docs/ImplementationLog/ImplementationLog.md` | 实现日志 | 每次改动后追加 |
-
----
-
-## 14. 附录：示巴星切片房间表（参考）
-
-> 来源：Minishoot 分析 1.25，翻译为 Ark 可执行版本。此表为设计参考，实际搭建时可根据需要调整。
-
-| 房间 ID | RoomNodeType | 设计目标 | 核心内容 | 验证体验 |
-|---------|-------------|---------|---------|---------|
-| `SH-R01` | `Safe` (入口) | 建立基调 | 坠机残骸、可读地标、低敌压 | "我掉进了一个死寂但有秩序的世界" |
-| `SH-R02` | `Pressure` | 引入静默压力 | 低声场、过热上升、少量可绕敌人 | "这里的安静不是安全，是风险" |
-| `SH-R03` | `Anchor` | 建立记忆点 | 冰雕/花路/音叉树/远景中的缕拉影子 | "这个世界有历史，也有某个存在在看着我" |
-| `SH-R04` | `Resolution` | 验证核心 loop | 锁门、1-2 波敌人、战斗散热明显 | "主动制造噪音反而让我活下来" |
-| `SH-R05` | `Reward` | 给认知奖励 | 小 Lore、短安全窗、工具获取 | "我不只是打赢了，我学会了一件事" |
-| `SH-R06` | `Loop` | 银河城兑现 | 开门回返、缩短路线 | "世界被我永久改了一点" |
-| `SH-R07` | `Safe` (收束) | 形成段落句号 | Checkpoint / Safe Room | "这是完整的一段旅程" |
-
----
-
-## 变更记录
-
-| 日期 | 版本 | 内容 |
-|------|------|------|
-| 2026-03-22 | v1.0 | 初始版本：基于 Minishoot 分析建立目标架构、核心数据结构、迁移策略、4 个 Batch 验收标准 |
+| `Docs/2_Design/Level/Level_CanonicalSpec.md` | Level 模块现役架构、声明、authority 规范 |
+| `Docs/2_Design/Level/Level_WorkflowSpec.md` | 关卡搭建与验证的操作手册 |
+| `Docs/Reference/Level_Architecture_Synthesis_Minishoot_Silksong_TUNIC.md` | 参考游戏分析与设计输入 |
+| `Docs/3_LevelDesigns/` | 区域拓扑设计稿与 JSON 输入 |
+| `Implement_rules.md` | 模块级实现约束与协作规则 |
+| `Docs/5_ImplementationLog/ImplementationLog.md` | 文档与实现变更留痕 |

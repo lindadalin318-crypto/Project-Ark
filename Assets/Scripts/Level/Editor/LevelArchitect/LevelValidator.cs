@@ -66,10 +66,20 @@ namespace ProjectArk.Level.Editor
                 ValidateArenaBossConfig(room);
             }
 
+            ValidateLocks();
+            ValidateCheckpoints();
+            ValidateHiddenAreaMasks();
+            ValidateBiomeTriggers();
+            ValidateScheduledBehaviours();
+            ValidateActivationGroups();
+            ValidatePreferredAuthoringRoots();
+
             ValidateDoorBidirectional(rooms);
+
             ValidateDoorPlayerLayer(rooms);
             ValidateDoorTargetSpawnPoint(rooms);
-        ValidateOrphanRooms(rooms);
+            ValidateOrphanRooms(rooms);
+
 
         int errors = 0, warnings = 0, infos = 0;
             foreach (var r in _lastResults)
@@ -323,7 +333,377 @@ namespace ProjectArk.Level.Editor
 
         // Rule 3.6: NodeType migration state — removed (all rooms now use explicit NodeType)
 
+        // Rule 3.7: Lock / Checkpoint / Trigger family
+        private static void ValidateLocks()
+        {
+            var locks = UnityEngine.Object.FindObjectsByType<Lock>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var lockComponent in locks)
+            {
+                if (lockComponent == null) continue;
+
+                ValidateTriggerCollider(lockComponent, "Lock");
+                ValidateLayerMask(lockComponent, "_playerLayer", "Lock");
+
+                var serialized = new SerializedObject(lockComponent);
+                if (serialized.FindProperty("_requiredKey").objectReferenceValue == null)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Error,
+                        Message = $"Lock '{lockComponent.gameObject.name}' is missing required key reference.",
+                        TargetObject = lockComponent,
+                        CanAutoFix = false,
+                        FixAction = null
+                    });
+                }
+
+                if (serialized.FindProperty("_targetDoor").objectReferenceValue == null)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Error,
+                        Message = $"Lock '{lockComponent.gameObject.name}' is missing target door reference.",
+                        TargetObject = lockComponent,
+                        CanAutoFix = false,
+                        FixAction = null
+                    });
+                }
+            }
+        }
+
+        private static void ValidateCheckpoints()
+        {
+            var checkpoints = UnityEngine.Object.FindObjectsByType<Checkpoint>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var checkpoint in checkpoints)
+            {
+                if (checkpoint == null) continue;
+
+                ValidateTriggerCollider(checkpoint, "Checkpoint");
+                ValidateLayerMask(checkpoint, "_playerLayer", "Checkpoint");
+
+                var serialized = new SerializedObject(checkpoint);
+                if (serialized.FindProperty("_data").objectReferenceValue == null)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Error,
+                        Message = $"Checkpoint '{checkpoint.gameObject.name}' is missing CheckpointSO reference.",
+                        TargetObject = checkpoint,
+                        CanAutoFix = false,
+                        FixAction = null
+                    });
+                }
+            }
+        }
+
+        private static void ValidateHiddenAreaMasks()
+        {
+            var masks = UnityEngine.Object.FindObjectsByType<HiddenAreaMask>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var mask in masks)
+            {
+                if (mask == null) continue;
+
+                ValidateTriggerCollider(mask, "HiddenAreaMask");
+                ValidateLayerMask(mask, "_playerLayer", "HiddenAreaMask");
+
+                if (mask.GetComponentsInChildren<SpriteRenderer>(true).Length == 0)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Warning,
+                        Message = $"HiddenAreaMask '{mask.gameObject.name}' has no SpriteRenderer on itself or children.",
+                        TargetObject = mask,
+                        CanAutoFix = false,
+                        FixAction = null
+                    });
+                }
+            }
+        }
+
+        private static void ValidateBiomeTriggers()
+        {
+            var biomeTriggers = UnityEngine.Object.FindObjectsByType<BiomeTrigger>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var biomeTrigger in biomeTriggers)
+            {
+                if (biomeTrigger == null) continue;
+
+                ValidateTriggerCollider(biomeTrigger, "BiomeTrigger");
+                ValidateLayerMask(biomeTrigger, "_playerLayer", "BiomeTrigger");
+
+                var serialized = new SerializedObject(biomeTrigger);
+                if (serialized.FindProperty("_ambiencePreset").objectReferenceValue == null)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Error,
+                        Message = $"BiomeTrigger '{biomeTrigger.gameObject.name}' is missing RoomAmbienceSO reference.",
+                        TargetObject = biomeTrigger,
+                        CanAutoFix = false,
+                        FixAction = null
+                    });
+                }
+            }
+        }
+
+        private static void ValidateScheduledBehaviours()
+        {
+            var scheduledBehaviours = UnityEngine.Object.FindObjectsByType<ScheduledBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var scheduledBehaviour in scheduledBehaviours)
+            {
+                if (scheduledBehaviour == null) continue;
+
+                var serialized = new SerializedObject(scheduledBehaviour);
+                if (serialized.FindProperty("_activePhaseIndices").arraySize == 0)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Warning,
+                        Message = $"ScheduledBehaviour '{scheduledBehaviour.gameObject.name}' has no active phase indices configured.",
+                        TargetObject = scheduledBehaviour,
+                        CanAutoFix = false,
+                        FixAction = null
+                    });
+                }
+
+                if (serialized.FindProperty("_targetGameObject").objectReferenceValue == null && scheduledBehaviour.transform.childCount == 0)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Warning,
+                        Message = $"ScheduledBehaviour '{scheduledBehaviour.gameObject.name}' has no target GameObject and no child objects to toggle.",
+                        TargetObject = scheduledBehaviour,
+                        CanAutoFix = false,
+                        FixAction = null
+                    });
+                }
+            }
+        }
+
+        private static void ValidateTriggerCollider(Component component, string componentLabel)
+        {
+            var collider = component.GetComponent<Collider2D>();
+            if (collider == null)
+            {
+                _lastResults.Add(new ValidationResult
+                {
+                    Severity = Severity.Error,
+                    Message = $"{componentLabel} '{component.gameObject.name}' is missing Collider2D.",
+                    TargetObject = component,
+                    CanAutoFix = true,
+                    FixAction = () =>
+                    {
+                        var newCollider = component.gameObject.AddComponent<BoxCollider2D>();
+                        newCollider.isTrigger = true;
+                    }
+                });
+                return;
+            }
+
+            if (collider.isTrigger)
+            {
+                return;
+            }
+
+            _lastResults.Add(new ValidationResult
+            {
+                Severity = Severity.Warning,
+                Message = $"{componentLabel} '{component.gameObject.name}' collider is not set as Trigger.",
+                TargetObject = component,
+                CanAutoFix = true,
+                FixAction = () =>
+                {
+                    Undo.RecordObject(collider, $"Fix {componentLabel} Trigger");
+                    collider.isTrigger = true;
+                }
+            });
+        }
+
+        private static void ValidateLayerMask(Component component, string fieldName, string componentLabel)
+        {
+            var serialized = new SerializedObject(component);
+            int bits = serialized.FindProperty(fieldName).FindPropertyRelative("m_Bits").intValue;
+            if (bits != 0)
+            {
+                return;
+            }
+
+            _lastResults.Add(new ValidationResult
+            {
+                Severity = Severity.Warning,
+                Message = $"{componentLabel} '{component.gameObject.name}' has no {fieldName} configured.",
+                TargetObject = component,
+                CanAutoFix = true,
+                FixAction = () =>
+                {
+                    int playerLayer = LayerMask.NameToLayer("Player");
+                    if (playerLayer >= 0)
+                    {
+                        var s = new SerializedObject(component);
+                        s.FindProperty(fieldName).FindPropertyRelative("m_Bits").intValue = 1 << playerLayer;
+                        s.ApplyModifiedProperties();
+                    }
+                }
+            });
+        }
+
+        private static void ValidateActivationGroups()
+        {
+            var activationGroups = UnityEngine.Object.FindObjectsByType<ActivationGroup>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var activationGroup in activationGroups)
+            {
+                if (activationGroup == null) continue;
+
+                var parentRoom = activationGroup.GetComponentInParent<Room>();
+                if (parentRoom == null)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Warning,
+                        Message = $"ActivationGroup '{activationGroup.gameObject.name}' is not a child of a Room and will not respond to room enter/exit events.",
+                        TargetObject = activationGroup,
+                        CanAutoFix = false,
+                        FixAction = null
+                    });
+                }
+
+                var serialized = new SerializedObject(activationGroup);
+                var members = serialized.FindProperty("_members");
+                bool hasAssignedMember = false;
+                bool hasNullMember = false;
+
+                for (int i = 0; i < members.arraySize; i++)
+                {
+                    if (members.GetArrayElementAtIndex(i).objectReferenceValue is GameObject member)
+                    {
+                        hasAssignedMember = true;
+
+                        if (parentRoom != null)
+                        {
+                            var memberRoom = member.GetComponentInParent<Room>();
+                            if (memberRoom != null && memberRoom != parentRoom)
+                            {
+                                _lastResults.Add(new ValidationResult
+                                {
+                                    Severity = Severity.Warning,
+                                    Message = $"ActivationGroup '{activationGroup.gameObject.name}' references member '{member.name}' from a different Room.",
+                                    TargetObject = activationGroup,
+                                    CanAutoFix = false,
+                                    FixAction = null
+                                });
+                            }
+                        }
+                    }
+                    else
+                    {
+                        hasNullMember = true;
+                    }
+                }
+
+                if (hasNullMember)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Warning,
+                        Message = $"ActivationGroup '{activationGroup.gameObject.name}' contains null entries in _members.",
+                        TargetObject = activationGroup,
+                        CanAutoFix = false,
+                        FixAction = null
+                    });
+                }
+
+                if (!hasAssignedMember && activationGroup.transform.childCount == 0)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Warning,
+                        Message = $"ActivationGroup '{activationGroup.gameObject.name}' has no members or child objects to manage.",
+                        TargetObject = activationGroup,
+                        CanAutoFix = false,
+                        FixAction = null
+                    });
+                }
+            }
+        }
+
+        private static void ValidatePreferredAuthoringRoots()
+        {
+            ValidatePreferredRoot<Lock>("Lock", "Elements");
+            ValidatePreferredRoot<Checkpoint>("Checkpoint", "Elements");
+            ValidatePreferredRoot<DestroyableObject>("DestroyableObject", "Elements");
+            ValidatePreferredRoot<OpenEncounterTrigger>("OpenEncounterTrigger", "Encounters");
+            ValidatePreferredRoot<BiomeTrigger>("BiomeTrigger", "Triggers");
+            ValidatePreferredRoot<HiddenAreaMask>("HiddenAreaMask", "Triggers");
+            ValidatePreferredRoot<ScheduledBehaviour>("ScheduledBehaviour", "Triggers");
+            ValidatePreferredRoot<WorldEventTrigger>("WorldEventTrigger", "Triggers");
+            ValidatePreferredRoot<EnvironmentHazard>("EnvironmentHazard", "Hazards");
+            ValidatePreferredRoot<ActivationGroup>("ActivationGroup", "Triggers", "ActivationGroups");
+        }
+
+        private static void ValidatePreferredRoot<T>(string componentLabel, params string[] allowedRootNames) where T : Component
+        {
+            var components = UnityEngine.Object.FindObjectsByType<T>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var component in components)
+            {
+                if (component == null) continue;
+                if (!TryGetImmediateRoomRoot(component.transform, out Room room, out string rootName))
+                {
+                    continue;
+                }
+
+                bool isAllowed = false;
+                foreach (var allowedRoot in allowedRootNames)
+                {
+                    if (string.Equals(rootName, allowedRoot, StringComparison.Ordinal))
+                    {
+                        isAllowed = true;
+                        break;
+                    }
+                }
+
+                if (isAllowed)
+                {
+                    continue;
+                }
+
+                string expectedRoots = string.Join(", ", allowedRootNames);
+                _lastResults.Add(new ValidationResult
+                {
+                    Severity = Severity.Warning,
+                    Message = $"{componentLabel} '{component.gameObject.name}' is under root '{rootName}' in Room '{room.RoomID}', but should be placed under {expectedRoots}.",
+                    TargetObject = component,
+                    CanAutoFix = false,
+                    FixAction = null
+                });
+            }
+        }
+
+        private static bool TryGetImmediateRoomRoot(Transform target, out Room room, out string rootName)
+        {
+            room = target.GetComponentInParent<Room>();
+            rootName = null;
+            if (room == null)
+            {
+                return false;
+            }
+
+            var current = target;
+            while (current != null && current != room.transform)
+            {
+                if (current.parent == room.transform)
+                {
+                    rootName = current.name;
+                    return true;
+                }
+
+                current = current.parent;
+            }
+
+            return false;
+        }
+
         // Rule 4: Door connections not bidirectional
+
+
         private static void ValidateDoorBidirectional(Room[] rooms)
         {
             foreach (var room in rooms)
