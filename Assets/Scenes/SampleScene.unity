@@ -364,8 +364,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 674084957}
   _targetSpawnPoint: {fileID: 342974651}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -1278,6 +1280,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
+  m_UseReflectionProbes: 0
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
@@ -1880,8 +1883,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 894095843}
   _targetSpawnPoint: {fileID: 156737320}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 1
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -2648,8 +2653,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 479141191}
   _targetSpawnPoint: {fileID: 1495810566}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -3230,8 +3237,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 782959805}
   _targetSpawnPoint: {fileID: 1727888468}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 1
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -4781,8 +4790,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 674084957}
   _targetSpawnPoint: {fileID: 287702981}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 1
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -5442,8 +5453,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 797297849}
   _targetSpawnPoint: {fileID: 19262288}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -5747,8 +5760,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 2081605164}
   _targetSpawnPoint: {fileID: 819587822}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -6220,8 +6235,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1621754357}
   _targetSpawnPoint: {fileID: 2043196480}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -6755,6 +6772,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
+  m_UseReflectionProbes: 0
   m_AdditionalShaderChannelsFlag: 0
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
@@ -7557,8 +7575,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1244424411}
   _targetSpawnPoint: {fileID: 700477568}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -8355,8 +8375,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1333121470}
   _targetSpawnPoint: {fileID: 2088251051}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -9277,8 +9299,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 743025555}
   _targetSpawnPoint: {fileID: 1797182160}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -10335,8 +10359,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 375654161}
   _targetSpawnPoint: {fileID: 605436100}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -12316,8 +12342,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1446717808}
   _targetSpawnPoint: {fileID: 1498025091}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -13144,8 +13172,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 614166044}
   _targetSpawnPoint: {fileID: 278713753}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -13788,8 +13818,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1129142390}
   _targetSpawnPoint: {fileID: 157290198}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -15425,8 +15457,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1020266609}
   _targetSpawnPoint: {fileID: 1249748421}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -16283,8 +16317,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1785514780}
   _targetSpawnPoint: {fileID: 1115703526}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -17044,8 +17080,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1836767662}
   _targetSpawnPoint: {fileID: 1545747981}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -17451,8 +17489,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 894095843}
   _targetSpawnPoint: {fileID: 1195023290}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -18562,8 +18602,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 816327546}
   _targetSpawnPoint: {fileID: 1314173046}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -19184,8 +19226,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 816327546}
   _targetSpawnPoint: {fileID: 1301403613}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -19698,8 +19742,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 272353874}
   _targetSpawnPoint: {fileID: 2046956132}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -19963,8 +20009,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 971097035}
   _targetSpawnPoint: {fileID: 1809224697}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -20131,8 +20179,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 2052516536}
   _targetSpawnPoint: {fileID: 727845331}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -21118,8 +21168,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 28262378}
   _targetSpawnPoint: {fileID: 1176260289}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -21300,8 +21352,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1420957655}
   _targetSpawnPoint: {fileID: 1287136118}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -21689,8 +21743,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 787444054}
   _targetSpawnPoint: {fileID: 845903617}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -25031,8 +25087,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 2143319789}
   _targetSpawnPoint: {fileID: 537280843}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -28114,8 +28172,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 150186990}
   _targetSpawnPoint: {fileID: 452784389}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -29652,8 +29712,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1020266609}
   _targetSpawnPoint: {fileID: 348097387}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -30925,8 +30987,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 150186990}
   _targetSpawnPoint: {fileID: 1368818389}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -32876,8 +32940,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1716575269}
   _targetSpawnPoint: {fileID: 2119579904}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -33044,8 +33110,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 479141191}
   _targetSpawnPoint: {fileID: 816532021}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -34140,8 +34208,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 797297849}
   _targetSpawnPoint: {fileID: 1404708199}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -34414,8 +34484,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1551373992}
   _targetSpawnPoint: {fileID: 863373905}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 1
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -35162,8 +35234,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 447752945}
   _targetSpawnPoint: {fileID: 1614557328}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -36256,8 +36330,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 359658469}
   _targetSpawnPoint: {fileID: 1906220220}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 1
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -37141,8 +37217,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1071126128}
   _targetSpawnPoint: {fileID: 608291181}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -37909,8 +37987,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1551373992}
   _targetSpawnPoint: {fileID: 441315152}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -38571,8 +38651,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1574855953}
   _targetSpawnPoint: {fileID: 1901615153}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -39109,8 +39191,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1828379595}
   _targetSpawnPoint: {fileID: 187853280}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -46843,8 +46927,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 926823527}
   _targetSpawnPoint: {fileID: 1968035022}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -47702,8 +47788,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1532318985}
   _targetSpawnPoint: {fileID: 1793453112}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -49436,8 +49524,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 943356293}
   _targetSpawnPoint: {fileID: 1597079240}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 1
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -49730,8 +49820,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1804129728}
   _targetSpawnPoint: {fileID: 1894790495}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 1
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -50463,8 +50555,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1583153403}
   _targetSpawnPoint: {fileID: 786329256}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -51779,8 +51873,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 2081605164}
   _targetSpawnPoint: {fileID: 1581754112}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -52022,8 +52118,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1096982946}
   _targetSpawnPoint: {fileID: 1982812059}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -53444,8 +53542,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1637684487}
   _targetSpawnPoint: {fileID: 1446087723}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -54557,8 +54657,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 614166044}
   _targetSpawnPoint: {fileID: 1361176550}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -55248,8 +55350,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1762022429}
   _targetSpawnPoint: {fileID: 402409699}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -55512,8 +55616,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 855626294}
   _targetSpawnPoint: {fileID: 1578413005}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 1
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -55945,8 +56051,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 446279442}
   _targetSpawnPoint: {fileID: 146004142}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -59277,8 +59385,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 479141191}
   _targetSpawnPoint: {fileID: 1342863163}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 1
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -59617,8 +59727,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1716575269}
   _targetSpawnPoint: {fileID: 272452597}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -61082,8 +61194,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 447752945}
   _targetSpawnPoint: {fileID: 361902145}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -61293,8 +61407,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 894095843}
   _targetSpawnPoint: {fileID: 1742449753}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -62729,8 +62845,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 272353874}
   _targetSpawnPoint: {fileID: 1657736695}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -62947,11 +63065,19 @@ MonoBehaviour:
   _fadeImage: {fileID: 1006811259}
   _normalFadeDuration: 0.3
   _layerFadeDuration: 0.5
+  _bossFadeDuration: 0.8
+  _heavyFadeDuration: 1
   _layerTransitionParticles: {fileID: 0}
   _layerTransitionSFX: {fileID: 0}
   _bgmCrossfadeDuration: 1.5
   _layerZoomOutAmount: 2
   _layerZoomDuration: 0.3
+  _bossTransitionSFX: {fileID: 0}
+  _bossZoomOutAmount: 3
+  _bossShakeIntensity: 0.15
+  _heavyTransitionSFX: {fileID: 0}
+  _heavyShakeIntensity: 0.25
+  _heavyZoomOutAmount: 4
   _fallbackVirtualCamera: {fileID: 791479427}
 --- !u!114 &1006811259
 MonoBehaviour:
@@ -64694,8 +64820,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 375654161}
   _targetSpawnPoint: {fileID: 331500256}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -66387,8 +66515,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 272353874}
   _targetSpawnPoint: {fileID: 1268955029}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -66555,8 +66685,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1446717808}
   _targetSpawnPoint: {fileID: 637795228}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -66827,8 +66959,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 2052516536}
   _targetSpawnPoint: {fileID: 2017025289}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -66995,8 +67129,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 943356293}
   _targetSpawnPoint: {fileID: 116233650}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -67796,8 +67932,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1785514780}
   _targetSpawnPoint: {fileID: 901946445}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -68416,8 +68554,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1214483173}
   _targetSpawnPoint: {fileID: 1011922598}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -71210,8 +71350,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1944242157}
   _targetSpawnPoint: {fileID: 855781661}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -71818,8 +71960,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 926823527}
   _targetSpawnPoint: {fileID: 1679540807}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -73810,8 +73954,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 28262378}
   _targetSpawnPoint: {fileID: 827098895}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -74209,8 +74355,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1020266609}
   _targetSpawnPoint: {fileID: 2092363080}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -77472,8 +77620,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1103381591}
   _targetSpawnPoint: {fileID: 1748460033}
+  _gateID: 
+  _connectionType: 0
   _initialState: 2
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: access_alpha
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -78330,8 +78480,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1574855953}
   _targetSpawnPoint: {fileID: 1884532777}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -79487,8 +79639,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 191024517}
   _targetSpawnPoint: {fileID: 1086605757}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -81895,8 +82049,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 891652255}
   _targetSpawnPoint: {fileID: 843709318}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -82063,8 +82219,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 150186990}
   _targetSpawnPoint: {fileID: 692195824}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -83613,8 +83771,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1461888219}
   _targetSpawnPoint: {fileID: 1228882087}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -83946,7 +84106,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2786a45fe16e6a54b87acc353b55da53, type: 3}
   m_Name: 
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.GameFlowManager
-  _fadeImage: {fileID: 1006811259}
   _deathFadeDuration: 0.5
   _deathHoldMs: 1000
   _respawnFadeDuration: 0.5
@@ -84285,8 +84444,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1071126128}
   _targetSpawnPoint: {fileID: 211868370}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -85758,8 +85919,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 471435041}
   _targetSpawnPoint: {fileID: 1358997597}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -87105,8 +87268,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1762022429}
   _targetSpawnPoint: {fileID: 1130467345}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -88961,8 +89126,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1244424411}
   _targetSpawnPoint: {fileID: 2006407310}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -90966,8 +91133,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 943356293}
   _targetSpawnPoint: {fileID: 1901173869}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -92529,8 +92698,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 782959805}
   _targetSpawnPoint: {fileID: 1123242262}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -95140,8 +95311,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 28262378}
   _targetSpawnPoint: {fileID: 2027261948}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 1
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -95758,8 +95931,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 191024517}
   _targetSpawnPoint: {fileID: 2033520717}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -96113,8 +96288,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1214483173}
   _targetSpawnPoint: {fileID: 2143468825}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -97361,8 +97538,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1214483173}
   _targetSpawnPoint: {fileID: 191641466}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -97918,8 +98097,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1333121470}
   _targetSpawnPoint: {fileID: 383365403}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -98086,8 +98267,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1884351814}
   _targetSpawnPoint: {fileID: 1013751351}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 1
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -99131,8 +99314,6 @@ MonoBehaviour:
   _postProcessVolume: {fileID: 0}
   _postProcessTransitionDuration: 2
   _defaultVignetteIntensity: 0.2
-  _stormVignetteIntensity: 0.45
-  _radiationVignetteIntensity: 0.35
   _phaseParticles: []
   _bgmCrossfadeDuration: 2
   _lowPassTransitionDuration: 1
@@ -102640,8 +102821,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1129142390}
   _targetSpawnPoint: {fileID: 62348641}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -102808,8 +102991,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 446279442}
   _targetSpawnPoint: {fileID: 902958546}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -104813,8 +104998,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1785514780}
   _targetSpawnPoint: {fileID: 1880091875}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -107769,8 +107956,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1096982946}
   _targetSpawnPoint: {fileID: 1312433008}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -109370,8 +109559,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1551373992}
   _targetSpawnPoint: {fileID: 1453137614}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -109538,8 +109729,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 2143319789}
   _targetSpawnPoint: {fileID: 1855598714}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -110359,8 +110552,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 894095843}
   _targetSpawnPoint: {fileID: 1261376835}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -113485,8 +113680,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 787444054}
   _targetSpawnPoint: {fileID: 498428751}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -115024,8 +115221,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 891652255}
   _targetSpawnPoint: {fileID: 77587054}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -115192,8 +115391,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1583153403}
   _targetSpawnPoint: {fileID: 493507806}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -115643,8 +115844,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 471435041}
   _targetSpawnPoint: {fileID: 1260550322}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -118359,8 +118562,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 471435041}
   _targetSpawnPoint: {fileID: 1768973103}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -118810,8 +119015,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 150186990}
   _targetSpawnPoint: {fileID: 177110091}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 1
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -120178,8 +120385,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 743025555}
   _targetSpawnPoint: {fileID: 137946409}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -121173,8 +121382,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1353205309}
   _targetSpawnPoint: {fileID: 411194129}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 1
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -122416,8 +122627,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1762022429}
   _targetSpawnPoint: {fileID: 552184940}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -122711,8 +122924,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1353205309}
   _targetSpawnPoint: {fileID: 1217965771}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 1
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -124753,8 +124968,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1129142390}
   _targetSpawnPoint: {fileID: 125153907}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -124860,8 +125077,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 447752945}
   _targetSpawnPoint: {fileID: 1207043354}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -125155,8 +125374,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1637684487}
   _targetSpawnPoint: {fileID: 1829064154}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -125972,8 +126193,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1214483173}
   _targetSpawnPoint: {fileID: 478647682}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -126967,8 +127190,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 971097035}
   _targetSpawnPoint: {fileID: 1700911974}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -128679,8 +128904,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 1096982946}
   _targetSpawnPoint: {fileID: 911775776}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -131735,8 +131962,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 971097035}
   _targetSpawnPoint: {fileID: 1625141624}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
@@ -131903,8 +132132,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Level::ProjectArk.Level.Door
   _targetRoom: {fileID: 816327546}
   _targetSpawnPoint: {fileID: 1204030306}
+  _gateID: 
+  _connectionType: 0
   _initialState: 0
-  _isLayerTransition: 0
+  _ceremony: 1
   _requiredKeyID: 
   _openDuringPhases: 
   _spriteRenderer: {fileID: 0}
