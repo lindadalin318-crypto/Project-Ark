@@ -12881,3 +12881,25 @@ dotnet build 验证：0 错误，0 警告。
 - 延续第一轮的“**退菜单，不强删实现**”策略：移除 `MenuItem` 暴露，但保留 `ShipPhysicsDebugWindow.Open()`、`ShipGlowMaterialCreator.CreateOrGet()`、`LevelSliceBuilder.ImportFromJson()` 等实现供内部调用
 - `LevelSliceBuilder` 的 JSON 导入能力未删除，只是撤掉与 `Level Architect` 重复的顶层快捷入口，保持现役 `Level` 工作流单入口化
 - 变更后执行 `dotnet build Project-Ark.slnx`，结果为 **0 error / 43 warnings**；同时对本轮改动文件执行 lints 检查，未引入新问题
+
+---
+
+## Unity `ProjectArk` 菜单第三轮瘦身（Space Life Create 收口）— 2026-04-09 14:58
+
+### 修改文件
+- `Assets/Scripts/SpaceLife/Editor/SpaceLifeMenuItems.cs` — 移除剩余 `ProjectArk/Space Life/Create/*` 菜单暴露，并补回该类的 legacy/helper 职责说明
+- `Assets/Scripts/SpaceLife/Editor/SpaceLifeSetupWindow.cs` — 保持 `ProjectArk/Space Life/Setup Wizard` 作为 Space Life 场景搭建主入口的说明口径
+
+### 内容
+- 清理 `SpaceLifeMenuItems.cs` 中剩余的场景 bootstrap / one-off 创建菜单暴露，包括 `SpaceLifeManager`、`SpaceLifeInputHandler`、`Player Controller`、`RelationshipManager`、`GiftInventory`、`Create NPC`、`Create Room`、`Create Door`、`Create Interactable Object`、`Create Dialogue UI`、`Create Gift UI`、`Create Minimap UI` 等 `Create/*` 入口。
+- 保留这些静态方法本身，继续作为 `SpaceLifeSetupWindow` 等正式入口内部可调用的 helper；不把一次性创建能力硬删出代码，降低误删风险。
+- 复查 `Assets/Scripts/SpaceLife` 后，`ProjectArk/Space Life/Create/*` 搜索结果已为 **0**；当前只保留 `ProjectArk/Space Life/Setup Wizard` 与 `ProjectArk/Space Life/Data/*` 这两类现役入口。
+- 对 `SpaceLifeMenuItems.cs` 与 `SpaceLifeSetupWindow.cs` 执行 lints 检查，结果均为 **0**；再执行 `dotnet build Project-Ark.slnx`，结果为 **0 error / 33 warnings**。
+
+### 目的
+- 继续把 Unity 顶层 `ProjectArk` 菜单收口为 authority / wizard / data 这类现役入口，避免 `Space Life` 的场景搭建再次分裂回散装 `Create/*` 工作流。
+- 明确 `SpaceLifeSetupWindow` 才是 Space Life 场景搭建与修复的单一主入口，减少新成员误触一次性 bootstrap 菜单的概率。
+
+### 技术
+- 延续“**退菜单，不强删实现**”策略：仅移除 `MenuItem` attribute，保留 `SpaceLifeMenuItems` 中的静态 helper 供 `SpaceLifeSetupWindow` 和未来内部工具复用。
+- 通过全文搜索验证菜单路径零残留，再用 lints + `dotnet build Project-Ark.slnx` 做代码层闭环校验，确保这轮收口只影响菜单暴露面，不影响已有实现链路。

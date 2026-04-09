@@ -4,6 +4,11 @@ using ProjectArk.SpaceLife.Data;
 
 namespace ProjectArk.SpaceLife.Editor
 {
+    /// <summary>
+    /// Legacy helper container for `Space Life` editor utilities.
+    /// Scene bootstrap has been hidden from the `ProjectArk` menu and consolidated into `SpaceLifeSetupWindow`.
+    /// Data asset creation entries remain exposed under `ProjectArk/Space Life/Data`.
+    /// </summary>
     public static class SpaceLifeMenuItems
     {
 
@@ -91,13 +96,11 @@ namespace ProjectArk.SpaceLife.Editor
             return Sprite.Create(texture, rect, pivot, 64);
         }
 
-        [MenuItem("ProjectArk/Space Life/Create/SpaceLifeManager", priority = 30)]
         public static void CreateSpaceLifeManager()
         {
             CreateSingleton<SpaceLifeManager>("SpaceLifeManager");
         }
 
-        [MenuItem("ProjectArk/Space Life/Create/SpaceLifeInputHandler", priority = 31)]
         public static void CreateSpaceLifeInputHandler()
         {
             var go = CreateSingleton<SpaceLifeInputHandler>("SpaceLifeInputHandler");
@@ -116,7 +119,6 @@ namespace ProjectArk.SpaceLife.Editor
             }
         }
 
-        [MenuItem("ProjectArk/Space Life/Create/Player Controller", priority = 32)]
         public static void CreatePlayerController()
         {
             if (Object.FindFirstObjectByType<PlayerController2D>() != null)
@@ -162,25 +164,21 @@ namespace ProjectArk.SpaceLife.Editor
             Debug.Log("[SpaceLife] Created Player2D");
         }
 
-        [MenuItem("ProjectArk/Space Life/Create/SpaceLifeRoomManager", priority = 33)]
         public static void CreateRoomManager()
         {
             CreateSingleton<SpaceLifeRoomManager>("SpaceLifeRoomManager");
         }
 
-        [MenuItem("ProjectArk/Space Life/Create/RelationshipManager", priority = 34)]
         public static void CreateRelationshipManager()
         {
             CreateSingleton<RelationshipManager>("RelationshipManager");
         }
 
-        [MenuItem("ProjectArk/Space Life/Create/GiftInventory", priority = 35)]
         public static void CreateGiftInventory()
         {
             CreateSingleton<GiftInventory>("GiftInventory");
         }
 
-        [MenuItem("ProjectArk/Space Life/Create/Create NPC", priority = 40)]
         public static void CreateNPC()
         {
             GameObject npcGo = new GameObject("NPC");
@@ -194,7 +192,6 @@ namespace ProjectArk.SpaceLife.Editor
             Debug.Log("[SpaceLife] NPC created");
         }
 
-        [MenuItem("ProjectArk/Space Life/Create/Create Room", priority = 41)]
         public static void CreateRoom()
         {
             GameObject roomGo = new GameObject("Room");
@@ -205,7 +202,6 @@ namespace ProjectArk.SpaceLife.Editor
             Debug.Log("[SpaceLife] Room created");
         }
 
-        [MenuItem("ProjectArk/Space Life/Create/Create Door", priority = 42)]
         public static void CreateDoor()
         {
             GameObject doorGo = new GameObject("Door");
@@ -217,7 +213,6 @@ namespace ProjectArk.SpaceLife.Editor
             Debug.Log("[SpaceLife] Door created");
         }
 
-        [MenuItem("ProjectArk/Space Life/Create/Create Interactable Object", priority = 43)]
         public static void CreateInteractable()
         {
             GameObject go = new GameObject("Interactable");
@@ -228,25 +223,21 @@ namespace ProjectArk.SpaceLife.Editor
             Debug.Log("[SpaceLife] Interactable created");
         }
 
-        [MenuItem("ProjectArk/Space Life/Create/Create Dialogue UI", priority = 44)]
         public static void CreateDialogueUI()
         {
             CreateSingleton<DialogueUI>("DialogueUI");
         }
 
-        [MenuItem("ProjectArk/Space Life/Create/Create Gift UI", priority = 45)]
         public static void CreateGiftUI()
         {
             CreateSingleton<GiftUI>("GiftUI");
         }
 
-        [MenuItem("ProjectArk/Space Life/Create/Create Minimap UI", priority = 46)]
         public static void CreateMinimapUI()
         {
             CreateSingleton<MinimapUI>("MinimapUI");
         }
 
-        [MenuItem("ProjectArk/Space Life/Create/Create Transition UI", priority = 47)]
         public static void CreateTransitionUI()
         {
             CreateSingleton<TransitionUI>("TransitionUI");

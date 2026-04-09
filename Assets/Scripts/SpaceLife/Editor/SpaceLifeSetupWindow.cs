@@ -52,8 +52,8 @@ namespace ProjectArk.SpaceLife.Editor
             EditorGUILayout.LabelField("Space Life System Setup", EditorStyles.boldLabel);
             EditorGUILayout.Space(5);
             EditorGUILayout.HelpBox(
-                "This wizard will help you set up the Space Life system in your scene.\n" +
-                "Select which phase you want to configure and click Execute!",
+                "This wizard is the primary entry point for Space Life scene setup.\n" +
+                "Use it to create or repair phase-specific scene content instead of scattered Create menu shortcuts.",
                 MessageType.Info);
             EditorGUILayout.Space(10);
         }
