@@ -178,7 +178,7 @@ namespace ProjectArk.Ship.Editor
                     }
                     else
                     {
-                        todo.Add($"ShipGlowMaterial not found at {GLOW_MATERIAL_PATH} — run 'Create Ship Glow Material' first");
+                        todo.Add($"ShipGlowMaterial not found at {GLOW_MATERIAL_PATH} — recreate the material asset via ShipGlowMaterialCreator before rebuilding again");
                     }
                 }
 

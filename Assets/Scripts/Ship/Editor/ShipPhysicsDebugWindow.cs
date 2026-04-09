@@ -20,7 +20,6 @@ namespace ProjectArk.Ship.Editor
         private float _peakAngularVelocity;
         private bool  _autoFind = true;
 
-        [MenuItem("ProjectArk/Ship/Physics Debug")]
         public static void Open()
         {
             var w = GetWindow<ShipPhysicsDebugWindow>("Ship Physics Debug");

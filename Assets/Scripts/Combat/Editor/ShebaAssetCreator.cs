@@ -6,8 +6,8 @@ using ProjectArk.UI;
 namespace ProjectArk.Combat.Editor
 {
     /// <summary>
-    /// Editor utility to auto-generate all Sheba Star Chart item assets (13 items total).
-    /// Menu: ProjectArk > Create Sheba Star Chart Assets
+    /// Legacy editor utility to auto-generate all Sheba Star Chart item assets (13 items total).
+    /// Hidden from the Unity menu because Sheba content bootstrap is no longer part of the current ProjectArk main workflow.
     ///
     /// Idempotent: already-existing assets are skipped.
     /// After creation, all new SOs are appended to PlayerInventory.asset.
@@ -32,7 +32,6 @@ namespace ProjectArk.Combat.Editor
         private static int _created;
         private static int _skipped;
 
-        [MenuItem("ProjectArk/Create Sheba Star Chart Assets")]
         public static void CreateAllAssets()
         {
             _created = 0;

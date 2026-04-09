@@ -6,46 +6,6 @@ namespace ProjectArk.SpaceLife.Editor
 {
     public static class SpaceLifeMenuItems
     {
-        [MenuItem("ProjectArk/Space Life/Setup/Phase 1 - Core & Basics", priority = 10)]
-        public static void SetupPhase1()
-        {
-            SetupWizardForPhase(SpaceLifeSetupWindow.SetupPhase.Phase1_CoreBasics);
-        }
-
-        [MenuItem("ProjectArk/Space Life/Setup/Phase 2 - NPC System", priority = 11)]
-        public static void SetupPhase2()
-        {
-            SetupWizardForPhase(SpaceLifeSetupWindow.SetupPhase.Phase2_NPCSystem);
-        }
-
-        [MenuItem("ProjectArk/Space Life/Setup/Phase 3 - Relationship & Gifting", priority = 12)]
-        public static void SetupPhase3()
-        {
-            SetupWizardForPhase(SpaceLifeSetupWindow.SetupPhase.Phase3_RelationshipGifting);
-        }
-
-        [MenuItem("ProjectArk/Space Life/Setup/Phase 4 - Rooms & Scenes", priority = 13)]
-        public static void SetupPhase4()
-        {
-            SetupWizardForPhase(SpaceLifeSetupWindow.SetupPhase.Phase4_RoomsScenes);
-        }
-
-        [MenuItem("ProjectArk/Space Life/Setup/Phase 5 - Full Integration", priority = 14)]
-        public static void SetupPhase5()
-        {
-            SetupWizardForPhase(SpaceLifeSetupWindow.SetupPhase.Phase5_FullIntegration);
-        }
-
-        [MenuItem("ProjectArk/Space Life/Setup/All Phases - Complete Setup", priority = 15)]
-        public static void SetupAllPhases()
-        {
-            SetupWizardForPhase(SpaceLifeSetupWindow.SetupPhase.AllPhases);
-        }
-
-        private static void SetupWizardForPhase(SpaceLifeSetupWindow.SetupPhase phase)
-        {
-            SpaceLifeSetupWindow.ShowWindow(phase);
-        }
 
         internal static UnityEngine.Object FindInputActionAsset()
         {

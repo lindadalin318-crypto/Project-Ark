@@ -17,7 +17,6 @@ namespace ProjectArk.Ship.Editor
         private const string OUTPUT_DIR  = "Assets/_Art/Ship/Glitch";
         private const string OUTPUT_PATH = "Assets/_Art/Ship/Glitch/ShipGlowMaterial.mat";
 
-        [MenuItem("ProjectArk/Ship/Create Ship Glow Material")]
         public static Material CreateOrGet()
         {
             // Force refresh: delete existing material and recreate

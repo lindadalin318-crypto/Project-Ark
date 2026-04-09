@@ -6,8 +6,8 @@ using UnityEngine;
 namespace ProjectArk.Combat.Editor
 {
     /// <summary>
-    /// Editor utility to auto-generate all Batch 5 test Prefabs and ScriptableObject assets.
-    /// Menu: ProjectArk > Create Batch 5 Test Assets
+    /// Legacy editor utility to auto-generate the old Batch 5 test Prefabs and ScriptableObject assets.
+    /// Hidden from the Unity menu to avoid cluttering the current ProjectArk workflow.
     /// </summary>
     public static class Batch5AssetCreator
     {
@@ -15,7 +15,6 @@ namespace ProjectArk.Combat.Editor
         private const string CoreRoot = "Assets/_Data/StarChart/Cores";
         private const string PrismRoot = "Assets/_Data/StarChart/Prisms";
 
-        [MenuItem("ProjectArk/Create Batch 5 Test Assets")]
         public static void CreateAllAssets()
         {
             EnsureDirectories();

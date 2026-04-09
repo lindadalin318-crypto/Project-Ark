@@ -12807,3 +12807,77 @@ dotnet build 验证：0 错误，0 警告。
 
 ### 技术
 以现行代码为锚点，对照 `RoomFactory`、`Room.cs`、`LevelValidator`、`LevelSliceBuilder`、`MinimapManager`、`RoomManager` 与 `WorldProgressManager` 做文档事实校准；编辑过程中识别并规避了同文件并行替换导致的覆盖风险，改为串行收口。
+
+---
+
+## Level 验收清单收口为现役口径 — 2026-04-09 10:19
+
+### 修改文件
+- `Docs/6_Diagnostics/VerificationChecklist.md` — 重写为与最新 `ImplementationLog` 对齐的现役 Level 验收清单
+
+### 内容
+- 将旧的“Phase 3-6 + Ship Feel”混合型验收文档重写为 **Level 模块现役验收清单**，不再沿用历史阶段工具存在性检查，而改为围绕当前工作流与实际结果进行验收。
+- 明确当前统一流程为：`结构搭建 / 场景落地 → 语义标注 → Overlay 检查 → Validate → Quick Play → 完整 Play Mode 验收`。
+- 从清单中移除并降级为“已退役口径”的旧项：`Scaffold Sheba Level`、`Phase 6: Create World Clock Assets`、`Phase 6: Build Scene Managers`、`Phase 6: Setup All`、`ShebaSliceBuilder`、`Phase6AssetCreator`。
+- 新增现役验收维度：`Level Architect` 三 Tab、`LevelSliceBuilder` 导入路径、`LevelValidator` 新增的元素/挂点/ActivationGroup 护栏、`Quick Play` 的 smoke test 边界，以及完整 Play Mode 下的战斗、地图、存档、世界阶段与动态世界联动。
+- 补入当前仍需人工自查的项目，特别是 `GateID` 重复、`RoomNodeType` / `ConnectionType` / `TransitionCeremony` 语义正确性，避免误以为 `LevelValidator` 已覆盖全部检查。
+
+### 目的
+- 让团队之后做 Level 验收时，依据的是**当前现役工具链和代码事实**，而不是早期一次性工具留下的过期清单。
+- 把“工具存在性验收”改成“结构、护栏、运行时闭环与人工试玩”的结果导向验收，和 2026-04-01 收口后的 Level 工作流保持一致。
+
+### 技术
+- 以 `ImplementationLog` 中 2026-04-01 的 Level 收口记录为唯一时间线依据，逐条对照现役入口、退役工具和当前验证边界。
+- 文档重写策略：保留验收文件路径不变，直接把旧 checklist 改写为现役版，避免后续继续维护两套口径。
+
+---
+
+## Unity `ProjectArk` 旧菜单清理 — 2026-04-09 10:35
+
+### 修改文件
+- `Assets/Scripts/Combat/Editor/Batch5AssetCreator.cs` — 移除 `ProjectArk/Create Batch 5 Test Assets` 菜单暴露，并将文件头注释改为 legacy 隐藏工具口径
+- `Assets/Scripts/Combat/Editor/ShebaAssetCreator.cs` — 移除 `ProjectArk/Create Sheba Star Chart Assets` 菜单暴露，并将文件头注释改为 legacy 隐藏工具口径
+- `Assets/Scripts/SpaceLife/Editor/SpaceLifeMenuItems.cs` — 删除 `Space Life/Setup/Phase 1-5` 与 `All Phases` 的分阶段 Setup 菜单方法，保留 `Setup Wizard` 作为统一设置入口，以及 `Create/Data` 快捷工具
+
+### 内容
+- 清理掉两类已经不该继续占用 `ProjectArk` 主菜单的入口：
+  - 明确属于旧批次/一次性内容生成的 `Batch5AssetCreator`、`ShebaAssetCreator`
+  - 与 `SpaceLifeSetupWindow` 的统一 Setup 入口重复的 `Space Life` 分阶段 Setup 菜单
+- 保留仍有现役职责的菜单：`Level Architect` / `LevelSliceBuilder`、`Ship/VFX Authority`、`EnemyAssetCreator`、`BestiaryImporter`、`ShapeContractValidator`、`UICanvasBuilder`、`Space Life/Setup Wizard`
+- 额外同步修正文档注释，避免代码文件头继续声称旧菜单仍然存在
+
+### 目的
+- 收窄 Unity 顶层 `ProjectArk` 菜单的噪音，把当前团队真正还在使用的 authority / importer / validator / wizard 留在台前
+- 避免成员继续误触旧批次测试工具或被重复的 `Space Life Setup` 入口干扰
+
+### 技术
+- 采用“**退菜单，不强删实现**”策略：优先移除 `MenuItem` 暴露和重复菜单方法，保留旧实现类作为隐藏辅助代码，降低误删风险
+- 依据 `ImplementationLog` 里对 `Level` 工具链收口、`SpaceLife` 统一 Setup 入口和旧批次工具历史定位来做边界判断，而不是只按文件名猜测
+- 变更后执行 `dotnet build Project-Ark.slnx` 验证，结果为 **0 error**（存在既有 warning，但本次未引入新编译错误）
+
+---
+
+## Unity `ProjectArk` 菜单第二轮瘦身 — 2026-04-09 11:25
+
+### 修改文件
+- `Assets/Scripts/Ship/Editor/ShipPhysicsDebugWindow.cs` — 移除 `ProjectArk/Ship/Physics Debug` 菜单暴露，并把文件头注释改为 legacy 隐藏调试窗口口径
+- `Assets/Scripts/Ship/Editor/ShipGlowMaterialCreator.cs` — 移除 `ProjectArk/Ship/Create Ship Glow Material` 菜单暴露，并把文件头注释改为隐藏辅助工具口径
+- `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs` — 更新缺失 `ShipGlowMaterial` 时的提示文案，避免继续引用已删除的旧菜单名
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelSliceBuilder.cs` — 移除 `ProjectArk/Level/Import from LevelDesigner JSON...` 顶层重复菜单，并把文件头工作流说明改为通过 `LevelArchitectWindow` 进入
+
+### 内容
+- 第二轮继续收窄 `ProjectArk` 主菜单，退掉 3 个已经不适合常驻的入口：
+  - `Ship/Physics Debug`：纯 Play Mode 调试窗口
+  - `Ship/Create Ship Glow Material`：已降级为 `ShipPrefabRebuilder` 内部可调用的辅助创建器
+  - `Level/Import from LevelDesigner JSON...`：功能仍保留，但统一收口到 `Level Architect` 的 Design 页按钮进入
+- 同步修正 `ShipPrefabRebuilder`、`ShipPhysicsDebugWindow`、`ShipGlowMaterialCreator`、`LevelSliceBuilder` 的注释与提示文案，避免代码层继续传播旧菜单路径
+- 复查脚本定义后，以上 3 个旧菜单路径在 `Assets/Scripts` 中已 **0 命中**
+
+### 目的
+- 继续把 Unity 顶层 `ProjectArk` 菜单收敛到 authority / validator / importer / wizard 这类现役入口
+- 减少调试型、重复型、内部 helper 型菜单对日常工作流的干扰，降低误触成本
+
+### 技术
+- 延续第一轮的“**退菜单，不强删实现**”策略：移除 `MenuItem` 暴露，但保留 `ShipPhysicsDebugWindow.Open()`、`ShipGlowMaterialCreator.CreateOrGet()`、`LevelSliceBuilder.ImportFromJson()` 等实现供内部调用
+- `LevelSliceBuilder` 的 JSON 导入能力未删除，只是撤掉与 `Level Architect` 重复的顶层快捷入口，保持现役 `Level` 工作流单入口化
+- 变更后执行 `dotnet build Project-Ark.slnx`，结果为 **0 error / 43 warnings**；同时对本轮改动文件执行 lints 检查，未引入新问题

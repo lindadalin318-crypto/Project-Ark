@@ -12,7 +12,7 @@ namespace ProjectArk.Level.Editor
     /// Replaces the old ShebaSliceBuilder (hardcoded) with a data-driven, reusable importer.
     ///
     /// Workflow:
-    ///   LevelDesigner.html → Export JSON → ProjectArk/Level/Import from LevelDesigner JSON
+    ///   `LevelArchitectWindow` Design tab → Import LevelDesigner JSON
     ///   → Room GameObjects + RoomSO assets + Door connections in active scene
     /// </summary>
     public static class LevelSliceBuilder
@@ -63,7 +63,6 @@ namespace ProjectArk.Level.Editor
 
         // ──────────────────── Menu Entry ────────────────────
 
-        [MenuItem("ProjectArk/Level/Import from LevelDesigner JSON...", false, 100)]
         public static void ImportFromJson()
         {
             string path = EditorUtility.OpenFilePanel(

@@ -16,7 +16,7 @@
     }
   ],
   "dependencies": {
-    "com.coplaydev.unity-mcp": "9.6.4",
+    "com.coplaydev.unity-mcp": "9.6.6",
     "com.cysharp.unitask": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask",
     "com.kyrylokuzyk.primetween": "1.3.8",
     "com.unity.2d.animation": "14.0.3",
