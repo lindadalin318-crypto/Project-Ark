@@ -214,7 +214,7 @@ namespace ProjectArk.Level
             // ArenaController owns the full encounter flow (lock doors → delay → spawn waves → unlock).
             // Do NOT call ActivateEnemies() for these rooms — it would create a WaveSpawnStrategy that
             // gets immediately Reset() when ArenaController calls SetStrategy() moments later.
-            if (room.NodeType == RoomNodeType.Resolution || room.NodeType == RoomNodeType.Boss)
+            if (room.NodeType == RoomNodeType.Arena || room.NodeType == RoomNodeType.Boss)
             {
                 if (room.State != RoomState.Cleared)
                 {
@@ -233,7 +233,7 @@ namespace ProjectArk.Level
             }
             else
             {
-                // Transit / Safe / Reward / Hub rooms: activate enemies directly
+                // Non-arena rooms activate enemies directly.
                 _currentRoom.ActivateEnemies();
             }
 

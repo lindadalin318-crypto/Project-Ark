@@ -227,11 +227,11 @@ JSON 结构示例见本文附录。
 - `ConnectionType`
 - `TransitionCeremony`
 - `EncounterSO`
-- Entry / Boss / Safe / Threshold 等关键节点语义
+- Entry / Boss / Safe 等关键节点语义
 
 **判断标准：**
 
-如果你还只能说“这是个大房间 / 小房间 / 长走廊”，说明还停留在结构层；只有当你能说“这是一个 `Pressure` 通往 `Resolution` 的推进段”，语义层才算完成。
+如果你还只能说“这是个大房间 / 小房间 / 长走廊”，说明还停留在结构层；只有当你能说“这是一个 `Combat` 通往 `Arena` 的推进段”，语义层才算完成。
 
 ### 6.3 Phase 3：Overlay 可视化检查
 
@@ -276,9 +276,9 @@ JSON 结构示例见本文附录。
 | 缺 `CameraConfiner` 或层级不正确 | Warning | ✅ |
 | 缺标准根节点：`Navigation / Elements / Encounters / Hazards / Decoration / Triggers` | Warning | ✅ |
 | Door 非双向连接 | Error | ✅ |
-| `Resolution` / `Boss` 房缺 `ArenaController` | Warning | ✅ |
-| `Resolution` / `Boss` 房缺 `EncounterSO` | Warning | ❌ |
-| `Resolution` / `Boss` 房缺 `EnemySpawner` | Warning | ✅ |
+| `Arena` / `Boss` 房缺 `ArenaController` | Warning | ✅ |
+| `Arena` / `Boss` 房缺 `EncounterSO` | Warning | ❌ |
+| `Arena` / `Boss` 房缺 `EnemySpawner` | Warning | ✅ |
 | Door 的 `_playerLayer` 未配置 | Warning | ✅ |
 | Door 的 `_targetSpawnPoint` 为空 | Error | ❌ |
 | 房间孤立（没有 Door 连接） | Info | ❌ |
@@ -543,15 +543,17 @@ Room_[ID]
 ### 11.4 `type` 规范字符串
 
 - `transit`
-- `pressure`
-- `resolution`
+- `combat`
+- `arena`
 - `reward`
-- `anchor`
-- `loop`
-- `hub`
-- `threshold`
 - `safe`
 - `boss`
+
+**严格要求：**
+
+- JSON 只能写以上 6 个字符串
+- 旧字符串 `pressure / resolution / anchor / loop / hub / threshold / corridor / normal / puzzle / narrative` 已全部废弃
+- 若导入仍包含旧值，`LevelDesigner.html` 与 `LevelSliceBuilder` 都应直接报错，而不是继续归一兼容
 
 ### 11.5 `connectionType` 规范字符串
 

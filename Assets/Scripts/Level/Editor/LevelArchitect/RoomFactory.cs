@@ -238,14 +238,18 @@ namespace ProjectArk.Level.Editor
                 "A safe zone with no enemies. May contain checkpoint, shop, or NPC.",
                 RoomNodeType.Safe, new Vector2(15, 12), 2, false, false);
 
-            var normal = CreatePresetIfMissing(path, "Preset_Normal", "Normal Room",
-                "Standard room with optional enemies.",
+            var transit = CreatePresetIfMissing(path, "Preset_Transit", "Transit Room",
+                "Connecting room focused on traversal and flow, with only light incidental threats.",
                 RoomNodeType.Transit, new Vector2(20, 15), 4, false, false);
-            if (normal != null) normalPreset = normal;
+            if (transit != null) normalPreset = transit;
+
+            CreatePresetIfMissing(path, "Preset_Combat", "Combat Room",
+                "Open combat room focused on mobile skirmishes while traversal continues.",
+                RoomNodeType.Combat, new Vector2(22, 16), 5, false, true);
 
             CreatePresetIfMissing(path, "Preset_Arena", "Arena Room",
-                "Combat arena — doors lock on entry, unlock after all waves cleared.",
-                RoomNodeType.Resolution, new Vector2(25, 20), 6, true, true);
+                "Closed combat room — doors lock on entry, unlock after all waves cleared.",
+                RoomNodeType.Arena, new Vector2(25, 20), 6, true, true);
 
             CreatePresetIfMissing(path, "Preset_Boss", "Boss Room",
                 "Boss encounter room — larger than arena, special rewards on clear.",

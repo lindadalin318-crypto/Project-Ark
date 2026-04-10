@@ -865,11 +865,13 @@ namespace ProjectArk.Level.Editor
         {
             switch (type)
             {
-                case RoomNodeType.Transit:    return new Color(0.3f, 0.5f, 0.9f, 0.5f);   // Blue
-                case RoomNodeType.Resolution: return new Color(0.9f, 0.6f, 0.2f, 0.5f);   // Orange
-                case RoomNodeType.Boss:       return new Color(0.9f, 0.2f, 0.2f, 0.5f);   // Red
-                case RoomNodeType.Safe:       return new Color(0.2f, 0.8f, 0.3f, 0.5f);   // Green
-                default:                      return new Color(0.5f, 0.5f, 0.5f, 0.5f);   // Gray
+                case RoomNodeType.Transit: return new Color(0.3f, 0.5f, 0.9f, 0.5f);   // Blue
+                case RoomNodeType.Combat: return new Color(0.9f, 0.7f, 0.2f, 0.5f);   // Yellow
+                case RoomNodeType.Arena: return new Color(0.9f, 0.6f, 0.2f, 0.5f);    // Orange
+                case RoomNodeType.Reward: return new Color(0.2f, 0.8f, 0.4f, 0.5f);   // Green
+                case RoomNodeType.Safe: return new Color(0.2f, 0.8f, 0.3f, 0.5f);     // Green-blue
+                case RoomNodeType.Boss: return new Color(0.9f, 0.2f, 0.2f, 0.5f);     // Red
+                default: return new Color(0.5f, 0.5f, 0.5f, 0.5f);                    // Gray
             }
         }
 
@@ -880,11 +882,13 @@ namespace ProjectArk.Level.Editor
         {
             switch (type)
             {
-                case RoomNodeType.Transit:    return new Color(0.3f, 0.5f, 0.9f, 1f);
-                case RoomNodeType.Resolution: return new Color(0.9f, 0.6f, 0.2f, 1f);
-                case RoomNodeType.Boss:       return new Color(0.9f, 0.2f, 0.2f, 1f);
-                case RoomNodeType.Safe:       return new Color(0.2f, 0.8f, 0.3f, 1f);
-                default:                      return new Color(0.5f, 0.5f, 0.5f, 1f);
+                case RoomNodeType.Transit: return new Color(0.3f, 0.5f, 0.9f, 1f);
+                case RoomNodeType.Combat: return new Color(0.9f, 0.7f, 0.2f, 1f);
+                case RoomNodeType.Arena: return new Color(0.9f, 0.6f, 0.2f, 1f);
+                case RoomNodeType.Reward: return new Color(0.2f, 0.8f, 0.4f, 1f);
+                case RoomNodeType.Safe: return new Color(0.2f, 0.8f, 0.3f, 1f);
+                case RoomNodeType.Boss: return new Color(0.9f, 0.2f, 0.2f, 1f);
+                default: return new Color(0.5f, 0.5f, 0.5f, 1f);
             }
         }
 
@@ -896,17 +900,13 @@ namespace ProjectArk.Level.Editor
         {
             switch (nodeType)
             {
-                case RoomNodeType.Transit:    return new Color(0.5f, 0.5f, 0.5f, 0.5f);
-                case RoomNodeType.Pressure:   return new Color(0.9f, 0.7f, 0.2f, 0.5f);
-                case RoomNodeType.Resolution: return new Color(0.9f, 0.3f, 0.2f, 0.5f);
-                case RoomNodeType.Reward:     return new Color(0.2f, 0.8f, 0.4f, 0.5f);
-                case RoomNodeType.Anchor:     return new Color(0.2f, 0.6f, 0.9f, 0.5f);
-                case RoomNodeType.Loop:       return new Color(0.7f, 0.4f, 0.9f, 0.5f);
-                case RoomNodeType.Hub:        return new Color(0.9f, 0.5f, 0.9f, 0.5f);
-                case RoomNodeType.Threshold:  return new Color(1f, 0.45f, 0.15f, 0.5f);
-                case RoomNodeType.Safe:       return new Color(0.2f, 0.9f, 0.6f, 0.5f);
-                case RoomNodeType.Boss:       return new Color(0.8f, 0.1f, 0.1f, 0.5f);
-                default:                      return new Color(0.5f, 0.5f, 0.5f, 0.5f);
+                case RoomNodeType.Transit: return new Color(0.5f, 0.5f, 0.5f, 0.5f);
+                case RoomNodeType.Combat: return new Color(0.9f, 0.7f, 0.2f, 0.5f);
+                case RoomNodeType.Arena: return new Color(0.9f, 0.3f, 0.2f, 0.5f);
+                case RoomNodeType.Reward: return new Color(0.2f, 0.8f, 0.4f, 0.5f);
+                case RoomNodeType.Safe: return new Color(0.2f, 0.9f, 0.6f, 0.5f);
+                case RoomNodeType.Boss: return new Color(0.8f, 0.1f, 0.1f, 0.5f);
+                default: return new Color(0.5f, 0.5f, 0.5f, 0.5f);
             }
         }
 

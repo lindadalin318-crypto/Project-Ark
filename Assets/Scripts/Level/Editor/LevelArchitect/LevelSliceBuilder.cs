@@ -33,8 +33,7 @@ namespace ProjectArk.Level.Editor
         {
             public string id;
             public string name;
-            public string type;   // Unity canonical: "transit"|"pressure"|"resolution"|"reward"|"anchor"|"loop"|"hub"|"threshold"|"safe"|"boss"
-                                  // HTML aliases:    "normal"→pressure, "arena"→resolution, "narrative"→anchor, "puzzle"→reward, "corridor"→transit
+            public string type;   // Strict RoomNodeType string: "transit"|"combat"|"arena"|"reward"|"safe"|"boss"
             public int floor;
             public float[] position; // [x, y] in grid units
             public float[] size;     // [w, h] in grid units
@@ -157,7 +156,7 @@ namespace ProjectArk.Level.Editor
                     Vector3 worldPos = JsonPosToWorld(rj.position);
                     Vector2 worldSize = JsonSizeToWorld(rj.size);
                     RoomNodeType nodeType = ParseNodeType(rj.type);
-                    bool needsEncounter = nodeType == RoomNodeType.Resolution || nodeType == RoomNodeType.Boss;
+                    bool needsEncounter = nodeType == RoomNodeType.Arena || nodeType == RoomNodeType.Boss;
 
                     // Create RoomSO
                     EncounterSO encounter = null;
@@ -300,7 +299,7 @@ namespace ProjectArk.Level.Editor
             var encSpawnRoot = CreateChild(encRoot.transform, "SpawnPoints");
             Transform[] spawnPoints = new Transform[0];
 
-            bool isCombat = nodeType == RoomNodeType.Resolution || nodeType == RoomNodeType.Boss;
+            bool isCombat = nodeType == RoomNodeType.Arena || nodeType == RoomNodeType.Boss;
             if (isCombat)
             {
                 spawnPoints = CreateSpawnPoints(encSpawnRoot.transform, size, 4);
@@ -527,27 +526,17 @@ namespace ProjectArk.Level.Editor
 
         private static RoomNodeType ParseNodeType(string type)
         {
-            // Canonical mapping: HTML type strings → RoomNodeType enum.
-            // HTML is the consumer; Unity RoomNodeType is the single source of truth.
-            return (type ?? "").ToLower() switch
+            // Strict mapping: JSON type strings must already match the new RoomNodeType contract.
+            // Any stale legacy value is treated as authoring data corruption and should fail loudly.
+            return (type ?? string.Empty).Trim().ToLowerInvariant() switch
             {
-                "transit"    => RoomNodeType.Transit,
-                "pressure"   => RoomNodeType.Pressure,
-                "resolution" => RoomNodeType.Resolution,
-                "reward"     => RoomNodeType.Reward,
-                "anchor"     => RoomNodeType.Anchor,
-                "loop"       => RoomNodeType.Loop,
-                "hub"        => RoomNodeType.Hub,
-                "threshold"  => RoomNodeType.Threshold,
-                "safe"       => RoomNodeType.Safe,
-                "boss"       => RoomNodeType.Boss,
-                // Legacy / HTML-side aliases
-                "arena"      => RoomNodeType.Resolution,   // arena = closed encounter = Resolution
-                "normal"     => RoomNodeType.Pressure,     // normal = open combat room = Pressure
-                "narrative"  => RoomNodeType.Anchor,       // narrative landmark = Anchor
-                "puzzle"     => RoomNodeType.Reward,       // puzzle/secret reward = Reward
-                "corridor"   => RoomNodeType.Transit,      // corridor = pass-through = Transit
-                _            => RoomNodeType.Transit
+                "transit" => RoomNodeType.Transit,
+                "combat" => RoomNodeType.Combat,
+                "arena" => RoomNodeType.Arena,
+                "reward" => RoomNodeType.Reward,
+                "safe" => RoomNodeType.Safe,
+                "boss" => RoomNodeType.Boss,
+                _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unsupported RoomNodeType string. Expected: transit/combat/arena/reward/safe/boss.")
             };
         }
 

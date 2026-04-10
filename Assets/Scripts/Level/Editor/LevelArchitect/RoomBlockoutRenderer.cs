@@ -172,17 +172,13 @@ namespace ProjectArk.Level.Editor
         {
             switch (nodeType)
             {
-                case RoomNodeType.Transit:    return "TR";
-                case RoomNodeType.Pressure:   return "PR";
-                case RoomNodeType.Resolution: return "RS";
-                case RoomNodeType.Reward:     return "RW";
-                case RoomNodeType.Anchor:     return "AN";
-                case RoomNodeType.Loop:       return "LP";
-                case RoomNodeType.Hub:        return "HB";
-                case RoomNodeType.Threshold:  return "TH";
-                case RoomNodeType.Safe:       return "SF";
-                case RoomNodeType.Boss:       return "BS";
-                default:                      return "??";
+                case RoomNodeType.Transit: return "TR";
+                case RoomNodeType.Combat: return "CB";
+                case RoomNodeType.Arena: return "AR";
+                case RoomNodeType.Reward: return "RW";
+                case RoomNodeType.Safe: return "SF";
+                case RoomNodeType.Boss: return "BS";
+                default: return "??";
             }
         }
 

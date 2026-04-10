@@ -94,7 +94,9 @@ namespace ProjectArk.Level.Editor
                 var room = selectedRooms[0];
                 menu.AddItem(new GUIContent("Set as Entry Room"), false, () => SetAsEntryRoom(room));
                 menu.AddItem(new GUIContent("Set as Boss Room"), false, () => SetNodeType(room, RoomNodeType.Boss));
-                menu.AddItem(new GUIContent("Set as Arena Room"), false, () => SetNodeType(room, RoomNodeType.Resolution));
+                menu.AddItem(new GUIContent("Set as Arena Room"), false, () => SetNodeType(room, RoomNodeType.Arena));
+                menu.AddItem(new GUIContent("Set as Combat Room"), false, () => SetNodeType(room, RoomNodeType.Combat));
+                menu.AddItem(new GUIContent("Set as Reward Room"), false, () => SetNodeType(room, RoomNodeType.Reward));
                 menu.AddItem(new GUIContent("Set as Safe Room"), false, () => SetNodeType(room, RoomNodeType.Safe));
                 menu.AddItem(new GUIContent("Set as Transit Room"), false, () => SetNodeType(room, RoomNodeType.Transit));
                 menu.AddSeparator("");
@@ -254,7 +256,7 @@ namespace ProjectArk.Level.Editor
             EditorUtility.SetDirty(room.Data);
 
             // Add ArenaController for combat rooms
-            if (nodeType == RoomNodeType.Resolution || nodeType == RoomNodeType.Boss)
+            if (nodeType == RoomNodeType.Arena || nodeType == RoomNodeType.Boss)
             {
                 if (room.GetComponent<ArenaController>() == null)
                 {

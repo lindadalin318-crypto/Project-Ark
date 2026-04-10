@@ -2,6 +2,72 @@
 
 ---
 
+## Level RoomNodeType 硬切迁移与旧值清除 — 2026-04-10 15:44
+
+### 修改文件
+- `Assets/Scripts/Level/Data/RoomNodeType.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelSliceBuilder.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomFactory.cs`
+- `Tools/LevelDesigner.html`
+- `Docs/2_Design/Level/Level_CanonicalSpec.md`
+- `Docs/2_Design/Level/Level_WorkflowSpec.md`
+- `Docs/3_LevelDesigns/Sheba/Sheba_ACT1_ACT2.json`
+- `Docs/3_LevelDesigns/Sheba/Sheba_FirstSlice.json`
+- `Assets/_Data/Level/Rooms/Sheba/*.asset`
+- `Assets/_Data/Level/示巴星___ACT1+ACT2_(Z1a_Z2d)/Rooms/*.asset`
+
+### 内容
+- 将 `RoomNodeType` 的现役序列化值正式收口为连续新六类：`Transit=0 / Combat=1 / Arena=2 / Reward=3 / Safe=4 / Boss=5`，删除此前为旧模型保留的稀疏编号。
+- 删除 `LevelSliceBuilder` 和 `LevelDesigner.html` 中对旧字符串 `pressure / resolution / anchor / loop / hub / threshold / corridor / normal / puzzle / narrative` 的兼容归一；旧值现在应直接报错，而不是静默映射。
+- 将 `Sheba_ACT1_ACT2.json` 中遗留的 `normal` 房间按实际主体验重新落到 `Combat` 或 `Reward`；同时把 `Sheba_FirstSlice.json` 中的 `Normal / Gate / Hub` 改成新六类，并同步更新 `standardComponents` 文案。
+- 批量迁移 `RoomSO` 资产：将旧字段 `_type` 全部改写为 `_nodeType`，并把 `Sheba` 样例资产与 `示巴星___ACT1+ACT2_(Z1a_Z2d)` 房间资产统一写入新六类数值，不再依赖旧字段残留。
+- `RoomFactory` 的内置预设命名同步改为 `Transit Room` / `Combat Room` 等新口径，避免 Unity Editor 继续生成 `Normal Room` 这类旧 authoring 语言。
+- 删除仓库内两份旧版 `LevelDesigner` 备份 HTML，避免旧 `RoomNodeType` 口径继续作为误用来源留在 `Tools/` 目录。
+
+### 目的
+- 完成一次真正的 `RoomNodeType` 硬切迁移，避免仓库继续处于“代码是新口径、工具和资产仍在吃旧值”的半迁移状态。
+- 让导入链、设计稿、SO 资产与 Editor 预设共享同一套新六类语言，并在发现旧值时尽早报错。
+
+### 技术
+- 严格导入契约：导入器与 HTML 工具改为只接受新六类字符串，旧值直接 fail loud。
+- 批量资产迁移：使用一次性脚本对 JSON 与 YAML 资产做字段级重写，移除 `_type` 并统一 `_nodeType` 数值。
+- 自检验证：迁移后继续用全文搜索、`read_lints` 与整仓编译确认没有残留旧入口。
+
+## Level RoomNodeType 六类化重构 — 2026-04-10 15:29
+
+### 修改文件
+- `Assets/Scripts/Level/Data/RoomNodeType.cs`
+- `Assets/Scripts/Level/Room/RoomManager.cs`
+- `Assets/Scripts/Level/Map/MapRoomWidget.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/BatchEditPanel.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelSliceBuilder.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomFactory.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomBlockoutRenderer.cs`
+- `Docs/2_Design/Level/Level_CanonicalSpec.md`
+- `Docs/2_Design/Level/Level_WorkflowSpec.md`
+- `Tools/LevelDesigner.html`
+
+### 内容
+- 将 `RoomNodeType` 从旧的 10 类节奏/结构混合枚举，收口为 6 个只描述“玩家进入房间后主体验是什么”的类型：`Transit / Combat / Arena / Reward / Safe / Boss`。
+- 为避免枚举重排污染现有序列化数据，在 `RoomNodeType.cs` 中为保留类型显式写入数值（`Transit=0`、`Combat=1`、`Arena=2`、`Reward=3`、`Safe=8`、`Boss=9`）。
+- 运行时代码与编辑器工具同步切换到新命名：`Resolution` → `Arena`、`Pressure` → `Combat`，并移除 `Anchor / Loop / Hub / Threshold` 作为 `RoomNodeType` 的现役入口。
+- `LevelSliceBuilder` 与 `LevelDesigner.html` 新增兼容归一逻辑，旧字符串仍可导入：`pressure -> combat`、`resolution -> arena`、`anchor/loop/hub/threshold/corridor/normal -> transit`、`puzzle/narrative -> reward`。
+- `RoomFactory` 新增 `Combat Room` 预设，并把原 `Normal Room` 口径收口为 `Transit Room`；`BatchEditPanel`、`LevelArchitectWindow`、`RoomBlockoutRenderer` 的菜单、颜色、标签也统一改成新 6 类。
+- `Level_CanonicalSpec.md` 与 `Level_WorkflowSpec.md` 同步改写 `RoomNodeType` 定义、职责说明、Validator 表述和规范字符串列表，确保文档、代码、HTML 工具使用同一套语言。
+
+### 目的
+- 让 `RoomNodeType` 重新回到“房间主体验类型”这一单一职责，避免继续把结构身份和节奏语义混在同一个枚举里。
+- 降低关卡 authoring、代码分支和工具面板的认知负担，让房间类型判断更直白、更稳定。
+- 在不破坏现有序列化数据和旧导入内容的前提下，完成一次可平滑落地的枚举收口。
+
+### 技术
+- 枚举收口：使用显式 enum 值保序，避免重构导致资产 int 映射漂移。
+- 兼容迁移：在导入层保留旧字符串归一，避免一次性改旧 HTML/JSON 数据源。
+- 可视化同步：同时更新编辑器颜色、标签、预设与 HTML 设计器，保证 authoring 视图与代码语义一致。
+- 自检验证：`read_lints` 检查相关 C# 文件无新增 lint；`dotnet build Project-Ark.slnx` 通过，结果为 `0 error`、仅有既有 warning。
+
 ## Level 房间元素分类规范同步到设计文档与诊断表 — 2026-04-10 15:10
 
 ### 修改文件

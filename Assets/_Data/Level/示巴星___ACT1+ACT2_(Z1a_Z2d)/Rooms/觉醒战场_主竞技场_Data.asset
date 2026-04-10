@@ -15,7 +15,7 @@ MonoBehaviour:
   _roomID: 
   _displayName: 
   _floorLevel: 0
-  _type: 0
+  _nodeType: 2
   _mapIcon: {fileID: 0}
   _ambientMusic: {fileID: 0}
   _encounter: {fileID: 11400000, guid: 01d86be1b528a42c2b9bdaf0aa9416af, type: 2}

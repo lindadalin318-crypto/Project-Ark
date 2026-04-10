@@ -15,7 +15,7 @@ MonoBehaviour:
   _roomID: sheba_arena_01
   _displayName: Arena 01
   _floorLevel: 0
-  _type: 1
+  _nodeType: 2
   _mapIcon: {fileID: 0}
   _ambientMusic: {fileID: 0}
   _encounter: {fileID: 11400000, guid: 458b8dac4a32dde4ba14456bfbafcf67, type: 2}

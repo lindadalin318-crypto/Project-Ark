@@ -1,42 +1,29 @@
 namespace ProjectArk.Level
 {
     /// <summary>
-    /// 房间在关卡节奏中的职责类型。
-    /// 来源：Minishoot 分析 1.21 的 6 种节点分级 + Ark 扩展。
-    /// 
-    /// 设计原则：不要说"我要做 8 个房间"，而要说"我要 2 个 Transit + 2 个 Pressure + 
-    /// 1 个 Resolution + 1 个 Reward + 1 个 Anchor + 1 个 Loop"。
+    /// 房间的主体验类型。
+    /// 只回答“玩家进入这个房间后，主要在做什么？”。
+    /// 结构身份（如 Anchor / Loop / Hub / Threshold）不再放在这里，后续应由 WorldGraph 标签或附加元数据承载。
+    /// 当前仓库只允许新六类枚举值，不再保留旧模型的兼容序列化编号。
     /// </summary>
     public enum RoomNodeType
     {
-        /// <summary>过路节点：保持移动，连接相邻区域，不承载太重信息。可能有少量 EncounterOpen。</summary>
-        Transit,
+        /// <summary>过路房。主体验是通过与连接，可带少量敌人或机关，但不承载强事件。</summary>
+        Transit = 0,
 
-        /// <summary>压力节点：不打断流程但增加消耗和警惕。1-3 组开放敌人，可边打边走。</summary>
-        Pressure,
+        /// <summary>开放战斗房。主体验是边移动边打，流程不断。</summary>
+        Combat = 1,
 
-        /// <summary>清算节点：用封闭战斗验证玩家是否掌握当前区段规则。EncounterClose + 波次/Boss。</summary>
-        Resolution,
+        /// <summary>竞技场。主体验是锁门清场或波次验证。</summary>
+        Arena = 2,
 
-        /// <summary>回报节点：紧张后给认知/资源/氛围缓冲。Checkpoint、宝箱、景观房。</summary>
-        Reward,
+        /// <summary>回报房。主体验是获得资源、剧情或探索回报。</summary>
+        Reward = 3,
 
-        /// <summary>锚点节点：帮助玩家建立脑内地图。明显地标、特殊 CameraTrigger、独特 Biome。</summary>
-        Anchor,
+        /// <summary>安全房。主体验是休整，没有持续敌意内容。</summary>
+        Safe = 4,
 
-        /// <summary>回路节点：把单向推进转化成结构性掌控。解锁门、反向通路、回旧 Checkpoint 的捷径。</summary>
-        Loop,
-
-        /// <summary>枢纽节点：多条路径的交汇点，提供导航选择。通常是大区域的中心。</summary>
-        Hub,
-
-        /// <summary>门槛节点：章节边界，进入后世界发生不可逆变化。Boss 前厅、关键剧情触发点。</summary>
-        Threshold,
-
-        /// <summary>安全节点：完全没有敌意的休息区。Safe Room、商店。</summary>
-        Safe,
-
-        /// <summary>Boss 节点：Boss 竞技场，独立演出流程。</summary>
-        Boss
+        /// <summary>Boss 房。主体验是完整 Boss 战流程。</summary>
+        Boss = 5
     }
 }

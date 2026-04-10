@@ -769,10 +769,10 @@ namespace ProjectArk.Level.Editor
             }
         }
 
-        // Rule 5: Resolution/Boss rooms missing ArenaController or EncounterSO
+        // Rule 5: Arena/Boss rooms missing ArenaController or EncounterSO
         private static void ValidateArenaBossConfig(Room room)
         {
-            if (room.NodeType != RoomNodeType.Resolution && room.NodeType != RoomNodeType.Boss) return;
+            if (room.NodeType != RoomNodeType.Arena && room.NodeType != RoomNodeType.Boss) return;
 
             var arenaController = room.GetComponent<ArenaController>();
             if (arenaController == null)

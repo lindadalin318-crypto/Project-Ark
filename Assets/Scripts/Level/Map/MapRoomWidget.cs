@@ -125,7 +125,7 @@ namespace ProjectArk.Level
         {
             return type switch
             {
-                RoomNodeType.Resolution => COLOR_ARENA,
+                RoomNodeType.Arena => COLOR_ARENA,
                 RoomNodeType.Boss => COLOR_BOSS,
                 RoomNodeType.Safe => COLOR_SAFE,
                 _ => COLOR_NORMAL

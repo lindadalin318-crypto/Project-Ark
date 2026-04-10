@@ -15,7 +15,7 @@ MonoBehaviour:
   _roomID: sheba_corridor_c
   _displayName: Corridor C
   _floorLevel: 0
-  _type: 0
+  _nodeType: 0
   _mapIcon: {fileID: 0}
   _ambientMusic: {fileID: 0}
   _encounter: {fileID: 11400000, guid: 3bd5111cb5302194b98e86f622938b69, type: 2}
