@@ -10,18 +10,21 @@
 >
 > 它**不是**现役链路、资产映射、Prefab/Scene owner 的真相源。各模块的权威来源：
 >
-> - `Ship / VFX`：`Docs/Reference/ShipVFX_CanonicalSpec.md` + `ShipVFX_AssetRegistry.md`
-> - `Level`：`Docs/Reference/Level_CanonicalSpec.md`
+> - `Ship / VFX`：`Docs/2_Design/Ship/ShipVFX_CanonicalSpec.md` + `Docs/2_Design/Ship/ShipVFX_AssetRegistry.md`
+> - `Level`：`Docs/2_Design/Level/Level_CanonicalSpec.md`
+> - 其余暂无独立 `CanonicalSpec` 的治理章节：以本文档的约束为准；现役链路、对象映射和实现真相仍以对应代码、Prefab / Scene 与设计文档为准
 >
-> 当前已启用模块：
+> 当前已启用章节：
 >
 > - `Ship / VFX`
 > - `Level`
+> - `全局 Unity / Editor 治理`
+> - `Core / Infrastructure`
+> - `UI`
+> - `Combat / Projectile`
 >
 > 后续可以继续追加：
 >
-> - `Combat`
-> - `UI`
 > - `Enemy`
 > - `Save`
 >
@@ -71,8 +74,8 @@
 
 本节适用范围以以下文档为准：
 
-- 现役规范：`Docs/Reference/ShipVFX_CanonicalSpec.md`
-- 资产映射：`Docs/Reference/ShipVFX_AssetRegistry.md`
+- 现役规范：`Docs/2_Design/Ship/ShipVFX_CanonicalSpec.md`
+- 资产映射：`Docs/2_Design/Ship/ShipVFX_AssetRegistry.md`
 
 当前主要覆盖：
 
@@ -87,10 +90,10 @@
   - `Assets/_Prefabs/VFX/BoostTrailRoot.prefab`
   - `Assets/Scenes/SampleScene.unity`
 - 相关文档
-  - `Docs/Reference/ShipVFX_CanonicalSpec.md`
-  - `Docs/Reference/ShipVFX_AssetRegistry.md`
-  - `Docs/Reference/ShipVFX_MigrationPlan.md`
-  - `Docs/Reference/Ship_VFX_Player_Perception_Reference.md`
+  - `Docs/2_Design/Ship/ShipVFX_CanonicalSpec.md`
+  - `Docs/2_Design/Ship/ShipVFX_AssetRegistry.md`
+  - `Docs/2_Design/Ship/ShipVFX_MigrationPlan.md`
+  - `Docs/2_Design/Ship/ShipVFX_Player_Perception_Reference.md`
 
 ### 2.2 模块目标
 
@@ -424,13 +427,13 @@
 
 ## 7. Level 模块规则
 
-> **启用时机**：Level 模块进入 CanonicalSpec 驱动的重构阶段（Batch 1 起），工具链开始增长，需要事前设置 authority 防止重蹈 VFX 的治理困境。
+> **当前定位**：Level 模块已进入现役 authoring / validation / scene integration 阶段。这里不再维护“重构计划”或“已删除旧工具清单”，只记录**当前还在代码里存在并且影响协作的规则**。
 >
-> **与 VFX 的区别**：VFX 的 Authority Matrix 是"事后救火"——5+ 个 Editor 工具同时写同一个 Prefab 导致定位地狱。Level 模块工具职责天然分离（每个工具改不同对象），因此采用**轻量预防式** authority，重点是迁移纪律和 Scene 接线治理。
+> **与 VFX 的区别**：VFX 的 Authority Matrix 主要用于收口多入口写同一链路；Level 模块更强调 Scene authoring、Door 连线、导入骨架与校验器之间的职责边界。
 >
 > **权威来源**：
-> - 目标架构 / 数据结构 / 迁移策略：`Docs/Reference/Level_CanonicalSpec.md`（权威）
-> - 实现约束 / 踩坑治理：本文档本节（执行层）
+> - 目标架构 / 数据结构 / 工具链边界：`Docs/2_Design/Level/Level_CanonicalSpec.md`
+> - 实现约束 / 踩坑治理：本文档本节
 > - 若两者冲突，以 `Level_CanonicalSpec.md` 为准
 
 ### 7.1 模块边界
@@ -447,63 +450,53 @@
 - Scene
   - `Assets/Scenes/SampleScene.unity`（示巴星切片）
 - 相关文档
-  - `Docs/Reference/Level_CanonicalSpec.md`
-  - `Docs/Reference/Level_Architecture_Synthesis_Minishoot_Silksong_TUNIC.md`（参考输入）
-  - `Docs/LevelModulePlan.md`（v3.0，降级为历史参考）
+  - `Docs/2_Design/Level/Level_CanonicalSpec.md`
+  - `Docs/2_Design/Level/Level_WorkflowSpec.md`
+  - `Docs/7_Reference/GameAnalysis/Level_Architecture_Synthesis_Minishoot_Silksong_TUNIC.md`（参考输入）
+  - `Docs/8_Obsolete/LevelModulePlan.md`（历史参考）
 
 ### 7.2 模块目标
 
 Level 模块的治理目标：
 
-- **加一个新房间时，只需要创建 SO + 场景布局，不需要考古工具链执行顺序**
-- **改一扇门的连接时，只需要改 Door 的 `_targetRoom` / `_targetSpawnPoint` 引用（或跑一次 DoorWiringService），不需要同时改 Runtime / Scene / 地图**
-- **迁移结束后，旧路径（RoomType 等）干净删除，不留半迁移状态**
+- **加一个新房间时，只需要走现役工具链与场景布局，不需要考古执行顺序**
+- **改一扇门的连接时，只需要改 Door 的 `_targetRoom` / `_targetSpawnPoint` 引用（或跑一次 `DoorWiringService`），不需要同时改 Runtime / Scene / 地图**
+- **结构演进完成后，旧路径要及时删除，不保留长期双轨语义**
 
 ### 7.3 Authority 执行约束表
 
-> 说明：本表是 Level 模块的**轻量版 authority**，用于收口"谁可以写什么"。工具的完整职责定义以 `Level_CanonicalSpec.md` §9 为准，本表只约束执行边界。
+> 说明：本表只保留仓库中**当前存在**的现役工具。工具的完整职责定义以 `Level_CanonicalSpec.md` §9 为准，本表只约束执行边界。
 
 | 对象类型 | 唯一写入者 | 禁止 | 备注 |
 |---------|-----------|------|------|
-| Room GameObject 结构 | `RoomFactory` | 手动创建子节点、Runtime 补全子节点 | 标准子节点语法由 CanonicalSpec §6 定义 |
-| Door 双向连线 | `DoorWiringService` | Runtime 自动补线、手动在 Inspector 逐个接 | GateID 仍为手动分配 |
-| SO 资产批量创建 | `LevelAssetCreator` | 手动逐个创建 | 含 RoomSO、EncounterSO 等 |
-| 全局校验 | `LevelValidator` | 任何工具隐式修复问题 | Validator 只报告，不写入 |
-| Scene View 可视化 | `PacingOverlayRenderer` / `RoomBlockoutRenderer` | 写入场景数据 | 只读 |
-| RoomType → RoomNodeType 迁移 | `RoomNodeMigrator`（Batch 2） | 手动逐个改、Runtime 兼容分支永久保留 | 迁移完成后必须删旧路径 |
-| 房间子节点审计 | `RoomHierarchyAuditor`（Batch 2） | 隐式修复 | 只审计，不自动修正 |
-| Runtime 房间加载 / 转场 | `RoomManager` / `DoorTransitionController` | Editor 工具在 Play Mode 接管 | Runtime 只消费 Door 引用数据 |
+| Editor 统一入口 | `LevelArchitectWindow` | 直接承担运行时 authority | 只编排 `Design / Build / Validate` 入口，不替代子工具权威 |
+| LevelDesigner JSON 导入骨架 | `LevelSliceBuilder` | Runtime 回填房间骨架、手工复制旧切片充当真相源 | 负责导入 `Room / RoomSO / Door` 初始结构 |
+| 标准房间模板骨架 | `RoomFactory` | 手动散建标准子节点、Runtime 补全 | 用于 Scene 内快速创建合规 `Room` |
+| Door 双向连线 | `DoorWiringService` | Runtime 自动补线、手动在 Inspector 大量逐个接线 | `GateID` 仍需与设计意图保持一致 |
+| 全局校验与显式修复 | `LevelValidator` | 任何工具隐式静默修复 | 默认只报告；只有显式 `Auto-Fix` 才允许写回 |
+| Scene View 可视化 | `PacingOverlayRenderer` / `RoomBlockoutRenderer` | 写入场景数据 | 只读显示 |
+| Scene View 白盒交互 | `BlockoutModeHandler` | 绕过 `LevelArchitectWindow` 状态直接改结构 | 只处理编辑交互，不定义数据权威 |
+| Runtime 房间加载 / 转场 | `RoomManager` / `DoorTransitionController` | Editor 工具在 Play Mode 接管 | Runtime 只消费已完成 authoring 的 Door 引用数据 |
 
-> **代码层标记**：上表中所有"唯一写入者"的类在 XML doc `<summary>` 中均已标注 `[Authority: Level CanonicalSpec §9.1]`，方便 grep 定位。
->
-> **已删除的旧工具**（2026-03-22）：
-> - `LevelDesignerWindow`（`[Obsolete]`，被 `LevelArchitectWindow` 替代）
-> - `RoomBatchEditor`（`[Obsolete]`，被 `LevelArchitectWindow` 替代）
-> - `ShebaLevelScaffolder`（`[Obsolete]`，被 `LevelArchitectWindow` 替代）
-> - `LevelGenerator`（旧 scaffold 生成器，被 `ScaffoldToSceneGenerator` 替代）
-> - `HtmlScaffoldImporter`（一次性 HTML 导入工具，已完成使命）
-> - `Phase6AssetCreator`（Phase 6 一次性资产生成，已完成使命）
-> - `MapUIBuilder`（Map UI 一次性构建工具，已完成使命）
-> - `LevelElementLibrary`（数据类，仅被 `LevelDesignerWindow` + `LevelGenerator` 引用）
-> - 同步清理了 `LevelArchitectWindow` 中的 Legacy Tool Detection 代码段
+> **维护规则**：已删除、计划中、或一次性任务工具不在此处维护；历史沿革交给 `git log` 或对应设计文档，不再混入现役规则表。
 
 ### 7.4 实现规则
 
-#### 7.4.1 迁移纪律（最高优先级）
+#### 7.4.1 演进纪律（最高优先级）
 
-Level 重构是**增量升级**（CanonicalSpec §10），最大风险是半迁移状态。以下规则必须遵守：
+Level 的高风险不是“功能没写完”，而是 authoring 工具、场景数据和 runtime 消费链**长期双轨**。以下规则必须遵守：
 
-- 每个 Batch 结束时，必须明确标注：
-  - 哪些旧路径已被新路径替代
-  - 哪些旧路径仍需保留（写明原因 + 计划删除的 Batch）
-  - 哪些旧路径本 Batch 已删除
-- **禁止新增永久兼容分支**。若必须保留旧代码路径，必须用 `[Migration: remove in Batch N]` 注释标注，且 N ≤ 当前 Batch + 2
-- RoomType → RoomNodeType 迁移完成后（Batch 2），必须有一次收尾：删除旧 `RoomType` 枚举及所有引用
+- 每次结构性改动后，都必须明确记录：
+  - 哪些旧入口 / 旧字段已被新路径替代
+  - 哪些旧路径仍暂时保留（写明原因与退役条件）
+  - 哪些旧路径已完成删除
+- **禁止新增永久兼容分支**。若必须保留旧代码路径，必须在代码或文档中写清退役条件，不允许“先留着以后再说”。
+- 新 authoring 入口一旦成为现役，就应尽快把旧入口降级为历史参考或删除，避免 scene、tool、runtime 三层同时维护两套语义。
 
 #### 7.4.2 Runtime 不回写设计时数据
 
 - `RoomSO` 等 ScriptableObject 是设计时离线数据（CanonicalSpec §7），Runtime 严禁修改
-- Runtime 需要的可变状态（房间解锁、门状态）走 `RoomFlagRegistry`（Batch 3），不走 SO
+- Runtime 需要的可变状态（房间解锁、门状态）走 `RoomFlagRegistry` 等运行时状态容器，不走 SO
 
 #### 7.4.3 工具执行模式
 
@@ -536,71 +529,375 @@ Level 关键链路缺引用时，禁止静默 return：
 - Room 的 RoomNodeType（由 RoomSO 驱动，不在场景实例上手动改）
 - Door 的 GateID / ConnectionType（由 DoorWiringService 或手动分配，场景中的 Door 组件必须与设计意图一致）
 
+#### 7.4.6 `CameraConfiner` 绝不能参与玩家物理阻挡
+
+- `CameraConfiner` 的职责是提供 **Cinemachine 边界形状**，不是房间实体墙。
+- 任何通过 `LevelSliceBuilder`、`RoomFactory`、`LevelValidator` 生成或修复出来的 `CameraConfiner`，都必须满足：
+  - GameObject 在 `Ignore Raycast` 层
+  - `PolygonCollider2D.isTrigger = true`
+  - 只服务于相机约束，不承担玩家阻挡职责
+- 排查“飞船被 room 边缘堵住，但代码里只看到 room trigger 没问题”时，**优先检查 `CameraConfiner` 是否被保存成 `RoomBounds + isTrigger=false`**。
+- 若 `CameraConfiner` 状态不对，禁止只在 Runtime 临时忽略碰撞；必须回到 Editor 生成链或 Validator 修正源头。
+
 ### 7.5 踩坑总结
 
-> 本节当前为骨架，后续 Batch 遇到实际问题时增量追加。
+> 本节记录已发生且可复用的真实踩坑；后续新增案例继续增量追加。
 
-#### 7.5.1 （预防性）半迁移状态
+#### 7.5.1 （预防性）双轨语义并存
 
-- **风险**：RoomType 和 RoomNodeType 并存期间，部分代码走旧枚举、部分走新枚举，导致行为不一致
-- **防御**：Batch 2 的 `RoomNodeMigrator` 必须是原子操作——一次迁移所有房间，不允许"先迁移一半"
+- **风险**：新旧 authoring 入口、字段语义或导入链长期并存，部分代码走旧路径、部分走新路径，导致行为不一致
+- **防御**：结构迁移必须尽快收口到单一真相源；若暂时并存，必须明确 owner、退役条件，以及 `LevelValidator` 或文档层的兜底说明
 
 #### 7.5.2 （预防性）Door 连接引用不完整
 
 - **风险**：Door 的 `_targetRoom` 或 `_targetSpawnPoint` 为 null，导致转场静默失败或 MinimapManager 拓扑缺失
 - **防御**：`LevelValidator` 校验 Door 引用完整性。每次改完连接关系后必须跑一次 Validator
 
+#### 7.5.3 `CameraConfiner` 被误当成房间实体边界
+
+- **现象**：飞船看起来像被 room 边缘堵住，`Room` 根节点的 `BoxCollider2D` 明明已经是 trigger，但玩家仍然无法顺利进入房间；同时相机问题容易被误诊为 Door / RoomManager / Confiner 切换失败。
+- **根因**：房间子节点 `CameraConfiner` 上的 `PolygonCollider2D` 被错误保存成 `RoomBounds` 层且 `isTrigger=false`，结果相机边界形状实际参与了玩家物理碰撞，变成一圈隐形实体墙。
+- **防御**：把 `CameraConfiner` 视为“相机专用形状”而不是“房间墙体”——统一要求 `Ignore Raycast + isTrigger=true`；导入后若再出现边缘阻挡，先枚举房间下全部 `Collider2D`，优先找剩余的非 trigger collider，而不是先怀疑移动代码或相机跟随逻辑。
+
 ### 7.6 验收清单
 
-#### 每个 Batch 结束时
+#### 每次结构性改动后
 
 1. `LevelValidator` 是否通过（0 error）？
-2. 本 Batch 新增的工具是否写入了 Authority 执行约束表？
-3. 本 Batch 的迁移是否标注了旧路径处置（保留/已删/计划删）？
+2. 新增或变更的工具是否写入了 Authority 执行约束表？
+3. 是否明确标注了旧路径处置（保留 / 已删 / 退役条件）？
 4. Runtime 是否有回写 SO 的行为？（禁止）
-5. 新增的 Editor 工具是否遵循"执行后输出报告"原则？
+5. 新增的 Editor 工具是否遵循“执行后输出报告”原则？
 
 #### 常规改动验收
 
 1. 改动是否只涉及 Authority 表中允许的写入者？
 2. 是否新增了 fallback / 兼容分支？若是，是否标注了退役计划？
 3. Door 连接引用是否完整？（跑 Validator）
-4. 是否有 silent no-op？（关键引用缺失必须报错）
+4. `CameraConfiner` 是否仍满足 `Ignore Raycast + isTrigger=true`？
+5. 是否有 silent no-op？（关键引用缺失必须报错）
 
 ### 7.7 推荐工作流
 
 #### 新房间 / 新连接
 
-1. 用 `RoomFactory` 在场景中创建 Room GameObject
-2. 用 `LevelAssetCreator` 创建对应的 RoomSO 资产
+1. 用 `LevelArchitectWindow` 作为统一入口，按场景选择 `LevelSliceBuilder` 导入 JSON 或 `RoomFactory` 创建标准房间骨架
+2. 确认 `Room / RoomSO / Door` 的基础结构已经由现役工具链生成，而不是手工补出第二套骨架
 3. 手动或用 `DoorWiringService` 配置 Door 的 `_targetRoom` / `_targetSpawnPoint` 引用
-4. 跑 `LevelValidator` 确认 Door 连接完整性
+4. 跑 `LevelValidator` 确认 Door 连接完整性与关键结构无漂移
 5. 补 `ImplementationLog`
 
 #### 难定位 bug
 
-1. 先跑 `LevelValidator` — 大部分问题是 Door 引用缺失或 GateID 重复
-2. 确认 Runtime 有没有回写 SO 数据（运行时数据隔离原则）
-3. 确认是否有旧路径（RoomType）仍在参与行为
-4. 若问题根因是工具职责不清，优先补 Authority 约束，而非叠保护逻辑
+1. 先跑 `LevelValidator` — 大部分问题是 Door 引用缺失、GateID 重复，或 `CameraConfiner` 配置漂移
+2. 若表现为“房间边缘堵船 / 进房异常”，先枚举该 Room 下全部 `Collider2D`，优先找剩余的非 trigger collider
+3. 确认 Runtime 有没有回写 SO 数据（运行时数据隔离原则）
+4. 确认是否仍有旧 authoring 入口、legacy alias 或历史切片对象在参与行为
+5. 若问题根因是工具职责不清，优先补 Authority 约束，而非叠保护逻辑
 
 ---
 
-## 8. 后续可追加模块（占位）
+## 8. 全局 Unity / Editor 治理
 
-后续可按同样结构追加：
+> 本节处理跨模块共享的 Unity / 序列化 / Editor 操作 guardrails。它不替代各模块规则，而是收口那些**几乎任何模块都可能踩**的底层坑。
 
-- `Combat`
-- `UI`
+### 8.1 适用范围
+
+- `Assets/**/*.unity`、`Assets/**/*.prefab`、`Assets/**/*.asset`、`Assets/**/*.meta`
+- Unity Editor 中的 Layer / Tag / Physics2D 配置
+- 需要直接编辑 Unity 序列化文件或批量修场景 / prefab 的任务
+
+### 8.2 治理目标
+
+- **避免因为错误编辑 Unity 序列化文件而制造隐性损坏**
+- **避免把应由 Editor GUI 或自动化工具处理的配置，降级成高风险手改 YAML**
+- **让“能不能直接改 `.unity` / `.prefab` / `.meta`”这类决策有稳定边界**
+
+### 8.3 实现规则
+
+#### 8.3.1 严禁凭空创建 `.meta` 文件
+
+- `.meta` 的 GUID 必须由 Unity 自动生成，禁止手编 GUID。
+- 若需要新建 `.cs` / 资源文件，只创建资源本体；`.meta` 由 Unity 生成。
+
+#### 8.3.2 直接编辑 Unity YAML 只能在定位明确时进行
+
+- 允许直接改已存在的 `.unity` / `.prefab` / `.asset` / `.meta`，前提是**知道要改哪个对象、哪个字段、为什么改**。
+- 若需要在数千行 YAML 中盲搜 `GUID` / `fileID` / 组件块，优先让用户在 Unity Editor 中提供定位信息，或改用 Editor 自动化工具。
+- 原则：**定位成本高时，不要靠纯文本搜索硬撑**。
+
+#### 8.3.3 `fileID` 必须从 Unity 生成结果复制，禁止手写
+
+- 任何 scene / prefab 序列化中的 `fileID`，都必须从 Unity 已生成的真实文件中复制。
+- 关键引用若为 null，守卫代码不能静默 return，必须配合 `Debug.LogError` 或 validator 暴露出来。
+
+#### 8.3.4 Physics2D 碰撞矩阵统一走 Editor GUI
+
+- Layer Collision Matrix 一律在 `Project Settings > Physics 2D` 中配置。
+- 禁止通过手算位掩码直接改项目配置 YAML。
+- 新增 Layer 后，应立即检查目标层与玩家、敌人、投射物、相机辅助层的碰撞关系。
+
+### 8.4 踩坑总结
+
+#### 8.4.1 Unity 内部类 `MonoBehaviour` GUID / fileID 不稳定
+
+- **现象**：Inspector 显示 `script cannot be loaded`，场景或 prefab 上的脚本引用突然失效。
+- **根因**：把 `MonoBehaviour` 写成内部类后，Unity 序列化依赖的类型标识会因为类名 / 文件变化而失配。
+- **防御**：`MonoBehaviour` 必须是顶级类；遵守“一文件一类”，不要把 `MonoBehaviour` 写成其他类的内部类。
+
+#### 8.4.2 场景序列化 `fileID` 错误导致字段 Missing
+
+- **现象**：代码看起来引用齐全，但运行时字段反序列化成 null，系统走到守卫分支后静默失效。
+- **根因**：手写或错误复制了 `fileID`，导致 Unity 无法还原真实引用。
+- **防御**：`fileID` 只从 Unity 已生成文件中复制；关键 null 守卫必须配日志或 validator。
+
+#### 8.4.3 Physics2D 碰撞矩阵遗漏
+
+- **现象**：新增 Layer 后，玩家、子弹或触发器出现莫名碰撞 / 穿透 / 自碰撞。
+- **根因**：项目设置中的碰撞矩阵没有同步更新。
+- **防御**：新增 Layer 后立即做一次碰撞矩阵检查，不把这一步留给“以后再说”。
+
+### 8.5 验收清单
+
+1. 是否避免了手造 `.meta`？
+2. 若直接编辑了 Unity YAML，是否有明确定位依据，而不是大范围盲改？
+3. 新增或调整引用时，`fileID` 是否来自 Unity 真实生成结果？
+4. 新增 Layer 后，是否检查了 Physics2D 碰撞矩阵？
+5. 关键引用缺失时，是否会被日志或 validator 抓到，而不是 silent no-op？
+
+---
+
+## 9. Core / Infrastructure 模块规则
+
+> 本节沉淀那些跨模块复用、但又不适合继续散落在 `CLAUDE.md` 的运行时防御性规则。
+
+### 9.1 模块边界
+
+- `Assets/Scripts/Core/` 及其子目录
+- 所有实现 `IPoolable` 的运行时对象
+- 运行时会从 authored prefab / SO 派生可变实例的系统
+- 关键视觉组件缺失时需要 fallback 或响亮失败的表现链路
+
+### 9.2 模块目标
+
+- **对象池对象回收后绝不带脏状态**
+- **运行时可变行为绝不共享 authored prefab 上的同一实例**
+- **关键视觉依赖缺失时，优先响亮失败或提供明确 fallback**
+
+### 9.3 实现规则
+
+#### 9.3.1 `OnReturnToPool()` 必须完整复位
+
+- 所有运行时字段、事件、动态组件、Transform、视觉状态，都必须在回池时清干净。
+- 不允许只重置“当前 bug 涉及的那一项”；池对象要按全量复位思维写。
+
+#### 9.3.2 authored prefab 上的可变行为不能被多实体共享
+
+- 若某个组件或 modifier 会在运行时持有状态，禁止直接从 prefab 上 `GetComponent()` 后让多个实体复用。
+- 这类对象必须为每个运行时实例创建独立副本（例如 `AddComponent` + 深拷贝 / 单独初始化）。
+
+#### 9.3.3 关键视觉引用缺失时要么 fallback，要么响亮失败
+
+- 像 `SpriteRenderer.sprite` 这类会导致“物体存在但完全不可见”的关键依赖，不能静默缺失。
+- 至少应满足其一：运行时 fallback、显式报错、或 validator / audit 可抓到。
+
+### 9.4 踩坑总结
+
+#### 9.4.1 对象池状态泄漏
+
+- **现象**：颜色、缩放、事件订阅、动态 modifier 等旧状态残留到下一次复用。
+- **根因**：`OnReturnToPool()` 只重置了一部分字段。
+- **防御**：把对象池回收视为“完整重建初始状态”，而不是“修当前问题”。
+
+#### 9.4.2 SO / Prefab 字段返回共享实例
+
+- **现象**：多个实体看似各自独立，实际共享同一运行时组件状态，导致一个实例的修改污染全部实例。
+- **根因**：直接从 authored prefab 上取组件引用，误把 authored data 当成 runtime instance 用。
+- **防御**：所有运行时可变对象按实例创建，不共享 prefab 上的同一组件引用。
+
+#### 9.4.3 `SpriteRenderer` 不可见
+
+- **现象**：Prefab 已经生成，逻辑也在跑，但视觉上完全看不到对象。
+- **根因**：关键 sprite 未分配，且没有 fallback 或告警。
+- **防御**：在 `Awake` / 初始化阶段做显式检查，缺失时 fallback 或报错。
+
+### 9.5 验收清单
+
+1. 所有池对象的 `OnReturnToPool()` 是否重置了字段、事件、Transform、视觉状态？
+2. 是否存在从 prefab 上直接取可变组件并在多个实体之间共享的路径？
+3. 关键视觉依赖缺失时，是否至少能 fallback、报错或被 validator 抓到？
+4. 新增运行时状态后，是否同步补了回池复位逻辑？
+
+---
+
+## 10. UI 模块规则
+
+> 本节收口 UI / DragDrop / Mask / EventSystem 一类高频隐性坑，让“看起来什么都对但就是不响应”的问题有固定排查入口。
+
+### 10.1 模块边界
+
+- `Assets/Scripts/UI/` 及其子目录
+- StarChart / 背包 / 拖拽 / Overlay / 高亮相关 UI
+- `InputSystemUIInputModule`、uGUI Mask、CanvasGroup、Drag Ghost 等基础设施
+
+### 10.2 模块目标
+
+- **UI 显隐不依赖容易序列化漂移的 `SetActive` 语义**
+- **拖拽 / 高亮 / Raycast 行为保持稳定可读**
+- **Mask 与 InputModule 的底层前提被显式守护，而不是靠偶然正确**
+
+### 10.3 实现规则
+
+#### 10.3.1 uGUI 面板统一用 `CanvasGroup` 控制显隐
+
+- GameObject 默认保持 active。
+- 用 `CanvasGroup.alpha / interactable / blocksRaycasts` 控制开关。
+- `Awake()` 中只做初始化，禁止顺手 `SetActive(false)`。
+
+#### 10.3.2 Mask 相关 Image 不能把 alpha 做到 0
+
+- Mask 所依赖的 `Image` 必须保持 alpha ≥ 1/255。
+- 若只是想隐藏视觉，用 `showMaskGraphic=false`，不要用 `Color.clear` 充当“不可见但可工作”的 mask。
+
+#### 10.3.3 `InputSystemUIInputModule` 关键 Action 必须显式连线
+
+- 不依赖“Inspector 里大概接过了”。
+- 应在初始化或验证阶段显式检查 UI Action 是否就绪，必要时由代码自动补线。
+
+#### 10.3.4 拖拽坐标系和网格索引语义必须单一
+
+- 线性 `cellIndex` 与二维 `(col, row)` 不能混用后二次转换。
+- 动态构建子节点时，子节点 anchor 坐标系必须与父节点 pivot 语义一致；若不一致，必须在父节点定位时显式补偿。
+
+#### 10.3.5 透明拦截层必须保留 Raycast 与交互数据
+
+- 想做“透明但可点击 / 可拖拽”的 Image，alpha 不能为 0。
+- Overlay 只负责视觉替换，不能把底层 Cell 的交互数据一起清空。
+
+### 10.4 踩坑总结
+
+#### 10.4.1 `InputSystemUIInputModule` 失效
+
+- **现象**：UI 看得到，但点击、拖拽、导航都不响应。
+- **根因**：Action 字段未连线或初始化时机错误。
+- **防御**：在 `UIManager.Awake` 或等效入口中显式配置 / 验证 UI Actions。
+
+#### 10.4.2 uGUI Mask 裁剪异常
+
+- **现象**：子节点全部被裁掉，或 mask 看起来不生效。
+- **根因**：Mask Image alpha 被设成 0，或错误使用 `Color.clear`。
+- **防御**：Mask Image alpha 至少保留 1/255；隐藏视觉走 `showMaskGraphic=false`。
+
+#### 10.4.3 面板用 `SetActive` 控制显隐导致 `Awake` 推迟
+
+- **现象**：代码逻辑看起来正确，但首次打开面板会瞬间关闭，或某些初始化永远不执行。
+- **根因**：inactive 状态被序列化进场景，`Awake` 被推迟到首次激活时才执行。
+- **防御**：GameObject 常驻 active，显隐统一交给 `CanvasGroup`；修复后别忘了在 Editor 中把历史遗留的 inactive 状态重新勾回并保存场景。
+
+#### 10.4.4 动态构建子节点导致拖拽 Ghost 偏移
+
+- **现象**：鼠标位置是对的，但 Ghost 视觉内容整体偏到鼠标下方或侧边。
+- **根因**：父节点 pivot 和子节点 anchor 的坐标系不一致。
+- **防御**：统一坐标语义；必要时在 `FollowPointer` 层加显式 `centeringOffset`。
+
+#### 10.4.5 网格高亮线性索引被二次转换
+
+- **现象**：高亮落到错误格子，或越界。
+- **根因**：已是线性 `cellIndex` 的值，又被当成 `row` 重新做了一次 `row * gridCols + col`。
+- **防御**：API 参数语义保持单一；传线性索引就直接按线性索引定位。
+
+#### 10.4.6 `Color.clear` Image 不接收 uGUI Raycast
+
+- **现象**：透明拦截层存在，但事件完全穿透。
+- **根因**：alpha 为 0 的像素被 uGUI 视为不可射线命中。
+- **防御**：使用极小但非零的 alpha，或不要依赖透明 Image 充当事件层。
+
+#### 10.4.7 Overlay 覆盖 Cell 时丢失交互数据
+
+- **现象**：视觉被 Overlay 正常替换，但拖拽源 / 点击源彻底失效。
+- **根因**：Overlay 方案顺手把 `DisplayedItem` 等交互数据也清空了。
+- **防御**：坚持“Overlay = 纯视觉，Cell = 交互”，隐藏视觉不等于抹掉数据。
+
+### 10.5 验收清单
+
+1. 面板 GameObject 是否保持 active，显隐是否统一走 `CanvasGroup`？
+2. Mask Image alpha 是否 ≥ 1/255，且隐藏视觉是否走 `showMaskGraphic=false`？
+3. `InputSystemUIInputModule` 的关键 Action 是否已连线并可验证？
+4. 拖拽 Ghost 的 anchor / pivot / offset 语义是否一致？
+5. 网格高亮 API 是否明确区分线性索引与二维坐标？
+6. 透明拦截层是否仍可接收 Raycast？
+7. Overlay 方案是否保留了底层交互数据？
+
+### 10.6 推荐工作流
+
+#### 难定位 UI bug
+
+1. 先确认目标面板 GameObject 是否仍然 active，显隐是否由 `CanvasGroup` 控制
+2. 检查 `InputSystemUIInputModule` 的 Action 连线是否完整
+3. 检查 Mask / RaycastBlocker 的 Image alpha 是否错误地设成了 0
+4. 若是拖拽 / 高亮问题，明确当前 API 传的是 `cellIndex` 还是 `(col, row)`
+5. 若是 Overlay 方案，核对视觉层是否误清空了底层交互数据
+
+---
+
+## 11. Combat / Projectile 模块规则
+
+> 本节先收口当前最明确的一类 Combat 高频坑：投射物碰撞配置。后续若 Combat 子系统继续增长，再扩成完整模块规则。
+
+### 11.1 模块边界
+
+- `Assets/Scripts/Combat/Projectile/` 及相关 modifier / collision 处理
+- 玩家投射物、敌人投射物及其 Layer / LayerMask 配置
+- 依赖 Physics2D 触发与碰撞的战斗表现链路
+
+### 11.2 模块目标
+
+- **投射物永远不会因为层配置疏漏而互相误撞**
+- **碰撞规则既体现在项目配置，也体现在代码过滤，不把安全性压在单点上**
+
+### 11.3 实现规则
+
+#### 11.3.1 Physics2D 查询的 `LayerMask` 必须显式声明
+
+- 禁止默认 `~0`。
+- 代码层和 prefab / scene 配置层都要明确写出目标层。
+
+#### 11.3.2 投射物自碰撞必须做“双保险”
+
+- 第一层：在 Physics2D 碰撞矩阵中关闭不该互撞的层对。
+- 第二层：在代码中继续做 Layer 过滤，避免配置漂移时直接炸成运行时 bug。
+
+### 11.4 踩坑总结
+
+#### 11.4.1 子弹自碰撞
+
+- **现象**：同阵营投射物互相触发 `OnTriggerEnter2D`，出现异常销毁、伤害丢失或表现错乱。
+- **根因**：同 Layer 投射物默认仍在互相检测，项目设置和代码过滤至少有一层缺失。
+- **防御**：碰撞矩阵关闭 `PlayerProjectile` 自碰撞；代码层继续做 Layer 过滤，不把安全性只押在配置表上。
+
+### 11.5 验收清单
+
+1. 相关 Physics2D 查询是否用了显式 `LayerMask`？
+2. `PlayerProjectile` / `EnemyProjectile` 等层对是否在碰撞矩阵中配置正确？
+3. 代码层是否仍保留了必要的 Layer 过滤？
+4. 新增投射物家族时，是否同步检查了层与碰撞语义？
+
+---
+
+## 12. 后续可追加模块（占位）
+
+后续可按同样结构继续追加：
+
 - `Enemy`
 - `Save`
-- `Core / Infrastructure`
+- `Map / Minimap`
+- `Audio`
 
 新模块首次追加时，**不要求一开始就补齐全部章节**。按需启用，逐步沉淀。
 
 ---
 
-## 9. 通用模块规则模板
+## 13. 通用模块规则模板
 
 > 本节定义当新模块需要在 `Implement_rules.md` 中追加规则时，应遵循的统一结构。
 >
@@ -612,11 +909,11 @@ Level 关键链路缺引用时，禁止静默 return：
 > - 新功能开发时需要先"考古"才能动手
 >
 > **与架构速写的关系**：
-> - `Docs/Reference/{ModuleName}_ArchBrief.md`：描述模块**是什么**——结构、职责、驱动关系
+> - `Docs/2_Design/{ModuleName}/{ModuleName}_ArchBrief.md`：描述模块**是什么**——结构、职责、驱动关系
 > - `Implement_rules.md` 中的模块规则：描述模块**怎么改更不容易烂**——实现约束、踩坑防御、验收清单
 > - 两者互补，不重复。架构速写回答"谁管什么"，实现规则回答"改的时候要注意什么"
 
-### 9.1 模块规则统一结构
+### 13.1 模块规则统一结构
 
 每个模块追加到 `Implement_rules.md` 时，应包含以下章节（按需启用，不必一次写全）：
 
@@ -651,14 +948,14 @@ Level 关键链路缺引用时，禁止静默 return：
 - 难定位 bug 怎么查
 ```
 
-### 9.2 规则质量标准
+### 13.2 规则质量标准
 
 - **可执行**：每条规则都能转化为具体检查动作，禁止模糊表述（如"注意代码质量"）
 - **有根因**：每条规则都要说明"为什么"，没有根因的规则不写
 - **不重复**：与 `CLAUDE.md` 的架构原则 / 代码规范不重复；此处只写该模块特有的约束
 - **不过时**：定期审查，已不再适用的规则标记 `[已废弃]` 并说明原因，不要静默删除
 
-### 9.3 模块规则与架构速写的联动
+### 13.3 模块规则与架构速写的联动
 
 | 时机 | 架构速写 (`_ArchBrief.md`) | 模块规则 (`Implement_rules.md`) |
 |------|---------------------------|--------------------------------|
@@ -668,8 +965,9 @@ Level 关键链路缺引用时，禁止静默 return：
 | 多人 / 多 AI session 协作 | 确保结构描述准确 | ✅ 追加协作约束（如 authority matrix） |
 | 架构重构后 | 重写或大幅更新 | 清理过时规则，补新规则 |
 
-### 9.4 已有模块的规则参考
+### 13.4 已有模块的规则参考
 
 - **Ship / VFX**：见本文档 Section 2-6（当前最完整的模块规则范例）
-- **Level**：见本文档 Section 7（轻量预防式 authority）
-- **Combat / UI / Enemy / Save**：待追加（见 Section 8 占位）
+- **Level**：见本文档 Section 7（现役 authoring / validation 范例）
+- **全局 Unity / Editor 治理**：见 Section 8（跨模块底层 guardrails）
+- **Core / Infrastructure / UI / Combat / Projectile**：见 Section 9-11（由 `CLAUDE.md` 迁入的首批通用陷阱沉淀）

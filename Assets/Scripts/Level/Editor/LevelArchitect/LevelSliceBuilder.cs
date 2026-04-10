@@ -25,6 +25,7 @@ namespace ProjectArk.Level.Editor
             public string levelName;
             public RoomJson[] rooms;
             public ConnectionJson[] connections;
+            public DoorLinkJson[] doorLinks;
         }
 
         [Serializable]
@@ -52,6 +53,15 @@ namespace ProjectArk.Level.Editor
             public string toDir;
             public string connectionType; // Unity canonical: "progression"|"return"|"ability"|"challenge"|"identity"|"scheduled"
                                           // HTML aliases:    "normal"→progression, "tidal"→scheduled, "locked"→ability, "one_way"→progression
+        }
+
+        [Serializable]
+        private class DoorLinkJson
+        {
+            public string roomId;
+            public string entryDir;
+            public int doorIndex;
+            public float[] spawnOffset; // Player arrival point in target-room local grid coordinates (HTML top-left origin, Y-down).
         }
 
         // ──────────────────── Constants ────────────────────
@@ -106,7 +116,8 @@ namespace ProjectArk.Level.Editor
                 "Import Level Slice",
                 $"Level: {levelName}\n" +
                 $"Rooms: {data.rooms.Length}\n" +
-                $"Connections: {data.connections?.Length ?? 0}\n\n" +
+                $"Connections: {data.connections?.Length ?? 0}\n" +
+                $"Door Links: {data.doorLinks?.Length ?? 0}\n\n" +
                 "This will create Room GameObjects and RoomSO assets in the active scene.\n" +
                 "Continue?",
                 "Import", "Cancel");
@@ -133,13 +144,11 @@ namespace ProjectArk.Level.Editor
                 EnsureDirectoryExists(roomDataDir);
 
                 // ── Scene root ──
-                var sliceRoot = new GameObject($"── {levelName} ──");
-                Undo.RegisterCreatedObjectUndo(sliceRoot, "Create Slice Root");
-                sliceRoot.transform.position = Vector3.zero;
+                var sliceRoot = ReplaceExistingSliceRoot(levelName);
 
                 // ── Step 1: Create Room GameObjects ──
                 var roomMap = new Dictionary<string, Room>();
-                var doorSpawnMap = new Dictionary<string, Transform>(); // key: "roomId_dir"
+                var doorLinkLookup = BuildDoorLinkLookup(data.doorLinks);
 
                 foreach (var rj in data.rooms)
                 {
@@ -176,9 +185,12 @@ namespace ProjectArk.Level.Editor
 
                         ConnectionType connType = ParseConnectionType(conn.connectionType);
 
+                        float[] fromSpawnOffset = GetDoorLinkSpawnOffset(doorLinkLookup, conn.from, conn.fromDir);
+                        float[] toSpawnOffset = GetDoorLinkSpawnOffset(doorLinkLookup, conn.to, conn.toDir);
+
                         // Create door pair
-                        var fromDoor = CreateDoor(fromRoom, conn.fromDir, conn.to, connType);
-                        var toDoor = CreateDoor(toRoom, conn.toDir, conn.from, connType);
+                        var fromDoor = CreateDoor(fromRoom, conn.fromDir, conn.to, connType, fromSpawnOffset);
+                        var toDoor = CreateDoor(toRoom, conn.toDir, conn.from, connType, toSpawnOffset);
 
                         // Wire cross-references
                         if (fromDoor.door != null && toDoor.door != null)
@@ -196,7 +208,7 @@ namespace ProjectArk.Level.Editor
                 Selection.activeGameObject = sliceRoot;
                 SceneView.RepaintAll();
 
-                Debug.Log($"[LevelSliceBuilder] ✅ Imported '{levelName}': {data.rooms.Length} rooms, {data.connections?.Length ?? 0} connections.");
+                Debug.Log($"[LevelSliceBuilder] ✅ Imported '{levelName}': {data.rooms.Length} rooms, {data.connections?.Length ?? 0} connections, {data.doorLinks?.Length ?? 0} doorLinks.");
             }
             catch (Exception ex)
             {
@@ -253,7 +265,15 @@ namespace ProjectArk.Level.Editor
 
             var room = roomGO.AddComponent<Room>();
 
-            var box = roomGO.AddComponent<BoxCollider2D>();
+            // Room has [RequireComponent(typeof(BoxCollider2D))], so AddComponent<Room>() may already
+            // have injected the collider. Reuse that collider instead of adding a second default 1x1 box,
+            // otherwise downstream GetComponent<BoxCollider2D>() calls can read the wrong size.
+            var box = roomGO.GetComponent<BoxCollider2D>();
+            if (box == null)
+            {
+                box = roomGO.AddComponent<BoxCollider2D>();
+            }
+
             box.isTrigger = true;
             box.size = size;
 
@@ -269,6 +289,7 @@ namespace ProjectArk.Level.Editor
             var confinerGO = CreateChild(roomGO.transform, "CameraConfiner");
             confinerGO.layer = IGNORE_RAYCAST_LAYER;
             var poly = confinerGO.AddComponent<PolygonCollider2D>();
+            poly.isTrigger = true;
             SetConfinerBounds(poly, size);
 
             // Navigation placeholders
@@ -307,7 +328,7 @@ namespace ProjectArk.Level.Editor
         }
 
         private static (Door door, Transform spawnPoint) CreateDoor(
-            Room ownerRoom, string direction, string targetRoomId, ConnectionType connType)
+            Room ownerRoom, string direction, string targetRoomId, ConnectionType connType, float[] customSpawnOffset)
         {
             var doorsParent = ownerRoom.transform.Find("Navigation/Doors");
             if (doorsParent == null)
@@ -338,7 +359,15 @@ namespace ProjectArk.Level.Editor
             var spawnGO = new GameObject($"SpawnPoint_{direction}");
             Undo.RegisterCreatedObjectUndo(spawnGO, $"Create SpawnPoint {direction}");
             spawnGO.transform.SetParent(spawnParent != null ? spawnParent : doorsParent, false);
-            spawnGO.transform.localPosition = doorGO.transform.localPosition + GetSpawnOffset(direction);
+
+            if (TryGetCustomSpawnLocalPosition(customSpawnOffset, roomSize, out var customSpawnLocalPosition))
+            {
+                spawnGO.transform.localPosition = customSpawnLocalPosition;
+            }
+            else
+            {
+                spawnGO.transform.localPosition = doorGO.transform.localPosition + GetSpawnOffset(direction);
+            }
 
             // Configure door
             var serialized = new SerializedObject(door);
@@ -366,6 +395,48 @@ namespace ProjectArk.Level.Editor
             serialized.ApplyModifiedProperties();
         }
 
+        private static Dictionary<string, DoorLinkJson> BuildDoorLinkLookup(DoorLinkJson[] doorLinks)
+        {
+            var lookup = new Dictionary<string, DoorLinkJson>(StringComparer.Ordinal);
+            if (doorLinks == null) return lookup;
+
+            foreach (var doorLink in doorLinks)
+            {
+                if (doorLink == null || string.IsNullOrEmpty(doorLink.roomId) || string.IsNullOrEmpty(doorLink.entryDir))
+                {
+                    continue;
+                }
+
+                string key = GetDoorLinkKey(doorLink.roomId, doorLink.entryDir);
+                if (lookup.ContainsKey(key))
+                {
+                    Debug.LogWarning($"[LevelSliceBuilder] Duplicate doorLink for room '{doorLink.roomId}' entry '{doorLink.entryDir}'. Keeping the first mapping.");
+                    continue;
+                }
+
+                lookup[key] = doorLink;
+            }
+
+            return lookup;
+        }
+
+        private static float[] GetDoorLinkSpawnOffset(Dictionary<string, DoorLinkJson> doorLinkLookup, string roomId, string entryDir)
+        {
+            if (doorLinkLookup == null || string.IsNullOrEmpty(roomId) || string.IsNullOrEmpty(entryDir))
+            {
+                return null;
+            }
+
+            return doorLinkLookup.TryGetValue(GetDoorLinkKey(roomId, entryDir), out var doorLink)
+                ? doorLink.spawnOffset
+                : null;
+        }
+
+        private static string GetDoorLinkKey(string roomId, string entryDir)
+        {
+            return $"{roomId}::{(entryDir ?? string.Empty).Trim().ToLowerInvariant()}";
+        }
+
         // ──────────────────── Geometry Helpers ────────────────────
 
         private static Vector3 GetDoorEdgePosition(Vector2 roomSize, string dir)
@@ -380,6 +451,24 @@ namespace ProjectArk.Level.Editor
                 "south" => new Vector3(0, -hy, 0),
                 _       => Vector3.zero
             };
+        }
+
+        private static bool TryGetCustomSpawnLocalPosition(float[] spawnOffset, Vector2 roomSize, out Vector3 localPosition)
+        {
+            localPosition = Vector3.zero;
+            if (spawnOffset == null || spawnOffset.Length < 2)
+            {
+                return false;
+            }
+
+            // Contract: spawnOffset is authored in LevelDesigner target-room local grid coordinates
+            // (HTML top-left origin, X-right, Y-down). Import converts it once at the boundary into
+            // Unity room-centered local coordinates (X-right, Y-up).
+            localPosition = new Vector3(
+                spawnOffset[0] * GRID_TO_WORLD - roomSize.x * 0.5f,
+                roomSize.y * 0.5f - spawnOffset[1] * GRID_TO_WORLD,
+                0f);
+            return true;
         }
 
         private static Vector3 GetSpawnOffset(string dir)
@@ -485,6 +574,45 @@ namespace ProjectArk.Level.Editor
         }
 
         // ──────────────────── Utility ────────────────────
+
+        private static GameObject ReplaceExistingSliceRoot(string levelName)
+        {
+            string rootName = $"── {levelName} ──";
+            var existingRoot = FindSceneRootByName(rootName);
+            if (existingRoot != null)
+            {
+                Undo.DestroyObjectImmediate(existingRoot);
+                Debug.Log($"[LevelSliceBuilder] Replacing existing slice root '{rootName}' before import.");
+            }
+
+            var sliceRoot = new GameObject(rootName);
+            Undo.RegisterCreatedObjectUndo(sliceRoot, "Create Slice Root");
+            sliceRoot.transform.position = Vector3.zero;
+            return sliceRoot;
+        }
+
+        private static GameObject FindSceneRootByName(string rootName)
+        {
+            foreach (var transform in Resources.FindObjectsOfTypeAll<Transform>())
+            {
+                if (transform == null || transform.parent != null)
+                {
+                    continue;
+                }
+
+                if (EditorUtility.IsPersistent(transform) || !transform.gameObject.scene.IsValid())
+                {
+                    continue;
+                }
+
+                if (string.Equals(transform.name, rootName, StringComparison.Ordinal))
+                {
+                    return transform.gameObject;
+                }
+            }
+
+            return null;
+        }
 
         private static GameObject CreateChild(Transform parent, string name)
         {

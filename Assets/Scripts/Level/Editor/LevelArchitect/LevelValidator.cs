@@ -267,20 +267,40 @@ namespace ProjectArk.Level.Editor
                     }
                 });
             }
-            else if (confinerTransform.gameObject.layer != 2) // Ignore Raycast = 2
+            else
             {
-                _lastResults.Add(new ValidationResult
+                var poly = confinerTransform.GetComponent<PolygonCollider2D>();
+                bool wrongLayer = confinerTransform.gameObject.layer != 2; // Ignore Raycast = 2
+                bool missingPolygon = poly == null;
+                bool blockingPhysics = poly != null && !poly.isTrigger;
+
+                if (wrongLayer || missingPolygon || blockingPhysics)
                 {
-                    Severity = Severity.Warning,
-                    Message = $"Room '{room.RoomID}' CameraConfiner is not on Ignore Raycast layer.",
-                    TargetObject = confinerTransform.gameObject,
-                    CanAutoFix = true,
-                    FixAction = () =>
+                    _lastResults.Add(new ValidationResult
                     {
-                        Undo.RecordObject(confinerTransform.gameObject, "Fix Confiner Layer");
-                        confinerTransform.gameObject.layer = 2;
-                    }
-                });
+                        Severity = Severity.Warning,
+                        Message = missingPolygon
+                            ? $"Room '{room.RoomID}' CameraConfiner is missing PolygonCollider2D."
+                            : blockingPhysics
+                                ? $"Room '{room.RoomID}' CameraConfiner PolygonCollider2D is not set as Trigger."
+                                : $"Room '{room.RoomID}' CameraConfiner is not on Ignore Raycast layer.",
+                        TargetObject = confinerTransform.gameObject,
+                        CanAutoFix = true,
+                        FixAction = () =>
+                        {
+                            Undo.RecordObject(confinerTransform.gameObject, "Fix CameraConfiner");
+                            confinerTransform.gameObject.layer = 2;
+
+                            var targetPoly = poly;
+                            if (targetPoly == null)
+                            {
+                                targetPoly = confinerTransform.gameObject.AddComponent<PolygonCollider2D>();
+                            }
+
+                            targetPoly.isTrigger = true;
+                        }
+                    });
+                }
             }
         }
 

@@ -25,17 +25,11 @@
         
         .left-panel {
             width: 180px;
-            height: 100vh;
             background: #16213e;
             border-right: 1px solid #0f3460;
             padding: 10px;
             display: flex;
             flex-direction: column;
-            overflow-y: auto;
-            overflow-x: hidden;
-            flex-shrink: 0;
-            min-height: 0;
-            overscroll-behavior: contain;
         }
         
         .panel-title {
@@ -67,23 +61,13 @@
             transform: translateX(3px);
         }
         
-        .preset-item.transit { background: #2a3035; border-left: 3px solid #607d8b; }
-        .preset-item.pressure { background: #5a4a27; border-left: 3px solid #ff9800; }
-        .preset-item.resolution { background: #5a2727; border-left: 3px solid #f44336; }
-        .preset-item.reward { background: #2d5a27; border-left: 3px solid #4caf50; }
-        .preset-item.anchor { background: #1a3a5a; border-left: 3px solid #2196f3; }
-        .preset-item.loop { background: #4a275a; border-left: 3px solid #9c27b0; }
-        .preset-item.hub { background: #5a1a3a; border-left: 3px solid #e91e63; }
-        .preset-item.threshold { background: #5a3027; border-left: 3px solid #ff5722; }
-        .preset-item.safe { background: #1a4a4a; border-left: 3px solid #00bcd4; }
-        .preset-item.boss { background: #2a1a5a; border-left: 3px solid #7c4dff; }
-        
-        /* Legacy aliases for old JSON / old presets */
+        .preset-item.safe { background: #2d5a27; border-left: 3px solid #4caf50; }
         .preset-item.normal { background: #5a4a27; border-left: 3px solid #ff9800; }
         .preset-item.arena { background: #5a2727; border-left: 3px solid #f44336; }
-        .preset-item.narrative { background: #1a3a5a; border-left: 3px solid #2196f3; }
-        .preset-item.puzzle { background: #2d5a27; border-left: 3px solid #4caf50; }
-        .preset-item.corridor { background: #2a3035; border-left: 3px solid #607d8b; }
+        .preset-item.boss { background: #4a275a; border-left: 3px solid #9c27b0; }
+        .preset-item.narrative { background: #2a2a5a; border-left: 3px solid #7c4dff; }
+        .preset-item.puzzle { background: #1a4a4a; border-left: 3px solid #00bcd4; }
+        .preset-item.corridor { background: #3a3a3a; border-left: 3px solid #9e9e9e; }
         
         .preset-item.element {
             background: #2a3a4a;
@@ -111,17 +95,11 @@
         
         .right-panel {
             width: 220px;
-            height: 100vh;
             background: #16213e;
             border-left: 1px solid #0f3460;
             padding: 10px;
             display: flex;
             flex-direction: column;
-            overflow-y: auto;
-            overflow-x: hidden;
-            flex-shrink: 0;
-            min-height: 0;
-            overscroll-behavior: contain;
         }
         
         .property-group {
@@ -823,7 +801,6 @@
                     <div class="color-dot" style="background: #7c4dff;"></div>
                     Boss (Boss)
                 </div>
-            </div>
             
             <div class="element-presets">
                 <div class="panel-title">房间元素</div>
@@ -870,7 +847,7 @@
             </div>
             
             <!-- Custom Element Section -->
-            <div class="custom-element-section" style="flex-shrink: 0;">
+            <div class="custom-element-section" style="overflow-y: auto; flex: 1; min-height: 0;">
                 <div class="panel-title">自定义元素</div>
                 <div class="custom-element-form">
                     <input type="text" id="custom-element-name" placeholder="元素名称" maxlength="20">
@@ -915,6 +892,7 @@
         </div>
         
         <div class="right-panel" id="right-panel">
+            <!-- Level Name (Unity Import Target) -->
             <div style="padding: 6px 0 4px 0; flex-shrink: 0;">
                 <div class="property-label" style="margin-bottom: 3px;">关卡名称 <span style="color:#666;font-size:9px;">(导出文件名 / Unity 导入用)</span></div>
                 <input type="text" class="property-input" id="level-name-input" value="NewLevel" placeholder="如 ShebaStation_Act1" oninput="updateJsonLivePreview()">
@@ -1332,9 +1310,12 @@
                 `;
 
                 item.addEventListener('dragstart', (e) => {
-                    e.dataTransfer.setData('elementType', 'custom');
-                    e.dataTransfer.setData('customLabel', preset.label);
-                    e.dataTransfer.setData('customColor', preset.color);
+                    setDragPayload(e.dataTransfer, {
+                        kind: 'element',
+                        elementType: 'custom',
+                        customLabel: preset.label,
+                        customColor: preset.color
+                    });
                 });
 
                 list.appendChild(item);
@@ -1405,15 +1386,79 @@
             svg.style.transform = `translate(${panX}px, ${panY}px)`;
             canvasArea.style.backgroundPosition = `${panX}px ${panY}px`;
         }
+
+        function allowCanvasDrop(e, source) {
+            e.preventDefault();
+            if (e.dataTransfer) {
+                e.dataTransfer.dropEffect = 'copy';
+            }
+            console.log(`[DRAG] dragover on ${source}`);
+        }
         
+        function setDragPayload(dataTransfer, payload) {
+            if (!dataTransfer) return;
+
+            const normalizedPayload = {
+                kind: payload.kind || '',
+                roomType: payload.roomType || '',
+                elementType: payload.elementType || '',
+                customLabel: payload.customLabel || '',
+                customColor: payload.customColor || ''
+            };
+
+            const serializedPayload = JSON.stringify(normalizedPayload);
+            dataTransfer.effectAllowed = 'copy';
+            dataTransfer.setData('text/plain', serializedPayload);
+            dataTransfer.setData('application/x-projectark-leveldesigner', serializedPayload);
+
+            if (normalizedPayload.roomType) dataTransfer.setData('roomType', normalizedPayload.roomType);
+            if (normalizedPayload.elementType) dataTransfer.setData('elementType', normalizedPayload.elementType);
+            if (normalizedPayload.customLabel) dataTransfer.setData('customLabel', normalizedPayload.customLabel);
+            if (normalizedPayload.customColor) dataTransfer.setData('customColor', normalizedPayload.customColor);
+        }
+
+        function getDragPayload(dataTransfer) {
+            const payload = {
+                kind: '',
+                roomType: dataTransfer?.getData('roomType') || '',
+                elementType: dataTransfer?.getData('elementType') || '',
+                customLabel: dataTransfer?.getData('customLabel') || '',
+                customColor: dataTransfer?.getData('customColor') || ''
+            };
+
+            const serializedPayload = dataTransfer?.getData('application/x-projectark-leveldesigner') || dataTransfer?.getData('text/plain');
+            if (serializedPayload) {
+                try {
+                    const parsed = JSON.parse(serializedPayload);
+                    if (parsed && typeof parsed === 'object') {
+                        payload.kind = parsed.kind || payload.kind;
+                        payload.roomType = parsed.roomType || payload.roomType;
+                        payload.elementType = parsed.elementType || payload.elementType;
+                        payload.customLabel = parsed.customLabel || payload.customLabel;
+                        payload.customColor = parsed.customColor || payload.customColor;
+                    }
+                } catch (error) {
+                    // Ignore non-JSON plain-text payloads.
+                }
+            }
+
+            if (!payload.kind) {
+                payload.kind = payload.roomType ? 'room' : (payload.elementType ? 'element' : '');
+            }
+
+            return payload;
+        }
+
         document.querySelectorAll('.preset-item[draggable="true"]').forEach(item => {
             item.addEventListener('dragstart', (e) => {
-                console.log('[DRAG] dragstart fired on:', item.dataset.type || item.dataset.element);
-                if (item.dataset.type) {
-                    e.dataTransfer.setData('roomType', item.dataset.type);
-                } else if (item.dataset.element) {
-                    e.dataTransfer.setData('elementType', item.dataset.element);
-                }
+                const roomType = item.dataset.type || '';
+                const elementType = item.dataset.element || '';
+                console.log('[DRAG] dragstart fired on:', roomType || elementType);
+                setDragPayload(e.dataTransfer, {
+                    kind: roomType ? 'room' : 'element',
+                    roomType,
+                    elementType
+                });
             });
         });
         
@@ -1422,25 +1467,23 @@
         // #connections-svg sits on top (z-index:5, position:absolute, 100%x100%) and
         // CSS pointer-events:none does NOT suppress HTML5 drag events — so we must
         // also call preventDefault() on svg's dragover to allow drop to bubble up.
-        canvasArea.addEventListener('dragover', (e) => { e.preventDefault(); console.log('[DRAG] dragover on canvasArea'); });
-        world.addEventListener('dragover', (e) => { e.preventDefault(); console.log('[DRAG] dragover on world'); });
-        svg.addEventListener('dragover', (e) => { e.preventDefault(); console.log('[DRAG] dragover on svg'); });
+        canvasArea.addEventListener('dragover', (e) => allowCanvasDrop(e, 'canvasArea'));
+        world.addEventListener('dragover', (e) => allowCanvasDrop(e, 'world'));
+        svg.addEventListener('dragover', (e) => allowCanvasDrop(e, 'svg'));
         
         // Single drop handler on canvasArea (bubbles up from world/rooms)
         canvasArea.addEventListener('drop', (e) => {
             e.preventDefault();
-            console.log('[DRAG] DROP fired on canvasArea! roomType:', e.dataTransfer.getData('roomType'), 'elementType:', e.dataTransfer.getData('elementType'));
+            const dragPayload = getDragPayload(e.dataTransfer);
+            console.log('[DRAG] DROP fired on canvasArea!', dragPayload);
             const rect = canvasArea.getBoundingClientRect();
             // Convert screen coords → world-space coords
             const x = Math.round((e.clientX - rect.left - panX) / GRID_SIZE) * GRID_SIZE;
             const y = Math.round((e.clientY - rect.top - panY) / GRID_SIZE) * GRID_SIZE;
             
-            const roomType = e.dataTransfer.getData('roomType');
-            const elementType = e.dataTransfer.getData('elementType');
-            
-            if (roomType) {
-                createRoom(roomType, x, y);
-            } else if (elementType) {
+            if (dragPayload.roomType) {
+                createRoom(dragPayload.roomType, x, y);
+            } else if (dragPayload.elementType) {
                 // Use elementFromPoint for precise hit detection, fallback to coord range
                 let targetRoom = null;
                 const hitEl = document.elementFromPoint(e.clientX, e.clientY);
@@ -1457,20 +1500,17 @@
                     );
                 }
                 if (targetRoom) {
-                    const customLabel = e.dataTransfer.getData('customLabel') || '';
-                    const customColor = e.dataTransfer.getData('customColor') || '';
-                    addElementToRoom(targetRoom, elementType, x, y, customLabel, customColor);
+                    addElementToRoom(targetRoom, dragPayload.elementType, x, y, dragPayload.customLabel, dragPayload.customColor);
                 }
             }
         });
         
         function createRoom(type, x, y) {
             pushUndoState();
-            const normalizedType = normalizeRoomType(type);
             const room = {
-                id: `room_${normalizedType}_${roomIdCounter++}`,
-                name: `${getTypeLabel(normalizedType)}`,
-                type: normalizedType,
+                id: `room_${type}_${roomIdCounter++}`,
+                name: `${getTypeLabel(type)}`,
+                type: type,
                 floor: 0,
                 x: x,
                 y: y,
@@ -1491,53 +1531,21 @@
             updateAsciiPreview();
         }
         
-        function normalizeRoomType(type) {
-            switch ((type || '').toLowerCase()) {
-                case 'transit':
-                case 'corridor':
-                    return 'transit';
-                case 'pressure':
-                case 'normal':
-                    return 'pressure';
-                case 'resolution':
-                case 'arena':
-                    return 'resolution';
-                case 'reward':
-                case 'puzzle':
-                    return 'reward';
-                case 'anchor':
-                case 'narrative':
-                    return 'anchor';
-                case 'loop':
-                    return 'loop';
-                case 'hub':
-                    return 'hub';
-                case 'threshold':
-                    return 'threshold';
-                case 'safe':
-                    return 'safe';
-                case 'boss':
-                    return 'boss';
-                default:
-                    return 'transit';
-            }
-        }
-
         function getTypeLabel(type) {
+            // Aligned with Unity RoomNodeType enum
             const labels = {
-                transit: 'Transit (过路)',
-                pressure: 'Pressure (压力)',
+                transit:    'Transit (过路)',
+                pressure:   'Pressure (压力)',
                 resolution: 'Resolution (清算)',
-                reward: 'Reward (回报)',
-                anchor: 'Anchor (锚点)',
-                loop: 'Loop (回路)',
-                hub: 'Hub (枢纽)',
-                threshold: 'Threshold (门槛)',
-                safe: 'Safe (安全区)',
-                boss: 'Boss'
+                reward:     'Reward (回报)',
+                anchor:     'Anchor (锚点)',
+                loop:       'Loop (回路)',
+                hub:        'Hub (枢纽)',
+                threshold:  'Threshold (门槛)',
+                safe:       'Safe (安全区)',
+                boss:       'Boss'
             };
-            const normalizedType = normalizeRoomType(type);
-            return labels[normalizedType] || normalizedType;
+            return labels[type] || type;
         }
         
         function renderRoom(room) {
@@ -1878,13 +1886,14 @@
                             if (!alreadyExists) {
                                 pushUndoState();
                                 const toDir = getNearestConnectionDir(targetRoom, mouseX, mouseY);
-                connections.push({
+                                connections.push({
                                     from: connectFromRoom.id,
                                     to: targetRoom.id,
                                     fromDir: connectFromDir,
                                     toDir: toDir,
                                     connectionType: 'progression'
                                 });
+
                                 
                                 // Auto-generate door element in target room near the entry direction
                                 const doorPos = calculateDoorPosition(targetRoom, toDir);
@@ -1962,74 +1971,6 @@
                 south: { x: room.width * 0.5,         y: room.height * (1 - inset) }
             };
             return positions[entryDir] || { x: room.width * 0.5, y: room.height * 0.5 };
-        }
-
-        const DOOR_LINK_CENTER_OFFSET_PX = 11;
-        const DEFAULT_DOOR_LINK_INWARD_OFFSET_GRIDS = 2.5;
-
-        function normalizeSpawnOffset(spawnOffset) {
-            if (!Array.isArray(spawnOffset) || spawnOffset.length < 2) return null;
-            const x = Number(spawnOffset[0]);
-            const y = Number(spawnOffset[1]);
-            if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-            return [x, y];
-        }
-
-        function getDoorLinkDoorElement(doorLink, roomOverride = null) {
-            if (!doorLink) return null;
-            const room = roomOverride || rooms.find(r => r.id === doorLink.roomId);
-            if (!room || !Array.isArray(room.elements)) return null;
-            const doorEl = room.elements[doorLink.doorIndex];
-            return doorEl && doorEl.type === 'door' ? doorEl : null;
-        }
-
-        function getDefaultDoorLinkSpawnOffset(room, entryDir, doorEl = null) {
-            if (!room) return null;
-
-            const fallbackDoorPos = calculateDoorPosition(room, entryDir);
-            const sourceDoor = doorEl && typeof doorEl.x === 'number' && typeof doorEl.y === 'number'
-                ? doorEl
-                : fallbackDoorPos;
-
-            let x = (sourceDoor.x + DOOR_LINK_CENTER_OFFSET_PX) / GRID_SIZE;
-            let y = (sourceDoor.y + DOOR_LINK_CENTER_OFFSET_PX) / GRID_SIZE;
-
-            switch (entryDir) {
-                case 'west':
-                    x += DEFAULT_DOOR_LINK_INWARD_OFFSET_GRIDS;
-                    break;
-                case 'east':
-                    x -= DEFAULT_DOOR_LINK_INWARD_OFFSET_GRIDS;
-                    break;
-                case 'north':
-                    y += DEFAULT_DOOR_LINK_INWARD_OFFSET_GRIDS;
-                    break;
-                case 'south':
-                    y -= DEFAULT_DOOR_LINK_INWARD_OFFSET_GRIDS;
-                    break;
-            }
-
-            const maxX = room.width / GRID_SIZE;
-            const maxY = room.height / GRID_SIZE;
-            return [
-                Math.max(0, Math.min(maxX, x)),
-                Math.max(0, Math.min(maxY, y))
-            ];
-        }
-
-        function getDoorLinkSpawnOffset(doorLink) {
-            if (!doorLink) return null;
-
-            const explicitSpawnOffset = normalizeSpawnOffset(doorLink.spawnOffset);
-            if (explicitSpawnOffset) {
-                return explicitSpawnOffset;
-            }
-
-            const room = rooms.find(r => r.id === doorLink.roomId);
-            if (!room) return null;
-
-            const doorEl = getDoorLinkDoorElement(doorLink, room);
-            return getDefaultDoorLinkSpawnOffset(room, doorLink.entryDir, doorEl);
         }
         
         // Given a mouse position (world-space) and a target room, return the nearest connection direction
@@ -2372,14 +2313,6 @@
             
             const room = rooms.find(r => r.id === dl.roomId);
             const roomName = room ? room.name : dl.roomId;
-            const spawnOffset = getDoorLinkSpawnOffset(dl);
-            const hasExplicitSpawnOffset = !!normalizeSpawnOffset(dl.spawnOffset);
-            const spawnOffsetText = spawnOffset
-                ? `[${spawnOffset[0].toFixed(2)}, ${spawnOffset[1].toFixed(2)}]`
-                : '未定义';
-            const spawnOffsetSourceText = hasExplicitSpawnOffset
-                ? '显式 spawnOffset'
-                : '默认门中心 + inward 推导';
             
             const panel = document.getElementById('properties-panel');
             panel.style.display = 'block';
@@ -2391,9 +2324,7 @@
                     <div style="margin-bottom: 6px;"><b>所在房间:</b> ${roomName}</div>
                     <div style="margin-bottom: 6px;"><b>入口方向:</b> ${dl.entryDir}</div>
                     <div style="margin-bottom: 6px;"><b>门元素序号:</b> #${dl.doorIndex}</div>
-                    <div style="margin-bottom: 6px;"><b>出生落点:</b> ${spawnOffsetText}</div>
-                    <div style="margin-bottom: 6px;"><b>落点来源:</b> ${spawnOffsetSourceText}</div>
-                    <div style="margin-bottom: 6px; color: #888; font-size: 11px;">含义：从 ${dl.entryDir} 方向进入此房间 → 玩家落在目标房间左上角局部坐标系下的该位置（单位：格）</div>
+                    <div style="margin-bottom: 6px; color: #888; font-size: 11px;">含义：从 ${dl.entryDir} 方向进入此房间 → 出生在门#${dl.doorIndex}位置</div>
                     <button style="margin-top: 10px; width: 100%; padding: 6px; background: #e94560; border: none; color: white; border-radius: 4px; cursor: pointer;" onclick="deleteSelectedDoorLink()">🗑 删除此门关联</button>
                 </div>
             `;
@@ -2622,11 +2553,10 @@
                 selectedRoom.name = value;
                 document.getElementById(selectedRoom.id).querySelector('.room-name').textContent = value;
             } else if (prop === 'type') {
-                const normalizedType = normalizeRoomType(value);
-                selectedRoom.type = normalizedType;
+                selectedRoom.type = value;
                 const div = document.getElementById(selectedRoom.id);
-                div.className = `room ${normalizedType} selected`;
-                div.querySelector('.room-type').textContent = normalizedType.toUpperCase();
+                div.className = `room ${value} selected`;
+                div.querySelector('.room-type').textContent = value.toUpperCase();
             } else if (prop === 'floor') {
                 selectedRoom.floor = value;
             } else if (prop === 'zoneId') {
@@ -2772,17 +2702,12 @@
             document.querySelectorAll('.toolbar-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(mode + '-mode')?.classList.add('active');
         }
-
+        
         function getLevelName() {
             const input = document.getElementById('level-name-input');
             return (input && input.value.trim()) ? input.value.trim() : 'NewLevel';
         }
 
-        function setLevelName(value) {
-            const input = document.getElementById('level-name-input');
-            if (input) input.value = (value && String(value).trim()) ? String(value).trim() : 'NewLevel';
-        }
-        
         function getExportData() {
             return {
                 levelName: getLevelName(),
@@ -2817,9 +2742,11 @@
                 connections: connections.map(c => ({ from: c.from, to: c.to, fromDir: c.fromDir, toDir: c.toDir, connectionType: normalizeConnectionType(c.connectionType) })),
                 doorLinks: doorLinks.map(d => {
                     const obj = { roomId: d.roomId, entryDir: d.entryDir, doorIndex: d.doorIndex };
-                    const spawnOffset = getDoorLinkSpawnOffset(d);
-                    if (spawnOffset) {
-                        obj.spawnOffset = spawnOffset;
+                    // Attach spawnOffset from the door element position if available
+                    const room = rooms.find(r => r.id === d.roomId);
+                    if (room && room.elements && room.elements[d.doorIndex] && room.elements[d.doorIndex].type === 'door') {
+                        const doorEl = room.elements[d.doorIndex];
+                        obj.spawnOffset = [doorEl.x / GRID_SIZE, doorEl.y / GRID_SIZE];
                     }
                     return obj;
                 })
@@ -2902,7 +2829,6 @@
             rooms = [];
             connections = [];
             doorLinks = [];
-            setLevelName(data.levelName);
             
             // Parse rooms
             if (data.rooms && Array.isArray(data.rooms)) {
@@ -2910,7 +2836,7 @@
                     const room = {
                         id: r.id || `room_imported_${roomIdCounter++}`,
                         name: r.name || 'Unnamed',
-                        type: normalizeRoomType(r.type || 'transit'),
+                        type: r.type || 'transit',
                         floor: r.floor || 0,
                         x: (r.position ? r.position[0] : 0) * GRID_SIZE,
                         y: (r.position ? r.position[1] : 0) * GRID_SIZE,
@@ -2967,8 +2893,7 @@
                 doorLinks = data.doorLinks.map(dl => ({
                     roomId: dl.roomId,
                     entryDir: dl.entryDir,
-                    doorIndex: dl.doorIndex,
-                    spawnOffset: normalizeSpawnOffset(dl.spawnOffset)
+                    doorIndex: dl.doorIndex
                 }));
             }
             
@@ -3098,6 +3023,7 @@
             URL.revokeObjectURL(url);
         }
 
+        // One-click export to file (no modal)
         function saveJsonToFile() {
             const data = getExportData();
             const jsonStr = JSON.stringify(data, null, 2);
@@ -3109,6 +3035,7 @@
             a.click();
             URL.revokeObjectURL(url);
 
+            // Brief visual feedback
             const btn = [...document.querySelectorAll('.toolbar-btn')].find(b => b.textContent.includes('导出文件'));
             if (btn) {
                 const orig = btn.textContent;
@@ -3121,7 +3048,6 @@
         
         function saveToLocal() {
             const data = {
-                levelName: getLevelName(),
                 rooms: rooms,
                 connections: connections,
                 doorLinks: doorLinks,
@@ -3143,25 +3069,9 @@
             if (!saved) return;
             
             const data = JSON.parse(saved);
-            setLevelName(data.levelName);
-            rooms = (data.rooms || []).map(r => ({
-                ...r,
-                type: normalizeRoomType(r.type),
-                elements: Array.isArray(r.elements) ? r.elements : [],
-                zoneId: r.zoneId || '',
-                act: r.act || '',
-                tension: r.tension || 0,
-                beatName: r.beatName || '',
-                timeRange: r.timeRange || ''
-            }));
-            connections = (data.connections || []).map(c => ({
-                ...c,
-                connectionType: normalizeConnectionType(c.connectionType)
-            }));
-            doorLinks = (data.doorLinks || []).map(dl => ({
-                ...dl,
-                spawnOffset: normalizeSpawnOffset(dl.spawnOffset)
-            }));
+            rooms = data.rooms || [];
+            connections = data.connections || [];
+            doorLinks = data.doorLinks || [];
             roomIdCounter = data.roomIdCounter || 1;
             
             selectedRoom = null;

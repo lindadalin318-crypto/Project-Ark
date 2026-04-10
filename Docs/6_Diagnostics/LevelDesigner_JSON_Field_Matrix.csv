@@ -1,0 +1,29 @@
+层级,字段路径,LevelDesigner导出,Unity当前消费,导入必需,说明
+顶层,levelName,是,是,否,关卡名 为空时 Unity 回退为 NewLevel
+顶层,rooms,是,是,是,核心房间数组 缺失或为空会导入失败
+顶层,connections,是,是,否,核心连接数组 可为空
+顶层,doorLinks,是,是,否,LevelSliceBuilder 读取 doorLinks 以查找目标房间的自定义门出生点
+rooms[],id,是,是,是,房间唯一 ID 为空时该房间会被跳过
+rooms[],name,是,是,否,写入 RoomSO 的 display name
+rooms[],type,是,是,是,支持 canonical 房型 也兼容 normal arena narrative puzzle corridor 等旧别名
+rooms[],floor,是,是,否,写入 RoomSO 的 floor level
+rooms[],position,是,是,是,网格坐标 导入 Unity 时会转世界坐标且翻转 Y
+rooms[],size,是,是,是,房间尺寸 网格单位
+rooms[],zoneId,按需,否,否,当前元数据仅保留在 JSON 中
+rooms[],act,按需,否,否,当前元数据仅保留在 JSON 中
+rooms[],tension,按需,否,否,当前元数据仅保留在 JSON 中
+rooms[],beatName,按需,否,否,当前元数据仅保留在 JSON 中
+rooms[],timeRange,按需,否,否,HTML 导出会带 但 Unity 当前 RoomJson 未声明此字段
+rooms[].elements[],type,是,否,否,房间元素当前不会自动生成场景对象
+rooms[].elements[],position,是,否,否,元素位置当前不会被 Unity 导入
+rooms[].elements[],customLabel,按需,否,否,自定义元素附加标签 仅供 HTML 自身使用
+rooms[].elements[],customColor,按需,否,否,自定义元素附加颜色 仅供 HTML 自身使用
+connections[],from,是,是,是,连接起点房间 ID
+connections[],to,是,是,是,连接终点房间 ID
+connections[],fromDir,是,是,是,方向值 east west north south
+connections[],toDir,是,是,是,方向值 east west north south
+connections[],connectionType,是,是,否,导出前会归一到 canonical 类型 progression return ability challenge identity scheduled
+doorLinks[],roomId,是,是,否,LevelSliceBuilder 用它匹配目标房间
+doorLinks[],entryDir,是,是,否,LevelSliceBuilder 用 roomId+entryDir 查找对应入口方向的落点
+doorLinks[],doorIndex,是,否,否,当前仅供 HTML 自身使用
+doorLinks[],spawnOffset,按需,是,否,表示进入目标房间后的玩家落点 使用目标房间左上角局部坐标（单位：格）；Unity 导入时会转换为房间中心局部坐标

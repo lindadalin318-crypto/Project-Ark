@@ -25,17 +25,11 @@
         
         .left-panel {
             width: 180px;
-            height: 100vh;
             background: #16213e;
             border-right: 1px solid #0f3460;
             padding: 10px;
             display: flex;
             flex-direction: column;
-            overflow-y: auto;
-            overflow-x: hidden;
-            flex-shrink: 0;
-            min-height: 0;
-            overscroll-behavior: contain;
         }
         
         .panel-title {
@@ -67,23 +61,13 @@
             transform: translateX(3px);
         }
         
-        .preset-item.transit { background: #2a3035; border-left: 3px solid #607d8b; }
-        .preset-item.pressure { background: #5a4a27; border-left: 3px solid #ff9800; }
-        .preset-item.resolution { background: #5a2727; border-left: 3px solid #f44336; }
-        .preset-item.reward { background: #2d5a27; border-left: 3px solid #4caf50; }
-        .preset-item.anchor { background: #1a3a5a; border-left: 3px solid #2196f3; }
-        .preset-item.loop { background: #4a275a; border-left: 3px solid #9c27b0; }
-        .preset-item.hub { background: #5a1a3a; border-left: 3px solid #e91e63; }
-        .preset-item.threshold { background: #5a3027; border-left: 3px solid #ff5722; }
-        .preset-item.safe { background: #1a4a4a; border-left: 3px solid #00bcd4; }
-        .preset-item.boss { background: #2a1a5a; border-left: 3px solid #7c4dff; }
-        
-        /* Legacy aliases for old JSON / old presets */
+        .preset-item.safe { background: #2d5a27; border-left: 3px solid #4caf50; }
         .preset-item.normal { background: #5a4a27; border-left: 3px solid #ff9800; }
         .preset-item.arena { background: #5a2727; border-left: 3px solid #f44336; }
-        .preset-item.narrative { background: #1a3a5a; border-left: 3px solid #2196f3; }
-        .preset-item.puzzle { background: #2d5a27; border-left: 3px solid #4caf50; }
-        .preset-item.corridor { background: #2a3035; border-left: 3px solid #607d8b; }
+        .preset-item.boss { background: #4a275a; border-left: 3px solid #9c27b0; }
+        .preset-item.narrative { background: #2a2a5a; border-left: 3px solid #7c4dff; }
+        .preset-item.puzzle { background: #1a4a4a; border-left: 3px solid #00bcd4; }
+        .preset-item.corridor { background: #3a3a3a; border-left: 3px solid #9e9e9e; }
         
         .preset-item.element {
             background: #2a3a4a;
@@ -111,17 +95,11 @@
         
         .right-panel {
             width: 220px;
-            height: 100vh;
             background: #16213e;
             border-left: 1px solid #0f3460;
             padding: 10px;
             display: flex;
             flex-direction: column;
-            overflow-y: auto;
-            overflow-x: hidden;
-            flex-shrink: 0;
-            min-height: 0;
-            overscroll-behavior: contain;
         }
         
         .property-group {
@@ -276,23 +254,13 @@
             box-shadow: 0 0 0 2px #e94560, 0 0 20px rgba(233,69,96,0.5);
         }
         
-        /* Room type colors — aligned with Unity RoomNodeType enum */
-        .room.transit    { background: #2a3035; border: 2px solid #607d8b; }
-        .room.pressure   { background: #5a4a27; border: 2px solid #ff9800; }
-        .room.resolution { background: #5a2727; border: 2px solid #f44336; }
-        .room.reward     { background: #2d5a27; border: 2px solid #4caf50; }
-        .room.anchor     { background: #1a3a5a; border: 2px solid #2196f3; }
-        .room.loop       { background: #4a275a; border: 2px solid #9c27b0; }
-        .room.hub        { background: #5a1a3a; border: 2px solid #e91e63; }
-        .room.threshold  { background: #5a3027; border: 2px solid #ff5722; }
-        .room.safe       { background: #1a4a4a; border: 2px solid #00bcd4; }
-        .room.boss       { background: #2a1a5a; border: 2px solid #7c4dff; }
-        /* Legacy aliases — kept for backward-compat with old JSON files */
-        .room.normal     { background: #5a4a27; border: 2px solid #ff9800; }
-        .room.arena      { background: #5a2727; border: 2px solid #f44336; }
-        .room.narrative  { background: #1a3a5a; border: 2px solid #2196f3; }
-        .room.puzzle     { background: #2d5a27; border: 2px solid #4caf50; }
-        .room.corridor   { background: #2a3035; border: 2px solid #607d8b; }
+        .room.safe { background: #2d5a27; border: 2px solid #4caf50; }
+        .room.normal { background: #5a4a27; border: 2px solid #ff9800; }
+        .room.arena { background: #5a2727; border: 2px solid #f44336; }
+        .room.boss { background: #4a275a; border: 2px solid #9c27b0; }
+        .room.narrative { background: #2a2a5a; border: 2px solid #7c4dff; }
+        .room.puzzle { background: #1a4a4a; border: 2px solid #00bcd4; }
+        .room.corridor { background: #3a3a3a; border: 2px solid #9e9e9e; }
         
         .room-name {
             margin-bottom: 2px;
@@ -782,46 +750,34 @@
     <div class="container">
         <div class="left-panel">
             <div class="room-presets">
-                <div class="panel-title">房间类型 (RoomNodeType)</div>
-                <div class="preset-item transit" draggable="true" data-type="transit">
-                    <div class="color-dot" style="background: #607d8b;"></div>
-                    Transit (过路)
-                </div>
-                <div class="preset-item pressure" draggable="true" data-type="pressure">
-                    <div class="color-dot" style="background: #ff9800;"></div>
-                    Pressure (压力)
-                </div>
-                <div class="preset-item resolution" draggable="true" data-type="resolution">
-                    <div class="color-dot" style="background: #f44336;"></div>
-                    Resolution (清算/竞技场)
-                </div>
-                <div class="preset-item reward" draggable="true" data-type="reward">
-                    <div class="color-dot" style="background: #4caf50;"></div>
-                    Reward (回报)
-                </div>
-                <div class="preset-item anchor" draggable="true" data-type="anchor">
-                    <div class="color-dot" style="background: #2196f3;"></div>
-                    Anchor (锚点/地标)
-                </div>
-                <div class="preset-item loop" draggable="true" data-type="loop">
-                    <div class="color-dot" style="background: #9c27b0;"></div>
-                    Loop (回路/捷径)
-                </div>
-                <div class="preset-item hub" draggable="true" data-type="hub">
-                    <div class="color-dot" style="background: #e91e63;"></div>
-                    Hub (枢纽)
-                </div>
-                <div class="preset-item threshold" draggable="true" data-type="threshold">
-                    <div class="color-dot" style="background: #ff5722;"></div>
-                    Threshold (门槛/章节界)
-                </div>
+                <div class="panel-title">房间类型</div>
                 <div class="preset-item safe" draggable="true" data-type="safe">
-                    <div class="color-dot" style="background: #00bcd4;"></div>
+                    <div class="color-dot" style="background: #4caf50;"></div>
                     Safe (安全区)
                 </div>
+                <div class="preset-item normal" draggable="true" data-type="normal">
+                    <div class="color-dot" style="background: #ff9800;"></div>
+                    Normal (普通)
+                </div>
+                <div class="preset-item arena" draggable="true" data-type="arena">
+                    <div class="color-dot" style="background: #f44336;"></div>
+                    Arena (竞技场)
+                </div>
                 <div class="preset-item boss" draggable="true" data-type="boss">
-                    <div class="color-dot" style="background: #7c4dff;"></div>
+                    <div class="color-dot" style="background: #9c27b0;"></div>
                     Boss (Boss)
+                </div>
+                <div class="preset-item narrative" draggable="true" data-type="narrative">
+                    <div class="color-dot" style="background: #7c4dff;"></div>
+                    Narrative (叙事)
+                </div>
+                <div class="preset-item puzzle" draggable="true" data-type="puzzle">
+                    <div class="color-dot" style="background: #00bcd4;"></div>
+                    Puzzle (解谜)
+                </div>
+                <div class="preset-item corridor" draggable="true" data-type="corridor">
+                    <div class="color-dot" style="background: #9e9e9e;"></div>
+                    Corridor (走廊)
                 </div>
             </div>
             
@@ -870,7 +826,7 @@
             </div>
             
             <!-- Custom Element Section -->
-            <div class="custom-element-section" style="flex-shrink: 0;">
+            <div class="custom-element-section" style="overflow-y: auto; flex: 1; min-height: 0;">
                 <div class="panel-title">自定义元素</div>
                 <div class="custom-element-form">
                     <input type="text" id="custom-element-name" placeholder="元素名称" maxlength="20">
@@ -896,7 +852,6 @@
                 <button class="toolbar-btn active" id="select-mode" onclick="setMode('select')">选择</button>
                 <button class="toolbar-btn" id="delete-mode" onclick="setMode('delete')">删除</button>
                 <button class="toolbar-btn" onclick="showExportModal()">导出 JSON</button>
-                <button class="toolbar-btn" onclick="saveJsonToFile()" style="background:#2d5a27; color:#4caf50; font-weight:bold;">💾 导出文件</button>
                 <button class="toolbar-btn" onclick="showImportModal()">导入 JSON</button>
                 <button class="toolbar-btn" onclick="saveToLocal()">保存</button>
                 <button class="toolbar-btn" onclick="loadFromLocal()">加载</button>            </div>
@@ -915,11 +870,6 @@
         </div>
         
         <div class="right-panel" id="right-panel">
-            <div style="padding: 6px 0 4px 0; flex-shrink: 0;">
-                <div class="property-label" style="margin-bottom: 3px;">关卡名称 <span style="color:#666;font-size:9px;">(导出文件名 / Unity 导入用)</span></div>
-                <input type="text" class="property-input" id="level-name-input" value="NewLevel" placeholder="如 ShebaStation_Act1" oninput="updateJsonLivePreview()">
-            </div>
-
             <!-- Section 1: Properties Panel -->
             <div class="right-panel-section" id="section-properties" style="flex: 1;">
                 <div class="panel-title">属性面板</div>
@@ -942,18 +892,15 @@
                     </div>
                     
                     <div class="property-group">
-                        <div class="property-label">类型 (RoomNodeType)</div>
+                        <div class="property-label">类型</div>
                         <select class="property-input" id="prop-type" onchange="updateRoomProperty('type', this.value)">
-                            <option value="transit">Transit (过路)</option>
-                            <option value="pressure">Pressure (压力)</option>
-                            <option value="resolution">Resolution (清算/竞技场)</option>
-                            <option value="reward">Reward (回报)</option>
-                            <option value="anchor">Anchor (锚点/地标)</option>
-                            <option value="loop">Loop (回路/捷径)</option>
-                            <option value="hub">Hub (枢纽)</option>
-                            <option value="threshold">Threshold (门槛/章节界)</option>
                             <option value="safe">Safe (安全区)</option>
+                            <option value="normal">Normal (普通)</option>
+                            <option value="arena">Arena (竞技场)</option>
                             <option value="boss">Boss (Boss)</option>
+                            <option value="narrative">Narrative (叙事)</option>
+                            <option value="puzzle">Puzzle (解谜)</option>
+                            <option value="corridor">Corridor (走廊)</option>
                         </select>
                     </div>
                     
@@ -1466,11 +1413,10 @@
         
         function createRoom(type, x, y) {
             pushUndoState();
-            const normalizedType = normalizeRoomType(type);
             const room = {
-                id: `room_${normalizedType}_${roomIdCounter++}`,
-                name: `${getTypeLabel(normalizedType)}`,
-                type: normalizedType,
+                id: `room_${type}_${roomIdCounter++}`,
+                name: `${getTypeLabel(type)}`,
+                type: type,
                 floor: 0,
                 x: x,
                 y: y,
@@ -1491,53 +1437,17 @@
             updateAsciiPreview();
         }
         
-        function normalizeRoomType(type) {
-            switch ((type || '').toLowerCase()) {
-                case 'transit':
-                case 'corridor':
-                    return 'transit';
-                case 'pressure':
-                case 'normal':
-                    return 'pressure';
-                case 'resolution':
-                case 'arena':
-                    return 'resolution';
-                case 'reward':
-                case 'puzzle':
-                    return 'reward';
-                case 'anchor':
-                case 'narrative':
-                    return 'anchor';
-                case 'loop':
-                    return 'loop';
-                case 'hub':
-                    return 'hub';
-                case 'threshold':
-                    return 'threshold';
-                case 'safe':
-                    return 'safe';
-                case 'boss':
-                    return 'boss';
-                default:
-                    return 'transit';
-            }
-        }
-
         function getTypeLabel(type) {
             const labels = {
-                transit: 'Transit (过路)',
-                pressure: 'Pressure (压力)',
-                resolution: 'Resolution (清算)',
-                reward: 'Reward (回报)',
-                anchor: 'Anchor (锚点)',
-                loop: 'Loop (回路)',
-                hub: 'Hub (枢纽)',
-                threshold: 'Threshold (门槛)',
-                safe: 'Safe (安全区)',
-                boss: 'Boss'
+                safe: '安全区',
+                normal: '普通房间',
+                arena: '竞技场',
+                boss: 'Boss房',
+                narrative: '叙事房间',
+                puzzle: '解谜房间',
+                corridor: '走廊'
             };
-            const normalizedType = normalizeRoomType(type);
-            return labels[normalizedType] || normalizedType;
+            return labels[type] || type;
         }
         
         function renderRoom(room) {
@@ -1883,7 +1793,7 @@
                                     to: targetRoom.id,
                                     fromDir: connectFromDir,
                                     toDir: toDir,
-                                    connectionType: 'progression'
+                                    connectionType: 'normal'
                                 });
                                 
                                 // Auto-generate door element in target room near the entry direction
@@ -1963,74 +1873,6 @@
             };
             return positions[entryDir] || { x: room.width * 0.5, y: room.height * 0.5 };
         }
-
-        const DOOR_LINK_CENTER_OFFSET_PX = 11;
-        const DEFAULT_DOOR_LINK_INWARD_OFFSET_GRIDS = 2.5;
-
-        function normalizeSpawnOffset(spawnOffset) {
-            if (!Array.isArray(spawnOffset) || spawnOffset.length < 2) return null;
-            const x = Number(spawnOffset[0]);
-            const y = Number(spawnOffset[1]);
-            if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-            return [x, y];
-        }
-
-        function getDoorLinkDoorElement(doorLink, roomOverride = null) {
-            if (!doorLink) return null;
-            const room = roomOverride || rooms.find(r => r.id === doorLink.roomId);
-            if (!room || !Array.isArray(room.elements)) return null;
-            const doorEl = room.elements[doorLink.doorIndex];
-            return doorEl && doorEl.type === 'door' ? doorEl : null;
-        }
-
-        function getDefaultDoorLinkSpawnOffset(room, entryDir, doorEl = null) {
-            if (!room) return null;
-
-            const fallbackDoorPos = calculateDoorPosition(room, entryDir);
-            const sourceDoor = doorEl && typeof doorEl.x === 'number' && typeof doorEl.y === 'number'
-                ? doorEl
-                : fallbackDoorPos;
-
-            let x = (sourceDoor.x + DOOR_LINK_CENTER_OFFSET_PX) / GRID_SIZE;
-            let y = (sourceDoor.y + DOOR_LINK_CENTER_OFFSET_PX) / GRID_SIZE;
-
-            switch (entryDir) {
-                case 'west':
-                    x += DEFAULT_DOOR_LINK_INWARD_OFFSET_GRIDS;
-                    break;
-                case 'east':
-                    x -= DEFAULT_DOOR_LINK_INWARD_OFFSET_GRIDS;
-                    break;
-                case 'north':
-                    y += DEFAULT_DOOR_LINK_INWARD_OFFSET_GRIDS;
-                    break;
-                case 'south':
-                    y -= DEFAULT_DOOR_LINK_INWARD_OFFSET_GRIDS;
-                    break;
-            }
-
-            const maxX = room.width / GRID_SIZE;
-            const maxY = room.height / GRID_SIZE;
-            return [
-                Math.max(0, Math.min(maxX, x)),
-                Math.max(0, Math.min(maxY, y))
-            ];
-        }
-
-        function getDoorLinkSpawnOffset(doorLink) {
-            if (!doorLink) return null;
-
-            const explicitSpawnOffset = normalizeSpawnOffset(doorLink.spawnOffset);
-            if (explicitSpawnOffset) {
-                return explicitSpawnOffset;
-            }
-
-            const room = rooms.find(r => r.id === doorLink.roomId);
-            if (!room) return null;
-
-            const doorEl = getDoorLinkDoorElement(doorLink, room);
-            return getDefaultDoorLinkSpawnOffset(room, doorLink.entryDir, doorEl);
-        }
         
         // Given a mouse position (world-space) and a target room, return the nearest connection direction
         function getNearestConnectionDir(room, worldX, worldY) {
@@ -2057,38 +1899,12 @@
         let selectedElementRoomId = null;
         let selectedElementIndex = -1;
 
-        function normalizeConnectionType(type) {
-            switch ((type || '').toLowerCase()) {
-                case 'progression':
-                case 'normal':
-                case 'one_way':
-                    return 'progression';
-                case 'return':
-                    return 'return';
-                case 'ability':
-                case 'locked':
-                case 'secret':
-                    return 'ability';
-                case 'challenge':
-                    return 'challenge';
-                case 'identity':
-                    return 'identity';
-                case 'scheduled':
-                case 'tidal':
-                    return 'scheduled';
-                default:
-                    return 'progression';
-            }
-        }
-
-        // Connection type color/marker config — aligned with Unity ConnectionType enum
+        // Connection type color/marker config
         const CONN_TYPE_CONFIG = {
-            progression: { stroke: '#9e9e9e', marker: 'arrow-gray'   },
-            return:      { stroke: '#9c27b0', marker: 'arrow-purple' },
-            ability:     { stroke: '#ffc107', marker: 'arrow-yellow' },
-            challenge:   { stroke: '#f44336', marker: 'arrow-red'    },
-            identity:    { stroke: '#ff9800', marker: 'arrow-orange' },
-            scheduled:   { stroke: '#4caf50', marker: 'arrow-green'  },
+            normal:  { stroke: '#e94560', marker: 'arrow-red'    },
+            tidal:   { stroke: '#00897b', marker: 'arrow-teal'   },
+            locked:  { stroke: '#ffc107', marker: 'arrow-yellow' },
+            one_way: { stroke: '#ff9800', marker: 'arrow-orange' }
         };
 
         function renderConnections() {
@@ -2103,13 +1919,11 @@
             }
             // Arrow markers for all connection types + selected
             defs.innerHTML = `
-                <marker id="arrow-gray"   markerWidth="10" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0,0 10,4 0,8" fill="#9e9e9e"/></marker>
+                <marker id="arrow-red"    markerWidth="10" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0,0 10,4 0,8" fill="#e94560"/></marker>
                 <marker id="arrow-blue"   markerWidth="10" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0,0 10,4 0,8" fill="#4fc3f7"/></marker>
-                <marker id="arrow-purple" markerWidth="10" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0,0 10,4 0,8" fill="#9c27b0"/></marker>
+                <marker id="arrow-teal"   markerWidth="10" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0,0 10,4 0,8" fill="#00897b"/></marker>
                 <marker id="arrow-yellow" markerWidth="10" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0,0 10,4 0,8" fill="#ffc107"/></marker>
-                <marker id="arrow-red"    markerWidth="10" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0,0 10,4 0,8" fill="#f44336"/></marker>
                 <marker id="arrow-orange" markerWidth="10" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0,0 10,4 0,8" fill="#ff9800"/></marker>
-                <marker id="arrow-green"  markerWidth="10" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0,0 10,4 0,8" fill="#4caf50"/></marker>
             `;
             
             connections.forEach((conn, idx) => {
@@ -2156,16 +1970,15 @@
                 svg.appendChild(hitLine);
                 
                 // Visible line with arrow marker (color by connectionType)
-                const connType = normalizeConnectionType(conn.connectionType);
-                const typeConfig = CONN_TYPE_CONFIG[connType] || CONN_TYPE_CONFIG.progression;
+                const connType = conn.connectionType || 'normal';
+                const typeConfig = CONN_TYPE_CONFIG[connType] || CONN_TYPE_CONFIG.normal;
                 const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                 line.setAttribute('x1', fromPos.x + offsetX);
                 line.setAttribute('y1', fromPos.y + offsetY);
                 line.setAttribute('x2', toPos.x + offsetX);
                 line.setAttribute('y2', toPos.y + offsetY);
-                line.setAttribute('class', 'connection-line' + (isSelected ? ' selected' : ''));
-                line.style.stroke = isSelected ? '#4fc3f7' : typeConfig.stroke;
-                line.style.strokeWidth = isSelected ? '3px' : '2px';
+                const lineClass = 'connection-line' + (isSelected ? ' selected' : (connType !== 'normal' ? ' ' + connType : ''));
+                line.setAttribute('class', lineClass);
                 line.setAttribute('marker-end', `url(#${isSelected ? 'arrow-blue' : typeConfig.marker})`);
                 line.setAttribute('data-conn-index', idx);
                 svg.appendChild(line);
@@ -2206,7 +2019,7 @@
             const dirLabel = hasReverse ? '双向' : '单向';
             const fromName = fromRoom ? `${fromRoom.name} (${conn.from})` : conn.from;
             const toName = toRoom ? `${toRoom.name} (${conn.to})` : conn.to;
-            const currentType = normalizeConnectionType(conn.connectionType);
+            const currentType = conn.connectionType || 'normal';
             
             const panel = document.getElementById('properties-panel');
             panel.style.display = 'block';
@@ -2222,12 +2035,10 @@
                     <div style="margin-bottom: 4px; font-size: 11px; color: #888;">通道类型</div>
                     <select style="width:100%; padding:5px 6px; background:#0f3460; border:1px solid #1a1a2e; border-radius:3px; color:#eee; font-size:12px; margin-bottom:8px;"
                         onchange="updateConnectionType(${idx}, this.value)">
-                        <option value="progression" ${currentType==='progression' ? 'selected':''}>🔵 Progression (主路推进)</option>
-                        <option value="return" ${currentType==='return' ? 'selected':''}>🟣 Return (回返/捷径)</option>
-                        <option value="ability" ${currentType==='ability' ? 'selected':''}>🟡 Ability (能力门)</option>
-                        <option value="challenge" ${currentType==='challenge' ? 'selected':''}>🔴 Challenge (挑战/竞技场入口)</option>
-                        <option value="identity" ${currentType==='identity' ? 'selected':''}>🟠 Identity (Biome切换)</option>
-                        <option value="scheduled" ${currentType==='scheduled' ? 'selected':''}>🟢 Scheduled (时间控制门)</option>
+                        <option value="normal"  ${currentType==='normal'  ? 'selected':''}>🔴 普通通道</option>
+                        <option value="tidal"   ${currentType==='tidal'   ? 'selected':''}>🟢 潮汐门（涨潮开启）</option>
+                        <option value="locked"  ${currentType==='locked'  ? 'selected':''}>🟡 锁门（需要钥匙）</option>
+                        <option value="one_way" ${currentType==='one_way' ? 'selected':''}>🟠 单向通道</option>
                     </select>
                     <button style="margin-top: 2px; width: 100%; padding: 6px; background: #e94560; border: none; color: white; border-radius: 4px; cursor: pointer;" onclick="deleteSelectedConnection()">🗑 删除此连接</button>
                     ${hasReverse ? `<button style="margin-top: 6px; width: 100%; padding: 6px; background: #d32f2f; border: none; color: white; border-radius: 4px; cursor: pointer;" onclick="deleteConnectionPair(${idx})">🗑 删除双向连接</button>` : ''}
@@ -2237,7 +2048,7 @@
 
         function updateConnectionType(idx, type) {
             if (idx < 0 || idx >= connections.length) return;
-            connections[idx].connectionType = normalizeConnectionType(type);
+            connections[idx].connectionType = type;
             renderConnections();
             updateAsciiPreview();
         }
@@ -2372,14 +2183,6 @@
             
             const room = rooms.find(r => r.id === dl.roomId);
             const roomName = room ? room.name : dl.roomId;
-            const spawnOffset = getDoorLinkSpawnOffset(dl);
-            const hasExplicitSpawnOffset = !!normalizeSpawnOffset(dl.spawnOffset);
-            const spawnOffsetText = spawnOffset
-                ? `[${spawnOffset[0].toFixed(2)}, ${spawnOffset[1].toFixed(2)}]`
-                : '未定义';
-            const spawnOffsetSourceText = hasExplicitSpawnOffset
-                ? '显式 spawnOffset'
-                : '默认门中心 + inward 推导';
             
             const panel = document.getElementById('properties-panel');
             panel.style.display = 'block';
@@ -2391,9 +2194,7 @@
                     <div style="margin-bottom: 6px;"><b>所在房间:</b> ${roomName}</div>
                     <div style="margin-bottom: 6px;"><b>入口方向:</b> ${dl.entryDir}</div>
                     <div style="margin-bottom: 6px;"><b>门元素序号:</b> #${dl.doorIndex}</div>
-                    <div style="margin-bottom: 6px;"><b>出生落点:</b> ${spawnOffsetText}</div>
-                    <div style="margin-bottom: 6px;"><b>落点来源:</b> ${spawnOffsetSourceText}</div>
-                    <div style="margin-bottom: 6px; color: #888; font-size: 11px;">含义：从 ${dl.entryDir} 方向进入此房间 → 玩家落在目标房间左上角局部坐标系下的该位置（单位：格）</div>
+                    <div style="margin-bottom: 6px; color: #888; font-size: 11px;">含义：从 ${dl.entryDir} 方向进入此房间 → 出生在门#${dl.doorIndex}位置</div>
                     <button style="margin-top: 10px; width: 100%; padding: 6px; background: #e94560; border: none; color: white; border-radius: 4px; cursor: pointer;" onclick="deleteSelectedDoorLink()">🗑 删除此门关联</button>
                 </div>
             `;
@@ -2622,11 +2423,10 @@
                 selectedRoom.name = value;
                 document.getElementById(selectedRoom.id).querySelector('.room-name').textContent = value;
             } else if (prop === 'type') {
-                const normalizedType = normalizeRoomType(value);
-                selectedRoom.type = normalizedType;
+                selectedRoom.type = value;
                 const div = document.getElementById(selectedRoom.id);
-                div.className = `room ${normalizedType} selected`;
-                div.querySelector('.room-type').textContent = normalizedType.toUpperCase();
+                div.className = `room ${value} selected`;
+                div.querySelector('.room-type').textContent = value.toUpperCase();
             } else if (prop === 'floor') {
                 selectedRoom.floor = value;
             } else if (prop === 'zoneId') {
@@ -2772,20 +2572,10 @@
             document.querySelectorAll('.toolbar-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(mode + '-mode')?.classList.add('active');
         }
-
-        function getLevelName() {
-            const input = document.getElementById('level-name-input');
-            return (input && input.value.trim()) ? input.value.trim() : 'NewLevel';
-        }
-
-        function setLevelName(value) {
-            const input = document.getElementById('level-name-input');
-            if (input) input.value = (value && String(value).trim()) ? String(value).trim() : 'NewLevel';
-        }
         
         function getExportData() {
             return {
-                levelName: getLevelName(),
+                levelName: 'New Level',
                 rooms: rooms.map(r => {
                     const obj = {
                         id: r.id,
@@ -2814,12 +2604,14 @@
                     if (r.timeRange) obj.timeRange = r.timeRange;
                     return obj;
                 }),
-                connections: connections.map(c => ({ from: c.from, to: c.to, fromDir: c.fromDir, toDir: c.toDir, connectionType: normalizeConnectionType(c.connectionType) })),
+                connections: connections.map(c => ({ from: c.from, to: c.to, fromDir: c.fromDir, toDir: c.toDir, connectionType: c.connectionType || 'normal' })),
                 doorLinks: doorLinks.map(d => {
                     const obj = { roomId: d.roomId, entryDir: d.entryDir, doorIndex: d.doorIndex };
-                    const spawnOffset = getDoorLinkSpawnOffset(d);
-                    if (spawnOffset) {
-                        obj.spawnOffset = spawnOffset;
+                    // Attach spawnOffset from the door element position if available
+                    const room = rooms.find(r => r.id === d.roomId);
+                    if (room && room.elements && room.elements[d.doorIndex] && room.elements[d.doorIndex].type === 'door') {
+                        const doorEl = room.elements[d.doorIndex];
+                        obj.spawnOffset = [doorEl.x / GRID_SIZE, doorEl.y / GRID_SIZE];
                     }
                     return obj;
                 })
@@ -2902,7 +2694,6 @@
             rooms = [];
             connections = [];
             doorLinks = [];
-            setLevelName(data.levelName);
             
             // Parse rooms
             if (data.rooms && Array.isArray(data.rooms)) {
@@ -2910,7 +2701,7 @@
                     const room = {
                         id: r.id || `room_imported_${roomIdCounter++}`,
                         name: r.name || 'Unnamed',
-                        type: normalizeRoomType(r.type || 'transit'),
+                        type: r.type || 'normal',
                         floor: r.floor || 0,
                         x: (r.position ? r.position[0] : 0) * GRID_SIZE,
                         y: (r.position ? r.position[1] : 0) * GRID_SIZE,
@@ -2951,14 +2742,14 @@
                 });
             }
             
-            // Parse connections (backward-compatible: legacy aliases are normalized to canonical values)
+            // Parse connections (backward-compatible: connectionType defaults to 'normal')
             if (data.connections && Array.isArray(data.connections)) {
                 connections = data.connections.map(c => ({
                     from: c.from,
                     to: c.to,
                     fromDir: c.fromDir || 'east',
                     toDir: c.toDir || 'west',
-                    connectionType: normalizeConnectionType(c.connectionType)
+                    connectionType: c.connectionType || 'normal'
                 }));
             }
             
@@ -2967,8 +2758,7 @@
                 doorLinks = data.doorLinks.map(dl => ({
                     roomId: dl.roomId,
                     entryDir: dl.entryDir,
-                    doorIndex: dl.doorIndex,
-                    spawnOffset: normalizeSpawnOffset(dl.spawnOffset)
+                    doorIndex: dl.doorIndex
                 }));
             }
             
@@ -3093,35 +2883,13 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = getLevelName() + '.json';
+            a.download = 'level-design.json';
             a.click();
             URL.revokeObjectURL(url);
-        }
-
-        function saveJsonToFile() {
-            const data = getExportData();
-            const jsonStr = JSON.stringify(data, null, 2);
-            const blob = new Blob([jsonStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = getLevelName() + '.json';
-            a.click();
-            URL.revokeObjectURL(url);
-
-            const btn = [...document.querySelectorAll('.toolbar-btn')].find(b => b.textContent.includes('导出文件'));
-            if (btn) {
-                const orig = btn.textContent;
-                const origBg = btn.style.background;
-                btn.textContent = '✓ 已导出';
-                btn.style.background = '#1a4a1a';
-                setTimeout(() => { btn.textContent = orig; btn.style.background = origBg; }, 1500);
-            }
         }
         
         function saveToLocal() {
             const data = {
-                levelName: getLevelName(),
                 rooms: rooms,
                 connections: connections,
                 doorLinks: doorLinks,
@@ -3143,25 +2911,9 @@
             if (!saved) return;
             
             const data = JSON.parse(saved);
-            setLevelName(data.levelName);
-            rooms = (data.rooms || []).map(r => ({
-                ...r,
-                type: normalizeRoomType(r.type),
-                elements: Array.isArray(r.elements) ? r.elements : [],
-                zoneId: r.zoneId || '',
-                act: r.act || '',
-                tension: r.tension || 0,
-                beatName: r.beatName || '',
-                timeRange: r.timeRange || ''
-            }));
-            connections = (data.connections || []).map(c => ({
-                ...c,
-                connectionType: normalizeConnectionType(c.connectionType)
-            }));
-            doorLinks = (data.doorLinks || []).map(dl => ({
-                ...dl,
-                spawnOffset: normalizeSpawnOffset(dl.spawnOffset)
-            }));
+            rooms = data.rooms || [];
+            connections = data.connections || [];
+            doorLinks = data.doorLinks || [];
             roomIdCounter = data.roomIdCounter || 1;
             
             selectedRoom = null;

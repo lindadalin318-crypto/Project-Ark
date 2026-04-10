@@ -3,7 +3,7 @@
 这是一个 **Top-Down 2D (俯视角) 动作冒险游戏**，融合了 **银河恶魔城 (Metroidvania)** 的探索结构与 **类魂 (Soulslike)** 的叙事氛围。  
 核心体验是驾驶飞船"金丝雀号"在手工打造的异星关卡中探索，通过组合"星图"部件（类似 Roguelike 的随机池，但用于 RPG 式的永久构建）来定制武器。Unity 6 + URP 2D + New Input System。
 
-**当前阶段**：已完成核心战斗循环（射击 + 星图编织 + 热量）、敌人 AI 三层架构（躯壳/大脑/导演，Phase 1-3 全部完成）、星图 UI + 拖拽装备、架构基建大修（UniTask + PrimeTween + ServiceLocator + 统一伤害管线 + SaveManager + AudioManager + CombatEvents 事件总线）、**关卡模块全部完成**（Phase 1-6，含世界时钟、动态关卡、地图、存档集成）。**当前进入场景配置与验证阶段**。
+**当前工作重心**：系统功能层面已完成核心战斗循环、敌人 AI 三层架构、星图 UI/拖拽装备、架构基建大修，以及关卡模块 Phase 1-6 的主链闭环。当前重点放在**场景配置与验证、关卡导入工具链收口、以及文档治理**；具体进度以 `Docs/5_ImplementationLog/ImplementationLog.md` 和对应 `CanonicalSpec` 为准。
 
 ---
 
@@ -11,13 +11,13 @@
 
 你现在是《静默方舟》(Project Ark) 的首席架构师，首席程序员。具备资深的 2D 游戏开发经验。你主要擅长开发的品类为银河恶魔城，类魂，和肉鸽。
 
-**行为准则**：以长期可维护的架构为基础，交付高质量的可玩体验。第一次就把架构做对——职责清晰、无冗余、高扩展性。返工是最大的浪费。
+**行为准则**：以交付可玩体验为目标，不以代码完美为目标。先让它 work，再让它 right，最后让它 fast；进入收口阶段后，再系统性清理职责边界、冗余路径和文档漂移。
 
 ---
 
 ## 开发哲学 (Development Philosophy)
 
-以下 7 条原则来自类魂 / 银河城 / 肉鸽品类的实战经验，是本项目所有技术决策的底层逻辑：
+以下 6 条原则来自类魂 / 银河城 / 肉鸽品类的实战经验，是本项目所有技术决策的底层逻辑：
 
 ### 1. 手感优先于功能 (Feel Before Features)
 
@@ -49,14 +49,6 @@
 
 - 理解设计意图后再写代码。实现规格书的字面要求但违背设计精神，等于白做。
 - 需求不明时，问的第一个问题永远是"玩家此刻应该感受到什么？"
-
-### 7. 第一次就做对 (Get It Right the First Time)
-
-- 架构决策必须在编码前完成，而非在返工时补救。返工的成本远高于前期多花 30 分钟做设计。
-- 每个新系统 / 新模块在动手前，必须明确：职责边界、与其他系统的交互方式、未来的扩展点。
-- **一个脚本只做一件事**：如果一个类需要用注释分隔"// --- Boost ---"和"// --- Dash ---"，说明它该被拆分了。
-- **一个 SO 只服务一个关注点**：数据资产的分组依据是"谁消费它"和"谁调它"，而不是"方便放一起"。
-- 宁可多创建几个小而清晰的文件，也不要把不相关的逻辑塞进已有的大文件。
 
 ---
 
@@ -101,7 +93,7 @@
 - **数据资产 (Data)**: `*StatsSO` 全系列, CSV→SO 导入管线 (`BestiaryImporter`)
 - **UI**: 星图面板 (`StarChartPanel` + 拖拽装备), 热量条 (`HeatBarHUD`), 血条 (`HealthBarHUD`), 编织态过渡 (`WeavingStateTransition`)
 - **基建 (Infrastructure)**: 服务定位 (`ServiceLocator`), 伤害管线 (`DamagePayload` + `DamageCalculator`), 存档 (`SaveManager` + `PlayerSaveData`), 音频 (`AudioManager`), 跨程序集事件总线 (`CombatEvents`), 数据驱动 AI 转换 (`TransitionRuleEvaluator`)
-- **关卡系统 (Level)**: [全部完成] 房间系统 (`Room` + `RoomManager` + `Door`)，进度管理 (`CheckpointSystem` + `LockKeySystem` + `WorldProgressManager`)，战斗房间 (`EncounterSystem` + `WaveSpawnStrategy` + `ArenaController` + `Hazard`)，地图 (`MinimapManager` + `MapPanel` + `MinimapHUD`)，世界时钟 (`WorldClock` + `WorldPhaseManager` + `WorldPhaseSO`)，动态关卡 (`ScheduledBehaviour` + `WorldEventTrigger` + `TilemapVariantSwitcher` + `AmbienceController`)，房间变体 (`RoomVariantSO`)，多层结构（FloorLevel + 层间过渡 + `NarrativeFallTrigger`），存档集成 (`SaveBridge`)。架构：单场景 + Tilemap 房间 + Cinemachine Confiner。详见 `Docs/LevelModulePlan.md` v3.0
+- **关卡系统 (Level)**: [全部完成] 房间系统 (`Room` + `RoomManager` + `Door`)，进度管理 (`CheckpointSystem` + `LockKeySystem` + `WorldProgressManager`)，战斗房间 (`EncounterSystem` + `WaveSpawnStrategy` + `ArenaController` + `Hazard`)，地图 (`MinimapManager` + `MapPanel` + `MinimapHUD`)，世界时钟 (`WorldClock` + `WorldPhaseManager` + `WorldPhaseSO`)，动态关卡 (`ScheduledBehaviour` + `WorldEventTrigger` + `TilemapVariantSwitcher` + `AmbienceController`)，房间变体 (`RoomVariantSO`)，多层结构（FloorLevel + 层间过渡 + `NarrativeFallTrigger`），存档集成 (`SaveBridge`)。架构：单场景 + Tilemap 房间 + Cinemachine Confiner。详见 `Docs/2_Design/Level/Level_CanonicalSpec.md`（现役）与 `Docs/8_Obsolete/LevelModulePlan.md`（历史）
 
 ---
 
@@ -316,7 +308,7 @@ Assets/
 
 > **⚠️ 第 4 步"架构速写"是强制步骤，不可跳过。** 每次开发新模块或新子系统（≥2 个新脚本）时，必须在编码前产出架构速写文档。详细规则见下方「模块架构速写」章节。
 >
-> **⚠️ 第 9 步"记录日志"是强制步骤，不可跳过。** 每次创建、修改、删除文件后，必须在结束当前回合前将变更追加到 `Docs/ImplementationLog/ImplementationLog.md`。详细规则见本文档底部"实现日志"章节。
+> **⚠️ 第 9 步"记录日志"是强制步骤，不可跳过。** 每次创建、修改、删除文件后，必须在结束当前回合前将变更追加到 `Docs/5_ImplementationLog/ImplementationLog.md`。详细规则见本文档底部"实现日志"章节。
 
 ### 模块架构速写 (Module Architecture Brief)
 
@@ -393,9 +385,9 @@ Assets/
 
 #### 产出与演进规则
 
-- **产出位置**：`Docs/Reference/{ModuleName}_ArchBrief.md`
+- **产出位置**：`Docs/2_Design/{ModuleName}/{ModuleName}_ArchBrief.md`
 - **编码前产出**，编码完成后根据实际实现更新（工作流第 8 步）
-- **渐进升级**：随着模块复杂度增长，Lv.1 可升级为 Lv.2，Lv.2 可进一步拆分为完整的 `CanonicalSpec` + `AssetRegistry`（参考 `ShipVFX_CanonicalSpec.md`）
+- **渐进升级**：随着模块复杂度增长，Lv.1 可升级为 Lv.2，Lv.2 可进一步拆分为完整的 `CanonicalSpec` + `AssetRegistry`（参考 `Docs/2_Design/Ship/ShipVFX_CanonicalSpec.md`）
 - **升级信号**：当模块出现以下任一情况时，应考虑从 Brief 升级为完整 Spec：
   - 同类 bug 连续出现两次以上
   - 多个入口同时改同一条链路
@@ -404,58 +396,22 @@ Assets/
 
 ---
 
-## 常见陷阱 (Known Pitfalls)
+## 模块陷阱与治理入口
 
-从项目历史中已踩过的坑提炼，遇到相关场景时需主动防御：
+项目里那些“已经踩过、需要长期防御、应该转化成 checklist / guardrail”的陷阱，不再继续堆在 `CLAUDE.md`。从现在开始，这类内容统一沉淀到 `Implement_rules.md`，让这里保持为**项目总章程 / 全局协作规则 / 工具使用约束**。
 
-| 陷阱 | 根因 | 防御措施 |
-|------|------|----------|
-| 对象池状态泄漏 | `OnReturnToPool()` 遗漏字段重置 | 遵循对象池回收清单（5 项全检） |
-| Physics2D 碰撞矩阵遗漏 | 新 Layer 未配置碰撞关系 | 新增 Layer 后立即提示用户检查碰撞矩阵 |
-| SpriteRenderer 不可见 | Prefab 未分配 Sprite | Awake 中添加 fallback 检测，缺 Sprite 时生成程序化占位 |
-| uGUI Mask 裁剪失效 | Mask 依赖的 Image alpha=0 | Mask Image alpha 至少设为 1/255，CullTransparentMesh=false |
-| SO Prefab 字段返回共享实例 | GetComponent 从 Prefab 取组件，多实体共享同一引用 | 运行时用 AddComponent + JsonUtility 深拷贝创建独立实例 |
-| InputSystemUIInputModule 失效 | Action 字段未连线 | UIManager.Awake 中用代码自动配置 UI Action 引用 |
-| 子弹自碰撞 | 同 Layer 投射物互相触发 OnTriggerEnter2D | 碰撞矩阵关闭 PlayerProjectile 自碰撞 + 代码层 Layer 过滤 |
-| uGUI Mask 裁剪所有子内容 | `Color.clear`（alpha=0）作为 Mask Image 颜色，stencil buffer 全透明导致子节点全被裁剪 | Mask Image 颜色必须用 `new Color(1,1,1,1)` 或 alpha≥1/255；用 `showMaskGraphic=false` 隐藏视觉，而非 `Color.clear` |
-| Unity 内部类 MonoBehaviour GUID 不稳定 | nested class 的 fileID 由类名哈希计算，跨版本/文件移动后哈希失配，Inspector 显示"script cannot be loaded" | MonoBehaviour 必须是顶级类（一文件一类），禁止将 MonoBehaviour 写成其他类的内部类 |
-| 场景序列化 fileID 错误导致字段 Missing | 手写或复制场景文件时 fileID 填写错误（如填 `100100000` 而非实际 64 位 ID），运行时反序列化为 null，守卫代码静默跳过不报错 | 修改 `.unity`/`.prefab` 序列化文件时，fileID 必须从 Unity 生成的文件中复制，不可手写；null 守卫应配合 `Debug.LogError` 而非静默 return |
-| **uGUI 面板禁止用 `SetActive` 控制显隐** | `SetActive(false)` 会推迟 `Awake()` 执行；Editor 工具脚本调用后 inactive 状态被序列化进场景；Play Mode 启动时面板已是 inactive，首次 `Open()` 触发 `SetActive(true)` 后 `Awake()` 才执行，若 `Awake()` 内有 `SetActive(false)` 则面板被瞬间关闭，三个副作用连锁。**额外陷阱**：即使代码层已修复（不再调用 `SetActive(false)`），历史遗留的序列化状态（`.unity` 场景文件中 `m_IsActive: 0`）仍会持续生效，导致 `Awake` 永远被推迟——代码看起来完全正确但就是不工作，排查时极难发现 | **uGUI 面板统一用 `CanvasGroup`（alpha + interactable + blocksRaycasts）控制显隐，GameObject 始终保持 active**；`Awake()` 中只初始化 CanvasGroup 状态，禁止调用 `SetActive(false)`；**修复后还需在 Unity Editor 中手动将面板 GameObject 的 active 勾选框打开并保存场景**，否则序列化的 inactive 状态不会消失 |
-| **uGUI 动态构建子节点的坐标系陷阱（拖拽 Ghost 偏移）** | 父节点 `pivot=(0.5,0.5)`，`FollowPointer` 把父节点**中心**放到鼠标位置。但动态创建的子节点若使用 `anchorMin=anchorMax=Vector2.zero`（相对于父节点左下角）+ `anchoredPosition` 绝对定位，子节点会从父节点**左下角**向右下展开，导致视觉内容整体偏向鼠标下方，而非以鼠标为中心。（本项目 `ItemIconRenderer.BuildShapeCellsAbsolute` + `DragGhostView.FollowPointer` 曾踩此坑） | 在 `FollowPointer` 中加 `centeringOffset` 补偿：`new Vector2(0f, size.y * 1.0f)`，把 Ghost 整体上移一个高度，使视觉内容中心对齐鼠标。**通用原则**：动态构建子节点时，子节点的 anchor 坐标系必须与父节点 pivot 保持一致，或在父节点的位置计算中显式补偿偏移。 |
-| **uGUI 网格高亮的线性索引二次转换陷阱** | 网格格子有两种索引方式：`(col, row)` 二维坐标 和 `cellIndex`（线性索引，`cellIndex = row * gridCols + col`）。若将已经是线性索引的 `CellIndex` 当成 `row` 传入，再在内部做 `row * gridCols + col` 转换，结果会被 `gridCols` 倍放大。例如 SAT（2×2，gridCols=2）：右上角 `CellIndex=1` 被当成 `row=1`，计算出 `cellIndex=1×2+0=2`（左下角）；右下角 `CellIndex=3` 算出 `cellIndex=6`（越界）。（本项目 `SlotCellView` → `DragHighlightLayer.ShowHighlight` 曾踩此坑） | **不要对同一个索引做两次转换**。若调用方已持有线性 `cellIndex`，直接传 `cellIndex` 并用 `cells[cellIndex]` 定位，不要再拆成 `(col, row)` 再重新合并。若 API 只接受 `(col, row)`，调用方必须先正确分解：`col = cellIndex % gridCols; row = cellIndex / gridCols`，而不是直接把 `cellIndex` 塞进 `row`。**通用原则**：网格定位 API 的参数语义必须在调用链上保持一致，混用线性索引和二维坐标是高频 bug 来源。 |
-| **`Color.clear` Image 不接收 uGUI Raycast** | `Image.color = Color.clear`（alpha=0）时，uGUI 的 raycast 系统会跳过该像素（alpha=0 被视为透明），即使 `raycastTarget = true` 也无效。常见误用场景：想用一个透明 Image 作为 EventSystem 的点击/拖拽接收层，却发现事件穿透到下层。（本项目 `ItemOverlayView` 曾踩此坑：加了 `raycastBlocker` Image 但 `Color.clear` 导致完全无效） | 若需要透明但可接收 raycast 的 Image，使用 `new Color(0, 0, 0, 1f/255f)`（alpha 极小但非零）。或者换思路：不依赖透明 Image 拦截，而是让下层元素保留正确的交互数据（见下一条陷阱）。 |
-| **Overlay 覆盖 Cell 时必须保留 Cell 的交互数据** | 用 Overlay GameObject 覆盖交互 Cell 做纯视觉替换时，若同时清空 Cell 的数据字段（如 `DisplayedItem = null`），Cell 的交互逻辑（`OnBeginDrag` 检查 `DisplayedItem != null`）会静默失效，拖拽/点击无任何报错但完全不工作。（本项目 `SlotCellView.SetHiddenByOverlay()` 曾踩此坑：清空 `DisplayedItem` 导致 PRISM/CORE 部件无法从 Track 拖回背包，而 SAIL/SAT 因为调用 `SetItem()` 保留了 `DisplayedItem` 所以正常） | **Overlay = 纯视觉，Cell = 交互**。`SetHiddenByOverlay(item)` 只清空视觉（background/icon/label），**必须保留 `DisplayedItem = item`**，使 Cell 继续作为有效的拖拽源。诊断技巧：若某类型正常而另一类型异常，优先对比两者的数据设置路径差异，而非假设 EventSystem 路由问题。 |
+优先查阅入口：
 
----
+- **全局 Unity / Editor 治理**：`.meta`、序列化 YAML、`fileID`、Physics2D 碰撞矩阵、编辑器配置边界
+- **`Core / Infrastructure`**：对象池复位、共享运行时实例、关键视觉引用缺失防御
+- **`UI`**：`CanvasGroup` vs `SetActive`、Mask、拖拽 Ghost、线性索引、Raycast、Overlay 交互数据
+- **`Combat / Projectile`**：投射物自碰撞、LayerMask 与碰撞矩阵双重防御
 
-## Unity 编辑器操作边界
+使用原则：
 
-### 严禁：凭空创建 `.meta` 文件
-
-- `.meta` 文件的 GUID 由 Unity 自动生成，手动编造 GUID 必定出错
-- 如果需要新建 `.cs` 文件，只创建代码文件本身，`.meta` 交给 Unity 自动生成
-
-### 允许：直接编辑已存在的 `.unity` / `.asset` / `.prefab` / `.meta`
-
-- 修改这些 Unity 序列化文件是允许的，前提是清楚要改什么
-- **但是**：当操作需要大量 token 来定位目标（如在数千行场景文件中搜索某个组件的 GUID/fileID），**应先询问用户是否能提供定位信息**，而非盲目搜索消耗 token
-- 用户在 Unity Editor 中查看一个 fileID 只需 5 秒，比 AI 搜索几千行 YAML 快得多
-
-### Physics2D 碰撞矩阵
-
-- 始终交给用户在 Editor 中配置（Project Settings > Physics 2D > Layer Collision Matrix）
-- 碰撞矩阵的 YAML 编码是位掩码，手动计算极易出错，用户在 GUI 中勾选只需几秒
-
-### 决策树
-
-```
-需要 Unity 编辑器配置？
-├─ 操作 <=3 步 → 写分步指南让用户操作
-├─ 操作 4+ 步且定位明确 → 直接编辑序列化文件
-├─ 操作 4+ 步但需搜索大文件定位 → 先问用户要定位信息，再编辑
-├─ 操作 >10 步或批量重复 → 写 Editor 自动化脚本
-└─ 需要新建 .meta 文件 → 禁止，交给 Unity 自动生成
-```
+- **全局稳定规则**留在 `CLAUDE.md`
+- **模块型陷阱 / 防御措施 / 验收清单 / 排查路径**写进 `Implement_rules.md`
+- 新坑若已复现一次以上，或排查成本明显高于实现成本，优先补 `Implement_rules.md`，而不是继续把临时经验堆回这里
 
 ---
 
@@ -611,83 +567,24 @@ run_tests (testMode: "EditMode") → 获取 job_id
 
 ## AI Skills 使用指南
 
-Skills 是一组可动态加载的专业指令集，能显著提升特定任务的执行质量。**在合适的场景下应积极主动调用 Skills，不要只依赖基础工具。**
+Skills 会随着当前 IDE / agent 环境变化。**本文档不再维护固定 Skill 白名单，也不预写不存在的 Skill 名称。** 是否可用、具体叫什么，以运行时 `use_skill` 工具实际暴露的列表为准。
 
-### 可用 Skills 与触发场景
+### 当前使用规则
 
-| 场景 | 推荐 Skill | 何时触发 |
-|------|-----------|----------|
-| **架构设计与决策** | `architecture-designer` | 设计新系统架构、评审已有架构、做架构决策（如新增模块/重构解耦方案） |
-| **方案头脑风暴** | `simple-brainstorm` | 任何创意性或架构性工作之前——功能设计、组件创建、行为变更，先 brainstorm 再动手 |
-| **Unity 开发** | `unity-developer` | Unity 特有问题：渲染管线、Tilemap、动画状态机、物理配置、URP 设置、MonoBehaviour 生命周期等 |
-| **游戏开发通用** | `game-developer` | 游戏系统设计：ECS、对象池、AI 行为树/HFSM、弹幕系统、碰撞检测、性能优化等 |
-| **游戏开发路由** | `game-development` | 不确定用哪个游戏开发 Skill 时，用此路由自动分流 |
-| **新功能设计** | `feature-forge` | 定义新功能需求、拆分用户故事、编写验收标准（对应 Feature 开发工作流的第 1-3 步） |
-| **Bug 排查** | `debugging-wizard` | 遇到难以定位的 bug、分析错误堆栈、排查行为异常的根因 |
-| **代码审查** | `code-reviewer` | 完成较大改动后自查代码质量、检查是否违反架构原则、发现潜在问题 |
-| **C# 开发** | `csharp-developer` / `csharp-dotnet` | C# 语言层面问题：async/await 模式、LINQ 优化、泛型约束、.NET API 选型 |
-| **安全审计** | `secure-code-guardian` | 涉及存档加密、输入验证、反作弊等安全相关实现 |
-| **测试策略** | `test-master` | 编写单元测试、设计测试策略、构建测试自动化框架 |
-| **遗留系统分析** | `spec-miner` | 理解没有文档的旧代码、从实现中提取规格说明 |
-| **批判性审查** | `the-fool` | 质疑设计方案、做 pre-mortem 分析、红队审计，避免确认偏误 |
-| **提示工程** | `prompt-engineer` | 设计 LLM 提示词、优化模型表现、构建评估框架 |
-| **搜索更多 Skills** | `skill-global-search` | 需要当前列表中没有的能力时，从 80,000+ 技能库中搜索安装 |
+- 先看当前环境里**实际可用**的 Skill，再决定是否调用。
+- 调用 `use_skill` 时，使用**当前工具约定**的参数格式；不要沿用旧文档里的 `skill_name`、`use_mcp_tool` 等过期写法。
+- Skill 适合处理**明确的专项任务**，例如：`pdf` / `docx` / `xlsx` / `pptx` 文档处理、`Browser Automation` / `playwright-cli` 浏览器自动化、`多模态内容生成`、`find-skills` 等。
+- 若当前环境没有合适 Skill，就直接用基础工具完成，不要为了套流程强行找 Skill。
 
-### ⚠️ Skills 调用方式（与 MCP 严格区分）
+### Project Ark 中的使用建议
 
-**Skills 和 MCP 是两套完全不同的工具，调用方式不同，绝对不能混用：**
-
-| | Skills | MCP 工具（如 Unity MCP） |
-|---|---|---|
-| **调用工具** | `use_skill` | `use_mcp_tool` |
-| **参数** | `{"skill_name": "debugging-wizard"}` | `{"serverName": "...", "toolName": "...", "arguments": "..."}` |
-| **用途** | 加载专业指令集，提升特定任务质量 | 调用外部服务（Unity Editor、知识库等） |
-
-**正确的 Skills 调用示例：**
-```
-use_skill({"skill_name": "debugging-wizard"})
-use_skill({"skill_name": "unity-developer"})
-use_skill({"skill_name": "code-reviewer"})
-```
-
-**错误示例（禁止）：**
-```
-// ❌ 错误：用 use_mcp_tool 调用 skill
-use_mcp_tool({"serverName": "skill", "toolName": "use_skill", "arguments": "..."})
-```
-
-> **根本原因**：`use_mcp_tool` 需要一个已连接的 MCP 服务器，而 Skills 是内置能力，直接用 `use_skill` 工具调用即可，不经过 MCP 协议。用 `use_mcp_tool` 调用 Skills 会因为找不到 `skill` 服务器而永远失败。
-
-### 使用原则
-
-1. **先 Skill 后动手**：涉及架构决策或新功能设计时，先调用对应 Skill 获取专业指导，再开始编码
-2. **组合使用**：复杂任务可串联多个 Skill，例如 `simple-brainstorm` → `architecture-designer` → `unity-developer` → `code-reviewer`
-3. **自查闭环**：完成较大改动后，用 `code-reviewer` 做一轮自查，确保符合架构原则
-4. **Bug 优先**：遇到 bug 时，优先调用 `debugging-wizard` 而非盲目试错
-5. **不要滥用**：简单的单文件修改、明确的小 bug 修复不需要调用 Skill，避免过度流程化
-
-### Project Ark 常见工作流与 Skills 映射
-
-```
-新功能开发：
-  feature-forge → simple-brainstorm → architecture-designer → 编码 → code-reviewer
-
-Bug 修复：
-  debugging-wizard → 定位问题 → 修复 → code-reviewer
-
-架构重构：
-  simple-brainstorm → architecture-designer → the-fool (质疑方案) → 编码 → code-reviewer
-
-新星图部件：
-  game-developer → unity-developer → 编码 → code-reviewer
-
-性能优化：
-  game-developer → unity-developer → 分析 → 编码 → test-master (验证)
-```
+- Unity / Level / Combat / Ship / VFX 的日常开发，优先依赖代码搜索、Unity MCP、编译验证与场景验证闭环。
+- 只有当任务本身明显属于某个专用能力域时，才加载对应 Skill。
+- 若后续正式接入新的游戏开发类 Skill，再补充本文档；**不要提前写死假定存在的 Skill 名称**。
 
 ---
 
-## 实用开发 Tips
+## Agent / 工具实用 Tips
 
 ### 快速编译检查项目错误
 
@@ -752,7 +649,7 @@ dotnet build Project-Ark.slnx
 ## GalacticGlitch 参考资产
 
 > ⚠️ **完整分析文档（含 PlayerSkinDefault 映射表、颜色数据、防错误引用警告）见**：  
-> `Docs/Reference/GalacticGlitch_Structure_Analysis.md`
+> `Docs/7_Reference/GameAnalysis/GalacticGlitch_Structure_Analysis.md`
 >
 > **核心记忆**：`Primary_4.png` 对应 State 3/4/8，使用 `Primary_4` / `Primary` / `Primary_6`。  
 > `GrabGun_Base_9/8` **只属于 State 7**，绝对不能用于其他状态。
@@ -765,7 +662,7 @@ dotnet build Project-Ark.slnx
 
 ### 基本规则
 
-- 日志文件位于 `Docs/ImplementationLog/ImplementationLog.md`
+- 日志文件位于 `Docs/5_ImplementationLog/ImplementationLog.md`
 - **每次**创建新文件、修改现有文件、或做出重大架构变更后，**必须在当前回合结束前**将变更追加到日志中
 - 纯讨论、问答、不涉及文件变更的对话不需要记录
 - **记录语言：** 中文

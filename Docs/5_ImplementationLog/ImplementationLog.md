@@ -2,6 +2,27 @@
 
 ---
 
+## Camera 对比分析文档沉淀（Project Ark × Minishoot）— 2026-04-10 13:18
+
+### 新建文件
+- `Docs/7_Reference/GameAnalysis/ProjectArk_Minishoot_Camera_Analysis.md`
+
+### 内容
+- 新增 `ProjectArk_Minishoot_Camera_Analysis.md`，把本轮对 `Project Ark` 与 `Minishoot` 的镜头调研结果沉淀为可复用参考文档。
+- 文档按“Ark 当前镜头链路 → Minishoot 镜头链路 → 核心差异 → 可借鉴点 → 阶段性判断 → 后续迭代方向”组织，避免后续继续讨论 camera 时重复考古脚本与场景配置。
+- 明确记录 Ark 当前 `SampleScene` 的关键状态：已接入 `CinemachineCamera + PositionComposer + Confiner2D + Impulse`，但 `Lookahead` 关闭、`TargetOffset = 0`、`CameraTrigger` 尚未在场景实际 authoring 中使用。
+- 明确记录本轮最核心结论：Ark 不缺 camera 底座，当前主要缺 `Minishoot` 式的前向 lead、速度驱动 zoom / follow、StickyPoint 兴趣点机制、独立 Camera FX / Juice 层。
+
+### 目的
+- 将本次 camera 对比结论固化为后续镜头改造的基线文档，降低反复读取脚本与场景配置的沟通成本。
+- 为下一步讨论 `Project Ark` 的镜头 MVP 改造方案提供统一参考口径。
+
+### 技术
+- 文档沉淀：基于已完成的代码链路比对、场景配置核对与参考工程脚本调研，输出结构化分析文档。
+- 对比维度聚焦：围绕房间边界、持续跟随、前向引导、兴趣点机制、Boss framing 与 Camera FX 分层做横向归纳。
+
+---
+
 ## LevelValidator 第二批层级与 ActivationGroup 校验扩展 — 2026-04-01 23:06
 
 ### 修改文件
@@ -12903,3 +12924,132 @@ dotnet build 验证：0 错误，0 警告。
 ### 技术
 - 延续“**退菜单，不强删实现**”策略：仅移除 `MenuItem` attribute，保留 `SpaceLifeMenuItems` 中的静态 helper 供 `SpaceLifeSetupWindow` 和未来内部工具复用。
 - 通过全文搜索验证菜单路径零残留，再用 lints + `dotnet build Project-Ark.slnx` 做代码层闭环校验，确保这轮收口只影响菜单暴露面，不影响已有实现链路。
+
+---
+
+## LevelDesigner.html 全面审查 + 拖拽修复 + 数据对齐收口 — 2026-04-09 15:32
+
+### 修改文件
+- `Tools/LevelDesigner.html` — 审查并修复 HTML5 拖拽主链、统一连接类型 canonical 值、收口连线渲染与导入/导出口径
+
+### 内容
+- 全面审查 `LevelDesigner.html` 与 Unity 侧 `LevelSliceBuilder.cs` / `Level_WorkflowSpec.md` 的流程契约，确认当前 Unity 导入主链消费的是 `levelName`、`rooms[]`、`connections[]`，并继续把 `Door` 拓扑作为场景 authority。
+- 修复房间/元素从左侧预设拖到画布的主链：新增统一的 `setDragPayload()` / `getDragPayload()`，把拖拽数据同时写入 `text/plain` 与 `application/x-projectark-leveldesigner`，并保留原有 `roomType` / `elementType` / `customLabel` / `customColor` 字段，降低 Safari / WebKit 对自定义 MIME 类型的兼容风险。
+- 收口 `dragover` 处理为 `allowCanvasDrop()`，显式设置 `dropEffect = 'copy'`；`drop` 事件改为统一解析标准 payload，而不是散落读取多个 `dataTransfer.getData(...)` 字段。
+- 审查后确认页面内部 `createRoom()` 链路本身一直可用；问题集中在 HTML5 DnD 数据交接层，而不是房间创建或渲染链路。
+- 把连接类型内部状态与导出 JSON 统一收口到 Unity canonical 值：新增 `normalizeConnectionType()`，将 `normal / one_way → progression`，`tidal → scheduled`，`locked / secret → ability`；新建连接默认值改为 `progression`。
+- 连接属性面板切回 canonical 下拉值（`progression / return / ability / challenge / identity / scheduled`），导入旧 JSON 时也会自动做 alias 归一化；连线颜色改为直接按 `CONN_TYPE_CONFIG` 设置，不再依赖旧 alias CSS class。
+- 回归验证：lints 为 **0**；浏览器中脚本 helper 已实际生效；用同一个 `DataTransfer` 跑完整 `dragstart → drop` 可成功创建房间，并且导出 JSON 中新增 `rooms[]` 条目，`normalizeConnectionType('normal') / ('tidal')` 分别返回 `progression / scheduled`。
+
+### 目的
+- 修复 `LevelDesigner.html` 当前最影响使用的房间拖拽问题，让“左侧预设 → 画布放置”的最小主链重新稳定可用。
+- 把 HTML 工具的连接类型状态、导出数据和 Unity 导入契约重新收口到同一套 canonical 口径，减少“能导入但不是规范值”的长期漂移。
+- 明确本轮审查结论：`elements` / `doorLinks` 仍主要用于 HTML 规划与归档，Unity 当前现役导入主链仍以 `rooms[] + connections[]` 为核心消费数据。
+
+### 技术
+- 前端拖拽兼容治理：保留原有自定义字段的同时，额外写入标准 `text/plain` payload，避免把拖拽成败绑定在浏览器是否接受自定义 drag data type 上。
+- 数据正规化：引入 `normalizeConnectionType()` 把 legacy alias 在编辑、导入、导出三个方向统一归一，保证新数据天然落成 canonical 值，同时保留旧 JSON 的兼容性。
+- 验证策略：发现 `agent-browser drag` 不会可靠触发源元素 `dragstart`，因此改用同一 `DataTransfer` 手工串起 `dragstart → drop` 做页面主链回归，避免把自动化工具局限误判成页面本身仍然损坏。
+
+## LevelDesigner 历史版本副本导出 - 2026-04-09 16:16
+- 新建/修改文件：`Tools/LevelDesigner.2026-02-27_17-25-04.html`
+- 内容：从 Git 提交 `48b0ec05b927d6120f9e5cf88bdc057260703d03`（时间 `2026-02-27 17:25:04 +0800`）导出 `LevelDesigner.html` 副本，保留当前工作区文件不变。
+- 目的：为 room 拖拽失效问题提供历史版本对照，便于与当前版本做逐步 diff 和行为回归。
+- 技术：使用 `git show <commit>:path` 提取历史文件快照并落地为独立 HTML 副本。
+
+## LevelDesigner 0227基线恢复升级 - 2026-04-09 22:09
+- 新建/修改文件：`Tools/LevelDesigner.html`、`Tools/LevelDesigner.pre-2026-04-09-2159.html`、`Tools/_tmp_upgrade_leveldesigner_from_0227.py`（已删除）
+- 内容：以 `2026-02-27 17:25:04 +0800` 的稳定版 `LevelDesigner.html` 为基线重建主文件，恢复旧版拖拽/投放主链；同时前移关卡名称导出、一键导出文件、canonical 房间类型、canonical 连接类型、房间/连接 legacy→canonical 归一、导入导出与本地存档归一化。
+- 目的：回到已验证可用的交互基线，避免继续在坏掉的新版本主链上修补；在不牺牲可用性的前提下保留 Unity 当前需要的 JSON 契约与类型升级。
+- 技术：采用历史快照回退 + 选择性前移升级点的策略；保留旧版 HTML5 DnD 数据写法，使用字符串补丁重建 canonical room/connection 映射，并用 Node `vm.Script` 做静态语法校验。
+
+## LevelDesigner 房间类型面板样式统一 - 2026-04-09 23:02
+- 新建/修改文件：`Tools/LevelDesigner.html`
+- 内容：修正左侧房间类型 preset 面板的 CSS 映射，为当前 canonical 房间类型 `transit / pressure / resolution / reward / anchor / loop / hub / threshold / safe / boss` 补齐背景色与左侧色条，同时保留旧版 alias 样式兼容。
+- 目的：解决只有 `safe` 和 `boss` 显示背景、其余房型缺少视觉填充的问题，统一房型面板的可读性与视觉反馈。
+- 技术：更新 HTML 内联 CSS 的类型类名映射，使 preset 面板样式与当前 RoomNodeType 命名保持一致。
+
+## LevelDesigner 左侧栏滚动体验修正 - 2026-04-09 23:05
+- 新建/修改文件：`Tools/LevelDesigner.html`
+- 内容：确认 `黑水区域` 后仍有 `自定义元素` 区块和 `清空画布` 按钮后，将左侧栏改为整栏纵向滚动，并移除 `custom-element-section` 的内层独立滚动，改为统一由外层 sidebar 承担滚动。
+- 目的：避免左侧面板在黑水区域处看似结束但实际后面仍有内容，提升侧栏内容可发现性与浏览一致性。
+- 技术：调整 `.left-panel` 的 `overflow-y` / `min-height`，并简化自定义元素区块的布局滚动职责。
+
+## LevelDesigner 左侧栏滚动修正补丁 - 2026-04-09 23:09
+- 新建/修改文件：`Tools/LevelDesigner.html`
+- 内容：修正左侧栏未实际生效的滚动样式，为 `.left-panel` 显式补上 `height: 100vh`、`overflow-y: auto`、`overflow-x: hidden`、`flex-shrink: 0` 与 `overscroll-behavior: contain`。
+- 目的：解决左侧栏内容超出后仍无法滚动的问题，确保 `房间类型 / 房间元素 / 自定义元素 / 清空画布` 可以完整浏览。
+- 技术：强化 sidebar 布局约束，避免仅依赖 flex 拉伸导致滚动容器未被正确建立。
+
+## LevelDesigner 右侧栏滚动支持 - 2026-04-09 23:16
+- 新建/修改文件：`Tools/LevelDesigner.html`
+- 内容：为右侧属性栏 `.right-panel` 补充显式 sidebar 滚动约束，新增 `height: 100vh`、`overflow-y: auto`、`overflow-x: hidden`、`flex-shrink: 0`、`min-height: 0` 与 `overscroll-behavior: contain`。
+- 目的：确保属性编辑、连接列表、元素列表和 ASCII 预览内容超出视口时仍可完整浏览，不会被侧栏高度截断。
+- 技术：统一左右侧栏的布局策略，使用显式高度 + 纵向滚动容器的方式建立稳定的 sidebar 滚动行为。
+
+## LevelDesigner JSON 字段对照 CSV - 2026-04-09 23:38
+- 新建/修改文件：`Docs/Reference/LevelDesigner_JSON_Field_Matrix.csv`
+- 内容：整理 `LevelDesigner.html` 当前导出 JSON 字段与 Unity `LevelSliceBuilder` 当前消费情况的对照表，覆盖顶层字段、`rooms[]`、`connections[]`、`rooms[].elements[]` 与 `doorLinks[]`。
+- 目的：把口头说明沉淀为结构化表格，便于后续工具链迭代、字段补接与多人协作核对。
+- 技术：基于现有 HTML 导出逻辑和 Unity 导入器字段模型，生成 CSV 形式的字段消费矩阵。
+
+## LevelDesigner JSON 字段对照 CSV 归档位置调整 - 2026-04-09 23:57
+- 新建/修改文件：`Docs/7_Reference/LevelDesigner_JSON_Field_Matrix.csv`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：将 `LevelDesigner_JSON_Field_Matrix.csv` 从未编号目录 `Docs/Reference/` 移动到已有编号目录 `Docs/7_Reference/`，保持文档目录结构一致。
+- 目的：遵循项目文档按编号目录归档的习惯，避免继续向非编号目录落文件。
+- 技术：使用工作区内文件移动方式调整文档归档位置，并追加实现日志记录此次归位操作。
+
+## LevelDesigner JSON 字段对照 CSV 再归档到诊断目录 - 2026-04-10 00:13
+- 新建/修改文件：`Docs/6_Diagnostics/LevelDesigner_JSON_Field_Matrix.csv`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：根据最新归档要求，将 `LevelDesigner_JSON_Field_Matrix.csv` 从 `Docs/7_Reference/` 移动到已有编号目录 `Docs/6_Diagnostics/`。
+- 目的：统一放入当前更符合使用语境的诊断类文档目录，避免参考资料与诊断对照表分散。
+- 技术：使用工作区内文件移动方式调整文档归档位置，并追加实现日志记录此次目录变更。
+
+## LevelSliceBuilder 消费 doorLinks.spawnOffset - 2026-04-10 00:39
+- 新建/修改文件：`Assets/Scripts/Level/Editor/LevelArchitect/LevelSliceBuilder.cs`、`Docs/6_Diagnostics/LevelDesigner_JSON_Field_Matrix.csv`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：为 `LevelSliceBuilder` 增加 `doorLinks` / `spawnOffset` 解析与消费逻辑；导入时按 `roomId + entryDir` 建立查找表，创建每个门的本地 `SpawnPoint` 时优先使用 JSON 中的自定义落点，缺失时继续回退到原有 inward offset 规则；同时更新字段矩阵，把 `doorLinks`、`roomId`、`entryDir`、`spawnOffset` 标记为 Unity 当前已消费。
+- 目的：让 LevelDesigner 中“从哪个方向进入这个房间，就应该落在哪个门元素附近”的设计意图真正进入 `LevelSliceBuilder` 主导入链，实现门过渡出生点的自由定义而不破坏旧 JSON 兼容性。
+- 技术：扩展 `LevelSliceBuilder` 的 `JsonUtility` 数据模型，新增 `DoorLinkJson` 和 `roomId+entryDir` 查找辅助函数；将 HTML 左上角房间坐标系下的 `spawnOffset` 转换为 Unity 房间中心局部坐标；保留旧 `GetSpawnOffset()` 作为 fallback，并用 `dotnet build Project-Ark.slnx` 完成编译验证。
+
+## LevelDesigner spawnOffset 语义收口 - 2026-04-10 09:57
+- 新建/修改文件：`Tools/LevelDesigner.html`、`Assets/Scripts/Level/Editor/LevelArchitect/LevelSliceBuilder.cs`、`Docs/6_Diagnostics/LevelDesigner_JSON_Field_Matrix.csv`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：将 `doorLinks[].spawnOffset` 在 HTML 侧正式收口为“进入目标房间后的玩家落点”；导出时优先保留显式 `spawnOffset`，缺失时按“门视觉中心 + inward”默认规则推导；导入 JSON 与本地恢复时保留该字段；门关联属性面板补充落点值与来源说明；Unity 侧补充注释，明确导入时只做 HTML 左上角局部坐标到房间中心局部坐标的边界转换；同步更新字段矩阵说明。
+- 目的：让 HTML、JSON 契约与 Unity 导入对 `spawnOffset` 的业务语义保持一致，避免再把“门元素坐标”和“玩家落点”混为一谈，同时保留方案 1 的坐标转换边界。
+- 技术：前端新增 `spawnOffset` 归一化与默认推导 helper；默认落点采用 `door icon visual center + inward 2.5 格`；JSON round-trip 保留显式 authored 值；Unity 维持现有 `roomId + entryDir` 查找与单次坐标系转换。
+
+## LevelSliceBuilder 修复重复 Room Collider 导致 spawnOffset 偏移 - 2026-04-10 11:09
+- 新建/修改文件：`Assets/Scripts/Level/Editor/LevelArchitect/LevelSliceBuilder.cs`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：在 `CreateRoomGameObject()` 中停止重复 `AddComponent<BoxCollider2D>()`，改为复用 `Room` 因 `[RequireComponent(typeof(BoxCollider2D))]` 自动注入的碰撞体；修复后用 Unity MCP 在临时空场景里复跑两组最小导入样例（默认 `spawnOffset` 与显式 `spawnOffset`），确认房间只保留一个尺寸正确的 `BoxCollider2D`，且 `Door.TargetSpawnPoint` 最终局部坐标与预期完全一致。
+- 目的：修复真实导入链中因读取到默认 `1x1` BoxCollider2D 而导致的 `spawnOffset` 换算偏移，让 HTML → JSON → Unity 的门过渡落点在实际场景对象上真正对齐。
+- 技术：利用 `RequireComponent` 行为分析定位重复组件根因；改为 `GetComponent<BoxCollider2D>() ?? AddComponent<BoxCollider2D>()` 的单实例策略；使用 Unity MCP `execute_code` 在临时 additive 场景中通过反射调用 `LevelSliceBuilder.BuildFromJson()` 做闭环验证，并在验证后自动清理临时资产。
+
+## 导入房间阻挡与相机丢失问题排查收口 - 2026-04-10 11:23
+- 新建/修改文件：`Assets/Scripts/Level/Editor/LevelArchitect/LevelSliceBuilder.cs`、`Assets/Scenes/SampleScene.unity`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：排查发现当前 `SampleScene` 中活跃导入切片 `── NewLevel ──` 的房间残留了旧版本导入生成的额外 `1x1` 非 trigger `BoxCollider2D`，同时 `RoomManager._startingRoom` 与 `CinemachineConfiner2D.BoundingShape2D` 仍指向 inactive 的旧 `Room_Start`；已清理 `NewLevel` 房间上的错误碰撞盒，仅保留正确的房间 trigger，并把起始房间与相机 confiner 绑定切到活跃导入房间 `room_reward_1`。另外为 `LevelSliceBuilder` 增加“同名切片覆盖式导入”行为，重复导入相同 `levelName` 时会先替换旧场景根节点，防止历史脏房间对象继续残留。
+- 目的：修复导入房间测试时飞船被错误实体碰撞盒干扰、以及 camera 仍锁在旧房间导致看不到飞船的问题，同时让后续重复导入不会继续叠加旧坏数据。
+- 技术：使用 `Resources.FindObjectsOfTypeAll<Transform>()` + `Undo.DestroyObjectImmediate()` 查找并替换已有切片根节点；通过 Unity MCP `execute_code` 清理当前场景的多余 `BoxCollider2D`、改写 `RoomManager` 起始房间和 `CinemachineConfiner2D` 绑定；在 Play Mode 下验证 `RoomManager` 初始进入 `room_reward_1`，并确认切到 `room_pressure_2` 时 `RoomCameraConfiner` 会同步更新边界。
+
+## 房间边缘实体阻挡根因修复（CameraConfiner） - 2026-04-10 11:59
+- 新建/修改文件：`Assets/Scripts/Level/Editor/LevelArchitect/LevelSliceBuilder.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/RoomFactory.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs`、`Assets/Scenes/SampleScene.unity`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：继续排查后确认真正阻挡飞船的不是 `Room` 根节点 trigger，而是每个导入房间子节点 `CameraConfiner` 上的 `PolygonCollider2D`：当前场景里它被错误保存在 `RoomBounds` 层且 `isTrigger=false`，实际成了实体边界墙。已在 `SampleScene` 中把 `NewLevel` 下两个房间的 `CameraConfiner` 修正为 `Ignore Raycast` 且 `isTrigger=true`，同时清理了重复门对象；并在 `LevelSliceBuilder`、`RoomFactory`、`LevelValidator` 三个入口统一补上 `CameraConfiner` 必须为 trigger 的约束与自动修复逻辑。
+- 目的：彻底消除导入房间边缘把飞船顶住的问题，避免 camera confiner 参与玩家物理碰撞；同时让后续所有建房入口都不会再次生成同类实体挡板。
+- 技术：使用 Unity MCP `execute_code` 枚举 `NewLevel` 下全部 `Collider2D`，定位到 `CameraConfiner` 的 `PolygonCollider2D` 是唯一剩余非 trigger 边界；通过编辑器脚本把 confiner 统一改为 `Ignore Raycast + isTrigger=true`；在 Play Mode 下再次验证 `NewLevel` 内 `nonTriggerCount=0`，并用从房间外向内的 `Physics2D.RaycastAll` 确认只命中房间 trigger、不再命中实体边界。
+
+## Level 模块补充 CameraConfiner 阻挡排查 tips - 2026-04-10 12:05
+- 新建/修改文件：`Implement_rules.md`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：在 `Implement_rules.md` 的 Level 模块中追加了 `CameraConfiner` 非阻挡规则、真实踩坑总结、常规验收项和难定位 bug 的排查顺序，明确 `CameraConfiner` 必须保持 `Ignore Raycast + isTrigger=true`，并把“房间边缘堵船时先枚举 Room 下全部 Collider2D”沉淀为标准检查动作。
+- 目的：把这次成功修补转化成长期可复用的 tips，避免未来再次把 `CameraConfiner` 误当成 Door、RoomManager 或移动系统问题。
+- 技术：按 `Implement_rules.md` 的 Level 模块结构，将经验分别写入“实现规则 / 踩坑总结 / 验收清单 / 推荐工作流”四个层次，让后续排查能从规则、现象、检查清单和步骤四个维度直接复用。
+
+## CLAUDE 与 Implement_rules 过时内容清理 - 2026-04-10 12:25
+- 新建/修改文件：`CLAUDE.md`、`Implement_rules.md`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：对 `CLAUDE.md` 和 `Implement_rules.md` 做了一轮去过时化治理，清理了已失效的文档路径、旧的 `ImplementationLog` 路径、过期的 Skills 名称与调用方式说明，以及 `Level` 模块中已不存在的工具名、Batch 迁移叙述和历史清单；同时把 `Level` 章节改写为当前现役的 authoring / validation 工具链视角。
+- 目的：让项目协作文档重新对齐当前仓库结构与真实工具链，避免后续开发、排查和多会话协作继续被旧路径、旧流程和不存在的工具误导。
+- 技术：通过对照当前工作区真实文件路径、现役设计文档位置和实际存在的 Editor 工具类，逐段替换文档中的失配引用与阶段性叙述，并把规则表达从一次性迁移语境收口为长期有效的治理约束。
+
+## CLAUDE 陷阱库迁移到 Implement_rules - 2026-04-10 13:08
+- 新建/修改文件：`CLAUDE.md`、`Implement_rules.md`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：将原本堆在 `CLAUDE.md` 中的 `常见陷阱` 与 `Unity 编辑器操作边界` 从项目总章程里迁出，改为一个轻量的“模块陷阱与治理入口”索引；同时在 `Implement_rules.md` 中新增 `全局 Unity / Editor 治理`、`Core / Infrastructure`、`UI`、`Combat / Projectile` 四个正式章节，把对象池状态泄漏、共享运行时实例、uGUI Mask / CanvasGroup / DragDrop / Raycast 隐性坑，以及投射物自碰撞等经验按模块归档。
+- 目的：把 `CLAUDE.md` 收口为全局协作规则与 agent 使用约束，把复用型踩坑经验统一沉淀到 `Implement_rules.md`，降低文档职责重叠和后续协作时的检索成本。
+- 技术：先按“全局治理 / Core / UI / Combat”四类重组原有陷阱条目，再调整 `Implement_rules.md` 的顶部导航与模板编号，使新增章节与现有 `Ship / VFX`、`Level` 章节并列，同时保留 `CLAUDE.md` 中仅属于 agent / 工具层的实用提示。
+

@@ -1,0 +1,67 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]: 房间类型 (RoomNodeType)
+      - generic [ref=e6]: Transit (过路)
+      - generic [ref=e8]: Pressure (压力)
+      - generic [ref=e10]: Resolution (清算/竞技场)
+      - generic [ref=e12]: Reward (回报)
+      - generic [ref=e14]: Anchor (锚点/地标)
+      - generic [ref=e16]: Loop (回路/捷径)
+      - generic [ref=e18]: Hub (枢纽)
+      - generic [ref=e20]: Threshold (门槛/章节界)
+      - generic [ref=e22]: Safe (安全区)
+      - generic [ref=e24]: Boss (Boss)
+    - generic [ref=e26]:
+      - generic [ref=e27]: 房间元素
+      - generic [ref=e28]: 生成点
+      - generic [ref=e30]: 门
+      - generic [ref=e32]: 敌人
+      - generic [ref=e34]: 宝箱
+      - generic [ref=e36]: 检查点
+      - generic [ref=e38]: NPC
+      - generic [ref=e40]: 潮汐门
+      - generic [ref=e42]: 共鸣水晶
+      - generic [ref=e44]: Lore音频
+      - generic [ref=e46]: 黑水区域
+    - generic [ref=e48]:
+      - generic [ref=e49]: 自定义元素
+      - generic [ref=e50]:
+        - textbox "元素名称" [ref=e51]
+        - generic [ref=e52]:
+          - textbox [ref=e53] [cursor=pointer]: "#e91e63"
+          - button "+ 添加" [ref=e54] [cursor=pointer]
+      - generic [ref=e56]: 暂无自定义元素，请在上方添加
+    - button "清空画布" [ref=e58] [cursor=pointer]
+  - generic [ref=e59]:
+    - img
+    - generic [ref=e60]:
+      - button "选择" [ref=e61] [cursor=pointer]
+      - button "删除" [ref=e62] [cursor=pointer]
+      - button "导出 JSON" [ref=e63] [cursor=pointer]
+      - button "💾 导出文件" [ref=e64] [cursor=pointer]
+      - button "导入 JSON" [ref=e65] [cursor=pointer]
+      - button "保存" [ref=e66] [cursor=pointer]
+      - button "加载" [ref=e67] [cursor=pointer]
+    - generic [ref=e68]:
+      - heading "操作说明" [level=4] [ref=e69]
+      - list [ref=e70]:
+        - listitem [ref=e71]: • 拖拽房间到画布
+        - listitem [ref=e72]: • 点击红点拖出连接线
+        - listitem [ref=e73]: • 拖拽四角调整大小
+        - listitem [ref=e74]: • 拖拽房间移动位置
+  - generic [ref=e75]:
+    - generic [ref=e76]:
+      - generic [ref=e77]: 关卡名称 (导出文件名 / Unity 导入用)
+      - textbox "如 ShebaStation_Act1" [ref=e78]: NewLevel
+    - generic [ref=e79]:
+      - generic [ref=e80]: 属性面板
+      - generic [ref=e82]:
+        - text: 选择一个房间
+        - text: 查看和编辑属性
+    - generic [ref=e84]:
+      - generic [ref=e85]: JSON 实时预览
+      - textbox [ref=e86]: "{ \"levelName\": \"NewLevel\", \"rooms\": [], \"connections\": [], \"doorLinks\": [] }"
+    - generic [ref=e88]:
+      - generic [ref=e90]: 心流张力曲线
+      - generic [ref=e92]: ASCII 预览

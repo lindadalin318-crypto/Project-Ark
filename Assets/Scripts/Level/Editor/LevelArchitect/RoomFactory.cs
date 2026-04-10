@@ -73,6 +73,7 @@ namespace ProjectArk.Level.Editor
             confinerGO.layer = IGNORE_RAYCAST_LAYER;
 
             var polyCollider = confinerGO.AddComponent<PolygonCollider2D>();
+            polyCollider.isTrigger = true;
             SetConfinerBounds(polyCollider, preset.DefaultSize);
 
             // ── Standard Navigation placeholders ──
