@@ -529,7 +529,60 @@ Level 关键链路缺引用时，禁止静默 return：
 - Room 的 RoomNodeType（由 RoomSO 驱动，不在场景实例上手动改）
 - Door 的 GateID / ConnectionType（由 DoorWiringService 或手动分配，场景中的 Door 组件必须与设计意图一致）
 
-#### 7.4.6 `CameraConfiner` 绝不能参与玩家物理阻挡
+#### 7.4.6 房间元素分类口径必须统一
+
+`Level` 房间元素的顶层 authoring 分类，统一使用 **六大玩法家族 + 一类基础设施件**：
+
+| 中文分类 | 英文标签 | 判断问题 | 当前代表 |
+| --- | --- | --- | --- |
+| **通路件** | `Path` | 它是不是在控制玩家怎么去别的地方？ | `Door` |
+| **交互件** | `Interact` | 玩家是不是要主动碰它、按它、拿它？ | `Checkpoint`、`Lock`、`PickupBase` |
+| **状态件** | `Stateful` | 房间是不是需要记住它已经变了？ | `DestroyableObject` |
+| **战斗件** | `Combat` | 它是不是在决定什么时候开打、怎么打、什么时候结束？ | `OpenEncounterTrigger`、`ArenaController`、`EnemySpawner` |
+| **环境机关件** | `Environment` | 它是不是在持续改变玩家的通行、生存或移动条件？ | `EnvironmentHazard` 及其子类 |
+| **导演件** | `Directing` | 它是不是在控制镜头、氛围、相位或演出状态？ | `BiomeTrigger`、`HiddenAreaMask`、`ScheduledBehaviour`、`ActivationGroup`、`WorldEventTrigger`、`CameraTrigger` |
+| **基础设施件** | `Infrastructure` | 它是不是在支撑房间系统运转，而不是直接提供玩法对象？ | `SpawnPoint`、`CameraConfiner` |
+
+补充约束：
+
+- 这套分类用于 **文档、Inspector 分组、Validator 输出、authoring 沟通**。
+- **禁止**把分类标签当成具体组件类名的替代；代码类名仍保持精确语义，例如 `OpenEncounterTrigger`、`WorldEventTrigger`、`RoomCameraConfiner`。
+- 若后续 `CanonicalSpec`、`WorkflowSpec`、`LevelValidator`、诊断文档使用分类标签，应统一沿用本表，不再同时维护第二套近义词命名。
+
+#### 7.4.7 新房间元素必须先落类，再落实现
+
+新增 `Level` 房间元素前，必须先回答：
+
+1. 它属于哪一个顶层玩法家族，或是否应归入 `Infrastructure`？
+2. 它的默认挂点应该在 `Navigation / Elements / Encounters / Hazards / Triggers / CameraConfiner` 的哪一层？
+3. 它是 `Room` 主链成员，还是组件自治元素？
+4. 它是否需要进入状态通道 / Save？
+
+执行规则：
+
+- **优先新增现有家族下的子类型**，不要轻易新增第七个玩法大类。
+- 只有当一个新元素**长期重复出现**，且同时满足以下大部分条件时，才考虑新增顶层分类：
+  - 默认挂点与现有家族都不一致
+  - 运行时 owner 明显独立于现有家族
+  - 状态 / Save 规则是一套新语义
+  - 未来会形成一批重复元素，而不是一次性特例
+- 若只是表现不同、交互不同、子系统不同，但顶层意图仍清楚落在现有家族，应继续归入原家族，不得为了“命名顺手”新开大类。
+
+#### 7.4.8 分类不是运行时 owner，也不是 `Room` 主链声明
+
+- 顶层分类解决的是 **authoring 语义**，不是 Runtime owner 判定。
+- **同一分类下的元素，可以分属不同消费层级**：
+  - 有些对象由 `Room` 主链主动收集
+  - 有些对象属于组件自治，只挂在场景中运行
+  - 有些对象同时接入状态通道 / Save
+- `Infrastructure` 也不应与玩法六类混用；它服务于房间运行支撑，而不是直接提供玩家交互目标。
+- 因此，后续讨论新元素时，必须分别说明：
+  - **它属于哪个分类**
+  - **它由谁消费**
+  - **它挂在哪个根节点**
+  - **它是否持久化**
+
+#### 7.4.9 `CameraConfiner` 绝不能参与玩家物理阻挡
 
 - `CameraConfiner` 的职责是提供 **Cinemachine 边界形状**，不是房间实体墙。
 - 任何通过 `LevelSliceBuilder`、`RoomFactory`、`LevelValidator` 生成或修复出来的 `CameraConfiner`，都必须满足：
@@ -573,9 +626,10 @@ Level 关键链路缺引用时，禁止静默 return：
 
 1. 改动是否只涉及 Authority 表中允许的写入者？
 2. 是否新增了 fallback / 兼容分支？若是，是否标注了退役计划？
-3. Door 连接引用是否完整？（跑 Validator）
-4. `CameraConfiner` 是否仍满足 `Ignore Raycast + isTrigger=true`？
-5. 是否有 silent no-op？（关键引用缺失必须报错）
+3. 若新增 / 调整了房间元素，是否已明确它的分类、默认挂点、消费 owner 与持久化语义？
+4. Door 连接引用是否完整？（跑 Validator）
+5. `CameraConfiner` 是否仍满足 `Ignore Raycast + isTrigger=true`？
+6. 是否有 silent no-op？（关键引用缺失必须报错）
 
 ### 7.7 推荐工作流
 
@@ -585,6 +639,14 @@ Level 关键链路缺引用时，禁止静默 return：
 2. 确认 `Room / RoomSO / Door` 的基础结构已经由现役工具链生成，而不是手工补出第二套骨架
 3. 手动或用 `DoorWiringService` 配置 Door 的 `_targetRoom` / `_targetSpawnPoint` 引用
 4. 跑 `LevelValidator` 确认 Door 连接完整性与关键结构无漂移
+5. 补 `ImplementationLog`
+
+#### 新房间元素
+
+1. 先确定它属于 `Path / Interact / Stateful / Combat / Environment / Directing / Infrastructure` 的哪一类
+2. 再确定它的默认挂点、Runtime owner、是否进入 `Room` 主链、是否接入 Save
+3. 若它只是现有家族的新子类型，沿用原分类；若想新增顶层分类，先补书面理由，再改文档 / 工具 / validator 口径
+4. 把 authoring 语义、挂点和校验需求一起落到 `CanonicalSpec` / `WorkflowSpec` / `LevelValidator` 的相应位置
 5. 补 `ImplementationLog`
 
 #### 难定位 bug

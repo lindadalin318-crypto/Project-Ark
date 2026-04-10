@@ -377,9 +377,9 @@ Room_[ID]
 
 每次新增一个房间元素，都按以下顺序收口：
 
-1. **先选模板家族**
-   - 先判断它属于 `Door / Gate`、`Interact Anchor`、`Persistent Room Element`、`Encounter Element`、`Hazard Element`、`Trigger / Director` 中的哪一类。
-   - 如果现役模板能覆盖，就不要新开“特殊逻辑分支”。
+1. **先选房间元素分类**
+   - 先判断它属于 `Path`、`Interact`、`Stateful`、`Combat`、`Environment`、`Directing`、`Infrastructure` 中的哪一类。
+   - 如果现役分类能覆盖，就不要新开“特殊逻辑分支”。
 
 2. **再定场景挂点**
    - `Navigation`：导航事实、门、进出点
@@ -399,7 +399,7 @@ Room_[ID]
 
 5. **决定要不要接 `Room` 主链**
    - 只有当元素需要被 `Room` / `RoomManager` 查询、重置、批量调度时，才扩 `Room.CollectSceneReferences()`。
-   - 能自给自足的触发器、互动件、环境控制器，应优先保持自治。
+   - 能自给自足的触发器、交互件、环境控制器，应优先保持自治。
 
 6. **决定要不要扩编辑期模型**
    - 只有当该元素需要参与 `LevelScaffoldData`、HTML 导入导出、Overlay 或批量搭建工具时，才扩编辑期 schema。
@@ -409,16 +409,17 @@ Room_[ID]
    - 需要进入标准工作流的元素，必须同步补 `LevelValidator`。
    - 至少跑一轮：`Validate` → `Quick Play` → 对应系统的完整 Play Mode 手测。
 
-### 8.5 六类模板落位速查
+### 8.5 房间元素分类落位速查
 
-| 模板家族 | 常见代表 | 默认挂点 | 必须先确认的接入点 |
-|---------|----------|----------|--------------------|
-| `Door / Gate` | `Door`、层间门、阶段门 | `Navigation` | 目标房间、出生点、连接语义、阶段/进度门控 |
-| `Interact Anchor` | `Lock`、`Checkpoint`、拾取物 | `Elements` | 触发器、`_playerLayer`、输入链、必需 SO / 目标引用 |
-| `Persistent Room Element` | `DestroyableObject`、永久机关、一次性揭示物 | `Elements` | 父 `Room`、flag key、`RoomFlagRegistry`、`SaveBridge` |
-| `Encounter Element` | `OpenEncounterTrigger`、`ArenaController`、`EnemySpawner` | `Encounters` | `EncounterSO`、Spawner、重置链、房型语义 |
-| `Hazard Element` | `EnvironmentHazard` 子类 | `Hazards` | 伤害配置、Layer、Collider、是否需要持久关闭 |
-| `Trigger / Director` | `BiomeTrigger`、`HiddenAreaMask`、`ScheduledBehaviour`、`ActivationGroup`、`WorldEventTrigger` | `Triggers`（或显式扩展层） | 事件源、target 引用、phase/progress 依赖、预激活要求 |
+| 中文分类 | 英文标签 | 常见代表 | 默认挂点 | 必须先确认的接入点 |
+|---------|----------|----------|----------|--------------------|
+| **通路件** | `Path` | `Door`、层间门、阶段门 | `Navigation` | 目标房间、出生点、连接语义、阶段/进度门控 |
+| **交互件** | `Interact` | `Lock`、`Checkpoint`、拾取物 | `Elements` | 触发器、`_playerLayer`、输入链、必需 SO / 目标引用 |
+| **状态件** | `Stateful` | `DestroyableObject`、永久机关、一次性揭示物 | `Elements` | 父 `Room`、flag key、`RoomFlagRegistry`、`SaveBridge` |
+| **战斗件** | `Combat` | `OpenEncounterTrigger`、`ArenaController`、`EnemySpawner` | `Encounters` | `EncounterSO`、Spawner、重置链、房型语义 |
+| **环境机关件** | `Environment` | `EnvironmentHazard` 子类 | `Hazards` | 伤害配置、Layer、Collider、是否需要持久关闭 |
+| **导演件** | `Directing` | `BiomeTrigger`、`HiddenAreaMask`、`ScheduledBehaviour`、`ActivationGroup`、`WorldEventTrigger` | `Triggers`（或显式扩展层） | 事件源、target 引用、phase/progress 依赖、预激活要求 |
+| **基础设施件** | `Infrastructure` | `SpawnPoint`、`CameraConfiner` | `Navigation/SpawnPoints`、`CameraConfiner` | 房间入口落点、镜头边界、与 `Room` / `Door` / `CameraDirector` 的协作关系 |
 
 ---
 

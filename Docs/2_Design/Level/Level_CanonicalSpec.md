@@ -352,8 +352,8 @@ Room_[ID]
 
 | 维度 | 必须回答的问题 | 现役收口点 |
 |------|----------------|------------|
-| 模板家族 | 它属于哪一类现役模板 | 先复用模板，再考虑新增家族 |
-| 场景挂点 | 它放在 `Navigation / Elements / Encounters / Hazards / Triggers` 的哪一层 | Scene 是空间 authority |
+| 顶层分类 | 它属于哪一类现役房间元素分类 | 先复用现有分类，再考虑新增大类 |
+| 场景挂点 | 它放在 `Navigation / Elements / Encounters / Hazards / Triggers / CameraConfiner` 的哪一层 | Scene 是空间 authority |
 | 运行时 owner | 谁驱动它的启停、交互或状态切换 | 组件自身、`Room`、`RoomManager`、`WorldPhaseManager` 或其他管理器 |
 | 状态通道 | 它是会话态、房间持久态，还是世界级进度态 | 房间级走 `RoomFlagRegistry`，世界级走对应 manager |
 | 触发来源 | 它由重叠触发、交互键、房间切换、世界阶段、世界进度中的哪一种驱动 | 只能有一个主驱动 |
@@ -361,29 +361,32 @@ Room_[ID]
 
 **协议要求：**
 
-1. **先归类，后实现**：新增元素默认必须先归入现役模板，不能直接发明新的“特殊 case 家族”。
+1. **先归类，后实现**：新增元素默认必须先归入现役房间元素分类，不能直接发明新的“特殊 case 大类”。
 2. **空间事实留在 Scene**：位置、朝向、层级、目标引用等空间事实只存在于场景对象；只有当元素需要复用配置或策划调参时，才引入 SO。
 3. **房间级持久化统一走 `RoomFlagRegistry`**：凡是“同一个房间内被打开 / 打碎 / 触发后应长期保持”的状态，一律写入 `RoomFlagRegistry`，并通过 `SaveBridge` 进入存档；禁止把运行时结果写回 SO。
 4. **只在需要时扩 `Room` 的收集链**：当前 `Room` 只主动收集 `Door`、`EnemySpawner`、`OpenEncounterTrigger`、`DestroyableObject` 和 SpawnPoint。只有当新元素需要被 `Room` / `RoomManager` 查询、重置或统一调度时，才允许扩展 `CollectSceneReferences()`；否则应保持组件自治。
 5. **按主触发机制决定挂点**：导航事实进 `Navigation`，互动件进 `Elements`，战斗编排进 `Encounters`，环境伤害进 `Hazards`，必须在玩家进房前就绪的感知/导演类对象进 `Triggers`。
 6. **编辑期模型按需扩展**：只有当新元素需要参与 `LevelScaffoldData`、HTML 导入导出、Overlay 或批量 authoring 工具时，才扩展编辑期 schema；纯场景手工 authoring 的运行时细节，不应反向污染 Scaffold 模型。
 
-### 6.5 现役模板家族
+### 6.5 现役房间元素分类（六大玩法家族 + 基础设施件）
 
-| 模板家族 | 代表类型 | 默认挂点 | 运行时 authority | 状态通道 | Validator 关注点 |
-|---------|----------|----------|------------------|----------|------------------|
-| `Door / Gate` | `Door`、层间过渡门、时间门 | `Navigation` | `Door._targetRoom` / `_targetSpawnPoint` + 语义字段 | `Door` 本体 + 世界阶段 / 进度系统 | 双向连接、出生点、`_playerLayer`、门控字段 |
-| `Interact Anchor` | `Lock`、`Checkpoint`、`PickupBase` 派生物 | `Elements` | 组件自身 + 可选 SO / manager | 会话态或 manager 持有 | 触发器、`_playerLayer`、必需引用、输入订阅 |
-| `Persistent Room Element` | `DestroyableObject`、房间内永久机关、一次性揭示物 | `Elements` | 场景组件 + `RoomFlagRegistry` flag | `RoomFlagRegistry` ↔ `SaveBridge` | 父 `Room`、flag key、持久状态一致性 |
-| `Encounter Element` | `OpenEncounterTrigger`、`ArenaController`、`EnemySpawner` | `Encounters` | `EncounterSO` + 运行时波次策略 | 房间战斗状态 / 房间清除状态 | `EncounterSO`、Spawner、房型语义匹配 |
-| `Hazard Element` | `EnvironmentHazard` 及其子类 | `Hazards` | 危险物组件自身 | 通常为会话态；若永久关闭再接 `RoomFlagRegistry` | 碰撞器、Layer、伤害配置、可选 owner room |
-| `Trigger / Director` | `BiomeTrigger`、`HiddenAreaMask`、`ScheduledBehaviour`、`ActivationGroup`、`WorldEventTrigger` | `Triggers`（或显式扩展内容层） | 世界事件、`RoomManager`、`AmbienceController` 或组件自身 | 会话态 / 世界阶段态 / 世界进度态 | 触发器、phase 配置、target 引用、manager 依赖 |
+| 中文分类 | 英文标签 | 历史旧术语（兼容） | 代表类型 | 默认挂点 | 运行时 authority | 状态通道 | Validator 关注点 |
+|---------|----------|--------------------|----------|----------|------------------|----------|------------------|
+| **通路件** | `Path` | `Door / Gate` | `Door`、层间过渡门、时间门 | `Navigation` | `Door._targetRoom` / `_targetSpawnPoint` + 语义字段 | `Door` 本体 + 世界阶段 / 进度系统 | 双向连接、出生点、`_playerLayer`、门控字段 |
+| **交互件** | `Interact` | `Interact Anchor` | `Lock`、`Checkpoint`、`PickupBase` 派生物 | `Elements` | 组件自身 + 可选 SO / manager | 会话态或 manager 持有 | 触发器、`_playerLayer`、必需引用、输入订阅 |
+| **状态件** | `Stateful` | `Persistent Room Element` | `DestroyableObject`、房间内永久机关、一次性揭示物 | `Elements` | 场景组件 + `RoomFlagRegistry` flag | `RoomFlagRegistry` ↔ `SaveBridge` | 父 `Room`、flag key、持久状态一致性 |
+| **战斗件** | `Combat` | `Encounter Element` | `OpenEncounterTrigger`、`ArenaController`、`EnemySpawner` | `Encounters` | `EncounterSO` + 运行时波次策略 | 房间战斗状态 / 房间清除状态 | `EncounterSO`、Spawner、房型语义匹配 |
+| **环境机关件** | `Environment` | `Hazard Element` | `EnvironmentHazard` 及其子类 | `Hazards` | 危险物组件自身 | 通常为会话态；若永久关闭再接 `RoomFlagRegistry` | 碰撞器、Layer、伤害配置、可选 owner room |
+| **导演件** | `Directing` | `Trigger / Director` | `BiomeTrigger`、`HiddenAreaMask`、`ScheduledBehaviour`、`ActivationGroup`、`WorldEventTrigger` | `Triggers`（或显式扩展内容层） | 世界事件、`RoomManager`、`AmbienceController` 或组件自身 | 会话态 / 世界阶段态 / 世界进度态 | 触发器、phase 配置、target 引用、manager 依赖 |
+| **基础设施件** | `Infrastructure` | 无 | `SpawnPoint`、`CameraConfiner` | `Navigation/SpawnPoints`、`CameraConfiner` | `Room`、`Door`、`CameraDirector` 等房间运行链 | 跟随房间运行链，不作为独立玩法状态件 | 位置语义、引用完整性、`CameraConfiner` 物理设置 |
 
 **补充规则：**
 
+- 这套分类是 **authoring / validator / 文档沟通口径**，不是具体组件类名替代，也不是运行时 owner 声明。
 - `ActivationGroup`、`ScheduledBehaviour` 这类“控制其他对象”的组件，可以放在独立扩展层，但它们不能替代标准根节点职责。
 - `HiddenAreaMask` 这类靠玩家触发感知的遮罩类对象，若需要在玩家进入房间前就可生效，应优先归入 `Triggers`。
-- 若一个新元素同时满足多个模板，以**主驱动 authority** 为准；不要让同一个元素同时挂两条主流程。
+- 若一个新元素同时满足多个分类，以**主驱动 authority + 默认挂点** 为准；不要让同一个元素同时挂两条主流程。
+- 历史旧术语只保留为兼容说明；后续新增文档与工具输出统一使用新分类名。
 
 ---
 
@@ -423,7 +426,7 @@ RoomFlagRegistry
 1. **Door 是连接拓扑真相源**：传送与地图连线都从 Door 读事实
 2. **Room 是空间真相源**：房间边界、导航点、镜头限制存在于场景对象
 3. **RoomSO 是房间元数据真相源**：ID、名称、楼层、节点类型、附加配置来自 SO
-4. **RoomFlagRegistry 是细粒度状态真相源**：互动件的持久状态统一收口到 Registry
+4. **RoomFlagRegistry 是细粒度状态真相源**：交互件的持久状态统一收口到 Registry
 5. **LevelEvents 是跨模块通知渠道**：跨系统通信走事件，不走直接引用
 
 ---

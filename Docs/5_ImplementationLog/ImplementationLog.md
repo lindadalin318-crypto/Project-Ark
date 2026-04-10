@@ -2,6 +2,105 @@
 
 ---
 
+## Level 房间元素分类规范同步到设计文档与诊断表 — 2026-04-10 15:10
+
+### 修改文件
+- `Docs/2_Design/Level/Level_CanonicalSpec.md`
+- `Docs/2_Design/Level/Level_WorkflowSpec.md`
+- `Docs/6_Diagnostics/Level_RoomElements_Findings_2026-04-10.md`
+- `Docs/6_Diagnostics/Level_RoomElements_Findings_2026-04-10.csv`
+
+### 内容
+- 将 `Level_CanonicalSpec.md` 中的现役房间元素矩阵正式改为新分类规范：`通路件 / 交互件 / 状态件 / 战斗件 / 环境机关件 / 导演件 / 基础设施件`，并加入对应英文标签 `Path / Interact / Stateful / Combat / Environment / Directing / Infrastructure`。
+- 将 `Level_WorkflowSpec.md` 的“新增房间元素接入 SOP”和“分类落位速查”统一切换到新分类规范，确保 authoring 流程、默认挂点判断和新增元素决策树与模块规则一致。
+- 将 `Level_RoomElements_Findings_2026-04-10.md` 从“推荐命名”口径升级为“现役分类主表”，保留旧术语仅作为兼容说明，不再把旧家族名当作当前规范。
+- 重写 `Level_RoomElements_Findings_2026-04-10.csv` 的分类字段，改为 `category_cn + category_en` 双列，并将逐元素记录统一映射到新分类标签；同时把 `Room infrastructure`、`Interact Anchor`、`Encounter Element` 等旧值全部切换到新规范。
+- 额外统一了 `CanonicalSpec` / `WorkflowSpec` 中零散的“互动件”表述，全部收口为“交互件”，避免同一分类出现多个中文叫法。
+
+### 目的
+- 让 `Level` 的模块规则、设计规范、搭建手册、诊断表四处使用同一套房间元素分类口径，消除“规则是新名、设计文档还是旧名”的双轨状态。
+- 为后续继续扩 `LevelValidator`、新增房间元素和做关卡 authoring 评审提供统一、可筛选、可复用的分类语言。
+
+### 技术
+- 文档规范同步：以 `Implement_rules.md` 中已确立的分类规则为基线，回写到 `CanonicalSpec`、`WorkflowSpec` 和诊断产物。
+- 结构化数据升级：对 CSV 做字段级 schema 调整，用 `category_cn` / `category_en` 取代旧的 `canonical_family` 口径。
+
+## Level 房间元素分类规范写入模块规则 — 2026-04-10 15:00
+
+### 修改文件
+- `Implement_rules.md`
+
+### 内容
+- 在 `Implement_rules.md` 的 `Level` 模块规则中新增房间元素分类总则，正式把 `通路件 / 交互件 / 状态件 / 战斗件 / 环境机关件 / 导演件 / 基础设施件` 这套口径写入治理文档。
+- 同步加入简洁英文标签约束：`Path`、`Interact`、`Stateful`、`Combat`、`Environment`、`Directing`、`Infrastructure`，并明确这些短名只用于文档、Inspector 分组、Validator 输出和 authoring 沟通，不替代具体组件类名。
+- 新增“新房间元素必须先落类，再落实现”规则，要求后续任何 `Level` 新元素在实现前先明确所属分类、默认挂点、Runtime owner、是否进入 `Room` 主链、是否接入 Save。
+- 新增“分类不是运行时 owner，也不是 `Room` 主链声明”的边界说明，并把这套规则接入 `Level` 模块的常规验收清单与推荐工作流，避免后续再次混淆 authoring 分类、运行时消费层级和基础设施职责。
+
+### 目的
+- 将前面在诊断文档里提炼出的房间元素命名与分类规范，升级为模块级长期规则，而不是停留在一次性分析结论。
+- 为后续新增 `Level` 元素、扩展 `LevelValidator`、补齐 `CanonicalSpec` / `WorkflowSpec` 提供统一、简洁、可执行的口径。
+
+### 技术
+- 规则沉淀：以 `Implement_rules.md` 为治理入口，把人话版分类、英文标签、落类决策和边界说明写成可执行条款。
+- 流程收口：同时更新验收清单与推荐工作流，确保这套分类规则在后续实现流程中真正被使用。
+
+## Level 房间元素分类命名收口（人话版 + 简洁英文）— 2026-04-10 14:54
+
+### 修改文件
+- `Docs/6_Diagnostics/Level_RoomElements_Findings_2026-04-10.md`
+
+### 内容
+- 将 `Level_RoomElements_Findings_2026-04-10.md` 中“房间元素家族”章节改写为更贴近 authoring 和玩家感知的版本，把原有技术口径收口为：`通路件 / 交互件 / 状态件 / 战斗件 / 环境机关件 / 导演件`，并将 `SpawnPoint`、`CameraConfiner` 单列为 `基础设施件`。
+- 在文档中新增“推荐命名（中文 / 英文）”对照表，明确当前分类层可使用更简洁的英文标签：`Path`、`Interact`、`Stateful`、`Combat`、`Environment`、`Directing`，同时强调这些短名用于文档、Inspector 分组、Validator 输出与沟通，不替代具体组件类名。
+- 同步把逐元素结论矩阵改写为新的清晰分类和英文标签，避免正文使用新口径、表格仍保留旧术语，造成文档内部语义割裂。
+- 更新最终判断表述，将总结中的“六大家族”收口为“六大玩法家族 + 一类基础设施件”，让后续团队讨论时更容易统一认知边界。
+
+### 目的
+- 降低 `Level` 房间元素分类的理解门槛，让分类更适合用于关卡 authoring、设计评审和验证讨论。
+- 为后续若要把这套分类继续写入 `CanonicalSpec` / `WorkflowSpec` 或 `LevelValidator` 输出文案，先建立一套更短、更稳的人类可读命名口径。
+
+### 技术
+- 文档结构重写：在不改变本轮验证事实的前提下，重组分类章节、命名映射表和逐元素矩阵的表头与家族字段。
+- 命名分层：区分“分类标签”与“具体组件类名”，避免把简洁英文分类误用为代码级命名替代。
+
+## Level 房间元素验证结论 MD 沉淀 — 2026-04-10 14:37
+
+### 新建文件
+- `Docs/6_Diagnostics/Level_RoomElements_Findings_2026-04-10.md`
+
+### 内容
+- 新增 `Level_RoomElements_Findings_2026-04-10.md`，将本轮 `Level` 模块房间元素验证结果从对话结论和 CSV 矩阵进一步沉淀为完整 Markdown 报告。
+- 报告按“文档目的 → 结论先说 → 验证口径 → 元素家族 → 运行时消费分层 → `SampleScene` 实际挂载 → 标准根节点覆盖 → 逐元素结论矩阵 → 编辑期 schema 边界 → 当前配置问题 → 最终判断 → 后续优先级”组织，便于后续评审和复盘。
+- 明确保留本轮最重要的结构性判断：`SampleScene` 当前有 17 个 `Room`，但只有 2/17 完整具备标准根节点；当前场景现役成熟元素集中在 `Door`、`Checkpoint`、`Lock`、`PickupBase`、`EnemySpawner`、`ArenaController`、`EnvironmentHazard`；`rooms[].elements[]` 与 `ScaffoldElementType` 不是运行时 authority。
+- 在 Markdown 中额外补充了人类可读的分层说明和逐元素表格，降低后续只看 CSV 时的信息压缩感。
+
+### 目的
+- 为后续 `Level` authoring 收口、场景补铺和验证复盘提供一份适合直接阅读、讨论和引用的结论文档。
+- 与 CSV 形成互补：CSV 用于过滤和筛选，Markdown 用于表达完整判断逻辑与证据链。
+
+### 技术
+- 文档沉淀：基于已生成的 `Level_RoomElements_Findings_2026-04-10.csv` 与本轮场景验证结论，重组为面向阅读的 Markdown 报告。
+- 结论重组策略：保留 CSV 的矩阵信息，同时补充运行时分层、场景状态解释与验证口径，避免后续再次从零拼接推理链。
+
+## Level 房间元素验证结论 CSV 沉淀 — 2026-04-10 14:32
+
+### 新建文件
+- `Docs/6_Diagnostics/Level_RoomElements_Findings_2026-04-10.csv`
+
+### 内容
+- 新增 `Level_RoomElements_Findings_2026-04-10.csv`，把本轮 `Level` 模块房间元素验证的发现、证据和结论收口为单文件 CSV。
+- CSV 同时覆盖 3 层信息：规范 / 架构层结论、逐元素矩阵、编辑期 schema 非运行时 authority 结论，避免后续再次把“代码存在”“场景已挂载”“运行时主链已消费”混为一谈。
+- 逐元素行包含 `canonical family`、默认挂点、运行时 owner / 入口、是否进入 `Room` 主链、是否组件自治、状态通道 / Save、是否纳入 `LevelValidator`、`SampleScene` 实例数、现役成熟度、最终结论等字段。
+- 明确固化本轮几个关键判断：`SampleScene` 当前有 17 个 `Room`，但只有 2/17 完整具备标准根节点；当前场景主流已实装元素集中在 `Door`、`Checkpoint`、`Lock`、`PickupBase`、`EnemySpawner`、`ArenaController`、`EnvironmentHazard`；`rooms[].elements[]` 与 `ScaffoldElementType` 不是 Unity 运行时实装 authority。
+
+### 目的
+- 将本轮关卡验证结果从对话结论沉淀为结构化数据资产，方便后续筛选“现役可实装”“代码支持但未铺开”“编辑期模型”三类元素。
+- 为下一步继续做 `Level` authoring 收口、场景补铺和 Validator 扩护栏提供统一的核对表。
+
+### 技术
+- 结构化文档沉淀：使用 CSV 而非 Markdown，便于按列过滤运行时主链、场景实例、Validator 覆盖和成熟度。
+- 结论组织方式：将整体诊断结论与逐元素事实矩阵放在同一文件，通过 `section` 字段区分 `summary`、`element` 与 `editor_schema`。
+
 ## Camera 对比分析文档沉淀（Project Ark × Minishoot）— 2026-04-10 13:18
 
 ### 新建文件
