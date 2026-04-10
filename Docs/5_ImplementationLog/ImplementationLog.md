@@ -2,6 +2,7 @@
 
 ---
 
+<<<<<<< Updated upstream
 ## Level RoomNodeType 硬切迁移与旧值清除 — 2026-04-10 15:44
 
 ### 修改文件
@@ -166,8 +167,84 @@
 ### 技术
 - 结构化文档沉淀：使用 CSV 而非 Markdown，便于按列过滤运行时主链、场景实例、Validator 覆盖和成熟度。
 - 结论组织方式：将整体诊断结论与逐元素事实矩阵放在同一文件，通过 `section` 字段区分 `summary`、`element` 与 `editor_schema`。
+=======
+## Plan 体系首轮落地（ProjectPlan + ShipVFX 归档）— 2026-04-10 15:31
+
+### 新建文件
+- `Docs/Plan/ProjectPlan.md`
+- `Docs/Plan/ongoing/README.md`
+- `Docs/Plan/complete/README.md`
+- `Docs/Plan/complete/ShipVFX-PhaseA.md`
+
+### 删除文件
+- `Docs/2_Design/Ship/ShipVFX_PhaseA_AuthorityPlan.md`
+
+### 修改文件
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 正式建立 `Docs/Plan/` 首轮入口：落地 `ProjectPlan.md`、`ongoing/README.md`、`complete/README.md`，使项目状态入口、活跃专项入口与已完成归档入口在目录层清晰分开。
+- 在 `ProjectPlan.md` 中写入当前项目阶段、模块状态总表、候选专项、风险与文档导航，使其成为新的项目驾驶舱。
+- 迁移 `ShipVFX_PhaseA_AuthorityPlan.md` 时，核对正文发现该专项已写到 `Gate G` 通过、准备进入 `Phase B`，因此没有继续误放在 `ongoing/`，而是直接归档为 `Docs/Plan/complete/ShipVFX-PhaseA.md`。
+- 新增 `Docs/Plan/ongoing/README.md` 说明当前尚无已迁入的活跃专项，并为后续 `ShipVFX-PhaseB`、`Camera-MVP`、`Level-Validation-Hardening` 等专项预留入口。
+
+### 目的
+- 把 `Plan` 从 `Spec` 和 `ImplementationLog` 中拆出，建立稳定的项目驾驶舱与专项入口。
+- 在真实迁移过程中尊重文档当前状态，避免把已经完成的专项继续伪装成 ongoing，确保新结构从第一天就语义准确。
+
+### 技术
+- 文档结构重组：采用“总入口 + ongoing + complete”的增量落地方式。
+- 状态校准：通过迁移前核对正文完成态，将原定的 ongoing 迁移调整为 complete 归档，保证目录语义与文档内容一致。
+
+---
+
+## Plan 体系实施计划沉淀 — 2026-04-10 15:13
+
+
+### 新建文件
+- `Docs/superpowers/plans/2026-04-10-plan-doc-structure-rollout.md`
+
+### 内容
+- 新增 `2026-04-10-plan-doc-structure-rollout.md`，把 `Docs/Plan/` 首轮落地的具体施工顺序写成正式实施计划。
+- 实施计划明确了首轮只做四件事：建立 `Docs/Plan/` 入口、创建 `ProjectPlan.md`、迁入第一份 ongoing 专项 `ShipVFX-PhaseA`、补实现日志与断链验证。
+- 文档中固定了 `ProjectPlan.md` 的首版内容、`complete/README.md` 的职责说明、`ShipVFX-PhaseA` 的迁移与重组步骤，以及最终人工 review checklist。
+- 计划同时明确本轮不处理 `CanonicalSpec` / `WorkflowSpec` 迁移，也不处理 `Docs` 顶层编号目录与非编号目录并存的历史债，保证 rollout 范围可控。
+
+### 目的
+- 把已经通过评审的 `Plan` 体系方案转成可执行施工说明，避免真正落地时再次临场决定范围和顺序。
+- 为后续选择执行方式（子代理分任务执行或当前会话内联执行）提供统一依据。
+
+### 技术
+- 文档实施规划：以“先入口、后迁移”的增量方式组织 `Docs/Plan/` 首轮 rollout。
+- 风险控制：通过文件职责映射、显式不迁移清单和最终验证步骤，限制本轮只处理最小可用范围。
+
+---
+
+## Plan 文档结构改造设计稿沉淀 — 2026-04-10 15:09
+
+
+### 新建文件
+- `Docs/superpowers/specs/2026-04-10-plan-doc-structure-design.md`
+
+### 内容
+- 新增 `2026-04-10-plan-doc-structure-design.md`，把本轮对 `Docs` 文档结构重组的讨论结果沉淀为正式设计稿。
+- 设计稿明确提出新的 `Docs/Plan/` 体系：由 `ProjectPlan.md` 作为项目总入口，`ongoing/` 作为当前活跃专项入口，`complete/` 作为已完成专项归档入口。
+- 在文档中明确区分了 `Plan`、`Design / Spec`、`ImplementationLog` 三类文档的职责边界，避免后续再次混用“项目状态”“规范真相源”“历史记录”。
+- 文档同时固定了 `ProjectPlan.md` 的建议栏目、专项 plan 模板、`ongoing → complete` 的迁移规则，以及首轮增量落地顺序。
+
+### 目的
+- 把本轮已经达成一致的文档治理方案固化为可评审、可执行的设计文本，作为后续真正落地 `Docs/Plan/` 体系的统一依据。
+- 降低后续继续讨论文档结构时的重复沟通成本，避免方案只停留在聊天记录中。
+
+### 技术
+- 文档设计：通过“总入口 + 活跃专项 + 已完成归档”的三层结构，重组项目状态信息的承载方式。
+- 边界治理：用职责拆分原则明确 `Plan / Spec / Log` 三类文档的定位，并用增量迁移策略控制重构范围。
+
+---
+>>>>>>> Stashed changes
 
 ## Camera 对比分析文档沉淀（Project Ark × Minishoot）— 2026-04-10 13:18
+
 
 ### 新建文件
 - `Docs/7_Reference/GameAnalysis/ProjectArk_Minishoot_Camera_Analysis.md`

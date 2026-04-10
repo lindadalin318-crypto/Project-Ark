@@ -1,60 +1,52 @@
-# Ship VFX Phase A Authority Plan
+# ShipVFX-PhaseA
 
-## 1. 文档定位
+<!-- markdownlint-disable MD024 -->
 
-本文件是 `Ship/VFX` 的 **Phase A：authority 收口治理执行计划**。
+## 文档定位
 
-它的职责不是替代总迁移文档，而是把“接下来按什么顺序治理、每一步做到什么算完成”固定下来，供后续逐步执行与验收。
+本文件是 `Ship / VFX` 的 `Phase A` **已完成专项归档**。
 
-### 与现有文档的关系
+它负责保留：
+
+- 本轮治理目标
+- 范围边界
+- 完成标准
+- 完成状态
+- 工作拆分与执行结论
+- 完成结论与后续切片入口
+- 关联文档
+
+它不替代以下真相源：
 
 - `Implement_rules.md`
-  - 提供治理原则、authority matrix、override 白名单、验收规则
-  - 回答 **“什么是正确治理方式”**
 - `ShipVFX_CanonicalSpec.md`
-  - 提供现役主链、owner、live 状态定义
-  - 回答 **“现在什么是现役真相”**
 - `ShipVFX_AssetRegistry.md`
-  - 提供对象路径、资产映射、owner 与状态表
-  - 回答 **“具体对象在哪里、归谁管”**
 - `ShipVFX_MigrationPlan.md`
-  - 提供迁移全景图与体验 backlog
-  - 回答 **“长期上我们要迁到哪里、后面还要改哪些体验项”**
-- **本文件**
-  - 提供当前治理施工顺序与阶段完成标准
-  - 回答 **“我们现在先做哪一步、一步步怎么过 Gate”**
+
+一句话原则：
+
+> 本文件回答“`Ship / VFX` 的 `Phase A` 做完了什么、为什么算完成、后续从哪里继续”。
 
 ---
 
-## 2. 本轮目标
+## 当前目标
 
-本轮只做一件事：
+> **把 `Ship / VFX` 从“多入口可写、靠经验排查”的状态，收口到“权威清晰、工具分层、能自动抓错”的状态。**
 
-> **把 `Ship/VFX` 从“多入口可写、靠经验排查”的状态，收口到“权威清晰、工具分层、能自动抓错”的状态。**
-
-这轮不追求把所有视觉效果都重做得更好看；这轮优先解决的是：
+本轮优先解决：
 
 - prefab / scene / runtime / debug 多入口并行写入
 - builder 越权写回
 - runtime fallback 维持双轨主链
 - debug 工具默认参与正式链路
 - scene override 漂移与 silent no-op
-- legacy / migration residue 长期滞留，导致模块边界继续模糊
-
-### 本轮最终完成态约束
-
-Phase A 的**最终交付态**不是“把旧工具标成 legacy 后继续长期保留”，而是：
-
-- `Ship/VFX` 进入**单轨、干净、低冗余**状态
-- 不再保留**无明确价值**的 legacy 文件、旧菜单、旁路 debug 工具、迁移残留脚本
-- 任何**不符合当前 authority 规范且没有保留必要性**的脚本/入口，应以**删除**为默认处理，而不是继续挂着备用
-- 只有仍承担明确职责、且暂时无法被 authority 工具替代的对象，才允许短期过渡保留，并且必须写清退役条件
+- legacy / migration residue 长期滞留
 
 ---
 
-## 3. 范围与边界
+## 范围
 
-### 3.1 本轮范围（In Scope）
+### In Scope
 
 - `Assets/Scripts/Ship/Editor/`
 - `Assets/Scripts/Ship/VFX/`
@@ -64,39 +56,37 @@ Phase A 的**最终交付态**不是“把旧工具标成 legacy 后继续长期
 - `Assets/Scenes/SampleScene.unity` 中的 scene-only Bloom 链路
 - `ShipVFX` 相关文档与工具职责口径
 
-### 3.2 本轮不做（Out of Scope）
+### Out of Scope
 
 - 大规模视觉重做
 - 大范围物理 rename / 资源迁移
-- 仅为了追求新风格而脱离当前读感目标、整包重做 `MainTrail`
+- 脱离当前读感目标的整包重做
 - 批量清理所有 dormant 资源
-- 把所有 backlog 条目直接推进到视觉验收
-
-### 3.3 治理基线
-
-- `MainTrail` 只作为**当前满意读感参考**，不是冻结资产；若其实现、结构或流程不符合规范，允许直接精简、重构或替换，只需保持主观效果同类
-- 不新增新的 fallback / legacy path / 临时双轨
-- `Legacy / Migration Only` 只允许作为**过渡标识**，不允许成为 Phase A 的最终落点
-- 当 authority 替代已明确、validator 能提供检查抓手后，应**删除**不再需要的 legacy 文件、旧入口和旁路脚本
-- 优先收口 authority，再讨论体验重构
+- 直接推进 backlog 中的视觉验收条目
 
 ---
 
-## 4. Phase A 完成标准（Gate G）
-
-只有满足以下 5 条，才允许进入体验重构主线：
+## 完成标准
 
 1. **唯一权威**：每类引用只有一个权威来源
 2. **无双轨主链**：不再保留不必要的 runtime fallback
 3. **debug 不接管主链**：debug 工具默认只观察，不持续覆盖正式运行态
-4. **override 白名单化**：明确哪些 scene override 允许保留，哪些必须清理
+4. **override 白名单化**：明确哪些 scene override 可保留，哪些必须清理
 5. **无静默失败**：关键依赖缺失时会报错，或能被 validator / audit 抓到
-
-此外，Phase A 还必须满足 **`Clean Exit`**：不以“legacy 继续挂着备用”的形态收尾；任何无职责、无 owner、无保留必要性的旧脚本、旧菜单、旧 debug 旁路都应被删除。
+6. **Clean Exit**：不以“legacy 继续挂着备用”的形态收尾
 
 ---
 
-## 5. 执行顺序总览
+## 完成状态
+
+- **状态**：已完成（`Gate G` 已通过，2026-03-17）
+- **已完成内容**：A0 冻结治理边界、A1 工具权限审计、A2 菜单与职责收口、A3 Validator / Audit MVP、A4 删除双轨主链与冗余旧路径、A5 Scene Override 收口
+- **完成判定**：治理目标已达到，`Ship / VFX` 可从 `Phase A` 切换到后续体验重构主线
+- **后续入口**：如正式启动体验重构，应新建 `ShipVFX-PhaseB`，而不是继续把新工作堆回本文件
+
+---
+
+## 6. 工作拆分总览
 
 | 步骤 | 名称 | 目标 | 产出 | 通过标准 |
 | --- | --- | --- | --- | --- |
@@ -110,7 +100,7 @@ Phase A 的**最终交付态**不是“把旧工具标成 legacy 后继续长期
 
 ---
 
-## 6. 分步执行细则
+## 7. 分步执行细则
 
 ## Step A0 — 冻结治理边界
 
@@ -353,7 +343,7 @@ Phase A 的**最终交付态**不是“把旧工具标成 legacy 后继续长期
 
 ---
 
-## 7. Gate G — Phase A 验收门槛
+## 8. Gate G — Phase A 验收门槛
 
 在进入体验重构前，必须逐条确认：
 
@@ -382,11 +372,11 @@ Phase A 的**最终交付态**不是“把旧工具标成 legacy 后继续长期
 - **override 白名单化：通过**。`BoostTrailView` 当前只允许 `_boostBloomVolume` 作为合法 scene-only override，A5 已把合法修正、非法漂移与 validator 误归因三者区分清楚。
 - **无静默失败：通过**。`ShipVfxValidator` 已覆盖 prefab、scene、debug 与静态代码痕迹四类审计；关键依赖缺失时会直接报错或被审计抓到。
 - **Clean Exit：通过**。当前已不存在无 owner 的 legacy / debug-only 菜单入口；保留的 `ShipBuilder` 与 `BoostTrailDebugManager` 仍有明确职责、使用边界与后续 Phase B 决策位置，不属于“失去职责却继续裸露给团队”的残留物。
-- **结论**：`Gate G` 本轮复核通过，`Ship / VFX` 的 Phase A 治理可以收口，后续进入 Phase B 体验重构主线。
+- **结论**：`Gate G` 本轮复核通过，`Ship / VFX` 的 `Phase A` 治理可以收口，后续进入 `Phase B` 体验重构主线。
 
 ---
 
-## 8. 通过 Gate 后怎么走
+## 9. 通过 Gate 后怎么走
 
 通过 Gate G 之后，才进入体验重构主线。
 
@@ -404,24 +394,24 @@ Phase A 的**最终交付态**不是“把旧工具标成 legacy 后继续长期
 
 ---
 
-## 9. 推荐推进顺序
+## 10. 推荐推进顺序
 
 ### 当前推荐的下一步
 
-**`Gate G` 已完成复核，下一步正式进入 Phase B 的体验重构主线。**
+**`Gate G` 已完成复核，下一步正式进入 `Phase B` 的体验重构主线。**
 
 原因：
 
 - `A4` 与 `A5` 已把 authority、override、debug、validator 四条治理主线全部收口：主链回到 canonical 单轨，合法 scene-only 绑定已明确，debug-only 组件不再接管 live chain。
-- `Gate G` 五条标准与 `Clean Exit` 已完成本轮复核，当前没有继续阻塞 Phase B 的治理级问题。
+- `Gate G` 五条标准与 `Clean Exit` 已完成本轮复核，当前没有继续阻塞 `Phase B` 的治理级问题。
 - 因此接下来的推进重心，不应再停留在“证明治理已完成”，而应回到 `Ship / VFX` 的体验目标与感知质量本身。
 
 ### 当前建议工作流
 
-1. 从 `ShipVFX_MigrationPlan.md` 的体验 backlog 中选择一个条目或一个强耦合小簇，作为 Phase B 第一个切片
-2. 推进前固定回答：玩家此刻应该感受到什么、当前最不对劲的点是什么、这次决定保留/重做/合并/删除哪一层
+1. 从 `ShipVFX_MigrationPlan.md` 的体验 backlog 中选择一个条目或一个强耦合小簇，作为 `Phase B` 第一个切片
+2. 推进前固定回答：玩家此刻应该感受到什么、当前最不对劲的点是什么、这次决定保留 / 重做 / 合并 / 删除哪一层
 3. 继续保留 `ShipVfxValidator` 作为回归护栏；后续体验改动若触碰 authority / scene-only 绑定，必须重新过一遍审计
-4. `BoostTrailDebugManager` 是否进一步退役，不再作为 Phase A blocker，而是根据 Phase B 的实际调试价值再做决策
+4. `BoostTrailDebugManager` 是否进一步退役，不再作为 `Phase A` blocker，而是根据 `Phase B` 的实际调试价值再做决策
 
 ### A5 当前结论（场景实态 + 审计修正）
 
@@ -433,7 +423,7 @@ Phase A 的**最终交付态**不是“把旧工具标成 legacy 后继续长期
 
 ---
 
-## 10. 执行状态板
+## 11. 执行状态板
 
 | 步骤 | 状态 | 备注 |
 | --- | --- | --- |
@@ -443,15 +433,26 @@ Phase A 的**最终交付态**不是“把旧工具标成 legacy 后继续长期
 | A3 Validator / Audit MVP | `已完成（2026-03-16）` | `ShipVfxValidator` 已落地，覆盖 prefab / scene / debug / 静态代码痕迹四类审计 |
 | A4 删除双轨主链与冗余旧路径 | `已完成（2026-03-17，代码侧收口）` | 已完成三批清理：debug takeover / ShipView fallback / legacy debug menu、authority 工具中的 `FindAssets / GameObject.Find / Type.GetType / 名字搜索` residue、以及 `VisualChild` legacy alias + `ShipBuilder` bootstrap residue；代码侧已回到 canonical 单轨 |
 | A5 Scene Override 落地 | `已完成（2026-03-17，场景边界收口）` | 已完成 `SampleScene` diff 初勘 + Unity 实态核查，确认合法 scene-only 绑定与 preview-only debug 边界，并修正 `ShipVfxValidator` 对整个 prefab instance override 的误归因 |
-| Gate G | `已通过（2026-03-17，复核完成）` | 五条标准 + `Clean Exit` 已按代码 / 场景 / 文档三侧复核通过，后续可进入 Phase B |
+| Gate G | `已通过（2026-03-17，复核完成）` | 五条标准 + `Clean Exit` 已按代码 / 场景 / 文档三侧复核通过，后续可进入 `Phase B` |
 
 ---
 
-## 11. 使用方式
+## 12. 完成结论
 
-后续我们就按这份文件推进：
+- `Ship / VFX` 的 `Phase A` 已完成从“多入口可写”到“authority 收口、debug 降权、validator 落地”的治理切换
+- `Phase A` 的价值在于把体验重构之前的结构性风险先收口，而不是直接交付更华丽的视觉效果
+- 后续若继续推进 `Ship / VFX`，应把工作重心转向 `Phase B` 的体验切片，而不是继续延长 `Phase A`
 
-- 每次只推进一个 step
-- 每完成一个 step，就更新本文件的“执行状态板”与对应步骤结论
-- 所有代码/工具/文档改动，继续按项目规则补 `ImplementationLog.md`
-- 若 `CanonicalSpec` / `AssetRegistry` / `Implement_rules` 任一真相源发生变化，应回看本计划是否需要同步调整
+## 13. 遗留事项 / 后续可选项
+
+- 继续从 `ShipVFX_MigrationPlan.md` 中挑选 `Phase B` 的第一批体验条目
+- 评估是否需要把 `BoostTrailDebugManager` 在 `Phase B` 中进一步退役或缩减
+- 若 `CanonicalSpec`、`AssetRegistry` 或 `Implement_rules.md` 再次变更，需要回看本归档是否应补结论说明
+
+## 14. 关联文档
+
+- `Implement_rules.md`
+- `Docs/2_Design/Ship/ShipVFX_CanonicalSpec.md`
+- `Docs/2_Design/Ship/ShipVFX_MigrationPlan.md`
+- `Docs/Plan/ProjectPlan.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
