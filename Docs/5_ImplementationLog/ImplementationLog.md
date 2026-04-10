@@ -2,7 +2,71 @@
 
 ---
 
-<<<<<<< Updated upstream
+## Level Scaffold 硬切删除与工具链收口 — 2026-04-10 21:59
+
+### 修改文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`
+- `Docs/2_Design/Level/Level_WorkflowSpec.md`
+- `Docs/2_Design/Level/Level_CanonicalSpec.md`
+- `ProjectArk.Level.csproj`
+- `ProjectArk.Level.Editor.csproj`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 删除文件
+- `Assets/Scripts/Level/Data/LevelScaffoldData.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/ScaffoldSceneBinder.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/SceneScanner.cs`
+- `Assets/_Data/Level/Scaffolds/示巴星___ACT1+ACT2__Z1a→Z2d_.asset`
+- `Assets/NewLevelScaffold.asset`
+- 上述脚本与资产对应的 `.meta` / 目录 `.meta`
+
+### 内容
+- 从 `Level` 现役工具链中彻底移除 `Scaffold` 层：删除 `LevelScaffoldData`、`ScaffoldSceneBinder`、`SceneScanner` 三个脚本，不再保留 Scene→Scaffold 快照链路。
+- 收口 `LevelArchitectWindow`：移除 `Scaffold Data` 字段、`Scan Scene` 按钮、每帧 binder tick 与相关公开属性，使窗口只保留 `Design / Build / Validate` 的现役入口。
+- 同步改写 `Level_WorkflowSpec.md` 与 `Level_CanonicalSpec.md`，把口径从“Scaffold 是可选快照层”推进为“现役工具链已移除独立 Scaffold 层”，并将编辑期 schema 约束统一收口到 `LevelDesigner.html` JSON + Scene 主链。
+- 清理 Unity 侧残留资产与 `.meta`，删除旧 `Scaffolds` 目录和孤立 `NewLevelScaffold` 资产，避免仓库继续处于半删除状态。
+- 由于当前工作区的 Unity 生成 `.csproj` 尚未自动刷新，手动移除 `ProjectArk.Level.csproj` 与 `ProjectArk.Level.Editor.csproj` 中对已删 Scaffold 脚本的 `Compile Include`，恢复 `dotnet build` 可用性。
+
+### 目的
+- 彻底去掉一个不驱动 Scene、也不驱动 runtime 的中间模型，降低 `Level` authoring/toolchain 的认知负担。
+- 让关卡搭建入口重新只剩两条现役主链：`LevelDesigner.html → JSON → Scene` 与 `Level Architect / Build Tab → Scene`。
+- 避免团队继续把 `Scaffold` 误判为主真相源或必经中间层，保持 authority 清晰。
+
+### 技术
+- 硬切治理：直接删除废弃脚本、资产、窗口入口与对应元数据，不保留兼容桥。
+- authority 收口：文档与编辑器入口同步切换到 Scene + SO + JSON 的现役分权模型。
+- 编译修复：在 Unity 尚未重生成项目文件前，先手动清理 `.csproj` 的失效 `Compile Include`，以通过 `dotnet build Project-Ark.slnx` 验证本轮修改。
+
+---
+
+## Docs 顶层目录命名与排序统一 — 2026-04-10 20:31
+
+### 修改文件
+- `Docs/0_Plan/ProjectPlan.md`
+- `Docs/0_Plan/ongoing/README.md`
+- `Docs/0_Plan/complete/README.md`
+- `Docs/0_Plan/complete/ShipVFX-PhaseA.md`
+- `Docs/9_Superpowers/specs/2026-04-10-plan-doc-structure-design.md`
+- `Docs/9_Superpowers/plans/2026-04-10-plan-doc-structure-rollout.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 将原顶层非编号目录 `Docs/Plan/` 重命名为 `Docs/0_Plan/`，把 `Docs/superpowers/` 重命名为 `Docs/9_Superpowers/`，使 `Docs/` 顶层恢复统一编号排序。
+- 同步修正文档内显式路径、相对链接与示例命令，避免目录已经重命名但正文仍指向旧入口。
+- 更新 `ProjectPlan.md` 中“顶层目录仍混排”的过时描述，使其与当前文档结构一致。
+- 清理 `ImplementationLog.md` 中残留的 `<<<<<<< / ======= / >>>>>>>` 文本冲突标记，恢复日志可读性。
+
+### 目的
+- 让 `Docs/` 顶层入口的命名、排序和导航规则一致，降低后续找文档与维护路径时的认知成本。
+- 避免旧目录名继续在文档里回流，形成“目录已改、引用没改”的半迁移状态。
+
+### 技术
+- 目录级重命名：通过统一编号前缀把 `Plan` 与 `superpowers` 纳入现有 `Docs` 排序体系。
+- 引用级收口：同步更新 Markdown 文本路径、相对链接与命令示例。
+- 日志修复：在追加本轮记录时一并移除头部冲突标记，保留两侧原有日志内容。
+
+---
+
 ## Level RoomNodeType 硬切迁移与旧值清除 — 2026-04-10 15:44
 
 ### 修改文件
@@ -167,14 +231,13 @@
 ### 技术
 - 结构化文档沉淀：使用 CSV 而非 Markdown，便于按列过滤运行时主链、场景实例、Validator 覆盖和成熟度。
 - 结论组织方式：将整体诊断结论与逐元素事实矩阵放在同一文件，通过 `section` 字段区分 `summary`、`element` 与 `editor_schema`。
-=======
 ## Plan 体系首轮落地（ProjectPlan + ShipVFX 归档）— 2026-04-10 15:31
 
 ### 新建文件
-- `Docs/Plan/ProjectPlan.md`
-- `Docs/Plan/ongoing/README.md`
-- `Docs/Plan/complete/README.md`
-- `Docs/Plan/complete/ShipVFX-PhaseA.md`
+- `Docs/0_Plan/ProjectPlan.md`
+- `Docs/0_Plan/ongoing/README.md`
+- `Docs/0_Plan/complete/README.md`
+- `Docs/0_Plan/complete/ShipVFX-PhaseA.md`
 
 ### 删除文件
 - `Docs/2_Design/Ship/ShipVFX_PhaseA_AuthorityPlan.md`
@@ -183,10 +246,10 @@
 - `Docs/5_ImplementationLog/ImplementationLog.md`
 
 ### 内容
-- 正式建立 `Docs/Plan/` 首轮入口：落地 `ProjectPlan.md`、`ongoing/README.md`、`complete/README.md`，使项目状态入口、活跃专项入口与已完成归档入口在目录层清晰分开。
+- 正式建立 `Docs/0_Plan/` 首轮入口：落地 `ProjectPlan.md`、`ongoing/README.md`、`complete/README.md`，使项目状态入口、活跃专项入口与已完成归档入口在目录层清晰分开。
 - 在 `ProjectPlan.md` 中写入当前项目阶段、模块状态总表、候选专项、风险与文档导航，使其成为新的项目驾驶舱。
-- 迁移 `ShipVFX_PhaseA_AuthorityPlan.md` 时，核对正文发现该专项已写到 `Gate G` 通过、准备进入 `Phase B`，因此没有继续误放在 `ongoing/`，而是直接归档为 `Docs/Plan/complete/ShipVFX-PhaseA.md`。
-- 新增 `Docs/Plan/ongoing/README.md` 说明当前尚无已迁入的活跃专项，并为后续 `ShipVFX-PhaseB`、`Camera-MVP`、`Level-Validation-Hardening` 等专项预留入口。
+- 迁移 `ShipVFX_PhaseA_AuthorityPlan.md` 时，核对正文发现该专项已写到 `Gate G` 通过、准备进入 `Phase B`，因此没有继续误放在 `ongoing/`，而是直接归档为 `Docs/0_Plan/complete/ShipVFX-PhaseA.md`。
+- 新增 `Docs/0_Plan/ongoing/README.md` 说明当前尚无已迁入的活跃专项，并为后续 `ShipVFX-PhaseB`、`Camera-MVP`、`Level-Validation-Hardening` 等专项预留入口。
 
 ### 目的
 - 把 `Plan` 从 `Spec` 和 `ImplementationLog` 中拆出，建立稳定的项目驾驶舱与专项入口。
@@ -202,11 +265,11 @@
 
 
 ### 新建文件
-- `Docs/superpowers/plans/2026-04-10-plan-doc-structure-rollout.md`
+- `Docs/9_Superpowers/plans/2026-04-10-plan-doc-structure-rollout.md`
 
 ### 内容
-- 新增 `2026-04-10-plan-doc-structure-rollout.md`，把 `Docs/Plan/` 首轮落地的具体施工顺序写成正式实施计划。
-- 实施计划明确了首轮只做四件事：建立 `Docs/Plan/` 入口、创建 `ProjectPlan.md`、迁入第一份 ongoing 专项 `ShipVFX-PhaseA`、补实现日志与断链验证。
+- 新增 `2026-04-10-plan-doc-structure-rollout.md`，把 `Docs/0_Plan/` 首轮落地的具体施工顺序写成正式实施计划。
+- 实施计划明确了首轮只做四件事：建立 `Docs/0_Plan/` 入口、创建 `ProjectPlan.md`、迁入第一份 ongoing 专项 `ShipVFX-PhaseA`、补实现日志与断链验证。
 - 文档中固定了 `ProjectPlan.md` 的首版内容、`complete/README.md` 的职责说明、`ShipVFX-PhaseA` 的迁移与重组步骤，以及最终人工 review checklist。
 - 计划同时明确本轮不处理 `CanonicalSpec` / `WorkflowSpec` 迁移，也不处理 `Docs` 顶层编号目录与非编号目录并存的历史债，保证 rollout 范围可控。
 
@@ -215,7 +278,7 @@
 - 为后续选择执行方式（子代理分任务执行或当前会话内联执行）提供统一依据。
 
 ### 技术
-- 文档实施规划：以“先入口、后迁移”的增量方式组织 `Docs/Plan/` 首轮 rollout。
+- 文档实施规划：以“先入口、后迁移”的增量方式组织 `Docs/0_Plan/` 首轮 rollout。
 - 风险控制：通过文件职责映射、显式不迁移清单和最终验证步骤，限制本轮只处理最小可用范围。
 
 ---
@@ -224,16 +287,16 @@
 
 
 ### 新建文件
-- `Docs/superpowers/specs/2026-04-10-plan-doc-structure-design.md`
+- `Docs/9_Superpowers/specs/2026-04-10-plan-doc-structure-design.md`
 
 ### 内容
 - 新增 `2026-04-10-plan-doc-structure-design.md`，把本轮对 `Docs` 文档结构重组的讨论结果沉淀为正式设计稿。
-- 设计稿明确提出新的 `Docs/Plan/` 体系：由 `ProjectPlan.md` 作为项目总入口，`ongoing/` 作为当前活跃专项入口，`complete/` 作为已完成专项归档入口。
+- 设计稿明确提出新的 `Docs/0_Plan/` 体系：由 `ProjectPlan.md` 作为项目总入口，`ongoing/` 作为当前活跃专项入口，`complete/` 作为已完成专项归档入口。
 - 在文档中明确区分了 `Plan`、`Design / Spec`、`ImplementationLog` 三类文档的职责边界，避免后续再次混用“项目状态”“规范真相源”“历史记录”。
 - 文档同时固定了 `ProjectPlan.md` 的建议栏目、专项 plan 模板、`ongoing → complete` 的迁移规则，以及首轮增量落地顺序。
 
 ### 目的
-- 把本轮已经达成一致的文档治理方案固化为可评审、可执行的设计文本，作为后续真正落地 `Docs/Plan/` 体系的统一依据。
+- 把本轮已经达成一致的文档治理方案固化为可评审、可执行的设计文本，作为后续真正落地 `Docs/0_Plan/` 体系的统一依据。
 - 降低后续继续讨论文档结构时的重复沟通成本，避免方案只停留在聊天记录中。
 
 ### 技术
@@ -241,7 +304,6 @@
 - 边界治理：用职责拆分原则明确 `Plan / Spec / Log` 三类文档的定位，并用增量迁移策略控制重构范围。
 
 ---
->>>>>>> Stashed changes
 
 ## Camera 对比分析文档沉淀（Project Ark × Minishoot）— 2026-04-10 13:18
 

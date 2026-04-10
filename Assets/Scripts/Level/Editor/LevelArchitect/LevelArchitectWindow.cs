@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -40,7 +39,6 @@ namespace ProjectArk.Level.Editor
 
         // ──────────────────── Serialized State ────────────────────
 
-        [SerializeField] private LevelScaffoldData _scaffoldData;
         [SerializeField] private ToolMode _currentMode = ToolMode.Select;
         [SerializeField] private bool _sidePanelExpanded = true;
         [SerializeField] private bool _showPacingOverlay;
@@ -58,8 +56,6 @@ namespace ProjectArk.Level.Editor
 
         // ──────────────────── Sub-Systems ────────────────────
 
-        private ScaffoldSceneBinder _scaffoldBinder = new ScaffoldSceneBinder();
-
         internal static LevelArchitectWindow Instance { get; private set; }
 
         // ──────────────────── Public Properties ────────────────────
@@ -75,12 +71,6 @@ namespace ProjectArk.Level.Editor
 
         /// <summary> Currently hovered room. </summary>
         public Room HoveredRoom => _hoveredRoom;
-
-        /// <summary> The scaffold data asset being edited. </summary>
-        public LevelScaffoldData ScaffoldData => _scaffoldData;
-
-        /// <summary> The scaffold-scene binder instance. </summary>
-        public ScaffoldSceneBinder ScaffoldBinder => _scaffoldBinder;
 
         /// <summary> Active floor level filter (int.MinValue = show all). </summary>
         public int ActiveFloorLevel => _activeFloorLevel;
@@ -138,12 +128,6 @@ namespace ProjectArk.Level.Editor
             EditorApplication.hierarchyChanged += OnHierarchyChanged;
             Undo.undoRedoPerformed += OnUndoRedo;
 
-            // Initialize scaffold binder
-            if (_scaffoldData != null)
-            {
-                _scaffoldBinder.Initialize(_scaffoldData);
-            }
-
             SceneView.RepaintAll();
         }
 
@@ -164,7 +148,6 @@ namespace ProjectArk.Level.Editor
         private void OnGUI()
         {
             DrawWindowHeader();
-            DrawScaffoldDataField();
             EditorGUILayout.Space(4);
 
             // ── Tab Bar ──
@@ -326,22 +309,6 @@ namespace ProjectArk.Level.Editor
             EditorGUILayout.EndHorizontal();
         }
 
-        private void DrawScaffoldDataField()
-        {
-            EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("Scaffold Data", GUILayout.Width(90));
-            var newData = (LevelScaffoldData)EditorGUILayout.ObjectField(
-                _scaffoldData, typeof(LevelScaffoldData), false);
-            if (newData != _scaffoldData)
-            {
-                _scaffoldData = newData;
-                if (_scaffoldData != null)
-                    _scaffoldBinder.Initialize(_scaffoldData);
-                SceneView.RepaintAll();
-            }
-            EditorGUILayout.EndHorizontal();
-        }
-
         private void DrawModeSelector()
         {
             EditorGUILayout.LabelField("Tool Mode", EditorStyles.boldLabel);
@@ -419,16 +386,6 @@ namespace ProjectArk.Level.Editor
         {
             EditorGUILayout.LabelField("Actions", EditorStyles.boldLabel);
 
-            if (GUILayout.Button("Scan Scene", GUILayout.Height(24)))
-            {
-                var scannedData = SceneScanner.ScanScene();
-                if (scannedData != null)
-                {
-                    _scaffoldData = scannedData;
-                    _scaffoldBinder.Initialize(_scaffoldData);
-                    Repaint();
-                }
-            }
             if (GUILayout.Button("Create Built-in Presets", GUILayout.Height(22)))
             {
                 RoomFactory.CreateBuiltInPresets();
@@ -447,12 +404,6 @@ namespace ProjectArk.Level.Editor
         private void OnSceneGUI(SceneView sceneView)
         {
             if (!_isActive) return;
-
-            // Tick scaffold-scene binder
-            if (_scaffoldData != null)
-            {
-                _scaffoldBinder.Tick();
-            }
 
             // Lightweight validation (fatal issues only)
             LevelValidator.LightweightCheck();
@@ -558,13 +509,6 @@ namespace ProjectArk.Level.Editor
 
         private void DrawSidePanelContent()
         {
-            // ── Scaffold Data ──
-            GUILayout.Label("Scaffold Data", EditorStyles.boldLabel);
-            _scaffoldData = (LevelScaffoldData)EditorGUILayout.ObjectField(
-                _scaffoldData, typeof(LevelScaffoldData), false, GUILayout.Width(SIDE_PANEL_WIDTH - 40));
-
-            GUILayout.Space(8);
-
             // ── Room List ──
             GUILayout.Label("Rooms in Scene", EditorStyles.boldLabel);
 

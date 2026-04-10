@@ -482,7 +482,7 @@ Room_[ID]
 - 只做白盒，不补语义
 - 只看 Overlay，不跑 Validate
 - 只跑 Quick Play，就当切片已经验收完成
-- 把 JSON 或 `LevelScaffoldData` 当成运行时长期 authority
+- 把 JSON 设计稿或其他编辑期草图当成运行时长期 authority
 - 先堆美术 / 装饰，再决定房间在节奏里是什么
 
 ---

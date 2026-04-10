@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 在不重排整个 `Docs` 的前提下，落地 `Docs/Plan/` 体系，建立 `ProjectPlan.md` 总入口，并迁入第一份现役专项计划 `ShipVFX-PhaseA`。
+**Goal:** 在不重排整个 `Docs` 的前提下，落地 `Docs/0_Plan/` 体系，建立 `ProjectPlan.md` 总入口，并迁入第一份现役专项计划 `ShipVFX-PhaseA`。
 
-**Architecture:** 采用“先入口、后迁移”的增量落地方式：先建立 `Docs/Plan/` 目录与 `ProjectPlan.md` 驾驶舱，再把当前最典型的活跃计划从 `Docs/2_Design/Ship/ShipVFX_PhaseA_AuthorityPlan.md` 迁入 `Docs/Plan/ongoing/ShipVFX-PhaseA.md`，最后补 `ImplementationLog` 并验证没有断链。整个 rollout 不触碰 `CanonicalSpec`、`WorkflowSpec`、`ImplementationLog` 的职责边界，也不处理 `Docs` 顶层编号/非编号目录并存问题。
+**Architecture:** 采用“先入口、后迁移”的增量落地方式：先建立 `Docs/0_Plan/` 目录与 `ProjectPlan.md` 驾驶舱，再把当前最典型的活跃计划从 `Docs/2_Design/Ship/ShipVFX_PhaseA_AuthorityPlan.md` 迁入 `Docs/0_Plan/ongoing/ShipVFX-PhaseA.md`，最后补 `ImplementationLog` 并验证没有断链。整个 rollout 不触碰 `CanonicalSpec`、`WorkflowSpec`、`ImplementationLog` 的职责边界，也不处理 `Docs` 顶层编号/非编号目录并存问题。
 
 **Tech Stack:** Markdown 文档、PowerShell、Git、ripgrep（内容检索）
 
@@ -14,9 +14,9 @@
 
 ### Create
 
-- `Docs/Plan/ProjectPlan.md` — 项目总入口，维护当前阶段、模块状态、活跃专项、候选专项、风险与导航
-- `Docs/Plan/complete/README.md` — 说明 `complete/` 的语义，并保证空目录可被 Git 跟踪
-- `Docs/Plan/ongoing/ShipVFX-PhaseA.md` — 第一份迁入新体系的活跃专项计划
+- `Docs/0_Plan/ProjectPlan.md` — 项目总入口，维护当前阶段、模块状态、活跃专项、候选专项、风险与导航
+- `Docs/0_Plan/complete/README.md` — 说明 `complete/` 的语义，并保证空目录可被 Git 跟踪
+- `Docs/0_Plan/ongoing/ShipVFX-PhaseA.md` — 第一份迁入新体系的活跃专项计划
 
 ### Delete
 
@@ -38,21 +38,21 @@
 
 ---
 
-### Task 1: 建立 `Docs/Plan/` 入口与 `ProjectPlan.md`
+### Task 1: 建立 `Docs/0_Plan/` 入口与 `ProjectPlan.md`
 
 **Files:**
 
-- Create: `Docs/Plan/ProjectPlan.md`
-- Create: `Docs/Plan/complete/README.md`
+- Create: `Docs/0_Plan/ProjectPlan.md`
+- Create: `Docs/0_Plan/complete/README.md`
 
-- [ ] **Step 1: 确认当前不存在 `Docs/Plan/` 并创建目录**
+- [ ] **Step 1: 确认当前不存在 `Docs/0_Plan/` 并创建目录**
 
 Run:
 
 ```powershell
-Test-Path "f:\UnityProjects\Project-Ark\Docs\Plan"
-New-Item -ItemType Directory -Force -Path "f:\UnityProjects\Project-Ark\Docs\Plan\ongoing" | Out-Null
-New-Item -ItemType Directory -Force -Path "f:\UnityProjects\Project-Ark\Docs\Plan\complete" | Out-Null
+Test-Path "f:\UnityProjects\Project-Ark\Docs\0_Plan"
+New-Item -ItemType Directory -Force -Path "f:\UnityProjects\Project-Ark\Docs\0_Plan\ongoing" | Out-Null
+New-Item -ItemType Directory -Force -Path "f:\UnityProjects\Project-Ark\Docs\0_Plan\complete" | Out-Null
 ```
 
 Expected:
@@ -60,9 +60,9 @@ Expected:
 - 第一条命令返回 `False`
 - 两个目录创建成功，无报错
 
-- [ ] **Step 2: 创建 `Docs/Plan/complete/README.md`，固定 `complete/` 的语义**
+- [ ] **Step 2: 创建 `Docs/0_Plan/complete/README.md`，固定 `complete/` 的语义**
 
-Write this exact content to `Docs/Plan/complete/README.md`:
+Write this exact content to `Docs/0_Plan/complete/README.md`:
 
 ```markdown
 # Completed Plans
@@ -74,9 +74,9 @@ Write this exact content to `Docs/Plan/complete/README.md`:
 - 专项从 `ongoing/` 移入本目录前，应先同步更新 `ProjectPlan.md`
 ```
 
-- [ ] **Step 3: 创建 `Docs/Plan/ProjectPlan.md` 初版，直接写入首轮可用内容**
+- [ ] **Step 3: 创建 `Docs/0_Plan/ProjectPlan.md` 初版，直接写入首轮可用内容**
 
-Write this exact content to `Docs/Plan/ProjectPlan.md`:
+Write this exact content to `Docs/0_Plan/ProjectPlan.md`:
 
 ```markdown
 # Project Plan — Project Ark
@@ -159,7 +159,7 @@ Write this exact content to `Docs/Plan/ProjectPlan.md`:
 
 ## 文档导航
 
-- 设计稿：[`../superpowers/specs/2026-04-10-plan-doc-structure-design.md`](../superpowers/specs/2026-04-10-plan-doc-structure-design.md)
+- 设计稿：[`../specs/2026-04-10-plan-doc-structure-design.md`](../specs/2026-04-10-plan-doc-structure-design.md)
 - 关卡规范：[`../2_Design/Level/Level_CanonicalSpec.md`](../2_Design/Level/Level_CanonicalSpec.md)
 - 关卡工作流：[`../2_Design/Level/Level_WorkflowSpec.md`](../2_Design/Level/Level_WorkflowSpec.md)
 - Ship / VFX 规范：[`../2_Design/Ship/ShipVFX_CanonicalSpec.md`](../2_Design/Ship/ShipVFX_CanonicalSpec.md)
@@ -174,7 +174,7 @@ Write this exact content to `Docs/Plan/ProjectPlan.md`:
 Run:
 
 ```powershell
-rg -n "^## 文档定位|^## 当前项目阶段|^## 模块状态总表|^## 当前活跃专项|^## 下一批候选专项|^## 风险 / 阻塞项|^## 文档导航" "f:\UnityProjects\Project-Ark\Docs\Plan\ProjectPlan.md"
+rg -n "^## 文档定位|^## 当前项目阶段|^## 模块状态总表|^## 当前活跃专项|^## 下一批候选专项|^## 风险 / 阻塞项|^## 文档导航" "f:\UnityProjects\Project-Ark\Docs\0_Plan\ProjectPlan.md"
 ```
 
 Expected:
@@ -187,12 +187,12 @@ Expected:
 Run:
 
 ```powershell
-git -C "f:\UnityProjects\Project-Ark" --no-pager diff --stat -- "Docs/Plan"
+git -C "f:\UnityProjects\Project-Ark" --no-pager diff --stat -- "Docs/0_Plan"
 ```
 
 Expected:
 
-- 只看到 `Docs/Plan/ProjectPlan.md` 和 `Docs/Plan/complete/README.md` 的新增统计
+- 只看到 `Docs/0_Plan/ProjectPlan.md` 和 `Docs/0_Plan/complete/README.md` 的新增统计
 
 ---
 
@@ -200,7 +200,7 @@ Expected:
 
 **Files:**
 
-- Create: `Docs/Plan/ongoing/ShipVFX-PhaseA.md`
+- Create: `Docs/0_Plan/ongoing/ShipVFX-PhaseA.md`
 - Delete: `Docs/2_Design/Ship/ShipVFX_PhaseA_AuthorityPlan.md`
 
 - [ ] **Step 1: 先确认旧计划文档没有现役强引用，再执行迁移**
@@ -221,7 +221,7 @@ Expected:
 Run:
 
 ```powershell
-Move-Item "f:\UnityProjects\Project-Ark\Docs\2_Design\Ship\ShipVFX_PhaseA_AuthorityPlan.md" "f:\UnityProjects\Project-Ark\Docs\Plan\ongoing\ShipVFX-PhaseA.md"
+Move-Item "f:\UnityProjects\Project-Ark\Docs\2_Design\Ship\ShipVFX_PhaseA_AuthorityPlan.md" "f:\UnityProjects\Project-Ark\Docs\0_Plan\ongoing\ShipVFX-PhaseA.md"
 ```
 
 Expected:
@@ -231,7 +231,7 @@ Expected:
 
 - [ ] **Step 3: 把迁移后的文档顶部结构改造成 `ongoing` 模板**
 
-Replace the top section of `Docs/Plan/ongoing/ShipVFX-PhaseA.md` from the title down to the line just before the old `## 5. 执行顺序总览` with this exact content:
+Replace the top section of `Docs/0_Plan/ongoing/ShipVFX-PhaseA.md` from the title down to the line just before the old `## 5. 执行顺序总览` with this exact content:
 
 ```markdown
 # ShipVFX-PhaseA
@@ -326,7 +326,7 @@ Replace the top section of `Docs/Plan/ongoing/ShipVFX-PhaseA.md` from the title 
 
 - [ ] **Step 4: 调整迁移后的章节标题，使其符合新模板但保留原有详细内容**
 
-Perform these exact title replacements inside `Docs/Plan/ongoing/ShipVFX-PhaseA.md`:
+Perform these exact title replacements inside `Docs/0_Plan/ongoing/ShipVFX-PhaseA.md`:
 
 ```text
 把 `## 5. 执行顺序总览` 改为 `## 6. 工作拆分总览`
@@ -334,7 +334,7 @@ Perform these exact title replacements inside `Docs/Plan/ongoing/ShipVFX-PhaseA.
 在文件末尾追加 `## 8. 风险与注意事项` 和 `## 9. 关联文档`
 ```
 
-Append this exact block to the end of `Docs/Plan/ongoing/ShipVFX-PhaseA.md`:
+Append this exact block to the end of `Docs/0_Plan/ongoing/ShipVFX-PhaseA.md`:
 
 ```markdown
 ---
@@ -350,7 +350,7 @@ Append this exact block to the end of `Docs/Plan/ongoing/ShipVFX-PhaseA.md`:
 - `Implement_rules.md`
 - `Docs/2_Design/Ship/ShipVFX_CanonicalSpec.md`
 - `Docs/2_Design/Ship/ShipVFX_MigrationPlan.md`
-- `Docs/Plan/ProjectPlan.md`
+- `Docs/0_Plan/ProjectPlan.md`
 - `Docs/5_ImplementationLog/ImplementationLog.md`
 ```
 
@@ -360,8 +360,8 @@ Run:
 
 ```powershell
 Test-Path "f:\UnityProjects\Project-Ark\Docs\2_Design\Ship\ShipVFX_PhaseA_AuthorityPlan.md"
-Test-Path "f:\UnityProjects\Project-Ark\Docs\Plan\ongoing\ShipVFX-PhaseA.md"
-rg -n "^## 文档定位|^## 当前目标|^## 范围|^## 完成标准|^## 当前状态|^## 6\. 工作拆分总览|^## 7\. 分步执行细则|^## 8\. 风险与注意事项|^## 9\. 关联文档" "f:\UnityProjects\Project-Ark\Docs\Plan\ongoing\ShipVFX-PhaseA.md"
+Test-Path "f:\UnityProjects\Project-Ark\Docs\0_Plan\ongoing\ShipVFX-PhaseA.md"
+rg -n "^## 文档定位|^## 当前目标|^## 范围|^## 完成标准|^## 当前状态|^## 6\. 工作拆分总览|^## 7\. 分步执行细则|^## 8\. 风险与注意事项|^## 9\. 关联文档" "f:\UnityProjects\Project-Ark\Docs\0_Plan\ongoing\ShipVFX-PhaseA.md"
 ```
 
 Expected:
@@ -377,9 +377,9 @@ Expected:
 **Files:**
 
 - Modify: `Docs/5_ImplementationLog/ImplementationLog.md`
-- Verify: `Docs/Plan/ProjectPlan.md`
-- Verify: `Docs/Plan/ongoing/ShipVFX-PhaseA.md`
-- Verify: `Docs/Plan/complete/README.md`
+- Verify: `Docs/0_Plan/ProjectPlan.md`
+- Verify: `Docs/0_Plan/ongoing/ShipVFX-PhaseA.md`
+- Verify: `Docs/0_Plan/complete/README.md`
 
 - [ ] **Step 1: 把本轮 `Plan/` 首轮落地记录进实现日志**
 
@@ -390,9 +390,9 @@ Insert this exact log entry at the top of `Docs/5_ImplementationLog/Implementati
 
 ### 新建文件
 
-- `Docs/Plan/ProjectPlan.md`
-- `Docs/Plan/complete/README.md`
-- `Docs/Plan/ongoing/ShipVFX-PhaseA.md`
+- `Docs/0_Plan/ProjectPlan.md`
+- `Docs/0_Plan/complete/README.md`
+- `Docs/0_Plan/ongoing/ShipVFX-PhaseA.md`
 
 ### 删除文件
 
@@ -404,9 +404,9 @@ Insert this exact log entry at the top of `Docs/5_ImplementationLog/Implementati
 
 ### 内容
 
-- 新建 `Docs/Plan/` 体系首轮入口：`ProjectPlan.md`、`ongoing/`、`complete/`。
+- 新建 `Docs/0_Plan/` 体系首轮入口：`ProjectPlan.md`、`ongoing/`、`complete/`。
 - 在 `ProjectPlan.md` 中落入当前项目阶段、模块状态总表、活跃专项、候选专项、风险与文档导航，使其成为新的项目状态入口。
-- 将 `ShipVFX_PhaseA_AuthorityPlan.md` 迁入 `Docs/Plan/ongoing/ShipVFX-PhaseA.md`，并按新的 ongoing 模板重组顶部结构与关联文档。
+- 将 `ShipVFX_PhaseA_AuthorityPlan.md` 迁入 `Docs/0_Plan/ongoing/ShipVFX-PhaseA.md`，并按新的 ongoing 模板重组顶部结构与关联文档。
 - 明确 `complete/` 与 `Obsolete/` 的职责差异，避免后续把“已完成”与“已失效”再次混用。
 
 ### 目的
@@ -427,8 +427,8 @@ Replace `HH:MM` with the actual local time at the moment you write the log.
 Run:
 
 ```powershell
-rg -n "Docs/Plan/|ProjectPlan\.md|ShipVFX-PhaseA" "f:\UnityProjects\Project-Ark\Docs"
-git -C "f:\UnityProjects\Project-Ark" --no-pager diff --stat -- "Docs/Plan" "Docs/5_ImplementationLog/ImplementationLog.md" "Docs/2_Design/Ship/ShipVFX_PhaseA_AuthorityPlan.md"
+rg -n "Docs/0_Plan/|ProjectPlan\.md|ShipVFX-PhaseA" "f:\UnityProjects\Project-Ark\Docs"
+git -C "f:\UnityProjects\Project-Ark" --no-pager diff --stat -- "Docs/0_Plan" "Docs/5_ImplementationLog/ImplementationLog.md" "Docs/2_Design/Ship/ShipVFX_PhaseA_AuthorityPlan.md"
 ```
 
 Expected:
@@ -440,9 +440,9 @@ Expected:
 
 Open and manually check these files:
 
-- `Docs/Plan/ProjectPlan.md`
-- `Docs/Plan/ongoing/ShipVFX-PhaseA.md`
-- `Docs/Plan/complete/README.md`
+- `Docs/0_Plan/ProjectPlan.md`
+- `Docs/0_Plan/ongoing/ShipVFX-PhaseA.md`
+- `Docs/0_Plan/complete/README.md`
 - `Docs/5_ImplementationLog/ImplementationLog.md`
 
 Review checklist:
@@ -458,7 +458,7 @@ Review checklist:
 Run:
 
 ```powershell
-git -C "f:\UnityProjects\Project-Ark" --no-pager status --short -- "Docs/Plan" "Docs/5_ImplementationLog/ImplementationLog.md" "Docs/2_Design/Ship/ShipVFX_PhaseA_AuthorityPlan.md"
+git -C "f:\UnityProjects\Project-Ark" --no-pager status --short -- "Docs/0_Plan" "Docs/5_ImplementationLog/ImplementationLog.md" "Docs/2_Design/Ship/ShipVFX_PhaseA_AuthorityPlan.md"
 ```
 
 Expected:
@@ -474,7 +474,7 @@ Expected:
 
 本计划完整覆盖了设计稿中约定的首轮落地范围：
 
-- 创建 `Docs/Plan/` 入口
+- 创建 `Docs/0_Plan/` 入口
 - 创建 `ProjectPlan.md`
 - 迁入第一份活跃专项 `ShipVFX-PhaseA`
 - 不迁动 `CanonicalSpec` / `WorkflowSpec` / `ImplementationLog`
@@ -491,9 +491,9 @@ Expected:
 
 本计划中使用的关键文件路径、目录名、专项名保持一致：
 
-- `Docs/Plan/ProjectPlan.md`
-- `Docs/Plan/ongoing/ShipVFX-PhaseA.md`
-- `Docs/Plan/complete/README.md`
+- `Docs/0_Plan/ProjectPlan.md`
+- `Docs/0_Plan/ongoing/ShipVFX-PhaseA.md`
+- `Docs/0_Plan/complete/README.md`
 - `Docs/2_Design/Ship/ShipVFX_PhaseA_AuthorityPlan.md`
 
 不存在同一对象在不同任务中使用不同命名的问题。

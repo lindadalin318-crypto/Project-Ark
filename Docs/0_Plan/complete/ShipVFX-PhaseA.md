@@ -454,5 +454,5 @@
 - `Implement_rules.md`
 - `Docs/2_Design/Ship/ShipVFX_CanonicalSpec.md`
 - `Docs/2_Design/Ship/ShipVFX_MigrationPlan.md`
-- `Docs/Plan/ProjectPlan.md`
+- `Docs/0_Plan/ProjectPlan.md`
 - `Docs/5_ImplementationLog/ImplementationLog.md`

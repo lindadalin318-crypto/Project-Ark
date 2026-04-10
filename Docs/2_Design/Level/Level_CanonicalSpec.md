@@ -364,7 +364,7 @@ Room_[ID]
 3. **房间级持久化统一走 `RoomFlagRegistry`**：凡是“同一个房间内被打开 / 打碎 / 触发后应长期保持”的状态，一律写入 `RoomFlagRegistry`，并通过 `SaveBridge` 进入存档；禁止把运行时结果写回 SO。
 4. **只在需要时扩 `Room` 的收集链**：当前 `Room` 只主动收集 `Door`、`EnemySpawner`、`OpenEncounterTrigger`、`DestroyableObject` 和 SpawnPoint。只有当新元素需要被 `Room` / `RoomManager` 查询、重置或统一调度时，才允许扩展 `CollectSceneReferences()`；否则应保持组件自治。
 5. **按主触发机制决定挂点**：导航事实进 `Navigation`，互动件进 `Elements`，战斗编排进 `Encounters`，环境伤害进 `Hazards`，必须在玩家进房前就绪的感知/导演类对象进 `Triggers`。
-6. **编辑期模型按需扩展**：只有当新元素需要参与 `LevelScaffoldData`、HTML 导入导出、Overlay 或批量 authoring 工具时，才扩展编辑期 schema；纯场景手工 authoring 的运行时细节，不应反向污染 Scaffold 模型。
+6. **编辑期 schema 按需扩展**：只有当新元素需要参与 `LevelDesigner.html` JSON、Overlay 或批量 authoring 工具时，才扩展编辑期 schema；纯场景手工 authoring 的运行时细节，不应反向发明脱离 Scene 主链的中间模型。
 
 ### 6.5 现役房间元素分类（六大玩法家族 + 基础设施件）
 

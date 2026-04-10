@@ -21,7 +21,7 @@
 - 已完成专项和失效文档、长期规范之间的边界不够清晰
 - 计划文档容易与规范文档、历史记录互相混用
 
-因此，本设计稿提出建立新的 `Docs/Plan/` 体系，作为 **项目状态入口 + 当前执行入口 + 专项归档入口**。
+因此，本设计稿提出建立新的 `Docs/0_Plan/` 体系，作为 **项目状态入口 + 当前执行入口 + 专项归档入口**。
 
 ---
 
@@ -274,10 +274,10 @@ Docs/
 
 先创建：
 
-- `Docs/Plan/`
-- `Docs/Plan/ProjectPlan.md`
-- `Docs/Plan/ongoing/`
-- `Docs/Plan/complete/`
+- `Docs/0_Plan/`
+- `Docs/0_Plan/ProjectPlan.md`
+- `Docs/0_Plan/ongoing/`
+- `Docs/0_Plan/complete/`
 
 第一阶段先让 `ProjectPlan.md` 成为新的默认阅读入口。
 
@@ -287,7 +287,7 @@ Docs/
 
 推荐第一批候选：
 
-- `ShipVFX_PhaseA_AuthorityPlan.md` → `Docs/Plan/ongoing/ShipVFX-PhaseA.md`
+- `ShipVFX_PhaseA_AuthorityPlan.md` → `Docs/0_Plan/ongoing/ShipVFX-PhaseA.md`
 - 其余专项视当前是否正式立项决定，避免“凡是带 Plan 的都迁”
 
 ### 8.3 Phase 3：完成专项归档
@@ -369,7 +369,7 @@ Docs/
 
 为了以最低风险启动这套体系，建议首轮只做以下事项：
 
-1. 创建 `Docs/Plan/` 结构
+1. 创建 `Docs/0_Plan/` 结构
 2. 新建 `ProjectPlan.md` 最小可用版本
 3. 先迁入一个最典型的活跃专项：`ShipVFX-PhaseA`
 4. 暂不迁动 `CanonicalSpec`、`WorkflowSpec`、`ImplementationLog`

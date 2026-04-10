@@ -68,7 +68,7 @@
 
 ## 风险 / 阻塞项
 
-- `Docs` 顶层仍存在编号目录与非编号目录并存问题，本轮只建立新入口，不主动解决该历史债
+- `Docs` 顶层目录已统一为编号排序；当前风险转为防止旧路径文本与旧入口名再次回流
 - 当前缺少自动化的 Markdown 链接校验，首轮 rollout 仍需人工 review
 - 长期 `MigrationPlan` 与当前执行计划若不继续拆分，后续仍可能发生“路线图”和“执行计划”混用
 
@@ -76,8 +76,8 @@
 
 ## 文档导航
 
-- 设计稿：[`../superpowers/specs/2026-04-10-plan-doc-structure-design.md`](../superpowers/specs/2026-04-10-plan-doc-structure-design.md)
-- 实施计划：[`../superpowers/plans/2026-04-10-plan-doc-structure-rollout.md`](../superpowers/plans/2026-04-10-plan-doc-structure-rollout.md)
+- 设计稿：[`../9_Superpowers/specs/2026-04-10-plan-doc-structure-design.md`](../9_Superpowers/specs/2026-04-10-plan-doc-structure-design.md)
+- 实施计划：[`../9_Superpowers/plans/2026-04-10-plan-doc-structure-rollout.md`](../9_Superpowers/plans/2026-04-10-plan-doc-structure-rollout.md)
 - 关卡规范：[`../2_Design/Level/Level_CanonicalSpec.md`](../2_Design/Level/Level_CanonicalSpec.md)
 - 关卡工作流：[`../2_Design/Level/Level_WorkflowSpec.md`](../2_Design/Level/Level_WorkflowSpec.md)
 - Ship / VFX 规范：[`../2_Design/Ship/ShipVFX_CanonicalSpec.md`](../2_Design/Ship/ShipVFX_CanonicalSpec.md)
