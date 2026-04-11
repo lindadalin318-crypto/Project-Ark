@@ -8,9 +8,9 @@ namespace ProjectArk.Level.Editor
     /// [Authority: Level CanonicalSpec §9.1]
     /// Main entry point for the Level Architect Tool.
     /// Three-tab layout: Design | Build | Validate.
-    /// - Design: LevelDesigner.html shortcut + JSON import
-    /// - Build:  SceneView modes (Select/Blockout/Connect) + room list + add room
-    /// - Validate: validation results + auto-fix
+    /// - Design: optional LevelDesigner.html shortcut + JSON import
+    /// - Build:  primary whitebox authoring path (Select/Blockout/Connect) + room list + quick play
+    /// - Validate: validation results + auto-fix aligned with current Level guardrails
     /// </summary>
     public class LevelArchitectWindow : EditorWindow
     {
@@ -179,9 +179,9 @@ namespace ProjectArk.Level.Editor
 
         private void DrawDesignTab()
         {
-            EditorGUILayout.LabelField("Level Designer", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Level Designer (Optional)", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "Use LevelDesigner.html to plan your level topology, then export JSON and import it here.",
+                "Use LevelDesigner.html only when you want a browser-side topology draft or JSON import source. For minimal validation slices and current room-runtime verification, Build is the preferred one-stop authoring path.",
                 MessageType.Info);
 
             EditorGUILayout.Space(4);
@@ -203,15 +203,15 @@ namespace ProjectArk.Level.Editor
             }
 
             EditorGUILayout.Space(8);
-            EditorGUILayout.LabelField("Workflow", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Optional HTML Workflow", EditorStyles.boldLabel);
 
             EditorGUILayout.LabelField(
                 "1. Open LevelDesigner.html in browser\n" +
-                "2. Design room topology & connections\n" +
+                "2. Sketch room topology & connections\n" +
                 "3. Set Level Name in the right panel\n" +
                 "4. Click 💾 Export File to save JSON\n" +
                 "5. Click Import LevelDesigner JSON here\n" +
-                "6. Switch to Build tab to refine in scene",
+                "6. Switch to Build tab to refine scene objects and validation rooms",
                 EditorStyles.helpBox);
         }
 
@@ -219,6 +219,10 @@ namespace ProjectArk.Level.Editor
 
         private void DrawBuildTab()
         {
+            EditorGUILayout.HelpBox(
+                "Primary whitebox authoring path. Build creates and refines Room / RoomSO / Door skeletons directly in scene. Encounter triggers, checkpoints, locks, ambience triggers, and other runtime elements should be added in-scene after the room skeleton is in place.",
+                MessageType.Info);
+            EditorGUILayout.Space(4);
             DrawModeSelector();
             EditorGUILayout.Space(4);
             DrawOverlayToggles();
@@ -399,12 +403,15 @@ namespace ProjectArk.Level.Editor
         {
             EditorGUILayout.LabelField("Actions", EditorStyles.boldLabel);
 
-            if (GUILayout.Button("Create Built-in Presets", GUILayout.Height(22)))
+            if (GUILayout.Button("Create / Verify Built-in Presets", GUILayout.Height(22)))
             {
                 RoomFactory.CreateBuiltInPresets();
                 Debug.Log("[LevelArchitect] Built-in presets created/verified.");
             }
             EditorGUILayout.Space(4);
+            EditorGUILayout.HelpBox(
+                "Quick Play is a structure smoke test. If RoomManager or DoorTransitionController is missing, the tool will create temporary _QuickPlay_* helpers before entering Play Mode.",
+                MessageType.None);
 
             if (GUILayout.Button("Quick Play ▶", GUILayout.Height(28)))
             {

@@ -2,6 +2,51 @@
 
 ---
 
+## Level Architect Workbench 专项立项（0_Plan 落地）— 2026-04-11 16:52
+
+### 新建文件
+- `Docs/0_Plan/ongoing/Level-Architect-Workbench.md`
+
+### 修改文件
+- `Docs/0_Plan/ProjectPlan.md`
+- `Docs/0_Plan/ongoing/README.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 在 `Docs/0_Plan/ongoing/` 下新增 `Level-Architect-Workbench.md`，把前一轮关于 `Level Architect` 重构 / 改进建议正式收束为专项计划，并明确北极星为 `Scene-backed authoring workbench`，核心原则是“吸收 `HTML` 的交互心智，但不新增第二套 authority”。
+- 文档中系统拆分了当前痛点、目标体验、架构约束、范围边界、MVP 与未来增强，并将实施路径收口为 `LA0-LA5 + Gate A` 六个阶段，方便后续按切片推进而不是一次性大重写。
+- 在 `ProjectPlan.md` 的候选专项与文档导航中加入 `Level-Architect-Workbench` 入口，使该提案进入正式 `0_Plan` 导航，而不只停留在对话结论。
+- 在 `Docs/0_Plan/ongoing/README.md` 中补记该待启动提案，保证 `ongoing/` 目录说明与现役专项入口一致。
+
+### 目的
+- 把“Level Architect 是否值得重构、应该朝什么方向重构”的讨论，沉淀成可跟踪、可排序、可拆阶段执行的正式计划文档。
+- 提前冻结本轮作者体验重构的北极星，避免后续在 `HTML`、`Build`、`Validate` 与手工 Scene 流程之间继续分叉演化。
+
+### 技术
+- 文档治理：沿用 `Docs/0_Plan/ProjectPlan.md + ongoing/` 的计划体系落位新专项，不把工具重构路线继续散落在聊天结论或 workflow 文档里。
+- 方案收口：以 `Palette + Canvas + Inspector + Preview + Validate` 为统一作者体验模型，同时明确 `Scene / Room / Door / RoomSO` 继续作为 authority，防止为追求“像 HTML”而长出新的中间真相源。
+
+## Level Architect 入口对齐与 Reward 预设补齐 — 2026-04-11 16:38
+
+### 修改文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomFactory.cs`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 将 `LevelArchitectWindow` 的入口口径改为现役表达：`Design` 明确降级为可选的 `LevelDesigner.html` / JSON 导入路径，`Build` 明确标注为当前最适合最小验证切片和运行时验证房的主 authoring 路径。
+- 在 `Build` Tab 补入职责说明，明确它负责直接创建与精修 `Room / RoomSO / Door` 骨架，而 `Checkpoint`、`Lock`、`OpenEncounterTrigger`、`BiomeTrigger`、`ScheduledBehaviour` 等运行时元素仍应在场景内继续手工补齐。
+- 在 `Build Actions` 区补入 `Quick Play` 结构冒烟提示，显式说明缺少 `RoomManager` 或 `DoorTransitionController` 时会自动生成临时 `_QuickPlay_*` 管理器，避免把它误判为完整验收入口。
+- 为 `RoomFactory.CreateBuiltInPresets()` 补齐缺失的 `Preset_Reward`，使 `Level Architect` 的内置预设集合重新与现役 `RoomNodeType` 六类（含 `Reward`）对齐，不再出现 HTML/JSON 支持 `reward`、Build 预设却无法直接创建的错位。
+
+### 目的
+- 把 `Level Architect` 收口成当前更可信的一步到位白盒搭建入口，降低“最小验证切片到底该从 HTML 还是 Build 开始”的协作歧义。
+- 消除 `Reward` 房型在编辑器预设链上的缺口，让现役房型语言、HTML JSON 契约与 Build Tab 的实际可创建能力保持一致。
+
+### 技术
+- 编辑器 UX 对齐：通过 `EditorWindow` 文案、HelpBox 与按钮标签调整，重新表达 `Design / Build / Validate` 三个 Tab 的现役职责边界。
+- 预设链补全：扩展 `RoomFactory` 的内置 `RoomPresetSO` 生成集合，新增 `Reward Room` 预设而不改动既有运行时房间创建管线。
+
 ## Level RoomElements finding 去日期化与现役化更新 — 2026-04-11 11:01
 
 ### 修改文件
@@ -13637,4 +13682,16 @@ dotnet build 验证：0 错误，0 警告。
 - 内容：将 `DoorWiringService` 从旧的单边 `UpdateDoorPositions()` 收口为完整连接同步：统一回刷门位、反向门位、Auto-Connect 生成的 `DoorSpawn_from_*` 出生点，以及基于 `FloorLevel` 的 `TransitionCeremony`；同时修正 `AutoConnectRooms()` 里目标出生点方向，保证自动连线生成的目标出生点落在目标房间内部，并把新建 SpawnPoint 优先挂到 `Navigation/SpawnPoints`。在 `BatchEditPanel` 中统一 `SetNodeType()` 与 `ApplyBatchNodeType()` 的副作用链，批量改 `FloorLevel` / `Size` 后会立刻触发门同步，避免房间边界、楼层语义与既有门连接脱节。`LevelArchitectWindow` 增加房间边界/楼层 authoring 状态跟踪，在 SceneView 中检测到房间 Rect 或楼层变化时自动调用门同步；`OnUndoRedo()` 也会全量回刷门连接。`LevelValidator` 新增 `Door ceremony` 一致性校验，并把 `TargetSpawnPoint` 校验扩展为“出生点必须落在目标房间范围内”，支持对历史漂移数据一键 Auto-Fix。
 - 目的：收口 `Level` 编辑器里“改了 Room 元数据/几何，但 Door 语义与位置不跟着更新”的 authority 漏口，避免 `FloorLevel`、房间尺寸、白盒拖拽、撤销重做等操作后留下半同步 Scene truth。
 - 技术：采用编辑器侧 authority 同步服务 + SceneView 状态跟踪 + Validate/Auto-Fix 三层闭环；通过 `SerializedObject` 回写 `Door` 序列化字段，通过 `Undo` 记录门、出生点、组件增补变更，并使用 `dotnet build Project-Ark.slnx` 验证本轮修改在当前工作区下编译通过（0 error，仅保留既有 warning）。
+
+## Level 设计文档现役口径同步 - 2026-04-11 11:29
+- 新建/修改文件：`Docs/2_Design/Level/Level_CanonicalSpec.md`、`Docs/2_Design/Level/Level_WorkflowSpec.md`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：对齐 `Level` 两份核心设计文档与现役代码，移除已删除的 `SceneScanner`、`ScaffoldSceneBinder`、`LevelScaffoldData` 相关口径；清理文档中不存在的 `LevelEvents.OnRoomCleared` 暴露；将 room-level combat owner 收口为 `Room.ActivateEnemies()` / `RoomManager.NotifyRoomCleared()`，明确 `ArenaController` 只是 `Arena` / `Boss` 房的 ceremony orchestrator、`OpenEncounterTrigger` 只拥有局部 open encounter 生命周期；同步修正文档中的镜头边界职责，改为 `RoomCameraConfiner` 监听 `RoomManager.OnCurrentRoomChanged` 更新 `CinemachineConfiner2D`，`CameraDirector` 仅消费 `CameraTrigger` 栈；同时补写 `Phase` / `Stage` 双链、`Directing` 家族现役职责、`LevelDesigner.html` 当前“拓扑规划 + JSON 导入源”的定位，以及 `rooms / connections / doorLinks` 主消费字段与 `elements[]` / `zoneId` / `act` / `tension` / `beatName` / `timeRange` 设计快照边界；更新 `WorkflowSpec` 的 `doorLinks[]` schema 与 `connectionType` alias 兼容说明，并注明 `CameraTrigger` 仍未进入同等级 `LevelValidator` 收口。
+- 目的：让 `CanonicalSpec` 与 `WorkflowSpec` 回到“以现役代码为准”的单一口径，避免设计、authoring 与排查时继续被退役 Scaffold 层、伪事件和错误 owner 描述误导。
+- 技术：基于 `Room`、`RoomManager`、`ArenaController`、`OpenEncounterTrigger`、`CameraTrigger`、`CameraDirector`、`RoomCameraConfiner`、`LevelSliceBuilder`、`LevelValidator`、`LevelEvents` 与 `LevelDesigner.html` 的现役实现做逐段比对回写；通过文档分层治理，把运行时 authority、authoring 路径、JSON 契约和 validator 覆盖面分别收口到对应章节。
+
+## LevelDesigner workflow 房型覆盖测试稿 - 2026-04-11 12:12
+- 新建/修改文件：`Docs/3_LevelDesigns/WorkflowTests/LevelDesigner_Workflow_RoomCoverage.json`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：新增一份可直接导入 `LevelDesigner.html` 的 workflow 测试 JSON，覆盖 `safe / transit / combat / reward / arena / boss` 全部 `RoomNodeType`，同时覆盖 `progression / challenge / ability / identity / scheduled / return` 六种现役 `connectionType`；补齐整套 `doorLinks` 与 `spawnOffset`，确保 HTML 侧的门关联线、目标入口落点和 Unity 导入链都能被一起验证；并在房间中携带 `zoneId`、`act`、`tension`、`beatName`、`timeRange` 与代表性的 `elements[]`，用于同步检查 ACT 分组、张力曲线和设计快照字段的保留情况。
+- 目的：为后续实际验证 `Level_WorkflowSpec.md` 提供一份低歧义、可重复导入、覆盖主路径的标准测试稿，避免一开始就拿大型历史设计稿混测而难以判断是 workflow 问题还是输入样本过于复杂。
+- 技术：严格按 `LevelDesigner.html` / `LevelSliceBuilder` 当前共享 schema 组织 JSON，仅使用现役字段；按 `roomId + entryDir` 唯一键约束编排 `doorLinks`；混合覆盖 0/1 楼层、ACT1/ACT2、张力排序字段与自定义元素，随后使用 `python3` 对生成文件做 JSON 语法校验，确认可作为导入样本。
 

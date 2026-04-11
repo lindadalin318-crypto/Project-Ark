@@ -68,6 +68,7 @@
 
 - **`ShipVFX-PhaseB`**：基于 `Phase A` 已完成的治理基线，进入第一批体验重构切片
 - **`Camera-MVP`**：在现有镜头底座上补前向 lead、基础兴趣点与更明确的 framing 规则
+- **`Level-Architect-Workbench`**：把 `Level Architect` 从工具集合收口为 `Scene-backed authoring workbench`，吸收 `HTML` 的交互心智而不新增第二套 authority
 - **`Level-Authoring-Standardization`**：待 `Room` 运行时消费链收口后，再推进场景根节点与房间语法的批量规范化
 - **`Plan-Rollout-Phase2`**：当首轮入口跑顺后，再评估是否迁入第二批现役专项或清理顶层目录历史债
 
@@ -91,6 +92,7 @@
 - Ship / VFX 迁移路线图：[`../2_Design/Ship/ShipVFX_MigrationPlan.md`](../2_Design/Ship/ShipVFX_MigrationPlan.md)
 - 活跃专项入口：[`./ongoing/README.md`](./ongoing/README.md)
 - 当前活跃专项：[`./ongoing/Level-RoomRuntimeChain-Hardening.md`](./ongoing/Level-RoomRuntimeChain-Hardening.md)
+- 待启动提案：[`./ongoing/Level-Architect-Workbench.md`](./ongoing/Level-Architect-Workbench.md)
 - 已完成专项：[`./complete/ShipVFX-PhaseA.md`](./complete/ShipVFX-PhaseA.md)
 - 实现日志：[`../5_ImplementationLog/ImplementationLog.md`](../5_ImplementationLog/ImplementationLog.md)
 - 历史关卡方案：[`../8_Obsolete/LevelModulePlan.md`](../8_Obsolete/LevelModulePlan.md)

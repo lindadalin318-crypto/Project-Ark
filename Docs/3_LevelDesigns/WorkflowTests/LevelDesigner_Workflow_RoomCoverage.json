@@ -1,0 +1,221 @@
+{
+  "levelName": "LevelDesigner Workflow Test - Room Coverage",
+  "rooms": [
+    {
+      "id": "WF_R01_SAFE_ENTRY",
+      "name": "入口安全房",
+      "type": "safe",
+      "floor": 0,
+      "position": [0, 10],
+      "size": [12, 8],
+      "zoneId": "T1a",
+      "act": "ACT1",
+      "tension": 1,
+      "beatName": "进入",
+      "timeRange": "0:00-1:30",
+      "elements": [
+        { "type": "door", "position": [11, 4] },
+        { "type": "checkpoint", "position": [3, 4] },
+        { "type": "cameraTrigger", "position": [6, 4] }
+      ]
+    },
+    {
+      "id": "WF_R02_TRANSIT_HUB",
+      "name": "导向过路房",
+      "type": "transit",
+      "floor": 0,
+      "position": [16, 10],
+      "size": [12, 8],
+      "zoneId": "T1b",
+      "act": "ACT1",
+      "tension": 2,
+      "beatName": "导向",
+      "timeRange": "1:30-3:00",
+      "elements": [
+        { "type": "door", "position": [0, 4] },
+        { "type": "door", "position": [11, 4] },
+        { "type": "hiddenAreaMask", "position": [5, 1] }
+      ]
+    },
+    {
+      "id": "WF_R03_COMBAT_FIELD",
+      "name": "开放战斗房",
+      "type": "combat",
+      "floor": 0,
+      "position": [32, 10],
+      "size": [14, 9],
+      "zoneId": "T1c",
+      "act": "ACT1",
+      "tension": 5,
+      "beatName": "施压",
+      "timeRange": "3:00-5:30",
+      "elements": [
+        { "type": "door", "position": [0, 4] },
+        { "type": "door", "position": [13, 4] },
+        { "type": "openEncounter", "position": [6, 4] },
+        { "type": "biomeTrigger", "position": [2, 4] }
+      ]
+    },
+    {
+      "id": "WF_R04_REWARD_CACHE",
+      "name": "回报缓存房",
+      "type": "reward",
+      "floor": 0,
+      "position": [50, 10],
+      "size": [10, 8],
+      "zoneId": "T1d",
+      "act": "ACT1",
+      "tension": 3,
+      "beatName": "回报",
+      "timeRange": "5:30-7:00",
+      "elements": [
+        { "type": "door", "position": [0, 4] },
+        { "type": "door", "position": [5, 7] },
+        { "type": "chest", "position": [6, 4] },
+        { "type": "custom", "position": [3, 2], "customLabel": "Lore", "customColor": "#ffcc66" }
+      ]
+    },
+    {
+      "id": "WF_R05_ARENA_PROOF",
+      "name": "封闭清算房",
+      "type": "arena",
+      "floor": 0,
+      "position": [50, 24],
+      "size": [12, 10],
+      "zoneId": "T2a",
+      "act": "ACT2",
+      "tension": 8,
+      "beatName": "证明",
+      "timeRange": "7:00-9:00",
+      "elements": [
+        { "type": "door", "position": [6, 0] },
+        { "type": "door", "position": [11, 5] },
+        { "type": "arenaController", "position": [6, 5] },
+        { "type": "scheduledBehaviour", "position": [3, 2] }
+      ]
+    },
+    {
+      "id": "WF_R06_TRANSIT_BIOME_SHIFT",
+      "name": "生态切换过路房",
+      "type": "transit",
+      "floor": 0,
+      "position": [66, 24],
+      "size": [12, 9],
+      "zoneId": "T2b",
+      "act": "ACT2",
+      "tension": 6,
+      "beatName": "切换",
+      "timeRange": "9:00-10:30",
+      "elements": [
+        { "type": "door", "position": [0, 4] },
+        { "type": "door", "position": [6, 0] },
+        { "type": "biomeTrigger", "position": [3, 4] },
+        { "type": "activationGroup", "position": [8, 4] }
+      ]
+    },
+    {
+      "id": "WF_R07_SAFE_UPPER_REST",
+      "name": "上层安全房",
+      "type": "safe",
+      "floor": 1,
+      "position": [66, 8],
+      "size": [12, 8],
+      "zoneId": "T2c",
+      "act": "ACT2",
+      "tension": 2,
+      "beatName": "喘息",
+      "timeRange": "10:30-12:00",
+      "elements": [
+        { "type": "door", "position": [6, 7] },
+        { "type": "door", "position": [11, 4] },
+        { "type": "checkpoint", "position": [3, 4] },
+        { "type": "worldEventTrigger", "position": [8, 2] }
+      ]
+    },
+    {
+      "id": "WF_R08_BOSS_CORE",
+      "name": "Boss 核心房",
+      "type": "boss",
+      "floor": 1,
+      "position": [82, 8],
+      "size": [16, 12],
+      "zoneId": "T2d",
+      "act": "ACT2",
+      "tension": 10,
+      "beatName": "终局",
+      "timeRange": "12:00-15:00",
+      "elements": [
+        { "type": "door", "position": [0, 6] },
+        { "type": "cameraTrigger", "position": [8, 5] },
+        { "type": "enemy", "position": [8, 7] }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "WF_R01_SAFE_ENTRY",
+      "to": "WF_R02_TRANSIT_HUB",
+      "fromDir": "east",
+      "toDir": "west",
+      "connectionType": "progression"
+    },
+    {
+      "from": "WF_R02_TRANSIT_HUB",
+      "to": "WF_R03_COMBAT_FIELD",
+      "fromDir": "east",
+      "toDir": "west",
+      "connectionType": "challenge"
+    },
+    {
+      "from": "WF_R03_COMBAT_FIELD",
+      "to": "WF_R04_REWARD_CACHE",
+      "fromDir": "east",
+      "toDir": "west",
+      "connectionType": "ability"
+    },
+    {
+      "from": "WF_R04_REWARD_CACHE",
+      "to": "WF_R05_ARENA_PROOF",
+      "fromDir": "south",
+      "toDir": "north",
+      "connectionType": "identity"
+    },
+    {
+      "from": "WF_R05_ARENA_PROOF",
+      "to": "WF_R06_TRANSIT_BIOME_SHIFT",
+      "fromDir": "east",
+      "toDir": "west",
+      "connectionType": "scheduled"
+    },
+    {
+      "from": "WF_R06_TRANSIT_BIOME_SHIFT",
+      "to": "WF_R07_SAFE_UPPER_REST",
+      "fromDir": "north",
+      "toDir": "south",
+      "connectionType": "return"
+    },
+    {
+      "from": "WF_R07_SAFE_UPPER_REST",
+      "to": "WF_R08_BOSS_CORE",
+      "fromDir": "east",
+      "toDir": "west",
+      "connectionType": "progression"
+    }
+  ],
+  "doorLinks": [
+    { "roomId": "WF_R01_SAFE_ENTRY", "entryDir": "east", "doorIndex": 0, "spawnOffset": [9.5, 4] },
+    { "roomId": "WF_R02_TRANSIT_HUB", "entryDir": "west", "doorIndex": 0, "spawnOffset": [2.5, 4] },
+    { "roomId": "WF_R02_TRANSIT_HUB", "entryDir": "east", "doorIndex": 1, "spawnOffset": [9.5, 4] },
+    { "roomId": "WF_R03_COMBAT_FIELD", "entryDir": "west", "doorIndex": 0, "spawnOffset": [2.5, 4.5] },
+    { "roomId": "WF_R03_COMBAT_FIELD", "entryDir": "east", "doorIndex": 1, "spawnOffset": [11.5, 4.5] },
+    { "roomId": "WF_R04_REWARD_CACHE", "entryDir": "west", "doorIndex": 0, "spawnOffset": [2.5, 4] },
+    { "roomId": "WF_R04_REWARD_CACHE", "entryDir": "south", "doorIndex": 1, "spawnOffset": [5, 5.5] },
+    { "roomId": "WF_R05_ARENA_PROOF", "entryDir": "north", "doorIndex": 0, "spawnOffset": [6, 2.5] },
+    { "roomId": "WF_R05_ARENA_PROOF", "entryDir": "east", "doorIndex": 1, "spawnOffset": [9.5, 5] },
+    { "roomId": "WF_R06_TRANSIT_BIOME_SHIFT", "entryDir": "west", "doorIndex": 0, "spawnOffset": [2.5, 4.5] },
+    { "roomId": "WF_R06_TRANSIT_BIOME_SHIFT", "entryDir": "north", "doorIndex": 1, "spawnOffset": [6, 2.5] },
+    { "roomId": "WF_R07_SAFE_UPPER_REST", "entryDir": "south", "doorIndex": 0, "spawnOffset": [6, 5.5] },
+    { "roomId": "WF_R07_SAFE_UPPER_REST", "entryDir": "east", "doorIndex": 1, "spawnOffset": [9.5, 4] },
+    { "roomId": "WF_R08_BOSS_CORE", "entryDir": "west", "doorIndex": 0, "spawnOffset": [2.5, 6] }
+  ]
+}

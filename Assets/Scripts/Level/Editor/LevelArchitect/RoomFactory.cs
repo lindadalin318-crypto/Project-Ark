@@ -224,8 +224,8 @@ namespace ProjectArk.Level.Editor
         }
 
         /// <summary>
-        /// Create the 5 built-in presets if they don't exist.
-        /// Returns the Transit (Normal) preset.
+        /// Create the built-in presets if they don't exist.
+        /// Returns the default preset used by Blockout mode.
         /// </summary>
         public static RoomPresetSO CreateBuiltInPresets()
         {
@@ -246,6 +246,10 @@ namespace ProjectArk.Level.Editor
             CreatePresetIfMissing(path, "Preset_Combat", "Combat Room",
                 "Open combat room focused on mobile skirmishes while traversal continues.",
                 RoomNodeType.Combat, new Vector2(22, 16), 5, false, true);
+
+            CreatePresetIfMissing(path, "Preset_Reward", "Reward Room",
+                "Low-pressure payoff room for pickups, post-encounter relief, or one-off rewards.",
+                RoomNodeType.Reward, new Vector2(18, 12), 2, false, false);
 
             CreatePresetIfMissing(path, "Preset_Arena", "Arena Room",
                 "Closed combat room — doors lock on entry, unlock after all waves cleared.",

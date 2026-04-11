@@ -31,8 +31,8 @@
 | 房间空间布局 | Scene 中的 `Room` GameObject | 房间位置、尺寸、边界、子节点结构以场景为准 |
 | 房间连接拓扑 | Scene 中 `Door._targetRoom` / `_targetSpawnPoint` | Door 是连接关系 authority |
 | 房间元数据 | `RoomSO` / `EncounterSO` / `CheckpointSO` / `WorldPhaseSO` 等 SO | 非空间配置、节奏类型、遭遇配置以 SO 为准 |
-| 外部拓扑草图 | `LevelDesigner.html` 导出的 JSON | 只作为导入源 |
-| 编辑期快照 | `LevelScaffoldData` | 只承担归档 / 导出，不驱动运行时 |
+| 外部拓扑草图 | `LevelDesigner.html` 导出的 JSON | 只作为导入源；现役主消费为 `rooms / connections / doorLinks` |
+| 设计快照字段 | `LevelDesigner.html` 的 `elements[]`、`zoneId`、`act`、`tension`、`beatName`、`timeRange` | 当前主要用于设计沟通与 JSON 留档，不驱动运行时对象生成 |
 | 架构规则与模块边界 | `Level_CanonicalSpec.md` | 架构、声明、authority 规范 |
 
 ### 1.4 一句话原则
@@ -140,13 +140,18 @@ Level Architect / Build Tab → Blockout / Connect → Scene 落地
 - JSON 是导入源，不是运行时 authority
 - 导入完成后，继续演化的是 Scene 中的 `Room` / `Door` 和相关 SO
 - 如果导入后又手改了房间位置、尺寸、Door 接线，以 Scene 当前状态为准
+- 当前 Unity 导入主链只消费 `rooms / connections / doorLinks` 骨架；`elements[]` 与节奏元数据仍属于设计快照层
 
 ### 4.4 JSON 导入约束
 
-- `LevelSliceBuilder` 读取的是顶层 `connections[]`
-- 房间位置与尺寸字段使用 `position: [x, y]` / `size: [w, h]`
+- `LevelSliceBuilder` 读取顶层 `rooms[]`、`connections[]`、`doorLinks[]`
+- 房间主消费字段为 `id`、`name`、`type`、`floor`、`position`、`size`
+- `doorLinks[]` 负责目标房间入场落点；若未提供显式 `spawnOffset`，导入器会回退到默认内缩落点
 - 连接方向字段使用 `fromDir` / `toDir`
 - 方向值使用 `east / west / north / south`
+- `zoneId`、`act`、`tension`、`beatName`、`timeRange`、`elements[]` 当前会随 JSON 保存，但不会自动生成 Encounter、敌人、Checkpoint 或其他场景对象
+- `type` 必须使用 `transit / combat / arena / reward / safe / boss`；旧房间类型字符串会在导入时直接失败
+- `connectionType` 推荐使用 `progression / return / ability / challenge / identity / scheduled`；当前 `LevelDesigner.html` 与 `LevelSliceBuilder` 仍会把旧 alias 归一到现役枚举（如 `normal → progression`、`tidal → scheduled`）
 
 JSON 结构示例见本文附录。
 
@@ -287,6 +292,11 @@ JSON 结构示例见本文附录。
 | Door 的 `_targetSpawnPoint` 为空 | Error | ❌ |
 | 房间孤立（没有 Door 连接） | Info | ❌ |
 
+**当前补充：**
+
+- `LevelValidator` 还会检查 `BiomeTrigger`、`HiddenAreaMask`、`ScheduledBehaviour`、`ActivationGroup`、`WorldEventTrigger` 的基础引用与推荐挂点。
+- `CameraTrigger` 当前**尚未进入同等级 validator 收口**；镜头导演区的层级、player layer 与局部镜头效果仍需要人工走查。
+
 ### 7.3 `Quick Play` 的准确定位
 
 `Quick Play` 会：
@@ -367,7 +377,7 @@ Room_[ID]
 |------|------|
 | `Navigation` | Door、进入点、离开点等空间导航结构 |
 | `Elements` | 锁、拾取物、互动件、可破坏物、NPC |
-| `Encounters` | 遭遇触发器、`ArenaController`、`EnemySpawner` |
+| `Encounters` | 遭遇触发器、`OpenEncounterTrigger`、`EnemySpawner` |
 | `Hazards` | 环境伤害与危险物 |
 | `Decoration` | 纯视觉 / 氛围内容 |
 | `Triggers` | Camera、Biome、事件、隐藏区域等触发器 |
@@ -413,8 +423,8 @@ Room_[ID]
    - 能自给自足的触发器、交互件、环境控制器，应优先保持自治。
 
 6. **决定要不要扩编辑期模型**
-   - 只有当该元素需要参与 `LevelScaffoldData`、HTML 导入导出、Overlay 或批量搭建工具时，才扩编辑期 schema。
-   - 纯场景手工 authoring 的细节，不要为了“看起来统一”强行塞进 `ScaffoldElementType`。
+   - 只有当该元素需要参与 `LevelDesigner.html` JSON、Overlay 或批量搭建工具时，才扩编辑期 schema。
+   - 纯场景手工 authoring 的细节，不要为了“看起来统一”额外发明脱离 Scene 主链的中间快照层。
 
 7. **最后补校验与验收**
    - 需要进入标准工作流的元素，必须同步补 `LevelValidator`。
@@ -434,45 +444,75 @@ Room_[ID]
 
 ---
 
-## 9. `LevelScaffoldData` 的定位
-
+## 9. `LevelDesigner.html` JSON 与设计快照字段的定位
 
 ### 9.1 它是什么
 
-`LevelScaffoldData` 是：
+`LevelDesigner.html` 导出的 JSON 是：
 
-- 编辑期快照
-- 场景信息的归档 / 导出载体
-- `Scene → Scaffold` 单向同步目标
+- 浏览器侧拓扑规划结果
+- `HTML → JSON → LevelSliceBuilder → Scene` 这条路径的导入源
+- 设计沟通与结构归档的轻量文本载体
 
 ### 9.2 它不是什么
 
 它不是：
 
 - 运行时 authority
-- Door 拓扑真相源
-- JSON 导入的必经中间层
-- Scene 的持续反向驱动器
+- Door 拓扑的长期真相源
+- Scene 的持续双向同步层
+- Unity 场景对象的全自动 authoring 面板
 
-### 9.3 同步方向
+### 9.3 当前主消费字段
 
-`ScaffoldSceneBinder` 的同步方向是：
+现役导入主链主要消费：
 
-**Scene → Scaffold**
+- 顶层：`rooms[]`、`connections[]`、`doorLinks[]`
+- 房间：`id`、`name`、`type`、`floor`、`position`、`size`
+- 连接：`from`、`to`、`fromDir`、`toDir`、`connectionType`
+- 门落点：`roomId`、`entryDir`、`spawnOffset`
 
-- 场景是 source of truth
-- `ScaffoldData` 是 snapshot / export target
-- 不做 `Scaffold → Scene` 自动回写
+这些字段足以让 `LevelSliceBuilder` 生成：
 
-### 9.4 什么时候值得用它
+- `Room` 根对象
+- `RoomSO` 资产
+- Door 对与 SpawnPoint 对
+- 标准房间层级骨架
 
-适合用于：
+### 9.4 当前仍属于设计快照的字段
 
-- 给已搭好的 Scene 做结构归档
-- 记录房间位置、尺寸与部分骨架信息
-- 作为后续工具链扩展的数据落脚点
+以下字段会跟随 JSON 留档，但当前**不会**自动驱动 Unity 生成对应运行时对象：
 
-如果只是想快速导入 JSON 或直接搭房间，没有必要先创建 `LevelScaffoldData`。
+- `rooms[].elements[]`
+- `rooms[].zoneId`
+- `rooms[].act`
+- `rooms[].tension`
+- `rooms[].beatName`
+- `rooms[].timeRange`
+
+它们当前更适合用于：
+
+- 设计讨论
+- 节奏对齐
+- 导入前的拓扑审阅
+- JSON 历史留档
+
+### 9.5 权威切换时机
+
+一旦导入完成，权威立即切换为：
+
+- Scene 中的 `Room` / `Door`
+- 相关 `RoomSO` / `EncounterSO` / 其他 SO
+
+也就是说：
+
+- **JSON 负责“把骨架带进来”**
+- **Scene + SO 负责“之后它真正怎么活”**
+
+### 9.6 兼容性说明
+
+- `RoomNodeType` 字符串已经严格收口到 `transit / combat / arena / reward / safe / boss`
+- `connectionType` 仍保留少量旧 alias 归一兼容，便于迁移旧 JSON，但新增设计稿应统一写现役字符串
 
 ---
 
@@ -516,7 +556,14 @@ Room_[ID]
       "zoneId": "sheba",
       "act": "ACT1",
       "tension": 1,
-      "beatName": "intro"
+      "beatName": "intro",
+      "timeRange": "0:00-5:00",
+      "elements": [
+        {
+          "type": "door",
+          "position": [28, 10]
+        }
+      ]
     }
   ],
   "connections": [
@@ -527,21 +574,30 @@ Room_[ID]
       "toDir": "west",
       "connectionType": "progression"
     }
+  ],
+  "doorLinks": [
+    {
+      "roomId": "room_002",
+      "entryDir": "west",
+      "doorIndex": 0,
+      "spawnOffset": [2, 10]
+    }
   ]
 }
 ```
 
 ### 11.2 `rooms[]` 字段说明
 
-| 字段 | 说明 |
-|------|------|
-| `id` | 房间唯一 ID |
-| `name` | 房间显示名称 |
-| `type` | 房间节奏类型 |
-| `floor` | 楼层 |
-| `position` | `[x, y]`，网格单位 |
-| `size` | `[w, h]`，网格单位 |
-| `zoneId` / `act` / `tension` / `beatName` | 可携带的附加设计信息 |
+| 字段 | 说明 | 当前导入状态 |
+|------|------|-------------|
+| `id` | 房间唯一 ID | ✅ 主消费 |
+| `name` | 房间显示名称 | ✅ 主消费 |
+| `type` | 房间节奏类型 | ✅ 主消费 |
+| `floor` | 楼层 | ✅ 主消费 |
+| `position` | `[x, y]`，网格单位 | ✅ 主消费 |
+| `size` | `[w, h]`，网格单位 | ✅ 主消费 |
+| `zoneId` / `act` / `tension` / `beatName` / `timeRange` | 附加设计信息 | 📝 当前留档，不自动生成运行时对象 |
+| `elements[]` | 房内设计元素快照 | 📝 当前留档，不自动生成场景对象 |
 
 ### 11.3 `connections[]` 字段说明
 
@@ -551,7 +607,16 @@ Room_[ID]
 | `fromDir` / `toDir` | 门朝向，使用 `east / west / north / south` |
 | `connectionType` | 连接语义类型 |
 
-### 11.4 `type` 规范字符串
+### 11.4 `doorLinks[]` 字段说明
+
+| 字段 | 说明 |
+|------|------|
+| `roomId` | 目标房间 ID |
+| `entryDir` | 进入该房间时对应的入口边（`east / west / north / south`） |
+| `doorIndex` | HTML 侧门元素索引，主要用于设计器内部关联 |
+| `spawnOffset` | 目标房间局部网格坐标下的落点；导入时会转换为 Unity 房间中心坐标系 |
+
+### 11.5 `type` 规范字符串
 
 - `transit`
 - `combat`
@@ -564,9 +629,11 @@ Room_[ID]
 
 - JSON 只能写以上 6 个字符串
 - 旧字符串 `pressure / resolution / anchor / loop / hub / threshold / corridor / normal / puzzle / narrative` 已全部废弃
-- 若导入仍包含旧值，`LevelDesigner.html` 与 `LevelSliceBuilder` 都应直接报错，而不是继续归一兼容
+- 若导入仍包含旧值，`LevelSliceBuilder` 会直接报错，而不是继续归一兼容
 
-### 11.5 `connectionType` 规范字符串
+### 11.6 `connectionType` 规范字符串
+
+推荐现役值：
 
 - `progression`
 - `return`
@@ -574,6 +641,14 @@ Room_[ID]
 - `challenge`
 - `identity`
 - `scheduled`
+
+当前兼容的旧 alias：
+
+- `normal` → `progression`
+- `tidal` → `scheduled`
+- `locked` → `ability`
+- `one_way` → `progression`
+- `secret` → `ability`
 
 ---
 
