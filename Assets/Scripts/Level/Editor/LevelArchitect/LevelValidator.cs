@@ -64,10 +64,12 @@ namespace ProjectArk.Level.Editor
                 ValidateCameraConfiner(room);
                 ValidateStandardRoomHierarchy(room);
                 ValidateArenaBossConfig(room);
+                ValidateRoomEncounterMode(room);
             }
 
             ValidateLocks();
             ValidateCheckpoints();
+            ValidateOpenEncounterTriggers();
             ValidateHiddenAreaMasks();
             ValidateBiomeTriggers();
             ValidateScheduledBehaviours();
@@ -75,6 +77,7 @@ namespace ProjectArk.Level.Editor
             ValidatePreferredAuthoringRoots();
 
             ValidateDoorBidirectional(rooms);
+            ValidateDoorCeremonyConsistency(rooms);
 
             ValidateDoorPlayerLayer(rooms);
             ValidateDoorTargetSpawnPoint(rooms);
@@ -409,6 +412,84 @@ namespace ProjectArk.Level.Editor
                         Severity = Severity.Error,
                         Message = $"Checkpoint '{checkpoint.gameObject.name}' is missing CheckpointSO reference.",
                         TargetObject = checkpoint,
+                        CanAutoFix = false,
+                        FixAction = null
+                    });
+                }
+            }
+        }
+
+        private static void ValidateOpenEncounterTriggers()
+        {
+            var openEncounters = UnityEngine.Object.FindObjectsByType<OpenEncounterTrigger>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var openEncounter in openEncounters)
+            {
+                if (openEncounter == null) continue;
+
+                ValidateTriggerCollider(openEncounter, "OpenEncounterTrigger");
+                ValidateLayerMask(openEncounter, "_playerLayer", "OpenEncounterTrigger");
+
+                var serialized = new SerializedObject(openEncounter);
+                var encounterProperty = serialized.FindProperty("_encounter");
+                var encounter = encounterProperty.objectReferenceValue as EncounterSO;
+                if (encounter == null)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Error,
+                        Message = $"OpenEncounterTrigger '{openEncounter.gameObject.name}' is missing EncounterSO reference.",
+                        TargetObject = openEncounter,
+                        CanAutoFix = false,
+                        FixAction = null
+                    });
+                }
+                else if (encounter.Mode != EncounterMode.Open)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Warning,
+                        Message = $"OpenEncounterTrigger '{openEncounter.gameObject.name}' uses EncounterSO '{encounter.name}' with Mode '{encounter.Mode}'. Open encounters should use Mode 'Open'.",
+                        TargetObject = encounter,
+                        CanAutoFix = false,
+                        FixAction = null
+                    });
+                }
+
+                bool hasAssignedSpawner = serialized.FindProperty("_spawner").objectReferenceValue != null;
+                bool hasChildSpawner = openEncounter.GetComponentInChildren<EnemySpawner>(true) != null;
+                if (!hasAssignedSpawner && !hasChildSpawner)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Error,
+                        Message = $"OpenEncounterTrigger '{openEncounter.gameObject.name}' has no EnemySpawner reference or child spawner.",
+                        TargetObject = openEncounter,
+                        CanAutoFix = false,
+                        FixAction = null
+                    });
+                }
+
+                var parentRoom = openEncounter.GetComponentInParent<Room>();
+                if (parentRoom == null)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Warning,
+                        Message = $"OpenEncounterTrigger '{openEncounter.gameObject.name}' is not nested under a Room.",
+                        TargetObject = openEncounter,
+                        CanAutoFix = false,
+                        FixAction = null
+                    });
+                    continue;
+                }
+
+                if (parentRoom.Data != null && parentRoom.Data.HasEncounter)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Warning,
+                        Message = $"Room '{parentRoom.RoomID}' mixes RoomSO encounter with OpenEncounterTrigger '{openEncounter.gameObject.name}'. Choose a single encounter owner.",
+                        TargetObject = openEncounter,
                         CanAutoFix = false,
                         FixAction = null
                     });
@@ -769,12 +850,81 @@ namespace ProjectArk.Level.Editor
             }
         }
 
-        // Rule 5: Arena/Boss rooms missing ArenaController or EncounterSO
+        private static void ValidateDoorCeremonyConsistency(Room[] rooms)
+        {
+            foreach (var room in rooms)
+            {
+                if (room == null) continue;
+                var doors = room.GetComponentsInChildren<Door>(true);
+
+                foreach (var door in doors)
+                {
+                    if (door == null || door.TargetRoom == null) continue;
+
+                    var expectedCeremony = DoorWiringService.GetExpectedCeremony(room, door.TargetRoom);
+                    if (door.Ceremony == expectedCeremony) continue;
+
+                    var capturedRoom = room;
+                    var capturedDoor = door;
+                    var capturedExpectedCeremony = expectedCeremony;
+
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Warning,
+                        Message = $"Door '{capturedDoor.gameObject.name}' in '{capturedRoom.RoomID}' has ceremony '{capturedDoor.Ceremony}' but expected '{capturedExpectedCeremony}'.",
+                        TargetObject = capturedDoor,
+                        CanAutoFix = true,
+                        FixAction = () => DoorWiringService.SynchronizeRoomConnections(capturedRoom)
+                    });
+                }
+            }
+        }
+
+        private static void ValidateRoomEncounterMode(Room room)
+        {
+            if (room?.Data == null || room.Data.Encounter == null)
+            {
+                return;
+            }
+
+            if (room.Data.Encounter.Mode == EncounterMode.Closed)
+            {
+                return;
+            }
+
+            _lastResults.Add(new ValidationResult
+            {
+                Severity = Severity.Warning,
+                Message = $"Room '{room.RoomID}' uses RoomSO Encounter '{room.Data.Encounter.name}' with Mode '{room.Data.Encounter.Mode}'. Room-owned encounters should use Mode 'Closed'; open encounters belong on OpenEncounterTrigger.",
+                TargetObject = room.Data.Encounter,
+                CanAutoFix = false,
+                FixAction = null
+            });
+        }
+
+        // Rule 5: Arena/Boss rooms must use ArenaController as their ceremony orchestrator.
         private static void ValidateArenaBossConfig(Room room)
         {
-            if (room.NodeType != RoomNodeType.Arena && room.NodeType != RoomNodeType.Boss) return;
-
             var arenaController = room.GetComponent<ArenaController>();
+            bool isArenaBossRoom = room.NodeType == RoomNodeType.Arena || room.NodeType == RoomNodeType.Boss;
+
+            if (!isArenaBossRoom)
+            {
+                if (arenaController != null)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Warning,
+                        Message = $"Room '{room.RoomID}' ({room.NodeType}) has ArenaController but is not Arena/Boss. Remove the controller or change the room NodeType.",
+                        TargetObject = arenaController,
+                        CanAutoFix = false,
+                        FixAction = null
+                    });
+                }
+
+                return;
+            }
+
             if (arenaController == null)
             {
                 _lastResults.Add(new ValidationResult
@@ -888,7 +1038,28 @@ namespace ProjectArk.Level.Editor
                             CanAutoFix = false,
                             FixAction = null
                         });
+                        continue;
                     }
+
+                    if (door.TargetRoom == null) continue;
+
+                    var targetBox = door.TargetRoom.GetComponent<BoxCollider2D>();
+                    if (targetBox == null) continue;
+
+                    Rect targetRect = LevelArchitectWindow.GetRoomWorldRect(door.TargetRoom, targetBox);
+                    if (targetRect.Contains(door.TargetSpawnPoint.position)) continue;
+
+                    var capturedRoom = room;
+                    var capturedDoor = door;
+
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Warning,
+                        Message = $"Door '{capturedDoor.gameObject.name}' in '{capturedRoom.RoomID}' points to spawn '{capturedDoor.TargetSpawnPoint.name}' outside target room '{capturedDoor.TargetRoom.RoomID}'.",
+                        TargetObject = capturedDoor.TargetSpawnPoint,
+                        CanAutoFix = true,
+                        FixAction = () => DoorWiringService.SynchronizeRoomConnections(capturedRoom)
+                    });
                 }
             }
         }

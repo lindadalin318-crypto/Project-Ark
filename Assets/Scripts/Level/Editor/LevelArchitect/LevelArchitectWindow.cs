@@ -53,6 +53,19 @@ namespace ProjectArk.Level.Editor
         private Vector2 _sidePanelScroll;
         private List<Room> _selectedRooms = new List<Room>();
         private Room _hoveredRoom;
+        private readonly Dictionary<int, RoomAuthoringState> _roomAuthoringStates = new Dictionary<int, RoomAuthoringState>();
+
+        private struct RoomAuthoringState
+        {
+            public readonly Rect Bounds;
+            public readonly int FloorLevel;
+
+            public RoomAuthoringState(Rect bounds, int floorLevel)
+            {
+                Bounds = bounds;
+                FloorLevel = floorLevel;
+            }
+        }
 
         // ──────────────────── Sub-Systems ────────────────────
 
@@ -423,6 +436,9 @@ namespace ProjectArk.Level.Editor
             // Process input events based on current mode
             ProcessSceneInput(sceneView);
 
+            // Re-sync authoring-owned door state when room bounds or floor metadata changes.
+            TrackRoomAuthoringChanges();
+
             // Force SceneView to repaint for continuous updates
             if (Event.current.type == EventType.Layout)
             {
@@ -792,6 +808,74 @@ namespace ProjectArk.Level.Editor
 
         // ──────────────────── Utility ────────────────────
 
+        private void TrackRoomAuthoringChanges()
+        {
+            if (Event.current != null && Event.current.type != EventType.Repaint)
+            {
+                return;
+            }
+
+            var rooms = FindObjectsByType<Room>();
+            var liveRoomIds = new HashSet<int>();
+
+            foreach (var room in rooms)
+            {
+                if (room == null) continue;
+
+                int roomId = room.GetInstanceID();
+                liveRoomIds.Add(roomId);
+
+                var currentState = CaptureRoomAuthoringState(room);
+                if (!_roomAuthoringStates.TryGetValue(roomId, out var previousState))
+                {
+                    _roomAuthoringStates[roomId] = currentState;
+                    continue;
+                }
+
+                bool boundsChanged = !AreRectsApproximatelyEqual(previousState.Bounds, currentState.Bounds);
+                bool floorChanged = previousState.FloorLevel != currentState.FloorLevel;
+                if (!boundsChanged && !floorChanged)
+                {
+                    continue;
+                }
+
+                DoorWiringService.SynchronizeRoomConnections(room);
+                _roomAuthoringStates[roomId] = CaptureRoomAuthoringState(room);
+            }
+
+            var staleIds = new List<int>();
+            foreach (var roomId in _roomAuthoringStates.Keys)
+            {
+                if (!liveRoomIds.Contains(roomId))
+                {
+                    staleIds.Add(roomId);
+                }
+            }
+
+            foreach (var staleId in staleIds)
+            {
+                _roomAuthoringStates.Remove(staleId);
+            }
+        }
+
+        private static RoomAuthoringState CaptureRoomAuthoringState(Room room)
+        {
+            var box = room != null ? room.GetComponent<BoxCollider2D>() : null;
+            Rect bounds = box != null
+                ? GetRoomWorldRect(room, box)
+                : new Rect(room != null ? (Vector2)room.transform.position : Vector2.zero, Vector2.zero);
+            int floorLevel = room != null && room.Data != null ? room.Data.FloorLevel : 0;
+            return new RoomAuthoringState(bounds, floorLevel);
+        }
+
+        private static bool AreRectsApproximatelyEqual(Rect a, Rect b)
+        {
+            return Mathf.Approximately(a.x, b.x)
+                && Mathf.Approximately(a.y, b.y)
+                && Mathf.Approximately(a.width, b.width)
+                && Mathf.Approximately(a.height, b.height);
+        }
+
         /// <summary>
         /// Returns the world-space Rect for a room based on its Transform and BoxCollider2D.
         /// </summary>
@@ -890,12 +974,16 @@ namespace ProjectArk.Level.Editor
             _selectedRooms.RemoveAll(r => r == null);
             if (_hoveredRoom == null) _hoveredRoom = null; // Unity null check
 
+            _roomAuthoringStates.Clear();
+
             Repaint();
             SceneView.RepaintAll();
         }
 
         private void OnUndoRedo()
         {
+            _roomAuthoringStates.Clear();
+            DoorWiringService.SynchronizeAllRoomConnections();
             Repaint();
             SceneView.RepaintAll();
         }

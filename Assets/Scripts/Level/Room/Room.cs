@@ -46,7 +46,9 @@ namespace ProjectArk.Level
         private RoomState _state = RoomState.Undiscovered;
         private Door[] _doors;
         private EnemySpawner _spawner;
+        private ArenaController _arenaController;
         private WaveSpawnStrategy _waveStrategy;
+        private Action _roomOwnedEncounterComplete;
         private OpenEncounterTrigger[] _openEncounters;
         private DestroyableObject[] _destroyables;
         private RoomVariantSO _activeVariant; // currently active variant (null = default)
@@ -85,6 +87,9 @@ namespace ProjectArk.Level
         /// <summary> Current runtime state. </summary>
         public RoomState State => _state;
 
+        /// <summary> Whether this room has a room-owned encounter setup (EncounterSO + EnemySpawner). </summary>
+        public bool HasRoomOwnedEncounterSetup => ActiveEncounter != null && _spawner != null;
+
         // ──────────────────── Lifecycle ────────────────────
 
         private const string NAVIGATION_ROOT_NAME = "Navigation";
@@ -115,6 +120,7 @@ namespace ProjectArk.Level
         {
             _doors = CollectComponentsFromPreferredRoot<Door>(NAVIGATION_ROOT_NAME);
             _spawner = FindComponentInPreferredRoot<EnemySpawner>(ENCOUNTERS_ROOT_NAME);
+            _arenaController = GetComponent<ArenaController>();
             _openEncounters = CollectComponentsFromPreferredRoot<OpenEncounterTrigger>(ENCOUNTERS_ROOT_NAME);
             _destroyables = CollectComponentsFromPreferredRoot<DestroyableObject>(ELEMENTS_ROOT_NAME);
             _spawnPoints = CollectSpawnPoints();
@@ -266,18 +272,32 @@ namespace ProjectArk.Level
         // ──────────────────── Enemy Activation ────────────────────
 
         /// <summary>
-        /// Activate enemies in this room. If EncounterSO is configured and room is not cleared,
-        /// creates a WaveSpawnStrategy and starts it via EnemySpawner.
-        /// Otherwise falls back to activating pre-placed child enemies.
-        /// Called by RoomManager when player enters the room.
+        /// Activate combat in this room through the single room-level entry.
+        /// Arena/Boss rooms delegate ceremony to ArenaController, normal rooms start the room-owned encounter directly,
+        /// and legacy rooms without encounter data fall back to pre-placed child enemies.
         /// </summary>
         public void ActivateEnemies()
         {
-            // 波次刷怪模式：有 EncounterSO（含变体覆盖）且房间未清除且有 Spawner
-            var encounter = ActiveEncounter;
-            if (encounter != null && _state != RoomState.Cleared && _spawner != null)
+            if (_state == RoomState.Cleared)
             {
-                StartWaveEncounter(encounter);
+                return;
+            }
+
+            if (UsesArenaEncounterOrchestrator)
+            {
+                _arenaController.BeginEncounter();
+                return;
+            }
+
+            if (IsArenaOrBossRoom && _arenaController == null)
+            {
+                Debug.LogWarning($"[Room] {RoomID}: {NodeType} room is missing ArenaController. Falling back to direct room activation.");
+                LockAllDoors(DoorState.Locked_Combat);
+            }
+
+            if (HasRoomOwnedEncounterSetup)
+            {
+                StartRoomOwnedEncounter();
                 return;
             }
 
@@ -286,18 +306,41 @@ namespace ProjectArk.Level
         }
 
         /// <summary>
-        /// Start a wave-based encounter using the given EncounterSO data.
-        /// Supports variant override encounters.
+        /// Start the room-owned encounter using the active EncounterSO and EnemySpawner.
+        /// ArenaController may supply a completion callback for arena-specific post-clear orchestration.
         /// </summary>
-        private void StartWaveEncounter(EncounterSO encounter)
+        public bool StartRoomOwnedEncounter(Action onEncounterComplete = null)
         {
+            var encounter = ActiveEncounter;
+            if (_state == RoomState.Cleared || encounter == null || _spawner == null)
+            {
+                return false;
+            }
+
+            if (_waveStrategy != null)
+            {
+                Debug.LogWarning($"[Room] {RoomID}: Room-owned encounter is already active.");
+                return false;
+            }
+
+            _roomOwnedEncounterComplete = onEncounterComplete;
             _waveStrategy = new WaveSpawnStrategy(encounter);
             _waveStrategy.OnEncounterComplete += HandleEncounterComplete;
 
             _spawner.SetStrategy(_waveStrategy);
             _spawner.StartStrategy();
 
-            Debug.Log($"[Room] {RoomID}: Wave encounter started ({encounter.WaveCount} waves)");
+            Debug.Log($"[Room] {RoomID}: Room-owned encounter started ({encounter.WaveCount} waves)");
+            return true;
+        }
+
+        /// <summary>
+        /// Stop the room-owned encounter lifecycle and despawn currently active spawned enemies.
+        /// </summary>
+        public void StopRoomOwnedEncounter()
+        {
+            _spawner?.StopAndDespawnActiveEnemies();
+            CleanupWaveStrategy();
         }
 
         /// <summary>
@@ -315,29 +358,7 @@ namespace ProjectArk.Level
             }
         }
 
-        private void HandleEncounterComplete()
-        {
-            // 清理事件订阅
-            if (_waveStrategy != null)
-            {
-                _waveStrategy.OnEncounterComplete -= HandleEncounterComplete;
-            }
-
-            // 通知 RoomManager 房间已清除
-            var roomManager = ServiceLocator.Get<RoomManager>();
-            if (roomManager != null)
-            {
-                roomManager.NotifyRoomCleared(this);
-            }
-
-            Debug.Log($"[Room] {RoomID}: Encounter complete → Room cleared!");
-        }
-
-        /// <summary>
-        /// Deactivate all enemies in this room (disable their GameObjects).
-        /// Called by RoomManager when player leaves the room.
-        /// </summary>
-        public void DeactivateEnemies()
+        private void DeactivatePreplacedEnemies()
         {
             foreach (var sp in _spawnPoints)
             {
@@ -349,6 +370,48 @@ namespace ProjectArk.Level
             }
         }
 
+        private void HandleEncounterComplete()
+        {
+            var onEncounterComplete = _roomOwnedEncounterComplete;
+            CleanupWaveStrategy();
+
+            if (onEncounterComplete != null)
+            {
+                onEncounterComplete.Invoke();
+                return;
+            }
+
+            NotifyRoomOwnedEncounterCleared();
+        }
+
+        private void NotifyRoomOwnedEncounterCleared()
+        {
+            // Room-owned encounter may clear the whole room.
+            var roomManager = ServiceLocator.Get<RoomManager>();
+            if (roomManager != null)
+            {
+                roomManager.NotifyRoomCleared(this);
+            }
+            else
+            {
+                Debug.LogError($"[Room] {RoomID}: RoomManager not found when encounter completed.");
+            }
+
+            Debug.Log($"[Room] {RoomID}: Encounter complete → Room cleared!");
+        }
+
+        /// <summary>
+        /// Deactivate all room-owned combat actors when this room is no longer current.
+        /// Handles pre-placed enemies, room-level spawner output, and local open encounters.
+        /// </summary>
+        public void DeactivateEnemies()
+        {
+            _arenaController?.HandleRoomExit();
+            DeactivatePreplacedEnemies();
+            StopRoomOwnedEncounter();
+            DeactivateOpenEncountersForRoomExit();
+        }
+
         /// <summary>
         /// Reset all enemies in this room to their initial state.
         /// Used by death/respawn system to repopulate the room.
@@ -356,30 +419,10 @@ namespace ProjectArk.Level
         /// </summary>
         public void ResetEnemies()
         {
-            // 先全部关闭
-            DeactivateEnemies();
-
-            // 重置 spawner 策略状态
-            if (_spawner != null)
-            {
-                _spawner.ResetSpawner();
-            }
-
-            // 清理旧的 WaveSpawnStrategy 事件
-            if (_waveStrategy != null)
-            {
-                _waveStrategy.OnEncounterComplete -= HandleEncounterComplete;
-                _waveStrategy = null;
-            }
-
-            // 重置所有 OpenEncounterTrigger
-            if (_openEncounters != null)
-            {
-                foreach (var openEnc in _openEncounters)
-                {
-                    if (openEnc != null) openEnc.ResetEncounter();
-                }
-            }
+            _arenaController?.ResetEncounter();
+            DeactivatePreplacedEnemies();
+            StopRoomOwnedEncounter();
+            ResetOpenEncounters();
 
             // 重置房间战斗状态（如果已清除，恢复到 Entered 以允许再次战斗）
             if (_state == RoomState.Cleared)
@@ -395,6 +438,50 @@ namespace ProjectArk.Level
 
             Debug.Log($"[Room] {RoomID}: Enemies reset.");
         }
+
+        private void DeactivateOpenEncountersForRoomExit()
+        {
+            if (_openEncounters == null)
+            {
+                return;
+            }
+
+            foreach (var openEnc in _openEncounters)
+            {
+                openEnc?.HandleRoomExit();
+            }
+        }
+
+        private void ResetOpenEncounters()
+        {
+            if (_openEncounters == null)
+            {
+                return;
+            }
+
+            foreach (var openEnc in _openEncounters)
+            {
+                openEnc?.ResetEncounter();
+            }
+        }
+
+        private void CleanupWaveStrategy()
+        {
+            _roomOwnedEncounterComplete = null;
+
+            if (_waveStrategy == null)
+            {
+                return;
+            }
+
+            _waveStrategy.OnEncounterComplete -= HandleEncounterComplete;
+            _waveStrategy.Dispose();
+            _waveStrategy = null;
+        }
+
+        private bool UsesArenaEncounterOrchestrator => IsArenaOrBossRoom && _arenaController != null;
+
+        private bool IsArenaOrBossRoom => NodeType == RoomNodeType.Arena || NodeType == RoomNodeType.Boss;
 
         // ──────────────────── Variant Support ────────────────────
 

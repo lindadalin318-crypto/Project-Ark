@@ -1,9 +1,9 @@
 using System;
+using System.Threading;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
 using ProjectArk.Core;
 using ProjectArk.Core.Audio;
-using ProjectArk.Combat.Enemy;
 
 namespace ProjectArk.Level
 {
@@ -11,8 +11,8 @@ namespace ProjectArk.Level
     /// Orchestrator for Arena and Boss room combat encounters.
     /// Attach to the same GameObject as the Room component.
     /// 
-    /// Flow: Player enters → lock doors → alarm SFX → delay → start waves
-    ///       → all waves cleared → unlock doors → victory SFX → optional reward drop → mark Cleared.
+    /// Flow: Player enters → lock doors → alarm SFX → delay → ask Room to start waves
+    ///       → all waves cleared → victory delay → reward / clear notification.
     /// 
     /// Re-entering a Cleared arena does not retrigger the encounter.
     /// </summary>
@@ -45,50 +45,64 @@ namespace ProjectArk.Level
         // ──────────────────── Cached References ────────────────────
 
         private Room _room;
-        private EnemySpawner _spawner;
-        private WaveSpawnStrategy _waveStrategy;
         private bool _encounterActive;
-
-        // ──────────────────── Events ────────────────────
-
-        /// <summary> Fired when the arena encounter begins (doors locked). </summary>
-        public event Action OnEncounterStarted;
-
-        /// <summary> Fired when the arena encounter is cleared. </summary>
-        public event Action OnEncounterCleared;
+        private CancellationTokenSource _encounterCts;
 
         // ──────────────────── Lifecycle ────────────────────
 
         private void Awake()
         {
             _room = GetComponent<Room>();
-            _spawner = GetComponentInChildren<EnemySpawner>(true);
+        }
 
-            if (_spawner == null)
-            {
-                Debug.LogError($"[ArenaController] {gameObject.name}: No EnemySpawner found in children!");
-            }
+        private void OnDestroy()
+        {
+            CancelEncounterFlow();
         }
 
         // ──────────────────── Public API ────────────────────
 
         /// <summary>
-        /// Begin the arena encounter. Called by RoomManager.EnterRoom() or externally.
+        /// Begin the arena encounter. Called through Room.ActivateEnemies().
         /// Does nothing if already active or room is Cleared.
         /// </summary>
         public void BeginEncounter()
         {
             if (_encounterActive) return;
-            if (_room.State == RoomState.Cleared) return;
-            if (_room.Data == null || !_room.Data.HasEncounter) return;
-            if (_spawner == null) return;
+            if (_room == null || _room.State == RoomState.Cleared) return;
 
-            RunEncounterSequence().Forget();
+            if (!_room.HasRoomOwnedEncounterSetup)
+            {
+                Debug.LogError($"[ArenaController] {_room.RoomID}: Room-owned encounter setup is incomplete. Ensure RoomSO Encounter and EnemySpawner are configured.");
+                return;
+            }
+
+            CancelEncounterFlow();
+            _encounterCts = CancellationTokenSource.CreateLinkedTokenSource(destroyCancellationToken);
+            RunEncounterSequence(_encounterCts.Token).Forget();
+        }
+
+        /// <summary>
+        /// Called by Room when this room is no longer current.
+        /// Cancels pending pre/post delays so the arena cannot keep advancing off-room.
+        /// </summary>
+        public void HandleRoomExit()
+        {
+            CancelEncounterFlow();
+            _encounterActive = false;
+        }
+
+        /// <summary>
+        /// Called by Room reset flows (death/respawn).
+        /// </summary>
+        public void ResetEncounter()
+        {
+            HandleRoomExit();
         }
 
         // ──────────────────── Encounter Sequence ────────────────────
 
-        private async UniTaskVoid RunEncounterSequence()
+        private async UniTaskVoid RunEncounterSequence(CancellationToken token)
         {
             _encounterActive = true;
 
@@ -99,45 +113,48 @@ namespace ProjectArk.Level
             // 2. 播放警报音效
             PlaySFX(_alarmSFX);
 
-            // 3. 广播遭遇开始事件
-            OnEncounterStarted?.Invoke();
-
-            // 4. 等待预遭遇延迟
+            // 3. 等待预遭遇延迟
             if (_preEncounterDelay > 0f)
             {
                 try
                 {
                     await UniTask.Delay(
                         TimeSpan.FromSeconds(_preEncounterDelay),
-                        cancellationToken: destroyCancellationToken);
+                        cancellationToken: token);
                 }
-                catch (OperationCanceledException) { return; }
+                catch (OperationCanceledException)
+                {
+                    _encounterActive = false;
+                    CompleteEncounterFlow();
+                    return;
+                }
             }
 
-            // 5. 创建 WaveSpawnStrategy 并启动
-            _waveStrategy = new WaveSpawnStrategy(_room.Data.Encounter);
-            _waveStrategy.OnEncounterComplete += HandleWavesCleared;
+            // 4. 由 Room 统一启动 room-owned encounter
+            if (!_room.StartRoomOwnedEncounter(HandleWavesCleared))
+            {
+                Debug.LogError($"[ArenaController] {_room.RoomID}: Failed to start room-owned encounter.");
+                _room.UnlockCombatDoors();
+                _encounterActive = false;
+                CompleteEncounterFlow();
+                return;
+            }
 
-            _spawner.SetStrategy(_waveStrategy);
-            _spawner.StartStrategy();
-
-            Debug.Log($"[ArenaController] {_room.RoomID}: Waves spawning...");
+            Debug.Log($"[ArenaController] {_room.RoomID}: Room-owned encounter started via ArenaController.");
         }
 
         private void HandleWavesCleared()
         {
-            // 取消订阅并释放 CTS
-            if (_waveStrategy != null)
+            if (!_encounterActive)
             {
-                _waveStrategy.OnEncounterComplete -= HandleWavesCleared;
-                _waveStrategy.Dispose();
-                _waveStrategy = null;
+                return;
             }
 
-            RunPostClearSequence().Forget();
+            var token = _encounterCts != null ? _encounterCts.Token : destroyCancellationToken;
+            RunPostClearSequence(token).Forget();
         }
 
-        private async UniTaskVoid RunPostClearSequence()
+        private async UniTaskVoid RunPostClearSequence(CancellationToken token)
         {
             Debug.Log($"[ArenaController] {_room.RoomID}: All waves cleared!");
 
@@ -148,32 +165,36 @@ namespace ProjectArk.Level
                 {
                     await UniTask.Delay(
                         TimeSpan.FromSeconds(_postClearDelay),
-                        cancellationToken: destroyCancellationToken);
+                        cancellationToken: token);
                 }
-                catch (OperationCanceledException) { return; }
+                catch (OperationCanceledException)
+                {
+                    _encounterActive = false;
+                    CompleteEncounterFlow();
+                    return;
+                }
             }
 
-            // 2. 解锁门
-            _room.UnlockCombatDoors();
-            Debug.Log($"[ArenaController] {_room.RoomID}: Doors unlocked.");
-
-            // 3. 播放胜利音效
+            // 2. 播放胜利音效
             PlaySFX(_victorySFX);
 
-            // 4. 标记房间为 Cleared
+            // 3. 由 RoomManager 统一确权 room cleared 与 combat door unlock。
             var roomManager = ServiceLocator.Get<RoomManager>();
             if (roomManager != null)
             {
                 roomManager.NotifyRoomCleared(_room);
             }
+            else
+            {
+                Debug.LogError($"[ArenaController] {_room.RoomID}: RoomManager not found when clearing arena.");
+                _room.UnlockCombatDoors();
+            }
 
-            // 5. 生成奖励（如有配置）
+            // 4. 生成奖励（如有配置）
             SpawnReward();
 
-            // 6. 广播遭遇清除事件
-            OnEncounterCleared?.Invoke();
-
             _encounterActive = false;
+            CompleteEncounterFlow();
         }
 
         // ──────────────────── Reward ────────────────────
@@ -199,6 +220,31 @@ namespace ProjectArk.Level
                                "Ensure PoolManager is registered in ServiceLocator.");
                 Instantiate(_rewardPrefab, spawnPos, Quaternion.identity);
             }
+        }
+
+        // ──────────────────── Flow Helpers ────────────────────
+
+        private void CancelEncounterFlow()
+        {
+            if (_encounterCts == null)
+            {
+                return;
+            }
+
+            _encounterCts.Cancel();
+            _encounterCts.Dispose();
+            _encounterCts = null;
+        }
+
+        private void CompleteEncounterFlow()
+        {
+            if (_encounterCts == null)
+            {
+                return;
+            }
+
+            _encounterCts.Dispose();
+            _encounterCts = null;
         }
 
         // ──────────────────── Audio Helper ────────────────────

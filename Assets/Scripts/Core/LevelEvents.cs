@@ -23,30 +23,6 @@ namespace ProjectArk.Core
             OnRoomEntered?.Invoke(roomID);
         }
 
-        /// <summary>
-        /// Broadcast when the player exits a room.
-        /// Params: roomID.
-        /// Published by RoomManager.
-        /// </summary>
-        public static event Action<string> OnRoomExited;
-
-        public static void RaiseRoomExited(string roomID)
-        {
-            OnRoomExited?.Invoke(roomID);
-        }
-
-        /// <summary>
-        /// Broadcast when all enemies in a room are defeated.
-        /// Params: roomID.
-        /// Published by RoomManager, consumed by Door (unlock Locked_Combat).
-        /// </summary>
-        public static event Action<string> OnRoomCleared;
-
-        public static void RaiseRoomCleared(string roomID)
-        {
-            OnRoomCleared?.Invoke(roomID);
-        }
-
         // ──────────────────── Boss Events ────────────────────
 
         /// <summary>

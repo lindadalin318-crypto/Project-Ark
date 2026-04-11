@@ -30,7 +30,7 @@
 
 - **阶段**：场景配置与验证阶段
 - **主目标**：把已完成模块真正挂进场景并跑通可玩闭环
-- **当前重点**：关卡 authoring 护栏、场景接线验证、镜头体验方向收敛、梳理下一批专项入口
+- **当前重点**：`Room` 运行时消费链收口、关卡 authoring 护栏、场景接线验证、镜头体验方向收敛
 - **当前非重点**：大规模新系统扩张、顶层目录历史债全面清理
 
 ---
@@ -44,16 +44,23 @@
 | Enemy AI | 已完成 | HFSM、4 原型、Phase 3 扩展已完成 | 遭遇配置与可读性联调 | 跟关卡试玩闭环验证 | — |
 | UI | 已完成 | 星图面板、HUD、拖拽装备、编织态过渡已完成 | 场景内联调与细节修整 | 依据试玩反馈微调 | — |
 | Infrastructure | 已完成 | `UniTask`、`PrimeTween`、`ServiceLocator`、`SaveManager`、`AudioManager`、`CombatEvents` 已完成 | 作为验证阶段底座 | 仅修复阻塞性问题 | — |
-| Level | 验证中 | Phase 1-6 已全部完成 | 场景配置、authoring 护栏、可玩闭环验证 | 完成当前场景接线与 Play Mode 验收 | — |
+| Level | 验证中 | Phase 1-6 已全部完成 | `Room` 运行时消费链收口、场景配置与 authoring 护栏验证 | 推进 `Level-RoomRuntimeChain-Hardening` 并完成代表房间验收 | `ongoing/Level-RoomRuntimeChain-Hardening.md` |
 | Ship / VFX 治理 | 已完成 | `Phase A` 已完成 authority 收口，`Gate G` 已通过 | 保持治理成果稳定 | 如启动体验重构，单独立项 `ShipVFX-PhaseB` | `complete/ShipVFX-PhaseA.md` |
 
 ---
 
 ## 当前活跃专项
 
-- **当前暂无已迁入 `ongoing/` 的专项**
-- **说明**：首轮迁移核对后确认 `ShipVFX-PhaseA` 已达到完成态，因此已归档到 `complete/`
-- **下一份建议立项**：`ShipVFX-PhaseB`、`Camera-MVP`、`Level-Validation-Hardening`
+### `Level-RoomRuntimeChain-Hardening`
+
+- **所属模块**：`Level`
+- **目标**：把 `Room` 运行时消费链从“主干合理但 owner 分叉、清房语义偏松、离房停怪不完整”的状态，收口到“owner 单一、状态一致、离房可正确复位、authoring/validator 口径同步”的状态
+- **当前状态**：待启动（已完成 lead review，当前处于 plan 冻结阶段）
+- **对应文档**：[`ongoing/Level-RoomRuntimeChain-Hardening.md`](./ongoing/Level-RoomRuntimeChain-Hardening.md)
+
+### 已完成专项提示
+
+- `ShipVFX-PhaseA` 已归档到 `complete/`
 
 ---
 
@@ -61,7 +68,7 @@
 
 - **`ShipVFX-PhaseB`**：基于 `Phase A` 已完成的治理基线，进入第一批体验重构切片
 - **`Camera-MVP`**：在现有镜头底座上补前向 lead、基础兴趣点与更明确的 framing 规则
-- **`Level-Validation-Hardening`**：继续补齐 authoring 护栏与验证规则，让场景配置问题更早暴露
+- **`Level-Authoring-Standardization`**：待 `Room` 运行时消费链收口后，再推进场景根节点与房间语法的批量规范化
 - **`Plan-Rollout-Phase2`**：当首轮入口跑顺后，再评估是否迁入第二批现役专项或清理顶层目录历史债
 
 ---
@@ -83,6 +90,7 @@
 - Ship / VFX 规范：[`../2_Design/Ship/ShipVFX_CanonicalSpec.md`](../2_Design/Ship/ShipVFX_CanonicalSpec.md)
 - Ship / VFX 迁移路线图：[`../2_Design/Ship/ShipVFX_MigrationPlan.md`](../2_Design/Ship/ShipVFX_MigrationPlan.md)
 - 活跃专项入口：[`./ongoing/README.md`](./ongoing/README.md)
+- 当前活跃专项：[`./ongoing/Level-RoomRuntimeChain-Hardening.md`](./ongoing/Level-RoomRuntimeChain-Hardening.md)
 - 已完成专项：[`./complete/ShipVFX-PhaseA.md`](./complete/ShipVFX-PhaseA.md)
 - 实现日志：[`../5_ImplementationLog/ImplementationLog.md`](../5_ImplementationLog/ImplementationLog.md)
 - 历史关卡方案：[`../8_Obsolete/LevelModulePlan.md`](../8_Obsolete/LevelModulePlan.md)

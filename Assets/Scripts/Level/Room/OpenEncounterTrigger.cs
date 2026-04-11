@@ -43,10 +43,6 @@ namespace ProjectArk.Level
                  "Only cleared by defeating all enemies.")]
         [SerializeField] private bool _persistAfterExit;
 
-        [Tooltip("If true, this encounter resets and can be triggered again after player leaves and returns. " +
-                 "Ignored once fully cleared.")]
-        [SerializeField] private bool _respawnOnReenter = true;
-
         [Header("Player Detection")]
         [Tooltip("Layer mask for the player ship.")]
         [SerializeField] private LayerMask _playerLayer;
@@ -58,17 +54,6 @@ namespace ProjectArk.Level
         private bool _isCleared;     // all enemies defeated — permanent until room reset
         private WaveSpawnStrategy _waveStrategy;
         private CancellationTokenSource _exitCts;
-
-        // ──────────────────── Events ────────────────────
-
-        /// <summary> Fired when the open encounter activates (enemies start spawning). </summary>
-        public event Action OnEncounterActivated;
-
-        /// <summary> Fired when all enemies are cleared. </summary>
-        public event Action OnEncounterCleared;
-
-        /// <summary> Fired when the encounter deactivates (player left + grace period expired). </summary>
-        public event Action OnEncounterDeactivated;
 
         // ──────────────────── Public Properties ────────────────────
 
@@ -153,6 +138,7 @@ namespace ProjectArk.Level
             if (_encounter == null || _spawner == null) return;
             if (_isCleared) return;
 
+            CleanupStrategy();
             _isActive = true;
 
             // Create and start wave strategy
@@ -161,8 +147,6 @@ namespace ProjectArk.Level
 
             _spawner.SetStrategy(_waveStrategy);
             _spawner.StartStrategy();
-
-            OnEncounterActivated?.Invoke();
 
             Debug.Log($"[OpenEncounterTrigger] {gameObject.name}: Open encounter activated " +
                       $"({_encounter.WaveCount} waves)");
@@ -174,15 +158,13 @@ namespace ProjectArk.Level
 
             _isActive = false;
 
-            // Reset spawner (despawn active enemies)
+            // Stop future waves and despawn active enemies.
             if (_spawner != null)
             {
-                _spawner.ResetSpawner();
+                _spawner.StopAndDespawnActiveEnemies();
             }
 
             CleanupStrategy();
-
-            OnEncounterDeactivated?.Invoke();
 
             Debug.Log($"[OpenEncounterTrigger] {gameObject.name}: Open encounter deactivated " +
                       $"(player left zone)");
@@ -195,16 +177,8 @@ namespace ProjectArk.Level
 
             CleanupStrategy();
 
-            // Notify parent room if possible
-            var room = GetComponentInParent<Room>();
-            if (room != null)
-            {
-                var roomManager = ServiceLocator.Get<RoomManager>();
-                roomManager?.NotifyRoomCleared(room);
-            }
-
-            OnEncounterCleared?.Invoke();
-
+            // OpenEncounterTrigger only owns its local zone lifecycle.
+            // Whole-room cleared authority stays in Room/RoomManager.
             Debug.Log($"[OpenEncounterTrigger] {gameObject.name}: Open encounter cleared!");
         }
 
@@ -254,6 +228,7 @@ namespace ProjectArk.Level
             if (_waveStrategy != null)
             {
                 _waveStrategy.OnEncounterComplete -= HandleEncounterComplete;
+                _waveStrategy.Dispose();
                 _waveStrategy = null;
             }
         }
@@ -261,14 +236,23 @@ namespace ProjectArk.Level
         // ──────────────────── Reset (for death/respawn) ────────────────────
 
         /// <summary>
+        /// Called when the parent room is no longer current.
+        /// Force-stops the local encounter lifecycle without upgrading it to whole-room clear.
+        /// </summary>
+        public void HandleRoomExit()
+        {
+            CancelExitTimer();
+            _playerInZone = false;
+            DeactivateEncounter();
+        }
+
+        /// <summary>
         /// Reset the encounter to initial state. Called by Room.ResetEnemies() or GameFlowManager.
         /// </summary>
         public void ResetEncounter()
         {
-            CancelExitTimer();
-            DeactivateEncounter();
+            HandleRoomExit();
             _isCleared = false;
-            _playerInZone = false;
 
             Debug.Log($"[OpenEncounterTrigger] {gameObject.name}: Encounter reset.");
         }

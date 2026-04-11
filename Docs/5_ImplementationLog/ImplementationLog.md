@@ -2,6 +2,281 @@
 
 ---
 
+## Level RoomElements finding 去日期化与现役化更新 — 2026-04-11 11:01
+
+### 修改文件
+- `Docs/6_Diagnostics/Level_RoomElements_Findings.md`
+- `Docs/0_Plan/ongoing/Level-RoomRuntimeChain-Hardening.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 删除文件
+- `Docs/6_Diagnostics/Level_RoomElements_Findings_2026-04-10.md`
+
+### 内容
+- 将 `Level_RoomElements_Findings_2026-04-10.md` 正式改名为 `Level_RoomElements_Findings.md`，去掉日期后缀，使该文件从“一次性日期快照”收口为 `Level` 房间元素模块的现役 finding 文档。
+- 回写文档头部定位：明确本文件是“现役 finding / 最新诊断入口”，后续采用持续回写方式维护，不再为同一模块继续滚动拆分新的按日期命名 Markdown；同时保留 `Level_RoomElements_Findings_2026-04-10.csv` 作为历史结构化快照。
+- 将近期已经落地的结论同步写回总览与 schema 边界章节，包括：`Room` / `ArenaController` / `OpenEncounterTrigger` 的 owner 收口结果，以及 `LevelDesigner.html` 现已明确为“拓扑规划 + JSON 导入源”、`elements[]` 与节奏元数据仍只是设计快照的最新口径。
+- 同步更新 `Level-RoomRuntimeChain-Hardening.md` 与 `ImplementationLog.md` 内部对诊断文档的路径引用，避免仓库进入“文件已改名、计划与日志仍指向旧路径”的半迁移状态。
+
+### 目的
+- 把 `Docs/6_Diagnostics/` 下这份核心诊断文档升级成模块现役入口，降低后续继续滚动日期文件造成的文档分叉与真相源漂移。
+- 让 `Plan / Diagnostics / ImplementationLog` 三条线继续指向同一份当前 finding，而不是一份最新文档和多份历史路径并存。
+
+### 技术
+- 文档治理：采用“主 Markdown 去日期化 + 历史 CSV 保留日期快照”的分层策略，让阅读入口稳定、筛选快照可追溯。
+- 路径收口：通过文件改名与跨文档引用同步，消除诊断文档路径的半迁移残影。
+
+---
+
+## LevelDesigner 轻量 UX 对齐更新 — 2026-04-11 10:52
+
+### 修改文件
+- `Tools/LevelDesigner.html`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 在 `LevelDesigner.html` 顶部与属性面板补入边界说明，明确该工具当前定位为“拓扑规划 + JSON 导入源”，避免继续把它误解为会自动完成 Unity 场景 authoring 的总控面板。
+- 为右侧 `Zone ID / ACT / 张力 / 叙事乐章 / 时长估算` 字段统一补上“设计备注”标签，并补充说明：这些字段会随 JSON 保存、可用于张力图与设计对齐，但当前不会自动生成 Encounter、敌人、Checkpoint 或其他运行时对象。
+- 为右侧 `元素` 列表补上“设计占位”标签与说明，收口“元素已接入 Unity 导入链”的错误暗示。
+- 在画布区 `操作说明` 中补入“Unity 现役主消费 / 不会自动生成”的提示卡，让设计侧在第一次打开工具时就能看到当前导入能力边界。
+- 在左侧 `房间元素` 区块补入“设计占位”标签与灰字提示，直接提示该区块当前只记录设计快照，不会自动下沉到场景生成。
+
+### 目的
+- 做一次轻量 UX 对齐更新：不改 JSON 契约、不改导入器逻辑，只把当前 `LevelDesigner` 与 Unity 现役导入能力之间的真实边界说清楚。
+- 降低设计阶段的假 affordance，避免后续继续出现“在网页里配了元素/节奏字段，为什么 Unity 没自动生成”的协作误解。
+
+### 技术
+- 前端静态文案对齐：使用 HTML 结构补充 `context-card`、`subtle-badge`、`property-note` 三类轻量提示组件，不改现有数据结构与交互逻辑。
+- UX 边界收口：把“主导入字段”和“设计快照字段”在可视层显式分层，而不是依赖外部文档或口头说明。
+
+---
+
+## Level Room 运行时消费链专项完成情况复核 — 2026-04-11 10:38
+
+### 修改文件
+- `Docs/0_Plan/ongoing/Level-RoomRuntimeChain-Hardening.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 重新按 `Level-RoomRuntimeChain-Hardening.md` 的 Step 定义与 Gate L 验收口径复核当前完成情况，不再沿用“代码已改大半，所以 A5 也算完成”的宽口径判断。
+- 复核后确认：A3（清房与门 authority）虽然此前没有单独写成一条实现日志，但其目标已由现役代码满足——`RoomManager.NotifyRoomCleared()` 仍是整房 `Room cleared` / combat door unlock 的唯一确权入口，`OpenEncounterTrigger` 完成时只保留局部 cleared 语义，不再越权升级整房 cleared。
+- 同时修正 plan 的当前状态描述：A0/A1/A2/A3/A4 可视为已完成；A5 只完成了 validator 与文档回写，尚缺“代表房间 Play Mode 验证”的正式记录，因此还不能算完全完成。
+- 复核过程中再次执行 `dotnet build Project-Ark.slnx`，当前结果为 **52 warnings / 0 errors**；warning 仍主要是现有 `Unity.VisualScripting.*` 缺失引用告警，本专项没有新增编译错误。
+
+### 目的
+- 让 ongoing plan 的“当前状态”与 Step/Acceptance 的严格定义重新对齐，避免后续协作时把“文档部分完成”误记成“整个步骤已完成”。
+- 提前把专项剩余工作收敛成唯一明确项：代表房间 Play Mode 验证与回写，而不是继续模糊停留在“差不多收完了”的口头状态。
+
+### 技术
+- 计划复核：逐条对照 Step A0-A5 与 Gate L 的验收定义，结合现役代码、现役文档和当前编译结果重新判定完成状态。
+- 真相源校对：以 `Room` / `RoomManager` / `ArenaController` / `OpenEncounterTrigger` 的现役实现为准，回写 plan 的阶段状态，避免仅依据之前的摘要结论继续滚动。
+
+---
+
+## Level Room 运行时消费链 A5 文档口径回写 — 2026-04-11 10:11
+
+### 修改文件
+- `Docs/2_Design/Level/Level_WorkflowSpec.md`
+- `Docs/6_Diagnostics/Level_RoomElements_Findings.md`
+- `Docs/0_Plan/ongoing/Level-RoomRuntimeChain-Hardening.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 在 `Level_WorkflowSpec.md` 中把战斗件的现役 authoring 规则写成明确口径：`Room.ActivateEnemies()` 是 room-level combat 单入口；`RoomSO Encounter` 现役使用 `EncounterSO.Mode = Closed`；`ArenaController` 只服务于 `Arena` / `Boss` 房的 ceremony；`OpenEncounterTrigger` 作为局部 open encounter owner，要求 `EncounterSO.Mode = Open`，且不与 `RoomSO Encounter` 混用。
+- 同步更新 `LevelValidator` 检查清单，使 WorkflowSpec 中的 Validate 表与当前代码护栏一致，补入“非 Arena/Boss 房误挂 `ArenaController`”“RoomSO Encounter 使用非 `Closed` 模式”“OpenEncounterTrigger 使用非 `Open` 模式”“RoomSO Encounter 与 OpenEncounterTrigger 混用”等 warning 项。
+- 在 `Level_RoomElements_Findings.md` 中追加 2026-04-11 补记，回写 A2/A4 后的现役结论：`ArenaController` 已退回 ceremony 层、`Room` 负责 room-level encounter 入口、`EnemySpawner` owner 已收口到 `Room / OpenEncounterTrigger`，并补记 `_respawnOnReenter`、`RoomState.Locked` 与房间/遭遇弱事件已退出现役链路。
+- 在 ongoing plan 中把专项当前状态更新为“代码与文档回写已完成，仅剩代表房间 Play Mode 验证”，让计划、代码、诊断和日志四条线重新对齐。
+
+### 目的
+- 完成 `Level-RoomRuntimeChain-Hardening` 的 A5 文档回写，把这轮运行时收口结果沉淀成可被 authoring、验证和后续协作直接使用的现役口径。
+- 将专项剩余工作收敛到真正需要 Unity Editor 现场验证的部分，避免后续继续在“代码已改但文档还停在旧语义”状态下推进。
+
+### 技术
+- 文档同步：以当前代码实现为真相源，分别回写操作手册（怎么搭）与诊断文档（当前结论），避免把执行计划、现役规则和历史证据混写成一层。
+- 验证闭环收口：把 `LevelValidator` 当前规则同步写入 WorkflowSpec 的 Validate 清单，使 authoring 护栏、代码行为与文档说法保持一致。
+
+---
+
+## Level Room 运行时消费链 A4 死数据与弱链路清理 — 2026-04-11 10:08
+
+### 修改文件
+- `Assets/Scripts/Core/LevelEvents.cs`
+- `Assets/Scripts/Level/Room/RoomManager.cs`
+- `Assets/Scripts/Level/Room/OpenEncounterTrigger.cs`
+- `Assets/Scripts/Level/Room/ArenaController.cs`
+- `Assets/Scripts/Level/Room/RoomState.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs`
+- `Docs/0_Plan/ongoing/Level-RoomRuntimeChain-Hardening.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 删除 `OpenEncounterTrigger._respawnOnReenter`，因为该字段在当前运行时链路中完全未被读取；保留现役真实语义为“未清除时，open encounter 可重新触发”。
+- 删除 `RoomState.Locked`，明确房间门控 authority 不在 `RoomState`，而由 `Door` / `Lock` / 世界进度等系统负责，避免继续在状态枚举里保留误导性语义。
+- 删除当前 0 消费者的局部遭遇事件与房间级弱事件：`ArenaController` 的 `OnEncounterStarted` / `OnEncounterCleared`、`OpenEncounterTrigger` 的 `OnEncounterActivated` / `OnEncounterDeactivated` / `OnEncounterCleared`、以及 `LevelEvents` 中的 `OnRoomExited` / `OnRoomCleared`；同步移除 `RoomManager` 中对应的发布与空处理订阅。
+- 在 `LevelValidator` 中把 `EncounterMode` 正式接入 authoring 护栏：`RoomSO Encounter` 若不是 `Closed` 会 warning，`OpenEncounterTrigger` 若绑定了非 `Open` 的 `EncounterSO` 也会 warning，使 `EncounterMode` 不再只是资产注释字段。
+- 使用 `search_content` 回查确认 `_respawnOnReenter`、`RoomState.Locked`、`RaiseRoomExited`、`RaiseRoomCleared`、局部遭遇事件等残影已清零，并再次执行 `dotnet build Project-Ark.slnx`，结果为 **0 error**（保留项目既有 warning）。
+
+### 目的
+- 完成 `Level-RoomRuntimeChain-Hardening` 的 A4，把“看起来像系统一部分、实际上没接上”的字段、事件和语义假入口清掉，减少后续迭代时的误读与考古成本。
+- 让 `EncounterMode` 至少先在 authoring 阶段成为真实规则，而不是继续处于“资产里有、运行时没人管”的半接入状态。
+
+### 技术
+- 弱链路清理：通过全项目搜索确认 0 消费者后再删除事件与发布点，避免盲删造成隐藏依赖。
+- authoring 前移：在 `LevelValidator` 中把 `EncounterMode` 的设计意图转成可执行 warning，先用护栏约束现役语义，再决定未来是否需要运行时直接消费。
+- authority 收口：把门控 authority 从 `RoomState` 的假语义里剥离，继续维持 `Room` / `RoomManager` / `Door` 的现役职责边界。
+
+---
+
+## Level Room 运行时消费链 A2 encounter owner 收口 — 2026-04-11 10:01
+
+### 修改文件
+- `Assets/Scripts/Level/Room/Room.cs`
+- `Assets/Scripts/Level/Room/ArenaController.cs`
+- `Assets/Scripts/Level/Room/RoomManager.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs`
+- `Docs/0_Plan/ongoing/Level-RoomRuntimeChain-Hardening.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 在 `Room` 中新增统一的 room-owned encounter 启动协议：`ActivateEnemies()` 现在成为 room-level combat 的单一入口，普通房直接由 `Room` 启动整房遭遇，Arena/Boss 房则由 `Room` 转发给 `ArenaController` 做 ceremony 编排；真正的 `WaveSpawnStrategy` 创建统一收口到 `Room.StartRoomOwnedEncounter()`。
+- 在 `ArenaController` 中移除自行持有 `EnemySpawner` / `WaveSpawnStrategy` 并直接起波次的实现，改为只负责锁门、预延迟、胜利延迟、奖励与清房上报时机；同时补入 `CancellationTokenSource` 驱动的取消链，使离房与重置时可以停止未完成的 pre/post delay，避免 arena 房在玩家离开后延迟起怪或延迟清房。
+- 在 `RoomManager` 中删除 arena 特判分支，进入房间后统一只调用 `Room.ActivateEnemies()`，不再依赖注释约束“不要再直接调另一套链”。
+- 在 `LevelValidator` 中补入 `ArenaController` 的 placement 护栏：Arena/Boss 房缺少 `ArenaController` 继续 warning，非 Arena/Boss 房误挂 `ArenaController` 也会被提前报出，防止 room-level encounter owner 再次分叉。
+- 使用 `dotnet build Project-Ark.slnx` 做整项目编译校验，本轮结果为 **0 error**（保留项目既有 warning）。
+
+### 目的
+- 完成 `Level-RoomRuntimeChain-Hardening` 的 A2，把 `Room` / `ArenaController` 的双入口 encounter 模型收口为清晰协议：`Room` 是 room-level combat 的唯一运行时入口，`ArenaController` 只做 Arena/Boss 的仪式化编排，不再拥有第二套刷怪 owner。
+- 顺手补齐 arena 异步生命周期的离房/重置取消链，避免 owner 收口后仍残留“离房后延迟起怪”这类隐性行为债。
+
+### 技术
+- owner 收口：采用 `Room.ActivateEnemies()` 统一 room-level 入口、`Room.StartRoomOwnedEncounter()` 统一波次创建、`ArenaController` 只保留 ceremony orchestration 的分层协议。
+- 生命周期治理：通过 `CancellationTokenSource` 管理 Arena 的 pre/post delay，并在 `Room.DeactivateEnemies()` / `Room.ResetEnemies()` 中显式调用 `ArenaController.HandleRoomExit()` / `ResetEncounter()` 取消在途异步链。
+- authoring 护栏：在 `LevelValidator` 中把 ArenaController 的房型归属规则前推到编辑期，减少运行时再发现 encounter owner 混用的成本。
+
+---
+
+## Level Room 运行时消费链 A0/A1 收口落地 — 2026-04-11 09:50
+
+### 修改文件
+- `Assets/Scripts/Combat/Enemy/EnemySpawner.cs`
+- `Assets/Scripts/Level/Room/Room.cs`
+- `Assets/Scripts/Level/Room/RoomManager.cs`
+- `Assets/Scripts/Level/Room/OpenEncounterTrigger.cs`
+- `Assets/Scripts/Level/Room/ArenaController.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs`
+- `Docs/0_Plan/ongoing/Level-RoomRuntimeChain-Hardening.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 在 `EnemySpawner` 中补入活体 enemy 实例追踪，并新增 `StopSpawning()`、`DespawnActiveEnemies()`、`StopAndDespawnActiveEnemies()` 三段式生命周期 API，使离房、离区、reset 不再只是 reset strategy，而能真正回收 pooled enemy。
+- 在 `Room` 中把离房与 reset 链统一改成：同时处理预放置敌人、room-level spawner 生成敌人，以及所有 `OpenEncounterTrigger`；并补 `WaveSpawnStrategy` 清理逻辑，避免 room-owned encounter 残留旧订阅与旧状态。
+- 在 `RoomManager` 中明确整房 `Room cleared` 与 combat door unlock 的唯一 authority，并增加重复 cleared 上报保护；同时让 `ArenaController` 改为把清房确权回交 `RoomManager`。
+- 在 `OpenEncounterTrigger` 中收口语义：局部 open encounter 完成只触发本地 cleared，不再越权升级整房 cleared；离区/离房停用改为走真正的 stop + despawn。
+- 在 `LevelValidator` 中补入 `OpenEncounterTrigger` 的 authoring 护栏，新增对缺 `EncounterSO`、缺 `EnemySpawner`、脱离 `Room`、以及与 `RoomSO Encounter` 混用导致 owner 分叉的检查。
+- 使用 `dotnet build Project-Ark.slnx` 做整项目编译校验，本轮结果为 **0 error**（保留项目既有 warning）。
+
+### 目的
+- 先完成 `Level-RoomRuntimeChain-Hardening` 的 A0/A1：冻结整房/局部 encounter 的 owner 口径，并补齐 pooled enemy 的离房停怪与回收链，优先消除当前最容易造成状态残留和语义错判的运行时风险。
+- 让后续 A2/A3/A4/A5 可以建立在“room cleared authority 单一、leave-room lifecycle 可控、validator 已有基础护栏”的稳定底座上继续推进。
+
+### 技术
+- 生命周期收口：采用 `RoomManager` 统一整房 cleared authority、`OpenEncounterTrigger` 只做局部 encounter owner、`Room` 负责房间级停用与 reset 编排的三层边界。
+- 对象池治理：通过 `EnemySpawner` 追踪活体实例并使用 `PoolReference.ReturnToPool()` 回收，避免继续依赖 `_spawnPoints` 子树扫描这种对 pooled enemy 天然失效的假停怪链。
+- authoring 护栏：把运行时收口结果前推到 `LevelValidator`，提前阻断 `RoomSO Encounter` 与 `OpenEncounterTrigger` 混用造成的 encounter owner 分叉。
+
+---
+
+## Level Room 运行时消费链专项立项（0_Plan 落地）— 2026-04-11 09:36
+
+### 新建文件
+- `Docs/0_Plan/ongoing/Level-RoomRuntimeChain-Hardening.md`
+
+### 修改文件
+- `Docs/0_Plan/ProjectPlan.md`
+- `Docs/0_Plan/ongoing/README.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 在 `Docs/0_Plan/ongoing/` 下新增 `Level-RoomRuntimeChain-Hardening.md`，把前一轮对 `Room` 运行时消费链的 lead review 结论正式收束为 ongoing 专项计划，并按新 `0_Plan` 模板写入文档定位、当前目标、范围、完成标准、当前状态、工作拆分、风险与关联文档。
+- 在 `ProjectPlan.md` 中把 `Level` 模块的当前重点与关联专项同步到该计划，新增当前活跃专项条目，并把后续 Level 候选项改写为更适合链路收口后的 `Level-Authoring-Standardization`。
+- 在 `Docs/0_Plan/ongoing/README.md` 中补记当前活跃专项，确保目录说明与现役计划入口一致。
+
+### 目的
+- 把“Room 运行时消费链是否合理、哪里该收口”的口头评审结论，沉淀成可跨会话跟踪的正式执行入口。
+- 让 `Plan`、`Spec`、`Diagnostics`、`ImplementationLog` 的职责继续保持清晰：`Plan` 负责接下来做什么，`Spec` 负责规则，`Diagnostics` 负责证据，`Log` 负责留痕。
+
+### 技术
+- 文档治理：采用 `ProjectPlan.md + ongoing/` 的 `0_Plan` 体系落位新专项，不把执行计划继续散落在诊断文档或对话结论里。
+- 计划收口：把本轮 `Level` 链路问题按 `encounter owner`、`room cleared` 语义、`despawn` 生命周期、authority 重叠、死数据清理与 validator 同步 6 个方向拆成可执行工作流。
+
+---
+
+## Room 主动收集与直接依赖口径补记 — 2026-04-11 08:37
+
+### 修改文件
+- `Docs/6_Diagnostics/Level_RoomElements_Findings.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 在 `Level_RoomElements_Findings.md` 中，把原先偏概括式的 `Room 主链强消费` 描述改成 `Room.cs` 代码实查版本，明确拆分为：`CollectSceneReferences()` 主动收集链、`Room` 直接但非收集的序列化依赖，以及 `Room` 运行时直接调度 / 直接调用的系统依赖。
+- 明确写清当前 `Room` 主动收集链只有 `Door`、`EnemySpawner`、`OpenEncounterTrigger`、`DestroyableObject`、`SpawnPoint` 五类；其中 `SpawnPoint` 还补记了 `Encounters/SpawnPoints` → `Navigation/SpawnPoint_*` → Inspector `_spawnPoints` 的收集优先级。
+- 修正了原文里把 `CameraConfiner` 视为 `Room` 主动收集元素的模糊表述，改为更准确的口径：`Room` 直接依赖一个显式接线的 `ConfinerBounds` 引用，而 `RoomCameraConfiner` 是运行时消费者。
+- 同时补充“不要误算成 `Room` 直接依赖”的边界，明确 `Checkpoint`、`Lock`、`PickupBase`、`EnvironmentHazard`、`BiomeTrigger`、`WorldEventTrigger` 等属于组件自治或其他 owner；`MinimapManager`、`RoomCameraConfiner`、`LevelValidator`、`DoorWiringService` 等则属于 `Room` 的下游消费者或编辑器工具，不应混入 `Room.cs` 直接依赖列表。
+
+### 目的
+- 为后续 `Level` 模块的元素接入、Validator 扩项、authoring 评审和考察口径提供一份贴近代码真实行为的边界说明。
+- 避免团队后续在讨论“某元素要不要接 `Room` 主链”时，把主动收集、显式序列化依赖、下游消费者三层混为一谈。
+
+### 技术
+- 文档诊断收口：以 `Room.cs` 当前实现为准，按“主动收集 / 直接依赖 / 非直接依赖边界”三层重写诊断条目。
+- authority 口径校正：把 `ConfinerBounds` 从“主动收集元素”纠正为“显式接线依赖”，并把 `RoomManager` / `WorldPhaseManager` / `LevelEvents.OnPhaseChanged` / `WaveSpawnStrategy` 补记为直接运行时依赖。
+
+---
+
+## CLAUDE 结构审校与长期维护性收口 — 2026-04-10 23:00
+
+### 修改文件
+- `CLAUDE.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 以“大型项目长期维护”视角重新审校 `CLAUDE.md`，把真正不可违反的规则前置为 `不可违反的四条规则（先看这个）`，明确真相源优先级、`ImplementationLog` 强制性、MVP 不降架构标准，以及新模块 / 新子系统必须先产出 `ArchBrief`。
+- 调整 `需求确认` 与 `模块归属判断` 的措辞，改为“先查 `CanonicalSpec` / `Implement_rules.md` / `ImplementationLog` / 代码，再决定是否向用户提问”，消除与自主收敛工作流的潜在冲突。
+- 删除高维护成本或易过时内容：将历史里程碑长表收口为 `当前阶段` 摘要；把 `Unity MCP` 章节从完整工具清单改为条件化、策略化说明；删除已经有独立文档承载的 `GalacticGlitch` 专项参考；把过时的 `edit_file` 工具经验改写为通用 `大文件编辑建议`。
+- 顺手修正 `核心模块` 中 `Level` 条目的状态口径，移除与当前 `authoring / validation / scene integration` 收口阶段相冲突的“[全部完成]”表述。
+
+### 目的
+- 让 `CLAUDE.md` 真正承担“项目总章程 / 全局协作规则 / 开工闸门”的角色，而不是继续混入编年史、专项记忆和易过时工具目录。
+- 降低后续协作者、AI session 和新功能开发时的认知负担，避免被分散规则、旧状态口径和重复清单误导。
+
+### 技术
+- 文档分层治理：把全局硬规则前置，把模块细则继续留在 `Implement_rules.md` / `CanonicalSpec`。
+- 噪音剥离：移除历史阶段表、专项参考和重复能力目录，保留长期有效的判断准则与操作闸门。
+- 规则一致性校正：统一“先自助收敛、再升级提问”的流程口径，并修复 `Level` 模块状态描述冲突。
+
+---
+
+## CLAUDE 全局长期可维护性闸门补强 — 2026-04-10 22:50
+
+### 修改文件
+- `CLAUDE.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 在 `CLAUDE.md` 的前置全局规则区新增 `长期可维护性保障机制（全局闸门）` 章节，集中强调 `MVP 不降架构标准`、`Single Source of Truth`、`数据与规则分离`、`模块边界先于功能增长`、`临时方案必须显式登记`、`防止模块膨胀的拆分触发器`，以及 `开工前维护性问题清单`。
+- 新章节刻意采用比现有条目更硬的表述，把“先能跑再迁移”“默认保留临时桥接”“顺手再存一份状态”等路线明确降为不推荐甚至默认错误路线。
+- 同时补充 `CLAUDE.md` 与 `Implement_rules.md` / `CanonicalSpec` 的边界说明：`CLAUDE.md` 只负责全局开工闸门，模块 owner、authority matrix、override/fallback 细则继续留在模块文档，避免职责重叠。
+
+### 目的
+- 把仓库里原本分散在 `MVP`、`架构速写`、`Implement_rules` 中的维护性原则，收口成一个任何新需求进入前都能直接看到的全局闸门。
+- 明确向后续协作者和 AI session 传达：Project Ark 允许功能范围缩小，但不允许靠双轨、第二真相源和未登记临时方案换速度。
+
+### 技术
+- 文档治理：在不复制模块细节规则的前提下，把全局维护性约束前置到 `CLAUDE.md` 的沟通/工作流区域。
+- 职责分层：用“全局原则 vs 模块细则”的边界说明，保持 `CLAUDE.md`、`Implement_rules.md` 与各模块 `CanonicalSpec` 的文档分工稳定。
+
+---
+
 ## Level Scaffold 硬切删除与工具链收口 — 2026-04-10 21:59
 
 ### 修改文件
@@ -138,13 +413,13 @@
 ### 修改文件
 - `Docs/2_Design/Level/Level_CanonicalSpec.md`
 - `Docs/2_Design/Level/Level_WorkflowSpec.md`
-- `Docs/6_Diagnostics/Level_RoomElements_Findings_2026-04-10.md`
+- `Docs/6_Diagnostics/Level_RoomElements_Findings.md`
 - `Docs/6_Diagnostics/Level_RoomElements_Findings_2026-04-10.csv`
 
 ### 内容
 - 将 `Level_CanonicalSpec.md` 中的现役房间元素矩阵正式改为新分类规范：`通路件 / 交互件 / 状态件 / 战斗件 / 环境机关件 / 导演件 / 基础设施件`，并加入对应英文标签 `Path / Interact / Stateful / Combat / Environment / Directing / Infrastructure`。
 - 将 `Level_WorkflowSpec.md` 的“新增房间元素接入 SOP”和“分类落位速查”统一切换到新分类规范，确保 authoring 流程、默认挂点判断和新增元素决策树与模块规则一致。
-- 将 `Level_RoomElements_Findings_2026-04-10.md` 从“推荐命名”口径升级为“现役分类主表”，保留旧术语仅作为兼容说明，不再把旧家族名当作当前规范。
+- 将 `Level_RoomElements_Findings.md` 从“推荐命名”口径升级为“现役分类主表”，保留旧术语仅作为兼容说明，不再把旧家族名当作当前规范。
 - 重写 `Level_RoomElements_Findings_2026-04-10.csv` 的分类字段，改为 `category_cn + category_en` 双列，并将逐元素记录统一映射到新分类标签；同时把 `Room infrastructure`、`Interact Anchor`、`Encounter Element` 等旧值全部切换到新规范。
 - 额外统一了 `CanonicalSpec` / `WorkflowSpec` 中零散的“互动件”表述，全部收口为“交互件”，避免同一分类出现多个中文叫法。
 
@@ -178,10 +453,10 @@
 ## Level 房间元素分类命名收口（人话版 + 简洁英文）— 2026-04-10 14:54
 
 ### 修改文件
-- `Docs/6_Diagnostics/Level_RoomElements_Findings_2026-04-10.md`
+- `Docs/6_Diagnostics/Level_RoomElements_Findings.md`
 
 ### 内容
-- 将 `Level_RoomElements_Findings_2026-04-10.md` 中“房间元素家族”章节改写为更贴近 authoring 和玩家感知的版本，把原有技术口径收口为：`通路件 / 交互件 / 状态件 / 战斗件 / 环境机关件 / 导演件`，并将 `SpawnPoint`、`CameraConfiner` 单列为 `基础设施件`。
+- 将 `Level_RoomElements_Findings.md` 中“房间元素家族”章节改写为更贴近 authoring 和玩家感知的版本，把原有技术口径收口为：`通路件 / 交互件 / 状态件 / 战斗件 / 环境机关件 / 导演件`，并将 `SpawnPoint`、`CameraConfiner` 单列为 `基础设施件`。
 - 在文档中新增“推荐命名（中文 / 英文）”对照表，明确当前分类层可使用更简洁的英文标签：`Path`、`Interact`、`Stateful`、`Combat`、`Environment`、`Directing`，同时强调这些短名用于文档、Inspector 分组、Validator 输出与沟通，不替代具体组件类名。
 - 同步把逐元素结论矩阵改写为新的清晰分类和英文标签，避免正文使用新口径、表格仍保留旧术语，造成文档内部语义割裂。
 - 更新最终判断表述，将总结中的“六大家族”收口为“六大玩法家族 + 一类基础设施件”，让后续团队讨论时更容易统一认知边界。
@@ -197,10 +472,10 @@
 ## Level 房间元素验证结论 MD 沉淀 — 2026-04-10 14:37
 
 ### 新建文件
-- `Docs/6_Diagnostics/Level_RoomElements_Findings_2026-04-10.md`
+- `Docs/6_Diagnostics/Level_RoomElements_Findings.md`
 
 ### 内容
-- 新增 `Level_RoomElements_Findings_2026-04-10.md`，将本轮 `Level` 模块房间元素验证结果从对话结论和 CSV 矩阵进一步沉淀为完整 Markdown 报告。
+- 新增 `Level_RoomElements_Findings.md`，将本轮 `Level` 模块房间元素验证结果从对话结论和 CSV 矩阵进一步沉淀为完整 Markdown 报告。
 - 报告按“文档目的 → 结论先说 → 验证口径 → 元素家族 → 运行时消费分层 → `SampleScene` 实际挂载 → 标准根节点覆盖 → 逐元素结论矩阵 → 编辑期 schema 边界 → 当前配置问题 → 最终判断 → 后续优先级”组织，便于后续评审和复盘。
 - 明确保留本轮最重要的结构性判断：`SampleScene` 当前有 17 个 `Room`，但只有 2/17 完整具备标准根节点；当前场景现役成熟元素集中在 `Door`、`Checkpoint`、`Lock`、`PickupBase`、`EnemySpawner`、`ArenaController`、`EnvironmentHazard`；`rooms[].elements[]` 与 `ScaffoldElementType` 不是运行时 authority。
 - 在 Markdown 中额外补充了人类可读的分层说明和逐元素表格，降低后续只看 CSV 时的信息压缩感。
@@ -13356,4 +13631,10 @@ dotnet build 验证：0 错误，0 警告。
 - 内容：将原本堆在 `CLAUDE.md` 中的 `常见陷阱` 与 `Unity 编辑器操作边界` 从项目总章程里迁出，改为一个轻量的“模块陷阱与治理入口”索引；同时在 `Implement_rules.md` 中新增 `全局 Unity / Editor 治理`、`Core / Infrastructure`、`UI`、`Combat / Projectile` 四个正式章节，把对象池状态泄漏、共享运行时实例、uGUI Mask / CanvasGroup / DragDrop / Raycast 隐性坑，以及投射物自碰撞等经验按模块归档。
 - 目的：把 `CLAUDE.md` 收口为全局协作规则与 agent 使用约束，把复用型踩坑经验统一沉淀到 `Implement_rules.md`，降低文档职责重叠和后续协作时的检索成本。
 - 技术：先按“全局治理 / Core / UI / Combat”四类重组原有陷阱条目，再调整 `Implement_rules.md` 的顶部导航与模板编号，使新增章节与现有 `Ship / VFX`、`Level` 章节并列，同时保留 `CLAUDE.md` 中仅属于 agent / 工具层的实用提示。
+
+## Level Door/Room Authoring 同步收口 - 2026-04-10 22:29
+- 新建/修改文件：`Assets/Scripts/Level/Editor/LevelArchitect/DoorWiringService.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/BatchEditPanel.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：将 `DoorWiringService` 从旧的单边 `UpdateDoorPositions()` 收口为完整连接同步：统一回刷门位、反向门位、Auto-Connect 生成的 `DoorSpawn_from_*` 出生点，以及基于 `FloorLevel` 的 `TransitionCeremony`；同时修正 `AutoConnectRooms()` 里目标出生点方向，保证自动连线生成的目标出生点落在目标房间内部，并把新建 SpawnPoint 优先挂到 `Navigation/SpawnPoints`。在 `BatchEditPanel` 中统一 `SetNodeType()` 与 `ApplyBatchNodeType()` 的副作用链，批量改 `FloorLevel` / `Size` 后会立刻触发门同步，避免房间边界、楼层语义与既有门连接脱节。`LevelArchitectWindow` 增加房间边界/楼层 authoring 状态跟踪，在 SceneView 中检测到房间 Rect 或楼层变化时自动调用门同步；`OnUndoRedo()` 也会全量回刷门连接。`LevelValidator` 新增 `Door ceremony` 一致性校验，并把 `TargetSpawnPoint` 校验扩展为“出生点必须落在目标房间范围内”，支持对历史漂移数据一键 Auto-Fix。
+- 目的：收口 `Level` 编辑器里“改了 Room 元数据/几何，但 Door 语义与位置不跟着更新”的 authority 漏口，避免 `FloorLevel`、房间尺寸、白盒拖拽、撤销重做等操作后留下半同步 Scene truth。
+- 技术：采用编辑器侧 authority 同步服务 + SceneView 状态跟踪 + Validate/Auto-Fix 三层闭环；通过 `SerializedObject` 回写 `Door` 序列化字段，通过 `Undo` 记录门、出生点、组件增补变更，并使用 `dotnet build Project-Ark.slnx` 验证本轮修改在当前工作区下编译通过（0 error，仅保留既有 warning）。
 

@@ -7,6 +7,30 @@
 
 ---
 
+## 不可违反的四条规则（先看这个）
+
+> **如果时间很紧，只先看这一节。** 这 4 条是 Project Ark 的全局硬约束，优先级高于本文档里的普通建议。
+
+1. **真相源优先级不能混乱**
+   - 全局协作规则看 `CLAUDE.md`
+   - 模块治理 / 长期防御规则看 `Implement_rules.md`
+   - 现役链路、owner、对象映射、运行口径看对应 `CanonicalSpec` / `AssetRegistry`
+   - 若三者冲突：**现役真相以 `CanonicalSpec` / `AssetRegistry` 为准，`CLAUDE.md` 只定义全局闸门和工作流**
+
+2. **Implementation Log 是强制步骤，不是收尾可选项**
+   - 任何文件创建、修改、删除，必须在当前回合结束前追加到 `Docs/5_ImplementationLog/ImplementationLog.md`
+   - 不允许“先改完，之后有空再补”
+
+3. **允许缩小范围，不允许降低架构标准**
+   - MVP 可以砍功能，但不能靠第二真相源、双轨链路、临时桥接常驻、硬编码流程来换速度
+   - 一旦需要临时方案，必须写清原因、退出条件和最终收口边界
+
+4. **新模块 / 新子系统先做架构速写，再编码**
+   - 只要是新模块、新子系统，或重大架构变更，就先产出 `ArchBrief`
+   - 先写清模块边界、脚本职责、数据归属、扩展路径，再开始实现
+
+---
+
 ## 职责
 
 你现在是《静默方舟》(Project Ark) 的首席架构师，首席程序员。具备资深的 2D 游戏开发经验。你主要擅长开发的品类为银河恶魔城，类魂，和肉鸽。
@@ -67,7 +91,8 @@
   1. **目标 (Goal)**：我们要实现什么游玩体验？（例如：这是一个让玩家感到"惯性滑行"的移动手感，还是一个"瞬间爆发"的射击逻辑？）
   2. **范围 (Scope)**：涉及哪些脚本或系统？是否需要创建新的 `ScriptableObject` 数据资产？
   3. **架构约束 (Architecture)**：是否需要解耦？是否涉及对象池？是否需要暴露给策划配置？
-- 确认后再执行，不要猜测意图。
+- **先查现有文档和代码，再决定是否提问。** 优先从 `CanonicalSpec`、`Implement_rules.md`、`ImplementationLog` 和现有实现里收敛意图；只有当玩家体验目标或边界仍然不清晰时，才向用户提问。
+- 不要在缺乏设计意图的情况下盲猜，也不要把本可通过现有资料收敛的问题反复抛回给用户。
 
 ### 参考游戏锚定法
 
@@ -83,6 +108,64 @@
 - **MVP 是功能范围小，但架构完整的版本**——不是"先凑合能跑再说"。MVP 的代码应该是终态架构的子集，而非需要推翻重来的临时方案。
 - 验收标准同时覆盖手感和架构质量。
 
+### 长期可维护性保障机制（全局闸门）
+
+> **这是全局开工闸门。** 作用是防止项目为了短期验证而持续积累“双轨链路 / 第二真相源 / 临时桥接永不回收”一类结构性债务。
+>
+> **边界说明：** 本章只规定全局原则；具体到某个模块的 owner、authority matrix、override 白名单、fallback 收口细节，统一写进 `Implement_rules.md` 与对应 `CanonicalSpec`。
+
+#### 1. MVP 不能以牺牲架构为代价
+
+- MVP 可以小，但**不允许**用临时壳、平行系统、硬编码流程或“以后再迁移”的默认承诺换取“先能跑”。
+- 如果只是为了尽快进 Play Mode 验证，优先**缩小功能范围**，不要降低职责边界、数据边界和扩展路径标准。
+- “先堆进某个临时 `Manager` / `Window` / `MonoBehaviour`，后面再拆”默认视为错误路线；除非规格或实现日志里明确写出过渡原因、退出条件和最终收口目标。
+
+#### 2. 单一真值原则（Single Source of Truth）
+
+- 任何关键运行时状态只能有**一个正式 owner**；其它系统只能消费、观察、缓存只读视图，不能顺手再存一份平行真相。
+- `UI / HUD / Debug Panel / Editor Tool` 默认都是**读者**，不是玩法关键状态的 owner。
+- `ScriptableObject` 负责 authored data，运行时状态必须留在 runtime state / manager / component 中，禁止把动态状态回写成配置真相。
+- 开工前先写清：**这个状态由谁拥有、谁能写、谁只能读**。答不清就先不要实现。
+
+#### 3. 数据与规则分离
+
+- 可调数值、规则开关、资源引用、内容差异，优先进入 `ScriptableObject`、配置结构、曲线或明确的数据层，而不是散落在 `MonoBehaviour` 默认值和分支里。
+- 行为脚本负责流程与编排，不负责长期存放魔法数字、关卡特判和内容口径。
+- 允许为短期手感迭代保留少量本地默认值；但只要它会影响跨系统行为、内容扩展或多人协作，就必须尽快提升为正式数据层。
+
+#### 4. 模块边界先于功能增长
+
+- 新功能先判断**归属哪个现有模块**，再决定是否新增脚本、组件、接口、SO 或 Editor 工具。
+- 能挂到既有边界上，就不要再起同级 `Manager`、第二套扫描器、第二套 authoring 入口或第二套流程推进器。
+- 跨模块通信优先事件、接口、数据桥接和明确的服务边界；禁止为了省事建立大面积硬引用、链式查找和临时直连。
+- 一旦出现“这个功能要同时往 Runtime / Editor / Scene 三层都塞补丁才跑得起来”，应先停下来检查边界，而不是继续加补丁。
+
+#### 5. 临时方案必须显式登记
+
+- 任何过渡继承、桥接逻辑、兼容分支、fallback、override、占位字段，都必须在规格或 `Docs/5_ImplementationLog/ImplementationLog.md` 里写清：
+  1. **为什么当前必须临时这样做**
+  2. **它的退出条件是什么**
+  3. **后续要收口到哪个正式边界**
+- 未登记的临时方案，默认视为不允许存在的技术债，而不是“之后再说的小修补”。
+- 迁移一旦完成，必须安排一次**删旧路径**收尾；禁止把过渡链长期留在仓库里参与正式行为。
+
+#### 6. 防止模块膨胀的拆分触发器
+
+- 一个脚本、工具或管理器如果开始同时承担两个以上**无直接关系**的职责，就应该拆分。
+- 同一段逻辑出现第二次时，优先提取为 helper、纯 C# 类、组件、接口或共享工具，而不是复制粘贴第三次。
+- 如果新增一个 feature 需要同时改动 3 个以上**无直接职责关系**的核心脚本，先停下来检查模块边界是不是已经错了。
+- `Window / Editor Tool / SceneView Handler` 只保留入口、编排和可视化，不要把核心领域规则长期堆在 UI 入口脚本里。
+
+#### 7. 每次实现前必须回答的维护性问题
+
+- 这个状态由谁唯一拥有？
+- 这次改动是否引入了第二套入口、平行系统或双轨链路？
+- 这个规则是否应该数据化，而不是直接写死在脚本 / Inspector 默认值里？
+- 下一个同类内容接入时，是否可以通过“加数据 / 加实现类 / 实现接口”完成，而不是回头改核心？
+- 两周后回来看，这个脚本或模块的职责，是否仍能用一句话说清？
+
+> **开工闸门：** 如果以上问题里有任意一项答不清，就先不要开始实现；先收口模块边界、状态归属和数据归属，再动手编码。
+
 ---
 
 ## 核心模块
@@ -93,7 +176,7 @@
 - **数据资产 (Data)**: `*StatsSO` 全系列, CSV→SO 导入管线 (`BestiaryImporter`)
 - **UI**: 星图面板 (`StarChartPanel` + 拖拽装备), 热量条 (`HeatBarHUD`), 血条 (`HealthBarHUD`), 编织态过渡 (`WeavingStateTransition`)
 - **基建 (Infrastructure)**: 服务定位 (`ServiceLocator`), 伤害管线 (`DamagePayload` + `DamageCalculator`), 存档 (`SaveManager` + `PlayerSaveData`), 音频 (`AudioManager`), 跨程序集事件总线 (`CombatEvents`), 数据驱动 AI 转换 (`TransitionRuleEvaluator`)
-- **关卡系统 (Level)**: [全部完成] 房间系统 (`Room` + `RoomManager` + `Door`)，进度管理 (`CheckpointSystem` + `LockKeySystem` + `WorldProgressManager`)，战斗房间 (`EncounterSystem` + `WaveSpawnStrategy` + `ArenaController` + `Hazard`)，地图 (`MinimapManager` + `MapPanel` + `MinimapHUD`)，世界时钟 (`WorldClock` + `WorldPhaseManager` + `WorldPhaseSO`)，动态关卡 (`ScheduledBehaviour` + `WorldEventTrigger` + `TilemapVariantSwitcher` + `AmbienceController`)，房间变体 (`RoomVariantSO`)，多层结构（FloorLevel + 层间过渡 + `NarrativeFallTrigger`），存档集成 (`SaveBridge`)。架构：单场景 + Tilemap 房间 + Cinemachine Confiner。详见 `Docs/2_Design/Level/Level_CanonicalSpec.md`（现役）与 `Docs/8_Obsolete/LevelModulePlan.md`（历史）
+- **关卡系统 (Level)**: 房间系统 (`Room` + `RoomManager` + `Door`)，进度管理 (`CheckpointSystem` + `LockKeySystem` + `WorldProgressManager`)，战斗房间 (`EncounterSystem` + `WaveSpawnStrategy` + `ArenaController` + `Hazard`)，地图 (`MinimapManager` + `MapPanel` + `MinimapHUD`)，世界时钟 (`WorldClock` + `WorldPhaseManager` + `WorldPhaseSO`)，动态关卡 (`ScheduledBehaviour` + `WorldEventTrigger` + `TilemapVariantSwitcher` + `AmbienceController`)，房间变体 (`RoomVariantSO`)，多层结构（FloorLevel + 层间过渡 + `NarrativeFallTrigger`），存档集成 (`SaveBridge`)。当前处于 authoring / validation / scene integration 收口阶段。详见 `Docs/2_Design/Level/Level_CanonicalSpec.md`（现役）与 `Docs/8_Obsolete/LevelModulePlan.md`（历史）
 
 ---
 
@@ -253,40 +336,12 @@ Assets/
 
 ---
 
-## 当前里程碑
+## 当前阶段
 
-### 已完成
-
-| 阶段 | 内容 | 状态 |
-|------|------|------|
-| MS1 | 飞船基础移动 + Twin-Stick 瞄准 | 已完成 |
-| 射击核心 | 射击系统核心框架 (对象池 + 后坐力 + VFX) | 已完成 |
-| 星图 Batch 1 | 热量系统 + 星图 SO 数据层 | 已完成 |
-| 星图 Batch 2 | 槽位架构 + 发射管线重构 | 已完成 |
-| 星图 Batch 3 | 光帆框架 + 伴星运行时 | 已完成 |
-| 星图 Batch 4 | 星图 UI + 热量 HUD | 已完成 |
-| 星图 Batch 5 | 具体部件实现（四家族 Core + 三家族 Prism） | 已完成 |
-| 星图 Batch 6 | 编织态交互体验（镜头/后处理/视差） | 已完成 |
-| AI Phase 1 | HFSM + 躯壳/大脑/感知 + 莽夫/射手原型 | 已完成 |
-| AI Phase 2 | AttackDataSO + 导演系统 + 炮台原型 | 已完成 |
-| AI Phase 3 | 刺客 + 恐惧 + 阵营 + 闪避格挡 + 精英词缀 + Boss | 已完成 |
-| 补完 | 韧性/顿帧/群聚算法/血条 HUD/拖拽装备 | 已完成 |
-| 架构基建大修 | UniTask + PrimeTween + ServiceLocator + 伤害管线 + 存档 + 音频 + 事件总线 + 数据驱动AI + 单元测试 | 已完成 |
-
-### 已完成（续）
-
-| 阶段 | 内容 | 状态 |
-|------|------|------|
-| 关卡 Phase 1 (L1-L5) | Room + RoomManager + Door + Camera Confiner（基础结构） | 已完成 |
-| 关卡 Phase 2 (L6-L9.5) | Checkpoint + LockKey + Death&Respawn + WorldProgressManager（进度系统） | 已完成 |
-| 关卡 Phase 3 (L10-L12) | EncounterSystem + Arena + Hazard（战斗房间） | 已完成 |
-| 关卡 Phase 4 (L13-L15) | Minimap + SaveSystem集成 + 示巴星关卡布局 | 已完成 |
-| 关卡 Phase 5 (L16-L19) | 多层结构（FloorLevel + 层间过渡演出 + 小地图楼层切换） | 已完成 |
-| 关卡 Phase 6 (L20-L27) | 世界时钟 + 动态关卡（WorldClock + WorldPhaseManager + ScheduledBehaviour + WorldEventTrigger + TilemapVariantSwitcher + AmbienceController + Room 变体） | 已完成 |
-
-### 进行中
-
-- **场景配置与验证**：在 Unity Editor 中配置 WorldPhaseSO 资产（4个阶段）、AmbienceController 引用、场景中挂载 WorldClock/WorldPhaseManager/AmbienceController 管理器
+- **功能闭环状态**：核心战斗、敌人 AI、星图 UI/拖拽、架构基建，以及 `Level` Phase 1-6 主链已完成，不再把历史阶段表作为本文件的长期维护对象。
+- **当前主战场**：场景配置与验证、Level authoring/toolchain 收口、文档治理与 authority 清晰化。
+- **进度真相源**：精确到“这周/这次改了什么”的真实进度，以 `Docs/5_ImplementationLog/ImplementationLog.md` 为准；模块现役状态和边界以对应 `CanonicalSpec` 为准。
+- **维护原则**：`CLAUDE.md` 只保留当前阶段判断所需的高层摘要，不继续堆积长篇历史里程碑，避免文档快速过时。
 
 ---
 
@@ -327,7 +382,7 @@ Assets/
 3. **独立性测试** — 如果把这个功能完全删除，现有模块是否仍然完整？
    - → 是（现有模块不受影响）→ 起新模块
    - → 否（它是现有模块的自然延伸）→ 归入已有模块
-4. **仍然不确定** → 先问用户，给出判断和理由，让用户决定
+4. **仍然不确定** → 先查现有 `CanonicalSpec` / `ArchBrief` / `ImplementationLog` / 代码；只有在这些材料仍无法收敛模块归属时，再向用户说明分歧点并请其裁决
 
 **核心倾向**：宁可归入已有模块（少一份文档维护），除非功能确实独立到"删掉不影响任何现有系统"的程度。
 
@@ -417,58 +472,13 @@ Assets/
 
 ## Unity MCP 工具使用指南
 
-Unity MCP（CoplayDev 版，`com.coplaydev.unity-mcp`）将 Unity Editor 的操作能力直接接入 AI 对话，**打通了"代码修改 → 编辑器验证"之间的断层**。以前 AI 只能写代码、用户去 Editor 里验证；现在 AI 可以直接读取运行时状态、截图、执行代码来闭环验证。
+> **仅在当前会话实际接入 Unity MCP 时适用。** 若当前环境没有暴露 Unity MCP 工具或资源，以运行时实际可用能力为准，不要把本节当作“始终存在”的能力承诺。
 
-### 能力边界总览
+Unity MCP（如已接入）能把 Unity Editor 的读取、验证和部分编辑能力直接接到对话里，核心价值不是“列全工具名”，而是**缩短代码修改 → Editor 验证 → 继续迭代**的回路。
 
-| 工具类别 | 工具名 | 能做什么 |
-|----------|--------|----------|
-| **Console** | `read_console` | 读取/清除 Unity Console 日志（分页，可按类型过滤） |
-| **场景** | `manage_scene` | 场景 CRUD（create/load/save）、获取层级 `get_hierarchy`（分页）、截图 `screenshot`、查询构建设置 |
-| **GameObject** | `find_gameobjects` | 按名称/tag/layer/组件类型/路径搜索，返回 instanceID 列表 |
-| | `manage_gameobject` | 创建/修改/删除/复制/相对移动 GameObject |
-| | `manage_components` | 添加/删除/设置组件属性（`add / remove / set_property`） |
-| **资产** | `manage_asset` | 资产搜索、创建、修改、删除、导入（支持分页，`generate_preview=false` 避免大载荷） |
-| | `manage_scriptable_object` | 通过序列化路径创建和修改 ScriptableObject 资产 |
-| | `manage_material` | 创建 Material、修改 Shader 属性/颜色、指定给 Renderer |
-| | `manage_prefabs` | Prefab 无 UI 编辑（`get_info / get_hierarchy / create_from_gameobject / modify_contents`）；支持批量创建子 GO 和设置组件属性 |
-| | `manage_texture` | 程序化生成纹理（实色/棋盘/条纹/渐变/噪声等图案） |
-| | `manage_shader` | Shader 脚本的 CRUD（create/read/update/delete） |
-| **脚本** | `create_script` | 在指定路径新建 C# 脚本 |
-| | `manage_script` | 读取脚本内容（`read`），或兼容旧版 create/delete |
-| | `apply_text_edits` | 按精确行列坐标替换脚本中的文本片段 |
-| | `script_apply_edits` | 结构化 C# 编辑：替换/插入/删除整个方法，或按锚点 anchor 做模式匹配替换（更安全） |
-| | `validate_script` | 对 C# 脚本执行静态诊断，返回错误/警告列表 |
-| | `delete_script` | 删除 C# 脚本文件 |
-| | `find_in_file` | 在文件中用正则搜索，返回行号和摘录 |
-| | `get_sha` | 获取脚本的 SHA256 和元数据（不返回文件内容，省 token） |
-| **动画** | `manage_animation` | Animator 控制（play/crossfade/set 参数）、创建 AnimatorController/State/Transition、创建带关键帧曲线的 AnimationClip |
-| **VFX** | `manage_vfx` | 管理 ParticleSystem / VisualEffect / LineRenderer / TrailRenderer |
-| **编辑器** | `manage_editor` | Play/Pause/Stop、设置 active tool、添加/删除 Tag 和 Layer；读取 telemetry 状态 |
-| | `execute_menu_item` | 执行任意 Unity 菜单项（需先读 `menu_items` 资源确认路径） |
-| | `refresh_unity` | 刷新 AssetDatabase，可选等待脚本编译完成 |
-| **测试** | `run_tests` | 异步启动 EditMode/PlayMode 单元测试，返回 `job_id` |
-| | `get_test_job` | 轮询异步测试任务进度和结果 |
-| **批量执行** | `batch_execute` | 将多条 MCP 命令打包为一次调用，延迟/token 降低 10-100x；默认上限 25 条，最大 100 条 |
-| **实例管理** | `set_active_instance` | 多 Unity 实例时指定目标实例（Name@hash 或端口号） |
-| **自定义工具** | `execute_custom_tool` | 执行项目注册的自定义 MCP 工具（见 `custom_tools` 资源） |
-
-**Resources（只读状态读取，用 `FetchMcpResource` 访问）：**
-
-| 资源 | 说明 |
-|------|------|
-| `mcpforunity://editor_state` | 编辑器当前状态（isPlaying/isPaused/isCompiling 等） |
-| `mcpforunity://project_info` | 项目名称、Unity 版本、平台等基本信息 |
-| `mcpforunity://project_tags` | 项目所有 Tag 列表 |
-| `mcpforunity://project_layers` | 项目所有 Layer 列表 |
-| `mcpforunity://instances` | 当前连接的所有 Unity 实例列表 |
-| `mcpforunity://menu_items` | 所有可执行的菜单项路径 |
-| `mcpforunity://editor_selection` | 当前 Editor 选中的对象 |
-| `mcpforunity://editor_state` | 编辑器活跃工具等状态 |
-| `mcpforunity://get_tests` | 项目测试列表 |
-| `mcpforunity://custom-tools` | 项目注册的自定义工具列表（每次任务前先查） |
-| `mcpforunity://scene/gameobject/{id}` | 指定 instanceID 的 GameObject 完整数据 |
-| `mcpforunity://scene/gameobject/{id}/components` | 指定 GO 的所有组件列表 |
+**维护原则：**
+- 本文档只保留 **Project Ark 真正高频、长期有效** 的 Unity MCP 使用策略
+- 完整能力列表、精确参数和新增工具，以 MCP 服务端运行时暴露结果为准，不在 `CLAUDE.md` 里重复维护一份易过时的工具清单
 
 ### 推荐使用场景（Project Ark 专项）
 
@@ -603,14 +613,13 @@ dotnet build Project-Ark.slnx
 
 **说明：** 这个命令会编译所有 .csproj 项目，包括 `ProjectArk.Level.Editor` 等 Editor 程序集。
 
-### edit_file 单次写入行数上限
+### 大文件编辑建议
 
-使用 `edit_file` 工具一次性写入新文件时，**单次 `code_edit` 参数上限约为 900 行**。
+处理大文件或长文档时，不要假设单次工具调用可以稳定承载整段内容。
 
-- 实测 898 行 / 33KB 可以成功写入，不会报错。
-- 超过此限制时，工具会因"输出内容超过最大长度"而失败——**根因是 AI 响应总输出长度超限，而非文件行数本身**。
-- 消息中的解释文字越多，可用于 `code_edit` 的空间越少；因此写大文件时应尽量减少同条消息中的额外文字。
-- **拆分策略**：若单文件超过 900 行，先写入前 900 行，再用 `replace_in_file` / `multi_replace` 追加剩余内容。
+- 单次写入过长时，真正的限制通常来自**响应长度 / 工具载荷大小**，不一定是文件本身的行数。
+- **策略**：优先分段写入、分批替换、逐段校验，而不是把超长内容一次性塞进同一个编辑调用。
+- 对大文件做结构性改动时，先收口章节边界，再局部替换，可显著降低并发覆盖和大段替换失败风险。
 
 ---
 
@@ -646,15 +655,6 @@ dotnet build Project-Ark.slnx
 
 ---
 
-## GalacticGlitch 参考资产
-
-> ⚠️ **完整分析文档（含 PlayerSkinDefault 映射表、颜色数据、防错误引用警告）见**：  
-> `Docs/7_Reference/GameAnalysis/GalacticGlitch_Structure_Analysis.md`
->
-> **核心记忆**：`Primary_4.png` 对应 State 3/4/8，使用 `Primary_4` / `Primary` / `Primary_6`。  
-> `GrabGun_Base_9/8` **只属于 State 7**，绝对不能用于其他状态。
-
----
 
 ## 实现日志 (Implementation Log) — ⚠️ 严格执行
 

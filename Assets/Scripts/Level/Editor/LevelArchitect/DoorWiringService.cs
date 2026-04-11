@@ -15,6 +15,8 @@ namespace ProjectArk.Level.Editor
 
         private const float SHARED_EDGE_THRESHOLD = 0.5f;
         private const float DOOR_COLLIDER_SIZE = 2f;
+        private const float AUTO_CONNECT_SPAWN_OFFSET = 2f;
+        private const string AUTO_CONNECT_SPAWN_NAME_PREFIX = "DoorSpawn_from_";
 
         // ──────────────────── Public API ────────────────────
 
@@ -67,8 +69,8 @@ namespace ProjectArk.Level.Editor
             var doorB = doorBGO.GetComponent<Door>();
 
             // ── Create SpawnPoints at door positions ──
-            var spawnA = CreateDoorSpawnPoint(roomA, midpoint + dirAtoB * 2f, "DoorSpawn_from_" + roomB.RoomID);
-            var spawnB = CreateDoorSpawnPoint(roomB, midpoint - dirAtoB * 2f, "DoorSpawn_from_" + roomA.RoomID);
+            var spawnA = CreateDoorSpawnPoint(roomA, midpoint - dirAtoB * AUTO_CONNECT_SPAWN_OFFSET, "DoorSpawn_from_" + roomB.RoomID);
+            var spawnB = CreateDoorSpawnPoint(roomB, midpoint + dirAtoB * AUTO_CONNECT_SPAWN_OFFSET, "DoorSpawn_from_" + roomA.RoomID);
 
             // ── Wire references ──
             ConfigureDoor(doorA, roomB, spawnB, roomA, roomB);
@@ -101,33 +103,42 @@ namespace ProjectArk.Level.Editor
         }
 
         /// <summary>
+        /// Synchronize all authoring-owned door connections for a room.
+        /// Recomputes door positions, reverse door positions, auto-connect spawn points,
+        /// and door ceremony based on current room geometry/floor metadata.
+        /// </summary>
+        public static void SynchronizeRoomConnections(Room room)
+        {
+            if (room == null) return;
+            if (!TryGetRoomWorldRect(room, out Rect roomRect)) return;
+
+            var processedDoors = new HashSet<Door>();
+            var doors = room.GetComponentsInChildren<Door>(true);
+            foreach (var door in doors)
+            {
+                SynchronizeDoorConnection(room, roomRect, door, processedDoors);
+            }
+        }
+
+        /// <summary>
+        /// Synchronize all room door connections in the current scene.
+        /// </summary>
+        public static void SynchronizeAllRoomConnections()
+        {
+            var rooms = Object.FindObjectsByType<Room>();
+            foreach (var room in rooms)
+            {
+                SynchronizeRoomConnections(room);
+            }
+        }
+
+        /// <summary>
         /// Update door positions for all doors belonging to a room (after room move/resize).
+        /// Kept for backward compatibility; now performs full connection synchronization.
         /// </summary>
         public static void UpdateDoorPositions(Room room)
         {
-            if (room == null) return;
-
-            var box = room.GetComponent<BoxCollider2D>();
-            if (box == null) return;
-
-            Rect roomRect = LevelArchitectWindow.GetRoomWorldRect(room, box);
-            var doors = room.GetComponentsInChildren<Door>(true);
-
-            foreach (var door in doors)
-            {
-                if (door == null || door.TargetRoom == null) continue;
-
-                var targetBox = door.TargetRoom.GetComponent<BoxCollider2D>();
-                if (targetBox == null) continue;
-
-                Rect targetRect = LevelArchitectWindow.GetRoomWorldRect(door.TargetRoom, targetBox);
-
-                if (FindSharedEdge(roomRect, targetRect, out Vector2 newMidpoint, out Vector2 dir))
-                {
-                    Undo.RecordObject(door.transform, "Update Door Position");
-                    door.transform.position = newMidpoint;
-                }
-            }
+            SynchronizeRoomConnections(room);
         }
 
         /// <summary>
@@ -406,7 +417,10 @@ namespace ProjectArk.Level.Editor
             var spawnGO = new GameObject(spawnName);
             Undo.RegisterCreatedObjectUndo(spawnGO, "Create Door SpawnPoint");
 
-            spawnGO.transform.SetParent(room.transform);
+            var spawnRoot = room.transform.Find("Navigation/SpawnPoints");
+            var navigationRoot = room.transform.Find("Navigation");
+            var parent = spawnRoot != null ? spawnRoot : (navigationRoot != null ? navigationRoot : room.transform);
+            spawnGO.transform.SetParent(parent);
             spawnGO.transform.position = position;
 
             return spawnGO.transform;
@@ -420,11 +434,7 @@ namespace ProjectArk.Level.Editor
             serialized.FindProperty("_targetRoom").objectReferenceValue = targetRoom;
             serialized.FindProperty("_targetSpawnPoint").objectReferenceValue = targetSpawnPoint;
             serialized.FindProperty("_initialState").enumValueIndex = (int)DoorState.Open;
-
-            // Check floor level difference for layer transition
-            int ownerFloor = ownerRoom.Data != null ? ownerRoom.Data.FloorLevel : 0;
-            int targetFloor = targetRoomForFloorCheck.Data != null ? targetRoomForFloorCheck.Data.FloorLevel : 0;
-            serialized.FindProperty("_ceremony").enumValueIndex = (int)(ownerFloor != targetFloor ? TransitionCeremony.Layer : TransitionCeremony.Standard);
+            serialized.FindProperty("_ceremony").enumValueIndex = (int)GetExpectedCeremony(ownerRoom, targetRoomForFloorCheck);
 
             // Set player layer
             int playerLayer = LayerMask.NameToLayer("Player");
@@ -434,6 +444,139 @@ namespace ProjectArk.Level.Editor
             }
 
             serialized.ApplyModifiedProperties();
+        }
+
+        private static void SynchronizeDoorConnection(Room ownerRoom, Rect ownerRect, Door door, HashSet<Door> processedDoors)
+        {
+            if (door == null || door.TargetRoom == null || processedDoors.Contains(door))
+            {
+                return;
+            }
+
+            if (!TryGetRoomWorldRect(door.TargetRoom, out Rect targetRect))
+            {
+                Debug.LogWarning($"[DoorWiringService] Cannot sync '{door.gameObject.name}': target room '{door.TargetRoom.RoomID}' has no BoxCollider2D.");
+                return;
+            }
+
+            if (!FindSharedEdge(ownerRect, targetRect, out Vector2 midpoint, out Vector2 directionToTarget))
+            {
+                Debug.LogWarning($"[DoorWiringService] Cannot sync '{ownerRoom.RoomID}' ↔ '{door.TargetRoom.RoomID}': rooms no longer share an edge.");
+                return;
+            }
+
+            var reverseDoor = FindDoorTargetingRoom(door.TargetRoom, ownerRoom);
+
+            UpdateDoorTransform(door, midpoint);
+            UpdateDoorCeremony(door, ownerRoom, door.TargetRoom);
+            UpdateAutoConnectSpawnPoint(door.TargetSpawnPoint, midpoint + directionToTarget * AUTO_CONNECT_SPAWN_OFFSET);
+            processedDoors.Add(door);
+
+            if (reverseDoor != null)
+            {
+                UpdateDoorTransform(reverseDoor, midpoint);
+                UpdateDoorCeremony(reverseDoor, door.TargetRoom, ownerRoom);
+                UpdateAutoConnectSpawnPoint(reverseDoor.TargetSpawnPoint, midpoint - directionToTarget * AUTO_CONNECT_SPAWN_OFFSET);
+                processedDoors.Add(reverseDoor);
+            }
+        }
+
+        private static bool TryGetRoomWorldRect(Room room, out Rect rect)
+        {
+            rect = default;
+            if (room == null)
+            {
+                return false;
+            }
+
+            var box = room.GetComponent<BoxCollider2D>();
+            if (box == null)
+            {
+                return false;
+            }
+
+            rect = LevelArchitectWindow.GetRoomWorldRect(room, box);
+            return true;
+        }
+
+        private static Door FindDoorTargetingRoom(Room sourceRoom, Room targetRoom)
+        {
+            if (sourceRoom == null || targetRoom == null)
+            {
+                return null;
+            }
+
+            var doors = sourceRoom.GetComponentsInChildren<Door>(true);
+            foreach (var door in doors)
+            {
+                if (door != null && door.TargetRoom == targetRoom)
+                {
+                    return door;
+                }
+            }
+
+            return null;
+        }
+
+        private static void UpdateDoorTransform(Door door, Vector2 newPosition)
+        {
+            if (door == null || Approximately((Vector2)door.transform.position, newPosition))
+            {
+                return;
+            }
+
+            Undo.RecordObject(door.transform, "Sync Door Position");
+            door.transform.position = newPosition;
+            EditorUtility.SetDirty(door.transform);
+        }
+
+        private static void UpdateDoorCeremony(Door door, Room ownerRoom, Room targetRoom)
+        {
+            if (door == null)
+            {
+                return;
+            }
+
+            var expectedCeremony = GetExpectedCeremony(ownerRoom, targetRoom);
+            if (door.Ceremony == expectedCeremony)
+            {
+                return;
+            }
+
+            Undo.RecordObject(door, "Sync Door Ceremony");
+            var serialized = new SerializedObject(door);
+            serialized.FindProperty("_ceremony").enumValueIndex = (int)expectedCeremony;
+            serialized.ApplyModifiedProperties();
+            EditorUtility.SetDirty(door);
+        }
+
+        private static void UpdateAutoConnectSpawnPoint(Transform spawnPoint, Vector2 newPosition)
+        {
+            if (!IsAutoConnectSpawnPoint(spawnPoint) || Approximately((Vector2)spawnPoint.position, newPosition))
+            {
+                return;
+            }
+
+            Undo.RecordObject(spawnPoint, "Sync Door SpawnPoint");
+            spawnPoint.position = newPosition;
+            EditorUtility.SetDirty(spawnPoint);
+        }
+
+        private static bool IsAutoConnectSpawnPoint(Transform spawnPoint)
+        {
+            return spawnPoint != null && spawnPoint.name.StartsWith(AUTO_CONNECT_SPAWN_NAME_PREFIX);
+        }
+
+        private static bool Approximately(Vector2 a, Vector2 b)
+        {
+            return Mathf.Approximately(a.x, b.x) && Mathf.Approximately(a.y, b.y);
+        }
+
+        internal static TransitionCeremony GetExpectedCeremony(Room ownerRoom, Room targetRoom)
+        {
+            int ownerFloor = ownerRoom != null && ownerRoom.Data != null ? ownerRoom.Data.FloorLevel : 0;
+            int targetFloor = targetRoom != null && targetRoom.Data != null ? targetRoom.Data.FloorLevel : 0;
+            return ownerFloor != targetFloor ? TransitionCeremony.Layer : TransitionCeremony.Standard;
         }
 
         private static void RemoveDoorsTargeting(Room sourceRoom, Room targetRoom)

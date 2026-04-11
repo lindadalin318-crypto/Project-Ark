@@ -761,6 +761,11 @@
 <body>
     <div class="container">
         <div class="left-panel">
+            <div class="context-card" style="margin-bottom: 10px;">
+                <strong>当前定位：</strong>本工具现阶段主要用于 <strong>拓扑规划 + JSON 导入源</strong>。
+                Unity 现役导入主消费 rooms / connections / doorLinks 骨架；房间元素与节奏元数据当前仅作为设计快照，不会自动生成场景对象。
+            </div>
+
             <div class="room-presets">
                 <div class="panel-title">房间类型 (RoomNodeType)</div>
                 <div class="preset-item transit" draggable="true" data-type="transit">
@@ -790,7 +795,8 @@
             </div>
             
             <div class="element-presets">
-                <div class="panel-title">房间元素</div>
+                <div class="panel-title">房间元素 <span class="subtle-badge">设计占位</span></div>
+                <div class="help-text">当前仅记录设计快照，不会被 Unity 导入器自动生成到场景里。</div>
                 <div class="preset-item element" draggable="true" data-element="spawn">
                     <div class="color-dot" style="background: #4caf50;"></div>
                     生成点
@@ -873,6 +879,12 @@
                     <li>拖拽四角调整大小</li>
                     <li>拖拽房间移动位置</li>
                 </ul>
+                <div class="context-card" style="margin-top: 8px;">
+                    <strong>Unity 现役主消费：</strong><br>
+                    房间骨架、连接关系、doorLinks。<br>
+                    <strong>不会自动生成：</strong><br>
+                    elements、敌人、检查点、奖励物件与其他场景对象。
+                </div>
             </div>
             
             <div class="mode-indicator" id="mode-indicator">点击目标房间完成连接</div>
@@ -887,6 +899,10 @@
             <!-- Section 1: Properties Panel -->
             <div class="right-panel-section" id="section-properties" style="flex: 1;">
                 <div class="panel-title">属性面板</div>
+                <div class="context-card" style="margin-bottom: 10px;">
+                    <strong>属性边界：</strong> ID、名称、类型、楼层、尺寸、连接与 doorLinks 属于当前 Unity 导入主链；
+                    Zone、ACT、张力、叙事乐章、时长与元素快照目前主要用于设计沟通与 JSON 留档，不会自动驱动运行时对象生成。
+                </div>
                 
                 <div id="properties-panel">
                     <div class="help-text" style="text-align: center; margin-top: 50px;">
@@ -931,12 +947,12 @@
                     </div>
                     
                     <div class="property-group">
-                        <div class="property-label">Zone ID</div>
+                        <div class="property-label">Zone ID <span class="subtle-badge">设计备注</span></div>
                         <input type="text" class="property-input" id="prop-zone-id" placeholder="如 Z1a" onchange="updateRoomProperty('zoneId', this.value)">
                     </div>
                     
                     <div class="property-group">
-                        <div class="property-label">ACT 分组</div>
+                        <div class="property-label">ACT 分组 <span class="subtle-badge">设计备注</span></div>
                         <select class="property-input" id="prop-act" onchange="updateRoomProperty('act', this.value)">
                             <option value="">-- 未分组 --</option>
                             <option value="ACT1">ACT 1</option>
@@ -948,18 +964,19 @@
                     </div>
                     
                     <div class="property-group">
-                        <div class="property-label">张力值 <span id="tension-display" style="color:#e94560;">0</span></div>
+                        <div class="property-label">张力值 <span id="tension-display" style="color:#e94560;">0</span> <span class="subtle-badge">设计备注</span></div>
                         <input type="range" class="property-input" id="prop-tension" min="0" max="10" step="1" value="0" oninput="document.getElementById('tension-display').textContent=this.value; updateRoomProperty('tension', parseInt(this.value))">
                     </div>
                     
                     <div class="property-group">
-                        <div class="property-label">叙事乐章</div>
+                        <div class="property-label">叙事乐章 <span class="subtle-badge">设计备注</span></div>
                         <input type="text" class="property-input" id="prop-beat-name" placeholder="如 序曲：坠落" onchange="updateRoomProperty('beatName', this.value)">
                     </div>
                     
                     <div class="property-group">
-                        <div class="property-label">时长估算</div>
+                        <div class="property-label">时长估算 <span class="subtle-badge">设计备注</span></div>
                         <input type="text" class="property-input" id="prop-time-range" placeholder="如 0:00-5:00" onchange="updateRoomProperty('timeRange', this.value)">
+                        <div class="property-note">这些字段会随 JSON 保存，并用于设计对齐与张力图展示；当前不会自动生成 Encounter、敌人、Checkpoint 或其他 Unity 场景对象。</div>
                     </div>
 
                     <div class="property-group">
@@ -968,8 +985,9 @@
                     </div>
                     
                     <div class="property-group">
-                        <div class="property-label">元素</div>
+                        <div class="property-label">元素 <span class="subtle-badge">设计占位</span></div>
                         <div id="elements-list" style="font-size: 11px; max-height: 80px; overflow-y: auto;"></div>
+                        <div class="property-note">当前仅作为房间设计快照展示，不会被 LevelSliceBuilder 自动实例化到场景中。</div>
                     </div>
                     
                     <button class="btn btn-danger" onclick="deleteSelectedRoom()">删除房间</button>

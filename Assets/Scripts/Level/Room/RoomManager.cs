@@ -88,7 +88,6 @@ namespace ProjectArk.Level
             foreach (var room in _allRooms)
             {
                 room.OnPlayerEntered += HandlePlayerEnteredRoom;
-                room.OnPlayerExited += HandlePlayerExitedRoom;
 
                 // Build RoomID → Room lookup
                 string id = room.RoomID;
@@ -109,7 +108,6 @@ namespace ProjectArk.Level
             {
                 if (room == null) continue;
                 room.OnPlayerEntered -= HandlePlayerEnteredRoom;
-                room.OnPlayerExited -= HandlePlayerExitedRoom;
             }
         }
 
@@ -119,12 +117,6 @@ namespace ProjectArk.Level
         {
             if (room == _currentRoom) return; // Already in this room
             EnterRoom(room);
-        }
-
-        private void HandlePlayerExitedRoom(Room room)
-        {
-            if (room != _currentRoom) return;
-            LevelEvents.RaiseRoomExited(room.RoomID);
         }
 
         // ──────────────────── Core API ────────────────────
@@ -210,32 +202,11 @@ namespace ProjectArk.Level
                 director.ReturnAllTokens();
             }
 
-            // ── Arena/Boss encounter ──
-            // ArenaController owns the full encounter flow (lock doors → delay → spawn waves → unlock).
-            // Do NOT call ActivateEnemies() for these rooms — it would create a WaveSpawnStrategy that
-            // gets immediately Reset() when ArenaController calls SetStrategy() moments later.
-            if (room.NodeType == RoomNodeType.Arena || room.NodeType == RoomNodeType.Boss)
-            {
-                if (room.State != RoomState.Cleared)
-                {
-                    var arena = room.GetComponent<ArenaController>();
-                    if (arena != null)
-                    {
-                        arena.BeginEncounter();
-                    }
-                    else
-                    {
-                        // Fallback: no ArenaController → lock doors + activate directly
-                        room.LockAllDoors(DoorState.Locked_Combat);
-                        _currentRoom.ActivateEnemies();
-                    }
-                }
-            }
-            else
-            {
-                // Non-arena rooms activate enemies directly.
-                _currentRoom.ActivateEnemies();
-            }
+            // ── Room-owned combat activation ──
+            // Room is now the single runtime entry for room-level combat.
+            // Arena/Boss rooms delegate ceremony to ArenaController inside Room.ActivateEnemies(),
+            // while normal rooms start their encounter directly.
+            _currentRoom.ActivateEnemies();
 
             // ── Broadcast events ──
             LevelEvents.RaiseRoomEntered(room.RoomID);
@@ -245,17 +216,22 @@ namespace ProjectArk.Level
         }
 
         /// <summary>
-        /// Notify that a room has been cleared of all enemies.
-        /// Typically called by the encounter system after the last wave is defeated.
+        /// Notify that a whole room has been cleared of all enemies.
+        /// This is the single authority for room-cleared state and combat door unlock.
+        /// Only room-owned encounter flows should call this.
         /// </summary>
         public void NotifyRoomCleared(Room room)
         {
             if (room == null) return;
 
+            if (room.State == RoomState.Cleared)
+            {
+                Debug.LogWarning($"[RoomManager] Duplicate room cleared notification ignored: {room.RoomID}");
+                return;
+            }
+
             room.SetState(RoomState.Cleared);
             room.UnlockCombatDoors();
-
-            LevelEvents.RaiseRoomCleared(room.RoomID);
 
             Debug.Log($"[RoomManager] Room cleared: {room.RoomID}");
         }

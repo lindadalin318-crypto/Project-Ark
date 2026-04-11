@@ -277,8 +277,12 @@ JSON 结构示例见本文附录。
 | 缺标准根节点：`Navigation / Elements / Encounters / Hazards / Decoration / Triggers` | Warning | ✅ |
 | Door 非双向连接 | Error | ✅ |
 | `Arena` / `Boss` 房缺 `ArenaController` | Warning | ✅ |
+| 非 `Arena` / `Boss` 房误挂 `ArenaController` | Warning | ❌ |
 | `Arena` / `Boss` 房缺 `EncounterSO` | Warning | ❌ |
 | `Arena` / `Boss` 房缺 `EnemySpawner` | Warning | ✅ |
+| `RoomSO Encounter` 使用非 `Closed` 模式 | Warning | ❌ |
+| `OpenEncounterTrigger` 使用非 `Open` 模式 | Warning | ❌ |
+| `RoomSO Encounter` 与 `OpenEncounterTrigger` 混用 | Warning | ❌ |
 | Door 的 `_playerLayer` 未配置 | Warning | ✅ |
 | Door 的 `_targetSpawnPoint` 为空 | Error | ❌ |
 | 房间孤立（没有 Door 连接） | Info | ❌ |
@@ -369,6 +373,13 @@ Room_[ID]
 | `Triggers` | Camera、Biome、事件、隐藏区域等触发器 |
 | `CameraConfiner` | 当前房间镜头边界 |
 
+### 8.2.1 战斗件 authoring owner 口径（现役）
+
+- **`Room.ActivateEnemies()` 是 room-level combat 的唯一运行时入口**；不要再从外部直接拼第二套 arena / 普通房启动链。
+- **`RoomSO.Encounter` = room-owned encounter 配置**，现役语义统一按 `EncounterSO.Mode = Closed` authoring。
+- **`ArenaController` = `Arena` / `Boss` 房的 ceremony orchestrator**，只负责锁门、延迟、奖励与清房时机；它不是第二个刷怪 owner。
+- **`OpenEncounterTrigger` = 局部 open encounter owner**，使用独立 `EncounterSO`，并按 `EncounterSO.Mode = Open` authoring；不要和 `RoomSO Encounter` 混用在同一房间里。
+
 ### 8.3 可扩展内容层
 
 `Tilemaps`、`Variant_xxx`、`ActivationGroups` 等内容层可以存在，但不能替代标准根节点职责。
@@ -416,7 +427,7 @@ Room_[ID]
 | **通路件** | `Path` | `Door`、层间门、阶段门 | `Navigation` | 目标房间、出生点、连接语义、阶段/进度门控 |
 | **交互件** | `Interact` | `Lock`、`Checkpoint`、拾取物 | `Elements` | 触发器、`_playerLayer`、输入链、必需 SO / 目标引用 |
 | **状态件** | `Stateful` | `DestroyableObject`、永久机关、一次性揭示物 | `Elements` | 父 `Room`、flag key、`RoomFlagRegistry`、`SaveBridge` |
-| **战斗件** | `Combat` | `OpenEncounterTrigger`、`ArenaController`、`EnemySpawner` | `Encounters` | `EncounterSO`、Spawner、重置链、房型语义 |
+| **战斗件** | `Combat` | `OpenEncounterTrigger`、`ArenaController`、`EnemySpawner` | `Encounters` | `EncounterSO.Mode`、Spawner、重置链、房型语义 |
 | **环境机关件** | `Environment` | `EnvironmentHazard` 子类 | `Hazards` | 伤害配置、Layer、Collider、是否需要持久关闭 |
 | **导演件** | `Directing` | `BiomeTrigger`、`HiddenAreaMask`、`ScheduledBehaviour`、`ActivationGroup`、`WorldEventTrigger` | `Triggers`（或显式扩展层） | 事件源、target 引用、phase/progress 依赖、预激活要求 |
 | **基础设施件** | `Infrastructure` | `SpawnPoint`、`CameraConfiner` | `Navigation/SpawnPoints`、`CameraConfiner` | 房间入口落点、镜头边界、与 `Room` / `Door` / `CameraDirector` 的协作关系 |

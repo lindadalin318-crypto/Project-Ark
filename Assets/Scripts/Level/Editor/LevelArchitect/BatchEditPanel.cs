@@ -146,12 +146,7 @@ namespace ProjectArk.Level.Editor
 
             foreach (var room in rooms)
             {
-                if (room == null || room.Data == null) continue;
-
-                var serialized = new SerializedObject(room.Data);
-                serialized.FindProperty("_nodeType").enumValueIndex = (int)nodeType;
-                serialized.ApplyModifiedProperties();
-                EditorUtility.SetDirty(room.Data);
+                ApplyRoomNodeType(room, nodeType);
             }
 
             Debug.Log($"[BatchEdit] Set {objects.Count} room(s) to NodeType '{nodeType}'.");
@@ -167,13 +162,10 @@ namespace ProjectArk.Level.Editor
 
             foreach (var room in rooms)
             {
-                if (room == null || room.Data == null) continue;
-
-                var serialized = new SerializedObject(room.Data);
-                serialized.FindProperty("_floorLevel").intValue = floorLevel;
-                serialized.ApplyModifiedProperties();
-                EditorUtility.SetDirty(room.Data);
+                ApplyRoomFloorLevel(room, floorLevel);
             }
+
+            SynchronizeDoorAuthoring(rooms);
 
             Debug.Log($"[BatchEdit] Set {objects.Count} room(s) to floor level {floorLevel}.");
             SceneView.RepaintAll();
@@ -222,7 +214,10 @@ namespace ProjectArk.Level.Editor
                     new Vector2(-hw, -hh), new Vector2(hw, -hh),
                     new Vector2(hw, hh), new Vector2(-hw, hh)
                 };
+                EditorUtility.SetDirty(poly);
             }
+
+            SynchronizeDoorAuthoring(rooms);
 
             Debug.Log($"[BatchEdit] Resized {objects.Count} room(s) to {size}.");
             SceneView.RepaintAll();
@@ -242,6 +237,50 @@ namespace ProjectArk.Level.Editor
             return objects;
         }
 
+        private static void ApplyRoomNodeType(Room room, RoomNodeType nodeType)
+        {
+            if (room == null || room.Data == null) return;
+
+            var serialized = new SerializedObject(room.Data);
+            serialized.FindProperty("_nodeType").enumValueIndex = (int)nodeType;
+            serialized.ApplyModifiedProperties();
+            EditorUtility.SetDirty(room.Data);
+
+            EnsureNodeTypeSceneState(room, nodeType);
+        }
+
+        private static void ApplyRoomFloorLevel(Room room, int floorLevel)
+        {
+            if (room == null || room.Data == null) return;
+
+            var serialized = new SerializedObject(room.Data);
+            serialized.FindProperty("_floorLevel").intValue = floorLevel;
+            serialized.ApplyModifiedProperties();
+            EditorUtility.SetDirty(room.Data);
+        }
+
+        private static void SynchronizeDoorAuthoring(List<Room> rooms)
+        {
+            foreach (var room in rooms)
+            {
+                if (room == null) continue;
+                DoorWiringService.SynchronizeRoomConnections(room);
+            }
+        }
+
+        private static void EnsureNodeTypeSceneState(Room room, RoomNodeType nodeType)
+        {
+            if (room == null) return;
+            if (nodeType != RoomNodeType.Arena && nodeType != RoomNodeType.Boss) return;
+            if (room.GetComponent<ArenaController>() != null) return;
+
+            var arenaController = Undo.AddComponent<ArenaController>(room.gameObject);
+            if (arenaController != null)
+            {
+                EditorUtility.SetDirty(arenaController);
+            }
+        }
+
         // ──────────────────── Context Actions ────────────────────
 
         private static void SetNodeType(Room room, RoomNodeType nodeType)
@@ -249,22 +288,7 @@ namespace ProjectArk.Level.Editor
             if (room == null || room.Data == null) return;
 
             Undo.RecordObject(room.Data, "Set Room NodeType");
-
-            var serialized = new SerializedObject(room.Data);
-            serialized.FindProperty("_nodeType").enumValueIndex = (int)nodeType;
-            serialized.ApplyModifiedProperties();
-            EditorUtility.SetDirty(room.Data);
-
-            // Add ArenaController for combat rooms
-            if (nodeType == RoomNodeType.Arena || nodeType == RoomNodeType.Boss)
-            {
-                if (room.GetComponent<ArenaController>() == null)
-                {
-                    Undo.RecordObject(room.gameObject, "Add ArenaController");
-                    room.gameObject.AddComponent<ArenaController>();
-                }
-            }
-
+            ApplyRoomNodeType(room, nodeType);
             SceneView.RepaintAll();
         }
 

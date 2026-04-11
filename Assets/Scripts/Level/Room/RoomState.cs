@@ -2,7 +2,7 @@ namespace ProjectArk.Level
 {
     /// <summary>
     /// Runtime state of a room. Progresses forward: Undiscovered → Entered → Cleared.
-    /// Locked is a special state set by external systems (e.g., LockKeySystem).
+    /// Door gating remains owned by Door/Lock/world progress systems, not RoomState.
     /// </summary>
     public enum RoomState
     {
@@ -13,9 +13,6 @@ namespace ProjectArk.Level
         Entered,
 
         /// <summary> All enemies defeated (or room has no encounter). Doors unlocked. </summary>
-        Cleared,
-
-        /// <summary> Room is locked by external condition (key/ability/schedule). </summary>
-        Locked
+        Cleared
     }
 }

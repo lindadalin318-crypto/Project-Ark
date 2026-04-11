@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using ProjectArk.Core;
 
@@ -54,6 +55,7 @@ namespace ProjectArk.Combat.Enemy
         private ISpawnStrategy _strategy;
         private int _nextSpawnIndex;
         private GameObjectPool _legacyPool; // 仅 legacy 模式使用
+        private readonly HashSet<GameObject> _activeSpawnedEnemies = new();
 
         // ──────────────────── Events ────────────────────
 
@@ -156,6 +158,13 @@ namespace ProjectArk.Combat.Enemy
             // 从对象池获取实例
             var pool = GetOrCreatePool(prefab);
             GameObject enemy = pool.Get(position, Quaternion.identity);
+            if (enemy == null)
+            {
+                Debug.LogError($"[EnemySpawner] Failed to spawn enemy from prefab '{prefab.name}'.");
+                return null;
+            }
+
+            _activeSpawnedEnemies.Add(enemy);
 
             // 重置 Brain
             var brain = enemy.GetComponent<EnemyBrain>();
@@ -231,7 +240,11 @@ namespace ProjectArk.Combat.Enemy
 
         private void HandleEnemyDeath(GameObject enemy)
         {
-            Debug.Log($"[EnemySpawner] Enemy died: {enemy.name}");
+            if (enemy != null)
+            {
+                _activeSpawnedEnemies.Remove(enemy);
+                Debug.Log($"[EnemySpawner] Enemy died: {enemy.name}");
+            }
 
             _strategy?.OnEnemyDied(enemy);
 
@@ -245,12 +258,63 @@ namespace ProjectArk.Combat.Enemy
         // ──────────────────── Reset ────────────────────
 
         /// <summary>
+        /// Stop future spawns and reset strategy progress without touching currently alive instances.
+        /// </summary>
+        public void StopSpawning()
+        {
+            _strategy?.Reset();
+            _nextSpawnIndex = 0;
+        }
+
+        /// <summary>
+        /// Despawn all currently active enemies spawned by this spawner.
+        /// Supports both pooled enemies and fallback non-pooled instances.
+        /// </summary>
+        public void DespawnActiveEnemies()
+        {
+            if (_activeSpawnedEnemies.Count == 0)
+            {
+                return;
+            }
+
+            var snapshot = new List<GameObject>(_activeSpawnedEnemies);
+            foreach (var enemy in snapshot)
+            {
+                if (enemy == null || !enemy.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                var poolRef = enemy.GetComponent<PoolReference>();
+                if (poolRef != null && poolRef.OwnerPool != null)
+                {
+                    poolRef.ReturnToPool();
+                }
+                else
+                {
+                    enemy.SetActive(false);
+                }
+            }
+
+            _activeSpawnedEnemies.Clear();
+        }
+
+        /// <summary>
+        /// Stop future spawns and despawn all currently alive spawned enemies.
+        /// This is the room/encounter lifecycle API for leave-room and reset flows.
+        /// </summary>
+        public void StopAndDespawnActiveEnemies()
+        {
+            StopSpawning();
+            DespawnActiveEnemies();
+        }
+
+        /// <summary>
         /// Reset the spawner and its strategy. Used by Room.ResetEnemies() for respawn.
         /// </summary>
         public void ResetSpawner()
         {
-            _strategy?.Reset();
-            _nextSpawnIndex = 0;
+            StopAndDespawnActiveEnemies();
         }
 
         // ──────────────────── Debug ────────────────────

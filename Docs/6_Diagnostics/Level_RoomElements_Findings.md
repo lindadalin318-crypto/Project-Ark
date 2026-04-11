@@ -1,21 +1,29 @@
-# Level 房间元素验证结论（2026-04-10）
+# Level 房间元素现役 Finding
 
 ---
 
 ## 文档目的
 
-本文件用于把本轮 `Level` 模块房间元素验证的**发现、证据和结论**沉淀为可复用的诊断报告，重点回答两个问题：
+本文件是 `Level` 模块房间元素的**现役 finding / 最新诊断入口**，用于持续沉淀当前模块的**发现、证据和结论**。
+
+它重点回答两个问题：
 
 - **我们当前定义上的房间元素有哪些？**
 - **哪些已经在 Unity 中进入现役消费链，并且真的被场景实装了？**
 
-本轮结论来自 3 层信息的交叉核对：
+从现在开始，这份文档采用**持续回写**方式维护：
+
+- **新增 finding 直接回写本文件**
+- **不再为同一模块继续滚动拆出新的按日期命名 Markdown**
+- **需要保留历史结构化快照时，继续保留独立 CSV / 附件**
+
+当前结论来自 3 层信息的交叉核对：
 
 - **规范层**：`Level_CanonicalSpec.md`、`Level_WorkflowSpec.md`
-- **运行时 / 编辑器链路**：`Room`、`RoomManager`、`SaveBridge`、`LevelValidator` 等脚本
+- **运行时 / 编辑器链路**：`Room`、`RoomManager`、`SaveBridge`、`LevelValidator`、`LevelDesigner.html` 等脚本与工具
 - **当前 Unity 场景实况**：`SampleScene` 的真实挂载统计与层级检查
 
-补充：结构化筛选版本已另存为 `Docs/6_Diagnostics/Level_RoomElements_Findings_2026-04-10.csv`。
+补充：结构化筛选快照仍保留为 `Docs/6_Diagnostics/Level_RoomElements_Findings_2026-04-10.csv`，用于回看当日统计与矩阵筛选。
 
 ---
 
@@ -23,13 +31,15 @@
 
 **当前 `Level` 模块的房间元素体系在规范层已经收口完成，但 `SampleScene` 的 authoring 落地仍处于混合态 / 过渡态。**
 
-本轮最关键的结论有 6 条：
+当前最关键的结论有 7 条：
 
 - **`SampleScene` 当前确实已有 17 个 `Room` 实例**，所以 `Level` 不是“只有代码没有场景”的状态。
 - **只有 2/17 个房间完整具备 `Navigation / Elements / Encounters / Hazards / Decoration / Triggers / CameraConfiner` 标准根节点**，说明现役场景还没有全面迁入标准房间语法。
 - 当前场景里真正已经铺开的主流房间元素集中在：**`Door`、`Checkpoint`、`Lock`、`PickupBase`、`EnemySpawner`、`ArenaController`、`EnvironmentHazard`**。
 - **`DestroyableObject`、`OpenEncounterTrigger`、`BiomeTrigger`、`HiddenAreaMask`、`ScheduledBehaviour`、`ActivationGroup`、`WorldEventTrigger`、`CameraTrigger`** 等元素，代码侧已经具备或基本具备，但当前 `SampleScene` 里**尚未铺开**。
+- **`Room` / `ArenaController` / `OpenEncounterTrigger` 的 encounter owner 已进一步收口**：现役口径是“`Room` 负责 room-level 入口、`ArenaController` 只做 ceremony、`OpenEncounterTrigger` 只做局部 open encounter”；同时 `_respawnOnReenter`、`RoomState.Locked`、无消费者的房间/遭遇弱事件已从现役链路中清除。
 - **`LevelScaffoldData.rooms[].elements[]` 和 `ScaffoldElementType` 不是 Unity 当前运行时实装 authority**，不能把它们误判成“已经可被场景导入消费的现役房间元素”。
+- **`LevelDesigner.html` 现已在 UX 层明确收口为“拓扑规划 + JSON 导入源”**：`elements[]` 与 `Zone / ACT / 张力 / Beat / 时长` 当前仍只应视为设计快照 / 设计备注，不会自动生成场景对象。
 - **`Checkpoint` 链虽然已经进入现役场景，但配置还没有完全收尾**：当前已知有 3 个 `LevelValidator` 问题需要补。
 
 ---
@@ -111,18 +121,60 @@
 
 ## 2. 运行时消费链的真实分层
 
-### 2.1 `Room` 主链强消费的元素
+### 2.1 `Room.cs` 代码实查：主动收集 vs 直接依赖
 
-`Room` 当前主动收集和直接依赖的元素是：
+这次专门按 `Room.cs` 的真实实现，把“主动收集”和“直接依赖”拆开记，避免后续把 `Room` 会扫描到的对象、显式 Inspector 依赖、以及 `Room` 的下游消费者混成一层。
 
-- **`Door`**
-- **`EnemySpawner`**
-- **`OpenEncounterTrigger`**
-- **`DestroyableObject`**
-- **`SpawnPoint`**
-- **`CameraConfiner`**（作为房间镜头边界基础设施）
+#### 2.1.1 `CollectSceneReferences()` 当前主动收集的元素
 
-这批对象可以视为当前 `Level` 最硬的房间运行时主链。
+`Room` 在 `Awake()` 中调用 `CollectSceneReferences()`，当前**主动扫描 / 缓存**的是：
+
+- **`Door`**：优先从 `Navigation` 子树收集；若该根不存在或没有结果，再回退到整个 `Room` 子树
+- **`EnemySpawner`**：优先从 `Encounters` 子树取第一个；找不到再回退到整个 `Room` 子树
+- **`OpenEncounterTrigger`**：优先从 `Encounters` 子树收集；否则回退到整个 `Room` 子树
+- **`DestroyableObject`**：优先从 `Elements` 子树收集；否则回退到整个 `Room` 子树
+- **`SpawnPoint`**：按固定优先级收集：
+  1. `Encounters/SpawnPoints` 的直接子物体
+  2. `Navigation` 子树下所有命名以 `SpawnPoint_` 开头的节点
+  3. Inspector 里预先序列化的 `_spawnPoints`
+
+**这里最重要的口径是：** 当前 `Room` 主动收集链只有这 5 类，不包括 `Checkpoint`、`Lock`、`PickupBase`、`EnvironmentHazard`、`BiomeTrigger` 等其它房间元素。
+
+#### 2.1.2 不是主动收集，但属于 `Room` 的直接依赖
+
+以下对象不是 `CollectSceneReferences()` 扫出来的，但仍然是 `Room.cs` 的**直接依赖 / 直接持有配置**：
+
+- **`RoomSO` (`_data`)**：房间元数据 authority，提供 `RoomID`、`RoomNodeType`、默认 `EncounterSO`
+- **`Collider2D` (`_confinerBounds`)**：镜头边界引用，走 Inspector 显式接线，不是运行时自动搜索
+- **`RoomVariantSO[]` (`_variants`)**：相位驱动的房间变体配置
+- **`GameObject[]` (`_variantEnvironments`)**：变体环境子物体开关目标
+- **`LayerMask` (`_playerLayer`)**：房间 Trigger 的玩家层过滤
+- **`BoxCollider2D`**：通过 `[RequireComponent(typeof(BoxCollider2D))]` + `Awake()` 自检强制存在，并被修正为 `isTrigger = true`
+
+换句话说，**`CameraConfiner` 不应再被记成 `Room` 主动收集元素**；更准确的说法是：`Room` 直接依赖一个显式接线的 `ConfinerBounds` 引用，而 `RoomCameraConfiner` 运行时再去读取它。
+
+#### 2.1.3 `Room` 运行时直接调度 / 直接调用的类型与系统
+
+除了场景元素，`Room.cs` 当前还直接依赖这些运行时类型 / 系统：
+
+- **`EncounterSO`**：来自 `RoomSO` 或 `RoomVariantSO.OverrideEncounter`，其中 `RoomSO Encounter` 现役语义为 room-owned `Closed` encounter
+- **`WaveSpawnStrategy`**：由 `Room` 统一创建 room-owned encounter；`OpenEncounterTrigger` 仍为局部 open encounter 单独创建。`ArenaController` 不再直接 `new WaveSpawnStrategy`
+- **`RoomManager`**：通过 `ServiceLocator.Get<RoomManager>()` 在清房时直接通知 `NotifyRoomCleared(this)`
+- **`WorldPhaseManager`**：通过 `ServiceLocator.Get<WorldPhaseManager>()` 在启动时拉当前 phase
+- **`LevelEvents.OnPhaseChanged`**：`Room` 直接订阅，用来切换变体
+- **`DoorState` / `RoomState`**：`Room` 直接读写门状态，并只维护 `Undiscovered / Entered / Cleared` 三态房间状态
+
+因此，如果严格按“`Room.cs` 自己显式出现并直接调用/订阅”的标准来算，`Room` 的直接依赖不只是一组场景组件，还包括这条**相位切换 + 遭遇完成 + 清房通知**的运行时主链。
+
+#### 2.1.4 当前不应误算成 `Room` 直接依赖的对象
+
+以下对象虽然和房间体系密切相关，但**不应记成 `Room.cs` 当前直接依赖**：
+
+- **自治元素**：`Checkpoint`、`Lock`、`PickupBase`、`EnvironmentHazard`、`BiomeTrigger`、`HiddenAreaMask`、`ScheduledBehaviour`、`ActivationGroup`、`WorldEventTrigger`、`CameraTrigger`
+- **`Room` 的下游消费者**：`MinimapManager`、`RoomCameraConfiner`、`RoomFactory`
+- **编辑器工具**：`LevelValidator`、`DoorWiringService`、`LevelArchitectWindow`
+
+这些对象里，有的是组件自治，有的是别的系统来读取 `Room` 暴露的数据；**它们依赖 `Room`，不等于 `Room` 直接依赖它们。**
 
 ### 2.2 不一定进 `Room` 主链，但已能独立工作的元素
 
@@ -226,9 +278,9 @@
 | `Lock` | 交互件 | `Interact` | `Elements` | `Lock + Door + KeyInventory` | 否 | 是 | 1 | **现役成熟** |
 | `PickupBase` | 交互件 | `Interact` | `Elements` | `PickupBase` 派生物 | 否 | 否 | 2 | **现役成熟，但未纳入官方护栏** |
 | `DestroyableObject` | 状态件 | `Stateful` | `Elements` | `DestroyableObject + RoomFlagRegistry` | 是 | 是 | 0 | **代码已支持，但场景未铺开** |
-| `OpenEncounterTrigger` | 战斗件 | `Combat` | `Encounters` | `OpenEncounterTrigger + EnemySpawner` | 是 | 是 | 0 | **代码已支持，但场景未铺开** |
-| `ArenaController` | 战斗件 | `Combat` | `Encounters / room` | `ArenaController + RoomManager` | 部分 | 是 | 1 | **现役成熟** |
-| `EnemySpawner` | 战斗件 | `Combat` | `Encounters` | `Room / ArenaController / OpenEncounterTrigger` | 是 | 是 | 2 | **现役成熟** |
+| `OpenEncounterTrigger` | 战斗件 | `Combat` | `Encounters` | `OpenEncounterTrigger + EnemySpawner` | 是 | 是 | 0 | **代码已支持，但场景未铺开；现役语义为局部 `Open` encounter owner** |
+| `ArenaController` | 战斗件 | `Combat` | `Encounters / room` | `Room + ArenaController + RoomManager` | 部分 | 是 | 1 | **现役成熟；当前只负责 Arena/Boss ceremony，不再直接持有刷怪 owner** |
+| `EnemySpawner` | 战斗件 | `Combat` | `Encounters` | `Room / OpenEncounterTrigger` | 是 | 是 | 2 | **现役成熟；由 room-level 或 local open encounter owner 驱动** |
 | `EnvironmentHazard` | 环境机关件 | `Environment` | `Hazards` | `EnvironmentHazard` 子类 | 否 | 是 | 1 | **现役成熟** |
 | `BiomeTrigger` | 导演件 | `Directing` | `Triggers` | `BiomeTrigger + AmbienceController` | 否 | 是 | 0 | **代码已支持，但场景未铺开** |
 | `HiddenAreaMask` | 导演件 | `Directing` | `Triggers` | `HiddenAreaMask` | 否 | 是 | 0 | **代码已支持，但场景未铺开** |
@@ -293,14 +345,10 @@
 
 ### 从运行时消费角度
 
-**真正被 `Room` 主链强消费的仍是少数核心元素。** 目前最硬的链路仍集中在：
+**真正被 `Room` 主链强消费的仍是少数核心元素，但必须区分“主动收集”和“直接依赖”两层。** 当前更准确的口径是：
 
-- `Door`
-- `EnemySpawner`
-- `OpenEncounterTrigger`
-- `DestroyableObject`
-- `SpawnPoint`
-- `CameraConfiner`
+- **主动收集链**：`Door`、`EnemySpawner`、`OpenEncounterTrigger`、`DestroyableObject`、`SpawnPoint`
+- **直接但非收集依赖**：`RoomSO`、`ConfinerBounds`、`RoomVariantSO`、`WaveSpawnStrategy`、`RoomManager`、`WorldPhaseManager`、`LevelEvents.OnPhaseChanged`
 
 ### 从 `SampleScene` 的现役内容角度
 
@@ -321,6 +369,7 @@
 - 规范已经到位
 - 系统已经支持
 - 护栏已经开始收口
+- 工具侧边界提示也已开始收口
 - 但场景 authoring 还没有完全迁到标准根节点结构
 
 因此，如果下一步继续做 `Level` 模块验证，最有价值的方向不是再去泛泛梳理脚本，而是：
