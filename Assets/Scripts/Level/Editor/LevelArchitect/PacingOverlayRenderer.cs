@@ -349,26 +349,23 @@ namespace ProjectArk.Level.Editor
                     if (drawnPairs.Contains(pairKey)) continue;
                     drawnPairs.Add(pairKey);
 
-                    // Get color from ConnectionType
+                    if (!ConnectionGizmoDrawer.TryGetConnectionAnchors(room, door, out Vector3 fromPos, out Vector3 toPos, out bool isBidirectional))
+                    {
+                        continue;
+                    }
+
+                    bool isLayerTransition = door.Ceremony >= TransitionCeremony.Layer;
+
                     Color lineColor = LevelArchitectWindow.GetConnectionTypeColor(door.ConnectionType);
+                    lineColor.a = isLayerTransition ? 0.95f : 0.8f;
 
-                    Vector3 fromPos = room.transform.position;
-                    Vector3 toPos = door.TargetRoom.transform.position;
-
-            if (door.Ceremony >= TransitionCeremony.Layer)
-                    {
-                        // Layer transitions: thick solid line with higher alpha
-                        lineColor.a = 0.9f;
-                        Handles.color = lineColor;
-                        Handles.DrawAAPolyLine(4f, fromPos, toPos);
-                    }
-                    else
-                    {
-                        // Normal connections: dotted line with moderate alpha
-                        lineColor.a = 0.7f;
-                        Handles.color = lineColor;
-                        Handles.DrawDottedLine(fromPos, toPos, 4f);
-                    }
+                    ConnectionGizmoDrawer.DrawConnection(
+                        fromPos,
+                        toPos,
+                        lineColor,
+                        isBidirectional,
+                        isLayerTransition
+                    );
 
                     // Draw ConnectionType label at midpoint
                     Vector3 midPoint = (fromPos + toPos) / 2f;

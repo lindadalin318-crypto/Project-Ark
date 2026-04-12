@@ -13775,6 +13775,27 @@ dotnet build 验证：0 错误，0 警告。
 - 目的：把 `Level Architect` 的产品形态正式从“主窗口里堆满单房细字段”收口为“主窗口负责搜索 / 选择 / 批量维护，Detached Room Inspector 负责单房 / 单连接精修”，既保留 `Quick Edit` 的生产期工作台心智，又为后续继续扩展房间细修能力留出独立空间。
 - 技术：采用共享状态 + 共享绘制链的最小重构方式，不新增第二套 authoring 模型；通过 `LevelRoomInspectorWindow.OnInspectorUpdate()` 保持 detached 窗口跟随当前选择刷新；用 `DrawSingleRoomInfo(room, includeQuickEditSections)` 将连接面板与 starter 面板的显示控制从当前 tab 解耦，使独立窗口始终展示完整单房细修能力。最终通过 `read_lints` 检查 `LevelArchitect` 目录 **0 lint**，并通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**（保留既有 warning）。
 
+## Level Architect SceneView Overlay 点击截胡修复 - 2026-04-12 11:46
+- 新建/修改文件：`Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/RoomBlockoutRenderer.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/BlockoutModeHandler.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/DoorWiringService.cs`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：修复 `Build Helpers` 中“场景里没有 room 时第一次建房成功，但已有 room 后再次点 `Seed 5-Room Slice` 或任意 preset 房间不生效”的 SceneView 输入 bug。根因是 `RoomBlockoutRenderer` 在已有 room 时会提前启用 `Select` 模式鼠标处理，并在点击侧栏按钮区域时把事件误判成 Scene 空白点击后直接 `e.Use()`，导致 `IMGUI` 按钮拿不到 `MouseDown`。本轮为 `LevelArchitectWindow` 增加统一的 SceneView overlay 命中判定，复用顶部工具栏、侧栏面板和 `Blockout` 笔刷栏矩形；同时在 `Select`、`Blockout`、`Connect` 三条场景输入链起手处加上 overlay 保护，点击这些 UI 时直接让出事件，不再抢占侧栏按钮交互。
+- 目的：恢复 `Level Architect` 的连续 authoring loop，让作者在场景里已经存在房间时依然可以稳定使用 `Add Room`、`Seed 5-Room Slice`、工具栏和后续 `Blockout / Connect` UI，不再出现“只有第一次创建成功”的神奇状态依赖 bug。
+- 技术：采用统一 overlay hit-test + 共享矩形几何 + 场景输入早返回的防御性修复方式，避免 SceneView GUI 与世界交互双写同一鼠标事件；`BlockoutModeHandler` 额外抽出 `GetBrushToolbarRect()`，保证绘制区域和输入保护区域完全一致。最终通过 `read_lints` 检查相关文件 **0 lint**，并通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**（保留既有 warning）。
 
+## Level Architect SceneView 模式切换二次点击失效修复 - 2026-04-12 15:09
+- 新建/修改文件：`Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/RoomBlockoutRenderer.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/BlockoutModeHandler.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/DoorWiringService.cs`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：修复 `SceneView` 顶部 `Select / Blockout / Connect` 模式栏“通常第一次可以切，后续就点不动”的交互 bug。根因不是按钮本身失效，而是第一次进入某个模式后，`Select` 的拖拽/框选、`Blockout` 的拉框绘制、`Connect` 的连线起手可能残留在半活动状态，继续持有 `SceneView` 事件与 `GUIUtility.hotControl`，导致后续点击 overlay 时看起来像工具栏失灵。本轮为三条模式链分别补上统一的 `CancelSceneInteraction()` 取消入口，并在 `LevelArchitectWindow.OnSceneGUI()` 入口增加 overlay 守卫：当鼠标事件落在顶部模式栏、侧栏或 `Blockout` 笔刷栏，且当前存在残留场景交互时，先统一释放旧模式状态，再让 IMGUI 工具栏正常接收点击；同时 `SetMode()` 也会在切换前主动清理所有场景工具交互，避免把上一个模式的半截手势带进下一个模式。
+- 目的：恢复 `Level Architect` 在 `SceneView` 内稳定可切换的 authoring loop，让作者可以连续在 `Select / Blockout / Connect` 之间来回切换，而不会因为上一模式遗留的拖拽或连线状态导致模式栏后续失灵。
+- 技术：采用“统一状态复位 + overlay 优先级保护 + 模式切换前防御性释放 `hotControl`”的修复方案；新增 `RoomBlockoutRenderer.HasActiveInteraction / CancelSceneInteraction()`、`BlockoutModeHandler.HasActiveInteraction / CancelSceneInteraction()`、`DoorWiringService.HasActiveInteraction / CancelSceneInteraction()` 作为三条输入链的标准化取消入口，并让 `LevelArchitectWindow` 集中协调 overlay 事件守卫。最终通过 `read_lints` 检查相关文件 **0 lint**，并通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**（保留既有 warning）。
 
+## Level Architect 房间连线箭头可视化增强 - 2026-04-12 16:10
+- 新建/修改文件：`Assets/Scripts/Level/Editor/LevelArchitect/ConnectionGizmoDrawer.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/RoomBlockoutRenderer.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/PacingOverlayRenderer.cs`、`ProjectArk.Level.Editor.csproj`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：为 `Level Architect` 新增统一的 `ConnectionGizmoDrawer`，把房间连接线升级为更粗、更亮的可视化表现。默认灰色连接视图与 `Connection Types` overlay 现在都改为走同一套绘制链：普通连接使用手工分段的粗虚线，楼层切换连接保留更强调的实线；若连接缺少 reciprocal Door，则在目标端绘制单箭头；若存在反向 Door，则在两端都绘制箭头，明确表达双向连接。与此同时，将新脚本补入 `ProjectArk.Level.Editor.csproj` 的显式 `Compile Include` 清单，保证 `dotnet build` 与外部编辑器编译链能正确纳入该文件。
+- 目的：提升场景配置与验证阶段的拓扑可读性，让作者在 `SceneView` 中一眼看清“这两个 room 是否已成功接通”“当前是单向还是双向连接”，减少靠选中 Door 或进 `Quick Edit` 才能确认连接语义的来回切换成本。
+- 技术：采用编辑器层共享 Gizmo Drawer 收口画线 authority，避免默认视图与 overlay 各自维护一套 dashed line 逻辑；通过 `DoorWiringService.FindReverseDoor()` 复用现有 reciprocal 判定，不新增第二套连接模型；使用 `Handles.DrawAAPolyLine()` 手工分段实现可控粗虚线，并结合基于 `HandleUtility.GetHandleSize()` 的箭头头部长度计算，保证不同缩放下箭头仍有稳定可读性。最终通过 `read_lints` 检查 `LevelArchitect` 目录 **0 lint**，并通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**（保留既有 warning）。
+
+## Level Architect 连线箭头落点对齐 SpawnPoint - 2026-04-12 16:17
+- 新建/修改文件：`Assets/Scripts/Level/Editor/LevelArchitect/ConnectionGizmoDrawer.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/RoomBlockoutRenderer.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/PacingOverlayRenderer.cs`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：将 `Level Architect` 的连接 Gizmo 从“room center 到 room center”的抽象端点，进一步收口为优先对齐真实传送落点的锚点解算。`ConnectionGizmoDrawer` 现在会先解析连接两端的可视化 anchor：目标端优先使用 `Door.TargetSpawnPoint`，若存在 reciprocal Door，则反向箭头优先落在其 `TargetSpawnPoint`；缺失时再防御性回退到 door transform / target room center。`RoomBlockoutRenderer` 与 `PacingOverlayRenderer` 都已切到同一套 anchor 解析结果，`Connection Types` 的文字标签也同步改为挂在真实连接中点上。同时调整箭头长度策略：按连接中点的 `HandleUtility.GetHandleSize()` 取样，并允许短连接自动缩短箭头，避免 spawnpoint 距离较近时双向箭头互相打架。
+- 目的：让 `SceneView` 中的方向提示不只表达“这两个 room 有连接”，还直接表达“玩家会落到哪里”，提升门/出生点 authoring 的可读性；同时保持默认视图与 overlay 的语义一致，减少作者在抽象拓扑与真实落点之间来回脑补。
+- 技术：采用“共享锚点解析 + 防御性 fallback + 短连接自适应箭头缩放”的编辑器绘制增强方案，不改 Door 运行时逻辑，不新增第二套连接数据；最终通过 `read_lints` 检查相关文件 **0 lint**，并通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**（保留既有 warning）。
 

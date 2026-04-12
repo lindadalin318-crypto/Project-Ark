@@ -38,6 +38,9 @@ namespace ProjectArk.Level.Editor
         /// <summary> Whether currently drawing. </summary>
         public static bool IsDrawing => _isDrawing;
 
+        /// <summary> Whether Blockout mode currently owns an in-flight drawing gesture. </summary>
+        public static bool HasActiveInteraction => _isDrawing;
+
         // ──────────────────── Public API ────────────────────
 
         /// <summary>
@@ -46,6 +49,30 @@ namespace ProjectArk.Level.Editor
         public static void SetBrush(BrushType brush)
         {
             _activeBrush = brush;
+        }
+
+        /// <summary>
+        /// Cancel any in-flight Blockout drawing gesture and release SceneView control ownership.
+        /// </summary>
+        public static void CancelSceneInteraction()
+        {
+            if (!HasActiveInteraction)
+            {
+                return;
+            }
+
+            _isDrawing = false;
+            _isChainDraw = false;
+            _chainSourceRoom = null;
+            GUIUtility.hotControl = 0;
+        }
+
+        public static Rect GetBrushToolbarRect(SceneView sceneView)
+        {
+            float toolbarWidth = 240f;
+            float toolbarX = (sceneView.position.width - toolbarWidth) / 2f;
+            float toolbarY = 44f;
+            return new Rect(toolbarX, toolbarY, toolbarWidth, 28f);
         }
 
         /// <summary>
@@ -58,6 +85,13 @@ namespace ProjectArk.Level.Editor
 
             // Draw brush toolbar
             DrawBrushToolbar(sceneView);
+
+            var window = LevelArchitectWindow.Instance;
+            if (!_isDrawing && e.type == EventType.MouseDown && e.button == 0 &&
+                window != null && window.IsPointerOverSceneOverlay(sceneView, e.mousePosition))
+            {
+                return;
+            }
 
             int controlID = GUIUtility.GetControlID(FocusType.Passive);
             Vector2 worldPos = HandleUtility.GUIPointToWorldRay(e.mousePosition).origin;
@@ -174,11 +208,7 @@ namespace ProjectArk.Level.Editor
         {
             Handles.BeginGUI();
 
-            float toolbarWidth = 240f;
-            float toolbarX = (sceneView.position.width - toolbarWidth) / 2f;
-            float toolbarY = 44f; // Below the main toolbar
-
-            var toolbarRect = new Rect(toolbarX, toolbarY, toolbarWidth, 28f);
+            var toolbarRect = GetBrushToolbarRect(sceneView);
             GUI.Box(toolbarRect, GUIContent.none, EditorStyles.toolbar);
 
             GUILayout.BeginArea(new Rect(toolbarRect.x + 4, toolbarRect.y + 2, toolbarRect.width - 8, toolbarRect.height - 4));

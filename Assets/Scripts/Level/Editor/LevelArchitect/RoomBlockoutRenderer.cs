@@ -36,6 +36,26 @@ namespace ProjectArk.Level.Editor
 
         // ──────────────────── Public API ────────────────────
 
+        /// <summary> Whether Select mode currently owns an in-flight drag or box-select interaction. </summary>
+        public static bool HasActiveInteraction => _isDragging || _isBoxSelecting;
+
+        /// <summary>
+        /// Cancel any in-flight Select mode interaction and release SceneView control ownership.
+        /// </summary>
+        public static void CancelSceneInteraction()
+        {
+            if (!HasActiveInteraction)
+            {
+                return;
+            }
+
+            _isDragging = false;
+            _isSnapping = false;
+            _dragStartPositions.Clear();
+            _isBoxSelecting = false;
+            GUIUtility.hotControl = 0;
+        }
+
         /// <summary>
         /// Main render call — draw all room blockouts and handle interaction.
         /// Called from LevelArchitectWindow.OnSceneGUI().
@@ -257,18 +277,24 @@ namespace ProjectArk.Level.Editor
                     if (drawnPairs.Contains(pairKey)) continue;
                     drawnPairs.Add(pairKey);
 
-                    // Draw connection line
-                    Color lineColor = new Color(0.8f, 0.8f, 0.8f, 0.4f);
-            if (door.Ceremony >= TransitionCeremony.Layer)
-                        lineColor = new Color(0.6f, 0.3f, 0.9f, 0.6f);
+                    if (!ConnectionGizmoDrawer.TryGetConnectionAnchors(room, door, out Vector3 fromPos, out Vector3 toPos, out bool isBidirectional))
+                    {
+                        continue;
+                    }
 
-                    Handles.color = lineColor;
-                    Handles.DrawDottedLine(
-                        room.transform.position,
-                        door.TargetRoom.transform.position,
-                        4f
+                    bool isLayerTransition = door.Ceremony >= TransitionCeremony.Layer;
+
+                    Color lineColor = isLayerTransition
+                        ? new Color(0.68f, 0.42f, 0.98f, 0.82f)
+                        : new Color(0.92f, 0.92f, 0.92f, 0.72f);
+
+                    ConnectionGizmoDrawer.DrawConnection(
+                        fromPos,
+                        toPos,
+                        lineColor,
+                        isBidirectional,
+                        isLayerTransition
                     );
-                    Handles.color = Color.white;
                 }
             }
         }
@@ -286,6 +312,12 @@ namespace ProjectArk.Level.Editor
         {
             Event e = Event.current;
             if (e == null) return;
+
+            if (e.type == EventType.MouseDown && e.button == 0 && !_isDragging && !_isBoxSelecting &&
+                window.IsPointerOverSceneOverlay(sceneView, e.mousePosition))
+            {
+                return;
+            }
 
             int controlID = GUIUtility.GetControlID(FocusType.Passive);
 

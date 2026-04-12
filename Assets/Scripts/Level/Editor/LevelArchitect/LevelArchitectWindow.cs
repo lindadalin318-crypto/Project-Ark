@@ -518,6 +518,8 @@ namespace ProjectArk.Level.Editor
         {
             if (!_isActive) return;
 
+            CancelActiveSceneInteractionIfPointerIsOverOverlay(sceneView, Event.current);
+
             // Lightweight validation (fatal issues only)
             LevelValidator.LightweightCheck();
 
@@ -548,14 +550,95 @@ namespace ProjectArk.Level.Editor
 
         // ──────────────────── SceneView Toolbar ────────────────────
 
+        private static bool IsOverlayMouseEvent(Event e)
+        {
+            if (e == null || !e.isMouse)
+            {
+                return false;
+            }
+
+            return e.type == EventType.MouseDown ||
+                   e.type == EventType.MouseDrag ||
+                   e.type == EventType.MouseUp;
+        }
+
+        private static bool HasActiveSceneInteraction()
+        {
+            return RoomBlockoutRenderer.HasActiveInteraction ||
+                   BlockoutModeHandler.HasActiveInteraction ||
+                   DoorWiringService.HasActiveInteraction;
+        }
+
+        private static void CancelAllSceneToolInteractions()
+        {
+            RoomBlockoutRenderer.CancelSceneInteraction();
+            BlockoutModeHandler.CancelSceneInteraction();
+            DoorWiringService.CancelSceneInteraction();
+        }
+
+        private void CancelActiveSceneInteractionIfPointerIsOverOverlay(SceneView sceneView, Event e)
+        {
+            if (!HasActiveSceneInteraction() || !IsOverlayMouseEvent(e))
+            {
+                return;
+            }
+
+            if (!IsPointerOverSceneOverlay(sceneView, e.mousePosition))
+            {
+                return;
+            }
+
+            CancelAllSceneToolInteractions();
+        }
+
+        internal bool IsPointerOverSceneOverlay(SceneView sceneView, Vector2 mousePosition)
+        {
+            if (sceneView == null)
+            {
+                return false;
+            }
+
+            if (GetSceneToolbarRect(sceneView).Contains(mousePosition))
+            {
+                return true;
+            }
+
+            if (_sidePanelExpanded && GetSceneSidePanelRect(sceneView).Contains(mousePosition))
+            {
+                return true;
+            }
+
+            if (_currentMode == ToolMode.Blockout && BlockoutModeHandler.GetBrushToolbarRect(sceneView).Contains(mousePosition))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private Rect GetSceneToolbarRect(SceneView sceneView)
+        {
+            float toolbarWidth = _activeTab == Tab.Build ? 320f : 360f;
+            float toolbarX = (sceneView.position.width - toolbarWidth) / 2f;
+            return new Rect(toolbarX, 8f, toolbarWidth, TOOLBAR_HEIGHT);
+        }
+
+        private Rect GetSceneSidePanelRect(SceneView sceneView)
+        {
+            float panelHeight = Mathf.Max(120f, sceneView.position.height - TOOLBAR_HEIGHT - 60f);
+            return new Rect(
+                SIDE_PANEL_MARGIN,
+                TOOLBAR_HEIGHT + 20f,
+                SIDE_PANEL_WIDTH,
+                panelHeight
+            );
+        }
+
         private void DrawSceneViewToolbar(SceneView sceneView)
         {
             Handles.BeginGUI();
 
-            float toolbarWidth = _activeTab == Tab.Build ? 320f : 360f;
-            float toolbarX = (sceneView.position.width - toolbarWidth) / 2f;
-
-            var toolbarRect = new Rect(toolbarX, 8, toolbarWidth, TOOLBAR_HEIGHT);
+            var toolbarRect = GetSceneToolbarRect(sceneView);
             GUI.Box(toolbarRect, GUIContent.none, EditorStyles.toolbar);
 
             GUILayout.BeginArea(new Rect(toolbarRect.x + 4, toolbarRect.y + 2, toolbarRect.width - 8, toolbarRect.height - 4));
@@ -2764,7 +2847,15 @@ namespace ProjectArk.Level.Editor
 
         public void SetMode(ToolMode mode)
         {
-            if (_currentMode == mode) return;
+            CancelAllSceneToolInteractions();
+
+            if (_currentMode == mode)
+            {
+                Repaint();
+                SceneView.RepaintAll();
+                return;
+            }
+
             _currentMode = mode;
             _selectedRooms.Clear();
 

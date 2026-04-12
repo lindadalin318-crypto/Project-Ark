@@ -350,8 +350,26 @@ namespace ProjectArk.Level.Editor
         /// <summary> Whether a connect drag is in progress. </summary>
         public static bool IsConnecting => _isConnecting;
 
+        /// <summary> Whether Connect mode currently owns an in-flight connection gesture. </summary>
+        public static bool HasActiveInteraction => _isConnecting;
+
         /// <summary> The source room of the current connect drag. </summary>
         public static Room ConnectSourceRoom => _connectSourceRoom;
+
+        /// <summary>
+        /// Cancel any in-flight Connect gesture and release SceneView control ownership.
+        /// </summary>
+        public static void CancelSceneInteraction()
+        {
+            if (!HasActiveInteraction)
+            {
+                return;
+            }
+
+            _isConnecting = false;
+            _connectSourceRoom = null;
+            GUIUtility.hotControl = 0;
+        }
 
         /// <summary>
         /// Handle Connect Mode input in SceneView.
@@ -361,6 +379,13 @@ namespace ProjectArk.Level.Editor
         {
             Event e = Event.current;
             if (e == null) return;
+
+            var window = LevelArchitectWindow.Instance;
+            if (!_isConnecting && e.type == EventType.MouseDown && e.button == 0 &&
+                window != null && window.IsPointerOverSceneOverlay(sceneView, e.mousePosition))
+            {
+                return;
+            }
 
             int controlID = GUIUtility.GetControlID(FocusType.Passive);
             Vector2 worldPos = HandleUtility.GUIPointToWorldRay(e.mousePosition).origin;
