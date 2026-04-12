@@ -61,8 +61,8 @@ namespace ProjectArk.Level.Editor
             // Draw pacing/critical path/lock-key overlays
             PacingOverlayRenderer.DrawOverlays(rooms);
 
-            // Handle interaction (only in Select mode)
-            if (window.CurrentMode == LevelArchitectWindow.ToolMode.Select)
+            // Handle interaction (only in Select mode and authoring workspaces)
+            if (window.AllowSceneSelectionInteraction && window.CurrentMode == LevelArchitectWindow.ToolMode.Select)
             {
                 HandleSelectModeInput(sceneView, rooms, window);
             }

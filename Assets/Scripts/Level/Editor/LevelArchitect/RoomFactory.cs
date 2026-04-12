@@ -1,5 +1,8 @@
+using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 using ProjectArk.Combat.Enemy;
 
 namespace ProjectArk.Level.Editor
@@ -23,6 +26,18 @@ namespace ProjectArk.Level.Editor
         private const string DECORATION_ROOT_NAME = "Decoration";
         private const string TRIGGERS_ROOT_NAME = "Triggers";
 
+        public readonly struct StableRoomIdentity
+        {
+            public StableRoomIdentity(string roomId, string displayName)
+            {
+                RoomId = roomId;
+                DisplayName = displayName;
+            }
+
+            public string RoomId { get; }
+            public string DisplayName { get; }
+        }
+
         // ──────────────────── Public API ────────────────────
 
         /// <summary>
@@ -41,11 +56,13 @@ namespace ProjectArk.Level.Editor
 
             EnsureDirectoryExists(ROOM_DATA_PATH);
 
+            const int defaultFloorLevel = 0;
+            StableRoomIdentity identity = GenerateStableIdentity(preset.NodeTypeValue, defaultFloorLevel);
+
             Undo.SetCurrentGroupName($"Create Room ({preset.PresetName})");
 
             // ── Root GameObject ──
-            string roomName = GenerateRoomName(preset);
-            var roomGO = new GameObject(roomName);
+            var roomGO = new GameObject(identity.RoomId);
             Undo.RegisterCreatedObjectUndo(roomGO, "Create Room");
 
             roomGO.transform.position = position;
@@ -99,7 +116,7 @@ namespace ProjectArk.Level.Editor
             }
 
             // ── RoomSO Asset ──
-            RoomSO roomSO = CreateRoomSOForPreset(preset, roomName);
+            RoomSO roomSO = CreateRoomSOForPreset(preset, identity, defaultFloorLevel);
 
             // ── Configure Room via SerializedObject ──
             ConfigureRoom(room, roomSO, polyCollider, spawnPoints);
@@ -116,7 +133,7 @@ namespace ProjectArk.Level.Editor
             Selection.activeGameObject = roomGO;
             SceneView.RepaintAll();
 
-            Debug.Log($"[RoomFactory] Created room '{roomName}' from preset '{preset.PresetName}' at {position}");
+            Debug.Log($"[RoomFactory] Created room '{identity.RoomId}' from preset '{preset.PresetName}' at {position}");
 
             return room;
         }
@@ -151,6 +168,57 @@ namespace ProjectArk.Level.Editor
             }
 
             return room;
+        }
+
+        /// <summary>
+        /// Duplicate an authored room in-scene, clone its RoomSO asset,
+        /// and strip existing door links so the copy can be rewired safely.
+        /// </summary>
+        public static Room DuplicateRoom(Room sourceRoom, Vector3 position)
+        {
+            if (sourceRoom == null)
+            {
+                Debug.LogError("[RoomFactory] Cannot duplicate room: source is null.");
+                return null;
+            }
+
+            EnsureDirectoryExists(ROOM_DATA_PATH);
+            Undo.SetCurrentGroupName($"Duplicate Room ({sourceRoom.RoomID})");
+
+            var duplicateGO = Object.Instantiate(sourceRoom.gameObject, position, sourceRoom.transform.rotation, sourceRoom.transform.parent);
+            Undo.RegisterCreatedObjectUndo(duplicateGO, "Duplicate Room");
+            duplicateGO.transform.position = position;
+
+            var duplicateRoom = duplicateGO.GetComponent<Room>();
+            if (duplicateRoom == null)
+            {
+                Debug.LogError("[RoomFactory] Duplicated object is missing Room component.");
+                return null;
+            }
+
+            RoomNodeType duplicateNodeType = sourceRoom.Data != null ? sourceRoom.Data.NodeType : RoomNodeType.Transit;
+            int duplicateFloorLevel = sourceRoom.Data != null ? sourceRoom.Data.FloorLevel : 0;
+            StableRoomIdentity identity = GenerateStableIdentity(duplicateNodeType, duplicateFloorLevel);
+            duplicateGO.name = identity.RoomId;
+
+            var duplicatedRoomSO = DuplicateRoomDataAsset(sourceRoom.Data, identity.RoomId, identity.DisplayName);
+            if (duplicatedRoomSO != null)
+            {
+                var roomSerialized = new SerializedObject(duplicateRoom);
+                roomSerialized.FindProperty("_data").objectReferenceValue = duplicatedRoomSO;
+                roomSerialized.ApplyModifiedProperties();
+                EditorUtility.SetDirty(duplicateRoom);
+            }
+
+            ClearDuplicatedDoorAuthoring(duplicateRoom);
+
+            EditorUtility.SetDirty(duplicateGO);
+            AssetDatabase.SaveAssets();
+            Selection.activeGameObject = duplicateGO;
+            SceneView.RepaintAll();
+
+            Debug.Log($"[RoomFactory] Duplicated room '{sourceRoom.RoomID}' as '{identity.RoomId}'.");
+            return duplicateRoom;
         }
 
         /// <summary>
@@ -269,6 +337,103 @@ namespace ProjectArk.Level.Editor
             return normalPreset;
         }
 
+        public static StableRoomIdentity GenerateStableIdentity(RoomNodeType nodeType, int floorLevel, Room excludedRoom = null)
+        {
+            string floorToken = GetFloorToken(floorLevel);
+            string nodeToken = GetNodeTypeToken(nodeType);
+            int index = 1;
+
+            while (true)
+            {
+                string roomId = $"{floorToken}_{nodeToken}_{index:00}";
+                if (!IsRoomIdentityInUse(roomId, excludedRoom))
+                {
+                    return new StableRoomIdentity(roomId, $"{nodeToken} {floorToken}-{index:00}");
+                }
+
+                index++;
+            }
+        }
+
+        public static bool ApplyStableIdentity(Room room)
+        {
+            if (room == null || room.Data == null)
+            {
+                return false;
+            }
+
+            StableRoomIdentity identity = GenerateStableIdentity(room.Data.NodeType, room.Data.FloorLevel, room);
+
+            Undo.RecordObject(room.Data, "Stable Rename Room");
+            var serialized = new SerializedObject(room.Data);
+            serialized.FindProperty("_roomID").stringValue = identity.RoomId;
+            serialized.FindProperty("_displayName").stringValue = identity.DisplayName;
+            serialized.ApplyModifiedProperties();
+            EditorUtility.SetDirty(room.Data);
+
+            Undo.RecordObject(room.gameObject, "Stable Rename Room");
+            room.gameObject.name = identity.RoomId;
+            EditorUtility.SetDirty(room.gameObject);
+
+            string assetPath = AssetDatabase.GetAssetPath(room.Data);
+            if (!string.IsNullOrEmpty(assetPath))
+            {
+                string desiredAssetName = $"{identity.RoomId}_Data";
+                string currentAssetName = System.IO.Path.GetFileNameWithoutExtension(assetPath);
+                if (!string.Equals(currentAssetName, desiredAssetName, StringComparison.Ordinal))
+                {
+                    AssetDatabase.RenameAsset(assetPath, desiredAssetName);
+                }
+            }
+
+            AssetDatabase.SaveAssets();
+            return true;
+        }
+
+        public static Room[] CreateFiveRoomValidationSlice(Vector3 anchorPosition)
+        {
+            CreateBuiltInPresets();
+
+            RoomPresetSO safePreset = FindBuiltInPreset("Safe Room");
+            RoomPresetSO transitPreset = FindBuiltInPreset("Transit Room");
+            RoomPresetSO combatPreset = FindBuiltInPreset("Combat Room");
+            RoomPresetSO rewardPreset = FindBuiltInPreset("Reward Room");
+            if (safePreset == null || transitPreset == null || combatPreset == null || rewardPreset == null)
+            {
+                Debug.LogError("[RoomFactory] Cannot create validation slice: required built-in presets are missing.");
+                return Array.Empty<Room>();
+            }
+
+            var rooms = new List<Room>(5)
+            {
+                CreateRoomFromPreset(safePreset, anchorPosition + new Vector3(0f, 0f, 0f)),
+                CreateRoomFromPreset(transitPreset, anchorPosition + new Vector3(26f, 0f, 0f)),
+                CreateRoomFromPreset(combatPreset, anchorPosition + new Vector3(52f, 0f, 0f)),
+                CreateRoomFromPreset(rewardPreset, anchorPosition + new Vector3(52f, -22f, 0f)),
+                CreateRoomFromPreset(transitPreset, anchorPosition + new Vector3(26f, -22f, 0f))
+            };
+
+            rooms.RemoveAll(room => room == null);
+            if (rooms.Count != 5)
+            {
+                Debug.LogError("[RoomFactory] Validation slice creation aborted: one or more rooms failed to instantiate.");
+                return rooms.ToArray();
+            }
+
+            SetConnectionType(DoorWiringService.AutoConnectRooms(rooms[0], rooms[1]), ConnectionType.Progression);
+            SetConnectionType(DoorWiringService.AutoConnectRooms(rooms[1], rooms[2]), ConnectionType.Progression);
+            SetConnectionType(DoorWiringService.AutoConnectRooms(rooms[2], rooms[3]), ConnectionType.Challenge);
+            SetConnectionType(DoorWiringService.AutoConnectRooms(rooms[3], rooms[4]), ConnectionType.Return);
+            SetConnectionType(DoorWiringService.AutoConnectRooms(rooms[4], rooms[0]), ConnectionType.Return);
+
+            TrySetEntryRoom(rooms[0]);
+            Selection.activeGameObject = rooms[0].gameObject;
+            SceneView.RepaintAll();
+
+            Debug.Log("[RoomFactory] Created 5-room validation slice (Safe → Transit → Combat → Reward → Transit return loop).");
+            return rooms.ToArray();
+        }
+
         private static RoomPresetSO CreatePresetIfMissing(string basePath, string fileName, string presetName,
             string description, RoomNodeType nodeType, Vector2 defaultSize, int spawnPoints,
             bool includeArena, bool includeSpawner)
@@ -295,11 +460,147 @@ namespace ProjectArk.Level.Editor
 
         // ──────────────────── Private Helpers ────────────────────
 
-        private static string GenerateRoomName(RoomPresetSO preset)
+        private static RoomPresetSO FindBuiltInPreset(string presetName)
         {
-            string prefix = preset.NodeTypeValue.ToString();
-            string timestamp = System.DateTime.Now.ToString("HHmmss");
-            return $"Room_{prefix}_{timestamp}";
+            var presets = FindAllPresets();
+            foreach (var preset in presets)
+            {
+                if (preset == null)
+                {
+                    continue;
+                }
+
+                if (string.Equals(preset.PresetName, presetName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return preset;
+                }
+            }
+
+            return null;
+        }
+
+        private static void TrySetEntryRoom(Room room)
+        {
+            if (room == null)
+            {
+                return;
+            }
+
+            var roomManager = Object.FindAnyObjectByType<RoomManager>();
+            if (roomManager == null)
+            {
+                return;
+            }
+
+            Undo.RecordObject(roomManager, "Set Entry Room");
+            var serialized = new SerializedObject(roomManager);
+            serialized.FindProperty("_startingRoom").objectReferenceValue = room;
+            serialized.ApplyModifiedProperties();
+            EditorUtility.SetDirty(roomManager);
+        }
+
+        private static void SetConnectionType((Door doorA, Door doorB) connectionPair, ConnectionType connectionType)
+        {
+            if (connectionPair.doorA == null)
+            {
+                return;
+            }
+
+            DoorWiringService.SetConnectionType(connectionPair.doorA, connectionType);
+        }
+
+        private static bool IsRoomIdentityInUse(string roomId, Room excludedRoom)
+        {
+            Room existingRoom = FindSceneRoomById(roomId, excludedRoom);
+            if (existingRoom != null)
+            {
+                return true;
+            }
+
+            var existingAsset = AssetDatabase.LoadAssetAtPath<RoomSO>($"{ROOM_DATA_PATH}{roomId}_Data.asset");
+            return existingAsset != null && (excludedRoom == null || existingAsset != excludedRoom.Data);
+        }
+
+        private static Room FindSceneRoomById(string roomId, Room excludedRoom = null)
+        {
+            var rooms = Object.FindObjectsByType<Room>();
+            foreach (var room in rooms)
+            {
+                if (room == null || room == excludedRoom)
+                {
+                    continue;
+                }
+
+                if (string.Equals(room.RoomID, roomId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return room;
+                }
+            }
+
+            return null;
+        }
+
+        private static string GetFloorToken(int floorLevel)
+        {
+            if (floorLevel == 0)
+            {
+                return "G";
+            }
+
+            return floorLevel > 0 ? $"U{floorLevel}" : $"D{Mathf.Abs(floorLevel)}";
+        }
+
+        private static string GetNodeTypeToken(RoomNodeType nodeType)
+        {
+            return nodeType.ToString();
+        }
+
+        private static RoomSO DuplicateRoomDataAsset(RoomSO sourceData, string roomId, string displayName)
+        {
+            string desiredPath = AssetDatabase.GenerateUniqueAssetPath($"{ROOM_DATA_PATH}{roomId}_Data.asset");
+            RoomSO duplicatedRoomSO = null;
+
+            string sourceAssetPath = sourceData != null ? AssetDatabase.GetAssetPath(sourceData) : string.Empty;
+            if (!string.IsNullOrEmpty(sourceAssetPath) && AssetDatabase.CopyAsset(sourceAssetPath, desiredPath))
+            {
+                duplicatedRoomSO = AssetDatabase.LoadAssetAtPath<RoomSO>(desiredPath);
+            }
+
+            if (duplicatedRoomSO == null)
+            {
+                duplicatedRoomSO = ScriptableObject.CreateInstance<RoomSO>();
+                AssetDatabase.CreateAsset(duplicatedRoomSO, desiredPath);
+            }
+
+            var serialized = new SerializedObject(duplicatedRoomSO);
+            serialized.FindProperty("_roomID").stringValue = roomId;
+            serialized.FindProperty("_displayName").stringValue = string.IsNullOrWhiteSpace(displayName) ? roomId : displayName;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(duplicatedRoomSO);
+            return duplicatedRoomSO;
+        }
+
+        private static void ClearDuplicatedDoorAuthoring(Room room)
+        {
+            if (room == null) return;
+
+            var navigationDoorsRoot = room.transform.Find("Navigation/Doors");
+            if (navigationDoorsRoot != null)
+            {
+                for (int i = navigationDoorsRoot.childCount - 1; i >= 0; i--)
+                {
+                    Undo.DestroyObjectImmediate(navigationDoorsRoot.GetChild(i).gameObject);
+                }
+            }
+
+            var navigationSpawnRoot = room.transform.Find("Navigation/SpawnPoints");
+            if (navigationSpawnRoot != null)
+            {
+                for (int i = navigationSpawnRoot.childCount - 1; i >= 0; i--)
+                {
+                    Undo.DestroyObjectImmediate(navigationSpawnRoot.GetChild(i).gameObject);
+                }
+            }
         }
 
         private static GameObject CreateChildObject(Transform parent, string name)
@@ -351,16 +652,16 @@ namespace ProjectArk.Level.Editor
             return points;
         }
 
-        private static RoomSO CreateRoomSOForPreset(RoomPresetSO preset, string roomName)
+        private static RoomSO CreateRoomSOForPreset(RoomPresetSO preset, StableRoomIdentity identity, int floorLevel)
         {
             var roomSO = ScriptableObject.CreateInstance<RoomSO>();
-            roomSO.name = $"{roomName}_Data";
+            roomSO.name = $"{identity.RoomId}_Data";
 
             var serialized = new SerializedObject(roomSO);
-            serialized.FindProperty("_roomID").stringValue = roomName;
-            serialized.FindProperty("_displayName").stringValue = roomName;
+            serialized.FindProperty("_roomID").stringValue = identity.RoomId;
+            serialized.FindProperty("_displayName").stringValue = identity.DisplayName;
             serialized.FindProperty("_nodeType").enumValueIndex = (int)preset.NodeTypeValue;
-            serialized.FindProperty("_floorLevel").intValue = 0;
+            serialized.FindProperty("_floorLevel").intValue = floorLevel;
 
             if (preset.DefaultEncounter != null)
             {

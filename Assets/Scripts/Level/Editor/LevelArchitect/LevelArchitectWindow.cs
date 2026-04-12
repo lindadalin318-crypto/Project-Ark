@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -7,9 +8,9 @@ namespace ProjectArk.Level.Editor
     /// <summary>
     /// [Authority: Level CanonicalSpec §9.1]
     /// Main entry point for the Level Architect Tool.
-    /// Three-tab layout: Design | Build | Validate.
-    /// - Design: optional LevelDesigner.html shortcut + JSON import
-    /// - Build:  primary whitebox authoring path (Select/Blockout/Connect) + room list + quick play
+    /// Three-workspace layout: Build | Quick Edit | Validate.
+    /// - Build: primary whitebox authoring path (Select/Blockout/Connect) + quick play
+    /// - Quick Edit: room search, single-room inspector, batch maintenance, fast authoring actions
     /// - Validate: validation results + auto-fix aligned with current Level guardrails
     /// </summary>
     public class LevelArchitectWindow : EditorWindow
@@ -21,11 +22,12 @@ namespace ProjectArk.Level.Editor
         private const float SIDE_PANEL_WIDTH = 260f;
         private const float SIDE_PANEL_MARGIN = 10f;
         private const float TOOLBAR_HEIGHT = 30f;
+        private const int MAX_RECENT_ROOMS = 8;
 
         // ──────────────────── Tab ────────────────────
 
-        private enum Tab { Design, Build, Validate }
-        private static readonly string[] TAB_LABELS = { "🎨 Design", "🔨 Build", "✅ Validate" };
+        private enum Tab { Build, QuickEdit, Validate }
+        private static readonly string[] TAB_LABELS = { "🔨 Build", "🛠 Quick Edit", "✅ Validate" };
         [SerializeField] private Tab _activeTab = Tab.Build;
 
         // ──────────────────── Tool Modes ────────────────────
@@ -46,6 +48,10 @@ namespace ProjectArk.Level.Editor
         [SerializeField] private bool _showLockKeyGraph;
         [SerializeField] private bool _showConnectionTypes;
         [SerializeField] private int _activeFloorLevel = int.MinValue; // MinValue = show all
+        [SerializeField] private string _roomSearchQuery = string.Empty;
+        [SerializeField] private Door _selectedConnection;
+        [SerializeField] private List<Room> _pinnedRooms = new List<Room>();
+        [SerializeField] private List<Room> _recentRooms = new List<Room>();
 
         // ──────────────────── Runtime State ────────────────────
 
@@ -65,6 +71,38 @@ namespace ProjectArk.Level.Editor
                 Bounds = bounds;
                 FloorLevel = floorLevel;
             }
+        }
+
+        private sealed class SlicePreviewData
+        {
+            public Room[] Rooms = Array.Empty<Room>();
+            public Dictionary<RoomNodeType, int> NodeTypeCounts = new Dictionary<RoomNodeType, int>();
+            public Dictionary<int, int> FloorCounts = new Dictionary<int, int>();
+            public Dictionary<Room, List<Room>> DirectedGraph = new Dictionary<Room, List<Room>>();
+            public Room EntryRoom;
+            public Room BossRoom;
+            public Room FirstArenaMissingEncounterRoom;
+            public Room FirstOrphanRoom;
+            public int TotalRooms;
+            public int UniqueConnectionCount;
+            public int OneWayConnectionCount;
+            public int ConnectedComponentCount;
+            public int IslandCount;
+            public int OrphanRoomCount;
+            public int ArenaMissingEncounterCount;
+            public int ValidationErrors;
+            public int ValidationWarnings;
+            public bool HasClosedLoop;
+            public bool HasEntryToBossPath;
+            public int CriticalPathRoomCount;
+        }
+
+        private sealed class SliceSuggestion
+        {
+            public MessageType MessageType;
+            public string Message;
+            public string ActionLabel;
+            public Action OnClick;
         }
 
         // ──────────────────── Sub-Systems ────────────────────
@@ -99,6 +137,9 @@ namespace ProjectArk.Level.Editor
 
         /// <summary> Whether connection type color overlay is enabled. </summary>
         public bool ShowConnectionTypes => _showConnectionTypes;
+
+        /// <summary> Whether SceneView room selection / drag interaction should be allowed. </summary>
+        public bool AllowSceneSelectionInteraction => _activeTab != Tab.Validate;
 
         // ──────────────────── Menu Item ────────────────────
 
@@ -163,56 +204,27 @@ namespace ProjectArk.Level.Editor
             DrawWindowHeader();
             EditorGUILayout.Space(4);
 
-            // ── Tab Bar ──
+            var previousTab = _activeTab;
             _activeTab = (Tab)GUILayout.Toolbar((int)_activeTab, TAB_LABELS, GUILayout.Height(26));
+            if (previousTab != _activeTab)
+            {
+                HandleActiveTabChanged(previousTab, _activeTab);
+            }
+
             EditorGUILayout.Space(4);
 
             switch (_activeTab)
             {
-                case Tab.Design:   DrawDesignTab();   break;
-                case Tab.Build:    DrawBuildTab();    break;
-                case Tab.Validate: DrawValidateTab(); break;
+                case Tab.Build:
+                    DrawBuildTab();
+                    break;
+                case Tab.QuickEdit:
+                    DrawQuickEditTab();
+                    break;
+                case Tab.Validate:
+                    DrawValidateTab();
+                    break;
             }
-        }
-
-        // ──────────────────── Design Tab ────────────────────
-
-        private void DrawDesignTab()
-        {
-            EditorGUILayout.LabelField("Level Designer (Optional)", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox(
-                "Use LevelDesigner.html only when you want a browser-side topology draft or JSON import source. For minimal validation slices and current room-runtime verification, Build is the preferred one-stop authoring path.",
-                MessageType.Info);
-
-            EditorGUILayout.Space(4);
-
-            if (GUILayout.Button("🌐 Open LevelDesigner.html", GUILayout.Height(30)))
-            {
-                string htmlPath = System.IO.Path.Combine(
-                    System.IO.Path.GetDirectoryName(Application.dataPath),
-                    "Tools", "LevelDesigner.html");
-                Application.OpenURL("file://" + htmlPath.Replace("\\", "/"));
-            }
-
-            EditorGUILayout.Space(8);
-            EditorGUILayout.LabelField("Import from JSON", EditorStyles.boldLabel);
-
-            if (GUILayout.Button("📂 Import LevelDesigner JSON...", GUILayout.Height(28)))
-            {
-                LevelSliceBuilder.ImportFromJson();
-            }
-
-            EditorGUILayout.Space(8);
-            EditorGUILayout.LabelField("Optional HTML Workflow", EditorStyles.boldLabel);
-
-            EditorGUILayout.LabelField(
-                "1. Open LevelDesigner.html in browser\n" +
-                "2. Sketch room topology & connections\n" +
-                "3. Set Level Name in the right panel\n" +
-                "4. Click 💾 Export File to save JSON\n" +
-                "5. Click Import LevelDesigner JSON here\n" +
-                "6. Switch to Build tab to refine scene objects and validation rooms",
-                EditorStyles.helpBox);
         }
 
         // ──────────────────── Build Tab ────────────────────
@@ -220,7 +232,7 @@ namespace ProjectArk.Level.Editor
         private void DrawBuildTab()
         {
             EditorGUILayout.HelpBox(
-                "Primary whitebox authoring path. Build creates and refines Room / RoomSO / Door skeletons directly in scene. Encounter triggers, checkpoints, locks, ambience triggers, and other runtime elements should be added in-scene after the room skeleton is in place.",
+                "Build 是当前的白盒搭建工作面。你应在这里完成房间骨架、拖拽白盒、连接关系、楼层过滤与 Quick Play 冒烟验证；HTML / JSON 导入仅保留为可选外部草图入口，不再作为顶层工作面。",
                 MessageType.Info);
             EditorGUILayout.Space(4);
             DrawModeSelector();
@@ -230,6 +242,64 @@ namespace ProjectArk.Level.Editor
             DrawFloorLevelSelector();
             EditorGUILayout.Space(8);
             DrawBuildActions();
+            EditorGUILayout.Space(10);
+            DrawOptionalDraftImportTools();
+        }
+
+        // ──────────────────── Quick Edit Tab ────────────────────
+
+        private void DrawQuickEditTab()
+        {
+            EditorGUILayout.HelpBox(
+                "Quick Edit 是生产期修改工作面。这里优先服务‘找房间 → 改 RoomSO 核心字段 → 修尺寸 / 遭遇 / 入口 → 快速回看’的连续 authoring loop。",
+                MessageType.Info);
+            EditorGUILayout.Space(4);
+            DrawFloorLevelSelector();
+            EditorGUILayout.Space(4);
+            DrawOverlayToggles();
+            EditorGUILayout.Space(8);
+
+            _sidePanelScroll = EditorGUILayout.BeginScrollView(_sidePanelScroll);
+            DrawRoomSearchField();
+            EditorGUILayout.Space(4);
+            DrawQuickAccessSection();
+            EditorGUILayout.Space(6);
+            DrawRoomListSection();
+            EditorGUILayout.Space(8);
+            DrawSelectionSection();
+            EditorGUILayout.Space(8);
+            DrawCompactValidationSection();
+            EditorGUILayout.EndScrollView();
+        }
+
+        private void DrawOptionalDraftImportTools()
+        {
+            EditorGUILayout.LabelField("Optional Draft & Import", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "仅当你需要浏览器侧拓扑草图或 JSON 导入源时才使用这些入口。常规最小验证切片仍应优先走 Build / Quick Edit 主链。",
+                MessageType.None);
+
+            if (GUILayout.Button("🌐 Open LevelDesigner.html", GUILayout.Height(28)))
+            {
+                string htmlPath = System.IO.Path.Combine(
+                    System.IO.Path.GetDirectoryName(Application.dataPath),
+                    "Tools", "LevelDesigner.html");
+                Application.OpenURL("file://" + htmlPath.Replace("\\", "/"));
+            }
+
+            if (GUILayout.Button("📂 Import LevelDesigner JSON...", GUILayout.Height(28)))
+            {
+                LevelSliceBuilder.ImportFromJson();
+            }
+
+            EditorGUILayout.LabelField(
+                "1. Open LevelDesigner.html in browser\n" +
+                "2. Sketch room topology & connections\n" +
+                "3. Set Level Name in the right panel\n" +
+                "4. Click 💾 Export File to save JSON\n" +
+                "5. Import JSON here\n" +
+                "6. Return to Build / Quick Edit to refine Room / Door / validation state",
+                EditorStyles.helpBox);
         }
 
         // ──────────────────── Validate Tab ────────────────────
@@ -308,6 +378,17 @@ namespace ProjectArk.Level.Editor
             {
                 EditorGUILayout.HelpBox("No validation results yet. Click Validate All.", MessageType.None);
             }
+        }
+
+        private void HandleActiveTabChanged(Tab previousTab, Tab nextTab)
+        {
+            if (nextTab != Tab.Build && _currentMode != ToolMode.Select)
+            {
+                _currentMode = ToolMode.Select;
+            }
+
+            Repaint();
+            SceneView.RepaintAll();
         }
 
         private void DrawWindowHeader()
@@ -408,6 +489,9 @@ namespace ProjectArk.Level.Editor
                 RoomFactory.CreateBuiltInPresets();
                 Debug.Log("[LevelArchitect] Built-in presets created/verified.");
             }
+
+            EditorGUILayout.Space(6);
+            DrawValidationSliceTemplateSection(false);
             EditorGUILayout.Space(4);
             EditorGUILayout.HelpBox(
                 "Quick Play is a structure smoke test. If RoomManager or DoorTransitionController is missing, the tool will create temporary _QuickPlay_* helpers before entering Play Mode.",
@@ -459,7 +543,7 @@ namespace ProjectArk.Level.Editor
         {
             Handles.BeginGUI();
 
-            float toolbarWidth = 320f;
+            float toolbarWidth = _activeTab == Tab.Build ? 320f : 360f;
             float toolbarX = (sceneView.position.width - toolbarWidth) / 2f;
 
             var toolbarRect = new Rect(toolbarX, 8, toolbarWidth, TOOLBAR_HEIGHT);
@@ -468,14 +552,21 @@ namespace ProjectArk.Level.Editor
             GUILayout.BeginArea(new Rect(toolbarRect.x + 4, toolbarRect.y + 2, toolbarRect.width - 8, toolbarRect.height - 4));
             GUILayout.BeginHorizontal();
 
-            // Mode buttons
-            DrawSceneToolbarButton("Select", ToolMode.Select);
-            DrawSceneToolbarButton("Blockout", ToolMode.Blockout);
-            DrawSceneToolbarButton("Connect", ToolMode.Connect);
+            if (_activeTab == Tab.Build)
+            {
+                DrawSceneToolbarButton("Select", ToolMode.Select);
+                DrawSceneToolbarButton("Blockout", ToolMode.Blockout);
+                DrawSceneToolbarButton("Connect", ToolMode.Connect);
+            }
+            else
+            {
+                GUILayout.Label("Quick Edit", EditorStyles.miniBoldLabel, GUILayout.Width(64));
+                DrawSceneToolbarButton("Select", ToolMode.Select);
+                GUILayout.Label("Selection + Room Inspector", EditorStyles.miniLabel);
+            }
 
             GUILayout.FlexibleSpace();
 
-            // Toggle side panel
             if (GUILayout.Button(_sidePanelExpanded ? "◀ Panel" : "▶ Panel", EditorStyles.toolbarButton, GUILayout.Width(60)))
             {
                 _sidePanelExpanded = !_sidePanelExpanded;
@@ -507,101 +598,254 @@ namespace ProjectArk.Level.Editor
         private void DrawSceneViewSidePanel(SceneView sceneView)
         {
             Handles.BeginGUI();
+            try
+            {
+                float panelHeight = Mathf.Max(120f, sceneView.position.height - TOOLBAR_HEIGHT - 60f);
+                var panelRect = new Rect(
+                    SIDE_PANEL_MARGIN,
+                    TOOLBAR_HEIGHT + 20,
+                    SIDE_PANEL_WIDTH,
+                    panelHeight
+                );
 
-            float panelHeight = sceneView.position.height - TOOLBAR_HEIGHT - 60;
-            var panelRect = new Rect(
-                SIDE_PANEL_MARGIN,
-                TOOLBAR_HEIGHT + 20,
-                SIDE_PANEL_WIDTH,
-                panelHeight
-            );
+                EditorGUI.DrawRect(panelRect, new Color(0.2f, 0.2f, 0.2f, 0.9f));
 
-            // Background
-            EditorGUI.DrawRect(panelRect, new Color(0.2f, 0.2f, 0.2f, 0.9f));
+                bool areaBegan = false;
+                bool scrollViewBegan = false;
 
-            GUILayout.BeginArea(new Rect(panelRect.x + 8, panelRect.y + 8, panelRect.width - 16, panelRect.height - 16));
-            _sidePanelScroll = GUILayout.BeginScrollView(_sidePanelScroll);
+                try
+                {
+                    GUILayout.BeginArea(new Rect(panelRect.x + 8, panelRect.y + 8, panelRect.width - 16, panelRect.height - 16));
+                    areaBegan = true;
 
-            DrawSidePanelContent();
+                    _sidePanelScroll = GUILayout.BeginScrollView(_sidePanelScroll);
+                    scrollViewBegan = true;
 
-            GUILayout.EndScrollView();
-            GUILayout.EndArea();
+                    DrawSceneSidePanelContent();
+                }
+                finally
+                {
+                    if (scrollViewBegan)
+                    {
+                        GUILayout.EndScrollView();
+                    }
 
-            Handles.EndGUI();
+                    if (areaBegan)
+                    {
+                        GUILayout.EndArea();
+                    }
+                }
+            }
+            finally
+            {
+                Handles.EndGUI();
+            }
         }
 
-        private void DrawSidePanelContent()
+        private void DrawSceneSidePanelContent()
         {
-            // ── Room List ──
+            switch (_activeTab)
+            {
+                case Tab.Build:
+                    DrawBuildSidePanelContent();
+                    break;
+                case Tab.QuickEdit:
+                    DrawQuickEditSidePanelContent();
+                    break;
+            }
+        }
+
+        private void DrawBuildSidePanelContent()
+        {
+            GUILayout.Label("Build Helpers", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "这里优先服务搭建：补房、补模板、Quick Play，以及在需要时直接查看当前选中房间。",
+                MessageType.None);
+
+            GUILayout.Space(6);
+            DrawSelectionSection();
+            GUILayout.Space(8);
+            DrawAddRoomSection();
+            GUILayout.Space(8);
+            DrawCompactValidationSection();
+        }
+
+        private void DrawQuickEditSidePanelContent()
+        {
+            DrawRoomSearchField();
+            GUILayout.Space(4);
+            DrawQuickAccessSection();
+            GUILayout.Space(6);
+            DrawRoomListSection();
+            GUILayout.Space(8);
+            DrawSelectionSection();
+            GUILayout.Space(8);
+            DrawSlicePreviewSection();
+            GUILayout.Space(8);
+            DrawCompactValidationSection();
+        }
+
+        private void DrawRoomSearchField()
+        {
+            GUILayout.Label("Find Room", EditorStyles.boldLabel);
+
+            EditorGUILayout.BeginHorizontal();
+            _roomSearchQuery = EditorGUILayout.TextField("Search", _roomSearchQuery);
+            if (GUILayout.Button("Clear", GUILayout.Width(48)))
+            {
+                _roomSearchQuery = string.Empty;
+                GUI.FocusControl(null);
+            }
+            EditorGUILayout.EndHorizontal();
+
+            GUILayout.Label("Matches Room ID / Display Name / Node Type / Floor Level.", EditorStyles.miniLabel);
+        }
+
+        private void DrawQuickAccessSection()
+        {
+            SanitizeQuickAccessRooms();
+
+            GUILayout.Label("Quick Access", EditorStyles.boldLabel);
+
+            var selectedRoom = _selectedRooms.Count == 1 ? _selectedRooms[0] : null;
+
+            EditorGUILayout.BeginHorizontal();
+            using (new EditorGUI.DisabledScope(selectedRoom == null))
+            {
+                string pinLabel = selectedRoom != null && IsPinnedRoom(selectedRoom) ? "Unpin Selected" : "Pin Selected";
+                if (GUILayout.Button(pinLabel, GUILayout.Height(20)) && selectedRoom != null)
+                {
+                    TogglePinnedRoom(selectedRoom);
+                }
+            }
+
+            using (new EditorGUI.DisabledScope(GetPreviousRecentRoom() == null))
+            {
+                if (GUILayout.Button("Recall Previous", GUILayout.Height(20)))
+                {
+                    RecallPreviousRoom();
+                }
+            }
+            EditorGUILayout.EndHorizontal();
+
+            DrawQuickAccessRoomList("Pinned", _pinnedRooms, "No pinned rooms yet.");
+            GUILayout.Space(3);
+            DrawQuickAccessRoomList("Recent", _recentRooms, "Recent rooms appear here after you select or edit a room.");
+        }
+
+        private void DrawQuickAccessRoomList(string title, List<Room> source, string emptyMessage)
+        {
+            GUILayout.Label(title, EditorStyles.miniBoldLabel);
+
+            var rooms = GetQuickAccessRooms(source);
+            if (rooms.Count == 0)
+            {
+                GUILayout.Label(emptyMessage, EditorStyles.miniLabel);
+                return;
+            }
+
+            foreach (var room in rooms)
+            {
+                EditorGUILayout.BeginHorizontal();
+
+                if (GUILayout.Button(IsPinnedRoom(room) ? "★" : "☆", EditorStyles.miniButton, GUILayout.Width(24)))
+                {
+                    TogglePinnedRoom(room);
+                }
+
+                bool isSelected = _selectedRooms.Count == 1 && _selectedRooms[0] == room;
+                var labelStyle = isSelected ? EditorStyles.boldLabel : EditorStyles.miniButton;
+                if (GUILayout.Button(GetQuickAccessLabel(room), labelStyle))
+                {
+                    OpenRoomFromQuickAccess(room, false);
+                }
+
+                if (GUILayout.Button("↗", EditorStyles.miniButton, GUILayout.Width(24)))
+                {
+                    OpenRoomFromQuickAccess(room, true);
+                }
+
+                EditorGUILayout.EndHorizontal();
+            }
+        }
+
+        private void DrawRoomListSection()
+        {
             GUILayout.Label("Rooms in Scene", EditorStyles.boldLabel);
 
-            var rooms = FindObjectsByType<Room>();
-            if (rooms.Length == 0)
+            var rooms = GetFilteredRooms();
+            if (rooms.Count == 0)
             {
-                GUILayout.Label("No rooms found in scene.", EditorStyles.miniLabel);
+                string message = string.IsNullOrWhiteSpace(_roomSearchQuery)
+                    ? "No rooms found in scene."
+                    : "No rooms match the current search / floor filter.";
+                GUILayout.Label(message, EditorStyles.miniLabel);
+                return;
+            }
+
+            foreach (var room in rooms)
+            {
+                if (room == null) continue;
+
+                EditorGUILayout.BeginHorizontal();
+
+                if (GUILayout.Button(IsPinnedRoom(room) ? "★" : "☆", EditorStyles.miniButton, GUILayout.Width(24)))
+                {
+                    TogglePinnedRoom(room);
+                }
+
+                var prevColor = GUI.color;
+                GUI.color = GetRoomNodeTypeColor(room.NodeType);
+                GUILayout.Label("■", GUILayout.Width(14));
+                GUI.color = prevColor;
+
+                bool isSelected = _selectedRooms.Contains(room);
+                var style = isSelected ? EditorStyles.boldLabel : EditorStyles.label;
+                if (GUILayout.Button(GetRoomListLabel(room), style))
+                {
+                    HandleRoomListClick(room);
+                }
+
+                EditorGUILayout.EndHorizontal();
+            }
+        }
+
+        private void DrawSelectionSection()
+        {
+            GUILayout.Label(_selectedRooms.Count > 0
+                ? $"Selected: {_selectedRooms.Count} room(s)"
+                : "Selection", EditorStyles.boldLabel);
+
+            if (_selectedRooms.Count == 0)
+            {
+                _selectedConnection = null;
+                GUILayout.Label("No room selected.", EditorStyles.miniLabel);
+                return;
+            }
+
+            if (_selectedRooms.Count == 1)
+            {
+                DrawSingleRoomInfo(_selectedRooms[0]);
             }
             else
             {
-                foreach (var room in rooms)
-                {
-                    if (room == null) continue;
-
-                    // Floor filter
-                    if (_activeFloorLevel != int.MinValue)
-                    {
-                        int roomFloor = room.Data != null ? room.Data.FloorLevel : 0;
-                        if (roomFloor != _activeFloorLevel) continue;
-                    }
-
-                    EditorGUILayout.BeginHorizontal();
-
-                    // Color indicator
-                    var prevColor = GUI.color;
-                    GUI.color = GetRoomNodeTypeColor(room.NodeType);
-                    GUILayout.Label("■", GUILayout.Width(14));
-                    GUI.color = prevColor;
-
-                    // Room name button (select on click)
-                    bool isSelected = _selectedRooms.Contains(room);
-                    var style = isSelected ? EditorStyles.boldLabel : EditorStyles.label;
-                    if (GUILayout.Button(room.RoomID, style))
-                    {
-                        HandleRoomListClick(room);
-                    }
-
-                    EditorGUILayout.EndHorizontal();
-                }
+                _selectedConnection = null;
+                BatchEditPanel.DrawBatchEditPanel(_selectedRooms);
             }
 
-            GUILayout.Space(8);
-
-            // ── Selection Info ──
-            if (_selectedRooms.Count > 0)
+            var lastRect = GUILayoutUtility.GetLastRect();
+            if (Event.current.type == EventType.ContextClick && lastRect.Contains(Event.current.mousePosition))
             {
-                GUILayout.Label($"Selected: {_selectedRooms.Count} room(s)", EditorStyles.boldLabel);
-
-                if (_selectedRooms.Count == 1)
-                {
-                    DrawSingleRoomInfo(_selectedRooms[0]);
-                }
-                else
-                {
-                    BatchEditPanel.DrawBatchEditPanel(_selectedRooms);
-                }
-
-                // Right-click context menu
-                var lastRect = GUILayoutUtility.GetLastRect();
-                if (Event.current.type == EventType.ContextClick && lastRect.Contains(Event.current.mousePosition))
-                {
-                    BatchEditPanel.ShowContextMenu(_selectedRooms);
-                    Event.current.Use();
-                }
+                BatchEditPanel.ShowContextMenu(_selectedRooms);
+                Event.current.Use();
             }
+        }
 
-            GUILayout.Space(8);
-
-            // ── Add Room Button ──
+        private void DrawAddRoomSection()
+        {
             GUILayout.Label("Add Room", EditorStyles.boldLabel);
+            DrawValidationSliceTemplateSection(true);
+            GUILayout.Space(6);
 
             var presets = RoomFactory.FindAllPresets();
             if (presets.Length == 0)
@@ -610,89 +854,1756 @@ namespace ProjectArk.Level.Editor
                 {
                     RoomFactory.CreateBuiltInPresets();
                 }
+                return;
             }
-            else
+
+            foreach (var preset in presets)
             {
-                foreach (var preset in presets)
+                if (preset == null) continue;
+
+                EditorGUILayout.BeginHorizontal();
+
+                var prevColor = GUI.color;
+                GUI.color = GetRoomTypeColor(preset.NodeTypeValue);
+                GUILayout.Label("■", GUILayout.Width(14));
+                GUI.color = prevColor;
+
+                string label = $"{preset.PresetName} ({preset.DefaultSize.x}×{preset.DefaultSize.y})";
+                if (GUILayout.Button(label, EditorStyles.miniButton))
                 {
-                    if (preset == null) continue;
+                    var sv = SceneView.lastActiveSceneView;
+                    Vector3 placePos = sv != null ? sv.camera.transform.position : Vector3.zero;
+                    placePos.z = 0;
+                    RoomFactory.CreateRoomFromPreset(preset, placePos);
+                }
 
-                    EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.EndHorizontal();
+            }
+        }
 
-                    var prevColor = GUI.color;
-                    GUI.color = LevelArchitectWindow.GetRoomTypeColor(preset.NodeTypeValue);
-                    GUILayout.Label("■", GUILayout.Width(14));
-                    GUI.color = prevColor;
+        private void DrawValidationSliceTemplateSection(bool compact)
+        {
+            EditorGUILayout.BeginVertical("HelpBox");
+            GUILayout.Label(compact ? "Validation Slice" : "5-Room Validation Slice", compact ? EditorStyles.miniBoldLabel : EditorStyles.boldLabel);
+            GUILayout.Label(
+                "Safe Entry → Transit → Combat → Reward → Return Transit。会自动建房、连门、设 Entry，让 Build / Validate / Quick Play 立刻拥有一个最小闭环起点。",
+                EditorStyles.wordWrappedMiniLabel);
+            GUILayout.Label(
+                "结果：默认生成 5 个已连通房间，并把整组切片选中到当前 authoring 上下文。",
+                EditorStyles.wordWrappedMiniLabel);
+            GUILayout.Label($"放置锚点：{GetValidationSliceAnchorHint()}", EditorStyles.miniLabel);
 
-                    string label = $"{preset.PresetName} ({preset.DefaultSize.x}×{preset.DefaultSize.y})";
-                    if (GUILayout.Button(label, EditorStyles.miniButton))
-                    {
-                        // Place at SceneView center
-                        var sv = SceneView.lastActiveSceneView;
-                        Vector3 placePos = sv != null ? sv.camera.transform.position : Vector3.zero;
-                        placePos.z = 0;
-                        RoomFactory.CreateRoomFromPreset(preset, placePos);
-                    }
+            if (GUILayout.Button("Seed 5-Room Slice", GUILayout.Height(compact ? 22 : 24)))
+            {
+                CreateValidationSliceTemplate(false, false);
+            }
 
-                    EditorGUILayout.EndHorizontal();
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Create + Validate", GUILayout.Height(20)))
+            {
+                CreateValidationSliceTemplate(true, false);
+            }
+            if (GUILayout.Button("Create + Quick Play", GUILayout.Height(20)))
+            {
+                CreateValidationSliceTemplate(false, true);
+            }
+            EditorGUILayout.EndHorizontal();
+
+            GUILayout.Label(
+                "Seed = 只建切片；Create + Validate = 立即打开 Validate；Create + Quick Play = 直接做结构冒烟。",
+                EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.EndVertical();
+        }
+
+        private static string GetValidationSliceAnchorHint()
+        {
+            var sceneView = SceneView.lastActiveSceneView;
+            if (sceneView == null || sceneView.camera == null)
+            {
+                return "未检测到 SceneView，相机锚点会回退到 (0.0, 0.0)。";
+            }
+
+            Vector3 position = sceneView.camera.transform.position;
+            return $"使用当前 SceneView 相机位置 ({position.x:0.0}, {position.y:0.0})。";
+        }
+
+        private void CreateValidationSliceTemplate(bool validateAfterCreate, bool quickPlayAfterCreate)
+        {
+            var sceneView = SceneView.lastActiveSceneView;
+            Vector3 anchorPosition = sceneView != null ? sceneView.camera.transform.position : Vector3.zero;
+            anchorPosition.z = 0f;
+
+            var rooms = RoomFactory.CreateFiveRoomValidationSlice(anchorPosition);
+            if (rooms == null || rooms.Length == 0)
+            {
+                return;
+            }
+
+            _activeTab = Tab.Build;
+            _selectedRooms.Clear();
+            _selectedRooms.AddRange(rooms);
+            _selectedConnection = null;
+
+            TrackRecentRoom(rooms[0]);
+            Selection.activeGameObject = rooms[0].gameObject;
+            SceneView.lastActiveSceneView?.FrameSelected();
+            Repaint();
+            SceneView.RepaintAll();
+
+            if (validateAfterCreate)
+            {
+                LevelValidator.ValidateAll();
+                OpenValidateTab();
+            }
+
+            if (quickPlayAfterCreate)
+            {
+                BlockoutModeHandler.QuickPlay();
+            }
+        }
+
+        private void DrawBuildRuntimeAssistSection()
+        {
+            GUILayout.Label("Runtime Assist", EditorStyles.boldLabel);
+
+            var selectedRoom = _selectedRooms.Count == 1 ? _selectedRooms[0] : null;
+            if (selectedRoom == null)
+            {
+                string hint = _selectedRooms.Count <= 0
+                    ? "先单选一个房间，再从这里补 Checkpoint、Encounter Trigger、Biome Trigger 等标准 starter。"
+                    : $"当前选中了 {_selectedRooms.Count} 个房间。Runtime Assist 只对单房显示，避免工具替你批量猜设计。";
+                EditorGUILayout.HelpBox(hint, MessageType.None);
+                return;
+            }
+
+            GUILayout.Label(
+                "适合在结构与连接已基本稳定后，补第一批 runtime 对象起点。创建后会自动选中新对象，方便继续补 SO / phase / key 配置。",
+                EditorStyles.wordWrappedMiniLabel);
+            DrawRoomRuntimeAssistSection(selectedRoom, false);
+        }
+
+        private void DrawRoomRuntimeAssistSection(Room room, bool compact)
+        {
+            if (room == null)
+            {
+                return;
+            }
+
+            EditorGUILayout.BeginVertical("HelpBox");
+            EditorGUILayout.LabelField(compact ? "Runtime Assist / Starter Objects" : "Starter Objects", compact ? EditorStyles.miniBoldLabel : EditorStyles.boldLabel);
+            EditorGUILayout.LabelField($"Room: {GetRoomListLabel(room)}", EditorStyles.miniLabel);
+            EditorGUILayout.LabelField(
+                "只创建符合 validator 根节点约定的标准起点；CheckpointSO、EncounterSO、RoomAmbienceSO 等业务资产仍需作者手动指定。",
+                EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.LabelField(
+                "根节点分组：Elements → Checkpoint；Encounters → Open Encounter；Triggers → Biome / Scheduled / World Event。",
+                EditorStyles.wordWrappedMiniLabel);
+
+            DrawRoomRuntimeAssistButtons(room, compact);
+            EditorGUILayout.EndVertical();
+        }
+
+        private void DrawRoomRuntimeAssistButtons(Room room, bool compact)
+        {
+            float buttonHeight = compact ? 20f : 22f;
+
+            EditorGUILayout.LabelField("Elements", EditorStyles.miniBoldLabel);
+            if (GUILayout.Button(LevelRuntimeAssistFactory.GetDisplayName(LevelRuntimeAssistFactory.RoomAssistType.Checkpoint), GUILayout.Height(buttonHeight)))
+            {
+                CreateRoomRuntimeAssist(room, LevelRuntimeAssistFactory.RoomAssistType.Checkpoint);
+            }
+
+            GUILayout.Space(2f);
+            EditorGUILayout.LabelField("Encounters", EditorStyles.miniBoldLabel);
+            if (GUILayout.Button(LevelRuntimeAssistFactory.GetDisplayName(LevelRuntimeAssistFactory.RoomAssistType.OpenEncounterTrigger), GUILayout.Height(buttonHeight)))
+            {
+                CreateRoomRuntimeAssist(room, LevelRuntimeAssistFactory.RoomAssistType.OpenEncounterTrigger);
+            }
+
+            GUILayout.Space(2f);
+            EditorGUILayout.LabelField("Triggers", EditorStyles.miniBoldLabel);
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button(LevelRuntimeAssistFactory.GetDisplayName(LevelRuntimeAssistFactory.RoomAssistType.BiomeTrigger), GUILayout.Height(buttonHeight)))
+            {
+                CreateRoomRuntimeAssist(room, LevelRuntimeAssistFactory.RoomAssistType.BiomeTrigger);
+            }
+            if (GUILayout.Button(LevelRuntimeAssistFactory.GetDisplayName(LevelRuntimeAssistFactory.RoomAssistType.ScheduledBehaviour), GUILayout.Height(buttonHeight)))
+            {
+                CreateRoomRuntimeAssist(room, LevelRuntimeAssistFactory.RoomAssistType.ScheduledBehaviour);
+            }
+            EditorGUILayout.EndHorizontal();
+
+            if (GUILayout.Button(LevelRuntimeAssistFactory.GetDisplayName(LevelRuntimeAssistFactory.RoomAssistType.WorldEventTrigger), GUILayout.Height(buttonHeight)))
+            {
+                CreateRoomRuntimeAssist(room, LevelRuntimeAssistFactory.RoomAssistType.WorldEventTrigger);
+            }
+        }
+
+        private void DrawConnectionRuntimeAssistSection(Room ownerRoom, Door door)
+        {
+            EditorGUILayout.Space(6f);
+            EditorGUILayout.LabelField("Connection Assist", EditorStyles.boldLabel);
+
+            string ownerRoomId = ownerRoom != null ? ownerRoom.RoomID : "Missing Owner";
+            string targetRoomId = door != null && door.TargetRoom != null ? door.TargetRoom.RoomID : "Missing Target";
+            EditorGUILayout.LabelField($"Link: {ownerRoomId} → {targetRoomId}", EditorStyles.miniLabel);
+            EditorGUILayout.LabelField(
+                "Lock starter 会建在 owner room 的 Elements 根下，自动绑定当前 Door，并把门的初始状态切到 Locked_Key。",
+                EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.LabelField(
+                "创建后仍需手动指定 KeyItemSO，并确认这条门控是否真的是推进门，而不是 return / shortcut。",
+                EditorStyles.wordWrappedMiniLabel);
+
+            if (door == null || door.TargetRoom == null)
+            {
+                EditorGUILayout.HelpBox("当前连接缺少 TargetRoom，先修复 Door link，再创建 Lock starter。", MessageType.Warning);
+            }
+
+            using (new EditorGUI.DisabledScope(ownerRoom == null || door == null || door.TargetRoom == null))
+            {
+                string buttonLabel = door != null && door.TargetRoom != null
+                    ? $"Create Lock Starter → {door.TargetRoom.RoomID}"
+                    : "Create Lock Starter";
+
+                if (GUILayout.Button(buttonLabel, GUILayout.Height(22f)))
+                {
+                    CreateConnectionLockAssist(ownerRoom, door);
                 }
             }
+        }
 
-            GUILayout.Space(8);
-
-            // ── Quick Validate (compact) ──
+        private void DrawCompactValidationSection()
+        {
             if (GUILayout.Button("✅ Validate All", GUILayout.Height(22)))
             {
                 LevelValidator.ValidateAll();
-                var window = LevelArchitectWindow.Instance;
+                var window = Instance;
                 if (window != null) window.Repaint();
             }
 
             var validationResults = LevelValidator.LastResults;
-            if (validationResults.Count > 0)
+            if (validationResults.Count <= 0)
             {
-                int errors = 0, warnings = 0;
-                foreach (var r in validationResults)
-                {
-                    if (r.Severity == LevelValidator.Severity.Error) errors++;
-                    else if (r.Severity == LevelValidator.Severity.Warning) warnings++;
-                }
-                EditorGUILayout.HelpBox($"{errors} error(s), {warnings} warning(s) — see Validate tab",
-                    errors > 0 ? MessageType.Error : MessageType.Warning);
+                return;
             }
+
+            int errors = 0;
+            int warnings = 0;
+            foreach (var result in validationResults)
+            {
+                if (result.Severity == LevelValidator.Severity.Error) errors++;
+                else if (result.Severity == LevelValidator.Severity.Warning) warnings++;
+            }
+
+            EditorGUILayout.HelpBox(
+                $"{errors} error(s), {warnings} warning(s) — see Validate tab",
+                errors > 0 ? MessageType.Error : MessageType.Warning);
+        }
+
+        private void DrawSlicePreviewSection()
+        {
+            var preview = BuildSlicePreviewData();
+
+            GUILayout.Label("Preview / Summary", EditorStyles.boldLabel);
+
+            if (preview.TotalRooms <= 0)
+            {
+                EditorGUILayout.HelpBox(
+                    "No rooms in scene yet. Start from Build and place a starter room before wiring topology.",
+                    MessageType.Info);
+                DrawNextStepSuggestions(preview);
+                return;
+            }
+
+            EditorGUILayout.HelpBox(GetSliceStateHeadline(preview), GetSliceStateMessageType(preview));
+
+            EditorGUILayout.LabelField("Topology", EditorStyles.miniBoldLabel);
+            GUILayout.Label(GetTopologySummary(preview), EditorStyles.wordWrappedMiniLabel);
+            GUILayout.Label(GetFloorSummary(preview), EditorStyles.wordWrappedMiniLabel);
+
+            GUILayout.Space(4);
+            EditorGUILayout.LabelField("Semantics", EditorStyles.miniBoldLabel);
+            GUILayout.Label(GetNodeTypeSummary(preview), EditorStyles.wordWrappedMiniLabel);
+            GUILayout.Label(GetCriticalPathSummary(preview), EditorStyles.wordWrappedMiniLabel);
+            GUILayout.Label(GetLoopSummary(preview), EditorStyles.wordWrappedMiniLabel);
+            GUILayout.Label(GetValidationSnapshotSummary(preview), EditorStyles.wordWrappedMiniLabel);
+
+            GUILayout.Space(4);
+            EditorGUILayout.LabelField("Next Step", EditorStyles.miniBoldLabel);
+            DrawNextStepSuggestions(preview);
+        }
+
+        private void DrawNextStepSuggestions(SlicePreviewData preview)
+        {
+            var suggestions = BuildNextStepSuggestions(preview);
+            if (suggestions.Count <= 0)
+            {
+                GUILayout.Label("No immediate next step.", EditorStyles.miniLabel);
+                return;
+            }
+
+            foreach (var suggestion in suggestions)
+            {
+                EditorGUILayout.BeginVertical("HelpBox");
+                GUILayout.Label($"{GetSuggestionPrefix(suggestion.MessageType)} {suggestion.Message}", EditorStyles.wordWrappedMiniLabel);
+                if (!string.IsNullOrWhiteSpace(suggestion.ActionLabel) && suggestion.OnClick != null)
+                {
+                    if (GUILayout.Button(suggestion.ActionLabel, GUILayout.Height(20)))
+                    {
+                        suggestion.OnClick();
+                    }
+                }
+                EditorGUILayout.EndVertical();
+            }
+        }
+
+        private List<SliceSuggestion> BuildNextStepSuggestions(SlicePreviewData preview)
+        {
+            var suggestions = new List<SliceSuggestion>();
+            Room selectedRoom = _selectedRooms.Count == 1 ? _selectedRooms[0] : null;
+            bool hasValidationSnapshot = LevelValidator.LastResults.Count > 0;
+
+            if (preview.TotalRooms <= 0)
+            {
+                suggestions.Add(new SliceSuggestion
+                {
+                    MessageType = MessageType.Info,
+                    Message = "先在 Build 里放一个起手房间，当前切片还没有 Room 可供连线或验证。",
+                    ActionLabel = "Go Build",
+                    OnClick = GoToBuildBlockout
+                });
+                return suggestions;
+            }
+
+            if (preview.EntryRoom == null)
+            {
+                suggestions.Add(new SliceSuggestion
+                {
+                    MessageType = MessageType.Warning,
+                    Message = selectedRoom != null
+                        ? $"还没有 Entry Room。可以先把当前选中的 '{GetRoomListLabel(selectedRoom)}' 设为起手入口。"
+                        : "还没有 Entry Room。先在 Quick Edit 里选中一个合适房间并执行 Set Entry。",
+                    ActionLabel = selectedRoom != null ? "Set Selected Entry" : "Open Quick Edit",
+                    OnClick = selectedRoom != null ? (Action)SetSelectedRoomAsEntry : OpenQuickEditTab
+                });
+            }
+
+            if (preview.EntryRoom != null && preview.BossRoom != null && !preview.HasEntryToBossPath)
+            {
+                suggestions.Add(new SliceSuggestion
+                {
+                    MessageType = MessageType.Warning,
+                    Message = $"Entry '{GetRoomListLabel(preview.EntryRoom)}' 还走不到 Boss '{GetRoomListLabel(preview.BossRoom)}'，主路径仍未打通。",
+                    ActionLabel = "Focus Entry",
+                    OnClick = () => FocusRoomFromSuggestion(preview.EntryRoom)
+                });
+            }
+            else if (preview.BossRoom == null && preview.TotalRooms >= 3)
+            {
+                suggestions.Add(new SliceSuggestion
+                {
+                    MessageType = MessageType.Info,
+                    Message = "当前还没有 Boss 房；如果这轮目标是最小纵切，可以补一个终点房来验证 Entry → Boss 主路径。",
+                    ActionLabel = "Go Build Connect",
+                    OnClick = GoToBuildConnect
+                });
+            }
+
+            if (preview.ArenaMissingEncounterCount > 0)
+            {
+                string roomLabel = preview.FirstArenaMissingEncounterRoom != null
+                    ? GetRoomListLabel(preview.FirstArenaMissingEncounterRoom)
+                    : "Arena/Boss room";
+
+                suggestions.Add(new SliceSuggestion
+                {
+                    MessageType = MessageType.Warning,
+                    Message = $"{preview.ArenaMissingEncounterCount} 个 Arena/Boss 房还缺 EncounterSO。先补战斗 owner，首个缺口在 '{roomLabel}'。",
+                    ActionLabel = preview.FirstArenaMissingEncounterRoom != null ? "Focus Room" : "Open Quick Edit",
+                    OnClick = preview.FirstArenaMissingEncounterRoom != null
+                        ? () => FocusRoomFromSuggestion(preview.FirstArenaMissingEncounterRoom)
+                        : OpenQuickEditTab
+                });
+            }
+
+            if (preview.OrphanRoomCount > 0)
+            {
+                string roomLabel = preview.FirstOrphanRoom != null
+                    ? GetRoomListLabel(preview.FirstOrphanRoom)
+                    : "isolated room";
+
+                suggestions.Add(new SliceSuggestion
+                {
+                    MessageType = MessageType.Warning,
+                    Message = $"还有 {preview.OrphanRoomCount} 个房间没有有效 Door 连接。先处理孤立房，首个缺口在 '{roomLabel}'。",
+                    ActionLabel = preview.FirstOrphanRoom != null ? "Focus Room" : "Go Build Connect",
+                    OnClick = preview.FirstOrphanRoom != null
+                        ? () => FocusRoomFromSuggestion(preview.FirstOrphanRoom)
+                        : GoToBuildConnect
+                });
+            }
+
+            if (preview.OneWayConnectionCount > 0)
+            {
+                suggestions.Add(new SliceSuggestion
+                {
+                    MessageType = MessageType.Warning,
+                    Message = $"当前有 {preview.OneWayConnectionCount} 条单向连接。确认它们是否故意；如果不是，优先回到 Validate 修 reciprocal Door。",
+                    ActionLabel = "Open Validate",
+                    OnClick = OpenValidateAndRun
+                });
+            }
+
+            if (!hasValidationSnapshot)
+            {
+                suggestions.Add(new SliceSuggestion
+                {
+                    MessageType = MessageType.Info,
+                    Message = "还没有 Validate 快照。跑一次 Validate All，可以把 authoring gaps 和 auto-fix 入口收口出来。",
+                    ActionLabel = "Validate Now",
+                    OnClick = OpenValidateAndRun
+                });
+            }
+            else if (preview.ValidationErrors > 0 || preview.ValidationWarnings > 0)
+            {
+                suggestions.Add(new SliceSuggestion
+                {
+                    MessageType = preview.ValidationErrors > 0 ? MessageType.Error : MessageType.Warning,
+                    Message = $"Validate 当前还有 {preview.ValidationErrors} 个 error / {preview.ValidationWarnings} 个 warning，建议先收口再继续扩图。",
+                    ActionLabel = "Open Validate",
+                    OnClick = OpenValidateTab
+                });
+            }
+
+            if (suggestions.Count == 0)
+            {
+                suggestions.Add(new SliceSuggestion
+                {
+                    MessageType = MessageType.Info,
+                    Message = "当前切片已经具备最小结构闭环，可以进入 Quick Play 做一轮连通与手感冒烟验证。",
+                    ActionLabel = "Quick Play",
+                    OnClick = RunQuickPlayFromSuggestion
+                });
+            }
+
+            if (suggestions.Count > 4)
+            {
+                suggestions.RemoveRange(4, suggestions.Count - 4);
+            }
+
+            return suggestions;
+        }
+
+        private SlicePreviewData BuildSlicePreviewData()
+        {
+            var preview = new SlicePreviewData();
+            foreach (RoomNodeType nodeType in Enum.GetValues(typeof(RoomNodeType)))
+            {
+                preview.NodeTypeCounts[nodeType] = 0;
+            }
+
+            var rooms = FindObjectsByType<Room>();
+            preview.Rooms = rooms ?? Array.Empty<Room>();
+            preview.TotalRooms = preview.Rooms.Length;
+            if (preview.TotalRooms <= 0)
+            {
+                return preview;
+            }
+
+            var undirectedGraph = new Dictionary<Room, List<Room>>();
+            var uniqueConnectionPairs = new HashSet<string>();
+            var oneWayConnectionPairs = new HashSet<string>();
+
+            foreach (var room in preview.Rooms)
+            {
+                if (room == null)
+                {
+                    continue;
+                }
+
+                preview.DirectedGraph[room] = new List<Room>();
+                undirectedGraph[room] = new List<Room>();
+                preview.NodeTypeCounts[room.NodeType]++;
+
+                int floorLevel = room.Data != null ? room.Data.FloorLevel : 0;
+                if (!preview.FloorCounts.ContainsKey(floorLevel))
+                {
+                    preview.FloorCounts[floorLevel] = 0;
+                }
+                preview.FloorCounts[floorLevel]++;
+
+                bool hasConnectedDoor = false;
+                var seenTargets = new HashSet<int>();
+                var doors = room.GetComponentsInChildren<Door>(true);
+                foreach (var door in doors)
+                {
+                    Room targetRoom = door != null ? door.TargetRoom : null;
+                    if (targetRoom == null || targetRoom == room)
+                    {
+                        continue;
+                    }
+
+                    hasConnectedDoor = true;
+
+                    if (seenTargets.Add(targetRoom.GetInstanceID()))
+                    {
+                        preview.DirectedGraph[room].Add(targetRoom);
+                    }
+
+                    if (!undirectedGraph[room].Contains(targetRoom))
+                    {
+                        undirectedGraph[room].Add(targetRoom);
+                    }
+
+                    if (!undirectedGraph.ContainsKey(targetRoom))
+                    {
+                        undirectedGraph[targetRoom] = new List<Room>();
+                    }
+
+                    if (!undirectedGraph[targetRoom].Contains(room))
+                    {
+                        undirectedGraph[targetRoom].Add(room);
+                    }
+
+                    string pairKey = GetRoomPairKey(room, targetRoom);
+                    uniqueConnectionPairs.Add(pairKey);
+
+                    if (DoorWiringService.FindReverseDoor(door) == null)
+                    {
+                        oneWayConnectionPairs.Add(pairKey);
+                    }
+                }
+
+                if (!hasConnectedDoor)
+                {
+                    preview.OrphanRoomCount++;
+                    if (preview.FirstOrphanRoom == null)
+                    {
+                        preview.FirstOrphanRoom = room;
+                    }
+                }
+
+                bool needsEncounter = room.NodeType == RoomNodeType.Arena || room.NodeType == RoomNodeType.Boss;
+                if (needsEncounter && (room.Data == null || room.Data.Encounter == null))
+                {
+                    preview.ArenaMissingEncounterCount++;
+                    if (preview.FirstArenaMissingEncounterRoom == null)
+                    {
+                        preview.FirstArenaMissingEncounterRoom = room;
+                    }
+                }
+            }
+
+            preview.UniqueConnectionCount = uniqueConnectionPairs.Count;
+            preview.OneWayConnectionCount = oneWayConnectionPairs.Count;
+            preview.ConnectedComponentCount = CountConnectedComponents(preview.Rooms, undirectedGraph);
+            preview.IslandCount = Mathf.Max(0, preview.ConnectedComponentCount - 1);
+            preview.HasClosedLoop = HasClosedLoop(preview.Rooms, undirectedGraph);
+
+            preview.EntryRoom = FindConfiguredEntryRoom();
+            preview.BossRoom = FindBossRoom(preview.Rooms);
+
+            if (preview.EntryRoom != null && preview.BossRoom != null)
+            {
+                var path = FindPath(preview.EntryRoom, preview.BossRoom, preview.DirectedGraph);
+                preview.HasEntryToBossPath = path != null && path.Count > 0;
+                preview.CriticalPathRoomCount = preview.HasEntryToBossPath ? path.Count : 0;
+            }
+
+            foreach (var result in LevelValidator.LastResults)
+            {
+                if (result.Severity == LevelValidator.Severity.Error)
+                {
+                    preview.ValidationErrors++;
+                }
+                else if (result.Severity == LevelValidator.Severity.Warning)
+                {
+                    preview.ValidationWarnings++;
+                }
+            }
+
+            return preview;
+        }
+
+        private string GetSliceStateHeadline(SlicePreviewData preview)
+        {
+            string state;
+            if (preview.TotalRooms <= 0)
+            {
+                state = "Slice State · No slice yet";
+            }
+            else if (preview.ValidationErrors > 0)
+            {
+                state = "Slice State · Blocking validation gaps";
+            }
+            else if (preview.EntryRoom == null || preview.OrphanRoomCount > 0 || (preview.BossRoom != null && !preview.HasEntryToBossPath))
+            {
+                state = "Slice State · Topology incomplete";
+            }
+            else if (preview.ArenaMissingEncounterCount > 0 || preview.OneWayConnectionCount > 0 || preview.ValidationWarnings > 0)
+            {
+                state = "Slice State · Needs authoring pass";
+            }
+            else
+            {
+                state = "Slice State · Ready for Quick Play";
+            }
+
+            return $"{state} · {preview.TotalRooms} room(s) · {preview.UniqueConnectionCount} link(s) · {preview.IslandCount} island(s) · {preview.OneWayConnectionCount} one-way";
+        }
+
+        private static MessageType GetSliceStateMessageType(SlicePreviewData preview)
+        {
+            if (preview.TotalRooms <= 0)
+            {
+                return MessageType.Info;
+            }
+
+            if (preview.ValidationErrors > 0)
+            {
+                return MessageType.Error;
+            }
+
+            if (preview.EntryRoom == null || preview.OrphanRoomCount > 0 || (preview.BossRoom != null && !preview.HasEntryToBossPath))
+            {
+                return MessageType.Warning;
+            }
+
+            if (preview.ArenaMissingEncounterCount > 0 || preview.OneWayConnectionCount > 0 || preview.ValidationWarnings > 0)
+            {
+                return MessageType.Warning;
+            }
+
+            return MessageType.Info;
+        }
+
+        private static string GetTopologySummary(SlicePreviewData preview)
+        {
+            return $"Rooms {preview.TotalRooms} · Connections {preview.UniqueConnectionCount} · Clusters {Mathf.Max(preview.ConnectedComponentCount, 1)} · Orphans {preview.OrphanRoomCount} · One-way {preview.OneWayConnectionCount}";
+        }
+
+        private string GetFloorSummary(SlicePreviewData preview)
+        {
+            if (preview.FloorCounts.Count <= 0)
+            {
+                return "Floors: none.";
+            }
+
+            if (_activeFloorLevel != int.MinValue)
+            {
+                preview.FloorCounts.TryGetValue(_activeFloorLevel, out int count);
+                return $"Current Floor {GetFloorLabel(_activeFloorLevel)} · {count} room(s) in active filter.";
+            }
+
+            var floorLevels = new List<int>(preview.FloorCounts.Keys);
+            floorLevels.Sort((a, b) => b.CompareTo(a));
+
+            var parts = new List<string>();
+            foreach (int floorLevel in floorLevels)
+            {
+                parts.Add($"{GetFloorLabel(floorLevel)}×{preview.FloorCounts[floorLevel]}");
+            }
+
+            return $"Floors: {string.Join(" · ", parts)}";
+        }
+
+        private static string GetNodeTypeSummary(SlicePreviewData preview)
+        {
+            var parts = new List<string>();
+            foreach (RoomNodeType nodeType in Enum.GetValues(typeof(RoomNodeType)))
+            {
+                if (!preview.NodeTypeCounts.TryGetValue(nodeType, out int count) || count <= 0)
+                {
+                    continue;
+                }
+
+                parts.Add($"{nodeType}×{count}");
+            }
+
+            return parts.Count > 0
+                ? $"Node Types: {string.Join(" · ", parts)}"
+                : "Node Types: none.";
+        }
+
+        private static string GetCriticalPathSummary(SlicePreviewData preview)
+        {
+            if (preview.EntryRoom == null)
+            {
+                return "Critical Path: Entry Room is not configured yet.";
+            }
+
+            if (preview.BossRoom == null)
+            {
+                return $"Critical Path: Entry is '{GetRoomListLabel(preview.EntryRoom)}'; Boss room has not been authored yet.";
+            }
+
+            if (!preview.HasEntryToBossPath)
+            {
+                return $"Critical Path: Entry '{GetRoomListLabel(preview.EntryRoom)}' cannot reach Boss '{GetRoomListLabel(preview.BossRoom)}' yet.";
+            }
+
+            return $"Critical Path: Entry '{GetRoomListLabel(preview.EntryRoom)}' reaches Boss '{GetRoomListLabel(preview.BossRoom)}' in {preview.CriticalPathRoomCount} room(s).";
+        }
+
+        private static string GetLoopSummary(SlicePreviewData preview)
+        {
+            if (preview.TotalRooms < 3)
+            {
+                return "Loop: not enough rooms yet to judge a meaningful closed loop.";
+            }
+
+            return preview.HasClosedLoop
+                ? "Loop: at least one closed route exists in the current slice."
+                : "Loop: no closed route yet — the current slice is still mostly linear.";
+        }
+
+        private static string GetValidationSnapshotSummary(SlicePreviewData preview)
+        {
+            return LevelValidator.LastResults.Count > 0
+                ? $"Validation Snapshot: {preview.ValidationErrors} error(s), {preview.ValidationWarnings} warning(s)."
+                : "Validation Snapshot: not run yet.";
+        }
+
+        private static string GetSuggestionPrefix(MessageType messageType)
+        {
+            switch (messageType)
+            {
+                case MessageType.Error:
+                    return "✖";
+                case MessageType.Warning:
+                    return "⚠";
+                default:
+                    return "•";
+            }
+        }
+
+        private static string GetFloorLabel(int floorLevel)
+        {
+            if (floorLevel == 0)
+            {
+                return "G";
+            }
+
+            return floorLevel > 0 ? $"+{floorLevel}" : floorLevel.ToString();
+        }
+
+        private static int CountConnectedComponents(Room[] rooms, Dictionary<Room, List<Room>> graph)
+        {
+            var visited = new HashSet<Room>();
+            int count = 0;
+
+            foreach (var room in rooms)
+            {
+                if (room == null || visited.Contains(room))
+                {
+                    continue;
+                }
+
+                count++;
+                var queue = new Queue<Room>();
+                queue.Enqueue(room);
+                visited.Add(room);
+
+                while (queue.Count > 0)
+                {
+                    var current = queue.Dequeue();
+                    if (!graph.TryGetValue(current, out var neighbors))
+                    {
+                        continue;
+                    }
+
+                    foreach (var neighbor in neighbors)
+                    {
+                        if (neighbor == null || !visited.Add(neighbor))
+                        {
+                            continue;
+                        }
+
+                        queue.Enqueue(neighbor);
+                    }
+                }
+            }
+
+            return count;
+        }
+
+        private static bool HasClosedLoop(Room[] rooms, Dictionary<Room, List<Room>> graph)
+        {
+            var visited = new HashSet<Room>();
+            foreach (var room in rooms)
+            {
+                if (room == null || visited.Contains(room))
+                {
+                    continue;
+                }
+
+                if (ContainsCycle(room, null, graph, visited))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool ContainsCycle(Room current, Room parent, Dictionary<Room, List<Room>> graph, HashSet<Room> visited)
+        {
+            visited.Add(current);
+            if (!graph.TryGetValue(current, out var neighbors))
+            {
+                return false;
+            }
+
+            foreach (var neighbor in neighbors)
+            {
+                if (neighbor == null)
+                {
+                    continue;
+                }
+
+                if (!visited.Contains(neighbor))
+                {
+                    if (ContainsCycle(neighbor, current, graph, visited))
+                    {
+                        return true;
+                    }
+                }
+                else if (neighbor != parent)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static List<Room> FindPath(Room start, Room target, Dictionary<Room, List<Room>> graph)
+        {
+            if (start == null || target == null)
+            {
+                return null;
+            }
+
+            var visited = new HashSet<Room>();
+            var queue = new Queue<List<Room>>();
+            queue.Enqueue(new List<Room> { start });
+            visited.Add(start);
+
+            while (queue.Count > 0)
+            {
+                var currentPath = queue.Dequeue();
+                var currentRoom = currentPath[currentPath.Count - 1];
+                if (currentRoom == target)
+                {
+                    return currentPath;
+                }
+
+                if (!graph.TryGetValue(currentRoom, out var neighbors))
+                {
+                    continue;
+                }
+
+                foreach (var neighbor in neighbors)
+                {
+                    if (neighbor == null || !visited.Add(neighbor))
+                    {
+                        continue;
+                    }
+
+                    var nextPath = new List<Room>(currentPath) { neighbor };
+                    queue.Enqueue(nextPath);
+                }
+            }
+
+            return null;
+        }
+
+        private static Room FindConfiguredEntryRoom()
+        {
+            var roomManager = UnityEngine.Object.FindAnyObjectByType<RoomManager>();
+            if (roomManager == null)
+            {
+                return null;
+            }
+
+            var serialized = new SerializedObject(roomManager);
+            return serialized.FindProperty("_startingRoom").objectReferenceValue as Room;
+        }
+
+        private static Room FindBossRoom(Room[] rooms)
+        {
+            foreach (var room in rooms)
+            {
+                if (room != null && room.NodeType == RoomNodeType.Boss)
+                {
+                    return room;
+                }
+            }
+
+            return null;
+        }
+
+        private static string GetRoomPairKey(Room roomA, Room roomB)
+        {
+            int idA = roomA != null ? roomA.GetInstanceID() : 0;
+            int idB = roomB != null ? roomB.GetInstanceID() : 0;
+            return idA < idB ? $"{idA}_{idB}" : $"{idB}_{idA}";
+        }
+
+        private void OpenQuickEditTab()
+        {
+            _activeTab = Tab.QuickEdit;
+            Repaint();
+            SceneView.RepaintAll();
+        }
+
+        private void OpenValidateTab()
+        {
+            _activeTab = Tab.Validate;
+            Repaint();
+            SceneView.RepaintAll();
+        }
+
+        private void OpenValidateAndRun()
+        {
+            LevelValidator.ValidateAll();
+            OpenValidateTab();
+        }
+
+        private void FocusRoomFromSuggestion(Room room)
+        {
+            if (room == null)
+            {
+                OpenQuickEditTab();
+                return;
+            }
+
+            _activeTab = Tab.QuickEdit;
+            OpenRoomFromQuickAccess(room, true);
+        }
+
+        private void SetSelectedRoomAsEntry()
+        {
+            var selectedRoom = _selectedRooms.Count == 1 ? _selectedRooms[0] : null;
+            if (selectedRoom == null)
+            {
+                OpenQuickEditTab();
+                return;
+            }
+
+            TrackRecentRoom(selectedRoom);
+            BatchEditPanel.SetEntryRoom(selectedRoom);
+            Repaint();
+            SceneView.RepaintAll();
+        }
+
+        private void GoToBuildBlockout()
+        {
+            _activeTab = Tab.Build;
+            SetMode(ToolMode.Blockout);
+        }
+
+        private void GoToBuildConnect()
+        {
+            _activeTab = Tab.Build;
+            SetMode(ToolMode.Connect);
+        }
+
+        private static void RunQuickPlayFromSuggestion()
+        {
+            BlockoutModeHandler.QuickPlay();
         }
 
         private void DrawSingleRoomInfo(Room room)
         {
             if (room == null) return;
 
+            var roomData = room.Data;
+            var box = room.GetComponent<BoxCollider2D>();
+            var doors = room.GetComponentsInChildren<Door>(true);
+
             EditorGUILayout.BeginVertical("HelpBox");
-
-            GUILayout.Label($"ID: {room.RoomID}");
-            GUILayout.Label($"Node Type: {room.NodeType}");
-
-            if (room.Data != null)
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Label("Room Inspector", EditorStyles.boldLabel);
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button(IsPinnedRoom(room) ? "★ Pinned" : "☆ Pin", EditorStyles.miniButton, GUILayout.Width(76)))
             {
-                GUILayout.Label($"Explicit Node: {room.Data.NodeType}");
-                GUILayout.Label($"Floor: {room.Data.FloorLevel}");
-                GUILayout.Label($"SO: {room.Data.name}");
+                TogglePinnedRoom(room);
+            }
+            EditorGUILayout.EndHorizontal();
 
-                if (room.Data.Encounter != null)
+            var assignedRoomData = (RoomSO)EditorGUILayout.ObjectField("RoomSO", roomData, typeof(RoomSO), false);
+            if (assignedRoomData != roomData)
+            {
+                TrackRecentRoom(room);
+                BatchEditPanel.AssignRoomData(room, assignedRoomData);
+                EditorGUILayout.EndVertical();
+                return;
+            }
+
+            if (roomData == null)
+            {
+                EditorGUILayout.HelpBox(
+                    "This room is missing a RoomSO reference. Assign an existing RoomSO here, or use Validate Auto-Fix to create one.",
+                    MessageType.Error);
+
+                if (GUILayout.Button("Validate All", GUILayout.Height(22)))
                 {
-                    GUILayout.Label($"Encounter: {room.Data.Encounter.name} ({room.Data.Encounter.WaveCount} waves)");
+                    LevelValidator.ValidateAll();
+                    Repaint();
+                }
+
+                EditorGUILayout.EndVertical();
+                return;
+            }
+
+            string currentDisplayName = string.IsNullOrWhiteSpace(roomData.DisplayName)
+                ? roomData.RoomID
+                : roomData.DisplayName;
+
+            string updatedRoomId = EditorGUILayout.DelayedTextField("Room ID", roomData.RoomID);
+            string updatedDisplayName = EditorGUILayout.DelayedTextField("Display Name", currentDisplayName);
+            if (updatedRoomId != roomData.RoomID || updatedDisplayName != currentDisplayName)
+            {
+                TrackRecentRoom(room);
+                ApplyRoomIdentity(room, updatedRoomId, updatedDisplayName);
+            }
+
+            RoomFactory.StableRoomIdentity stableIdentity = RoomFactory.GenerateStableIdentity(roomData.NodeType, roomData.FloorLevel, room);
+            EditorGUILayout.HelpBox(
+                $"Stable Suggestion: {stableIdentity.RoomId} / {stableIdentity.DisplayName}",
+                MessageType.None);
+
+            var newNodeType = (RoomNodeType)EditorGUILayout.EnumPopup("Node Type", roomData.NodeType);
+            if (newNodeType != roomData.NodeType)
+            {
+                TrackRecentRoom(room);
+                BatchEditPanel.ApplySingleNodeType(room, newNodeType);
+            }
+
+            int newFloorLevel = EditorGUILayout.IntField("Floor Level", roomData.FloorLevel);
+            if (newFloorLevel != roomData.FloorLevel)
+            {
+                TrackRecentRoom(room);
+                BatchEditPanel.ApplySingleFloorLevel(room, newFloorLevel);
+            }
+
+            var newEncounter = (EncounterSO)EditorGUILayout.ObjectField("Encounter", roomData.Encounter, typeof(EncounterSO), false);
+            if (newEncounter != roomData.Encounter)
+            {
+                TrackRecentRoom(room);
+                BatchEditPanel.AssignEncounter(room, newEncounter);
+            }
+
+            if (box != null)
+            {
+                Vector2 editedSize = EditorGUILayout.Vector2Field("Size", box.size);
+                Vector2 clampedSize = new Vector2(Mathf.Max(1f, editedSize.x), Mathf.Max(1f, editedSize.y));
+                if (!Mathf.Approximately(clampedSize.x, box.size.x) || !Mathf.Approximately(clampedSize.y, box.size.y))
+                {
+                    TrackRecentRoom(room);
+                    BatchEditPanel.ApplySingleSize(room, clampedSize);
+                }
+            }
+            else
+            {
+                EditorGUILayout.HelpBox("This room is missing BoxCollider2D, so size cannot be edited here.", MessageType.Warning);
+            }
+
+            GUILayout.Label($"Doors: {doors.Length}");
+            if (roomData.Encounter != null)
+            {
+                GUILayout.Label($"Encounter Waves: {roomData.Encounter.WaveCount}");
+            }
+
+            DrawConnectedRoomsSummary(doors);
+
+            if (_activeTab == Tab.QuickEdit)
+            {
+                DrawConnectionInspector(room, doors);
+                DrawRoomRuntimeAssistSection(room, true);
+            }
+
+            GUILayout.Space(6);
+            EditorGUILayout.LabelField("Quick Actions", EditorStyles.boldLabel);
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Focus", GUILayout.Height(22)))
+            {
+                Selection.activeGameObject = room.gameObject;
+                SceneView.lastActiveSceneView?.FrameSelected();
+                Repaint();
+                SceneView.RepaintAll();
+            }
+            if (GUILayout.Button("Duplicate", GUILayout.Height(22)))
+            {
+                DuplicateSelectedRoom(room);
+            }
+            if (GUILayout.Button("Set Entry", GUILayout.Height(22)))
+            {
+                TrackRecentRoom(room);
+                BatchEditPanel.SetEntryRoom(room);
+            }
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button($"Stable Rename → {stableIdentity.RoomId}", GUILayout.Height(22)))
+            {
+                TrackRecentRoom(room);
+                PerformStableRename(room);
+            }
+            if (GUILayout.Button("Select Connected", GUILayout.Height(22)))
+            {
+                TrackRecentRoom(room);
+                SelectConnectedRooms(room, doors);
+            }
+            if (GUILayout.Button("Save Preset", GUILayout.Height(22)))
+            {
+                TrackRecentRoom(room);
+                BatchEditPanel.SaveRoomPreset(room);
+            }
+            EditorGUILayout.EndHorizontal();
+
+            if (GUILayout.Button("Context", GUILayout.Height(22)))
+            {
+                BatchEditPanel.ShowContextMenu(new List<Room> { room });
+            }
+
+            EditorGUILayout.EndVertical();
+        }
+
+        private void DrawConnectedRoomsSummary(Door[] doors)
+        {
+            GUILayout.Label("Connected Rooms", EditorStyles.boldLabel);
+
+            var connectedRoomIds = new List<string>();
+            foreach (var door in doors)
+            {
+                if (door == null || door.TargetRoom == null) continue;
+                string targetRoomId = door.TargetRoom.RoomID;
+                if (!connectedRoomIds.Contains(targetRoomId))
+                {
+                    connectedRoomIds.Add(targetRoomId);
                 }
             }
 
-            var box = room.GetComponent<BoxCollider2D>();
-            if (box != null)
+            if (connectedRoomIds.Count == 0)
             {
-                GUILayout.Label($"Size: {box.size}");
+                GUILayout.Label("None", EditorStyles.miniLabel);
+                return;
             }
 
-            var doors = room.GetComponentsInChildren<Door>(true);
-            GUILayout.Label($"Doors: {doors.Length}");
+            GUILayout.Label(string.Join(", ", connectedRoomIds), EditorStyles.wordWrappedMiniLabel);
+        }
+
+        private void DrawConnectionInspector(Room room, Door[] doors)
+        {
+            GUILayout.Space(6);
+            GUILayout.Label("Connection Inspector", EditorStyles.boldLabel);
+
+            var connectionDoors = new List<Door>();
+            foreach (var door in doors)
+            {
+                if (door == null || door.TargetRoom == null) continue;
+                connectionDoors.Add(door);
+            }
+
+            connectionDoors.Sort((a, b) => string.Compare(GetDoorConnectionLabel(a), GetDoorConnectionLabel(b), System.StringComparison.Ordinal));
+
+            if (connectionDoors.Count == 0)
+            {
+                _selectedConnection = null;
+                EditorGUILayout.HelpBox(
+                    "This room has no authored Door links yet. Use Build > Connect or auto-connect helpers first.",
+                    MessageType.None);
+                return;
+            }
+
+            EnsureSelectedConnectionIsValid(connectionDoors);
+
+            foreach (var door in connectionDoors)
+            {
+                EditorGUILayout.BeginHorizontal();
+
+                var prevColor = GUI.color;
+                GUI.color = GetConnectionTypeColor(door.ConnectionType);
+                GUILayout.Label("■", GUILayout.Width(14));
+                GUI.color = prevColor;
+
+                bool isSelected = _selectedConnection == door;
+                var buttonStyle = isSelected ? EditorStyles.boldLabel : EditorStyles.miniButton;
+                if (GUILayout.Button(GetDoorConnectionLabel(door), buttonStyle))
+                {
+                    _selectedConnection = door;
+                    Repaint();
+                    SceneView.RepaintAll();
+                }
+
+                EditorGUILayout.EndHorizontal();
+            }
+
+            if (_selectedConnection == null)
+            {
+                return;
+            }
+
+            DrawSelectedConnectionInspector(room, _selectedConnection);
+        }
+
+        private void EnsureSelectedConnectionIsValid(List<Door> connectionDoors)
+        {
+            if (_selectedConnection != null && connectionDoors.Contains(_selectedConnection))
+            {
+                return;
+            }
+
+            _selectedConnection = connectionDoors.Count > 0 ? connectionDoors[0] : null;
+        }
+
+        private void DrawSelectedConnectionInspector(Room ownerRoom, Door door)
+        {
+            if (ownerRoom == null || door == null)
+            {
+                return;
+            }
+
+            var reverseDoor = DoorWiringService.FindReverseDoor(door);
+
+            EditorGUILayout.BeginVertical("HelpBox");
+            EditorGUILayout.LabelField("Selected Connection", EditorStyles.boldLabel);
+
+            using (new EditorGUI.DisabledScope(true))
+            {
+                EditorGUILayout.ObjectField("From Room", ownerRoom, typeof(Room), true);
+                EditorGUILayout.ObjectField("To Room", door.TargetRoom, typeof(Room), true);
+                EditorGUILayout.ObjectField("Target Spawn", door.TargetSpawnPoint, typeof(Transform), true);
+            }
+
+            EditorGUILayout.LabelField("Direction", GetConnectionDirectionLabel(ownerRoom, door.TargetRoom));
+            EditorGUILayout.LabelField("Target Landing", GetTargetLandingSummary(door.TargetSpawnPoint));
+            EditorGUILayout.LabelField("Gate ID", string.IsNullOrWhiteSpace(door.GateID) ? "—" : door.GateID);
+            EditorGUILayout.LabelField("Ceremony", door.Ceremony.ToString());
+            EditorGUILayout.LabelField("Reverse Link", reverseDoor != null ? reverseDoor.gameObject.name : "Missing reciprocal door");
+
+            var newConnectionType = (ConnectionType)EditorGUILayout.EnumPopup("Connection Type", door.ConnectionType);
+            if (newConnectionType != door.ConnectionType)
+            {
+                DoorWiringService.SetConnectionType(door, newConnectionType);
+            }
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Delete", GUILayout.Height(22)))
+            {
+                DeleteSelectedConnection(ownerRoom, door);
+            }
+            if (GUILayout.Button("Flip Direction", GUILayout.Height(22)))
+            {
+                FlipSelectedConnection(door);
+            }
+            if (GUILayout.Button("Make Return", GUILayout.Height(22)))
+            {
+                DoorWiringService.SetConnectionType(door, ConnectionType.Return);
+            }
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Recalc Landing", GUILayout.Height(22)))
+            {
+                DoorWiringService.RecalculateConnection(door);
+            }
+            if (GUILayout.Button("Focus To Room", GUILayout.Height(22)))
+            {
+                FocusRoomInScene(door.TargetRoom);
+            }
+            if (GUILayout.Button("Select Door", GUILayout.Height(22)))
+            {
+                Selection.activeGameObject = door.gameObject;
+                SceneView.lastActiveSceneView?.FrameSelected();
+                SceneView.RepaintAll();
+            }
+            EditorGUILayout.EndHorizontal();
+
+            DrawConnectionRuntimeAssistSection(ownerRoom, door);
 
             EditorGUILayout.EndVertical();
+        }
+
+        private void DeleteSelectedConnection(Room ownerRoom, Door door)
+        {
+            if (ownerRoom == null || door == null || door.TargetRoom == null)
+            {
+                return;
+            }
+
+            TrackRecentRoom(ownerRoom);
+            DoorWiringService.DisconnectRooms(ownerRoom, door.TargetRoom);
+            _selectedConnection = null;
+            Selection.activeGameObject = ownerRoom.gameObject;
+            Repaint();
+            SceneView.RepaintAll();
+        }
+
+        private void FlipSelectedConnection(Door door)
+        {
+            if (door == null)
+            {
+                return;
+            }
+
+            var reverseDoor = DoorWiringService.FindReverseDoor(door);
+            if (reverseDoor == null)
+            {
+                Debug.LogWarning($"[LevelArchitect] Cannot flip connection '{door.gameObject.name}': reverse door is missing.");
+                return;
+            }
+
+            var reverseOwnerRoom = reverseDoor.GetComponentInParent<Room>();
+            if (reverseOwnerRoom == null)
+            {
+                Debug.LogWarning($"[LevelArchitect] Cannot flip connection '{door.gameObject.name}': reverse owner room is missing.");
+                return;
+            }
+
+            _selectedRooms.Clear();
+            _selectedRooms.Add(reverseOwnerRoom);
+            _selectedConnection = reverseDoor;
+            TrackRecentRoom(reverseOwnerRoom);
+            Selection.activeGameObject = reverseOwnerRoom.gameObject;
+            SceneView.lastActiveSceneView?.FrameSelected();
+            Repaint();
+            SceneView.RepaintAll();
+        }
+
+        private static void FocusRoomInScene(Room room)
+        {
+            if (room == null)
+            {
+                return;
+            }
+
+            Selection.activeGameObject = room.gameObject;
+            SceneView.lastActiveSceneView?.FrameSelected();
+            SceneView.RepaintAll();
+        }
+
+        private static string GetDoorConnectionLabel(Door door)
+        {
+            if (door == null)
+            {
+                return "Missing Door";
+            }
+
+            string targetRoomId = door.TargetRoom != null ? door.TargetRoom.RoomID : "Missing Target";
+            return $"{targetRoomId} · {door.ConnectionType}";
+        }
+
+        private static string GetConnectionDirectionLabel(Room ownerRoom, Room targetRoom)
+        {
+            if (ownerRoom == null || targetRoom == null)
+            {
+                return "Unknown";
+            }
+
+            var ownerBox = ownerRoom.GetComponent<BoxCollider2D>();
+            var targetBox = targetRoom.GetComponent<BoxCollider2D>();
+            if (ownerBox != null && targetBox != null)
+            {
+                Rect ownerRect = GetRoomWorldRect(ownerRoom, ownerBox);
+                Rect targetRect = GetRoomWorldRect(targetRoom, targetBox);
+                if (DoorWiringService.FindSharedEdge(ownerRect, targetRect, out _, out Vector2 direction))
+                {
+                    return GetDirectionLabel(direction);
+                }
+            }
+
+            Vector2 fallbackDirection = ((Vector2)targetRoom.transform.position - (Vector2)ownerRoom.transform.position).normalized;
+            return GetDirectionLabel(fallbackDirection);
+        }
+
+        private static string GetDirectionLabel(Vector2 direction)
+        {
+            if (Mathf.Abs(direction.x) >= Mathf.Abs(direction.y))
+            {
+                return direction.x >= 0f ? "East / Right" : "West / Left";
+            }
+
+            return direction.y >= 0f ? "North / Up" : "South / Down";
+        }
+
+        private static string GetTargetLandingSummary(Transform targetSpawnPoint)
+        {
+            if (targetSpawnPoint == null)
+            {
+                return "Missing";
+            }
+
+            Vector3 position = targetSpawnPoint.position;
+            return $"{targetSpawnPoint.name} ({position.x:0.0}, {position.y:0.0})";
+        }
+
+        private void CreateRoomRuntimeAssist(Room room, LevelRuntimeAssistFactory.RoomAssistType assistType)
+        {
+            if (room == null)
+            {
+                return;
+            }
+
+            TrackRecentRoom(room);
+            var createdObject = LevelRuntimeAssistFactory.CreateRoomAssist(room, assistType);
+            if (createdObject == null)
+            {
+                return;
+            }
+
+            _selectedRooms.Clear();
+            _selectedRooms.Add(room);
+            _selectedConnection = null;
+            Repaint();
+            SceneView.RepaintAll();
+        }
+
+        private void CreateConnectionLockAssist(Room ownerRoom, Door door)
+        {
+            if (ownerRoom == null || door == null)
+            {
+                return;
+            }
+
+            TrackRecentRoom(ownerRoom);
+            var createdObject = LevelRuntimeAssistFactory.CreateLockAssist(ownerRoom, door);
+            if (createdObject == null)
+            {
+                return;
+            }
+
+            _selectedRooms.Clear();
+            _selectedRooms.Add(ownerRoom);
+            _selectedConnection = door;
+            Repaint();
+            SceneView.RepaintAll();
+        }
+
+        private void DuplicateSelectedRoom(Room room)
+        {
+            if (room == null) return;
+
+            Vector3 duplicatePosition = room.transform.position + GetDuplicateRoomOffset(room);
+            var duplicatedRoom = RoomFactory.DuplicateRoom(room, duplicatePosition);
+            if (duplicatedRoom == null) return;
+
+            _selectedRooms.Clear();
+            _selectedConnection = null;
+            _selectedRooms.Add(duplicatedRoom);
+            TrackRecentRoom(duplicatedRoom);
+            Selection.activeGameObject = duplicatedRoom.gameObject;
+            SceneView.lastActiveSceneView?.FrameSelected();
+            Repaint();
+            SceneView.RepaintAll();
+        }
+
+        private static Vector3 GetDuplicateRoomOffset(Room room)
+        {
+            var box = room != null ? room.GetComponent<BoxCollider2D>() : null;
+            float offsetX = box != null ? Mathf.Max(4f, box.size.x + 2f) : 6f;
+            return new Vector3(offsetX, 0f, 0f);
+        }
+
+        private void ApplyRoomIdentity(Room room, string roomId, string displayName)
+        {
+            if (room == null || room.Data == null) return;
+
+            string sanitizedRoomId = string.IsNullOrWhiteSpace(roomId) ? room.gameObject.name : roomId.Trim();
+            string sanitizedDisplayName = string.IsNullOrWhiteSpace(displayName) ? sanitizedRoomId : displayName.Trim();
+
+            Undo.RecordObject(room.Data, "Edit Room Identity");
+            var serialized = new SerializedObject(room.Data);
+            serialized.FindProperty("_roomID").stringValue = sanitizedRoomId;
+            serialized.FindProperty("_displayName").stringValue = sanitizedDisplayName;
+            serialized.ApplyModifiedProperties();
+            EditorUtility.SetDirty(room.Data);
+
+            Repaint();
+            SceneView.RepaintAll();
+        }
+
+        private void PerformStableRename(Room room)
+        {
+            if (room == null || room.Data == null) return;
+            if (!RoomFactory.ApplyStableIdentity(room)) return;
+
+            Selection.activeGameObject = room.gameObject;
+            SceneView.lastActiveSceneView?.FrameSelected();
+            Repaint();
+            SceneView.RepaintAll();
+        }
+
+        private void SelectConnectedRooms(Room room, Door[] doors)
+        {
+            if (room == null) return;
+
+            _selectedRooms.Clear();
+            _selectedConnection = null;
+            _selectedRooms.Add(room);
+            TrackRecentRoom(room);
+
+            foreach (var door in doors)
+            {
+                var targetRoom = door != null ? door.TargetRoom : null;
+                if (targetRoom == null || _selectedRooms.Contains(targetRoom)) continue;
+                _selectedRooms.Add(targetRoom);
+            }
+
+            Selection.activeGameObject = room.gameObject;
+            Repaint();
+            SceneView.RepaintAll();
+        }
+
+        private List<Room> GetFilteredRooms()
+        {
+            var filteredRooms = new List<Room>();
+            var rooms = FindObjectsByType<Room>();
+            foreach (var room in rooms)
+            {
+                if (MatchesRoomFilters(room))
+                {
+                    filteredRooms.Add(room);
+                }
+            }
+
+            filteredRooms.Sort((a, b) => string.Compare(a.RoomID, b.RoomID, System.StringComparison.Ordinal));
+            return filteredRooms;
+        }
+
+        private bool MatchesRoomFilters(Room room)
+        {
+            if (room == null) return false;
+
+            if (_activeFloorLevel != int.MinValue)
+            {
+                int roomFloor = room.Data != null ? room.Data.FloorLevel : 0;
+                if (roomFloor != _activeFloorLevel)
+                {
+                    return false;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(_roomSearchQuery))
+            {
+                return true;
+            }
+
+            string query = _roomSearchQuery.Trim();
+            if (room.RoomID.IndexOf(query, System.StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return true;
+            }
+
+            if (room.Data != null)
+            {
+                if (!string.IsNullOrWhiteSpace(room.Data.DisplayName) &&
+                    room.Data.DisplayName.IndexOf(query, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return true;
+                }
+
+                if (room.Data.NodeType.ToString().IndexOf(query, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return true;
+                }
+
+                if (room.Data.FloorLevel.ToString().IndexOf(query, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static string GetRoomListLabel(Room room)
+        {
+            if (room == null) return string.Empty;
+            if (room.Data == null || string.IsNullOrWhiteSpace(room.Data.DisplayName) || room.Data.DisplayName == room.RoomID)
+            {
+                return room.RoomID;
+            }
+
+            return $"{room.RoomID} · {room.Data.DisplayName}";
+        }
+
+        private string GetQuickAccessLabel(Room room)
+        {
+            if (room == null)
+            {
+                return string.Empty;
+            }
+
+            string floorLabel = room.Data != null ? $"F{room.Data.FloorLevel}" : "F?";
+            return $"{GetRoomListLabel(room)} · {room.NodeType} · {floorLabel}";
+        }
+
+        private List<Room> GetQuickAccessRooms(List<Room> source)
+        {
+            var results = new List<Room>();
+            if (source == null)
+            {
+                return results;
+            }
+
+            var seen = new HashSet<int>();
+            foreach (var room in source)
+            {
+                if (room == null)
+                {
+                    continue;
+                }
+
+                int roomId = room.GetInstanceID();
+                if (!seen.Add(roomId))
+                {
+                    continue;
+                }
+
+                if (!MatchesRoomFilters(room))
+                {
+                    continue;
+                }
+
+                results.Add(room);
+            }
+
+            return results;
+        }
+
+        private Room GetPreviousRecentRoom()
+        {
+            SanitizeQuickAccessRooms();
+
+            Room currentRoom = _selectedRooms.Count == 1 ? _selectedRooms[0] : null;
+            foreach (var room in _recentRooms)
+            {
+                if (room == null || room == currentRoom)
+                {
+                    continue;
+                }
+
+                if (!MatchesRoomFilters(room))
+                {
+                    continue;
+                }
+
+                return room;
+            }
+
+            return null;
+        }
+
+        private bool IsPinnedRoom(Room room)
+        {
+            return room != null && _pinnedRooms != null && _pinnedRooms.Contains(room);
+        }
+
+        private void TogglePinnedRoom(Room room)
+        {
+            if (room == null)
+            {
+                return;
+            }
+
+            SanitizeQuickAccessRooms();
+
+            if (_pinnedRooms.Contains(room))
+            {
+                _pinnedRooms.Remove(room);
+            }
+            else
+            {
+                _pinnedRooms.Insert(0, room);
+            }
+
+            Repaint();
+            SceneView.RepaintAll();
+        }
+
+        private void TrackRecentRoom(Room room)
+        {
+            if (room == null)
+            {
+                return;
+            }
+
+            SanitizeQuickAccessRooms();
+            _recentRooms.Remove(room);
+            _recentRooms.Insert(0, room);
+            if (_recentRooms.Count > MAX_RECENT_ROOMS)
+            {
+                _recentRooms.RemoveRange(MAX_RECENT_ROOMS, _recentRooms.Count - MAX_RECENT_ROOMS);
+            }
+        }
+
+        private void OpenRoomFromQuickAccess(Room room, bool frameInScene)
+        {
+            if (room == null)
+            {
+                return;
+            }
+
+            _selectedRooms.Clear();
+            _selectedRooms.Add(room);
+            _selectedConnection = null;
+            TrackRecentRoom(room);
+
+            Selection.activeGameObject = room.gameObject;
+            if (frameInScene)
+            {
+                SceneView.lastActiveSceneView?.FrameSelected();
+            }
+
+            Repaint();
+            SceneView.RepaintAll();
+        }
+
+        private void RecallPreviousRoom()
+        {
+            var previousRoom = GetPreviousRecentRoom();
+            if (previousRoom == null)
+            {
+                return;
+            }
+
+            OpenRoomFromQuickAccess(previousRoom, true);
+        }
+
+        private void SanitizeQuickAccessRooms()
+        {
+            RemoveInvalidRooms(_pinnedRooms, false);
+            RemoveInvalidRooms(_recentRooms, true);
+        }
+
+        private static void RemoveInvalidRooms(List<Room> rooms, bool trimToRecentLimit)
+        {
+            if (rooms == null)
+            {
+                return;
+            }
+
+            var seen = new HashSet<int>();
+            for (int i = 0; i < rooms.Count;)
+            {
+                var room = rooms[i];
+                if (room == null || !seen.Add(room.GetInstanceID()))
+                {
+                    rooms.RemoveAt(i);
+                    continue;
+                }
+
+                i++;
+            }
+
+            if (trimToRecentLimit && rooms.Count > MAX_RECENT_ROOMS)
+            {
+                rooms.RemoveRange(MAX_RECENT_ROOMS, rooms.Count - MAX_RECENT_ROOMS);
+            }
         }
 
         // ──────────────────── Scene Input Processing ────────────────────
@@ -778,8 +2689,11 @@ namespace ProjectArk.Level.Editor
                 _selectedRooms.Add(room);
             }
 
+            _selectedConnection = null;
+
             if (_selectedRooms.Count == 1)
             {
+                TrackRecentRoom(_selectedRooms[0]);
                 Selection.activeGameObject = _selectedRooms[0].gameObject;
                 SceneView.lastActiveSceneView?.FrameSelected();
             }
@@ -795,6 +2709,8 @@ namespace ProjectArk.Level.Editor
             if (!_selectedRooms.Contains(room))
                 _selectedRooms.Add(room);
 
+            TrackRecentRoom(room);
+            _selectedConnection = null;
             Repaint();
             SceneView.RepaintAll();
         }
@@ -802,6 +2718,7 @@ namespace ProjectArk.Level.Editor
         public void DeselectRoom(Room room)
         {
             _selectedRooms.Remove(room);
+            _selectedConnection = null;
             Repaint();
             SceneView.RepaintAll();
         }
@@ -809,6 +2726,7 @@ namespace ProjectArk.Level.Editor
         public void ClearSelection()
         {
             _selectedRooms.Clear();
+            _selectedConnection = null;
             Repaint();
             SceneView.RepaintAll();
         }
@@ -979,7 +2897,9 @@ namespace ProjectArk.Level.Editor
         {
             // Clean up references to destroyed rooms
             _selectedRooms.RemoveAll(r => r == null);
+            if (_selectedConnection == null) _selectedConnection = null; // Unity null check for destroyed Door
             if (_hoveredRoom == null) _hoveredRoom = null; // Unity null check
+            SanitizeQuickAccessRooms();
 
             _roomAuthoringStates.Clear();
 
@@ -990,6 +2910,8 @@ namespace ProjectArk.Level.Editor
         private void OnUndoRedo()
         {
             _roomAuthoringStates.Clear();
+            if (_selectedConnection == null) _selectedConnection = null;
+            SanitizeQuickAccessRooms();
             DoorWiringService.SynchronizeAllRoomConnections();
             Repaint();
             SceneView.RepaintAll();

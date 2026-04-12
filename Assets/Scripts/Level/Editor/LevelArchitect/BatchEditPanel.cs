@@ -79,6 +79,78 @@ namespace ProjectArk.Level.Editor
             EditorGUILayout.EndVertical();
         }
 
+        public static void ApplySingleNodeType(Room room, RoomNodeType nodeType)
+        {
+            if (room == null || room.Data == null) return;
+
+            Undo.RecordObject(room.Data, "Set Room NodeType");
+            ApplyRoomNodeType(room, nodeType);
+            SynchronizeDoorAuthoring(new List<Room> { room });
+            SceneView.RepaintAll();
+        }
+
+        public static void ApplySingleFloorLevel(Room room, int floorLevel)
+        {
+            if (room == null || room.Data == null) return;
+
+            Undo.RecordObject(room.Data, "Set Floor Level");
+            ApplyRoomFloorLevel(room, floorLevel);
+            SynchronizeDoorAuthoring(new List<Room> { room });
+            SceneView.RepaintAll();
+        }
+
+        public static void ApplySingleSize(Room room, Vector2 size)
+        {
+            if (room == null) return;
+            ApplyBatchSize(new List<Room> { room }, size);
+        }
+
+        public static void AssignEncounter(Room room, EncounterSO encounter)
+        {
+            if (room == null || room.Data == null) return;
+
+            Undo.RecordObject(room.Data, "Assign Encounter");
+            var serialized = new SerializedObject(room.Data);
+            serialized.FindProperty("_encounter").objectReferenceValue = encounter;
+            serialized.ApplyModifiedProperties();
+            EditorUtility.SetDirty(room.Data);
+            SceneView.RepaintAll();
+        }
+
+        public static void AssignRoomData(Room room, RoomSO roomData)
+        {
+            if (room == null) return;
+
+            Undo.RecordObject(room, "Assign RoomSO");
+            var serialized = new SerializedObject(room);
+            serialized.FindProperty("_data").objectReferenceValue = roomData;
+            serialized.ApplyModifiedProperties();
+            EditorUtility.SetDirty(room);
+            SynchronizeDoorAuthoring(new List<Room> { room });
+            SceneView.RepaintAll();
+        }
+
+        public static void SetEntryRoom(Room room)
+        {
+            if (room == null) return;
+            SetAsEntryRoom(room);
+            SceneView.RepaintAll();
+        }
+
+        public static RoomPresetSO SaveRoomPreset(Room room)
+        {
+            if (room == null) return null;
+
+            string presetName = room.RoomID;
+            var preset = RoomFactory.SaveRoomAsPreset(room, presetName);
+            if (preset != null)
+            {
+                EditorGUIUtility.PingObject(preset);
+            }
+
+            return preset;
+        }
+
         /// <summary>
         /// Show context menu for selected rooms.
         /// </summary>
@@ -355,12 +427,7 @@ namespace ProjectArk.Level.Editor
 
         private static void SaveAsPreset(Room room)
         {
-            string presetName = room.RoomID;
-            var preset = RoomFactory.SaveRoomAsPreset(room, presetName);
-            if (preset != null)
-            {
-                EditorGUIUtility.PingObject(preset);
-            }
+            SaveRoomPreset(room);
         }
 
         private static void CopyConfig(Room room)

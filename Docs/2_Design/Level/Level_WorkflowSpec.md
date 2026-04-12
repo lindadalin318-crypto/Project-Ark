@@ -169,23 +169,26 @@ JSON 结构示例见本文附录。
    - Unity 菜单：`ProjectArk > Level > Authority > Level Architect`
    - 进入 `Build` Tab
 
-2. **准备房间预设（首次使用时）**
-   - 点击 **`Create Built-in Presets`**
-   - 生成内置 `RoomPresetSO`
+2. **准备房间预设或直接起一个最小验证切片**
+   - 点击 **`Create Built-in Presets`** 生成内置 `RoomPresetSO`
+   - 若这轮目标是先验证 authoring 闭环，可直接使用 **`5-Room Validation Slice`** / **`Create + Validate`** / **`Create + Quick Play`** 作为起手模板
 
 3. **Blockout 模式白盒**
    - 切到 `Blockout`
    - 使用房间/走廊笔刷放置基础房间
    - 利用自动吸附和相邻自动连线快速形成主链
+   - 若是从 `5-Room Validation Slice` 起手，可在现成闭环上继续扩图，而不是每次从空场景重搭
 
 4. **Connect 模式补语义连接**
    - 切到 `Connect`
    - 从一个房间拖到另一个房间补建门对
    - 用于修正自动连线未覆盖的结构，或手动增加特殊连接
 
-5. **Select 模式精修**
+5. **Select / Quick Edit 模式精修**
    - 调整尺寸、楼层、房间类型、遭遇配置
    - 用侧边面板或批量编辑进行整理
+   - 使用 `Room ID` / `Display Name` 与 `Stable Rename` 保持房间命名按语义可读，而不是靠时间戳或位置记忆
+   - 若当前进入语义补件阶段，可直接用 `Runtime Assist` / `Starter Objects` 入口补 `Checkpoint`、`OpenEncounterTrigger`、`BiomeTrigger`、`ScheduledBehaviour`、`WorldEventTrigger`，连接 inspector 里则可直接补 `Lock` starter
 
 ### 5.3 路径特点
 
@@ -220,6 +223,8 @@ JSON 结构示例见本文附录。
 - `Blockout` / `Connect` / `Select`
 - `Floor Level` 过滤器
 - `Create Built-in Presets`
+- `5-Room Validation Slice`
+- `Stable Rename` / `Room ID` / `Display Name`
 - 右键菜单 / Batch Edit
 
 ### 6.2 Phase 2：语义标注 Pass
@@ -233,6 +238,7 @@ JSON 结构示例见本文附录。
 - `TransitionCeremony`
 - `EncounterSO`
 - Entry / Boss / Safe 等关键节点语义
+- 需要时用 `Runtime Assist` 创建标准 starter，再手动补齐 `CheckpointSO`、`KeyItemSO`、`EncounterSO`、`RoomAmbienceSO` 等业务资产
 
 **判断标准：**
 

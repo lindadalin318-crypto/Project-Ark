@@ -2,6 +2,26 @@
 
 ---
 
+## Level Architect Workbench 目标收口为生产期搭建工具 — 2026-04-11 17:01
+
+### 修改文件
+- `Docs/0_Plan/ongoing/Level-Architect-Workbench.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 将 `Level-Architect-Workbench.md` 的目标进一步收口为“服务全量开发阶段的高效率关卡搭建工具”，明确本轮优先解决的是如何更快搭出可用、可玩、可感受到关卡差异的真实切片，而不是补一套早期策划指标面板。
+- 删除并降级了 `Act`、`Tension`、`BeatName`、`TimeRange` 等规划阶段字段在计划中的存在感：不再把它们作为未来增强重点，也显式写入 `Out of Scope`，避免后续 scope 漂移。
+- 将 `Preview / Summary / Next Step` 与 `LA3` 的描述改写为更贴近生产期 authoring 的口径，重点关注主路径、回路、关键房型缺口和试玩闭环是否成立，而不是抽象节奏指标。
+- 将 editor-only 辅助字段的约束改写为“只保留直接服务搭建效率和协作沟通的信息”，避免 `Level Architect` 重新长成早期规划工具。
+
+### 目的
+- 让 `Level Architect` 的产品定位更聚焦：它首先应该是一个在全量开发阶段也长期好用的 Unity 搭建工具，而不是把浏览器设计器的规划指标原样搬进来。
+- 提前切掉低优先级、低回报的规划面板需求，把后续实现资源集中到真正提升搭建速度和试玩闭环效率的能力上。
+
+### 技术
+- 计划收口：通过调整专项目标、约束、Out of Scope、未来增强与 Gate 文案，统一 `Level Architect` 的能力边界与优先级判断标准。
+- authoring 导向修正：把评估重点从规划指标可视化切换为结构闭环、主路径可玩性、关键缺口可见性与生产期操作效率。
+
 ## Level Architect Workbench 专项立项（0_Plan 落地）— 2026-04-11 16:52
 
 ### 新建文件
@@ -13694,4 +13714,61 @@ dotnet build 验证：0 错误，0 警告。
 - 内容：新增一份可直接导入 `LevelDesigner.html` 的 workflow 测试 JSON，覆盖 `safe / transit / combat / reward / arena / boss` 全部 `RoomNodeType`，同时覆盖 `progression / challenge / ability / identity / scheduled / return` 六种现役 `connectionType`；补齐整套 `doorLinks` 与 `spawnOffset`，确保 HTML 侧的门关联线、目标入口落点和 Unity 导入链都能被一起验证；并在房间中携带 `zoneId`、`act`、`tension`、`beatName`、`timeRange` 与代表性的 `elements[]`，用于同步检查 ACT 分组、张力曲线和设计快照字段的保留情况。
 - 目的：为后续实际验证 `Level_WorkflowSpec.md` 提供一份低歧义、可重复导入、覆盖主路径的标准测试稿，避免一开始就拿大型历史设计稿混测而难以判断是 workflow 问题还是输入样本过于复杂。
 - 技术：严格按 `LevelDesigner.html` / `LevelSliceBuilder` 当前共享 schema 组织 JSON，仅使用现役字段；按 `roomId + entryDir` 唯一键约束编排 `doorLinks`；混合覆盖 0/1 楼层、ACT1/ACT2、张力排序字段与自定义元素，随后使用 `python3` 对生成文件做 JSON 语法校验，确认可作为导入样本。
+
+## Level Architect Workbench 工作面拆分提案收口 - 2026-04-11 17:14
+- 新建/修改文件：`Docs/0_Plan/ongoing/Level-Architect-Workbench.md`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：将 `Level Architect` 的作者体验提案正式收口为 `Build / Quick Edit / Validate` 三工作面结构；在 `Workbench` 文档中新增工作面拆分决策、三类工作面职责边界、P0/P1/P2 优先级评估与“不建议优先做”的方向；同步把 MVP、工作拆分总览和分步细则改写为与该结构一致的 `LA0-LA6` 执行链，补入 `Quick Edit` 所需的搜索 / 过滤 / `Pin` / 轻量 `Command Palette` 等生产期维护入口。
+- 目的：把“搭建”和“快速修改 / 返工”从口头共识提升为正式产品结构，避免后续继续按工具模式而不是按真实 authoring 阶段组织 `Level Architect`，让项目进入场景配置与验证密集期后仍能保持高效迭代。
+- 技术：采用文档级产品结构收口方式，按工作面而非底层实现模式组织提案；结合现有 `SceneView` 主画布、`BatchEditPanel`、连接语义和验证面板能力，明确 `Design` 降级为子模式 / 高级工具区而非顶层心智，并通过分层优先级表与阶段化执行步骤维持 authority 清晰与 MVP 可落地性。
+
+## Level Architect Workbench LA0+LA1 第一轮落地 - 2026-04-11 17:50
+- 新建/修改文件：`Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/BatchEditPanel.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/RoomBlockoutRenderer.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/RoomFactory.cs`、`Docs/0_Plan/ongoing/Level-Architect-Workbench.md`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：在 `LevelArchitectWindow` 中把顶层工作面正式收口为 `Build / Quick Edit / Validate`，将 `Design` 降级为 `Build` 下的可选导入区；`Quick Edit` 补齐房间搜索、单房可编辑 `Inspector`、`Duplicate` / `Set Entry` / `Stable Rename` / `Select Connected` 等快捷动作，并让 `Validate` 工作面在 `SceneView` 中进入只读收口。`BatchEditPanel` 对外开放单房写回 helper，便于窗口直接修改 `RoomSO`、尺寸、楼层、`EncounterSO` 和入口房；`RoomBlockoutRenderer` 新增工作面守卫，阻止 `Validate` 继续处理房间选择/拖拽。另在 `RoomFactory` 新增安全复制房间能力：复制场景房间、克隆 `RoomSO` 资产，并清掉复制体的旧门连接与导航出生点；同步把 `Workbench` 文档状态改为实施中，并记录当前 `LA0` / `LA1` 进度。
+- 目的：把 `Level Architect` 从提案真正推进到可用的作者工作台第一轮实现，优先打通“找房间 → 改单房核心字段 → 快速复制 / 重命名 / 设入口 → 收口验证”的连续 authoring loop，减少生产期维护时在 `SceneView`、外部 Inspector 和零散右键菜单之间来回跳转。
+- 技术：采用 `Build / Quick Edit / Validate` 三工作面结构收口顶层产品心智；使用 `SerializedObject` 直接回写 `RoomSO` 与 `Room` 序列化字段；通过 `RoomFactory.DuplicateRoom()` 执行场景对象克隆 + `RoomSO` 资产复制 + 旧 `Door` authoring 清理；通过 `AllowSceneSelectionInteraction` 将 `Validate` 工作面设为只读；并用 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**（保留既有 warning）。
+
+## Level Architect Workbench LA2 连接语义面板第一轮落地 - 2026-04-11 18:30
+- 新建/修改文件：`Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/DoorWiringService.cs`、`Docs/0_Plan/ongoing/Level-Architect-Workbench.md`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：在 `Quick Edit` 的单房 `Inspector` 中新增连接语义面板，作者现在可以直接从当前房间的 `Door` 列表中选中一条连接，并查看 `From Room`、`To Room`、方向、目标落点、`GateID`、`Ceremony` 与反向 Door 摘要；同时支持直接修改 `ConnectionType`，以及执行删除连接、翻转方向、转成 `Return`、重算落点、聚焦目标房间、选中 Door 对象等最小快捷动作。为保持 authority 清晰，在 `DoorWiringService` 中补充 Door 对级别的编辑 API：查找反向 Door、同步正反向 `ConnectionType`、重算连接落点与演出。同步把 `Workbench` 文档进度更新为 `LA2` 第一轮已落地。
+- 目的：把连接从“Scene 里一条辅助线”提升为 `Quick Edit` 中可直接操作的作者对象，打通“选房 → 选连接 → 改语义 / 删除 / 翻面看 / 重算落点”的连续 authoring loop，减少生产期维护时继续依赖外部 Inspector、隐式默认值或 scattered authoring 入口。
+- 技术：采用 `LevelArchitectWindow` 内部维护 `_selectedConnection` 的方式承载单连接选择态；基于现有 `Door` / `Room` / `DoorWiringService` authority，不新增中间连接模型；使用 `SerializedObject` 回写 Door 的 `_connectionType`，并在 `DoorWiringService` 中统一同步 reciprocal Door 与落点重算；最终通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**（保留既有 warning）。
+
+## Level Architect Workbench LA3 快速导航能力第一轮落地 - 2026-04-11 18:42
+- 新建/修改文件：`Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`、`Docs/0_Plan/ongoing/Level-Architect-Workbench.md`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：在 `Quick Edit` 中把搜索入口升级为明确的多字段匹配说明，并新增 `Quick Access` 区：支持对当前单房执行 `Pin Selected`，显示 `Pinned` / `Recent` 两组房间快捷列表，并提供 `Recall Previous` 快速回看入口；房间列表与单房 `Inspector` 头部也补上 `Pin` 按钮，作者可以在浏览或编辑过程中随手固定高频房间。为保证最近房间列表反映真实上下文，本轮把单房字段编辑、入口设置、稳定重命名、保存预设、连接翻面、删除连接、复制房间、普通选房与联通房间多选等高频动作统一接入 `Recent` 跟踪，并在层级变化 / UndoRedo 后清理失效引用。同步把 `Workbench` 文档状态更新为 `LA3` 第一轮已落地。
+- 目的：把“定位目标 → 打开上下文 → 立即回看上一个房间”的生产期维护动作收口到 `Quick Edit` 主链里，减少作者继续依赖层级树、人工记忆和散落快捷入口来往返切换高频房间。
+- 技术：采用 `LevelArchitectWindow` 内部维护 `_pinnedRooms` / `_recentRooms` 的轻量会话状态，不新增任何场景或资产级中间模型；通过统一的 `TrackRecentRoom()`、`OpenRoomFromQuickAccess()`、`SanitizeQuickAccessRooms()` 管理最近房间与失效引用；同时复用现有 `MatchesRoomFilters()` 过滤逻辑，让 `Pin` / `Recent` 与 `RoomID`、`DisplayName`、`RoomNodeType`、`FloorLevel` 搜索保持同一套 authoring 语义。最终通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**（保留既有 warning）。
+
+## Level Architect Workbench LA4 预览摘要与下一步建议第一轮落地 - 2026-04-11 18:52
+- 新建/修改文件：`Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`、`Docs/0_Plan/ongoing/Level-Architect-Workbench.md`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：在 `LevelArchitectWindow` 中新增统一的 `Preview / Summary / Next Step` 面板，并接入 `Build` 场景侧栏、`Quick Edit` 主窗口与场景侧栏、`Validate` 顶部。面板现在会基于现有 `Room` / `Door` / `RoomManager` / `LevelValidator` authority 即时生成拓扑摘要（房间数、连接数、孤岛数、单向连接数、楼层统计）、语义摘要（`RoomNodeType` 分布、Entry→Boss 主路径状态、回路闭环情况、验证快照），以及最多 4 条下一步建议；建议可直接联动到 `Set Entry`、聚焦缺口房间、切到 `Build` / `Quick Edit` / `Validate`、或触发 `Quick Play`。本轮实现不新增任何场景级或资产级拓扑缓存模型，只做编辑器侧轻量分析与导航动作。
+- 目的：把“改完房间之后还要自己判断现在缺什么”的隐性脑内负担收口进工具本身，让作者在 `Build` / `Quick Edit` / `Validate` 的任一工作面里都能快速知道当前切片处于什么阶段、最值得先补哪一处缺口。
+- 技术：采用 `LevelArchitectWindow` 内部新增 `SlicePreviewData` / `SliceSuggestion` 轻量分析模型；通过现算 `Room` 邻接图统计 connected components、单向连接与闭环；严格使用 `RoomManager._startingRoom` 作为 Entry 语义来源、`RoomNodeType.Boss` 作为终点语义来源；并复用 `LevelValidator.LastResults` 作为验证快照而非每帧新建第二套校验体系。最终通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**（保留既有 warning）。
+
+## Level Architect Workbench LA5 最小切片模板与稳定命名第一轮落地 - 2026-04-11 20:12
+- 新建/修改文件：`Assets/Scripts/Level/Editor/LevelArchitect/RoomFactory.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`、`Docs/0_Plan/ongoing/Level-Architect-Workbench.md`、`Docs/2_Design/Level/Level_WorkflowSpec.md`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：在 `RoomFactory` 中新增统一的稳定命名链路与 `5-Room Validation Slice` 模板生成入口。新建房间与复制房间现在都不再使用时间戳或 `_copy` 风格命名，而是按 `Floor + RoomNodeType + Index` 生成稳定的 `RoomID / DisplayName`；`LevelArchitectWindow` 的单房 `Inspector` 会显示稳定命名建议，并把 `Stable Rename` 动作切到同一套规则上。与此同时，`Build` 顶部 Actions 与侧栏 `Add Room` 区都补入了 `Seed 5-Room Slice`、`Create + Validate`、`Create + Quick Play` 三个模板入口：会直接生成 `Safe Entry → Transit → Combat → Reward → Return Transit` 的五房最小回路，自动连门、设置 Entry，并把结果选中到当前 authoring 上下文里。
+- 目的：把“每次验证关卡工具链都要从空场景重新起手”和“新房名只能靠时间戳记忆”的两类摩擦同时收掉，让作者能更快起一个最小验证切片，也让新房在协作、复盘与搜索时更像语义对象，而不是临时场景块。
+- 技术：采用 `RoomFactory.StableRoomIdentity` 统一承载稳定命名结果；用 `GenerateStableIdentity()` 检查 scene 内 `RoomID` 与 `RoomSO` 资产路径冲突，确保命名唯一；通过 `ApplyStableIdentity()` 统一同步 `RoomSO`、Scene GameObject 与数据资产文件名；模板部分复用现有 `RoomPresetSO`、`DoorWiringService.AutoConnectRooms()`、`ConnectionType` 与 `RoomManager._startingRoom`，不引入新的中间拓扑模型。最终通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**（保留既有 warning）。
+
+## Level Architect Workbench LA6 高频 runtime assist 入口第一轮落地 - 2026-04-11 20:35
+- 新建/修改文件：`Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/LevelRuntimeAssistFactory.cs`、`ProjectArk.Level.Editor.csproj`、`Docs/0_Plan/ongoing/Level-Architect-Workbench.md`、`Docs/2_Design/Level/Level_WorkflowSpec.md`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：新增 `LevelRuntimeAssistFactory`，统一创建 `Checkpoint`、`Lock`、`OpenEncounterTrigger`、`BiomeTrigger`、`ScheduledBehaviour`、`WorldEventTrigger` 的 authoring starter object；所有对象都会自动落在与 `LevelValidator` 对齐的推荐根节点下，并补上最小必要的 `BoxCollider2D`、`LayerMask`、目标门引用、`EnemySpawner` / `SpawnPoints` 等标准起点。`LevelArchitectWindow` 同步补入三处入口：`Build` 侧会针对当前单选房间显示 `Runtime Assist`，`Quick Edit` 单房 inspector 会显示 `Starter Objects` 面板，连接 inspector 会新增 `Create Lock Starter` 按钮。另补 `ProjectArk.Level.Editor.csproj` 显式编译清单，确保 `dotnet build` 能纳入新文件验证。
+- 目的：把关卡作者最常见的“场景里再补一个 Checkpoint / 锁门 / 开放遭遇触发器 / 世界阶段触发器”的第一步动作收口成低摩擦入口，同时保持 `Scene / Room / Door / SO` authority 清晰，不让工具开始替作者猜完整设计。
+- 技术：采用独立静态工厂 + `SerializedObject` 写私有序列化字段的方式，避免在窗口层复制第二套配置逻辑；复用 `Undo`、`Selection`、`SceneView.RepaintAll()` 保持 Unity authoring 体验；挂点根节点严格跟随 `LevelValidator.ValidatePreferredAuthoringRoots()` 约定，业务资产仍需作者后续手动配置。最终通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**（保留既有 warning）。
+
+## Level Architect Workbench LA5/LA6 文案布局与默认提示微调 - 2026-04-11 21:19
+- 新建/修改文件：`Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`、`Docs/0_Plan/ongoing/Level-Architect-Workbench.md`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：对 `5-Room Validation Slice` 与 `Runtime Assist` 做了一轮作者体验微调。`Validation Slice` 现在会额外提示切片生成结果、当前 SceneView 锚点位置，以及 `Seed` / `Create + Validate` / `Create + Quick Play` 三个入口的差异；`Runtime Assist` 则按 `Elements / Encounters / Triggers` 分组组织按钮，并补充“创建后会自动选中新对象”“仍需作者手动补齐哪些业务资产”的默认提示。连接侧的 `Connection Assist` 也改为明确展示当前 `owner → target` link、`Lock starter` 的副作用，以及 `TargetRoom` 缺失时的阻塞提示。
+- 目的：让 `LA5/LA6` 不只是“按钮已经存在”，而是让作者在第一次看到这些入口时就能理解它们会做什么、什么时候该点、点完之后还缺什么，从而减少误点和来回试错成本。
+- 技术：保持所有微调都收口在 `LevelArchitectWindow` 的编辑器呈现层，不改 `RoomFactory`、`LevelRuntimeAssistFactory` 的 authority；通过 `HelpBox`、`miniLabel`、分组标题与上下文提示改善信息层级；继续保持工具只创建标准起点，不替作者猜业务配置。最终通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**（保留既有 warning）。
+
+## Level Architect SceneView 侧栏 IMGUI 布局栈修复 - 2026-04-11 22:48
+- 新建/修改文件：`Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：修复 `DrawSceneViewSidePanel()` 在 `SceneView` 侧栏绘制时可能触发的 `EndLayoutGroup: BeginLayoutGroup must be called first` 报错。原实现直接包裹 `Handles.BeginGUI()`、`GUILayout.BeginArea()` 与 `GUILayout.BeginScrollView()`，一旦内部控件在绘制过程中触发 `ExitGUIException` 或提前中断，外层 `EndScrollView / EndArea / EndGUI` 就可能来不及执行，导致下一帧布局栈失衡。现在改为使用 `try/finally` 保证 `BeginGUI / BeginArea / BeginScrollView` 成对关闭，并为侧栏高度增加最小值保护。
+- 目的：消除 `Level Architect` 在 `SceneView` 侧栏操作过程中偶发的 IMGUI 布局栈泄漏，避免作者在点击对象字段、切换交互或触发中断流程后被布局异常打断。
+- 技术：采用 `try/finally` 包裹 IMGUI 外层布局组与 `Handles.BeginGUI()` 生命周期，使用布尔哨兵确保只关闭已成功开启的布局组；同时对 `panelHeight` 使用 `Mathf.Max(120f, ...)` 做最小尺寸防御。最终通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**（保留既有 warning）。
+
+
+
 

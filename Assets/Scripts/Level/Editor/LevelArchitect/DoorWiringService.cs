@@ -103,6 +103,72 @@ namespace ProjectArk.Level.Editor
         }
 
         /// <summary>
+        /// Find the reciprocal door for a given door, if one exists.
+        /// </summary>
+        public static Door FindReverseDoor(Door door)
+        {
+            if (door == null || door.TargetRoom == null)
+            {
+                return null;
+            }
+
+            var ownerRoom = door.GetComponentInParent<Room>();
+            if (ownerRoom == null)
+            {
+                return null;
+            }
+
+            return FindDoorTargetingRoom(door.TargetRoom, ownerRoom);
+        }
+
+        /// <summary>
+        /// Update connection type for a door and keep the reciprocal door in sync when available.
+        /// </summary>
+        public static void SetConnectionType(Door door, ConnectionType connectionType)
+        {
+            if (door == null)
+            {
+                return;
+            }
+
+            ApplyConnectionType(door, connectionType);
+
+            var reverseDoor = FindReverseDoor(door);
+            if (reverseDoor != null && reverseDoor != door)
+            {
+                ApplyConnectionType(reverseDoor, connectionType);
+            }
+
+            SceneView.RepaintAll();
+        }
+
+        /// <summary>
+        /// Recompute door position, ceremony, and auto-authored landing points for a connection pair.
+        /// </summary>
+        public static void RecalculateConnection(Door door)
+        {
+            if (door == null)
+            {
+                return;
+            }
+
+            var ownerRoom = door.GetComponentInParent<Room>();
+            if (ownerRoom == null)
+            {
+                Debug.LogError($"[DoorWiringService] Cannot recalculate connection '{door.gameObject.name}': owner room is missing.");
+                return;
+            }
+
+            SynchronizeRoomConnections(ownerRoom);
+            if (door.TargetRoom != null)
+            {
+                SynchronizeRoomConnections(door.TargetRoom);
+            }
+
+            SceneView.RepaintAll();
+        }
+
+        /// <summary>
         /// Synchronize all authoring-owned door connections for a room.
         /// Recomputes door positions, reverse door positions, auto-connect spawn points,
         /// and door ceremony based on current room geometry/floor metadata.
@@ -516,6 +582,20 @@ namespace ProjectArk.Level.Editor
             }
 
             return null;
+        }
+
+        private static void ApplyConnectionType(Door door, ConnectionType connectionType)
+        {
+            if (door == null || door.ConnectionType == connectionType)
+            {
+                return;
+            }
+
+            Undo.RecordObject(door, "Set Connection Type");
+            var serialized = new SerializedObject(door);
+            serialized.FindProperty("_connectionType").enumValueIndex = (int)connectionType;
+            serialized.ApplyModifiedProperties();
+            EditorUtility.SetDirty(door);
         }
 
         private static void UpdateDoorTransform(Door door, Vector2 newPosition)
