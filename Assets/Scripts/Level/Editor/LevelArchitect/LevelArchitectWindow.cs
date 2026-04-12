@@ -120,6 +120,15 @@ namespace ProjectArk.Level.Editor
         /// <summary> Currently selected rooms. </summary>
         public List<Room> SelectedRooms => _selectedRooms;
 
+        /// <summary> Currently selected room count. </summary>
+        public int SelectedRoomCount => _selectedRooms.Count;
+
+        /// <summary> Currently selected single room, if any. </summary>
+        public Room SelectedRoom => _selectedRooms.Count == 1 ? _selectedRooms[0] : null;
+
+        /// <summary> Currently selected connection, if any. </summary>
+        public Door SelectedConnection => _selectedConnection;
+
         /// <summary> Currently hovered room. </summary>
         public Room HoveredRoom => _hoveredRoom;
 
@@ -251,7 +260,7 @@ namespace ProjectArk.Level.Editor
         private void DrawQuickEditTab()
         {
             EditorGUILayout.HelpBox(
-                "Quick Edit 是生产期修改工作面。这里优先服务‘找房间 → 改 RoomSO 核心字段 → 修尺寸 / 遭遇 / 入口 → 快速回看’的连续 authoring loop。",
+                "Quick Edit 是生产期修改工作面。这里优先服务‘找房间 → 打开 Room Inspector Window → 改 RoomSO 核心字段 / 连接 / starter → 快速回看’的连续 authoring loop。",
                 MessageType.Info);
             EditorGUILayout.Space(4);
             DrawFloorLevelSelector();
@@ -562,7 +571,7 @@ namespace ProjectArk.Level.Editor
             {
                 GUILayout.Label("Quick Edit", EditorStyles.miniBoldLabel, GUILayout.Width(64));
                 DrawSceneToolbarButton("Select", ToolMode.Select);
-                GUILayout.Label("Selection + Room Inspector", EditorStyles.miniLabel);
+                GUILayout.Label("Selection + Inspector Window", EditorStyles.miniLabel);
             }
 
             GUILayout.FlexibleSpace();
@@ -825,7 +834,7 @@ namespace ProjectArk.Level.Editor
 
             if (_selectedRooms.Count == 1)
             {
-                DrawSingleRoomInfo(_selectedRooms[0]);
+                DrawSingleRoomSelectionSummary(_selectedRooms[0]);
             }
             else
             {
@@ -839,6 +848,94 @@ namespace ProjectArk.Level.Editor
                 BatchEditPanel.ShowContextMenu(_selectedRooms);
                 Event.current.Use();
             }
+        }
+
+        public void DrawDetachedRoomInspectorWindow()
+        {
+            if (_selectedRooms.Count == 0)
+            {
+                _selectedConnection = null;
+                EditorGUILayout.HelpBox(
+                    "未选中房间。请先在 Level Architect 中单选一个房间，再在这里做单房 / 连接细修。",
+                    MessageType.Info);
+                return;
+            }
+
+            if (_selectedRooms.Count > 1)
+            {
+                _selectedConnection = null;
+                EditorGUILayout.HelpBox(
+                    $"当前选中了 {_selectedRooms.Count} 个房间。Detached Room Inspector 只服务单房精修；批量维护请回到 Level Architect 主窗口。",
+                    MessageType.Info);
+
+                if (GUILayout.Button("Open Level Architect", GUILayout.Height(22f)))
+                {
+                    ShowWindow();
+                }
+
+                return;
+            }
+
+            DrawSingleRoomInfo(_selectedRooms[0], true);
+        }
+
+        private void DrawSingleRoomSelectionSummary(Room room)
+        {
+            if (room == null)
+            {
+                return;
+            }
+
+            var roomData = room.Data;
+            int doorCount = room.GetComponentsInChildren<Door>(true).Length;
+
+            EditorGUILayout.BeginVertical("HelpBox");
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Selected Room", EditorStyles.boldLabel);
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("Open Inspector", GUILayout.Width(108f), GUILayout.Height(20f)))
+            {
+                LevelRoomInspectorWindow.ShowWindow();
+            }
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.LabelField(GetRoomListLabel(room), EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.LabelField("Node / Floor", roomData != null ? $"{roomData.NodeType} · F{roomData.FloorLevel}" : "Missing RoomSO");
+            EditorGUILayout.LabelField("Door Links", doorCount.ToString());
+            if (_selectedConnection != null)
+            {
+                EditorGUILayout.LabelField("Selected Connection", GetDoorConnectionLabel(_selectedConnection), EditorStyles.wordWrappedMiniLabel);
+            }
+
+            EditorGUILayout.HelpBox(
+                "完整版 Room / Connection Inspector 已迁到独立窗口；这里保留选择摘要与高频跳转动作，避免 Quick Edit 再被细字段挤满。",
+                MessageType.None);
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Focus", GUILayout.Height(22f)))
+            {
+                FocusRoomInScene(room);
+            }
+            if (GUILayout.Button(IsPinnedRoom(room) ? "★ Pinned" : "☆ Pin", GUILayout.Height(22f)))
+            {
+                TogglePinnedRoom(room);
+            }
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Stable Rename", GUILayout.Height(22f)))
+            {
+                TrackRecentRoom(room);
+                PerformStableRename(room);
+            }
+            if (GUILayout.Button("Set Entry", GUILayout.Height(22f)))
+            {
+                TrackRecentRoom(room);
+                BatchEditPanel.SetEntryRoom(room);
+            }
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.EndVertical();
         }
 
         private void DrawAddRoomSection()
@@ -1816,6 +1913,11 @@ namespace ProjectArk.Level.Editor
 
         private void DrawSingleRoomInfo(Room room)
         {
+            DrawSingleRoomInfo(room, _activeTab == Tab.QuickEdit);
+        }
+
+        private void DrawSingleRoomInfo(Room room, bool includeQuickEditSections)
+        {
             if (room == null) return;
 
             var roomData = room.Data;
@@ -1918,7 +2020,7 @@ namespace ProjectArk.Level.Editor
 
             DrawConnectedRoomsSummary(doors);
 
-            if (_activeTab == Tab.QuickEdit)
+            if (includeQuickEditSections)
             {
                 DrawConnectionInspector(room, doors);
                 DrawRoomRuntimeAssistSection(room, true);

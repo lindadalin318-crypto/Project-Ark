@@ -48,7 +48,7 @@
 ## 当前状态与启动时机
 
 - **状态**：进行中（`LA0` 已完成，`LA1` 已落地，`LA2` 第一轮已落地，`LA3` 第一轮已落地，`LA4` 第一轮已落地，`LA5` 第一轮已落地，`LA6` 第一轮已落地）
-- **当前进度**：顶层 `Build / Quick Edit / Validate` 工作面已进入代码实现；`Quick Edit` 已具备多字段房间搜索（`RoomID` / `DisplayName` / `RoomNodeType` / `FloorLevel`）、单房可编辑 `Inspector`、基础快捷动作、连接 `Inspector` MVP（连接列表、`ConnectionType` 直改、删除 / 翻转方向 / 转 `Return` / 重算落点）、`Quick Access` MVP（`Pin Selected`、`Pinned` / `Recent` 列表、`Recall Previous` 快速回看），并在 `Build / Quick Edit / Validate` 三处补入统一的 `Preview / Summary / Next Step` 面板：可直接查看房间数、连接数、孤岛数、单向连接数、楼层统计、`RoomNodeType` 分布、Entry→Boss 主路径状态、回路闭环情况，以及基于当前结构与 `Validate` 快照生成的下一步建议与快捷动作。`LA5` 第一轮现已补上 `5-Room Validation Slice` 模板入口（支持 `Create`、`Create + Validate`、`Create + Quick Play`）与统一稳定命名链路：新建房间、复制房间、单房 `Stable Rename` 均改为使用按 `Floor + RoomNodeType + Index` 生成的稳定 `RoomID / DisplayName`，不再依赖时间戳式房名。`LA6` 第一轮则补上统一的高频 runtime assist 入口：`Build` 侧会对当前单选房间显示 `Checkpoint`、`OpenEncounterTrigger`、`BiomeTrigger`、`ScheduledBehaviour`、`WorldEventTrigger` starter；`Quick Edit` 单房 inspector 可直接补同一组 starter；连接 inspector 可一键创建 `Lock` starter，并把挂点根节点与 `LevelValidator` 约定保持一致。随后又完成了一轮 `LA5/LA6` UI 微调：`Validation Slice` 现在会明确说明切片结果、SceneView 锚点与三个按钮的差异；`Runtime Assist` 会按 `Elements / Encounters / Triggers` 分组，并把默认提示收口到“创建了什么、还需要作者补什么”。
+- **当前进度**：顶层 `Build / Quick Edit / Validate` 工作面已进入代码实现；`Quick Edit` 已具备多字段房间搜索（`RoomID` / `DisplayName` / `RoomNodeType` / `FloorLevel`）、Detached `Room Inspector Window`（承载单房字段、连接 `Inspector` 与 runtime assist 细修）、基础快捷动作（连接列表、`ConnectionType` 直改、删除 / 翻转方向 / 转 `Return` / 重算落点）、`Quick Access` MVP（`Pin Selected`、`Pinned` / `Recent` 列表、`Recall Previous` 快速回看），并在 `Build / Quick Edit / Validate` 三处补入统一的 `Preview / Summary / Next Step` 面板：可直接查看房间数、连接数、孤岛数、单向连接数、楼层统计、`RoomNodeType` 分布、Entry→Boss 主路径状态、回路闭环情况，以及基于当前结构与 `Validate` 快照生成的下一步建议与快捷动作。`LA5` 第一轮现已补上 `5-Room Validation Slice` 模板入口（支持 `Create`、`Create + Validate`、`Create + Quick Play`）与统一稳定命名链路：新建房间、复制房间、单房 `Stable Rename` 均改为使用按 `Floor + RoomNodeType + Index` 生成的稳定 `RoomID / DisplayName`，不再依赖时间戳式房名。`LA6` 第一轮则补上统一的高频 runtime assist 入口：`Build` 侧会对当前单选房间显示 `Checkpoint`、`OpenEncounterTrigger`、`BiomeTrigger`、`ScheduledBehaviour`、`WorldEventTrigger` starter；Detached `Room Inspector Window` 可直接补同一组 starter；连接 inspector 可一键创建 `Lock` starter，并把挂点根节点与 `LevelValidator` 约定保持一致。随后又完成了一轮 `LA5/LA6` UI 微调：`Validation Slice` 现在会明确说明切片结果、SceneView 锚点与三个按钮的差异；`Runtime Assist` 会按 `Elements / Encounters / Triggers` 分组，并把默认提示收口到“创建了什么、还需要作者补什么”。
 - **优先级判断**：高价值，当前已适合作为 `Level` 场景配置效率提升链的持续专项推进
 - **下一优先级**：做一轮 `Gate A` 代表切片复盘，验证这套 workbench 是否已真正减少作者在 SceneView、外部文档与工具之间的跳转
 - **为什么现在进入实施**：项目已经进入 `Level` 场景 authoring / 配置密集期，继续停留在提案层只会让 `Build`、`HTML`、`Validate`、手工 Scene 操作之间的 authoring loop 继续分裂；因此先把最影响日常效率的工作面结构与单房编辑能力落进代码
@@ -80,7 +80,7 @@
 | 工作面 | 面向阶段 | 主要问题 | 应承载的核心能力 | 不该承载什么 |
 | --- | --- | --- | --- | --- |
 | `Build` | 起盘 / 白盒搭建 | 我现在要快速把可玩骨架搭出来 | `Blockout`、`Connect`、模板入口、基础 Overlay、`Quick Play`、最小切片起手 | 不把大量维护动作继续塞进搭建页 |
-| `Quick Edit` | 生产期修改 / 返工 / 局部维护 | 图已经有了，我要快速改对 | 单房 `Inspector`、连接 `Inspector`、搜索 / 过滤 / `Pin`、批量维护、快捷命令 | 不重新发明第二套拓扑 authority |
+| `Quick Edit` | 生产期修改 / 返工 / 局部维护 | 图已经有了，我要快速改对 | Detached `Room Inspector`、连接 `Inspector`、搜索 / 过滤 / `Pin`、批量维护、快捷命令 | 不重新发明第二套拓扑 authority |
 | `Validate` | 收口 / 复核 / 准备试玩 | 现在能不能玩，还缺什么 | Blocking / Authoring Gaps / Next Step、结构摘要、关键缺口、最小闭环判断 | 不膨胀成完整 QA 或 runtime 调试框架 |
 
 ### 对现有实现的落地含义

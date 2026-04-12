@@ -13769,6 +13769,12 @@ dotnet build 验证：0 错误，0 警告。
 - 目的：消除 `Level Architect` 在 `SceneView` 侧栏操作过程中偶发的 IMGUI 布局栈泄漏，避免作者在点击对象字段、切换交互或触发中断流程后被布局异常打断。
 - 技术：采用 `try/finally` 包裹 IMGUI 外层布局组与 `Handles.BeginGUI()` 生命周期，使用布尔哨兵确保只关闭已成功开启的布局组；同时对 `panelHeight` 使用 `Mathf.Max(120f, ...)` 做最小尺寸防御。最终通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**（保留既有 warning）。
 
+## Level Architect Detached Room Inspector Window 落地 - 2026-04-12 11:07
+- 新建/修改文件：`Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/LevelRoomInspectorWindow.cs`、`ProjectArk.Level.Editor.csproj`、`Docs/0_Plan/ongoing/Level-Architect-Workbench.md`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：按方案 B 将 `Room Inspector` 从 `Quick Edit` / `SceneView` 侧栏里的完整版内嵌面板抽离为独立 `EditorWindow`。新增 `LevelRoomInspectorWindow` 作为 detached 单房细修窗口，通过 `LevelArchitectWindow` 共享当前选中的单房 / 连接状态，并直接复用现有单房字段编辑、连接 `Inspector`、`Runtime Assist` 与快捷动作。与此同时，`LevelArchitectWindow` 的 `Selection` 区改为显示精简摘要卡，只保留 `Open Inspector`、`Focus`、`Pin`、`Stable Rename`、`Set Entry` 等高频跳转动作，避免 `Quick Edit` 主窗口继续被细字段挤满。同步补入 `SelectedRoom` / `SelectedConnection` 只读入口、更新 `Quick Edit` 文案与 `Workbench` 当前能力说明，并把新窗口加入 `ProjectArk.Level.Editor.csproj` 显式编译清单。
+- 目的：把 `Level Architect` 的产品形态正式从“主窗口里堆满单房细字段”收口为“主窗口负责搜索 / 选择 / 批量维护，Detached Room Inspector 负责单房 / 单连接精修”，既保留 `Quick Edit` 的生产期工作台心智，又为后续继续扩展房间细修能力留出独立空间。
+- 技术：采用共享状态 + 共享绘制链的最小重构方式，不新增第二套 authoring 模型；通过 `LevelRoomInspectorWindow.OnInspectorUpdate()` 保持 detached 窗口跟随当前选择刷新；用 `DrawSingleRoomInfo(room, includeQuickEditSections)` 将连接面板与 starter 面板的显示控制从当前 tab 解耦，使独立窗口始终展示完整单房细修能力。最终通过 `read_lints` 检查 `LevelArchitect` 目录 **0 lint**，并通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**（保留既有 warning）。
+
 
 
 
