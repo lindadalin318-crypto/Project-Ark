@@ -13799,3 +13799,15 @@ dotnet build 验证：0 错误，0 警告。
 - 目的：让 `SceneView` 中的方向提示不只表达“这两个 room 有连接”，还直接表达“玩家会落到哪里”，提升门/出生点 authoring 的可读性；同时保持默认视图与 overlay 的语义一致，减少作者在抽象拓扑与真实落点之间来回脑补。
 - 技术：采用“共享锚点解析 + 防御性 fallback + 短连接自适应箭头缩放”的编辑器绘制增强方案，不改 Door 运行时逻辑，不新增第二套连接数据；最终通过 `read_lints` 检查相关文件 **0 lint**，并通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**（保留既有 warning）。
 
+## Level Architect 单向连接合法化收口 - 2026-04-12 23:20
+- 新建/修改文件：`Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：将 `Level Architect` 中的 `one-way` 连接从“视觉上已支持、但工具链仍暗示是错误”的半收口状态，正式推进为合法 authoring 语义。`LevelValidator.ValidateDoorBidirectional()` 现在不再把缺少 reciprocal Door 的连接记为 `Error`，而是记为带 auto-fix 的 `Info`：明确说明这是合法单向连接，仅当设计意图需要可回流时才补反向 Door。`LevelArchitectWindow` 同步改写切片建议、`Slice State` 判定和 `Connection Inspector`：`OneWayConnectionCount` 不再触发 `Needs authoring pass` / warning 态；建议文案改为合法信息提示；连接列表摘要新增 `One-way / Bidirectional` 标签；选中连接时会显式显示 `Directionality`，并在无 reverse door 时展示 `None (legal one-way)` 与说明提示，同时禁用对单向连接无意义的 `Flip Direction` 操作。
+- 目的：消除“画面上看起来可以，但 Validate 还在报错”的 authoring 心智冲突，让关卡作者能够把单向连接当成正式设计语言使用，而不是像在和工具对着干。
+- 技术：采用“validator 严重级别降级 + Slice State 触发条件收口 + Inspector 语义补全”的最小一致性修复，不改 Door 运行时数据结构，不新增第二套 one-way 配置模型；最终通过 `read_lints` 检查相关文件 **0 lint**，并通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**（保留既有 warning）。
+
+## Level Architect 连接 Hover / Select 高亮闭环 - 2026-04-13 00:00
+- 新建/修改文件：`Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/ConnectionGizmoDrawer.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/RoomBlockoutRenderer.cs`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：为 `Level Architect` 补齐“连接能看见，也能直接操作”的 SceneView authoring 闭环。`LevelArchitectWindow` 新增 `hovered connection` 状态，并在 `ProcessSceneInput()` 中同步更新房间与连接的悬停结果；`Connection Inspector` 也补入提示文案与跳转按钮，现在可以直接从 inspector 选择 `Door`、`Target SpawnPoint` 和 `Reverse Door`，同时保留单向连接的合法语义提示。`ConnectionGizmoDrawer` 从纯绘制器升级为连接几何 authority：除了解析真实 anchor 和画线外，还负责统一的 connection pick 逻辑，使用与渲染一致的起终点几何来判定鼠标命中的连接，并在双向线中按鼠标落点所在半段解析到对应方向的 authored `Door`。`RoomBlockoutRenderer` 则新增顶层 focus overlay：在所有默认灰线 / `Connection Types` overlay 绘制完之后，再把 hovered / selected connection 以更强调的线宽和颜色重绘一遍，并显式标出源 `Door`、目标 `SpawnPoint` 与 reciprocal door；同时 `HandleMouseDown()` 现在会优先尝试命中连接本身，从而支持在 `SceneView` 里直接点击连线选中对应连接，而不必回到侧栏列表里切换。
+- 目的：让关卡作者在 `SceneView` 里完成完整的连接 authoring loop：先看见哪条连接、再 hover 感知它对应哪扇门/哪一个落点、最后直接点中进入 inspector 精修，减少“视觉上已经看懂，但操作仍要绕回列表”的往返成本。
+- 技术：采用“窗口状态收口 + 共享连接几何 authority + 顶层 focus overlay”方案，不新增第二套连接数据模型；通过 `ConnectionGizmoDrawer.TryResolveConnection()` / `TryPickConnection()` 统一绘制与拾取几何，避免默认视图和 overlay 在命中语义上再次分叉。最终通过 `read_lints` 检查相关文件 **0 lint**，并通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**（保留既有 warning）。
+

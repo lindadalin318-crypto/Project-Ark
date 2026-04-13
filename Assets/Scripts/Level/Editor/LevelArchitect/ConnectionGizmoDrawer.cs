@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using ProjectArk.Level;
@@ -19,6 +20,40 @@ namespace ProjectArk.Level.Editor
         private const float MIN_ARROW_LENGTH = 0.35f;
         private const float MAX_ARROW_LENGTH = 1.8f;
         private const float ARROW_HALF_ANGLE = 24f;
+        private const float MIN_PICK_DISTANCE = 0.6f;
+        private const float HANDLE_PICK_DISTANCE_FACTOR = 0.08f;
+
+        internal readonly struct ConnectionVisualData
+        {
+            public readonly Room OwnerRoom;
+            public readonly Door Door;
+            public readonly Door ReverseDoor;
+            public readonly Room ReverseOwnerRoom;
+            public readonly Vector3 FromPos;
+            public readonly Vector3 ToPos;
+            public readonly bool IsBidirectional;
+            public readonly bool IsLayerTransition;
+
+            public ConnectionVisualData(
+                Room ownerRoom,
+                Door door,
+                Door reverseDoor,
+                Room reverseOwnerRoom,
+                Vector3 fromPos,
+                Vector3 toPos,
+                bool isBidirectional,
+                bool isLayerTransition)
+            {
+                OwnerRoom = ownerRoom;
+                Door = door;
+                ReverseDoor = reverseDoor;
+                ReverseOwnerRoom = reverseOwnerRoom;
+                FromPos = fromPos;
+                ToPos = toPos;
+                IsBidirectional = isBidirectional;
+                IsLayerTransition = isLayerTransition;
+            }
+        }
 
         /// <summary>
         /// Resolve connection anchors for a door pair.
@@ -30,24 +65,114 @@ namespace ProjectArk.Level.Editor
             toPos = default;
             isBidirectional = false;
 
+            if (!TryResolveConnection(ownerRoom, door, out ConnectionVisualData connection))
+            {
+                return false;
+            }
+
+            fromPos = connection.FromPos;
+            toPos = connection.ToPos;
+            isBidirectional = connection.IsBidirectional;
+            return true;
+        }
+
+        /// <summary>
+        /// Resolve the full visual payload for a connection so drawing and picking share the same geometry authority.
+        /// </summary>
+        public static bool TryResolveConnection(Room ownerRoom, Door door, out ConnectionVisualData connection)
+        {
+            connection = default;
             if (ownerRoom == null || door == null || door.TargetRoom == null)
             {
                 return false;
             }
 
             Door reverseDoor = DoorWiringService.FindReverseDoor(door);
-            isBidirectional = reverseDoor != null;
+            Room reverseOwnerRoom = reverseDoor != null ? reverseDoor.GetComponentInParent<Room>() : null;
+            bool isBidirectional = reverseDoor != null;
 
-            fromPos = ResolveStartAnchor(ownerRoom, door, reverseDoor);
-            toPos = ResolveEndAnchor(door, reverseDoor);
+            Vector3 fromPos = ResolveStartAnchor(ownerRoom, door, reverseDoor);
+            Vector3 toPos = ResolveEndAnchor(door, reverseDoor);
+            if (Vector3.Distance(fromPos, toPos) < MIN_DRAWABLE_LENGTH)
+            {
+                return false;
+            }
 
-            return Vector3.Distance(fromPos, toPos) >= MIN_DRAWABLE_LENGTH;
+            connection = new ConnectionVisualData(
+                ownerRoom,
+                door,
+                reverseDoor,
+                reverseOwnerRoom,
+                fromPos,
+                toPos,
+                isBidirectional,
+                door.Ceremony >= TransitionCeremony.Layer);
+            return true;
+        }
+
+        /// <summary>
+        /// Pick the nearest connection under the mouse using the same anchor geometry used for rendering.
+        /// Bidirectional lines resolve to the nearer authored direction half.
+        /// </summary>
+        public static bool TryPickConnection(Room[] rooms, Vector2 worldPos, out Room ownerRoom, out Door door)
+        {
+            ownerRoom = null;
+            door = null;
+
+            if (rooms == null || rooms.Length == 0)
+            {
+                return false;
+            }
+
+            float bestDistance = float.MaxValue;
+            var drawnPairs = new HashSet<string>();
+
+            foreach (var room in rooms)
+            {
+                if (room == null) continue;
+                var doors = room.GetComponentsInChildren<Door>(true);
+
+                foreach (var candidateDoor in doors)
+                {
+                    if (candidateDoor == null || candidateDoor.TargetRoom == null) continue;
+
+                    string pairKey = GetPairKey(room, candidateDoor.TargetRoom);
+                    if (!drawnPairs.Add(pairKey))
+                    {
+                        continue;
+                    }
+
+                    if (!TryResolveConnection(room, candidateDoor, out ConnectionVisualData connection))
+                    {
+                        continue;
+                    }
+
+                    float distance = DistancePointToSegment(worldPos, connection.FromPos, connection.ToPos);
+                    float pickDistance = GetPickDistance(connection.FromPos, connection.ToPos);
+                    if (distance > pickDistance || distance >= bestDistance)
+                    {
+                        continue;
+                    }
+
+                    ResolveDirectionalDoor(connection, worldPos, out Room resolvedOwnerRoom, out Door resolvedDoor);
+                    if (resolvedOwnerRoom == null || resolvedDoor == null)
+                    {
+                        continue;
+                    }
+
+                    bestDistance = distance;
+                    ownerRoom = resolvedOwnerRoom;
+                    door = resolvedDoor;
+                }
+            }
+
+            return ownerRoom != null && door != null;
         }
 
         /// <summary>
         /// Draw a directional connection line between resolved anchors.
         /// </summary>
-        public static void DrawConnection(Vector3 fromPos, Vector3 toPos, Color color, bool isBidirectional, bool isLayerTransition)
+        public static void DrawConnection(Vector3 fromPos, Vector3 toPos, Color color, bool isBidirectional, bool isLayerTransition, float widthMultiplier = 1f)
         {
             Vector3 delta = toPos - fromPos;
             delta.z = 0f;
@@ -59,7 +184,7 @@ namespace ProjectArk.Level.Editor
             }
 
             Vector3 forward = delta / rawDistance;
-            float lineWidth = isLayerTransition ? LAYER_LINE_WIDTH : DEFAULT_LINE_WIDTH;
+            float lineWidth = (isLayerTransition ? LAYER_LINE_WIDTH : DEFAULT_LINE_WIDTH) * Mathf.Max(0.1f, widthMultiplier);
             float arrowLength = GetArrowLength(fromPos, toPos, rawDistance, isBidirectional);
 
             Handles.color = color;
@@ -80,6 +205,31 @@ namespace ProjectArk.Level.Editor
             }
 
             Handles.color = Color.white;
+        }
+
+        private static void ResolveDirectionalDoor(ConnectionVisualData connection, Vector2 worldPos, out Room ownerRoom, out Door door)
+        {
+            ownerRoom = connection.OwnerRoom;
+            door = connection.Door;
+
+            if (!connection.IsBidirectional || connection.ReverseDoor == null || connection.ReverseOwnerRoom == null)
+            {
+                return;
+            }
+
+            float progress = GetSegmentProgress(worldPos, connection.FromPos, connection.ToPos);
+            if (progress < 0.5f)
+            {
+                ownerRoom = connection.ReverseOwnerRoom;
+                door = connection.ReverseDoor;
+            }
+        }
+
+        private static string GetPairKey(Room a, Room b)
+        {
+            int idA = a != null ? a.GetInstanceID() : 0;
+            int idB = b != null ? b.GetInstanceID() : 0;
+            return idA < idB ? $"{idA}_{idB}" : $"{idB}_{idA}";
         }
 
         private static Vector3 ResolveStartAnchor(Room ownerRoom, Door door, Door reverseDoor)
@@ -132,6 +282,42 @@ namespace ProjectArk.Level.Editor
                 : connectionLength * 0.35f;
 
             return Mathf.Min(handleDrivenLength, maxAllowedLength);
+        }
+
+        private static float GetPickDistance(Vector3 fromPos, Vector3 toPos)
+        {
+            Vector3 samplePoint = (fromPos + toPos) * 0.5f;
+            return Mathf.Max(MIN_PICK_DISTANCE, HandleUtility.GetHandleSize(samplePoint) * HANDLE_PICK_DISTANCE_FACTOR);
+        }
+
+        private static float DistancePointToSegment(Vector2 point, Vector3 segmentStart, Vector3 segmentEnd)
+        {
+            Vector2 start = segmentStart;
+            Vector2 end = segmentEnd;
+            Vector2 delta = end - start;
+            float sqrLength = delta.sqrMagnitude;
+            if (sqrLength <= Mathf.Epsilon)
+            {
+                return Vector2.Distance(point, start);
+            }
+
+            float t = Mathf.Clamp01(Vector2.Dot(point - start, delta) / sqrLength);
+            Vector2 closestPoint = start + delta * t;
+            return Vector2.Distance(point, closestPoint);
+        }
+
+        private static float GetSegmentProgress(Vector2 point, Vector3 segmentStart, Vector3 segmentEnd)
+        {
+            Vector2 start = segmentStart;
+            Vector2 end = segmentEnd;
+            Vector2 delta = end - start;
+            float sqrLength = delta.sqrMagnitude;
+            if (sqrLength <= Mathf.Epsilon)
+            {
+                return 1f;
+            }
+
+            return Mathf.Clamp01(Vector2.Dot(point - start, delta) / sqrLength);
         }
 
         private static void DrawDashedLine(Vector3 start, Vector3 end, float lineWidth)

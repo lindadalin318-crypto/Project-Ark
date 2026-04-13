@@ -19,6 +19,12 @@ namespace ProjectArk.Level.Editor
         private const float HOVER_OUTLINE_WIDTH = 2f;
         private const float LABEL_OFFSET_Y = 1.2f;
         private const float DOOR_ICON_SIZE = 0.8f;
+        private const float CONNECTION_HOVER_WIDTH_MULTIPLIER = 1.2f;
+        private const float CONNECTION_SELECTION_WIDTH_MULTIPLIER = 1.55f;
+        private const float CONNECTION_DOOR_MARKER_RADIUS = 0.55f;
+        private const float CONNECTION_SELECTED_DOOR_MARKER_RADIUS = 0.72f;
+        private const float CONNECTION_SPAWN_MARKER_RADIUS = 0.72f;
+        private const float CONNECTION_SELECTED_SPAWN_MARKER_RADIUS = 0.9f;
 
         // ──────────────────── Drag State ────────────────────
 
@@ -362,6 +368,15 @@ namespace ProjectArk.Level.Editor
         private static void HandleMouseDown(Event e, Room[] rooms, LevelArchitectWindow window, int controlID)
         {
             Vector2 worldPos = HandleUtility.GUIPointToWorldRay(e.mousePosition).origin;
+
+            if (ConnectionGizmoDrawer.TryPickConnection(rooms, worldPos, out Room connectionOwnerRoom, out Door connectionDoor))
+            {
+                window.SelectConnection(connectionOwnerRoom, connectionDoor);
+                GUIUtility.hotControl = controlID;
+                e.Use();
+                return;
+            }
+
             Room hitRoom = GetRoomAtPosition(worldPos, rooms);
 
             if (hitRoom != null)

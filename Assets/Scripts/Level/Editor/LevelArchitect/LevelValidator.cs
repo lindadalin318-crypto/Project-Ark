@@ -802,9 +802,7 @@ namespace ProjectArk.Level.Editor
             return false;
         }
 
-        // Rule 4: Door connections not bidirectional
-
-
+        // Rule 4: Surface authored one-way doors (legal but worth confirming)
         private static void ValidateDoorBidirectional(Room[] rooms)
         {
             foreach (var room in rooms)
@@ -836,8 +834,8 @@ namespace ProjectArk.Level.Editor
 
                         _lastResults.Add(new ValidationResult
                         {
-                            Severity = Severity.Error,
-                            Message = $"Door '{capturedDoor.gameObject.name}' in '{capturedRoom.RoomID}' → '{capturedDoor.TargetRoom.RoomID}' has no reverse door.",
+                            Severity = Severity.Info,
+                            Message = $"Door '{capturedDoor.gameObject.name}' in '{capturedRoom.RoomID}' is authored as one-way to '{capturedDoor.TargetRoom.RoomID}'. This is legal; add a reverse door only if traversal should be bidirectional.",
                             TargetObject = capturedDoor,
                             CanAutoFix = true,
                             FixAction = () =>

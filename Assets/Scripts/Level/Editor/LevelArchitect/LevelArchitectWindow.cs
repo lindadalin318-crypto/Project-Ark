@@ -50,6 +50,7 @@ namespace ProjectArk.Level.Editor
         [SerializeField] private int _activeFloorLevel = int.MinValue; // MinValue = show all
         [SerializeField] private string _roomSearchQuery = string.Empty;
         [SerializeField] private Door _selectedConnection;
+        [SerializeField] private Door _hoveredConnection;
         [SerializeField] private List<Room> _pinnedRooms = new List<Room>();
         [SerializeField] private List<Room> _recentRooms = new List<Room>();
 
@@ -1620,7 +1621,7 @@ namespace ProjectArk.Level.Editor
             {
                 state = "Slice State · Topology incomplete";
             }
-            else if (preview.ArenaMissingEncounterCount > 0 || preview.OneWayConnectionCount > 0 || preview.ValidationWarnings > 0)
+            else if (preview.ArenaMissingEncounterCount > 0 || preview.ValidationWarnings > 0)
             {
                 state = "Slice State · Needs authoring pass";
             }
@@ -2206,6 +2207,10 @@ namespace ProjectArk.Level.Editor
 
             EnsureSelectedConnectionIsValid(connectionDoors);
 
+            EditorGUILayout.HelpBox(
+                "Tip: hover or click a connection line in SceneView to preview or select that authored traversal path directly.",
+                MessageType.None);
+
             foreach (var door in connectionDoors)
             {
                 EditorGUILayout.BeginHorizontal();
@@ -2219,9 +2224,7 @@ namespace ProjectArk.Level.Editor
                 var buttonStyle = isSelected ? EditorStyles.boldLabel : EditorStyles.miniButton;
                 if (GUILayout.Button(GetDoorConnectionLabel(door), buttonStyle))
                 {
-                    _selectedConnection = door;
-                    Repaint();
-                    SceneView.RepaintAll();
+                    SelectConnection(room, door);
                 }
 
                 EditorGUILayout.EndHorizontal();
@@ -2265,10 +2268,18 @@ namespace ProjectArk.Level.Editor
             }
 
             EditorGUILayout.LabelField("Direction", GetConnectionDirectionLabel(ownerRoom, door.TargetRoom));
+            EditorGUILayout.LabelField("Directionality", GetConnectionDirectionalityLabel(door, reverseDoor));
             EditorGUILayout.LabelField("Target Landing", GetTargetLandingSummary(door.TargetSpawnPoint));
             EditorGUILayout.LabelField("Gate ID", string.IsNullOrWhiteSpace(door.GateID) ? "—" : door.GateID);
             EditorGUILayout.LabelField("Ceremony", door.Ceremony.ToString());
-            EditorGUILayout.LabelField("Reverse Link", reverseDoor != null ? reverseDoor.gameObject.name : "Missing reciprocal door");
+            EditorGUILayout.LabelField("Reverse Link", reverseDoor != null ? reverseDoor.gameObject.name : "None (legal one-way)");
+
+            if (reverseDoor == null)
+            {
+                EditorGUILayout.HelpBox(
+                    "This connection is authored as one-way. That is legal; add a reverse door only if the player should be able to travel back.",
+                    MessageType.Info);
+            }
 
             var newConnectionType = (ConnectionType)EditorGUILayout.EnumPopup("Connection Type", door.ConnectionType);
             if (newConnectionType != door.ConnectionType)
@@ -2281,9 +2292,12 @@ namespace ProjectArk.Level.Editor
             {
                 DeleteSelectedConnection(ownerRoom, door);
             }
-            if (GUILayout.Button("Flip Direction", GUILayout.Height(22)))
+            using (new EditorGUI.DisabledScope(reverseDoor == null))
             {
-                FlipSelectedConnection(door);
+                if (GUILayout.Button("Flip Direction", GUILayout.Height(22)))
+                {
+                    FlipSelectedConnection(door);
+                }
             }
             if (GUILayout.Button("Make Return", GUILayout.Height(22)))
             {
@@ -2302,9 +2316,24 @@ namespace ProjectArk.Level.Editor
             }
             if (GUILayout.Button("Select Door", GUILayout.Height(22)))
             {
-                Selection.activeGameObject = door.gameObject;
-                SceneView.lastActiveSceneView?.FrameSelected();
-                SceneView.RepaintAll();
+                SelectObjectInScene(door.gameObject);
+            }
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal();
+            using (new EditorGUI.DisabledScope(door.TargetSpawnPoint == null))
+            {
+                if (GUILayout.Button("Select Target Spawn", GUILayout.Height(22)))
+                {
+                    SelectObjectInScene(door.TargetSpawnPoint);
+                }
+            }
+            using (new EditorGUI.DisabledScope(reverseDoor == null))
+            {
+                if (GUILayout.Button("Select Reverse Door", GUILayout.Height(22)))
+                {
+                    SelectObjectInScene(reverseDoor.gameObject);
+                }
             }
             EditorGUILayout.EndHorizontal();
 
@@ -2371,6 +2400,18 @@ namespace ProjectArk.Level.Editor
             SceneView.RepaintAll();
         }
 
+        private static void SelectObjectInScene(UnityEngine.Object targetObject)
+        {
+            if (targetObject == null)
+            {
+                return;
+            }
+
+            Selection.activeObject = targetObject;
+            SceneView.lastActiveSceneView?.FrameSelected();
+            SceneView.RepaintAll();
+        }
+
         private static string GetDoorConnectionLabel(Door door)
         {
             if (door == null)
@@ -2379,7 +2420,22 @@ namespace ProjectArk.Level.Editor
             }
 
             string targetRoomId = door.TargetRoom != null ? door.TargetRoom.RoomID : "Missing Target";
-            return $"{targetRoomId} · {door.ConnectionType}";
+            return $"{targetRoomId} · {door.ConnectionType} · {GetConnectionDirectionalityLabel(door)}";
+        }
+
+        private static string GetConnectionDirectionalityLabel(Door door, Door reverseDoor = null)
+        {
+            if (door == null)
+            {
+                return "Unknown";
+            }
+
+            if (reverseDoor == null)
+            {
+                reverseDoor = DoorWiringService.FindReverseDoor(door);
+            }
+
+            return reverseDoor != null ? "Bidirectional" : "One-way";
         }
 
         private static string GetConnectionDirectionLabel(Room ownerRoom, Room targetRoom)
@@ -2798,10 +2854,11 @@ namespace ProjectArk.Level.Editor
             Event e = Event.current;
             if (e == null) return;
 
-            // Update hovered room
+            // Update hovered room / connection
             if (e.type == EventType.MouseMove || e.type == EventType.MouseDrag)
             {
                 UpdateHoveredRoom(e);
+                UpdateHoveredConnection(sceneView, e);
                 sceneView.Repaint();
             }
 
@@ -2840,6 +2897,28 @@ namespace ProjectArk.Level.Editor
                     _hoveredRoom = room;
                     break;
                 }
+            }
+        }
+
+        private void UpdateHoveredConnection(SceneView sceneView, Event e)
+        {
+            _hoveredConnection = null;
+
+            if (sceneView == null || _currentMode != ToolMode.Select || !AllowSceneSelectionInteraction)
+            {
+                return;
+            }
+
+            if (IsPointerOverSceneOverlay(sceneView, e.mousePosition) || RoomBlockoutRenderer.HasActiveInteraction)
+            {
+                return;
+            }
+
+            Vector2 worldPos = HandleUtility.GUIPointToWorldRay(e.mousePosition).origin;
+            var rooms = FindObjectsByType<Room>();
+            if (ConnectionGizmoDrawer.TryPickConnection(rooms, worldPos, out _, out Door hoveredDoor))
+            {
+                _hoveredConnection = hoveredDoor;
             }
         }
 
@@ -2904,6 +2983,26 @@ namespace ProjectArk.Level.Editor
 
             TrackRecentRoom(room);
             _selectedConnection = null;
+            Repaint();
+            SceneView.RepaintAll();
+        }
+
+        public void SelectConnection(Room ownerRoom, Door door, bool frameInScene = false)
+        {
+            if (ownerRoom == null || door == null)
+            {
+                return;
+            }
+
+            _selectedRooms.Clear();
+            _selectedRooms.Add(ownerRoom);
+            TrackRecentRoom(ownerRoom);
+            _selectedConnection = door;
+            Selection.activeGameObject = ownerRoom.gameObject;
+            if (frameInScene)
+            {
+                SceneView.lastActiveSceneView?.FrameSelected();
+            }
             Repaint();
             SceneView.RepaintAll();
         }
