@@ -2,6 +2,53 @@
 
 ---
 
+## Level Architect 当前支持元素权威矩阵落地 — 2026-04-13 15:44
+
+### 新建文件
+- `Docs/6_Diagnostics/LevelArchitect_SupportedElements_Matrix.md`
+
+### 修改文件
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 在 `Docs/6_Diagnostics/` 下新增 `LevelArchitect_SupportedElements_Matrix.md`，把当前 `Level Architect` 真正已开放的 authoring 能力收口成一份可持续维护的权威矩阵，避免后续继续把“代码里有类型 / validator 会检查 / 运行时支持”误判成“编辑器已支持搭建”。
+- 文档按 `Build / Quick Edit / Validate` 三工作面重新梳理了当前工具边界，并显式指出当前代码现役已经不是旧口径里的 `Design / Build / Validate`，降低后续协作时对老文档表述的继承性误读。
+- 文档分层整理了当前支持的 `RoomNodeType`、built-in room presets、Room Inspector / Batch Edit / Connection Inspector 可直接编辑项、Room Runtime Assist / Connection Assist 可创建的 starter objects，以及 `LevelDesigner JSON` 当前真正会被 Unity 消费的字段集合。
+- 额外单列“仅诊断/显示”“运行时支持未开放”“不计入当前支持”的矩阵，明确 `rooms[].elements[]`、`HiddenAreaMask`、`ActivationGroup`、`DestroyableObject`、`EnvironmentHazard`、`GateID` / `Ceremony` / `RequiredKeyID` 直接编辑等当前尚未进入正式 authoring 面板的边界。
+- 在文档末尾补入维护规则，要求后续新增 `Level Architect` 按钮、starter、JSON 消费字段或 inspector 编辑项时，同回合同步回写这份矩阵。
+
+### 目的
+- 为 `Level Architect` 建立一份真正可用的“当前支持什么”的统一参考表，服务后续新增元素时的范围判断、评审对照与协作沟通。
+- 把 `Level` 模块里“authoring 已开放”“只有诊断可见”“运行时已支持但还没开放入口”三类状态明确拆开，减少后续继续考古代码和互相口头校对的成本。
+
+### 技术
+- 文档治理：以 `LevelArchitectWindow`、`RoomFactory`、`BatchEditPanel`、`DoorWiringService`、`LevelRuntimeAssistFactory`、`LevelSliceBuilder`、`LevelValidator` 为直接依据，按能力状态做矩阵化收口。
+- authoring 边界建模：使用“可直接创建 / 可直接编辑 / 引导式起点 / 仅导入支持 / 仅诊断显示 / 运行时支持未开放 / 不计入当前支持”七类标签统一描述当前能力面。
+
+
+## 本地 MCP 开发环境配置补齐 — 2026-04-13 11:08
+
+### 新建文件
+- `.codebuddy/demo-projects.sqlite`
+
+### 修改文件
+- `c:\Users\seanyyao\.codebuddy\mcp.json`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 将全局 `mcp.json` 收口为可直接供 CodeBuddy 使用的显式配置：保留 `unityMCP` 的本地 HTTP 入口，并为 `playwright`、`context7`、`sqlite-demo-projects` 三个命令型 MCP 补齐 `type: "stdio"` 与用途说明，降低后续排查时对隐式默认值的依赖。
+- 逐项验证三个 `npx` 型 MCP 的启动前提：`@playwright/mcp@latest`、`@upstash/context7-mcp`、`mcp-server-sqlite` 均可正常输出帮助信息，说明包名与启动命令有效。
+- 为 `sqlite-demo-projects` 预创建工作区本地数据库文件 `.codebuddy/demo-projects.sqlite`，避免第一次启动时因为目标路径不存在而影响连接。
+- 额外确认 `unityMCP` 目标端口 `127.0.0.1:8080` 处于监听状态，且 `curl` 访问 `/mcp` 返回 `406`，说明 HTTP 端点在线、只是普通探测请求不符合 MCP 协议预期。
+
+### 目的
+- 让当前常用的 Unity / Playwright / Context7 / SQLite 四个 MCP 入口进入一份更显式、可维护、可验证的本地配置状态。
+- 把“能不能启动”与“端点是否在线”的基础问题提前排掉，减少后续在 IDE 里排查 MCP 失败时的环境噪音。
+
+### 技术
+- 本地 MCP 配置治理：按 CodeBuddy `mcp.json` 结构为命令型服务显式声明 `stdio` 传输，并保留 HTTP 型 Unity MCP 的 URL 接入方式。
+- 轻量连通性验证：使用 `npx --help`、端口探测与 HTTP 响应码确认包入口与本地服务状态。
+
 ## Level Architect Workbench 目标收口为生产期搭建工具 — 2026-04-11 17:01
 
 ### 修改文件
