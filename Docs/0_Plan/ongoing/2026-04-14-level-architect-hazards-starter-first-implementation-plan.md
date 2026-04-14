@@ -26,7 +26,7 @@
 ### Create
 
 - `Assets/Scripts/Level/Editor/LevelArchitect/LevelRuntimeAssistFactoryTests.cs` — `Hazards` starter creation regression tests，验证新按钮最终创建到 `Hazards` 根，组件类型、Trigger Collider、`_targetLayer` 都正确。
-- `Docs/9_Superpowers/plans/2026-04-14-level-architect-hazards-starter-first-implementation-plan.md` — 当前实现计划。
+- `Docs/0_Plan/ongoing/2026-04-14-level-architect-hazards-starter-first-implementation-plan.md` — 当前实现计划。
 
 ### Modify
 
@@ -757,7 +757,7 @@ Expected:
 
 ## Execution Handoff
 
-Plan complete and saved to `Docs/9_Superpowers/plans/2026-04-14-level-architect-hazards-starter-first-implementation-plan.md`. Two execution options:
+Plan complete and saved to `Docs/0_Plan/ongoing/2026-04-14-level-architect-hazards-starter-first-implementation-plan.md`. Two execution options:
 
 **1. Subagent-Driven (recommended)** - 我按任务逐个派新的执行 agent，下一个任务做完就 review 一次，风险最低。
 

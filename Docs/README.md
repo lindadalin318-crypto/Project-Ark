@@ -15,7 +15,7 @@
 
 ## 顶层目录职责
 
-- [`0_Plan/`](./0_Plan/README.md): 项目驾驶舱、活跃专项、已完成专项
+- [`0_Plan/`](./0_Plan/README.md): 项目驾驶舱、设计 spec、活跃专项、已完成专项
 - [`1_GameDesign/`](./1_GameDesign/README.md): 全部策划可直接理解和维护的设计正文
 - [`2_TechnicalDesign/`](./2_TechnicalDesign/README.md): 运行时架构、模块边界、技术真相源
 - [`3_WorkflowsAndRules/`](./3_WorkflowsAndRules/README.md): authoring workflow、authority、validator、文档治理规则
@@ -24,7 +24,6 @@
 - [`6_Diagnostics/`](./6_Diagnostics/README.md): 当前支持矩阵、状态盘点、现状报告
 - [`7_Reference/`](./7_Reference/README.md): 外部参考、游戏拆解、技术笔记
 - [`8_Obsolete/`](./8_Obsolete/README.md): 已失效或历史归档文档
-- [`9_Superpowers/`](./9_Superpowers/README.md): AI 工作流元文档
 
 ## 例外入口
 

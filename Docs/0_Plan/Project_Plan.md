@@ -58,7 +58,15 @@
 - **当前状态**：待启动（已完成 lead review，当前处于 plan 冻结阶段）
 - **对应文档**：[`ongoing/LevelRoomRuntimeChain_Hardening.md`](./ongoing/LevelRoomRuntimeChain_Hardening.md)
 
+### `Camera_MVP`
+
+- **所属模块**：`Level / Camera`
+- **目标**：把探索态镜头从“房间边界优先”收口到“飞船始终尽量居中、局部导演通过 soft bias / zoom 完成”的状态
+- **当前状态**：进行中（方向已冻结，MVP 计划已写入，待进入 Step C1 实施）
+- **对应文档**：[`ongoing/Camera_MVP.md`](./ongoing/Camera_MVP.md)
+
 ### 已完成专项提示
+
 
 - `ShipVFX_PhaseA` 已归档到 `complete/`
 
@@ -85,8 +93,8 @@
 ## 文档导航
 
 - 总设计入口：[`../1_GameDesign/Ark_MasterDesign.md`](../1_GameDesign/Ark_MasterDesign.md)
-- 文档结构设计稿：[`../9_Superpowers/specs/2026-04-10-plan-doc-structure-design.md`](../9_Superpowers/specs/2026-04-10-plan-doc-structure-design.md)
-- 文档结构实施计划：[`../9_Superpowers/plans/2026-04-10-plan-doc-structure-rollout.md`](../9_Superpowers/plans/2026-04-10-plan-doc-structure-rollout.md)
+- 文档结构设计稿：[`./specs/2026-04-10-plan-doc-structure-design.md`](./specs/2026-04-10-plan-doc-structure-design.md)
+- 文档结构实施计划：[`./ongoing/2026-04-10-plan-doc-structure-rollout.md`](./ongoing/2026-04-10-plan-doc-structure-rollout.md)
 - 关卡规范：[`../2_TechnicalDesign/Level/Level_CanonicalSpec.md`](../2_TechnicalDesign/Level/Level_CanonicalSpec.md)
 - 关卡工作流：[`../3_WorkflowsAndRules/LevelArchitect/Level_WorkflowSpec.md`](../3_WorkflowsAndRules/LevelArchitect/Level_WorkflowSpec.md)
 - Ship / VFX 规范：[`../2_TechnicalDesign/Ship/ShipVFX_CanonicalSpec.md`](../2_TechnicalDesign/Ship/ShipVFX_CanonicalSpec.md)
@@ -94,7 +102,9 @@
 - 游戏数据入口：[`../4_GameData/README.md`](../4_GameData/README.md)
 - 活跃专项入口：[`./ongoing/README.md`](./ongoing/README.md)
 - 当前活跃专项：[`./ongoing/LevelRoomRuntimeChain_Hardening.md`](./ongoing/LevelRoomRuntimeChain_Hardening.md)
+- 当前活跃专项：[`./ongoing/Camera_MVP.md`](./ongoing/Camera_MVP.md)
 - 待启动提案：[`./ongoing/LevelArchitect_Workbench.md`](./ongoing/LevelArchitect_Workbench.md)
+
 - 已完成专项：[`./complete/ShipVFX_PhaseA.md`](./complete/ShipVFX_PhaseA.md)
 - 实现日志：[`../5_ImplementationLog/README.md`](../5_ImplementationLog/README.md)
 - 历史关卡方案：[`../8_Obsolete/Plan/LevelModule_Plan.md`](../8_Obsolete/Plan/LevelModule_Plan.md)

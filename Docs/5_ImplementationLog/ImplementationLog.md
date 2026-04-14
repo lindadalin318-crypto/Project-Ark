@@ -2,6 +2,74 @@
 
 ---
 
+## Camera_MVP 探索态镜头改造计划立项 — 2026-04-15 00:28
+
+### 新建文件
+- `Docs/0_Plan/ongoing/Camera_MVP.md`
+
+### 修改文件
+- `Docs/0_Plan/ongoing/README.md`
+- `Docs/0_Plan/Project_Plan.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 新建 `Camera_MVP` 专项计划文档，正式冻结“普通探索房镜头永远尽量以飞船为中心”的目标体验，并把镜头改造拆成 `Goal / Scope / Architecture / Done Checklist / MVP / Future Enhancements` 与 `C0-C4` 分步执行计划。
+- 在计划中明确：探索态镜头的第一真相源应从“房间边界”切换为“飞船位置”，`RoomCameraConfiner` 从默认基础设施降级为特例工具，Arena / Boss / 演出镜头优先通过 `soft bias / zoom / lock` 解决构图问题，而不是继续依赖默认 hard confine。
+- 同步更新 `ongoing/README.md` 与 `Project_Plan.md`，把 `Camera_MVP` 从候选方向提升为正式活跃专项，并补齐从项目状态入口到计划正文的导航链路。
+
+### 目的
+- 把刚刚讨论达成一致的镜头方向正式沉淀为项目现役执行计划，避免后续再次回到“探索态到底是飞船优先还是房间边界优先”的摇摆状态。
+- 为后续实际改代码提供稳定的范围边界、架构约束和验收标准，让镜头主链调整能按 MVP 切片推进，而不是边讨论边试错。
+
+### 技术
+- 计划建档：在 `Docs/0_Plan/ongoing/` 下新增专项计划文档，并按现役计划模板整理目标、范围、分步实施与风险。
+- 文档索引治理：同步更新 `ongoing` 入口与 `Project_Plan` 活跃专项列表，保持计划体系与项目状态入口一致。
+
+## Plan / Specs 文档归并到 `0_Plan` 并收口 superpower 默认落点 — 2026-04-14 22:51
+
+
+### 新建文件
+- `Docs/0_Plan/specs/README.md`
+- `Docs/0_Plan/specs/2026-04-10-plan-doc-structure-design.md`
+- `Docs/0_Plan/specs/2026-04-14-level-architect-authoring-boundary-design.md`
+- `Docs/0_Plan/ongoing/2026-04-10-plan-doc-structure-rollout.md`
+- `Docs/0_Plan/ongoing/2026-04-14-level-architect-hazards-starter-first-implementation-plan.md`
+
+### 修改文件
+- `Docs/README.md`
+- `Docs/0_Plan/README.md`
+- `Docs/0_Plan/Project_Plan.md`
+- `Docs/0_Plan/ongoing/README.md`
+- `Docs/0_Plan/ongoing/2026-04-14-level-architect-hazards-starter-first-implementation-plan.md`
+- `.agents/skills/brainstorming/SKILL.md`
+- `.agents/skills/brainstorming/spec-document-reviewer-prompt.md`
+- `.agents/skills/writing-plans/SKILL.md`
+- `.agents/skills/subagent-driven-development/SKILL.md`
+- `.agents/skills/requesting-code-review/SKILL.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 删除文件
+- `Docs/9_Superpowers/README.md`
+- `Docs/9_Superpowers/specs/2026-04-10-plan-doc-structure-design.md`
+- `Docs/9_Superpowers/specs/2026-04-14-level-architect-authoring-boundary-design.md`
+- `Docs/9_Superpowers/plans/2026-04-10-plan-doc-structure-rollout.md`
+- `Docs/9_Superpowers/plans/2026-04-14-level-architect-hazards-starter-first-implementation-plan.md`
+
+### 内容
+- 将原 `Docs/9_Superpowers/` 下的 `specs/` 与 `plans/` 文档整体归并到 `Docs/0_Plan/`：spec 文档统一迁入 `Docs/0_Plan/specs/`，plan 文档统一迁入 `Docs/0_Plan/ongoing/`，并删除旧的 `9_Superpowers` 目录。
+- 为 `0_Plan` 补入 `specs/README.md`，同时更新 `Docs/README.md`、`Docs/0_Plan/README.md`、`Docs/0_Plan/ongoing/README.md` 与 `Project_Plan.md`，让新结构在索引、导航和职责说明层全部闭环。
+- 修改 `brainstorming`、`writing-plans`、`subagent-driven-development`、`requesting-code-review` 等 superpower skills / prompt，把默认 spec 落点改到 `Docs/0_Plan/specs/`，把默认 plan 落点改到 `Docs/0_Plan/ongoing/`，并显式强调 Project Ark 新生成的 plan 默认先放 `ongoing/`。
+- 同步修正已迁移的 `2026-04-14-level-architect-hazards-starter-first-implementation-plan.md` 中残留的旧自引用路径，并通过全仓搜索确认除历史 `ImplementationLog` 外，不再残留 `Docs/9_Superpowers` 或 `docs/superpowers` 的现役引用。
+
+### 目的
+- 把方案设计稿、实现计划和项目状态入口统一收口到 `0_Plan` 体系内，避免继续维护一个额外的 `9_Superpowers` 文档区。
+- 让后续 AI / superpower 工作流生成的 spec 与 plan 直接落到项目现役目录，特别是让新 plan 天然进入 `ongoing/`，减少后续人工搬运和目录漂移。
+
+### 技术
+- 文档树重构：使用文件迁移与目录删除收口 `Docs` 结构。
+- 路径治理：批量修复 Markdown 索引、导航链接、计划文档自引用与 skill 默认保存路径。
+- 结果验证：用全文检索确认旧路径已从现役文档与 skills 中清空，仅保留历史实现日志记录。
+
 ## Docs architecture migration rollout — 2026-04-14 17:56
 
 ### 新建文件

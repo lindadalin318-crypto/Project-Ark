@@ -13,11 +13,14 @@
 ## 目录结构
 
 - [`Project_Plan.md`](./Project_Plan.md): 项目当前推进入口
-- [`ongoing/`](./ongoing/README.md): 当前正在推进的专项计划与 workbench 文档
+- [`specs/README.md`](./specs/README.md): 设计稿、边界 spec、brainstorming 产出的方案文档
+- [`ongoing/`](./ongoing/README.md): 当前正在推进的专项计划、workbench 文档与新生成的 implementation plan
 - [`complete/`](./complete/README.md): 已完成且结论仍有效的专项计划
 
 ## 使用规则
 
 - 项目级阶段变化，优先更新 `Project_Plan.md`
-- 专项跨多个会话、需要单独跟踪完成标准时，放进 `ongoing/`
+- 需求讨论或方案收口后的设计文档，放进 `specs/`
+- 新生成的 implementation plan 默认放进 `ongoing/`
+- 专项跨多个会话、需要单独跟踪完成标准时，也放进 `ongoing/`
 - 专项完成后，从 `ongoing/` 移入 `complete/`
