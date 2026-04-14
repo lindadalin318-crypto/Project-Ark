@@ -1170,19 +1170,21 @@ namespace ProjectArk.Level.Editor
                 return;
             }
 
-            EditorGUILayout.BeginVertical("HelpBox");
-            EditorGUILayout.LabelField(compact ? "Runtime Assist / Starter Objects" : "Starter Objects", compact ? EditorStyles.miniBoldLabel : EditorStyles.boldLabel);
-            EditorGUILayout.LabelField($"Room: {GetRoomListLabel(room)}", EditorStyles.miniLabel);
-            EditorGUILayout.LabelField(
-                "只创建符合 validator 根节点约定的标准起点；CheckpointSO、EncounterSO、RoomAmbienceSO 等业务资产仍需作者手动指定。",
-                EditorStyles.wordWrappedMiniLabel);
-            EditorGUILayout.LabelField(
-                "根节点分组：Elements → Checkpoint；Encounters → Open Encounter；Triggers → Biome / Scheduled / World Event。",
-                EditorStyles.wordWrappedMiniLabel);
+            using (new EditorGUILayout.VerticalScope("HelpBox"))
+            {
+                EditorGUILayout.LabelField(compact ? "Runtime Assist / Starter Objects" : "Starter Objects", compact ? EditorStyles.miniBoldLabel : EditorStyles.boldLabel);
+                EditorGUILayout.LabelField($"Room: {GetRoomListLabel(room)}", EditorStyles.miniLabel);
+                EditorGUILayout.LabelField(
+                    "适合在结构与连接已基本稳定后，补第一批 runtime 对象起点。创建后会自动选中新对象，方便继续补 SO / phase / key / hazard 参数配置。",
+                    EditorStyles.wordWrappedMiniLabel);
+                EditorGUILayout.LabelField(
+                    "根节点分组：Elements → Checkpoint；Encounters → Open Encounter；Hazards → Contact / Zone / Timed；Triggers → Biome / Scheduled / World Event。",
+                    EditorStyles.wordWrappedMiniLabel);
 
-            DrawRoomRuntimeAssistButtons(room, compact);
-            EditorGUILayout.EndVertical();
+                DrawRoomRuntimeAssistButtons(room, compact);
+            }
         }
+
 
         private void DrawRoomRuntimeAssistButtons(Room room, bool compact)
         {
@@ -1192,6 +1194,7 @@ namespace ProjectArk.Level.Editor
             if (GUILayout.Button(LevelRuntimeAssistFactory.GetDisplayName(LevelRuntimeAssistFactory.RoomAssistType.Checkpoint), GUILayout.Height(buttonHeight)))
             {
                 CreateRoomRuntimeAssist(room, LevelRuntimeAssistFactory.RoomAssistType.Checkpoint);
+                return;
             }
 
             GUILayout.Space(2f);
@@ -1199,26 +1202,66 @@ namespace ProjectArk.Level.Editor
             if (GUILayout.Button(LevelRuntimeAssistFactory.GetDisplayName(LevelRuntimeAssistFactory.RoomAssistType.OpenEncounterTrigger), GUILayout.Height(buttonHeight)))
             {
                 CreateRoomRuntimeAssist(room, LevelRuntimeAssistFactory.RoomAssistType.OpenEncounterTrigger);
+                return;
+            }
+
+            GUILayout.Space(2f);
+            EditorGUILayout.LabelField("Hazards", EditorStyles.miniBoldLabel);
+            bool createContactHazard = false;
+            bool createDamageZone = false;
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                createContactHazard = GUILayout.Button(LevelRuntimeAssistFactory.GetDisplayName(LevelRuntimeAssistFactory.RoomAssistType.ContactHazard), GUILayout.Height(buttonHeight));
+                createDamageZone = GUILayout.Button(LevelRuntimeAssistFactory.GetDisplayName(LevelRuntimeAssistFactory.RoomAssistType.DamageZone), GUILayout.Height(buttonHeight));
+            }
+
+            if (createContactHazard)
+            {
+                CreateRoomRuntimeAssist(room, LevelRuntimeAssistFactory.RoomAssistType.ContactHazard);
+                return;
+            }
+
+            if (createDamageZone)
+            {
+                CreateRoomRuntimeAssist(room, LevelRuntimeAssistFactory.RoomAssistType.DamageZone);
+                return;
+            }
+
+            if (GUILayout.Button(LevelRuntimeAssistFactory.GetDisplayName(LevelRuntimeAssistFactory.RoomAssistType.TimedHazard), GUILayout.Height(buttonHeight)))
+            {
+                CreateRoomRuntimeAssist(room, LevelRuntimeAssistFactory.RoomAssistType.TimedHazard);
+                return;
             }
 
             GUILayout.Space(2f);
             EditorGUILayout.LabelField("Triggers", EditorStyles.miniBoldLabel);
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button(LevelRuntimeAssistFactory.GetDisplayName(LevelRuntimeAssistFactory.RoomAssistType.BiomeTrigger), GUILayout.Height(buttonHeight)))
+
+            bool createBiomeTrigger = false;
+            bool createScheduledBehaviour = false;
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                createBiomeTrigger = GUILayout.Button(LevelRuntimeAssistFactory.GetDisplayName(LevelRuntimeAssistFactory.RoomAssistType.BiomeTrigger), GUILayout.Height(buttonHeight));
+                createScheduledBehaviour = GUILayout.Button(LevelRuntimeAssistFactory.GetDisplayName(LevelRuntimeAssistFactory.RoomAssistType.ScheduledBehaviour), GUILayout.Height(buttonHeight));
+            }
+
+            if (createBiomeTrigger)
             {
                 CreateRoomRuntimeAssist(room, LevelRuntimeAssistFactory.RoomAssistType.BiomeTrigger);
+                return;
             }
-            if (GUILayout.Button(LevelRuntimeAssistFactory.GetDisplayName(LevelRuntimeAssistFactory.RoomAssistType.ScheduledBehaviour), GUILayout.Height(buttonHeight)))
+
+            if (createScheduledBehaviour)
             {
                 CreateRoomRuntimeAssist(room, LevelRuntimeAssistFactory.RoomAssistType.ScheduledBehaviour);
+                return;
             }
-            EditorGUILayout.EndHorizontal();
 
             if (GUILayout.Button(LevelRuntimeAssistFactory.GetDisplayName(LevelRuntimeAssistFactory.RoomAssistType.WorldEventTrigger), GUILayout.Height(buttonHeight)))
             {
                 CreateRoomRuntimeAssist(room, LevelRuntimeAssistFactory.RoomAssistType.WorldEventTrigger);
             }
         }
+
 
         private void DrawConnectionRuntimeAssistSection(Room ownerRoom, Door door)
         {

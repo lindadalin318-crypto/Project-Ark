@@ -254,20 +254,24 @@
 | `BiomeTrigger` | **引导式起点** | `Triggers` | 会创建触发器；仍需手动指定 `RoomAmbienceSO` |
 | `ScheduledBehaviour` | **引导式起点** | `Triggers` | 会创建 `ScheduledTarget` 子物体；仍需手动补 active phases / target |
 | `WorldEventTrigger` | **引导式起点** | `Triggers` | 会创建基础对象；仍需补世界阶段与效果 |
+| `ContactHazard` | **引导式起点** | `Hazards` | 会创建 trigger collider + `ContactHazard` 组件；创建后仍需手动调伤害、击退和命中冷却。 |
+| `DamageZone` | **引导式起点** | `Hazards` | 会创建 trigger collider + `DamageZone` 组件；创建后仍需手动调伤害、tick 间隔和覆盖范围。 |
+| `TimedHazard` | **引导式起点** | `Hazards` | 会创建 trigger collider + `TimedHazard` 组件；创建后仍需手动调激活周期、命中冷却和视觉同步。 |
 | `Lock` Starter | **引导式起点** | `Elements` | 连接级入口；会绑定当前 door，并把 door 初始状态改为 `Locked_Key` |
 
 ## 5.2 当前 validator 已覆盖，但未开放直接创建按钮的元素
 
 | 元素 | 当前状态 | 说明 |
+
 | --- | --- | --- |
 | `HiddenAreaMask` | **运行时支持未开放** | `LevelValidator` 会检查，但 `Level Architect` 当前没有 starter 按钮 |
 | `ActivationGroup` | **运行时支持未开放** | validator 已覆盖根节点与成员检查，但无创建入口 |
-| `EnvironmentHazard` | **运行时支持未开放** | validator 会检查根节点，但无 starter 按钮 |
 | `DestroyableObject` | **运行时支持未开放** | validator 已覆盖 preferred root，但无创建入口 |
 
 ## 5.3 当前系统存在，但不应算作 Level Architect 已支持 authoring 的元素
 
 | 元素 | 当前状态 | 说明 |
+
 | --- | --- | --- |
 | `PickupBase` 派生物 | **运行时支持未开放** | 当前无统一 starter / inspector authoring 入口 |
 | `CameraTrigger` | **运行时支持未开放** | 当前无 starter / validator 双向收口 |
@@ -333,7 +337,11 @@
 | Element | `BiomeTrigger` | **引导式起点** | `Runtime Assist` |
 | Element | `ScheduledBehaviour` | **引导式起点** | `Runtime Assist` |
 | Element | `WorldEventTrigger` | **引导式起点** | `Runtime Assist` |
+| Element | `ContactHazard` | **引导式起点** | `Runtime Assist` |
+| Element | `DamageZone` | **引导式起点** | `Runtime Assist` |
+| Element | `TimedHazard` | **引导式起点** | `Runtime Assist` |
 | Overlay | `Pacing / Critical Path / Lock-Key / Connection Types` | **仅诊断/显示** | Build / Quick Edit |
+
 | Validate | `Validate All / Fix / Auto-Fix` | **可直接使用** | `Validate` |
 | JSON | `rooms / connections / doorLinks` | **仅导入支持** | `LevelSliceBuilder` |
 | JSON | `rooms[].elements[]` | **不计入当前支持** | 当前无 Unity authoring 消费 |
@@ -347,8 +355,9 @@
 | 项目 | 原因 |
 | --- | --- |
 | `rooms[].elements[]` 自动导入 | 当前不会自动生成场景对象 |
-| `HiddenAreaMask` / `ActivationGroup` / `DestroyableObject` / `EnvironmentHazard` 的 starter 创建 | 当前无 authoring 按钮 |
+| `HiddenAreaMask` / `ActivationGroup` / `DestroyableObject` 的 starter 创建 | 当前无 authoring 按钮 |
 | `PickupBase` / `CameraTrigger` / `NarrativeFallTrigger` 的统一工具化 authoring | 当前无正式入口 |
+
 | `GateID / Ceremony / RequiredKeyID / openDuringPhases` 的 Inspector 直接编辑 | 目前只有部分显示或间接改写，没有正式字段编辑 UI |
 | `RoomVariantSO` / `_variantEnvironments` authoring | 运行时有，编辑器当前未开放 |
 | 旧 `Design` Tab 说法 | 当前代码现役是 `Build / Quick Edit / Validate` |
@@ -369,11 +378,12 @@
 
 - 先改代码
 - 再改本文档
-- 最后回写 `Docs/5_ImplementationLog/ImplementationLog.md`
+- 最后按 `Docs/5_ImplementationLog/README.md` 的规则回写当月实现日志
 
 ### 9.2 推荐沟通口径
 
 以后团队讨论时，建议统一用下面三句话之一，避免语义混乱：
+
 
 - **“这个元素 `Level Architect` 已支持直接 author。”**
 - **“这个元素目前只有 starter / scaffold，仍需手工补业务配置。”**

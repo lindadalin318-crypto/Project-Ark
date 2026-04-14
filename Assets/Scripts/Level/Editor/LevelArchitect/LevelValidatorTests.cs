@@ -181,7 +181,42 @@ namespace ProjectArk.Level.Editor
                 result.Message.Contains("Triggers")));
         }
 
+        [Test]
+        public void ValidateAll_ReportsWarning_WhenEnvironmentHazardPlacedOutsideHazardsRoot()
+        {
+            var roomRig = CreateValidRoomRig("Room_Hazard_WrongRoot");
+            var hazardObject = CreateGameObjectWithComponent<ContactHazard>("Hazard_WrongRoot");
+            hazardObject.transform.SetParent(roomRig.ElementsRoot, false);
+            hazardObject.AddComponent<BoxCollider2D>().isTrigger = true;
+            SetPrivateField(hazardObject.GetComponent<ContactHazard>(), "_targetLayer", (LayerMask)1);
+
+            var results = LevelValidator.ValidateAll();
+
+            Assert.That(results.Any(result =>
+                result.TargetObject == hazardObject.GetComponent<ContactHazard>() &&
+                result.Severity == LevelValidator.Severity.Warning &&
+                result.Message.Contains("EnvironmentHazard") &&
+                result.Message.Contains("Hazards")));
+        }
+
+        [Test]
+        public void ValidateAll_ReportsWarning_WhenEnvironmentHazardHasNoTargetLayer()
+        {
+            var roomRig = CreateValidRoomRig("Room_Hazard_MissingLayer");
+            var hazardObject = CreateGameObjectWithComponent<ContactHazard>("Hazard_MissingLayer");
+            hazardObject.transform.SetParent(roomRig.HazardsRoot, false);
+            hazardObject.AddComponent<BoxCollider2D>().isTrigger = true;
+
+            var results = LevelValidator.ValidateAll();
+
+            Assert.That(results.Any(result =>
+                result.TargetObject == hazardObject.GetComponent<ContactHazard>() &&
+                result.Severity == LevelValidator.Severity.Warning &&
+                result.Message.Contains("_targetLayer")));
+        }
+
         private RoomTestRig CreateValidRoomRig(string roomName)
+
         {
             var roomObject = CreateGameObjectWithComponent<Room>(roomName);
             roomObject.AddComponent<BoxCollider2D>().isTrigger = true;

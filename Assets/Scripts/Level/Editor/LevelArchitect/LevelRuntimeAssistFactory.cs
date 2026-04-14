@@ -18,11 +18,15 @@ namespace ProjectArk.Level.Editor
             OpenEncounterTrigger,
             BiomeTrigger,
             ScheduledBehaviour,
-            WorldEventTrigger
+            WorldEventTrigger,
+            ContactHazard,
+            DamageZone,
+            TimedHazard
         }
 
         private const string ELEMENTS_ROOT_NAME = "Elements";
         private const string ENCOUNTERS_ROOT_NAME = "Encounters";
+        private const string HAZARDS_ROOT_NAME = "Hazards";
         private const string TRIGGERS_ROOT_NAME = "Triggers";
         private const string SPAWN_POINTS_ROOT_NAME = "SpawnPoints";
 
@@ -41,9 +45,13 @@ namespace ProjectArk.Level.Editor
                 RoomAssistType.BiomeTrigger => CreateBiomeTrigger(room),
                 RoomAssistType.ScheduledBehaviour => CreateScheduledBehaviour(room),
                 RoomAssistType.WorldEventTrigger => CreateWorldEventTrigger(room),
+                RoomAssistType.ContactHazard => CreateContactHazard(room),
+                RoomAssistType.DamageZone => CreateDamageZone(room),
+                RoomAssistType.TimedHazard => CreateTimedHazard(room),
                 _ => null
             };
         }
+
 
         public static GameObject CreateLockAssist(Room ownerRoom, Door targetDoor)
         {
@@ -77,9 +85,13 @@ namespace ProjectArk.Level.Editor
                 RoomAssistType.BiomeTrigger => "Biome Trigger",
                 RoomAssistType.ScheduledBehaviour => "Scheduled",
                 RoomAssistType.WorldEventTrigger => "World Event",
+                RoomAssistType.ContactHazard => "Contact Hazard",
+                RoomAssistType.DamageZone => "Damage Zone",
+                RoomAssistType.TimedHazard => "Timed Hazard",
                 _ => assistType.ToString()
             };
         }
+
 
         private static GameObject CreateCheckpoint(Room room)
         {
@@ -157,7 +169,50 @@ namespace ProjectArk.Level.Editor
             return worldEventObject;
         }
 
+        private static GameObject CreateContactHazard(Room room)
+        {
+            Transform root = EnsureAuthoringRoot(room, HAZARDS_ROOT_NAME);
+            string objectName = GameObjectUtility.GetUniqueNameForSibling(root, $"ContactHazard_{room.RoomID}");
+            GameObject hazardObject = CreateChild(root, objectName, GetRoomCenter(room));
+
+            EnsureTriggerBoxCollider(hazardObject, new Vector2(4f, 4f));
+            var hazard = Undo.AddComponent<ContactHazard>(hazardObject);
+            ApplyPlayerLayer(hazard, "_targetLayer");
+
+            FinalizeCreatedObject(hazardObject, $"[LevelRuntimeAssist] Created ContactHazard starter in room '{room.RoomID}'. Tune damage, knockback and hit cooldown before playtest.");
+            return hazardObject;
+        }
+
+        private static GameObject CreateDamageZone(Room room)
+        {
+            Transform root = EnsureAuthoringRoot(room, HAZARDS_ROOT_NAME);
+            string objectName = GameObjectUtility.GetUniqueNameForSibling(root, $"DamageZone_{room.RoomID}");
+            GameObject hazardObject = CreateChild(root, objectName, GetRoomCenter(room));
+
+            EnsureTriggerBoxCollider(hazardObject, GetSuggestedTriggerSize(room, 0.45f, 0.35f, new Vector2(6f, 4f)));
+            var hazard = Undo.AddComponent<DamageZone>(hazardObject);
+            ApplyPlayerLayer(hazard, "_targetLayer");
+
+            FinalizeCreatedObject(hazardObject, $"[LevelRuntimeAssist] Created DamageZone starter in room '{room.RoomID}'. Tune damage, tick interval and playable footprint before playtest.");
+            return hazardObject;
+        }
+
+        private static GameObject CreateTimedHazard(Room room)
+        {
+            Transform root = EnsureAuthoringRoot(room, HAZARDS_ROOT_NAME);
+            string objectName = GameObjectUtility.GetUniqueNameForSibling(root, $"TimedHazard_{room.RoomID}");
+            GameObject hazardObject = CreateChild(root, objectName, GetRoomCenter(room));
+
+            EnsureTriggerBoxCollider(hazardObject, new Vector2(4f, 4f));
+            var hazard = Undo.AddComponent<TimedHazard>(hazardObject);
+            ApplyPlayerLayer(hazard, "_targetLayer");
+
+            FinalizeCreatedObject(hazardObject, $"[LevelRuntimeAssist] Created TimedHazard starter in room '{room.RoomID}'. Tune active/inactive durations, cooldown and visuals before playtest.");
+            return hazardObject;
+        }
+
         private static Transform EnsureAuthoringRoot(Room room, string rootName)
+
         {
             Transform root = room.transform.Find(rootName);
             if (root != null)

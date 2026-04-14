@@ -64,9 +64,9 @@
 ```text
 Docs/
 └── Plan/
-    ├── ProjectPlan.md
+    ├── Project_Plan.md
     ├── ongoing/
-    │   ├── ShipVFX-PhaseA.md
+    │   ├── ShipVFX_PhaseA.md
     │   ├── Camera-MVP.md
     │   └── Level-Validation-Hardening.md
     └── complete/
@@ -76,7 +76,7 @@ Docs/
 
 ### 3.1 结构职责
 
-- `ProjectPlan.md`
+- `Project_Plan.md`
   - 项目总入口
   - 负责维护当前项目阶段、模块状态、活跃专项、候选专项、风险与导航
 
@@ -129,9 +129,9 @@ Docs/
 
 ---
 
-## 5. `ProjectPlan.md` 固定结构
+## 5. `Project_Plan.md` 固定结构
 
-`ProjectPlan.md` 应是项目驾驶舱，而不是第二份 `GDD`。推荐固定包含以下栏目：
+`Project_Plan.md` 应是项目驾驶舱，而不是第二份 `GDD`。推荐固定包含以下栏目：
 
 ### 5.1 文档定位
 
@@ -238,7 +238,7 @@ Docs/
 
 ## 7. 创建与归档规则
 
-### 7.1 何时只更新 `ProjectPlan.md`
+### 7.1 何时只更新 `Project_Plan.md`
 
 满足以下条件时，只更新总 plan，不单独创建专项文档：
 
@@ -261,7 +261,7 @@ Docs/
 
 - 主目标已完成
 - 完成标准已满足
-- `ProjectPlan.md` 已同步状态
+- `Project_Plan.md` 已同步状态
 - 剩余问题只是不影响完成态的小尾项
 
 ---
@@ -275,11 +275,11 @@ Docs/
 先创建：
 
 - `Docs/0_Plan/`
-- `Docs/0_Plan/ProjectPlan.md`
+- `Docs/0_Plan/Project_Plan.md`
 - `Docs/0_Plan/ongoing/`
 - `Docs/0_Plan/complete/`
 
-第一阶段先让 `ProjectPlan.md` 成为新的默认阅读入口。
+第一阶段先让 `Project_Plan.md` 成为新的默认阅读入口。
 
 ### 8.2 Phase 2：迁入少量活跃专项
 
@@ -287,7 +287,7 @@ Docs/
 
 推荐第一批候选：
 
-- `ShipVFX_PhaseA_AuthorityPlan.md` → `Docs/0_Plan/ongoing/ShipVFX-PhaseA.md`
+- `ShipVFX_PhaseA_AuthorityPlan.md` → `Docs/0_Plan/complete/ShipVFX_PhaseA.md`
 - 其余专项视当前是否正式立项决定，避免“凡是带 Plan 的都迁”
 
 ### 8.3 Phase 3：完成专项归档
@@ -295,16 +295,16 @@ Docs/
 当专项完成后：
 
 - 将其从 `ongoing/` 移动到 `complete/`
-- 同步更新 `ProjectPlan.md`
+- 同步更新 `Project_Plan.md`
 - 保留与 `Spec`、`ImplementationLog` 的链接
 
 ### 8.4 Phase 4：再处理目录历史债
 
 以下问题不建议与本轮绑定：
 
-- `1_GDD` / `GDD` 并存
-- `5_ImplementationLog` / `ImplementationLog` 并存
-- `7_Reference` / `Reference` 并存
+- 旧设计主树与新职责主树并存
+- 历史总账与月度实现日志并存
+- 新参考目录与旧参考入口并存
 
 这些属于第二阶段的顶层目录治理问题，应在 `Plan/` 工作流跑顺后再单独处理。
 
@@ -330,14 +330,14 @@ Docs/
 像 `ShipVFX_MigrationPlan.md` 这类“长期路线图 + backlog”的复合文档，不建议整份直接搬进新的 `Plan/ongoing/`。推荐处理方式：
 
 - 把当前正在执行的部分抽成 `ongoing` 专项文件
-- 把长期方向摘要纳入 `ProjectPlan.md`
+- 把长期方向摘要纳入 `Project_Plan.md`
 - 原文暂时保留，后续再评估是继续留作参考、拆分，还是归档
 
 ---
 
 ## 10. 维护规则
 
-### 10.1 必须更新 `ProjectPlan.md` 的时机
+### 10.1 必须更新 `Project_Plan.md` 的时机
 
 - 项目阶段切换
 - 模块状态变化
@@ -353,7 +353,7 @@ Docs/
 
 ### 10.3 维护原则
 
-`ProjectPlan.md` 必须保持“5 分钟读完全局、1 分钟找到当前重点”的可读性。
+`Project_Plan.md` 必须保持“5 分钟读完全局、1 分钟找到当前重点”的可读性。
 
 因此，不应把以下内容塞入总 plan：
 
@@ -370,14 +370,14 @@ Docs/
 为了以最低风险启动这套体系，建议首轮只做以下事项：
 
 1. 创建 `Docs/0_Plan/` 结构
-2. 新建 `ProjectPlan.md` 最小可用版本
+2. 新建 `Project_Plan.md` 最小可用版本
 3. 先迁入一个最典型的活跃专项：`ShipVFX-PhaseA`
 4. 暂不迁动 `CanonicalSpec`、`WorkflowSpec`、`ImplementationLog`
 5. 暂不处理 `Docs` 顶层重复目录问题
 
 这样可以先验证：
 
-- 团队是否真的会把 `ProjectPlan.md` 当作开工入口
+- 团队是否真的会把 `Project_Plan.md` 当作开工入口
 - `ongoing → complete` 的流程是否顺手
 - 新体系是否能减少“去哪看”的沟通成本
 
@@ -389,7 +389,7 @@ Docs/
 
 它的价值不在于“把文档排得更整齐”，而在于建立一个真正可用的项目驾驶舱：
 
-- 看总貌，有 `ProjectPlan.md`
+- 看总貌，有 `Project_Plan.md`
 - 看当前执行，有 `ongoing/`
 - 看已完成专项，有 `complete/`
 - 看规则，去 `Design / Spec`

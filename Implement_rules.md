@@ -10,8 +10,8 @@
 >
 > 它**不是**现役链路、资产映射、Prefab/Scene owner 的真相源。各模块的权威来源：
 >
-> - `Ship / VFX`：`Docs/2_Design/Ship/ShipVFX_CanonicalSpec.md` + `Docs/2_Design/Ship/ShipVFX_AssetRegistry.md`
-> - `Level`：`Docs/2_Design/Level/Level_CanonicalSpec.md`
+> - `Ship / VFX`：`Docs/2_TechnicalDesign/Ship/ShipVFX_CanonicalSpec.md` + `Docs/2_TechnicalDesign/Ship/ShipVFX_AssetRegistry.md`
+> - `Level`：`Docs/2_TechnicalDesign/Level/Level_CanonicalSpec.md`
 > - 其余暂无独立 `CanonicalSpec` 的治理章节：以本文档的约束为准；现役链路、对象映射和实现真相仍以对应代码、Prefab / Scene 与设计文档为准
 >
 > 当前已启用章节：
@@ -74,8 +74,8 @@
 
 本节适用范围以以下文档为准：
 
-- 现役规范：`Docs/2_Design/Ship/ShipVFX_CanonicalSpec.md`
-- 资产映射：`Docs/2_Design/Ship/ShipVFX_AssetRegistry.md`
+- 现役规范：`Docs/2_TechnicalDesign/Ship/ShipVFX_CanonicalSpec.md`
+- 资产映射：`Docs/2_TechnicalDesign/Ship/ShipVFX_AssetRegistry.md`
 
 当前主要覆盖：
 
@@ -90,10 +90,10 @@
   - `Assets/_Prefabs/VFX/BoostTrailRoot.prefab`
   - `Assets/Scenes/SampleScene.unity`
 - 相关文档
-  - `Docs/2_Design/Ship/ShipVFX_CanonicalSpec.md`
-  - `Docs/2_Design/Ship/ShipVFX_AssetRegistry.md`
-  - `Docs/2_Design/Ship/ShipVFX_MigrationPlan.md`
-  - `Docs/2_Design/Ship/ShipVFX_Player_Perception_Reference.md`
+  - `Docs/2_TechnicalDesign/Ship/ShipVFX_CanonicalSpec.md`
+  - `Docs/2_TechnicalDesign/Ship/ShipVFX_AssetRegistry.md`
+  - `Docs/0_Plan/ongoing/ShipVFX_MigrationPlan.md`
+  - `Docs/7_Reference/GameAnalysis/ShipVFX_PlayerPerception_Reference.md`
 
 ### 2.2 模块目标
 
@@ -432,7 +432,7 @@
 > **与 VFX 的区别**：VFX 的 Authority Matrix 主要用于收口多入口写同一链路；Level 模块更强调 Scene authoring、Door 连线、导入骨架与校验器之间的职责边界。
 >
 > **权威来源**：
-> - 目标架构 / 数据结构 / 工具链边界：`Docs/2_Design/Level/Level_CanonicalSpec.md`
+> - 目标架构 / 数据结构 / 工具链边界：`Docs/2_TechnicalDesign/Level/Level_CanonicalSpec.md`
 > - 实现约束 / 踩坑治理：本文档本节
 > - 若两者冲突，以 `Level_CanonicalSpec.md` 为准
 
@@ -450,10 +450,10 @@
 - Scene
   - `Assets/Scenes/SampleScene.unity`（示巴星切片）
 - 相关文档
-  - `Docs/2_Design/Level/Level_CanonicalSpec.md`
-  - `Docs/2_Design/Level/Level_WorkflowSpec.md`
+  - `Docs/2_TechnicalDesign/Level/Level_CanonicalSpec.md`
+  - `Docs/3_WorkflowsAndRules/LevelArchitect/Level_WorkflowSpec.md`
   - `Docs/7_Reference/GameAnalysis/Level_Architecture_Synthesis_Minishoot_Silksong_TUNIC.md`（参考输入）
-  - `Docs/8_Obsolete/LevelModulePlan.md`（历史参考）
+  - `Docs/8_Obsolete/Plan/LevelModule_Plan.md`（历史参考）
 
 ### 7.2 模块目标
 
@@ -971,7 +971,7 @@ Level 关键链路缺引用时，禁止静默 return：
 > - 新功能开发时需要先"考古"才能动手
 >
 > **与架构速写的关系**：
-> - `Docs/2_Design/{ModuleName}/{ModuleName}_ArchBrief.md`：描述模块**是什么**——结构、职责、驱动关系
+> - `Docs/2_TechnicalDesign/{ModuleName}/{ModuleName}_ArchBrief.md`：描述模块**是什么**——结构、职责、驱动关系
 > - `Implement_rules.md` 中的模块规则：描述模块**怎么改更不容易烂**——实现约束、踩坑防御、验收清单
 > - 两者互补，不重复。架构速写回答"谁管什么"，实现规则回答"改的时候要注意什么"
 

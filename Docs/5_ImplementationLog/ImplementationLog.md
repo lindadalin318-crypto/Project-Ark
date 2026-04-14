@@ -2,6 +2,152 @@
 
 ---
 
+## Docs architecture migration rollout — 2026-04-14 17:56
+
+### 新建文件
+- `Docs/README.md`
+- `Docs/0_Plan/README.md`
+- `Docs/1_GameDesign/README.md`
+- `Docs/2_TechnicalDesign/README.md`
+- `Docs/3_WorkflowsAndRules/README.md`
+- `Docs/4_GameData/README.md`
+- `Docs/5_ImplementationLog/README.md`
+- `Docs/5_ImplementationLog/ImplementationLog_2026-04.md`
+- `Docs/6_Diagnostics/README.md`
+- `Docs/7_Reference/README.md`
+- `Docs/8_Obsolete/README.md`
+- `Docs/9_Superpowers/README.md`
+
+### 修改文件
+- `Docs/0_Plan/Project_Plan.md`
+- `Docs/0_Plan/ongoing/README.md`
+- `Docs/0_Plan/ongoing/LevelRoomRuntimeChain_Hardening.md`
+- `Docs/0_Plan/ongoing/LevelArchitect_Workbench.md`
+- `Docs/0_Plan/ongoing/ShipVFX_MigrationPlan.md`
+- `Docs/0_Plan/complete/README.md`
+- `Docs/0_Plan/complete/ShipVFX_PhaseA.md`
+- `Docs/1_GameDesign/Ark_MasterDesign.md`
+- `Docs/2_TechnicalDesign/Level/Level_CanonicalSpec.md`
+- `Docs/3_WorkflowsAndRules/LevelArchitect/Level_WorkflowSpec.md`
+- `Implement_rules.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 按新的职责主树创建 `Docs` 总索引与各一级目录 README，正式建立 `0_Plan / 1_GameDesign / 2_TechnicalDesign / 3_WorkflowsAndRules / 4_GameData / 5_ImplementationLog / 6_Diagnostics / 7_Reference / 8_Obsolete / 9_Superpowers` 的导航骨架。
+- 将现役设计正文、技术真相源、工作流规范、结构化数据和历史归档文档迁移到新目录，并统一为英文文件名、下划线分词风格。
+- 将 `1_GDD / 2_Design / 3_LevelDesigns / 4_DataTables` 的现役主内容重新落位，同时把旧版需求稿、旧 JSON、旧 checklist、旧状态快照和历史方案归入 `8_Obsolete` 对应职责分区。
+- 建立新的月度实现日志文件，并保留原有 `ImplementationLog.md` 作为历史总账。
+
+### 目的
+- 让每个目录只回答一种问题，降低“文档在哪、当前真相在哪、旧稿在哪”的查找成本。
+- 把策划正文、技术真相源、authoring 规则、游戏数据、实时诊断和历史归档彻底拆开，避免后续继续混放。
+
+### 技术
+- 文档架构重构：按职责分区、按主题归档、按稳定命名词法重建 `Docs` 主树。
+- 导航治理：使用总索引 + 一级目录 README + 相对路径链接，建立更稳定的索引体系。
+
+
+## 
+
+## Level Architect Runtime Assist IMGUI 布局报错修复 — 2026-04-14 15:06
+
+### 修改文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 修复 `Level Architect` 的 `Runtime Assist` 面板在点击 `Hazards` / `Triggers` 横排按钮后可能触发的 IMGUI 布局报错，重点处理 `EndLayoutGroup: BeginLayoutGroup must be called first.` 这类第二现场错误。
+- 将 `DrawRoomRuntimeAssistSection()` 的外层 `HelpBox` 改为 `VerticalScope`，并把横排按钮区改为 `HorizontalScope`，让布局组在异常或提前返回时也能被正确释放。
+- 将 `ContactHazard`、`DamageZone`、`BiomeTrigger`、`ScheduledBehaviour` 这类横排按钮的创建动作改为“先记录点击结果，再在布局闭合后执行”，避免在同一布局组尚未结束时就改动编辑器状态。
+
+### 目的
+- 消除本轮 `Hazards starter-first` 接入后出现的 Unity Editor 布局栈失衡问题，恢复 `Runtime Assist` 面板的稳定可用性。
+- 让后续 starter 创建入口在发生异常或状态切换时，不再把 IMGUI 留在半开布局状态。
+
+### 技术
+- IMGUI 防御性修复：使用 `EditorGUILayout.VerticalScope` / `HorizontalScope` 替代手写 `Begin/End`，降低异常路径下的布局失衡风险。
+- 延后执行动作：按钮点击先采集，再在 scope 结束后调用创建逻辑，避免在同一 GUI 组内即时修改选择/层级状态。
+
+
+
+## Level Architect Hazards starter-first authoring 接入 — 2026-04-14 12:12
+
+### 新建文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelRuntimeAssistFactoryTests.cs`
+- `Docs/9_Superpowers/plans/2026-04-14-level-architect-hazards-starter-first-implementation-plan.md`
+
+### 修改文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelRuntimeAssistFactory.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidatorTests.cs`
+- `Docs/6_Diagnostics/LevelArchitect_SupportedElements_Matrix.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 为 `Level Architect` 的 `Runtime Assist` 新增 `Hazards` 分组，并开放 `ContactHazard`、`DamageZone`、`TimedHazard` 三种 starter-first 创建入口，使现有 hazard family 正式进入 room authoring 主链。
+- 在 `LevelRuntimeAssistFactory` 中补齐 `Hazards` 根下的标准 starter 创建逻辑：统一创建 trigger collider、挂载具体 hazard 组件，并默认把 `_targetLayer` 指向 `Player`，让作者创建后可以直接进入参数细调。
+- 在 `LevelValidator` 中新增 `EnvironmentHazard` 基础验证，覆盖 Collider Trigger 与 `_targetLayer` 两项高频 authoring 错误；同时补充对应的 EditMode regression tests，防止后续回归。
+- 同步更新 `LevelArchitect_SupportedElements_Matrix.md`，把 hazards 从“运行时支持未开放”升级为现役可创建 starter 的 authoring 项。
+
+### 目的
+- 先打通 `Hazards` 这条最强语义、最高复用的 room element authoring 闭环，验证 spec 中“starter-first + validator”策略在 `Level Architect` 上的落地方式。
+- 为后续 `Traversal / Secret`、`Interaction`、`Group / World` 三条扩展链提供一套可复用的接入模板。
+
+### 技术
+- Level Architect starter-first authoring：复用现有 `EnvironmentHazard` family，在编辑器侧只补标准创建入口，不额外发明新的运行时系统。
+- 回归防护：使用 EditMode tests 固定 `Hazards` 根、Trigger Collider、`_targetLayer` 三类高频 authoring 约束。
+
+
+
+## Level Architect Hazards starter-first 实现计划落地 — 2026-04-14 11:27
+
+### 新建文件
+- `Docs/9_Superpowers/plans/2026-04-14-level-architect-hazards-starter-first-implementation-plan.md`
+
+### 修改文件
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 在 `Docs/9_Superpowers/plans/` 下新增 `2026-04-14-level-architect-hazards-starter-first-implementation-plan.md`，把已通过的 `Level Architect` 边界 spec 拆成第一张可执行子计划，明确本轮只实现 `Hazards starter-first`，不把 `Traversal / Secret`、`Interaction`、`Group / World` 一起塞进同一张计划。
+- 计划按 `tests → factory → window → validator → docs → full verification` 的顺序组织任务，把 `ContactHazard`、`DamageZone`、`TimedHazard` 三种现有运行时 hazard 接入 `Level Architect` 的 room authoring 主链，并要求同步更新支持矩阵和实现日志。
+- 计划显式利用了项目当前已存在的技术现实：`EnvironmentHazard` family 已在运行时存在，`LevelValidator` 已认 `Hazards` 根，因此本轮重点是 authoring 接入与护栏补齐，而不是新增另一套 hazard runtime 系统。
+- 计划文档同时把范围拆分写死：`Hazards` 是第一张计划，剩余的 `Traversal / Secret`、`Interaction`、`Group / World` 保留为后续独立计划，避免实现阶段 scope 膨胀。
+
+### 目的
+- 把抽象的边界设计转换成第一张真正可执行的实现计划，让后续开发可以按任务逐步落地，而不是继续停留在原则讨论层面。
+- 用 `Hazards` 这条最强语义、最高复用、现有基础最完整的子链路，验证 `starter-first + validator` 的扩展模式是否顺手。
+
+### 技术
+- 计划拆分：把一个覆盖多个子系统的 spec 拆成首个独立可交付的实现计划。
+- Level Architect authoring 路线：围绕 `LevelRuntimeAssistFactory`、`LevelArchitectWindow`、`LevelValidator`、EditMode tests 和诊断文档构造完整闭环。
+
+
+
+## Level Architect 语义化 authoring 边界设计定稿 — 2026-04-14 11:05
+
+### 新建文件
+- `Docs/superpowers/specs/2026-04-14-level-architect-authoring-boundary-design.md`
+
+### 修改文件
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 新增 `Docs/superpowers/specs/2026-04-14-level-architect-authoring-boundary-design.md`，把关于 `Level Architect` 未来应不应该承接 room elements 的讨论正式收敛成一份设计文档，明确其长期定位是“关卡语义编辑器”，而不是全量摆件或美术装饰编辑器。
+- 文档将团队已确认的决策写成明确规则：`Level Architect` 只负责玩法语义元素，纯 decoration 单品继续直接从 `Project` 面板摆放；并采用“分级候选制 + 保守收口”的准入模型，避免后续 scope 膨胀。
+- 文档进一步把 room elements 分为 `Core Semantic`、`Soft Semantic`、`Pure Dressing` 三层，给出 `starter-first` 作为新元素进入 `Level Architect` 的默认落地策略，要求后续新入口优先以标准 starter + validator 约束的方式接入，而不是一开始就做复杂完整面板。
+- 文档还给出了未来优先扩展的几类对象：`Hazards`、`Traversal / Secret`、`Interaction`、`Group / World`，并明确陷阱、可破坏路径阻挡物、`HiddenAreaMask`、`ActivationGroup` 等应作为高优先级候选，而纯美术植物和装饰散件不应进入主链。
+
+### 目的
+- 为 `Level Architect` 建立一条长期稳定的扩展边界，避免它在后续加元素时逐渐膨胀成“第二个 Hierarchy + Project”。
+- 给后续新增 room element 时提供一套明确的准入判断标准，减少评审阶段反复争论“这个元素到底该不该进 LA”。
+
+### 技术
+- 文档化设计：把已确认的产品定位、元素分层、准入规则、starter-first 策略和后续扩展顺序固化为 spec。
+- authoring 边界治理：以“语义 authority 是否必要”为核心，区分 `Level Architect` 与 Unity 原生 `Project`/`Hierarchy` 的职责边界。
+
+
+
 ## Level Architect 当前支持元素权威矩阵落地 — 2026-04-13 15:44
 
 ### 新建文件

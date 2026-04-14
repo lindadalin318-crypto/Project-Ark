@@ -74,7 +74,9 @@ namespace ProjectArk.Level.Editor
             ValidateBiomeTriggers();
             ValidateScheduledBehaviours();
             ValidateActivationGroups();
+            ValidateEnvironmentHazards();
             ValidatePreferredAuthoringRoots();
+
 
             ValidateDoorBidirectional(rooms);
             ValidateDoorCeremonyConsistency(rooms);
@@ -726,7 +728,21 @@ namespace ProjectArk.Level.Editor
             }
         }
 
+        private static void ValidateEnvironmentHazards()
+        {
+            var hazards = UnityEngine.Object.FindObjectsByType<EnvironmentHazard>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var hazard in hazards)
+            {
+                if (hazard == null) continue;
+
+                string componentLabel = hazard.GetType().Name;
+                ValidateTriggerCollider(hazard, componentLabel);
+                ValidateLayerMask(hazard, "_targetLayer", componentLabel);
+            }
+        }
+
         private static void ValidatePreferredAuthoringRoots()
+
         {
             ValidatePreferredRoot<Lock>("Lock", "Elements");
             ValidatePreferredRoot<Checkpoint>("Checkpoint", "Elements");
