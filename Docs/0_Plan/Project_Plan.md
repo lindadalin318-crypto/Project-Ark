@@ -30,7 +30,7 @@
 
 - **阶段**：场景配置与验证阶段
 - **主目标**：把已完成模块真正挂进场景并跑通可玩闭环
-- **当前重点**：`Room` 运行时消费链收口、关卡 authoring 护栏、场景接线验证、镜头体验方向收敛
+- **当前重点**：`Room` 运行时消费链收口、关卡 authoring 护栏、场景接线验证
 - **当前非重点**：大规模新系统扩张、顶层目录历史债全面清理
 
 ---
@@ -58,24 +58,17 @@
 - **当前状态**：待启动（已完成 lead review，当前处于 plan 冻结阶段）
 - **对应文档**：[`ongoing/LevelRoomRuntimeChain_Hardening.md`](./ongoing/LevelRoomRuntimeChain_Hardening.md)
 
-### `Camera_MVP`
-
-- **所属模块**：`Level / Camera`
-- **目标**：把探索态镜头从“房间边界优先”收口到“飞船始终尽量居中、局部导演通过 soft bias / zoom 完成”的状态
-- **当前状态**：进行中（方向已冻结，MVP 计划已写入，待进入 Step C1 实施）
-- **对应文档**：[`ongoing/Camera_MVP.md`](./ongoing/Camera_MVP.md)
-
 ### 已完成专项提示
 
-
 - `ShipVFX_PhaseA` 已归档到 `complete/`
+- `Camera_MVP` 已验收完成并归档到 `complete/`
 
 ---
 
 ## 下一批候选专项
 
 - **`ShipVFX-PhaseB`**：基于 `Phase A` 已完成的治理基线，进入第一批体验重构切片
-- **`Camera-MVP`**：在现有镜头底座上补前向 lead、基础兴趣点与更明确的 framing 规则
+- **`Camera-Phase2`**：基于 `Camera_MVP` 已完成基线，继续补前向 lead、基础兴趣点与更明确的 framing 规则
 - **`LevelArchitect_Workbench`**：把 `Level Architect` 从工具集合收口为 `Scene-backed authoring workbench`，吸收 `HTML` 的交互心智而不新增第二套 authority
 - **`Level-Authoring-Standardization`**：待 `Room` 运行时消费链收口后，再推进场景根节点与房间语法的批量规范化
 - **`Plan-Rollout-Phase2`**：当首轮入口跑顺后，再评估是否迁入第二批现役专项或清理顶层目录历史债
@@ -102,7 +95,7 @@
 - 游戏数据入口：[`../4_GameData/README.md`](../4_GameData/README.md)
 - 活跃专项入口：[`./ongoing/README.md`](./ongoing/README.md)
 - 当前活跃专项：[`./ongoing/LevelRoomRuntimeChain_Hardening.md`](./ongoing/LevelRoomRuntimeChain_Hardening.md)
-- 当前活跃专项：[`./ongoing/Camera_MVP.md`](./ongoing/Camera_MVP.md)
+- 已完成专项：[`./complete/Camera_MVP.md`](./complete/Camera_MVP.md)
 - 待启动提案：[`./ongoing/LevelArchitect_Workbench.md`](./ongoing/LevelArchitect_Workbench.md)
 
 - 已完成专项：[`./complete/ShipVFX_PhaseA.md`](./complete/ShipVFX_PhaseA.md)

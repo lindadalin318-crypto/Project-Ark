@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 using ProjectArk.Combat.Enemy;
 
 namespace ProjectArk.Level.Editor
@@ -63,6 +64,7 @@ namespace ProjectArk.Level.Editor
                 ValidateBoxColliderTrigger(room);
                 ValidateCameraConfiner(room);
                 ValidateStandardRoomHierarchy(room);
+                ValidateRoomGeometryAuthoring(room);
                 ValidateArenaBossConfig(room);
                 ValidateRoomEncounterMode(room);
             }
@@ -335,12 +337,12 @@ namespace ProjectArk.Level.Editor
         {
             string[] requiredRoots =
             {
-                "Navigation",
-                "Elements",
-                "Encounters",
-                "Hazards",
-                "Decoration",
-                "Triggers"
+                RoomAuthoringHierarchy.NavigationRootName,
+                RoomAuthoringHierarchy.ElementsRootName,
+                RoomAuthoringHierarchy.EncountersRootName,
+                RoomAuthoringHierarchy.HazardsRootName,
+                RoomAuthoringHierarchy.DecorationRootName,
+                RoomAuthoringHierarchy.TriggersRootName
             };
 
             var missingRoots = new List<string>();
@@ -365,16 +367,231 @@ namespace ProjectArk.Level.Editor
                 CanAutoFix = true,
                 FixAction = () =>
                 {
-                    foreach (var rootName in missingRoots)
-                    {
-                        if (room.transform.Find(rootName) != null) continue;
-
-                        var rootGO = new GameObject(rootName);
-                        Undo.RegisterCreatedObjectUndo(rootGO, $"Create {rootName}");
-                        rootGO.transform.SetParent(room.transform, false);
-                    }
+                    RoomAuthoringHierarchy.EnsureForRoom(room.transform);
                 }
             });
+        }
+
+        private static void ValidateRoomGeometryAuthoring(Room room)
+        {
+            var navigationRoot = room.transform.Find(RoomAuthoringHierarchy.NavigationRootName);
+            if (navigationRoot == null)
+            {
+                return;
+            }
+
+            var geometryRoot = navigationRoot.Find(RoomAuthoringHierarchy.GeometryRootName);
+            if (geometryRoot == null)
+            {
+                _lastResults.Add(new ValidationResult
+                {
+                    Severity = Severity.Warning,
+                    Message = $"Room '{room.RoomID}' is missing Navigation/Geometry root for static geometry authoring.",
+                    TargetObject = navigationRoot.gameObject,
+                    CanAutoFix = true,
+                    FixAction = () =>
+                    {
+                        RoomAuthoringHierarchy.EnsureForRoom(room.transform);
+                    }
+                });
+                return;
+            }
+
+            var outerWallsRoot = geometryRoot.Find(RoomAuthoringHierarchy.OuterWallsRootName);
+            if (outerWallsRoot == null)
+            {
+                _lastResults.Add(new ValidationResult
+                {
+                    Severity = Severity.Warning,
+                    Message = $"Room '{room.RoomID}' is missing Navigation/Geometry/OuterWalls root.",
+                    TargetObject = geometryRoot.gameObject,
+                    CanAutoFix = true,
+                    FixAction = () =>
+                    {
+                        RoomAuthoringHierarchy.EnsureForRoom(room.transform);
+                    }
+                });
+            }
+
+            var innerWallsRoot = geometryRoot.Find(RoomAuthoringHierarchy.InnerWallsRootName);
+            if (innerWallsRoot == null)
+            {
+                _lastResults.Add(new ValidationResult
+                {
+                    Severity = Severity.Info,
+                    Message = $"Room '{room.RoomID}' is missing Navigation/Geometry/InnerWalls root.",
+                    TargetObject = geometryRoot.gameObject,
+                    CanAutoFix = true,
+                    FixAction = () =>
+                    {
+                        RoomAuthoringHierarchy.EnsureForRoom(room.transform);
+                    }
+                });
+            }
+
+            ValidateGeometryRootMarker(room, geometryRoot);
+
+            if (outerWallsRoot != null)
+            {
+                ValidateOuterWallsCollisionChain(room, outerWallsRoot);
+            }
+
+            ValidateMisplacedNamedWallTilemaps(room, RoomAuthoringHierarchy.ElementsRootName);
+            ValidateMisplacedNamedWallTilemaps(room, RoomAuthoringHierarchy.TriggersRootName);
+        }
+
+        private static void ValidateGeometryRootMarker(Room room, Transform geometryRoot)
+        {
+            var markers = geometryRoot.GetComponents<RoomGeometryRoot>();
+            if (markers.Length == 0)
+            {
+                _lastResults.Add(new ValidationResult
+                {
+                    Severity = Severity.Warning,
+                    Message = $"Room '{room.RoomID}' Navigation/Geometry is missing RoomGeometryRoot marker.",
+                    TargetObject = geometryRoot.gameObject,
+                    CanAutoFix = true,
+                    FixAction = () =>
+                    {
+                        Undo.AddComponent<RoomGeometryRoot>(geometryRoot.gameObject);
+                    }
+                });
+                return;
+            }
+
+            if (markers.Length > 1)
+            {
+                _lastResults.Add(new ValidationResult
+                {
+                    Severity = Severity.Error,
+                    Message = $"Room '{room.RoomID}' Navigation/Geometry has multiple RoomGeometryRoot components.",
+                    TargetObject = geometryRoot.gameObject,
+                    CanAutoFix = false,
+                    FixAction = null
+                });
+            }
+
+            var components = geometryRoot.GetComponents<Component>();
+            foreach (var component in components)
+            {
+                if (component == null || component is Transform || component is RoomGeometryRoot)
+                {
+                    continue;
+                }
+
+                _lastResults.Add(new ValidationResult
+                {
+                    Severity = Severity.Warning,
+                    Message = $"Room '{room.RoomID}' Navigation/Geometry should stay marker-only, but found '{component.GetType().Name}'.",
+                    TargetObject = component,
+                    CanAutoFix = false,
+                    FixAction = null
+                });
+            }
+        }
+
+        private static void ValidateOuterWallsCollisionChain(Room room, Transform outerWallsRoot)
+        {
+            var tilemapColliders = outerWallsRoot.GetComponentsInChildren<TilemapCollider2D>(true);
+            if (tilemapColliders.Length == 0)
+            {
+                _lastResults.Add(new ValidationResult
+                {
+                    Severity = Severity.Warning,
+                    Message = $"Room '{room.RoomID}' OuterWalls has no TilemapCollider2D chain yet.",
+                    TargetObject = outerWallsRoot.gameObject,
+                    CanAutoFix = false,
+                    FixAction = null
+                });
+                return;
+            }
+
+            foreach (var tilemapCollider in tilemapColliders)
+            {
+                if (tilemapCollider == null)
+                {
+                    continue;
+                }
+
+                if (tilemapCollider.GetComponent<Tilemap>() == null)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Error,
+                        Message = $"Outer wall '{tilemapCollider.gameObject.name}' is missing Tilemap component.",
+                        TargetObject = tilemapCollider.gameObject,
+                        CanAutoFix = false,
+                        FixAction = null
+                    });
+                }
+
+                var compositeCollider = tilemapCollider.GetComponent<CompositeCollider2D>();
+                if (compositeCollider == null)
+                {
+                    continue;
+                }
+
+                var rigidbody = tilemapCollider.GetComponent<Rigidbody2D>();
+                if (rigidbody == null || rigidbody.bodyType != RigidbodyType2D.Static)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Error,
+                        Message = $"Outer wall '{tilemapCollider.gameObject.name}' uses CompositeCollider2D but is missing a Static Rigidbody2D.",
+                        TargetObject = tilemapCollider.gameObject,
+                        CanAutoFix = false,
+                        FixAction = null
+                    });
+                }
+
+                if (tilemapCollider.compositeOperation == Collider2D.CompositeOperation.None)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Error,
+                        Message = $"Outer wall '{tilemapCollider.gameObject.name}' has CompositeCollider2D but TilemapCollider2D is not configured to use composite.",
+                        TargetObject = tilemapCollider.gameObject,
+                        CanAutoFix = false,
+                        FixAction = null
+                    });
+                }
+            }
+        }
+
+        private static void ValidateMisplacedNamedWallTilemaps(Room room, string rootName)
+        {
+            var root = room.transform.Find(rootName);
+            if (root == null)
+            {
+                return;
+            }
+
+            var tilemapColliders = root.GetComponentsInChildren<TilemapCollider2D>(true);
+            foreach (var tilemapCollider in tilemapColliders)
+            {
+                if (tilemapCollider == null)
+                {
+                    continue;
+                }
+
+                string objectName = tilemapCollider.gameObject.name;
+                bool looksLikeWallRoot = objectName.StartsWith(RoomAuthoringHierarchy.OuterWallsRootName, StringComparison.Ordinal)
+                    || objectName.StartsWith(RoomAuthoringHierarchy.InnerWallsRootName, StringComparison.Ordinal);
+
+                if (!looksLikeWallRoot)
+                {
+                    continue;
+                }
+
+                _lastResults.Add(new ValidationResult
+                {
+                    Severity = Severity.Warning,
+                    Message = $"Named wall tilemap '{objectName}' is under '{rootName}' in Room '{room.RoomID}'. Static walls should live under Navigation/Geometry.",
+                    TargetObject = tilemapCollider.gameObject,
+                    CanAutoFix = false,
+                    FixAction = null
+                });
+            }
         }
 
         // Rule 3.6: NodeType migration state — removed (all rooms now use explicit NodeType)

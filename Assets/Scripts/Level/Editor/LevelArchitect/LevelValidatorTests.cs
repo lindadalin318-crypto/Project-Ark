@@ -3,6 +3,7 @@ using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 namespace ProjectArk.Level.Editor
 {
@@ -38,8 +39,7 @@ namespace ProjectArk.Level.Editor
         [Test]
         public void ValidateAll_ReportsError_WhenLockMissingRequiredKey()
         {
-            var lockObject = CreateGameObjectWithComponent<Lock>("Lock_MissingKey");
-            lockObject.AddComponent<BoxCollider2D>().isTrigger = true;
+            var lockObject = CreateGameObjectWithTriggerColliderAndComponent<Lock>("Lock_MissingKey");
             SetPrivateField(lockObject.GetComponent<Lock>(), "_playerLayer", (LayerMask)1);
             SetPrivateField(lockObject.GetComponent<Lock>(), "_targetDoor", CreateGameObjectWithComponent<Door>("TargetDoor").GetComponent<Door>());
 
@@ -54,8 +54,7 @@ namespace ProjectArk.Level.Editor
         [Test]
         public void ValidateAll_ReportsError_WhenCheckpointMissingData()
         {
-            var checkpointObject = CreateGameObjectWithComponent<Checkpoint>("Checkpoint_MissingData");
-            checkpointObject.AddComponent<BoxCollider2D>().isTrigger = true;
+            var checkpointObject = CreateGameObjectWithTriggerColliderAndComponent<Checkpoint>("Checkpoint_MissingData");
             SetPrivateField(checkpointObject.GetComponent<Checkpoint>(), "_playerLayer", (LayerMask)1);
 
             var results = LevelValidator.ValidateAll();
@@ -146,9 +145,8 @@ namespace ProjectArk.Level.Editor
         public void ValidateAll_ReportsWarning_WhenLockPlacedOutsideElementsRoot()
         {
             var roomRig = CreateValidRoomRig("Room_Lock_WrongRoot");
-            var lockObject = CreateGameObjectWithComponent<Lock>("Lock_WrongRoot");
+            var lockObject = CreateGameObjectWithTriggerColliderAndComponent<Lock>("Lock_WrongRoot");
             lockObject.transform.SetParent(roomRig.TriggersRoot, false);
-            lockObject.AddComponent<BoxCollider2D>().isTrigger = true;
             SetPrivateField(lockObject.GetComponent<Lock>(), "_playerLayer", (LayerMask)1);
             SetPrivateField(lockObject.GetComponent<Lock>(), "_requiredKey", CreateScriptableObject<KeyItemSO>("TestKey"));
             SetPrivateField(lockObject.GetComponent<Lock>(), "_targetDoor", CreateGameObjectWithComponent<Door>("DetachedTargetDoor").GetComponent<Door>());
@@ -185,9 +183,8 @@ namespace ProjectArk.Level.Editor
         public void ValidateAll_ReportsWarning_WhenEnvironmentHazardPlacedOutsideHazardsRoot()
         {
             var roomRig = CreateValidRoomRig("Room_Hazard_WrongRoot");
-            var hazardObject = CreateGameObjectWithComponent<ContactHazard>("Hazard_WrongRoot");
+            var hazardObject = CreateGameObjectWithTriggerColliderAndComponent<ContactHazard>("Hazard_WrongRoot");
             hazardObject.transform.SetParent(roomRig.ElementsRoot, false);
-            hazardObject.AddComponent<BoxCollider2D>().isTrigger = true;
             SetPrivateField(hazardObject.GetComponent<ContactHazard>(), "_targetLayer", (LayerMask)1);
 
             var results = LevelValidator.ValidateAll();
@@ -203,9 +200,8 @@ namespace ProjectArk.Level.Editor
         public void ValidateAll_ReportsWarning_WhenEnvironmentHazardHasNoTargetLayer()
         {
             var roomRig = CreateValidRoomRig("Room_Hazard_MissingLayer");
-            var hazardObject = CreateGameObjectWithComponent<ContactHazard>("Hazard_MissingLayer");
+            var hazardObject = CreateGameObjectWithTriggerColliderAndComponent<ContactHazard>("Hazard_MissingLayer");
             hazardObject.transform.SetParent(roomRig.HazardsRoot, false);
-            hazardObject.AddComponent<BoxCollider2D>().isTrigger = true;
 
             var results = LevelValidator.ValidateAll();
 
@@ -213,6 +209,86 @@ namespace ProjectArk.Level.Editor
                 result.TargetObject == hazardObject.GetComponent<ContactHazard>() &&
                 result.Severity == LevelValidator.Severity.Warning &&
                 result.Message.Contains("_targetLayer")));
+        }
+
+        [Test]
+        public void ValidateAll_ReportsWarning_WhenNavigationGeometryRootMissing()
+        {
+            var roomRig = CreateValidRoomRig("Room_Geometry_MissingRoot");
+            Object.DestroyImmediate(roomRig.GeometryRoot.gameObject);
+
+            var results = LevelValidator.ValidateAll();
+
+            Assert.That(results.Any(result =>
+                result.TargetObject == roomRig.NavigationRoot.gameObject &&
+                result.Severity == LevelValidator.Severity.Warning &&
+                result.Message.Contains("Navigation/Geometry")));
+        }
+
+        [Test]
+        public void ValidateAll_ReportsWarning_WhenGeometryRootMissingMarkerComponent()
+        {
+            var roomRig = CreateValidRoomRig("Room_Geometry_MissingMarker");
+            Object.DestroyImmediate(roomRig.GeometryRoot.GetComponent<RoomGeometryRoot>());
+
+            var results = LevelValidator.ValidateAll();
+
+            Assert.That(results.Any(result =>
+                result.TargetObject == roomRig.GeometryRoot.gameObject &&
+                result.Severity == LevelValidator.Severity.Warning &&
+                result.Message.Contains("RoomGeometryRoot")));
+        }
+
+        [Test]
+        public void ValidateAll_ReportsWarning_WhenGeometryRootHasUnexpectedExtraComponent()
+        {
+            var roomRig = CreateValidRoomRig("Room_Geometry_UnexpectedComponent");
+            roomRig.GeometryRoot.gameObject.AddComponent<BoxCollider2D>();
+
+            var results = LevelValidator.ValidateAll();
+
+            Assert.That(results.Any(result =>
+                result.TargetObject == roomRig.GeometryRoot.GetComponent<BoxCollider2D>() &&
+                result.Severity == LevelValidator.Severity.Warning &&
+                result.Message.Contains("marker-only") &&
+                result.Message.Contains("BoxCollider2D")));
+        }
+
+        [Test]
+        public void ValidateAll_ReportsError_WhenOuterWallsCompositeColliderHasNoStaticRigidbody()
+        {
+            var roomRig = CreateValidRoomRig("Room_Geometry_MissingStaticBody");
+            var outerWall = CreateChild(roomRig.OuterWallsRoot, "OuterWalls_Main");
+            outerWall.gameObject.AddComponent<Tilemap>();
+            outerWall.gameObject.AddComponent<TilemapRenderer>();
+            outerWall.gameObject.AddComponent<TilemapCollider2D>();
+            outerWall.gameObject.AddComponent<CompositeCollider2D>();
+
+            var results = LevelValidator.ValidateAll();
+
+            Assert.That(results.Any(result =>
+                result.TargetObject == outerWall.gameObject &&
+                result.Severity == LevelValidator.Severity.Error &&
+                result.Message.Contains("Rigidbody2D") &&
+                result.Message.Contains("Static")));
+        }
+
+        [Test]
+        public void ValidateAll_ReportsWarning_WhenWallNamedTilemapLivesUnderElementsRoot()
+        {
+            var roomRig = CreateValidRoomRig("Room_Geometry_WrongRoot");
+            var misplacedWall = CreateChild(roomRig.ElementsRoot, "OuterWalls_Main");
+            misplacedWall.gameObject.AddComponent<Tilemap>();
+            misplacedWall.gameObject.AddComponent<TilemapRenderer>();
+            misplacedWall.gameObject.AddComponent<TilemapCollider2D>();
+
+            var results = LevelValidator.ValidateAll();
+
+            Assert.That(results.Any(result =>
+                result.TargetObject == misplacedWall.gameObject &&
+                result.Severity == LevelValidator.Severity.Warning &&
+                result.Message.Contains("Navigation/Geometry") &&
+                result.Message.Contains("OuterWalls_Main")));
         }
 
         private RoomTestRig CreateValidRoomRig(string roomName)
@@ -226,24 +302,22 @@ namespace ProjectArk.Level.Editor
             SetPrivateField(roomData, "_displayName", roomName);
             SetPrivateField(roomObject.GetComponent<Room>(), "_data", roomData);
 
-            var navigationRoot = CreateChild(roomObject.transform, "Navigation");
-            var elementsRoot = CreateChild(roomObject.transform, "Elements");
-            var encountersRoot = CreateChild(roomObject.transform, "Encounters");
-            var hazardsRoot = CreateChild(roomObject.transform, "Hazards");
-            var decorationRoot = CreateChild(roomObject.transform, "Decoration");
-            var triggersRoot = CreateChild(roomObject.transform, "Triggers");
+            var hierarchy = RoomAuthoringHierarchy.EnsureForRoom(roomObject.transform);
             var confiner = CreateChild(roomObject.transform, "CameraConfiner");
             confiner.gameObject.layer = 2;
 
             return new RoomTestRig
             {
                 Room = roomObject.GetComponent<Room>(),
-                NavigationRoot = navigationRoot,
-                ElementsRoot = elementsRoot,
-                EncountersRoot = encountersRoot,
-                HazardsRoot = hazardsRoot,
-                DecorationRoot = decorationRoot,
-                TriggersRoot = triggersRoot,
+                NavigationRoot = hierarchy.NavigationRoot,
+                GeometryRoot = hierarchy.GeometryRoot,
+                OuterWallsRoot = hierarchy.OuterWallsRoot,
+                InnerWallsRoot = hierarchy.InnerWallsRoot,
+                ElementsRoot = hierarchy.ElementsRoot,
+                EncountersRoot = hierarchy.EncountersRoot,
+                HazardsRoot = hierarchy.HazardsRoot,
+                DecorationRoot = hierarchy.DecorationRoot,
+                TriggersRoot = hierarchy.TriggersRoot,
                 CameraConfiner = confiner
             };
         }
@@ -259,6 +333,16 @@ namespace ProjectArk.Level.Editor
         private GameObject CreateGameObjectWithComponent<T>(string name) where T : Component
         {
             var gameObject = new GameObject(name);
+            gameObject.AddComponent<T>();
+            _createdObjects.Add(gameObject);
+            return gameObject;
+        }
+
+        private GameObject CreateGameObjectWithTriggerColliderAndComponent<T>(string name) where T : Component
+        {
+            var gameObject = new GameObject(name);
+            var collider = gameObject.AddComponent<BoxCollider2D>();
+            collider.isTrigger = true;
             gameObject.AddComponent<T>();
             _createdObjects.Add(gameObject);
             return gameObject;
@@ -294,6 +378,9 @@ namespace ProjectArk.Level.Editor
         {
             public Room Room;
             public Transform NavigationRoot;
+            public Transform GeometryRoot;
+            public Transform OuterWallsRoot;
+            public Transform InnerWallsRoot;
             public Transform ElementsRoot;
             public Transform EncountersRoot;
             public Transform HazardsRoot;

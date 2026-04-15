@@ -276,7 +276,7 @@ namespace ProjectArk.Level.Editor
             box.isTrigger = true;
             box.size = size;
 
-            RoomCameraPolicy cameraPolicy = GetDefaultCameraPolicy(nodeType);
+            RoomCameraPolicy cameraPolicy = RoomFactory.GetDefaultCameraPolicy(nodeType);
 
             // Standard hierarchy
             var navRoot = CreateChild(roomGO.transform, "Navigation");
@@ -297,10 +297,6 @@ namespace ProjectArk.Level.Editor
                 SetConfinerBounds(poly, size);
             }
 
-
-            // Navigation placeholders
-            CreateChild(navRoot.transform, "Doors");
-            CreateChild(navRoot.transform, "SpawnPoints");
 
             // Encounter spawn points
             var encSpawnRoot = CreateChild(encRoot.transform, "SpawnPoints");

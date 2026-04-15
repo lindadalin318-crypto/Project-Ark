@@ -6,7 +6,8 @@
 
 - 首轮文档主树迁移已完成入口搭建
 - 当前活跃专项：`LevelRoomRuntimeChain_Hardening`
-- 当前活跃专项：`Camera_MVP`（已完成方向冻结，进入探索态镜头改造计划）
+- 新增 implementation plan：`2026-04-15-static-geometry-walls-implementation-plan.md`
+- `Camera_MVP` 已验收完成，并已归档到 `complete/`
 - 已补入待启动提案：`LevelArchitect_Workbench`
 - `ShipVFX_PhaseA` 在迁移核对时确认已完成，因此归档到了 `complete/`
 - 新生成的 implementation plan 默认先落在本目录，完成后再按需要移入 `complete/`

@@ -80,13 +80,9 @@ namespace ProjectArk.Level.Editor
 
             RoomCameraPolicy cameraPolicy = GetDefaultCameraPolicy(preset.NodeTypeValue);
 
-            // ── Standard hierarchy roots (Batch 2) ──
-            var navigationRoot = CreateChildObject(roomGO.transform, NAVIGATION_ROOT_NAME);
-            CreateChildObject(roomGO.transform, ELEMENTS_ROOT_NAME);
-            var encountersRoot = CreateChildObject(roomGO.transform, ENCOUNTERS_ROOT_NAME);
-            CreateChildObject(roomGO.transform, HAZARDS_ROOT_NAME);
-            CreateChildObject(roomGO.transform, DECORATION_ROOT_NAME);
-            CreateChildObject(roomGO.transform, TRIGGERS_ROOT_NAME);
+            // ── Standard hierarchy roots ──
+            var hierarchy = RoomAuthoringHierarchy.EnsureForRoom(roomGO.transform);
+            var encountersRoot = hierarchy.EncountersRoot;
 
             // ── Optional Camera Confiner Child ──
             PolygonCollider2D polyCollider = null;
@@ -101,12 +97,14 @@ namespace ProjectArk.Level.Editor
             }
 
 
-            // ── Standard Navigation placeholders ──
-            CreateChildObject(navigationRoot.transform, "Doors");
-            CreateChildObject(navigationRoot.transform, "SpawnPoints");
+            // ── Encounter SpawnPoints Container ──
+            var encounterSpawnRoot = encountersRoot.Find(RoomAuthoringHierarchy.SpawnPointsRootName);
+            if (encounterSpawnRoot == null)
+            {
+                encounterSpawnRoot = CreateChildObject(encountersRoot.transform, RoomAuthoringHierarchy.SpawnPointsRootName).transform;
+            }
 
-            // ── SpawnPoints Container ──
-            var spawnPointsGO = CreateChildObject(encountersRoot.transform, "SpawnPoints");
+            var spawnPointsGO = encounterSpawnRoot.gameObject;
             Transform[] spawnPoints = CreateSpawnPoints(spawnPointsGO.transform, preset);
 
             // ── ArenaController (for Arena/Boss) ──
@@ -488,6 +486,13 @@ namespace ProjectArk.Level.Editor
             return null;
         }
 
+        internal static RoomCameraPolicy GetDefaultCameraPolicy(RoomNodeType nodeType)
+        {
+            return nodeType == RoomNodeType.Arena || nodeType == RoomNodeType.Boss
+                ? RoomCameraPolicy.HardConfine
+                : RoomCameraPolicy.FollowPlayer;
+        }
+
         private static void TrySetEntryRoom(Room room)
         {
             if (room == null)
@@ -686,11 +691,12 @@ namespace ProjectArk.Level.Editor
             return roomSO;
         }
 
-        private static void ConfigureRoom(Room room, RoomSO roomSO, Collider2D confinerBounds, Transform[] spawnPoints)
+        private static void ConfigureRoom(Room room, RoomSO roomSO, RoomCameraPolicy cameraPolicy, Collider2D confinerBounds, Transform[] spawnPoints)
         {
             var serialized = new SerializedObject(room);
 
             serialized.FindProperty("_data").objectReferenceValue = roomSO;
+            serialized.FindProperty("_cameraPolicy").enumValueIndex = (int)cameraPolicy;
             serialized.FindProperty("_confinerBounds").objectReferenceValue = confinerBounds;
 
             // Set spawn points array

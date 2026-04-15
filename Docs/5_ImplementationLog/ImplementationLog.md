@@ -2,6 +2,260 @@
 
 ---
 
+## 落地静态几何墙 MVP authoring 闭环，统一 `Navigation/Geometry` room skeleton — 2026-04-15 21:24
+
+### 新建文件
+- `Assets/Scripts/Level/Room/RoomGeometryRoot.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomAuthoringHierarchy.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomAuthoringHierarchyTests.cs`
+
+### 修改文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomFactory.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelSliceBuilder.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidatorTests.cs`
+- `Docs/3_WorkflowsAndRules/LevelArchitect/Level_WorkflowSpec.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 新增 `RoomGeometryRoot` 作为 `Navigation/Geometry` 的超轻 marker，并用 `RoomAuthoringHierarchy` 把 `RoomFactory` 与 `LevelSliceBuilder` 的标准房间骨架收口到同一条 authority 链。
+- 新建房间、Blockout 画房与 JSON 导入房间现在都会自动带出 `Navigation/Geometry/OuterWalls/InnerWalls`，不再依赖作者手工搭 geometry 根节点。
+- `LevelValidator` 增加了 geometry authoring 规则：检查 `Navigation/Geometry`、`RoomGeometryRoot`、`OuterWalls` 碰撞链、以及命名墙 Tilemap 被误放到 `Elements/Triggers` 的问题；同时 `Navigation/Geometry` 的 marker-only 护栏已覆盖到内建组件而不只限于 `MonoBehaviour`。
+- 新增/更新 EditMode tests，锁住 geometry skeleton 与 validator 行为，并顺手修正了旧测试夹具在 Unity 6000 下对 `Lock`、`Checkpoint`、`EnvironmentHazard` 这类依赖 Collider 组件的创建顺序问题。
+
+### 目的
+- 把静态几何墙从 spec 推进为第一版可执行 authoring 语言，让外轮廓墙先拥有统一骨架、统一护栏和统一工具 authority。
+- 为后续 `BreakableWall`、`PhaseBarrier` 等变化墙保留干净的空间事实主链，避免再次把静态墙和玩法墙混写。
+
+### 技术
+- 使用 editor-only shared helper 收口 room skeleton authority，而不是在 `RoomFactory` 与 `LevelSliceBuilder` 中继续复制 hierarchy 创建代码。
+- 使用 `RoomGeometryRoot` marker + `LevelValidator` + NUnit EditMode tests 建立 starter-first 的 authoring 闭环，保持 `Scene-backed geometry` 原则不变；本轮已通过 `ProjectArk.Level.Editor` 程序集 `21/21` EditMode tests 与 `dotnet build Project-Ark.slnx` 验证。
+
+## 新增静态几何墙 implementation plan，进入 `0_Plan/ongoing` 执行阶段 — 2026-04-15 16:39
+
+### 新建文件
+- `Docs/0_Plan/ongoing/2026-04-15-static-geometry-walls-implementation-plan.md`
+
+### 修改文件
+- `Docs/0_Plan/ongoing/README.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 新建 `2026-04-15-static-geometry-walls-implementation-plan.md`，把已确认的静态几何墙 spec 继续拆成一份可执行 implementation plan，收口为 **room skeleton → marker component → validator → EditMode tests → workflow docs → implementation log** 的最小闭环。
+- 计划明确新增 `RoomGeometryRoot`、`RoomAuthoringHierarchy`、`RoomAuthoringHierarchyTests` 三个首批文件，并把 `RoomFactory` 与 `LevelSliceBuilder` 这两条现役房间骨架 authority 一并纳入同一轮改动，避免后续出现“手工建房有 Geometry、JSON 导入没 Geometry”的再次漂移。
+- 同步更新 `Docs/0_Plan/ongoing/README.md`，把这份静态几何墙 implementation plan 正式挂进 `ongoing` 目录入口，便于后续执行阶段和专项跟踪直接发现。
+- 计划中还显式限定了本轮边界：不做自动画墙、不做玩法墙、不做新的 runtime owner，只先把 `Navigation/Geometry/OuterWalls/InnerWalls` 的 authoring 主链收稳。
+
+### 目的
+- 把静态几何墙从“设计已确认”推进到“可开始执行”，减少后续实现时再从聊天或 spec 里二次回捞任务拆分的成本。
+- 为接下来的 editor / validator / workflow 落地提供统一的任务清单和执行顺序，保证第一版真正围绕外轮廓墙 authoring 稳定性来做，而不是再次扩 scope。
+
+### 技术
+- implementation plan 继续沿用 `Docs/0_Plan/ongoing/` 作为执行阶段文档落点，保持 `spec -> implementation plan -> implementation log` 的文档链路清晰。
+- 计划结构参考项目内已落地的 `starter-first` implementation plan 风格，按测试先行、authority 收口、文档同步和最终验证来组织任务。
+
+## 新增静态几何墙设计稿，收口 `Level` 墙几何 authoring 方向 — 2026-04-15 16:15
+
+### 新建文件
+- `Docs/0_Plan/specs/2026-04-15-static-geometry-walls-design.md`
+
+### 修改文件
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 新建 `2026-04-15-static-geometry-walls-design.md`，把本轮围绕静态几何墙的方案讨论正式收口为一份 spec，明确记录 `A / B / C` 三种方向的取舍，并确定采用 **B：轻量根组件 + 纯几何本体** 作为第一版设计结论。
+- 在 spec 中固定静态几何墙的推荐层级：`Room/Navigation/Geometry/OuterWalls + InnerWalls`，并明确 `Geometry` 根上仅允许挂超轻的 `RoomGeometryRoot` 作为 validator / tooling 锚点，禁止其成长为新的 runtime manager。
+- 同时定义第一版的 Tilemap / Collider 组合建议、`LevelValidator` 需要补的结构与碰撞链校验、以及 `Level Architect / RoomFactory` 当前只创建骨架、不生成墙形的接入边界。
+- 文档还补充了静态几何墙与后续 `BreakableWall`、`PhaseBarrier`、`ProjectileBarrier` 的语义分层关系，避免未来把“空间事实”和“变化玩法墙”再次混用。
+
+### 目的
+- 把静态几何墙从零散聊天结论提升为可回看的设计基线，作为后续 implementation plan 与实际代码实现的前置共识。
+- 为 `Level` 模块建立一条稳定的墙几何主链，让房间外轮廓 authoring、validator 护栏和未来墙家族扩展拥有统一入口。
+
+### 技术
+- 采用 `Docs/0_Plan/specs/` 作为 brainstorming 收口后的设计稿落点，保持 `spec → implementation plan` 的文档流程分层。
+- 以 `Level_CanonicalSpec` 的“空间事实留在 Scene”原则为约束，选择 Scene-backed Tilemap 几何方案，并通过超轻结构标记组件承接 editor/tooling 能力。
+
+## 新增 `Minishoot` 墙元素可做项总表并接入 Reference 入口 — 2026-04-15 15:52
+
+### 新建文件
+- `Docs/7_Reference/GameAnalysis/ProjectArk_Minishoot_WallElements_Summary.md`
+
+### 修改文件
+- `Docs/7_Reference/README.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 新建 `ProjectArk_Minishoot_WallElements_Summary.md`，把上一轮关于 `Minishoot` 墙语法的讨论正式收口成一份面向 `Project Ark` 的参考总表，避免后续继续散落在聊天结论或 room elements 泛文档中。
+- 文档将“墙”拆分为 `StructuralWall`、`BreakableWall`、`HiddenAreaMask / OccluderRevealVolume`、`ProgressBarrier`、`PhaseBarrier`、`ProjectileBarrier`、`OneWayPassage`、`CeremonySeal / BossBarrier` 八类，并按 **当前是否有底座 / 推荐优先级 / authoring 挂点 / MVP / Phase 2** 给出可执行归纳。
+- 明确指出 Ark 当前最值得进入计划池的是 `BreakableWall`、`HiddenAreaMask`、`ProgressBarrier`、`PhaseBarrier`，同时把 `ProjectileBarrier`、`OneWayPassage` 放到第二批，避免团队过早把精力分散到更重的战斗空间规则件上。
+- 更新 `Docs/7_Reference/README.md`，补充墙专题文档入口，使 `7_Reference` 内对 `Minishoot` 的房间元素参考与墙元素参考形成并列索引。
+
+### 目的
+- 把 `Minishoot` 对 Ark 最有启发的一类空间语法——“墙家族”——从泛化讨论收敛为可复用的参考材料，便于后续做 feature 取舍和计划排期。
+- 帮助团队明确：哪些墙只是场景几何事实，哪些墙应该进入 `Level` 标准件语法，并接入 `RoomFlagRegistry`、`WorldEventTrigger`、`ScheduledBehaviour` 等现役 authority 链。
+
+### 技术
+- 基于 `Minishoot` 中 `Location`、`WallDestroyable`、`BulletBlocker`、`HiddenArea`、`OneWay` 等实现语义，按 Ark 现役 `Level` 五层模型重新映射墙家族分类。
+- 以 `Docs/7_Reference/GameAnalysis/` 作为墙专题参考文档落点，并通过更新 `README.md` 建立目录级入口，保持 Reference 区可发现性。
+
+## 新增 `Minishoot` room elements 借鉴短名单并接入 Reference 入口 — 2026-04-15 15:32
+
+### 新建文件
+- `Docs/7_Reference/GameAnalysis/ProjectArk_Minishoot_RoomElements_Shortlist.md`
+
+### 修改文件
+- `Docs/7_Reference/README.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 新建 `ProjectArk_Minishoot_RoomElements_Shortlist.md`，把 `Minishoot` 中适合 `Project Ark` 的 room elements 收口为一份面向落地的短名单，而不是继续停留在泛化分析层。
+- 文档按 `Project Ark` 当前 `Level` 架构与 `示巴星` 需求进行重组，明确给出 `Unlocker -> Lock`、`BridgeLocked + BridgeTile`、`AmbientTrigger + BiomeTrigger`、`HiddenArea`、`BossDoor` 等候选的优先级、Ark 语义翻译、系统映射与 MVP / Phase 2 拆分。
+- 同时列出不建议直接搬运的项（如 `EncounterOpen / EncounterClose`、`Checkpoint`、`HudTrigger`、`RaceCheckpoint`、`Buyable`），避免后续把已具备能力或当前不贴主线体验的内容重复引入。
+- 更新 `Docs/7_Reference/README.md`，为新文档补充显式入口，避免参考资料落地后变成难以发现的孤立文件。
+
+### 目的
+- 把上一轮对 `Minishoot` 的 room elements 调研结果沉淀为可复用的参考文档，方便后续 `Level` authoring 扩展时直接回收，而不是重复考古参考项目。
+- 为 `Project Ark` 后续补强房间语法提供清晰候选池，帮助团队优先选择那些能在不打破现有 authority 的前提下显著提升探索回报与局部导演感的小型标准件。
+
+### 技术
+- 采用 `Docs/7_Reference/GameAnalysis/` 作为当前项目的 Reference 真正落点，而不是继续沿用旧口径中的 `Docs/Reference/` 路径。
+- 以现有 `Level_CanonicalSpec`、`示巴星` 需求和 `Minishoot` 脚本分析为交叉依据，对参考元素进行按 Ark 语义重命名、系统映射和阶段拆分。
+
+## 归档 `Camera_MVP` 专项并同步收口 Plan 入口状态 — 2026-04-15 12:53
+
+### 新建文件
+- `Docs/0_Plan/complete/Camera_MVP.md`
+
+### 删除文件
+- `Docs/0_Plan/ongoing/Camera_MVP.md`
+
+### 修改文件
+- `Docs/0_Plan/Project_Plan.md`
+- `Docs/0_Plan/ongoing/README.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 将 `Camera_MVP` 从 `Docs/0_Plan/ongoing/` 归档到 `Docs/0_Plan/complete/`，使其与 `0_Plan` 的“专项完成后移入 `complete/`”规则保持一致。
+- 把 `Camera_MVP` 文档自身的定位与状态段改为已完成归档口径，明确本轮探索态镜头改造已于 `2026-04-15` 验收通过，并给出后续应新建下一专项而非继续堆回原文件的入口约束。
+- 同步更新 `Project_Plan.md`：移除 `Camera_MVP` 的活跃专项状态，加入已完成专项提示，把导航链接切换到 `complete/Camera_MVP.md`，并将下一批候选方向改名为 `Camera-Phase2`，避免与已完成专项撞名。
+- 同步更新 `ongoing/README.md`，移除 `Camera_MVP` 的活跃专项描述，改为已归档提示。
+
+### 目的
+- 让 `Camera_MVP` 的验收完成状态在专项正文、项目总入口和目录入口三层保持一致，避免继续以进行中专项的身份污染当前执行面。
+- 保持 `Docs/0_Plan` 的 `ongoing → complete` 归档纪律，让后续团队成员能快速判断这轮镜头改造已经收口，下一步应基于完成基线另起新专项。
+
+### 技术
+- 使用文件移动完成 `ongoing` 到 `complete` 的专项归档，并保留原文主体作为已完成专项归档正文。
+- 通过同步更新 `Project_Plan.md` 与 `ongoing/README.md` 的状态入口，消除旧路径与旧状态残留，确保项目驾驶舱与专项归档口径一致。
+
+## 修复 `RoomFactory` / `LevelSliceBuilder` 缺失默认 CameraPolicy helper 的编译错误 — 2026-04-15 12:24
+
+### 修改文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomFactory.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelSliceBuilder.cs`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 修复 `RoomFactory.CreateRoomFromPreset()` 中调用 `GetDefaultCameraPolicy(preset.NodeTypeValue)` 时 helper 已缺失，导致 `CS0103` 的编译错误。
+- 在 `RoomFactory` 中补回统一的 `GetDefaultCameraPolicy(RoomNodeType)` 入口，并按 `Camera_MVP` 既定口径实现：仅 `Arena` / `Boss` 默认使用 `HardConfine`，其余房型默认使用 `FollowPlayer`。
+- 将 `LevelSliceBuilder` 改为复用 `RoomFactory.GetDefaultCameraPolicy(nodeType)`，避免两个编辑器建房入口再次长出分叉的默认镜头规则。
+- 补齐 `RoomFactory.ConfigureRoom(...)` 的参数签名与序列化写入链，使 `_cameraPolicy` 在创建房间时真正写回 `Room` 组件，而不是只在上层构建逻辑中计算却未落盘。
+- 使用 `dotnet build Project-Ark.slnx` 回归验证：当前结果为 **0 errors / 56 warnings**，本轮 `GetDefaultCameraPolicy` 相关编译错误已消失。
+
+### 目的
+- 恢复 `Level Architect` 编辑器工具链的可编译状态，避免 `RoomFactory` 与 `LevelSliceBuilder` 因共享 helper 缺失而一起失效。
+- 保持 `Camera_MVP` 的 authoring 默认行为只有一套真相源，不让不同建房入口重新产出不一致的 room camera policy。
+
+### 技术
+- 用单一静态 helper 收口默认 CameraPolicy 规则，并让多个建房入口共用同一实现。
+- 通过补齐 `SerializedObject` 写入链保证 authoring 计算值真正持久化到 `Room` 的 `_cameraPolicy` 字段。
+- 用 `dotnet build Project-Ark.slnx` 做编译级回归验证，而不是只依赖局部 lints 判断修复是否有效。
+
+## 删除 Unreal 相关 skills 并同步收口到 `.agents` 真相源 — 2026-04-15 11:54
+
+### 删除文件
+- `.agents/skills/unreal-engine/`
+- `.agents/skills/unreal-engine-cpp-pro/`
+- `.agents/skills/ue-ui-umg-slate/`
+
+### 修改文件
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 从当前项目的 `.agents/skills` 中删除 3 个 Unreal 相关 skills：`unreal-engine`、`unreal-engine-cpp-pro`、`ue-ui-umg-slate`。
+- 由于 `.codebuddy/skills` 通过符号链接直接消费 `.agents/skills`，删除真相源后，对应的 `.codebuddy/skills/*` 入口也同步消失，无需再单独维护第二份目录。
+- 删除后已验证 `.codebuddy/skills/unreal-engine`、`.codebuddy/skills/unreal-engine-cpp-pro`、`.codebuddy/skills/ue-ui-umg-slate` 均不存在，skill 总数回到 18。
+
+### 目的
+- 清理当前项目中不再需要的 Unreal 向能力包，避免 Unity 项目继续暴露无关的引擎工作流入口。
+- 继续保持 `.agents/skills` 作为唯一 skill 真相源，避免 `.agents` 与 `.codebuddy` 出现双轨残留。
+
+### 技术
+- 直接删除 `.agents/skills` 下目标 skill 目录，并依赖现有 `.codebuddy/skills -> ../.agents/skills` 链接关系实现同步移除。
+- 使用文件存在性检查与目录计数验证删除结果，确认链接消费链路没有留下 Unreal skill 残影。
+
+## 新增 Unity / C# 测试向 skills 并接入当前 `.agents`→`.codebuddy` 链路 — 2026-04-15 11:49
+
+### 新建文件
+- `.agents/skills/csharp-nunit/SKILL.md`
+- `.agents/skills/unity-developer/SKILL.md`
+- `.agents/skills/game-development/SKILL.md`
+- `.agents/skills/game-development/2d-games/SKILL.md`
+- `.agents/skills/game-development/3d-games/SKILL.md`
+- `.agents/skills/game-development/game-art/SKILL.md`
+- `.agents/skills/game-development/game-audio/SKILL.md`
+- `.agents/skills/game-development/game-design/SKILL.md`
+- `.agents/skills/game-development/mobile-games/SKILL.md`
+- `.agents/skills/game-development/multiplayer/SKILL.md`
+- `.agents/skills/game-development/pc-games/SKILL.md`
+- `.agents/skills/game-development/vr-ar/SKILL.md`
+- `.agents/skills/game-development/web-games/SKILL.md`
+
+### 修改文件
+- `skills-lock.json`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 使用 `skills` CLI 以项目级安装方式新增 3 个外部 skills：`github/awesome-copilot@csharp-nunit`、`rmyndharis/antigravity-skills@unity-developer`、`sickn33/antigravity-awesome-skills@game-development`。
+- 安装时统一使用 `--copy`，将 skill 内容直接落地到 `.agents/skills`，避免再依赖 `node_modules` 或外部仓库符号链接，保持仓库内 skill 资产自包含。
+- 通过现有 `.codebuddy/skills -> ../.agents/skills` 链路验证 3 个 skill 的 `SKILL.md` 均可正常访问，确认新增 skill 已被当前 CodeBuddy 目录结构正确消费。
+- `skills-lock.json` 重新生成并记录这 3 个 skill 的来源与哈希，使后续更新与追踪有明确元数据。
+
+### 目的
+- 为当前 `Project Ark` 增补最贴近 Unity 工作流的能力包：一个 Unity 通用开发 skill、一个游戏开发架构路由 skill、一个 C#/NUnit 测试规范 skill。
+- 在不破坏既有 `.agents` 真相源和 `.codebuddy` 链接策略的前提下，把外部 skill 安装流程纳入当前项目的本地技能体系。
+
+### 技术
+- 使用 `npx skills add <source> -s <skill> -a codebuddy -y --copy` 执行项目级安装，让安装器直接把目标 skill 复制到 `.agents/skills`，并通过 CodeBuddy agent 路由纳入当前工具链。
+- 安装后用文件存在性检查验证 `.codebuddy/skills/csharp-nunit/SKILL.md`、`.codebuddy/skills/unity-developer/SKILL.md`、`.codebuddy/skills/game-development/SKILL.md` 均可经符号链接正常读取。
+
+## Skills 体系改为复用 HandleWithPanic 并收口到 `.agents` — 2026-04-15 11:25
+
+### 新建/替换文件
+- `.agents/skills/*`
+
+### 修改文件
+- `.codebuddy/skills`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 删除文件
+- `skills-lock.json`
+- `.agents/skills` 下原有旧 skill 目录与内容
+
+### 内容
+- 清空 `Project-Ark` 旧有的 64 个本地 skill，并将 `HandleWithPanic/.codebuddy/skills` 中现役的 18 个 skill 全量复制到 `Project-Ark/.agents/skills`，保留对方现有的目录组织与 `SKILL.md / references / scripts / examples` 等结构。
+- 将当前项目的 `.codebuddy/skills` 从原先指向旧 `D:/UnityProjects/Project-Ark/.agents/skills` 的失效 Windows 链接，改为指向 `../.agents/skills` 的相对符号链接，使 `CodeBuddy` 与项目内 skill 真相源重新对齐。
+- 同步删除已不再描述现状的 `skills-lock.json`，避免目录已经切换到新 skill 集合后，仓库内还残留旧 skill 来源与哈希信息，形成第二真相源。
+
+### 目的
+- 按参考项目 `HandleWithPanic` 的现役 skill 体系统一当前项目的 AI 工作流，避免继续维护一套数量庞大但与目标项目实践脱节的旧 skills。
+- 把 skill 真相源稳定收口到 `.agents/skills`，并让 `.codebuddy/skills` 通过相对链接消费同一份内容，消除当前平台切换下的坏链接问题。
+
+### 技术
+- 采用“外部参考目录 → 本地 `.agents/skills` 落地复制 → `.codebuddy/skills` 相对符号链接回指”的双层收口方案：项目内保留自包含 skill 资产，同时避免 `.codebuddy` 再维护独立副本。
+- 迁移后已用 `diff -qr` 核对参考目录与目标目录无差异，并验证 `.codebuddy/skills/unreal-engine/SKILL.md`、`.codebuddy/skills/brainstorming/SKILL.md` 可经链接正常访问。
+
 ## Camera_MVP 编译修复：补回 Room 的 `_cameraPolicy` 序列化字段 — 2026-04-15 09:50
 
 ### 修改文件

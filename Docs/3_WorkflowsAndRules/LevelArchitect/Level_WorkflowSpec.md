@@ -191,6 +191,8 @@ JSON 结构示例见本文附录。
    - 用侧边面板或批量编辑进行整理
    - 使用 `Room ID` / `Display Name` 与 `Stable Rename` 保持房间命名按语义可读，而不是靠时间戳或位置记忆
    - 若当前进入语义补件阶段，可直接用 `Runtime Assist` / `Starter Objects` 入口补 `Checkpoint`、`OpenEncounterTrigger`、`BiomeTrigger`、`ScheduledBehaviour`、`WorldEventTrigger`，连接 inspector 里则可直接补 `Lock` starter
+   - 静态几何墙不走 `Runtime Assist` 按钮链，而是跟随新房默认骨架直接在 `Navigation/Geometry` 下 author；若 `Validate All` 报 geometry 结构 warning，优先修根节点与 marker，再修具体 Tilemap 碰撞链
+
 
 ### 5.3 路径特点
 
@@ -216,6 +218,9 @@ JSON 结构示例见本文附录。
 **这一阶段要完成：**
 
 - 房间位置、尺寸、楼层关系正确
+- 每个新房间都应带有 `Navigation/Geometry` 骨架；静态几何墙统一 author 在 `Navigation/Geometry/OuterWalls` 与 `Navigation/Geometry/InnerWalls`
+- `Navigation/Geometry` 应保持 marker-only，只挂 `RoomGeometryRoot`，不要把玩法脚本或状态组件塞在这个根上
+- 外轮廓主墙优先放在 `OuterWalls`，并使用统一的 `Tilemap + TilemapCollider2D (+ Static Rigidbody2D + CompositeCollider2D)` 组合
 - 主路线与回路的 Door 已打通
 - `CameraConfiner`、`BoxCollider2D`、标准根节点存在
 - 至少可从入口穿过一条有效主链
