@@ -448,7 +448,8 @@ Room_[ID]
 | **战斗件** | `Combat` | `OpenEncounterTrigger`、`ArenaController`、`EnemySpawner` | `Encounters` | `EncounterSO.Mode`、Spawner、重置链、房型语义 |
 | **环境机关件** | `Environment` | `EnvironmentHazard` 子类 | `Hazards` | 伤害配置、Layer、Collider、是否需要持久关闭 |
 | **导演件** | `Directing` | `BiomeTrigger`、`HiddenAreaMask`、`ScheduledBehaviour`、`ActivationGroup`、`WorldEventTrigger` | `Triggers`（或显式扩展层） | 事件源、target 引用、phase/progress 依赖、预激活要求 |
-| **基础设施件** | `Infrastructure` | `SpawnPoint`、`CameraConfiner` | `Navigation/SpawnPoints`、`CameraConfiner` | 房间入口落点、镜头边界、与 `Room` / `Door` / `CameraDirector` 的协作关系 |
+| **基础设施件** | `Infrastructure` | `SpawnPoint`、`CameraConfiner`（可选） | `Navigation/SpawnPoints`、`CameraConfiner` | 房间入口落点、可选硬镜头边界、与 `Room` / `Door` / `CameraDirector` 的协作关系 |
+
 
 ---
 

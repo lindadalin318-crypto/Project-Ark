@@ -6,11 +6,7 @@ namespace ProjectArk.Level
 {
     /// <summary>
     /// Bridges the room system with Cinemachine's CinemachineConfiner2D.
-    /// Subscribes to RoomManager.OnCurrentRoomChanged and updates the confiner's
-    /// bounding shape to match the new room's bounds.
-    /// 
-    /// Attach to the same GameObject as the CinemachineCamera, or any persistent object.
-    /// Drag the CinemachineConfiner2D component reference in the Inspector.
+    /// Hard confine is now an opt-in room policy rather than the default exploration camera behavior.
     /// </summary>
     public class RoomCameraConfiner : MonoBehaviour
     {
@@ -42,10 +38,13 @@ namespace ProjectArk.Level
 
             _roomManager.OnCurrentRoomChanged += HandleRoomChanged;
 
-            // Apply initial room bounds if a room is already set
             if (_roomManager.CurrentRoom != null)
             {
                 ApplyRoomBounds(_roomManager.CurrentRoom);
+            }
+            else
+            {
+                ClearConfiner();
             }
         }
 
@@ -61,7 +60,12 @@ namespace ProjectArk.Level
 
         private void HandleRoomChanged(Room newRoom)
         {
-            if (newRoom == null) return;
+            if (newRoom == null)
+            {
+                ClearConfiner();
+                return;
+            }
+
             ApplyRoomBounds(newRoom);
         }
 
@@ -69,19 +73,44 @@ namespace ProjectArk.Level
 
         private void ApplyRoomBounds(Room room)
         {
-            if (_confiner == null) return;
+            if (_confiner == null || room == null)
+            {
+                return;
+            }
+
+            if (!room.UsesHardCameraConfine)
+            {
+                ClearConfiner();
+                Debug.Log($"[RoomCameraConfiner] Room '{room.RoomID}' uses {room.CameraPolicy}. Hard confine cleared.");
+                return;
+            }
 
             var bounds = room.ConfinerBounds;
             if (bounds == null)
             {
-                Debug.LogWarning($"[RoomCameraConfiner] Room '{room.RoomID}' has no ConfinerBounds assigned. Camera will be unconstrained.");
+                Debug.LogWarning($"[RoomCameraConfiner] Room '{room.RoomID}' is HardConfine but has no ConfinerBounds assigned. Camera will remain unconstrained.");
+                ClearConfiner();
                 return;
             }
 
+            _confiner.enabled = true;
             _confiner.BoundingShape2D = bounds;
             _confiner.InvalidateBoundingShapeCache();
 
-            Debug.Log($"[RoomCameraConfiner] Updated confiner bounds to room: {room.RoomID}");
+            Debug.Log($"[RoomCameraConfiner] Applied hard confiner bounds for room: {room.RoomID}");
+        }
+
+        private void ClearConfiner()
+        {
+            if (_confiner == null)
+            {
+                return;
+            }
+
+            _confiner.BoundingShape2D = null;
+            _confiner.InvalidateBoundingShapeCache();
+            _confiner.enabled = false;
         }
     }
 }
+

@@ -42,10 +42,11 @@ namespace ProjectArk.Level.Editor
 
         /// <summary>
         /// Create a complete Room GameObject from a preset at the given world position.
-        /// Includes BoxCollider2D, CameraConfiner, SpawnPoints, and optionally
-        /// ArenaController + EnemySpawner for combat rooms.
+        /// Includes BoxCollider2D, standard child roots, spawn points, and optionally
+        /// CameraConfiner / ArenaController / EnemySpawner when the preset semantics need them.
         /// Also auto-creates a RoomSO asset.
         /// </summary>
+
         public static Room CreateRoomFromPreset(RoomPresetSO preset, Vector3 position)
         {
             if (preset == null)
@@ -77,6 +78,8 @@ namespace ProjectArk.Level.Editor
             boxCollider.isTrigger = true;
             boxCollider.size = preset.DefaultSize;
 
+            RoomCameraPolicy cameraPolicy = GetDefaultCameraPolicy(preset.NodeTypeValue);
+
             // ── Standard hierarchy roots (Batch 2) ──
             var navigationRoot = CreateChildObject(roomGO.transform, NAVIGATION_ROOT_NAME);
             CreateChildObject(roomGO.transform, ELEMENTS_ROOT_NAME);
@@ -85,13 +88,18 @@ namespace ProjectArk.Level.Editor
             CreateChildObject(roomGO.transform, DECORATION_ROOT_NAME);
             CreateChildObject(roomGO.transform, TRIGGERS_ROOT_NAME);
 
-            // ── Camera Confiner Child ──
-            var confinerGO = CreateChildObject(roomGO.transform, "CameraConfiner");
-            confinerGO.layer = IGNORE_RAYCAST_LAYER;
+            // ── Optional Camera Confiner Child ──
+            PolygonCollider2D polyCollider = null;
+            if (cameraPolicy == RoomCameraPolicy.HardConfine)
+            {
+                var confinerGO = CreateChildObject(roomGO.transform, "CameraConfiner");
+                confinerGO.layer = IGNORE_RAYCAST_LAYER;
 
-            var polyCollider = confinerGO.AddComponent<PolygonCollider2D>();
-            polyCollider.isTrigger = true;
-            SetConfinerBounds(polyCollider, preset.DefaultSize);
+                polyCollider = confinerGO.AddComponent<PolygonCollider2D>();
+                polyCollider.isTrigger = true;
+                SetConfinerBounds(polyCollider, preset.DefaultSize);
+            }
+
 
             // ── Standard Navigation placeholders ──
             CreateChildObject(navigationRoot.transform, "Doors");
@@ -119,7 +127,8 @@ namespace ProjectArk.Level.Editor
             RoomSO roomSO = CreateRoomSOForPreset(preset, identity, defaultFloorLevel);
 
             // ── Configure Room via SerializedObject ──
-            ConfigureRoom(room, roomSO, polyCollider, spawnPoints);
+            ConfigureRoom(room, roomSO, cameraPolicy, polyCollider, spawnPoints);
+
 
             // ── Configure EnemySpawner spawn points ──
             if (spawner != null && spawnPoints.Length > 0)

@@ -2,7 +2,75 @@
 
 ---
 
+## Camera_MVP 编译修复：补回 Room 的 `_cameraPolicy` 序列化字段 — 2026-04-15 09:50
+
+### 修改文件
+- `Assets/Scripts/Level/Room/Room.cs`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 修复 `Room.cs` 中 `CameraPolicy` / `UsesHardCameraConfine` 属性已引用 `_cameraPolicy`，但字段区未实际声明该序列化字段的问题。
+- 补回 `RoomCameraPolicy _cameraPolicy = RoomCameraPolicy.FollowPlayer` 的 authoring 字段，并保留 `ConfinerBounds` 作为仅在 `HardConfine` 下消费的可选引用。
+
+### 目的
+- 消除 `CS0103: The name '_cameraPolicy' does not exist in the current context` 编译错误，恢复 `Camera_MVP` 本轮改动的最小可编译状态。
+
+### 技术
+- 最小热修复：补齐遗漏的私有序列化字段声明，不改动既有运行时策略与编辑器工具口径。
+
+## Camera_MVP C1-C3：探索态默认解除 hard confine 并同步 authoring 口径 — 2026-04-15 09:38
+
+
+### 新建文件
+- `Assets/Scripts/Level/Room/RoomCameraPolicy.cs`
+
+### 修改文件
+- `Assets/Scripts/Level/Room/Room.cs`
+- `Assets/Scripts/Level/Camera/RoomCameraConfiner.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomFactory.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelSliceBuilder.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs`
+- `Docs/2_TechnicalDesign/Level/Level_CanonicalSpec.md`
+- `Docs/3_WorkflowsAndRules/LevelArchitect/Level_WorkflowSpec.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 为 `Room` 新增轻量 `RoomCameraPolicy` authoring 字段，并把 `RoomCameraConfiner` 的消费策略改为：只有当房间显式声明 `HardConfine` 时才把 `ConfinerBounds` 挂到 `CinemachineConfiner2D`；普通探索房进入时会主动清空 hard confine，避免镜头继续被房间边界默认卡住。
+- 在 `RoomFactory` 与 `LevelSliceBuilder` 中同步重写默认建房行为：普通探索向房型默认使用 `FollowPlayer`，仅 `Arena` / `Boss` 默认生成 `CameraConfiner` 并写入 `HardConfine` policy，防止编辑器工具继续批量产出“所有房间默认受 room bounds 限制”的旧镜头哲学。
+- 将 `LevelValidator` 的 `CameraConfiner` 规则改为“仅对声明 `HardConfine` 的房间强制要求完整配置；普通房间只有在显式存在可选 confiner authoring 时才校验其完整性”，并同步更新 `Level_CanonicalSpec` / `Level_WorkflowSpec` 中关于标准房间结构、validator 检查项与 runtime authority 的现役口径。
+- 补做本地诊断：本轮改动涉及的 C# 文件 `read_lints` 均为 0 新错误；`dotnet build Project-Ark.slnx` 目前仍因解决方案内 `.csproj` 路径残留指向 `f:\UnityProjects\Project-Ark` 而失败，判定为现存环境问题，不属于本次 `Camera_MVP` 改动引入的编译错误。
+
+### 目的
+- 先完成 `Camera_MVP` 的 C1（解除探索态默认 confine）与 C3（同步 authoring 默认行为）最小闭环，验证“飞船优先、房间边界降级为特例工具”的镜头主链是否能在代码与工具层同时成立。
+- 避免运行时刚解除默认 hard confine，编辑器工具和规范文档又继续把旧行为重新写回项目，形成第二真相源。
+
+### 技术
+- 轻量 room-level policy：新增 `RoomCameraPolicy` 枚举作为最小 authoring 开关，不引入重型 camera profile 体系。
+- 镜头 authority 收口：保留 `CameraDirector` 为总控入口，`RoomCameraConfiner` 仅承担 opt-in hard confine 特例桥接，不再作为所有探索房的默认 camera authority。
+- 工具链同步：`RoomFactory` / `LevelSliceBuilder` / `LevelValidator` 与规范文档一起改口径，确保 runtime、authoring、validator 三层一致。
+
+## Unity MCP 配置切换到 CodeBuddy `uvx + stdio` 模式 — 2026-04-15 09:15
+
+
+### 修改文件
+- `C:/Users/dada/.codebuddy.json`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 读取当前 CodeBuddy MCP 配置后，确认原有 `unityMCP` 仍指向旧的 `http://127.0.0.1:8080/mcp` HTTP 地址，不符合当前项目安装的 `com.coplaydev.unity-mcp 9.6.6` 推荐接入方式。
+- 将 `unityMCP` 配置改为 `stdio` 启动模式，命令指向本机已存在的 `C:/Users/dada/.local/bin/uvx.exe`，参数改为 `--from mcpforunityserver==9.6.6 mcp-for-unity --transport stdio`，并补充描述字段，确保 CodeBuddy 端按当前 Unity MCP 包版本启动对应 server。
+- 额外确认本机已具备 `uv` / `uvx` 可执行文件，而 `dotnet tool list -g` 中没有历史 `unity-mcp-server` 全局工具，因此本次不再沿用旧的 exe workaround，统一收口到官方推荐的 `uvx` 路线。
+
+### 目的
+- 先把 CodeBuddy 侧的 Unity MCP 入口配置正确，避免后续进入相机实现阶段时仍因旧的 HTTP MCP 配置而无法直接调用 Unity Editor。
+- 让当前 IDE 侧配置与项目内 Unity MCP 包版本、官方插件 README 的现役接入方式保持一致。
+
+### 技术
+- MCP 客户端配置治理：按 `com.coplaydev.unity-mcp` 当前版本的 `uvx + stdio` 启动模型重写 `unityMCP` 条目。
+- 环境校验：通过命令确认 `uv` / `uvx` 已安装，避免写入不可执行的 MCP 配置。
+
 ## Camera_MVP 探索态镜头改造计划立项 — 2026-04-15 00:28
+
 
 ### 新建文件
 - `Docs/0_Plan/ongoing/Camera_MVP.md`

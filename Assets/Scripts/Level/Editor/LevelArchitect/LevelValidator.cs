@@ -232,82 +232,103 @@ namespace ProjectArk.Level.Editor
             }
         }
 
-        // Rule 3: Missing CameraConfiner or wrong layer
+        // Rule 3: Optional CameraConfiner integrity / HardConfine requirements
         private static void ValidateCameraConfiner(Room room)
         {
+            bool requiresHardConfine = room.UsesHardCameraConfine;
             var confinerTransform = room.transform.Find("CameraConfiner");
+            var assignedBounds = room.ConfinerBounds;
+            var poly = confinerTransform != null ? confinerTransform.GetComponent<PolygonCollider2D>() : null;
 
-            if (confinerTransform == null)
+            if (!requiresHardConfine && confinerTransform == null)
             {
-                _lastResults.Add(new ValidationResult
+                return;
+            }
+
+            bool missingTransform = confinerTransform == null;
+            bool missingPolygon = confinerTransform != null && poly == null;
+            bool wrongLayer = confinerTransform != null && confinerTransform.gameObject.layer != 2;
+            bool blockingPhysics = poly != null && !poly.isTrigger;
+            bool missingBoundsReference = requiresHardConfine && assignedBounds == null;
+            bool mismatchedBoundsReference = requiresHardConfine && poly != null && assignedBounds != poly;
+
+            if (!(missingTransform || missingPolygon || wrongLayer || blockingPhysics || missingBoundsReference || mismatchedBoundsReference))
+            {
+                return;
+            }
+
+            var issues = new List<string>();
+            if (missingTransform) issues.Add("missing CameraConfiner child");
+            if (missingPolygon) issues.Add("missing PolygonCollider2D");
+            if (wrongLayer) issues.Add("not on Ignore Raycast layer");
+            if (blockingPhysics) issues.Add("PolygonCollider2D is not set as Trigger");
+            if (missingBoundsReference) issues.Add("Room._confinerBounds is unassigned");
+            if (mismatchedBoundsReference) issues.Add("Room._confinerBounds does not point to CameraConfiner");
+
+            _lastResults.Add(new ValidationResult
+            {
+                Severity = Severity.Warning,
+                Message = requiresHardConfine
+                    ? $"Room '{room.RoomID}' uses HardConfine but CameraConfiner authoring is incomplete: {string.Join(", ", issues)}."
+                    : $"Room '{room.RoomID}' has an optional CameraConfiner authoring issue: {string.Join(", ", issues)}.",
+                TargetObject = confinerTransform != null ? confinerTransform.gameObject : room,
+                CanAutoFix = true,
+                FixAction = () =>
                 {
-                    Severity = Severity.Warning,
-                    Message = $"Room '{room.RoomID}' has no CameraConfiner child.",
-                    TargetObject = room,
-                    CanAutoFix = true,
-                    FixAction = () =>
+                    Transform targetTransform = confinerTransform;
+                    PolygonCollider2D targetPoly = poly;
+
+                    if (targetTransform == null)
                     {
                         var confinerGO = new GameObject("CameraConfiner");
-                        Undo.RegisterCreatedObjectUndo(confinerGO, "Create Confiner");
+                        Undo.RegisterCreatedObjectUndo(confinerGO, "Create CameraConfiner");
                         confinerGO.transform.SetParent(room.transform, false);
-                        confinerGO.layer = 2; // Ignore Raycast
+                        confinerGO.layer = 2;
+                        targetTransform = confinerGO.transform;
+                    }
+                    else
+                    {
+                        Undo.RecordObject(targetTransform.gameObject, "Fix CameraConfiner");
+                        targetTransform.gameObject.layer = 2;
+                    }
 
-                        var poly = confinerGO.AddComponent<PolygonCollider2D>();
+                    if (targetPoly == null)
+                    {
+                        targetPoly = targetTransform.gameObject.GetComponent<PolygonCollider2D>();
+                        if (targetPoly == null)
+                        {
+                            targetPoly = targetTransform.gameObject.AddComponent<PolygonCollider2D>();
+                        }
+                    }
+
+                    Undo.RecordObject(targetPoly, "Fix CameraConfiner Collider");
+                    targetPoly.isTrigger = true;
+
+                    if (targetPoly.points == null || targetPoly.points.Length < 3)
+                    {
                         var box = room.GetComponent<BoxCollider2D>();
                         if (box != null)
                         {
                             float hw = box.size.x / 2f - 0.1f;
                             float hh = box.size.y / 2f - 0.1f;
-                            poly.points = new Vector2[]
+                            targetPoly.points = new Vector2[]
                             {
                                 new Vector2(-hw, -hh), new Vector2(hw, -hh),
                                 new Vector2(hw, hh), new Vector2(-hw, hh)
                             };
                         }
+                    }
 
-                        // Assign to room
+                    if (requiresHardConfine)
+                    {
                         var serialized = new SerializedObject(room);
-                        serialized.FindProperty("_confinerBounds").objectReferenceValue = poly;
+                        serialized.FindProperty("_confinerBounds").objectReferenceValue = targetPoly;
                         serialized.ApplyModifiedProperties();
                     }
-                });
-            }
-            else
-            {
-                var poly = confinerTransform.GetComponent<PolygonCollider2D>();
-                bool wrongLayer = confinerTransform.gameObject.layer != 2; // Ignore Raycast = 2
-                bool missingPolygon = poly == null;
-                bool blockingPhysics = poly != null && !poly.isTrigger;
-
-                if (wrongLayer || missingPolygon || blockingPhysics)
-                {
-                    _lastResults.Add(new ValidationResult
-                    {
-                        Severity = Severity.Warning,
-                        Message = missingPolygon
-                            ? $"Room '{room.RoomID}' CameraConfiner is missing PolygonCollider2D."
-                            : blockingPhysics
-                                ? $"Room '{room.RoomID}' CameraConfiner PolygonCollider2D is not set as Trigger."
-                                : $"Room '{room.RoomID}' CameraConfiner is not on Ignore Raycast layer.",
-                        TargetObject = confinerTransform.gameObject,
-                        CanAutoFix = true,
-                        FixAction = () =>
-                        {
-                            Undo.RecordObject(confinerTransform.gameObject, "Fix CameraConfiner");
-                            confinerTransform.gameObject.layer = 2;
-
-                            var targetPoly = poly;
-                            if (targetPoly == null)
-                            {
-                                targetPoly = confinerTransform.gameObject.AddComponent<PolygonCollider2D>();
-                            }
-
-                            targetPoly.isTrigger = true;
-                        }
-                    });
                 }
-            }
+            });
         }
+
 
         // Rule 3.5: Standard room hierarchy
         private static void ValidateStandardRoomHierarchy(Room room)

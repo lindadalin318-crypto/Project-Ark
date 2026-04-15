@@ -276,6 +276,8 @@ namespace ProjectArk.Level.Editor
             box.isTrigger = true;
             box.size = size;
 
+            RoomCameraPolicy cameraPolicy = GetDefaultCameraPolicy(nodeType);
+
             // Standard hierarchy
             var navRoot = CreateChild(roomGO.transform, "Navigation");
             CreateChild(roomGO.transform, "Elements");
@@ -284,12 +286,17 @@ namespace ProjectArk.Level.Editor
             CreateChild(roomGO.transform, "Decoration");
             CreateChild(roomGO.transform, "Triggers");
 
-            // Camera confiner
-            var confinerGO = CreateChild(roomGO.transform, "CameraConfiner");
-            confinerGO.layer = IGNORE_RAYCAST_LAYER;
-            var poly = confinerGO.AddComponent<PolygonCollider2D>();
-            poly.isTrigger = true;
-            SetConfinerBounds(poly, size);
+            // Optional camera confiner
+            PolygonCollider2D poly = null;
+            if (cameraPolicy == RoomCameraPolicy.HardConfine)
+            {
+                var confinerGO = CreateChild(roomGO.transform, "CameraConfiner");
+                confinerGO.layer = IGNORE_RAYCAST_LAYER;
+                poly = confinerGO.AddComponent<PolygonCollider2D>();
+                poly.isTrigger = true;
+                SetConfinerBounds(poly, size);
+            }
+
 
             // Navigation placeholders
             CreateChild(navRoot.transform, "Doors");
@@ -309,7 +316,9 @@ namespace ProjectArk.Level.Editor
             // Configure Room
             var serialized = new SerializedObject(room);
             serialized.FindProperty("_data").objectReferenceValue = roomSO;
+            serialized.FindProperty("_cameraPolicy").enumValueIndex = (int)cameraPolicy;
             serialized.FindProperty("_confinerBounds").objectReferenceValue = poly;
+
 
             var spProp = serialized.FindProperty("_spawnPoints");
             spProp.arraySize = spawnPoints.Length;

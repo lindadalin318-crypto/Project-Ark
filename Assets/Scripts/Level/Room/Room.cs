@@ -23,8 +23,12 @@ namespace ProjectArk.Level
         [SerializeField] private RoomSO _data;
 
         [Header("Camera")]
-        [Tooltip("Collider defining camera confiner bounds. Use a PolygonCollider2D (non-trigger) on a child object.")]
+        [Tooltip("How this room should drive the exploration camera. FollowPlayer = default gameplay camera, HardConfine = opt-in special case.")]
+        [SerializeField] private RoomCameraPolicy _cameraPolicy = RoomCameraPolicy.FollowPlayer;
+
+        [Tooltip("Optional collider defining hard confiner bounds. Only consumed when Camera Policy is HardConfine.")]
         [SerializeField] private Collider2D _confinerBounds;
+
 
         [Header("Spawn Points")]
         [Tooltip("Positions where enemies can be spawned in this room.")]
@@ -72,8 +76,15 @@ namespace ProjectArk.Level
         /// <summary> Pacing node type (from SO). </summary>
         public RoomNodeType NodeType => _data != null ? _data.NodeType : RoomNodeType.Transit;
 
+        /// <summary> Camera policy authoring for this room. </summary>
+        public RoomCameraPolicy CameraPolicy => _cameraPolicy;
+
+        /// <summary> Whether this room explicitly opts into hard camera confine. </summary>
+        public bool UsesHardCameraConfine => _cameraPolicy == RoomCameraPolicy.HardConfine;
+
         /// <summary> Camera confiner bounds collider. </summary>
         public Collider2D ConfinerBounds => _confinerBounds;
+
 
         /// <summary> Enemy spawn points in this room. </summary>
         public Transform[] SpawnPoints => _spawnPoints;
