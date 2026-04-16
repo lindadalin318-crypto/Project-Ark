@@ -2,6 +2,41 @@
 
 ---
 
+## 导入 Minishoot 墙体 starter pack 并生成首批 Tile 资产 — 2026-04-16 23:55
+
+### 修改文件
+- `Assets/Art/Tiles/Tilesets/Minishoot/DungeonWallStarter/WallBreakableSlimPart1Dungeon.png`
+- `Assets/Art/Tiles/Tilesets/Minishoot/DungeonWallStarter/WallBreakableSlimPart2Dungeon.png`
+- `Assets/Art/Tiles/Tilesets/Minishoot/DungeonWallStarter/WallBreakableSlimVertiPart1Dungeon.png`
+- `Assets/Art/Tiles/Tilesets/Minishoot/DungeonWallStarter/WallBreakableSlimVertiPart2Dungeon.png`
+- `Assets/Art/Tiles/Tilesets/Minishoot/DungeonWallStarter/WallBreakableSlimStaticLeftDungeon.png`
+- `Assets/Art/Tiles/Tilesets/Minishoot/DungeonWallStarter/WallBreakableSlimStaticRightDungeon.png`
+- `Assets/Art/Tiles/Tilesets/Minishoot/DungeonWallStarter/WallBreakableSlimVertiStaticTopDungeon.png`
+- `Assets/Art/Tiles/Tilesets/Minishoot/DungeonWallStarter/WallBreakableSlimVertiStaticDownDungeon.png`
+- `Assets/_Data/Level/Tiles/Minishoot/DungeonWallStarter/WallBreakableSlimPart1Dungeon_Tile.asset`
+- `Assets/_Data/Level/Tiles/Minishoot/DungeonWallStarter/WallBreakableSlimPart2Dungeon_Tile.asset`
+- `Assets/_Data/Level/Tiles/Minishoot/DungeonWallStarter/WallBreakableSlimVertiPart1Dungeon_Tile.asset`
+- `Assets/_Data/Level/Tiles/Minishoot/DungeonWallStarter/WallBreakableSlimVertiPart2Dungeon_Tile.asset`
+- `Assets/_Data/Level/Tiles/Minishoot/DungeonWallStarter/WallBreakableSlimStaticLeftDungeon_Tile.asset`
+- `Assets/_Data/Level/Tiles/Minishoot/DungeonWallStarter/WallBreakableSlimStaticRightDungeon_Tile.asset`
+- `Assets/_Data/Level/Tiles/Minishoot/DungeonWallStarter/WallBreakableSlimVertiStaticTopDungeon_Tile.asset`
+- `Assets/_Data/Level/Tiles/Minishoot/DungeonWallStarter/WallBreakableSlimVertiStaticDownDungeon_Tile.asset`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 从外部 `Minishoot` 参考目录中导入 8 张最小可用的 dungeon 墙体模块 Sprite，统一落到 `Assets/Art/Tiles/Tilesets/Minishoot/DungeonWallStarter/`。
+- 通过 Unity Editor 资产导入链把这批 PNG 配置为 `Sprite`，并统一设置为 `Point` 过滤、`Clamp`、关闭 mipmap、启用 alpha transparency、无压缩。
+- 在 `Assets/_Data/Level/Tiles/Minishoot/DungeonWallStarter/` 下生成 8 个对应的 `Tile` 资产，作为当前 `Tile Palette` 工作流可直接使用的首批墙体模块。
+- 明确这批资源是用于静态几何墙 authoring 验证的 starter pack，不是已经完成正规切图与规格统一的最终 tileset。
+
+### 目的
+- 让当前 `Geometry Authoring` 与 `Tile Palette` 链路不再卡在“项目里没有任何可用墙体 tile”这一步。
+- 先交付一套可立即看见、可立即拖入 Palette、可立即试刷墙的最小素材包，帮助继续验证静态几何墙工作流。
+
+### 技术
+- 使用外部参考素材最小导入策略：先导入不规则墙体模块作为 starter pack，而不是在本轮就做完整 atlas 切图与最终美术规范化。
+- `Tile` 资产统一采用 `Grid` collider 类型，优先服务当前 `Tilemap` authoring 验证与碰撞主链闭环。
+
 ## 修复 Geometry Canvas 缺 Grid 导致 Tile Palette 可能无法落笔的问题 — 2026-04-16 16:15
 
 ### 修改文件
