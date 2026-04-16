@@ -68,8 +68,7 @@
 - [ ] **A4** `Level Architect` 窗口包含 `Build / Quick Edit / Validate` 三个工作面
 
 - [ ] **A5** 当前搭建入口明确：
-  - 路径 A：`LevelDesigner.html → JSON → LevelSliceBuilder`
-  - 路径 B：`Level Architect / Build Tab → 白盒搭建`
+  - 唯一现役入口：`Level Architect / Build Tab → 白盒搭建`
 - [ ] **A6** 团队成员不再把 `Scaffold Sheba Level`、`Phase 6: Setup All` 等旧菜单当作现役入口
 
 ### B. 场景结构与 authority 检查
@@ -146,28 +145,16 @@
 
 ---
 
-## 4.2 第二步：确认当前切片的搭建来源
+## 4.2 第二步：确认当前切片走的是现役主链
 
-根据你的实际工作方式确认属于哪一类：
-
-### 路径 A：`LevelDesigner.html → JSON → Scene`
-
-1. 在 `Build` 工作面的 `Optional Draft & Import` 区点击 `🌐 Open LevelDesigner.html`
-2. 在浏览器中规划房间和连接
-3. 点击 `💾 Export File`
-4. 回到 Unity，在同一区域点击 `📂 Import LevelDesigner JSON...`
-5. 由 `LevelSliceBuilder` 导入场景骨架和 `RoomSO`
-
-### 路径 B：`Build Tab → 白盒搭建`
-
-
-1. 打开 `Build` Tab
+1. 打开 `Level Architect` 的 `Build` Tab
 2. 首次使用时点击 `Create Built-in Presets`
 3. 使用 `Blockout / Connect / Select` 搭建和精修房间
+4. 如需继续补语义或 starter objects，进入 `Quick Edit`
 
 **通过标准：**
 - 结构来源清楚
-- 当前切片是通过现役入口落地，而不是历史工具遗留
+- 当前切片是通过 `Level Architect` 现役入口落地，而不是历史工具遗留
 
 ---
 
@@ -291,7 +278,7 @@ Quick Play：通过 / 未通过
 - 把“工具存在”当成“场景已经正确落地”的证明
 
 **原因：**
-最新 `ImplementationLog` 已明确这些入口要么是**一次性工具**，要么已经被**`LevelArchitectWindow` / `LevelSliceBuilder` / `LevelValidator` / 当前场景真相源**替代。
+最新 `ImplementationLog` 已明确这些入口要么是**一次性工具**，要么已经被**`LevelArchitectWindow` / `LevelValidator` / 当前场景真相源**替代。
 
 ---
 

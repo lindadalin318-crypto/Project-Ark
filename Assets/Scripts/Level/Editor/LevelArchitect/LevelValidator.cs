@@ -85,6 +85,7 @@ namespace ProjectArk.Level.Editor
 
             ValidateDoorPlayerLayer(rooms);
             ValidateDoorTargetSpawnPoint(rooms);
+            ValidateDoorGeometryAlignment(rooms);
             ValidateOrphanRooms(rooms);
 
 
@@ -984,6 +985,7 @@ namespace ProjectArk.Level.Editor
         {
             ValidatePreferredRoot<Lock>("Lock", "Elements");
             ValidatePreferredRoot<Checkpoint>("Checkpoint", "Elements");
+            ValidatePreferredRoot<Door>("Door", "Navigation");
             ValidatePreferredRoot<DestroyableObject>("DestroyableObject", "Elements");
             ValidatePreferredRoot<OpenEncounterTrigger>("OpenEncounterTrigger", "Encounters");
             ValidatePreferredRoot<BiomeTrigger>("BiomeTrigger", "Triggers");
@@ -1314,6 +1316,75 @@ namespace ProjectArk.Level.Editor
                     });
                 }
             }
+        }
+
+        private static void ValidateDoorGeometryAlignment(Room[] rooms)
+        {
+            foreach (var room in rooms)
+            {
+                if (room == null) continue;
+
+                var geometryRoot = room.transform.Find($"{RoomAuthoringHierarchy.NavigationRootName}/{RoomAuthoringHierarchy.GeometryRootName}");
+                if (geometryRoot == null)
+                {
+                    continue;
+                }
+
+                var wallTilemaps = geometryRoot.GetComponentsInChildren<Tilemap>(true);
+                if (wallTilemaps.Length == 0)
+                {
+                    continue;
+                }
+
+                var doors = room.GetComponentsInChildren<Door>(true);
+                foreach (var door in doors)
+                {
+                    if (door == null) continue;
+                    if (!TryGetImmediateRoomRoot(door.transform, out Room ownerRoom, out string rootName)) continue;
+                    if (ownerRoom != room) continue;
+                    if (!string.Equals(rootName, RoomAuthoringHierarchy.NavigationRootName, StringComparison.Ordinal)) continue;
+
+                    Vector3 probePoint = TryGetDoorProbePoint(door);
+                    if (!DoorProbeHitsFilledWallTile(wallTilemaps, probePoint))
+                    {
+                        continue;
+                    }
+
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Warning,
+                        Message = $"Door '{door.gameObject.name}' in Room '{room.RoomID}' overlaps filled wall geometry. Door-type paths should align with a geometry opening instead of sitting inside a filled wall tilemap.",
+                        TargetObject = door,
+                        CanAutoFix = false,
+                        FixAction = null
+                    });
+                }
+            }
+        }
+
+        private static Vector3 TryGetDoorProbePoint(Door door)
+        {
+            var collider = door.GetComponent<Collider2D>();
+            return collider != null ? collider.bounds.center : door.transform.position;
+        }
+
+        private static bool DoorProbeHitsFilledWallTile(Tilemap[] tilemaps, Vector3 worldPoint)
+        {
+            foreach (var tilemap in tilemaps)
+            {
+                if (tilemap == null)
+                {
+                    continue;
+                }
+
+                var cell = tilemap.WorldToCell(worldPoint);
+                if (tilemap.GetTile(cell) != null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // Rule 8: Orphan rooms (no door connections)

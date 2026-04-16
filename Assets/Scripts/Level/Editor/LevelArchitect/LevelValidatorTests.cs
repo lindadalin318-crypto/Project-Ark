@@ -291,6 +291,90 @@ namespace ProjectArk.Level.Editor
                 result.Message.Contains("OuterWalls_Main")));
         }
 
+        [Test]
+        public void ValidateAll_ReportsWarning_WhenDoorPlacedOutsideNavigationRoot()
+        {
+            var roomRig = CreateValidRoomRig("Room_Door_WrongRoot");
+            var targetRig = CreateValidRoomRig("Room_Door_Target");
+            var doorObject = CreateGameObjectWithTriggerColliderAndComponent<Door>("Door_WrongRoot");
+            doorObject.transform.SetParent(roomRig.ElementsRoot, false);
+            SetPrivateField(doorObject.GetComponent<Door>(), "_targetRoom", targetRig.Room);
+            SetPrivateField(doorObject.GetComponent<Door>(), "_targetSpawnPoint", CreateChild(targetRig.NavigationRoot, "Spawn_Target"));
+            SetPrivateField(doorObject.GetComponent<Door>(), "_playerLayer", (LayerMask)1);
+
+            var results = LevelValidator.ValidateAll();
+
+            Assert.That(results.Any(result =>
+                result.TargetObject == doorObject.GetComponent<Door>() &&
+                result.Severity == LevelValidator.Severity.Warning &&
+                result.Message.Contains("Door") &&
+                result.Message.Contains("Navigation")));
+        }
+
+        [Test]
+        public void ValidateAll_ReportsWarning_WhenDoorCenterSitsInsideFilledOuterWallTile()
+        {
+            var roomRig = CreateValidRoomRig("Room_Door_FilledWall");
+            var targetRig = CreateValidRoomRig("Room_Door_TargetWall");
+            roomRig.OuterWallsRoot.gameObject.AddComponent<Grid>();
+            var outerWall = CreateChild(roomRig.OuterWallsRoot, "OuterWalls_Main");
+            var tilemap = outerWall.gameObject.AddComponent<Tilemap>();
+            outerWall.gameObject.AddComponent<TilemapRenderer>();
+            var tilemapCollider = outerWall.gameObject.AddComponent<TilemapCollider2D>();
+            var rigidbody = outerWall.gameObject.AddComponent<Rigidbody2D>();
+            rigidbody.bodyType = RigidbodyType2D.Static;
+            outerWall.gameObject.AddComponent<CompositeCollider2D>();
+            tilemapCollider.compositeOperation = Collider2D.CompositeOperation.Merge;
+
+            var tile = ScriptableObject.CreateInstance<Tile>();
+            _createdObjects.Add(tile);
+            tilemap.SetTile(Vector3Int.zero, tile);
+
+            var doorRoot = roomRig.NavigationRoot.Find(RoomAuthoringHierarchy.DoorsRootName);
+            Assert.That(doorRoot, Is.Not.Null);
+
+            var doorObject = CreateGameObjectWithTriggerColliderAndComponent<Door>("Door_FilledWall");
+            doorObject.transform.SetParent(doorRoot, false);
+            doorObject.transform.position = Vector3.zero;
+            SetPrivateField(doorObject.GetComponent<Door>(), "_targetRoom", targetRig.Room);
+            SetPrivateField(doorObject.GetComponent<Door>(), "_targetSpawnPoint", CreateChild(targetRig.NavigationRoot, "Spawn_TargetWall"));
+            SetPrivateField(doorObject.GetComponent<Door>(), "_playerLayer", (LayerMask)1);
+
+            var results = LevelValidator.ValidateAll();
+
+            Assert.That(results.Any(result =>
+                result.TargetObject == doorObject.GetComponent<Door>() &&
+                result.Severity == LevelValidator.Severity.Warning &&
+                result.Message.Contains("geometry opening")));
+        }
+
+        [Test]
+        public void ValidateAll_DoesNotReportDoorOpeningWarning_ForNarrativeFallTrigger()
+        {
+            var roomRig = CreateValidRoomRig("Room_FallTrigger_Boundary");
+            var targetRig = CreateValidRoomRig("Room_FallTrigger_Target");
+            var outerWall = CreateChild(roomRig.OuterWallsRoot, "OuterWalls_Main");
+            var tilemap = outerWall.gameObject.AddComponent<Tilemap>();
+            outerWall.gameObject.AddComponent<TilemapRenderer>();
+            outerWall.gameObject.AddComponent<TilemapCollider2D>();
+            var tile = ScriptableObject.CreateInstance<Tile>();
+            _createdObjects.Add(tile);
+            tilemap.SetTile(Vector3Int.zero, tile);
+
+            var triggerObject = CreateGameObjectWithTriggerColliderAndComponent<NarrativeFallTrigger>("NarrativeFall_Boundary");
+            triggerObject.transform.SetParent(roomRig.TriggersRoot, false);
+            triggerObject.transform.position = Vector3.zero;
+            SetPrivateField(triggerObject.GetComponent<NarrativeFallTrigger>(), "_targetRoom", targetRig.Room);
+            SetPrivateField(triggerObject.GetComponent<NarrativeFallTrigger>(), "_landingPoint", CreateChild(targetRig.NavigationRoot, "Landing_Target"));
+            SetPrivateField(triggerObject.GetComponent<NarrativeFallTrigger>(), "_playerLayer", (LayerMask)1);
+
+            var results = LevelValidator.ValidateAll();
+
+            Assert.That(results.Any(result =>
+                result.TargetObject == triggerObject.GetComponent<NarrativeFallTrigger>() &&
+                result.Message.Contains("geometry opening")), Is.False);
+        }
+
         private RoomTestRig CreateValidRoomRig(string roomName)
 
         {

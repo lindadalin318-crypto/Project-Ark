@@ -2,6 +2,186 @@
 
 ---
 
+## 修复 Geometry Canvas 缺 Grid 导致 Tile Palette 可能无法落笔的问题 — 2026-04-16 16:15
+
+### 修改文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomGeometryCanvasFactory.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomGeometryCanvasFactoryTests.cs`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 修复 `RoomGeometryCanvasFactory.CreateCanvas()` 在创建 `OuterWalls_Main` / `InnerWalls_Main` 前未确保父根节点存在 `Grid` 的问题。
+- 为 `RoomGeometryCanvasFactoryTests` 增加断言，验证 `CreateCanvas()` 后 `OuterWallsRoot` 会自动持有 `Grid`，避免后续回归再次让 Tile Palette 进入“有画布但无法正常绘制”的状态。
+- 重新执行 `dotnet build Project-Ark.slnx` 与 Unity `EditMode` tests，当前编译通过且测试 26 / 26 通过。
+
+### 目的
+- 确保作者在 `Geometry Authoring` 区块点击创建画布后，可以直接进入 Tile Palette 工作流，而不会因为缺少 `Grid` 宿主导致刷墙无效。
+- 把静态几何墙 starter 从“结构存在”推进到“编辑器里可直接落笔”的可用状态。
+
+### 技术
+- 在 geometry canvas 创建入口做最小修复：按需补 `Grid`，不改动既有 `RoomAuthoringHierarchy` 结构契约。
+- 通过 EditMode 测试为 `Grid` 宿主行为加回归保护，防止 Tile Palette 工作流再次静默失效。
+
+## 完成 Geometry Authoring 的 Unity 会话验证并修复场景几何链脏数据 — 2026-04-16 14:54
+
+### 修改文件
+- `Assets/Scenes/SampleScene.unity`
+- `Docs/0_Plan/ongoing/2026-04-15-static-geometry-walls-phase2-implementation-plan.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 恢复 Unity MCP 会话后，打开 `ProjectArk/Level/Authority/Level Architect` 窗口并运行 `EditMode` 测试，结果为 26 / 26 全通过。
+- 在 `SampleScene` 中对本轮静态几何墙链路做场景级修复：为 `G_Safe_03` 与 `G_Arena_02` 补齐 `Navigation/Geometry`、`OuterWalls`、`InnerWalls` authoring 根节点。
+- 修正 `DebugRoom/Navigation/Geometry/OuterWalls/OuterWalls_Main` 的 `CompositeCollider2D` 链配置，把 `Rigidbody2D` 切回 `Static`，并启用 `TilemapCollider2D.usedByComposite`。
+- 复跑 `LevelValidator.ValidateAll()` 后，静态几何墙相关错误已消除，剩余问题收敛到 `CheckpointSO` / `EncounterSO` 等非本轮范围项。
+
+### 目的
+- 把静态几何墙 Phase 2 从“代码与测试完成”推进到“Unity Editor 会话内验证也闭环”的状态。
+- 顺手清掉当前场景里直接阻碍 `Geometry Authoring` 工作流的脏数据，避免后续作者在 `SampleScene` 里继续踩同一条几何链问题。
+
+### 技术
+- 使用 Unity MCP 的 `run_tests`、`execute_menu_item`、`execute_code`、`manage_scene.save` 组成 Editor 内验证与修复闭环。
+- 仅修复与 `Geometry Authoring` 主链直接相关的 scene-backed authoring 数据，不把 `Checkpoint` / `Arena Encounter` 的独立配置问题混进本轮范围。
+
+## 补齐 Geometry Authoring UI 接线并收口 Phase 2 当前进度 — 2026-04-16 12:03
+
+### 修改文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`
+- `Docs/0_Plan/ongoing/2026-04-15-static-geometry-walls-phase2-implementation-plan.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 修复 `LevelArchitectWindow` 中 `Geometry Authoring` 只实现 helper、未接入实际 UI 调用点的问题，将该区块接回单房选择摘要与单房精修面板。
+- 重新执行 `dotnet build Project-Ark.slnx`，确认当前 `Level Architect` 与相关 Phase 2 编辑器代码可通过本地构建。
+- 在 implementation plan 顶部补充进度说明，明确当前代码与文档已基本落地，剩余阻塞集中在 Unity Editor 会话内验证链。
+
+### 目的
+- 确保静态几何墙画布 starter 不只是代码存在，而是真的能从 `Quick Edit` 工作面被作者发现和使用。
+- 避免 Phase 2 再次出现“核心实现已落地，但计划文档仍像全部待执行”的状态漂移。
+
+### 技术
+- 采用最小范围 UI wiring 修复，把 `Geometry Authoring` 接入现有单房入口，不改动既有 runtime assist 结构。
+- 通过 `dotnet build` 做编辑器程序集回归验证，并记录 Unity 项目锁 / MCP 未连会话导致的 Editor 内验证阻塞。
+
+## 新增静态几何墙 Phase 2 implementation plan，拆解 geometry starter 与 Door 边界任务 — 2026-04-15 23:56
+
+### 修改文件
+- `Docs/0_Plan/ongoing/2026-04-15-static-geometry-walls-phase2-implementation-plan.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 新建 `静态几何墙 Phase 2` implementation plan，把设计稿拆成 `Geometry Canvas Starter`、`Level Architect` 入口、`Door` / future transfer validator 边界、文档同步与代表房验收四个可执行批次。
+- 在计划中明确静态墙画布 starter 必须独立于 `Runtime AssistFactory`，并把 `Door` opening 检查限制在 `Door + Navigation/Geometry` 主链内，避免 future trap / fall / teleport 误报。
+- 同步把测试顺序、建议文件、新增 helper 名称、手动验收步骤与 commit 粒度写实，便于后续直接执行。
+
+### 目的
+- 让后续 implementation 能按清晰批次推进，而不是把静态墙工具化、Door 边界和 future transfer 讨论混成一次大改。
+- 把已确认的设计意图沉淀成可执行任务单，降低执行时再次扩 scope 或偏离 authority 边界的风险。
+
+### 技术
+- 采用 TDD + starter-first 的 implementation plan 结构，先锁测试，再落 factory / validator / workflow 文档。
+- 延续 `scene-backed geometry` 与 `Level Architect` 独立 geometry 区块的设计，不把静态墙入口并入 runtime starter 链。
+
+## 新增静态几何墙 Phase 2 设计稿，收口 Door 与 future transfer 边界 — 2026-04-15 23:53
+
+## 新增静态几何墙 Phase 2 设计稿，收口 Door 与 future transfer 边界 — 2026-04-15 23:53
+
+### 修改文件
+- `Docs/0_Plan/specs/2026-04-15-static-geometry-walls-phase2-design.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 新建 `静态几何墙 Phase 2` 设计稿，明确这轮工作的定位是 `Workbench Polish + Boundary Hardening`，不是自动建墙系统，也不是统一跨房间转移系统。
+- 在设计中正式区分 `Door` 型通路与 future trap / fall / teleport 等非门型跨房间转移，并写清 `Door` 需要门洞协作、future transfer 不强制要求墙体开口的边界。
+- 同步定义 `Level Architect` 推荐增强形态、validator 误报边界、代表房间验收建议与本阶段非目标，作为后续 implementation plan 的设计基线。
+
+### 目的
+- 防止团队在推进静态几何墙 Phase 2 时，把所有跨房间入口都错误收编进门洞协作规则，导致未来掉落陷阱、叙事坠落、特殊传送被错误约束。
+- 让后续计划拆解能够围绕 `starter-first`、`scene-backed authoring` 与清晰 authority 边界展开，而不是过早膨胀成新系统。
+
+### 技术
+- 采用文档先行的设计收口方式，先固化语义分类、validator 边界与 workbench 目标，再进入 implementation planning。
+- 延续现有 `Level` 模块的 `Path / Environment / Directing` 分类口径，并与 `Level Architect` 的 `starter-first` 策略保持一致。
+
+## 将静态几何墙 implementation plan 从 `ongoing/` 归档到 `complete/` — 2026-04-15 22:23
+
+## 将静态几何墙 implementation plan 从 `ongoing/` 归档到 `complete/` — 2026-04-15 22:23
+
+### 修改文件
+- `Docs/0_Plan/ongoing/README.md`
+- `Docs/0_Plan/complete/README.md`
+- `Docs/0_Plan/Project_Plan.md`
+- `Docs/0_Plan/complete/2026-04-15-static-geometry-walls-implementation-plan.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 将静态几何墙 implementation plan 从 `Docs/0_Plan/ongoing/` 物理迁移到 `Docs/0_Plan/complete/`，让目录语义与文档完成状态一致。
+- 同步修正文档内部自引用路径，以及 `ongoing/README.md`、`complete/README.md`、`Project_Plan.md` 中与该计划相关的入口说明和导航。
+
+### 目的
+- 彻底完成这份 implementation plan 的归档收口，避免出现“文档写着已完成，但仍躺在 ongoing 目录”的语义错位。
+- 让后续查阅者能从项目入口和 complete 目录直接找到这份已落地的静态几何墙执行记录。
+
+### 技术
+- 采用“先物理迁移，再修正文内路径与入口索引，最后补实现日志”的归档顺序，避免目录迁移后留下失效引用。
+- 保持计划正文内容不重写，只收口目录位置、导航和状态语义。
+
+## 将静态几何墙 implementation plan 标记为完成态，并收口 handoff 文案 — 2026-04-15 22:19
+
+## 将静态几何墙 implementation plan 标记为完成态，并收口 handoff 文案 — 2026-04-15 22:19
+
+### 修改文件
+- `Docs/0_Plan/ongoing/2026-04-15-static-geometry-walls-implementation-plan.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 将静态几何墙 implementation plan 顶部改为明确的已完成状态，避免该文档继续以待执行任务单的样子停留在 `ongoing` 目录中。
+- 把计划中的执行复选框统一切换为完成态，并将文末 `Execution Handoff` 改写为 `Completion Note`，让文档语义与实际落地状态一致。
+
+### 目的
+- 消除“实现已落地但计划文档仍显示待执行”的文档漂移，避免后续协作时误判这项工作仍未完成。
+- 保留这份计划作为历史执行记录，而不是继续把它当作未收尾的 handoff 清单。
+
+### 技术
+- 采用最小范围的文档收尾方式，只更新状态、复选框与结尾说明，不重新改写已完成任务的历史内容。
+- 通过实现日志补记文档状态收口动作，保持 `ongoing plan → implementation log` 的追踪链完整。
+
+## 硬删除 `HTML/JSON` 关卡导入链，统一收口到 `Level Architect` 主工作流 — 2026-04-15 21:57
+
+### 删除文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelSliceBuilder.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelSliceBuilder.cs.meta`
+- `Tools/LevelDesigner.html`
+- `Docs/6_Diagnostics/LevelDesigner_JSON_Field_Matrix.csv`
+
+### 修改文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/RoomAuthoringHierarchy.cs`
+- `Docs/2_TechnicalDesign/Level/Level_CanonicalSpec.md`
+- `Docs/3_WorkflowsAndRules/LevelArchitect/Level_WorkflowSpec.md`
+- `Docs/6_Diagnostics/Verification_Checklist.md`
+- `Docs/6_Diagnostics/LevelArchitect_SupportedElements_Matrix.md`
+- `Docs/6_Diagnostics/Level_RoomElements_Findings.md`
+- `Docs/0_Plan/ongoing/LevelArchitect_Workbench.md`
+- `Docs/0_Plan/ongoing/2026-04-15-static-geometry-walls-implementation-plan.md`
+- `Implement_rules.md`
+- `ProjectArk.Level.Editor.csproj`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 从 `Level Architect` 的 `Build` 工作面中彻底移除 `Optional Draft & Import` UI、`Open LevelDesigner.html` 按钮和 `Import LevelDesigner JSON` 入口。
+- 直接删除 `LevelSliceBuilder`、`LevelDesigner.html` 和专门服务旧导入链的 JSON 字段矩阵，不再保留外部 `HTML → JSON → Scene` workflow 能力；并同步清理 `ProjectArk.Level.Editor.csproj` 中遗留的显式 `Compile Include`。
+- 同步改写 `Level_CanonicalSpec`、`Level_WorkflowSpec`、`Verification_Checklist`、`LevelArchitect_SupportedElements_Matrix`、`Level_RoomElements_Findings` 与 `Implement_rules`，把现役搭建口径统一收口为 `Level Architect` 的 `Build / Quick Edit / Validate` 单主链。
+- 顺手清理静态几何墙 implementation plan 与顶部 implementation log 里仍把 `LevelSliceBuilder` 视为现役 authority 的噪音描述，避免仓库继续保留假的双入口心智模型。
+
+### 目的
+- 全面删除已经不再需要的浏览器拓扑规划与 JSON 导入链，避免团队继续在现役项目中维护第二套关卡 authoring 路径。
+- 把关卡搭建、精修、验证全部收口到 Unity 内的 `Level Architect`，减少工具链漂移与文档误导航成本。
+
+### 技术
+- 采用“先删代码入口，再删实现与辅助文件，最后回写规范 / workflow / diagnostics”的三层收口顺序，保证现役链先断、心智模型再对齐。
+- 以 `Level Architect` 单主链为 authority，保留历史日志但清理现役文档中的旧 workflow 表述，避免再次出现 UI 已删但文档仍在教学的半迁移状态。
+
 ## 落地静态几何墙 MVP authoring 闭环，统一 `Navigation/Geometry` room skeleton — 2026-04-15 21:24
 
 ### 新建文件
@@ -14394,3 +14574,9 @@ dotnet build 验证：0 错误，0 警告。
 - 目的：让关卡作者在 `SceneView` 里完成完整的连接 authoring loop：先看见哪条连接、再 hover 感知它对应哪扇门/哪一个落点、最后直接点中进入 inspector 精修，减少“视觉上已经看懂，但操作仍要绕回列表”的往返成本。
 - 技术：采用“窗口状态收口 + 共享连接几何 authority + 顶层 focus overlay”方案，不新增第二套连接数据模型；通过 `ConnectionGizmoDrawer.TryResolveConnection()` / `TryPickConnection()` 统一绘制与拾取几何，避免默认视图和 overlay 在命中语义上再次分叉。最终通过 `read_lints` 检查相关文件 **0 lint**，并通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**（保留既有 warning）。
 
+
+## Static Geometry Walls Phase 2：Door 边界与 Geometry Authoring 收口 - 2026-04-16 00:42
+- 新建/修改文件：`Assets/Scripts/Level/Editor/LevelArchitect/RoomGeometryCanvasFactory.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/RoomGeometryCanvasFactoryTests.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/LevelValidatorTests.cs`、`Docs/2_TechnicalDesign/Level/Level_CanonicalSpec.md`、`Docs/3_WorkflowsAndRules/LevelArchitect/Level_WorkflowSpec.md`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：为 `Level Architect` 新增 `RoomGeometryCanvasFactory` 与对应 EditMode 测试，补齐 `OuterWalls` / `InnerWalls` 标准 Tilemap 画布 starter，并在 `LevelArchitectWindow` 的 `Quick Edit` 中加入独立 `Geometry Authoring` 区块，明确它只负责准备静态墙 authoring 宿主，不接管 `Runtime Assist` 语义补件链。同时在 `LevelValidator` / `LevelValidatorTests` 中补入 `Door` 推荐根与静态墙开口协作校验，并显式锁住 `NarrativeFallTrigger` 这类非门型跨房间转移不会因为“没有门洞”被误报。最后同步更新 `Level_CanonicalSpec` 与 `Level_WorkflowSpec`，将 `Door = 显式门型通路`、`trap / fall / teleport = 非门型 transfer`、`Navigation/Geometry` 标准骨架和 validator 边界固化为现役文档口径。
+- 目的：把“门洞协作规则”收口为只服务于 `Door` 的 authoring / validator 契约，同时给未来 trap、fall、teleport 类跨房间转移留出明确扩展位，避免后续工具链误把所有 room transfer 都要求成墙体开口。
+- 技术：采用 TDD（先补 `RoomGeometryCanvasFactoryTests` / `LevelValidatorTests` 再实现）、编辑器 authoring authority 分层（`Geometry Authoring` vs `Runtime Assist`）、以及 `Door` / future transfer 分类边界收口策略；通过 Unity EditMode tests 回归验证 `Door` 几何 opening 检查只作用于显式门型通路。

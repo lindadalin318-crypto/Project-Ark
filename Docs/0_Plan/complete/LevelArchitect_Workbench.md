@@ -498,6 +498,5 @@
 - `Docs/2_TechnicalDesign/Level/Level_CanonicalSpec.md`
 - `Docs/3_WorkflowsAndRules/LevelArchitect/Level_WorkflowSpec.md`
 - `Docs/0_Plan/ongoing/LevelRoomRuntimeChain_Hardening.md`
-- `Tools/LevelDesigner.html`
 - `Docs/5_ImplementationLog/README.md`
 

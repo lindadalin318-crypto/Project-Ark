@@ -12,7 +12,7 @@
 
 这份文档只负责四件事：
 
-1. 说明搭建入口：`LevelDesigner.html` 导入，或 `Level Architect` 直接白盒
+1. 说明搭建入口：`Level Architect` 作为唯一现役白盒与精修工作面
 2. 说明通用流程：结构搭建 → 语义标注 → Overlay 检查 → Validate → Quick Play → 完整试玩
 3. 说明 authoring 约束：哪些层级是工具链默认要求，哪些数据由谁持有 authority
 4. 说明验证边界：不同验证手段各自验证什么，不验证什么
@@ -29,10 +29,9 @@
 | 主题 | 真相源 | 说明 |
 |------|--------|------|
 | 房间空间布局 | Scene 中的 `Room` GameObject | 房间位置、尺寸、边界、子节点结构以场景为准 |
-| 房间连接拓扑 | Scene 中 `Door._targetRoom` / `_targetSpawnPoint` | Door 是连接关系 authority |
+| 房间连接拓扑 | Scene 中 `Door._targetRoom` / `_targetSpawnPoint` | `Door` 是显式门型连接关系 authority；非门型 trap / fall / teleport 不自动进入这层拓扑 |
 | 房间元数据 | `RoomSO` / `EncounterSO` / `CheckpointSO` / `WorldPhaseSO` 等 SO | 非空间配置、节奏类型、遭遇配置以 SO 为准 |
-| 外部拓扑草图 | `LevelDesigner.html` 导出的 JSON | 只作为导入源；现役主消费为 `rooms / connections / doorLinks` |
-| 设计快照字段 | `LevelDesigner.html` 的 `elements[]`、`zoneId`、`act`、`tension`、`beatName`、`timeRange` | 当前主要用于设计沟通与 JSON 留档，不驱动运行时对象生成 |
+| Authoring 工作面 | `Level Architect`（`Build / Quick Edit / Validate`） | 当前唯一现役搭建与精修入口 |
 | 架构规则与模块边界 | `Level_CanonicalSpec.md` | 架构、声明、authority 规范 |
 
 ### 1.4 一句话原则
@@ -43,14 +42,10 @@
 
 ## 2. 工作流总览
 
-关卡搭建有两条入口路径：
+关卡搭建当前只有一条现役入口路径：
 
 ```text
-路径 A：HTML 拓扑规划
-LevelDesigner.html → Export JSON → LevelSliceBuilder 导入 → Scene 落地
-
-路径 B：Unity 内直接白盒
-Level Architect / Build Tab → Blockout / Connect → Scene 落地
+Level Architect / Build Tab → Blockout / Connect → Quick Edit → Scene 落地
 
 统一收口流程：
 结构搭建 Pass → 语义标注 Pass → Overlay 检查 → Validate → Quick Play → 完整 Play Mode 验收
@@ -77,95 +72,29 @@ Level Architect / Build Tab → Blockout / Connect → Scene 落地
 
 ## 3. 5 分钟快速上手
 
-### 3.1 什么时候走路径 A
+### 3.1 什么时候直接进入 `Level Architect`
 
-优先走 **路径 A：`HTML → JSON → Scene`**，如果你更需要：
+当前所有现役关卡搭建都应直接进入 **`Level Architect` 主链**，尤其适用于：
 
-- 先规划大拓扑，再进 Unity 落地
-- 先看房间关系、分层、节奏分布
-- 先和设计/GDD 对齐地图结构
+- 需要在 Unity 里直接白盒迭代
+- 需要边画边试，快速验证结构手感
+- 需要把房间、连接、语义补件与验证收口在同一工作面
 
-### 3.2 什么时候走路径 B
+### 3.2 默认建议
 
-优先走 **路径 B：`Blockout → Connect → Scene`**，如果你更需要：
-
-- 在 Unity 里直接白盒迭代
-- 边画边试，快速找手感
-- 已经知道要做什么，只想尽快产出可玩骨架
-
-### 3.3 默认建议
-
-- **新区域 / 新章节**：优先路径 A
-- **局部重做 / 单切片验证**：优先路径 B
-- **复杂项目中后期**：A 做大结构，B 做局部细化，最后统一进入验证流程
+- **新区域 / 新章节**：直接从 `Build` 起手，先搭最小可玩骨架
+- **局部重做 / 单切片验证**：优先用 `Validation Slice` 或局部 `Blockout`
+- **复杂项目中后期**：仍然沿 `Build → Quick Edit → Validate` 同一主链推进，不再额外维护外部导入分支
 
 ---
 
-## 4. 路径 A：`LevelDesigner.html → JSON → Scene`
+## 4. 当前唯一工作流：`Level Architect / Build Tab → 白盒搭建`
 
 ### 4.1 适用场景
 
-适合“先把拓扑和节奏画清楚，再落进 Unity”的工作方式。
+适合“直接在 Unity 中搭出可玩骨架，并立即进入验证”的工作方式。
 
 ### 4.2 操作步骤
-
-1. **打开工具**
-   - Unity 菜单：`ProjectArk > Level > Authority > Level Architect`
-   - 在 `Build` 工作面的 `Optional Draft & Import` 区点击 **`🌐 Open LevelDesigner.html`**
-
-   - 浏览器会打开 `Tools/LevelDesigner.html`
-
-2. **在浏览器里规划房间与连接**
-   - 放置房间节点
-   - 设定房间类型、命名、楼层、尺寸
-   - 创建连接并指定 `connectionType`
-   - 填写 `Level Name`
-
-3. **导出 JSON**
-   - 点击 **`💾 Export File`**
-   - 建议保存到 `Docs/4_GameData/` 对应目录
-
-4. **导入到 Unity 场景**
-   - 回到 `Build` 工作面的 `Optional Draft & Import` 区
-   - 点击 **`📂 Import LevelDesigner JSON...`**
-   - 导入后由 `LevelSliceBuilder` 自动创建：
-     - 场景中的 `Room` 根对象
-     - `RoomSO` 资产
-     - Door 对与 SpawnPoint 对
-     - 标准房间子节点骨架
-
-5. **继续在 `Build / Quick Edit` 工作面做精修**
-
-### 4.3 路径边界
-
-- JSON 是导入源，不是运行时 authority
-
-- 导入完成后，继续演化的是 Scene 中的 `Room` / `Door` 和相关 SO
-- 如果导入后又手改了房间位置、尺寸、Door 接线，以 Scene 当前状态为准
-- 当前 Unity 导入主链只消费 `rooms / connections / doorLinks` 骨架；`elements[]` 与节奏元数据仍属于设计快照层
-
-### 4.4 JSON 导入约束
-
-- `LevelSliceBuilder` 读取顶层 `rooms[]`、`connections[]`、`doorLinks[]`
-- 房间主消费字段为 `id`、`name`、`type`、`floor`、`position`、`size`
-- `doorLinks[]` 负责目标房间入场落点；若未提供显式 `spawnOffset`，导入器会回退到默认内缩落点
-- 连接方向字段使用 `fromDir` / `toDir`
-- 方向值使用 `east / west / north / south`
-- `zoneId`、`act`、`tension`、`beatName`、`timeRange`、`elements[]` 当前会随 JSON 保存，但不会自动生成 Encounter、敌人、Checkpoint 或其他场景对象
-- `type` 必须使用 `transit / combat / arena / reward / safe / boss`；旧房间类型字符串会在导入时直接失败
-- `connectionType` 推荐使用 `progression / return / ability / challenge / identity / scheduled`；当前 `LevelDesigner.html` 与 `LevelSliceBuilder` 仍会把旧 alias 归一到现役枚举（如 `normal → progression`、`tidal → scheduled`）
-
-JSON 结构示例见本文附录。
-
----
-
-## 5. 路径 B：`Level Architect / Build Tab → 白盒搭建`
-
-### 5.1 适用场景
-
-适合“直接在 Unity 中搭出可玩骨架”的工作方式。
-
-### 5.2 操作步骤
 
 1. **打开工具**
    - Unity 菜单：`ProjectArk > Level > Authority > Level Architect`
@@ -190,26 +119,31 @@ JSON 结构示例见本文附录。
    - 调整尺寸、楼层、房间类型、遭遇配置
    - 用侧边面板或批量编辑进行整理
    - 使用 `Room ID` / `Display Name` 与 `Stable Rename` 保持房间命名按语义可读，而不是靠时间戳或位置记忆
+   - 若当前进入静态墙 authoring 阶段，优先使用 `Geometry Authoring` 区块在 `Navigation/Geometry/OuterWalls` 或 `Navigation/Geometry/InnerWalls` 下创建标准 Tilemap 画布；它只负责准备宿主与标准碰撞链，不自动生成墙形
    - 若当前进入语义补件阶段，可直接用 `Runtime Assist` / `Starter Objects` 入口补 `Checkpoint`、`OpenEncounterTrigger`、`BiomeTrigger`、`ScheduledBehaviour`、`WorldEventTrigger`，连接 inspector 里则可直接补 `Lock` starter
-   - 静态几何墙不走 `Runtime Assist` 按钮链，而是跟随新房默认骨架直接在 `Navigation/Geometry` 下 author；若 `Validate All` 报 geometry 结构 warning，优先修根节点与 marker，再修具体 Tilemap 碰撞链
+   - `Door` 型通路需要与几何开口协作；trap / fall / teleport 这类非门型跨房间转移不走 `Door` 门洞规则，通常归入 `Triggers` 或对应玩法层
 
-
-### 5.3 路径特点
+### 4.3 路径特点
 
 - 迭代快
 - 离手感最近
 - 更适合小范围重做、切片打磨、结构改版
 
-### 5.4 风险提醒
+### 4.4 风险提醒
 
 - 只搭结构、不补语义，最终会得到“能通但节奏不清楚”的地图
 - 只看 SceneView 白盒、不做验证，会高估当前完成度
+
+### 4.5 历史材料处理原则
+
+- 若文档、笔记或历史截图描述了当前工作面之外的额外搭建路径，应统一视为历史材料，而不是现役操作说明
+- 当前团队沟通、验收与教学都应只围绕 `Level Architect` 主链展开
 
 ---
 
 ## 6. 通用 Build 流程
 
-无论走路径 A 还是路径 B，落到场景后都建议按下面 4 个阶段推进。
+沿 `Level Architect` 主链落到场景后，建议按下面 4 个阶段推进。
 
 ### 6.1 Phase 1：结构搭建 Pass
 
@@ -220,8 +154,9 @@ JSON 结构示例见本文附录。
 - 房间位置、尺寸、楼层关系正确
 - 每个新房间都应带有 `Navigation/Geometry` 骨架；静态几何墙统一 author 在 `Navigation/Geometry/OuterWalls` 与 `Navigation/Geometry/InnerWalls`
 - `Navigation/Geometry` 应保持 marker-only，只挂 `RoomGeometryRoot`，不要把玩法脚本或状态组件塞在这个根上
+- 需要标准墙宿主时，优先在 `Quick Edit` 的 `Geometry Authoring` 区块创建 `OuterWalls_Main` / `InnerWalls_Main` starter，再手工绘制墙形
 - 外轮廓主墙优先放在 `OuterWalls`，并使用统一的 `Tilemap + TilemapCollider2D (+ Static Rigidbody2D + CompositeCollider2D)` 组合
-- 主路线与回路的 Door 已打通
+- 主路线与回路的 `Door` 已打通，且 `Door` 型通路应与几何开口协作，不能直接压在填充墙 Tile 上
 - `CameraConfiner`、`BoxCollider2D`、标准根节点存在
 - 至少可从入口穿过一条有效主链
 
@@ -294,6 +229,8 @@ JSON 结构示例见本文附录。
 | 缺 `CameraConfiner` 或层级不正确 | Warning | ✅ |
 | 缺标准根节点：`Navigation / Elements / Encounters / Hazards / Decoration / Triggers` | Warning | ✅ |
 | Door 非双向连接 | Error | ✅ |
+| Door 位于非 `Navigation` 推荐根下 | Warning | ✅ |
+| Door 落在填充静态墙 Tile 内 | Warning | ❌ |
 | `Arena` / `Boss` 房缺 `ArenaController` | Warning | ✅ |
 | 非 `Arena` / `Boss` 房误挂 `ArenaController` | Warning | ❌ |
 | `Arena` / `Boss` 房缺 `EncounterSO` | Warning | ❌ |
@@ -308,6 +245,7 @@ JSON 结构示例见本文附录。
 **当前补充：**
 
 - `LevelValidator` 还会检查 `BiomeTrigger`、`HiddenAreaMask`、`ScheduledBehaviour`、`ActivationGroup`、`WorldEventTrigger` 的基础引用与推荐挂点。
+- 几何开口校验当前只约束 `Door` 这类显式门型通路；`NarrativeFallTrigger` 等非门型跨房间转移不会因为“没有门洞”被误报。
 - `CameraTrigger` 当前**尚未进入同等级 validator 收口**；镜头导演区的层级、player layer 与局部镜头效果仍需要人工走查。
 
 ### 7.3 `Quick Play` 的准确定位
@@ -372,6 +310,9 @@ JSON 结构示例见本文附录。
 ```text
 Room_[ID]
 ├── Navigation
+│   ├── Geometry            (`RoomGeometryRoot`，marker-only)
+│   │   ├── OuterWalls
+│   │   └── InnerWalls
 │   ├── Doors
 │   └── SpawnPoints
 ├── Elements
@@ -388,7 +329,7 @@ Room_[ID]
 
 | 节点 | 职责 |
 |------|------|
-| `Navigation` | Door、进入点、离开点等空间导航结构 |
+| `Navigation` | Door、进入点、离开点，以及 `Navigation/Geometry` 下的静态几何宿主 |
 | `Elements` | 锁、拾取物、互动件、可破坏物、NPC |
 | `Encounters` | 遭遇触发器、`OpenEncounterTrigger`、`EnemySpawner` |
 | `Hazards` | 环境伤害与危险物 |
@@ -436,7 +377,7 @@ Room_[ID]
    - 能自给自足的触发器、交互件、环境控制器，应优先保持自治。
 
 6. **决定要不要扩编辑期模型**
-   - 只有当该元素需要参与 `LevelDesigner.html` JSON、Overlay 或批量搭建工具时，才扩编辑期 schema。
+   - 只有当该元素需要参与 `Level Architect` overlay、validator 或批量搭建工具时，才扩编辑期 schema。
    - 纯场景手工 authoring 的细节，不要为了“看起来统一”额外发明脱离 Scene 主链的中间快照层。
 
 7. **最后补校验与验收**
@@ -447,76 +388,42 @@ Room_[ID]
 
 | 中文分类 | 英文标签 | 常见代表 | 默认挂点 | 必须先确认的接入点 |
 |---------|----------|----------|----------|--------------------|
-| **通路件** | `Path` | `Door`、层间门、阶段门 | `Navigation` | 目标房间、出生点、连接语义、阶段/进度门控 |
+| **通路件** | `Path` | `Door`、层间门、阶段门（仅限显式门型通路） | `Navigation` | 目标房间、出生点、连接语义、阶段/进度门控、几何开口协作 |
 | **交互件** | `Interact` | `Lock`、`Checkpoint`、拾取物 | `Elements` | 触发器、`_playerLayer`、输入链、必需 SO / 目标引用 |
 | **状态件** | `Stateful` | `DestroyableObject`、永久机关、一次性揭示物 | `Elements` | 父 `Room`、flag key、`RoomFlagRegistry`、`SaveBridge` |
 | **战斗件** | `Combat` | `OpenEncounterTrigger`、`ArenaController`、`EnemySpawner` | `Encounters` | `EncounterSO.Mode`、Spawner、重置链、房型语义 |
 | **环境机关件** | `Environment` | `EnvironmentHazard` 子类 | `Hazards` | 伤害配置、Layer、Collider、是否需要持久关闭 |
-| **导演件** | `Directing` | `BiomeTrigger`、`HiddenAreaMask`、`ScheduledBehaviour`、`ActivationGroup`、`WorldEventTrigger` | `Triggers`（或显式扩展层） | 事件源、target 引用、phase/progress 依赖、预激活要求 |
+| **导演件** | `Directing` | `BiomeTrigger`、`HiddenAreaMask`、`ScheduledBehaviour`、`ActivationGroup`、`WorldEventTrigger`、`NarrativeFallTrigger` | `Triggers`（或显式扩展层） | 事件源、target 引用、phase/progress 依赖、预激活要求 |
 | **基础设施件** | `Infrastructure` | `SpawnPoint`、`CameraConfiner`（可选） | `Navigation/SpawnPoints`、`CameraConfiner` | 房间入口落点、可选硬镜头边界、与 `Room` / `Door` / `CameraDirector` 的协作关系 |
 
+- `Door` = 显式门型通路；只有它这类对象才默认参与连接拓扑、目标出生点和几何开口协作。
+- trap / fall / teleport 式 room transfer 若不依赖门洞，默认按 `Directing` / `Triggers` 处理；不要为了过 validator 强行伪装成 `Door`。
 
 ---
 
-## 9. `LevelDesigner.html` JSON 与设计快照字段的定位
+## 9. 设计快照与现役 authoring 的边界
 
-### 9.1 它是什么
+### 9.1 当前唯一 authoring authority
 
-`LevelDesigner.html` 导出的 JSON 是：
+当前关卡 authoring 的唯一现役主链是：
 
-- 浏览器侧拓扑规划结果
-- `HTML → JSON → LevelSliceBuilder → Scene` 这条路径的导入源
-- 设计沟通与结构归档的轻量文本载体
+- Scene 中的 `Room` / `Door` / 相关子节点结构
+- `RoomSO` / `EncounterSO` / 其他业务 SO
+- `Level Architect` 的 `Build / Quick Edit / Validate` 工作面
 
-### 9.2 它不是什么
+### 9.2 不再保留的中间层
 
-它不是：
+以下口径不再作为现役工作流的一部分：
 
-- 运行时 authority
-- Door 拓扑的长期真相源
-- Scene 的持续双向同步层
-- Unity 场景对象的全自动 authoring 面板
+- 外部 `HTML → JSON → Scene` 导入链
+- 依赖额外快照文件驱动房间骨架生成的双轨流程
+- 把设计草图长期保留为 authoring authority 的做法
 
-### 9.3 当前主消费字段
+### 9.3 现役原则
 
-现役导入主链主要消费：
-
-- 顶层：`rooms[]`、`connections[]`、`doorLinks[]`
-- 房间：`id`、`name`、`type`、`floor`、`position`、`size`
-- 连接：`from`、`to`、`fromDir`、`toDir`、`connectionType`
-- 门落点：`roomId`、`entryDir`、`spawnOffset`
-
-这些字段足以让 `LevelSliceBuilder` 生成：
-
-- `Room` 根对象
-- `RoomSO` 资产
-- Door 对与 SpawnPoint 对
-- 标准房间层级骨架
-
-### 9.4 当前仍属于设计快照的字段
-
-以下字段会跟随 JSON 留档，但当前**不会**自动驱动 Unity 生成对应运行时对象：
-
-- `rooms[].elements[]`
-- `rooms[].zoneId`
-- `rooms[].act`
-- `rooms[].tension`
-- `rooms[].beatName`
-- `rooms[].timeRange`
-
-它们当前更适合用于：
-
-- 设计讨论
-- 节奏对齐
-- 导入前的拓扑审阅
-- JSON 历史留档
-
-### 9.5 权威切换时机
-
-一旦导入完成，权威立即切换为：
-
-- Scene 中的 `Room` / `Door`
-- 相关 `RoomSO` / `EncounterSO` / 其他 SO
+- 任何房间结构改动都应直接落在 Scene 中
+- 任何房间语义配置都应落在 `RoomSO` / 相关 SO 或现役 inspector 中
+- 若需要设计讨论材料，应把它视为辅助参考，而不是工具链 authority
 
 也就是说：
 
@@ -534,7 +441,7 @@ Room_[ID]
 
 ### 10.1 推荐节奏
 
-1. 用路径 A 或 B 先出骨架
+1. 先用 `Level Architect / Build` 出骨架
 2. 做一轮结构 Pass
 3. 做一轮语义 Pass
 4. 开 `Overlay` 看主链和节奏分布
@@ -552,126 +459,12 @@ Room_[ID]
 
 ---
 
-## 11. `LevelSliceBuilder` JSON Schema
-
-### 11.1 基本结构
-
-```json
-{
-  "levelName": "示巴星_ACT1",
-  "rooms": [
-    {
-      "id": "room_001",
-      "name": "坠机点_残骸区",
-      "type": "reward",
-      "floor": 0,
-      "position": [0, 0],
-      "size": [30, 20],
-      "zoneId": "sheba",
-      "act": "ACT1",
-      "tension": 1,
-      "beatName": "intro",
-      "timeRange": "0:00-5:00",
-      "elements": [
-        {
-          "type": "door",
-          "position": [28, 10]
-        }
-      ]
-    }
-  ],
-  "connections": [
-    {
-      "from": "room_001",
-      "to": "room_002",
-      "fromDir": "east",
-      "toDir": "west",
-      "connectionType": "progression"
-    }
-  ],
-  "doorLinks": [
-    {
-      "roomId": "room_002",
-      "entryDir": "west",
-      "doorIndex": 0,
-      "spawnOffset": [2, 10]
-    }
-  ]
-}
-```
-
-### 11.2 `rooms[]` 字段说明
-
-| 字段 | 说明 | 当前导入状态 |
-|------|------|-------------|
-| `id` | 房间唯一 ID | ✅ 主消费 |
-| `name` | 房间显示名称 | ✅ 主消费 |
-| `type` | 房间节奏类型 | ✅ 主消费 |
-| `floor` | 楼层 | ✅ 主消费 |
-| `position` | `[x, y]`，网格单位 | ✅ 主消费 |
-| `size` | `[w, h]`，网格单位 | ✅ 主消费 |
-| `zoneId` / `act` / `tension` / `beatName` / `timeRange` | 附加设计信息 | 📝 当前留档，不自动生成运行时对象 |
-| `elements[]` | 房内设计元素快照 | 📝 当前留档，不自动生成场景对象 |
-
-### 11.3 `connections[]` 字段说明
-
-| 字段 | 说明 |
-|------|------|
-| `from` / `to` | 连接起点房间 / 终点房间 ID |
-| `fromDir` / `toDir` | 门朝向，使用 `east / west / north / south` |
-| `connectionType` | 连接语义类型 |
-
-### 11.4 `doorLinks[]` 字段说明
-
-| 字段 | 说明 |
-|------|------|
-| `roomId` | 目标房间 ID |
-| `entryDir` | 进入该房间时对应的入口边（`east / west / north / south`） |
-| `doorIndex` | HTML 侧门元素索引，主要用于设计器内部关联 |
-| `spawnOffset` | 目标房间局部网格坐标下的落点；导入时会转换为 Unity 房间中心坐标系 |
-
-### 11.5 `type` 规范字符串
-
-- `transit`
-- `combat`
-- `arena`
-- `reward`
-- `safe`
-- `boss`
-
-**严格要求：**
-
-- JSON 只能写以上 6 个字符串
-- 旧字符串 `pressure / resolution / anchor / loop / hub / threshold / corridor / normal / puzzle / narrative` 已全部废弃
-- 若导入仍包含旧值，`LevelSliceBuilder` 会直接报错，而不是继续归一兼容
-
-### 11.6 `connectionType` 规范字符串
-
-推荐现役值：
-
-- `progression`
-- `return`
-- `ability`
-- `challenge`
-- `identity`
-- `scheduled`
-
-当前兼容的旧 alias：
-
-- `normal` → `progression`
-- `tidal` → `scheduled`
-- `locked` → `ability`
-- `one_way` → `progression`
-- `secret` → `ability`
-
----
-
-## 12. 相关文档索引
+## 11. 相关文档索引
 
 | 文档 | 职责 |
 |------|------|
 | `Docs/2_TechnicalDesign/Level/Level_CanonicalSpec.md` | Level 模块现役架构、声明、authority 规范 |
 | `Implement_rules.md` | 模块级实现约束与协作规则 |
-| `Docs/4_GameData/` | 各区域拓扑设计稿与 JSON 输入 |
-| `Tools/LevelDesigner.html` | 浏览器侧拓扑设计工具 |
+| `Docs/6_Diagnostics/Verification_Checklist.md` | 编辑期 / 运行期验收清单 |
+| `Docs/6_Diagnostics/LevelArchitect_SupportedElements_Matrix.md` | `Level Architect` 当前支持能力矩阵 |
 | `Docs/5_ImplementationLog/README.md` | 文档与实现变更留痕 |

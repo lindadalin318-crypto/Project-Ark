@@ -62,6 +62,7 @@
 
 - `ShipVFX_PhaseA` 已归档到 `complete/`
 - `Camera_MVP` 已验收完成并归档到 `complete/`
+- `静态几何墙 MVP authoring` 已完成，并归档到 `complete/2026-04-15-static-geometry-walls-implementation-plan.md`
 
 ---
 
@@ -96,6 +97,7 @@
 - 活跃专项入口：[`./ongoing/README.md`](./ongoing/README.md)
 - 当前活跃专项：[`./ongoing/LevelRoomRuntimeChain_Hardening.md`](./ongoing/LevelRoomRuntimeChain_Hardening.md)
 - 已完成专项：[`./complete/Camera_MVP.md`](./complete/Camera_MVP.md)
+- 已完成专项：[`./complete/2026-04-15-static-geometry-walls-implementation-plan.md`](./complete/2026-04-15-static-geometry-walls-implementation-plan.md)
 - 待启动提案：[`./ongoing/LevelArchitect_Workbench.md`](./ongoing/LevelArchitect_Workbench.md)
 
 - 已完成专项：[`./complete/ShipVFX_PhaseA.md`](./complete/ShipVFX_PhaseA.md)

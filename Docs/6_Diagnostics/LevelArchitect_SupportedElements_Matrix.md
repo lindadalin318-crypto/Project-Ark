@@ -26,7 +26,6 @@
 - `BatchEditPanel.cs`
 - `DoorWiringService.cs`
 - `LevelRuntimeAssistFactory.cs`
-- `LevelSliceBuilder.cs`
 - `LevelValidator.cs`
 - `RoomNodeType.cs`
 - `ConnectionType.cs`
@@ -46,7 +45,6 @@
 | **可直接创建** | `Level Architect` 当前有明确按钮/入口，可直接在场景里创建 |
 | **可直接编辑** | `Level Architect` 当前有明确 UI，可直接修改现有对象的核心字段 |
 | **引导式起点** | 可以创建 starter / scaffold，但仍需作者手动补 SO、key、phase 等业务配置 |
-| **仅导入支持** | 当前只会通过 `LevelDesigner JSON` 导入，不代表 Quick Edit / Build 能继续精修所有字段 |
 | **仅诊断/显示** | 当前只在 overlay、inspector 或 validator 中可见，不提供直接创建/编辑入口 |
 | **运行时支持未开放** | 代码或运行时已支持，但 `Level Architect` 还没有 authoring 入口 |
 | **不计入当前支持** | 字段存在、概念存在，或旧链路残留，但不能算作当前可交付的 authoring 能力 |
@@ -59,7 +57,7 @@
 
 | 工作面 | 当前状态 | 主要职责 |
 | --- | --- | --- |
-| **Build** | **现役主工作面** | 白盒建房、切换 `Select / Blockout / Connect`、Quick Play、Validation Slice、可选 JSON 导入 |
+| **Build** | **现役主工作面** | 白盒建房、切换 `Select / Blockout / Connect`、Quick Play、Validation Slice |
 | **Quick Edit** | **现役主工作面** | 搜房、单房 Inspector、连接 Inspector、starter 补件、批量维护 |
 | **Validate** | **现役主工作面** | 跑 `Validate All`、查看结果、逐项 Fix、Auto-Fix |
 
@@ -94,7 +92,6 @@
 | `Seed 5-Room Slice` | **可直接创建** | `Build > Validation Slice` | 自动建 `Safe → Transit → Combat → Reward → Return Transit` |
 | `Create + Validate` | **可直接创建** | `Build > Validation Slice` | 建切片后立即跑验证 |
 | `Create + Quick Play` | **可直接创建** | `Build > Validation Slice` | 建切片后立即做结构 smoke test |
-| `LevelDesigner JSON` 导入 | **仅导入支持** | `Build > Optional Draft & Import` | 导房间和连接骨架，不自动导房间元素 |
 | Duplicate Room | **可直接创建** | `Quick Edit > Room Inspector` | 会复制 `Room` 与 `RoomSO`，并清掉旧 door authoring 方便重接 |
 | Save as Preset | **可直接创建** | `Quick Edit > Room Inspector` | 将当前房间保存为新的 `RoomPresetSO` |
 
@@ -114,12 +111,12 @@
 
 | Room Type | 当前状态 | 来源 | 备注 |
 | --- | --- | --- | --- |
-| `Transit` | **可直接创建 + 可直接编辑** | 预设 / Inspector / JSON 导入 | 主连接房 |
-| `Combat` | **可直接创建 + 可直接编辑** | 预设 / Inspector / JSON 导入 | 开放战斗房 |
-| `Arena` | **可直接创建 + 可直接编辑** | 预设 / Inspector / JSON 导入 | 竞技场房 |
-| `Reward` | **可直接创建 + 可直接编辑** | 预设 / Inspector / JSON 导入 | 回报房 |
-| `Safe` | **可直接创建 + 可直接编辑** | 预设 / Inspector / JSON 导入 | 安全房 |
-| `Boss` | **可直接创建 + 可直接编辑** | 预设 / Inspector / JSON 导入 | Boss 房 |
+| `Transit` | **可直接创建 + 可直接编辑** | 预设 / Inspector | 主连接房 |
+| `Combat` | **可直接创建 + 可直接编辑** | 预设 / Inspector | 开放战斗房 |
+| `Arena` | **可直接创建 + 可直接编辑** | 预设 / Inspector | 竞技场房 |
+| `Reward` | **可直接创建 + 可直接编辑** | 预设 / Inspector | 回报房 |
+| `Safe` | **可直接创建 + 可直接编辑** | 预设 / Inspector | 安全房 |
+| `Boss` | **可直接创建 + 可直接编辑** | 预设 / Inspector | Boss 房 |
 
 ### 3.3.1 不应误算为当前 Room Type 的项
 
@@ -190,19 +187,18 @@
 | Connect 模式拖拽连房 | **可直接创建** | `Build > Tool Mode: Connect` | 从一个房间拖到另一个房间，自动建门对 |
 | Auto-Connect Adjacent | **可直接创建** | `Batch / Context` | 自动连接共享边的房间 |
 | Validation Slice 自动连门 | **可直接创建** | `Build > Validation Slice` | 建 5 房切片时自动连接 |
-| JSON 导入连接 | **仅导入支持** | `Import LevelDesigner JSON` | 导入 `connections[]` 与 `doorLinks[]` |
 | 删除连接 | **可直接编辑** | `Quick Edit > Connection Inspector` | 会删除这对房间间的 door link |
 
 ## 4.2 当前正式支持的 ConnectionType
 
 | Connection Type | 当前状态 | 来源 | 备注 |
 | --- | --- | --- | --- |
-| `Progression` | **可直接创建 + 可直接编辑** | Connect / Inspector / JSON 导入 | 主推进连接 |
-| `Return` | **可直接创建 + 可直接编辑** | Connect / Inspector / JSON 导入 | 回返 / 捷径 |
-| `Ability` | **可直接创建 + 可直接编辑** | Connect / Inspector / JSON 导入 | 能力门 |
-| `Challenge` | **可直接创建 + 可直接编辑** | Connect / Inspector / JSON 导入 | 挑战门 |
-| `Identity` | **可直接创建 + 可直接编辑** | Connect / Inspector / JSON 导入 | 身份 / 章节切换 |
-| `Scheduled` | **可直接创建 + 可直接编辑** | Connect / Inspector / JSON 导入 | 时间 / phase 连接 |
+| `Progression` | **可直接创建 + 可直接编辑** | Connect / Inspector | 主推进连接 |
+| `Return` | **可直接创建 + 可直接编辑** | Connect / Inspector | 回返 / 捷径 |
+| `Ability` | **可直接创建 + 可直接编辑** | Connect / Inspector | 能力门 |
+| `Challenge` | **可直接创建 + 可直接编辑** | Connect / Inspector | 挑战门 |
+| `Identity` | **可直接创建 + 可直接编辑** | Connect / Inspector | 身份 / 章节切换 |
+| `Scheduled` | **可直接创建 + 可直接编辑** | Connect / Inspector | 时间 / phase 连接 |
 
 ## 4.3 当前 Connection Inspector 可直接操作项
 
@@ -279,41 +275,6 @@
 
 ---
 
-## 6. JSON 导入支持矩阵（`LevelDesigner.html → JSON → LevelSliceBuilder`）
-
-## 6.1 当前会被 Unity 消费的导入字段
-
-| 字段 | 当前状态 | 说明 |
-| --- | --- | --- |
-| `levelName` | **仅导入支持** | 作为切片根名使用 |
-| `rooms[].id` | **仅导入支持** | 创建 `Room` / `RoomSO` |
-| `rooms[].name` | **仅导入支持** | 写入 `Display Name` |
-| `rooms[].type` | **仅导入支持** | 解析为现役 6 类 `RoomNodeType` |
-| `rooms[].floor` | **仅导入支持** | 写入 `Floor Level` |
-| `rooms[].position` | **仅导入支持** | 房间世界位置 |
-| `rooms[].size` | **仅导入支持** | 房间尺寸 |
-| `connections[]` | **仅导入支持** | 创建 door links |
-| `doorLinks[]` | **仅导入支持** | 控制目标房间进入落点 |
-
-## 6.2 当前不会被 Unity 消费的导入字段
-
-| 字段 | 当前状态 | 说明 |
-| --- | --- | --- |
-| `rooms[].elements[].type` | **不计入当前支持** | 不会自动生成场景对象 |
-| `rooms[].elements[].position` | **不计入当前支持** | 不会自动生成场景对象 |
-| `rooms[].elements[].customLabel` | **不计入当前支持** | 仅供 HTML 设计侧使用 |
-| `rooms[].elements[].customColor` | **不计入当前支持** | 仅供 HTML 设计侧使用 |
-| `rooms[].zoneId` / `act` / `tension` / `beatName` / `timeRange` | **不计入当前支持** | 当前只是设计备注，不进入 Unity authoring 主链 |
-
-### 6.2.1 结论
-
-**因此，`LevelDesigner.html` 当前仍应被理解为：**
-
-- 一个 **拓扑规划 + JSON 导入源**
-- 而不是一个会自动完成 `Room Elements` 场景 authoring 的总控工具
-
----
-
 ## 7. 当前“支持搭建元素”总表
 
 > 这张表用于后续新增元素时快速对照：**只有落在“可直接创建 / 可直接编辑 / 引导式起点”三列里的项，才算当前 `Level Architect` 已支持搭建。**
@@ -324,12 +285,12 @@
 | Workbench | `Quick Edit` | **可直接使用** | `LevelArchitectWindow` |
 | Workbench | `Validate` | **可直接使用** | `LevelArchitectWindow` |
 | Tool Mode | `Select / Blockout / Connect` | **可直接使用** | `Build` |
-| Room | `Transit / Combat / Arena / Reward / Safe / Boss` | **可直接创建 + 可直接编辑** | 预设 / Inspector / JSON |
+| Room | `Transit / Combat / Arena / Reward / Safe / Boss` | **可直接创建 + 可直接编辑** | 预设 / Inspector |
 | Room | `Corridor` 预设 | **可直接创建** | 预设按钮 |
 | Room | Validation Slice | **可直接创建** | `Build` |
 | Room | `RoomSO / Room ID / Display Name / Node Type / Floor Level / Encounter / Size` | **可直接编辑** | `Quick Edit > Room Inspector` |
 | Room | `Set Entry / Stable Rename / Duplicate / Save Preset` | **可直接编辑 / 创建** | `Build / Quick Edit` |
-| Connection | `Progression / Return / Ability / Challenge / Identity / Scheduled` | **可直接创建 + 可直接编辑** | Connect / Inspector / JSON |
+| Connection | `Progression / Return / Ability / Challenge / Identity / Scheduled` | **可直接创建 + 可直接编辑** | Connect / Inspector |
 | Connection | 删除 / Make Return / Recalc Landing | **可直接编辑** | `Connection Inspector` |
 | Connection | Lock starter | **引导式起点** | `Connection Assist` |
 | Element | `Checkpoint` | **引导式起点** | `Runtime Assist` |
@@ -343,8 +304,6 @@
 | Overlay | `Pacing / Critical Path / Lock-Key / Connection Types` | **仅诊断/显示** | Build / Quick Edit |
 
 | Validate | `Validate All / Fix / Auto-Fix` | **可直接使用** | `Validate` |
-| JSON | `rooms / connections / doorLinks` | **仅导入支持** | `LevelSliceBuilder` |
-| JSON | `rooms[].elements[]` | **不计入当前支持** | 当前无 Unity authoring 消费 |
 
 ---
 
@@ -371,8 +330,7 @@
 1. `Level Architect` 新增一个 **可点击的创建入口**
 2. `Room Inspector` 或 `Connection Inspector` 新增一个 **可编辑字段**
 3. `LevelRuntimeAssistFactory` 新增一个 **starter object**
-4. `LevelSliceBuilder` 新增一个 **真正被 Unity 消费的 JSON 字段**
-5. `LevelValidator` 新增覆盖项，但工具仍未开放入口，需要把它明确标为 **仅诊断/显示** 或 **运行时支持未开放**
+4. `LevelValidator` 新增覆盖项，但工具仍未开放入口，需要把它明确标为 **仅诊断/显示** 或 **运行时支持未开放**
 
 ### 9.1 推荐更新顺序
 

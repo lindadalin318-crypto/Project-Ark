@@ -242,7 +242,7 @@ namespace ProjectArk.Level.Editor
         private void DrawBuildTab()
         {
             EditorGUILayout.HelpBox(
-                "Build 是当前的白盒搭建工作面。你应在这里完成房间骨架、拖拽白盒、连接关系、楼层过滤与 Quick Play 冒烟验证；HTML / JSON 导入仅保留为可选外部草图入口，不再作为顶层工作面。",
+                "Build 是当前唯一的白盒搭建工作面。你应在这里完成房间骨架、拖拽白盒、连接关系、楼层过滤与 Quick Play 冒烟验证。",
                 MessageType.Info);
             EditorGUILayout.Space(4);
             DrawModeSelector();
@@ -252,8 +252,6 @@ namespace ProjectArk.Level.Editor
             DrawFloorLevelSelector();
             EditorGUILayout.Space(8);
             DrawBuildActions();
-            EditorGUILayout.Space(10);
-            DrawOptionalDraftImportTools();
         }
 
         // ──────────────────── Quick Edit Tab ────────────────────
@@ -280,36 +278,6 @@ namespace ProjectArk.Level.Editor
             EditorGUILayout.Space(8);
             DrawCompactValidationSection();
             EditorGUILayout.EndScrollView();
-        }
-
-        private void DrawOptionalDraftImportTools()
-        {
-            EditorGUILayout.LabelField("Optional Draft & Import", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox(
-                "仅当你需要浏览器侧拓扑草图或 JSON 导入源时才使用这些入口。常规最小验证切片仍应优先走 Build / Quick Edit 主链。",
-                MessageType.None);
-
-            if (GUILayout.Button("🌐 Open LevelDesigner.html", GUILayout.Height(28)))
-            {
-                string htmlPath = System.IO.Path.Combine(
-                    System.IO.Path.GetDirectoryName(Application.dataPath),
-                    "Tools", "LevelDesigner.html");
-                Application.OpenURL("file://" + htmlPath.Replace("\\", "/"));
-            }
-
-            if (GUILayout.Button("📂 Import LevelDesigner JSON...", GUILayout.Height(28)))
-            {
-                LevelSliceBuilder.ImportFromJson();
-            }
-
-            EditorGUILayout.LabelField(
-                "1. Open LevelDesigner.html in browser\n" +
-                "2. Sketch room topology & connections\n" +
-                "3. Set Level Name in the right panel\n" +
-                "4. Click 💾 Export File to save JSON\n" +
-                "5. Import JSON here\n" +
-                "6. Return to Build / Quick Edit to refine Room / Door / validation state",
-                EditorStyles.helpBox);
         }
 
         // ──────────────────── Validate Tab ────────────────────
@@ -1018,6 +986,9 @@ namespace ProjectArk.Level.Editor
                 BatchEditPanel.SetEntryRoom(room);
             }
             EditorGUILayout.EndHorizontal();
+
+            GUILayout.Space(6f);
+            DrawRoomGeometryAuthoringSection(room, true);
 
             EditorGUILayout.EndVertical();
         }
@@ -2150,6 +2121,7 @@ namespace ProjectArk.Level.Editor
             if (includeQuickEditSections)
             {
                 DrawConnectionInspector(room, doors);
+                DrawRoomGeometryAuthoringSection(room, true);
                 DrawRoomRuntimeAssistSection(room, true);
             }
 
@@ -2523,6 +2495,63 @@ namespace ProjectArk.Level.Editor
 
             Vector3 position = targetSpawnPoint.position;
             return $"{targetSpawnPoint.name} ({position.x:0.0}, {position.y:0.0})";
+        }
+
+        private void DrawRoomGeometryAuthoringSection(Room room, bool compact)
+        {
+            if (room == null)
+            {
+                return;
+            }
+
+            using (new EditorGUILayout.VerticalScope("HelpBox"))
+            {
+                EditorGUILayout.LabelField(compact ? "Geometry Authoring" : "Static Geometry Authoring", compact ? EditorStyles.miniBoldLabel : EditorStyles.boldLabel);
+                EditorGUILayout.LabelField($"Room: {GetRoomListLabel(room)}", EditorStyles.miniLabel);
+                EditorGUILayout.LabelField(
+                    "创建空 Tilemap 画布用于 scene-backed static wall authoring。它不是 Runtime Assist，不会生成墙形，只会准备标准 Geometry 宿主与碰撞链。",
+                    EditorStyles.wordWrappedMiniLabel);
+                EditorGUILayout.LabelField(
+                    "OuterWalls 用于主外轮廓；InnerWalls 用于房内阻挡与分隔。画布创建后请手工绘制 Tilemap，并用 Validate All 检查结构。",
+                    EditorStyles.wordWrappedMiniLabel);
+
+                float buttonHeight = compact ? 20f : 22f;
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button(RoomGeometryCanvasFactory.GetDisplayName(RoomGeometryCanvasFactory.WallCanvasKind.OuterWalls), GUILayout.Height(buttonHeight)))
+                    {
+                        CreateRoomGeometryCanvas(room, RoomGeometryCanvasFactory.WallCanvasKind.OuterWalls);
+                        return;
+                    }
+
+                    if (GUILayout.Button(RoomGeometryCanvasFactory.GetDisplayName(RoomGeometryCanvasFactory.WallCanvasKind.InnerWalls), GUILayout.Height(buttonHeight)))
+                    {
+                        CreateRoomGeometryCanvas(room, RoomGeometryCanvasFactory.WallCanvasKind.InnerWalls);
+                        return;
+                    }
+                }
+            }
+        }
+
+        private void CreateRoomGeometryCanvas(Room room, RoomGeometryCanvasFactory.WallCanvasKind kind)
+        {
+            if (room == null)
+            {
+                return;
+            }
+
+            TrackRecentRoom(room);
+            var createdObject = RoomGeometryCanvasFactory.CreateCanvas(room, kind);
+            if (createdObject == null)
+            {
+                return;
+            }
+
+            _selectedRooms.Clear();
+            _selectedRooms.Add(room);
+            _selectedConnection = null;
+            Repaint();
+            SceneView.RepaintAll();
         }
 
         private void CreateRoomRuntimeAssist(Room room, LevelRuntimeAssistFactory.RoomAssistType assistType)

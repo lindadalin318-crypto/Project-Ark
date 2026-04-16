@@ -20,7 +20,7 @@
 当前结论来自 3 层信息的交叉核对：
 
 - **规范层**：`Level_CanonicalSpec.md`、`Level_WorkflowSpec.md`
-- **运行时 / 编辑器链路**：`Room`、`RoomManager`、`SaveBridge`、`LevelValidator`、`LevelDesigner.html` 等脚本与工具
+- **运行时 / 编辑器链路**：`Room`、`RoomManager`、`SaveBridge`、`LevelValidator`、`Level Architect` 等脚本与工具
 - **当前 Unity 场景实况**：`SampleScene` 的真实挂载统计与层级检查
 
 补充：结构化筛选快照仍保留为 `Docs/6_Diagnostics/Level_RoomElements_Findings_2026-04-10.csv`，用于回看当日统计与矩阵筛选。
@@ -38,8 +38,8 @@
 - 当前场景里真正已经铺开的主流房间元素集中在：**`Door`、`Checkpoint`、`Lock`、`PickupBase`、`EnemySpawner`、`ArenaController`、`EnvironmentHazard`**。
 - **`DestroyableObject`、`OpenEncounterTrigger`、`BiomeTrigger`、`HiddenAreaMask`、`ScheduledBehaviour`、`ActivationGroup`、`WorldEventTrigger`、`CameraTrigger`** 等元素，代码侧已经具备或基本具备，但当前 `SampleScene` 里**尚未铺开**。
 - **`Room` / `ArenaController` / `OpenEncounterTrigger` 的 encounter owner 已进一步收口**：现役口径是“`Room` 负责 room-level 入口、`ArenaController` 只做 ceremony、`OpenEncounterTrigger` 只做局部 open encounter”；同时 `_respawnOnReenter`、`RoomState.Locked`、无消费者的房间/遭遇弱事件已从现役链路中清除。
-- **`LevelScaffoldData.rooms[].elements[]` 和 `ScaffoldElementType` 不是 Unity 当前运行时实装 authority**，不能把它们误判成“已经可被场景导入消费的现役房间元素”。
-- **`LevelDesigner.html` 现已在 UX 层明确收口为“拓扑规划 + JSON 导入源”**：`elements[]` 与 `Zone / ACT / 张力 / Beat / 时长` 当前仍只应视为设计快照 / 设计备注，不会自动生成场景对象。
+- **`LevelScaffoldData.rooms[].elements[]` 和 `ScaffoldElementType` 不是 Unity 当前运行时实装 authority**，不能把它们误判成“已经可被现役 authoring 主链消费的房间元素”。
+- **当前现役 authoring 已完全收口到 `Level Architect`**：房间元素的空间事实与语义配置应直接落在 Scene + SO 主链，不再通过外部 JSON 草图作为中间 authority。
 - **`Checkpoint` 链虽然已经进入现役场景，但配置还没有完全收尾**：当前已知有 3 个 `LevelValidator` 问题需要补。
 
 ---
@@ -303,12 +303,12 @@
 
 原因很明确：
 
-- `LevelDesigner_JSON_Field_Matrix.csv` 已明确写明：`rooms[].elements[].type` 与 `rooms[].elements[].position` 当前**不会被 Unity 导入**
-- `LevelSliceBuilder` 当前只会创建空的 `Elements` 根节点，**不会根据这批元素数据自动生成场景对象**
+- 现役 `Level Architect` 主链并不会自动把这批 schema 直接生成成场景对象
+- 当前 authoring authority 已明确收口到 Scene + SO，而不是保留一个额外的外部快照中间层
 
 因此，它们目前更像：
 
-- **设计快照**
+- **历史设计快照**
 - **工具侧 schema**
 - **编辑期模型**
 

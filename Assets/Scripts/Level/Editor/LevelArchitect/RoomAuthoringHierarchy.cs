@@ -5,7 +5,7 @@ namespace ProjectArk.Level.Editor
 {
     /// <summary>
     /// Shared editor authority for creating and repairing the standard Room authoring hierarchy.
-    /// Keeps `RoomFactory` and `LevelSliceBuilder` on the same structure contract.
+    /// Keeps `Level Architect` room creation and repair flows on the same structure contract.
     /// </summary>
     public static class RoomAuthoringHierarchy
     {

@@ -469,8 +469,7 @@ Level 模块的治理目标：
 
 | 对象类型 | 唯一写入者 | 禁止 | 备注 |
 |---------|-----------|------|------|
-| Editor 统一入口 | `LevelArchitectWindow` | 直接承担运行时 authority | 只编排 `Design / Build / Validate` 入口，不替代子工具权威 |
-| LevelDesigner JSON 导入骨架 | `LevelSliceBuilder` | Runtime 回填房间骨架、手工复制旧切片充当真相源 | 负责导入 `Room / RoomSO / Door` 初始结构 |
+| Editor 统一入口 | `LevelArchitectWindow` | 直接承担运行时 authority | 只编排 `Build / Quick Edit / Validate` 入口，不替代子工具权威 |
 | 标准房间模板骨架 | `RoomFactory` | 手动散建标准子节点、Runtime 补全 | 用于 Scene 内快速创建合规 `Room` |
 | Door 双向连线 | `DoorWiringService` | Runtime 自动补线、手动在 Inspector 大量逐个接线 | `GateID` 仍需与设计意图保持一致 |
 | 全局校验与显式修复 | `LevelValidator` | 任何工具隐式静默修复 | 默认只报告；只有显式 `Auto-Fix` 才允许写回 |
@@ -585,7 +584,7 @@ Level 关键链路缺引用时，禁止静默 return：
 #### 7.4.9 `CameraConfiner` 绝不能参与玩家物理阻挡
 
 - `CameraConfiner` 的职责是提供 **Cinemachine 边界形状**，不是房间实体墙。
-- 任何通过 `LevelSliceBuilder`、`RoomFactory`、`LevelValidator` 生成或修复出来的 `CameraConfiner`，都必须满足：
+- 任何通过 `RoomFactory`、`LevelValidator` 生成或修复出来的 `CameraConfiner`，都必须满足：
   - GameObject 在 `Ignore Raycast` 层
   - `PolygonCollider2D.isTrigger = true`
   - 只服务于相机约束，不承担玩家阻挡职责
@@ -635,7 +634,7 @@ Level 关键链路缺引用时，禁止静默 return：
 
 #### 新房间 / 新连接
 
-1. 用 `LevelArchitectWindow` 作为统一入口，按场景选择 `LevelSliceBuilder` 导入 JSON 或 `RoomFactory` 创建标准房间骨架
+1. 用 `LevelArchitectWindow` 作为统一入口，通过 `Build` / `Quick Edit` 主链创建和精修标准房间骨架
 2. 确认 `Room / RoomSO / Door` 的基础结构已经由现役工具链生成，而不是手工补出第二套骨架
 3. 手动或用 `DoorWiringService` 配置 Door 的 `_targetRoom` / `_targetSpawnPoint` 引用
 4. 跑 `LevelValidator` 确认 Door 连接完整性与关键结构无漂移
