@@ -44,35 +44,30 @@
 | Enemy AI | 已完成 | HFSM、4 原型、Phase 3 扩展已完成 | 遭遇配置与可读性联调 | 跟关卡试玩闭环验证 | — |
 | UI | 已完成 | 星图面板、HUD、拖拽装备、编织态过渡已完成 | 场景内联调与细节修整 | 依据试玩反馈微调 | — |
 | Infrastructure | 已完成 | `UniTask`、`PrimeTween`、`ServiceLocator`、`SaveManager`、`AudioManager`、`CombatEvents` 已完成 | 作为验证阶段底座 | 仅修复阻塞性问题 | — |
-| Level | 验证中 | Phase 1-6 已全部完成 | `Room` 运行时消费链收口、场景配置与 authoring 护栏验证 | 推进 `LevelRoomRuntimeChain_Hardening` 并完成代表房间验收 | `ongoing/LevelRoomRuntimeChain_Hardening.md` |
+| Level | 验证中 | Phase 1-6 与 `Room` 运行时消费链收口已完成 | 场景配置、接线与试玩验证收尾 | 按真实试玩结果做定向修整 | `complete/LevelRoomRuntimeChain_Hardening.md` |
 | Ship / VFX 治理 | 已完成 | `Phase A` 已完成 authority 收口，`Gate G` 已通过 | 保持治理成果稳定 | 如启动体验重构，单独立项 `ShipVFX-PhaseB` | `complete/ShipVFX_PhaseA.md` |
 
 ---
 
 ## 当前活跃专项
 
-### `LevelRoomRuntimeChain_Hardening`
-
-- **所属模块**：`Level`
-- **目标**：把 `Room` 运行时消费链从“主干合理但 owner 分叉、清房语义偏松、离房停怪不完整”的状态，收口到“owner 单一、状态一致、离房可正确复位、authoring/validator 口径同步”的状态
-- **当前状态**：待启动（已完成 lead review，当前处于 plan 冻结阶段）
-- **对应文档**：[`ongoing/LevelRoomRuntimeChain_Hardening.md`](./ongoing/LevelRoomRuntimeChain_Hardening.md)
+- 当前无仍在推进的独立专项；`LevelRoomRuntimeChain_Hardening` 已完成并归档到 [`./complete/LevelRoomRuntimeChain_Hardening.md`](./complete/LevelRoomRuntimeChain_Hardening.md)。
 
 ### 已完成专项提示
 
 - `ShipVFX_PhaseA` 已归档到 `complete/`
 - `Camera_MVP` 已验收完成并归档到 `complete/`
 - `静态几何墙 MVP authoring` 已完成，并归档到 `complete/2026-04-15-static-geometry-walls-implementation-plan.md`
+- `静态几何墙 Phase 2 authoring guards` 已完成，并归档到 `complete/2026-04-15-static-geometry-walls-phase2-implementation-plan.md`
+- `LevelRoomRuntimeChain_Hardening` 已完成，并归档到 `complete/LevelRoomRuntimeChain_Hardening.md`
+- `LevelArchitect_Workbench` 已完成，并归档到 `complete/LevelArchitect_Workbench.md`
+- `ShipVFX-PhaseB`、`Camera-Phase2`、`Level-Authoring-Standardization`、`Plan-Rollout-Phase2` 已在当前阶段视为完成或已吸收，不再保留为待启动候选
 
 ---
 
 ## 下一批候选专项
 
-- **`ShipVFX-PhaseB`**：基于 `Phase A` 已完成的治理基线，进入第一批体验重构切片
-- **`Camera-Phase2`**：基于 `Camera_MVP` 已完成基线，继续补前向 lead、基础兴趣点与更明确的 framing 规则
-- **`LevelArchitect_Workbench`**：把 `Level Architect` 从工具集合收口为 `Scene-backed authoring workbench`，吸收 `HTML` 的交互心智而不新增第二套 authority
-- **`Level-Authoring-Standardization`**：待 `Room` 运行时消费链收口后，再推进场景根节点与房间语法的批量规范化
-- **`Plan-Rollout-Phase2`**：当首轮入口跑顺后，再评估是否迁入第二批现役专项或清理顶层目录历史债
+- 当前这一批候选已全部完成或已吸收到现役主链，暂不保留待启动候选。
 
 ---
 
@@ -95,10 +90,11 @@
 - Ship / VFX 迁移路线图：[`./ongoing/ShipVFX_MigrationPlan.md`](./ongoing/ShipVFX_MigrationPlan.md)
 - 游戏数据入口：[`../4_GameData/README.md`](../4_GameData/README.md)
 - 活跃专项入口：[`./ongoing/README.md`](./ongoing/README.md)
-- 当前活跃专项：[`./ongoing/LevelRoomRuntimeChain_Hardening.md`](./ongoing/LevelRoomRuntimeChain_Hardening.md)
 - 已完成专项：[`./complete/Camera_MVP.md`](./complete/Camera_MVP.md)
 - 已完成专项：[`./complete/2026-04-15-static-geometry-walls-implementation-plan.md`](./complete/2026-04-15-static-geometry-walls-implementation-plan.md)
-- 待启动提案：[`./ongoing/LevelArchitect_Workbench.md`](./ongoing/LevelArchitect_Workbench.md)
+- 已完成专项：[`./complete/2026-04-15-static-geometry-walls-phase2-implementation-plan.md`](./complete/2026-04-15-static-geometry-walls-phase2-implementation-plan.md)
+- 已完成专项：[`./complete/LevelRoomRuntimeChain_Hardening.md`](./complete/LevelRoomRuntimeChain_Hardening.md)
+- 已完成专项：[`./complete/LevelArchitect_Workbench.md`](./complete/LevelArchitect_Workbench.md)
 
 - 已完成专项：[`./complete/ShipVFX_PhaseA.md`](./complete/ShipVFX_PhaseA.md)
 - 实现日志：[`../5_ImplementationLog/README.md`](../5_ImplementationLog/README.md)

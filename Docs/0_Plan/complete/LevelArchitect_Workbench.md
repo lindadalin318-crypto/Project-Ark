@@ -17,7 +17,7 @@
 
 - `Docs/2_TechnicalDesign/Level/Level_CanonicalSpec.md`
 - `Docs/3_WorkflowsAndRules/LevelArchitect/Level_WorkflowSpec.md`
-- `Docs/0_Plan/ongoing/LevelRoomRuntimeChain_Hardening.md`
+- `Docs/0_Plan/complete/LevelRoomRuntimeChain_Hardening.md`
 - `Docs/5_ImplementationLog/README.md`
 
 一句话原则：
@@ -46,13 +46,12 @@
 
 ---
 
-## 当前状态与启动时机
+## 当前状态与结项口径
 
-- **状态**：进行中（`LA0` 已完成，`LA1` 已落地，`LA2` 第一轮已落地，`LA3` 第一轮已落地，`LA4` 第一轮已落地，`LA5` 第一轮已落地，`LA6` 第一轮已落地）
+- **状态**：已完成（`LA0`-`LA6` 与 `Gate A` 已按当前项目口径收口，本文档作为完成态记录保留）
 - **当前进度**：顶层 `Build / Quick Edit / Validate` 工作面已进入代码实现；`Quick Edit` 已具备多字段房间搜索（`RoomID` / `DisplayName` / `RoomNodeType` / `FloorLevel`）、Detached `Room Inspector Window`（承载单房字段、连接 `Inspector` 与 runtime assist 细修）、基础快捷动作（连接列表、`ConnectionType` 直改、删除 / 翻转方向 / 转 `Return` / 重算落点）、`Quick Access` MVP（`Pin Selected`、`Pinned` / `Recent` 列表、`Recall Previous` 快速回看），并在 `Build / Quick Edit / Validate` 三处补入统一的 `Preview / Summary / Next Step` 面板：可直接查看房间数、连接数、孤岛数、单向连接数、楼层统计、`RoomNodeType` 分布、Entry→Boss 主路径状态、回路闭环情况，以及基于当前结构与 `Validate` 快照生成的下一步建议与快捷动作。`LA5` 第一轮现已补上 `5-Room Validation Slice` 模板入口（支持 `Create`、`Create + Validate`、`Create + Quick Play`）与统一稳定命名链路：新建房间、复制房间、单房 `Stable Rename` 均改为使用按 `Floor + RoomNodeType + Index` 生成的稳定 `RoomID / DisplayName`，不再依赖时间戳式房名。`LA6` 第一轮则补上统一的高频 runtime assist 入口：`Build` 侧会对当前单选房间显示 `Checkpoint`、`OpenEncounterTrigger`、`BiomeTrigger`、`ScheduledBehaviour`、`WorldEventTrigger` starter；Detached `Room Inspector Window` 可直接补同一组 starter；连接 inspector 可一键创建 `Lock` starter，并把挂点根节点与 `LevelValidator` 约定保持一致。随后又完成了一轮 `LA5/LA6` UI 微调：`Validation Slice` 现在会明确说明切片结果、SceneView 锚点与三个按钮的差异；`Runtime Assist` 会按 `Elements / Encounters / Triggers` 分组，并把默认提示收口到“创建了什么、还需要作者补什么”。
-- **优先级判断**：高价值，当前已适合作为 `Level` 场景配置效率提升链的持续专项推进
-- **下一优先级**：做一轮 `Gate A` 代表切片复盘，验证这套 workbench 是否已真正减少作者在 SceneView、外部文档与工具之间的跳转
-- **为什么现在进入实施**：项目已经进入 `Level` 场景 authoring / 配置密集期，继续停留在提案层只会让 `Build`、`HTML`、`Validate`、手工 Scene 操作之间的 authoring loop 继续分裂；因此先把最影响日常效率的工作面结构与单房编辑能力落进代码
+- **结项说明**：本轮 workbench 第一轮作者体验收口已不再作为待启动候选保留；后续若继续扩展 `Level Architect`，应以新专项或常规迭代形式推进，而不是继续回填为本文件的进行中状态。
+- **为什么现在归档**：项目已将这批 `Level Architect` authoring workbench 工作视为完成态成果，项目入口与目录索引不再保留其为候选项。
 
 ---
 
@@ -478,7 +477,7 @@
 5. 新体验是否保持了 `Scene / Door / SO` authority 清晰，而不是又长出中间模型？
 6. 本轮改动是否真的提升了最小验证切片的搭建效率，而不只是增加了更多按钮？
 
-只有这些问题都能给出正向回答，本专项才应从 `ongoing` 进入后续完成或下一阶段拆分。
+当前项目入口已将这些问题对应的第一轮要求视为满足，因此本专项改以完成态记录保留；若后续还要继续扩展 `Level Architect`，应另立新专项或按常规迭代处理。
 
 ---
 
@@ -497,6 +496,6 @@
 
 - `Docs/2_TechnicalDesign/Level/Level_CanonicalSpec.md`
 - `Docs/3_WorkflowsAndRules/LevelArchitect/Level_WorkflowSpec.md`
-- `Docs/0_Plan/ongoing/LevelRoomRuntimeChain_Hardening.md`
+- `Docs/0_Plan/complete/LevelRoomRuntimeChain_Hardening.md`
 - `Docs/5_ImplementationLog/README.md`
 

@@ -6,3 +6,6 @@
 - `Obsolete/` 表示文档口径已失效，不应继续作为现役依据
 - 专项从 `ongoing/` 移入本目录前，应先同步更新 `Project_Plan.md`
 - `2026-04-15-static-geometry-walls-implementation-plan.md`：静态几何墙 MVP authoring 闭环已完成归档
+- `2026-04-15-static-geometry-walls-phase2-implementation-plan.md`：静态几何墙 Phase 2（Geometry Authoring + Door / future transfer 边界）已完成归档
+- `LevelRoomRuntimeChain_Hardening.md`：`Room` 运行时消费链收口专项已完成归档
+- `LevelArchitect_Workbench.md`：`Level Architect` workbench 收口专项已完成归档

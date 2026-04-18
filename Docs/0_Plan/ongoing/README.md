@@ -5,11 +5,12 @@
 当前状态：
 
 - 首轮文档主树迁移已完成入口搭建
-- 当前活跃专项：`LevelRoomRuntimeChain_Hardening`
+- 当前无仍需单独跟踪的活跃专项
+- `LevelRoomRuntimeChain_Hardening` 已完成并归档到 `complete/`
+- `LevelArchitect_Workbench` 已完成并归档到 `complete/`
 - `2026-04-15-static-geometry-walls-implementation-plan.md` 已完成并归档到 `complete/`
+- `2026-04-15-static-geometry-walls-phase2-implementation-plan.md` 已完成并归档到 `complete/`
 - `Camera_MVP` 已验收完成，并已归档到 `complete/`
-- 已补入待启动提案：`LevelArchitect_Workbench`
 - `ShipVFX_PhaseA` 在迁移核对时确认已完成，因此归档到了 `complete/`
 - 新生成的 implementation plan 默认先落在本目录，完成后再按需要移入 `complete/`
-- 后续若正式启动 `ShipVFX-PhaseB`、`Level-Authoring-Standardization` 等专项，应在本目录创建对应计划文档
 

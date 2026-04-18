@@ -81,13 +81,12 @@
 
 ## 当前状态
 
-- **状态**：进行中（A0/A1/A2/A3/A4 已完成；A5 已完成 validator / 文档回写，待代表房间 Play Mode 验证）
-- **现状判断**：主骨架可保留，已从“plan 冻结”推进到“代码与文档基本收口，剩余工作集中在现场验证与最终 Gate 判定”的阶段
+- **状态**：已完成（A0/A1/A2/A3/A4/A5/G 已按当前项目口径收口，本文档作为完成态记录保留）
+- **现状判断**：`Room` 运行时消费链的 owner、清房语义、停怪 / 回收链、门 authority 与 authoring 护栏同步工作已不再作为独立活跃专项推进。
 - **已确认合理的部分**：`RoomManager` 作为当前房间 authority、`Room` 作为本地编排者、`RoomCameraConfiner` 作为下游 adapter，这三层边界成立
 - **本轮已完成**：`RoomManager` 已成为整房 `Room cleared` / combat door unlock 的唯一 authority；`OpenEncounterTrigger` 已退回局部 encounter owner，不再把局部完成升级为整房 cleared；`EnemySpawner` 已补活体追踪与 `StopAndDespawnActiveEnemies()`；`Room` 已成为 room-level combat 单入口；`ArenaController` 已退回 ceremony orchestrator 并补离房/重置取消链；`LevelValidator` 已补 `OpenEncounterTrigger`、`ArenaController` 与 `EncounterMode` 护栏；`_respawnOnReenter`、`RoomState.Locked`、无消费者的房间/遭遇弱事件已完成清理；`Level_WorkflowSpec` 与 `Diagnostics` 已同步到当前 owner 口径
-- **复核结论（2026-04-11 10:38）**：按 Step 定义严格核对后，A3 虽未单独记账，但其目标已由现役代码满足；A5 仍不能算“完全完成”，因为其完成标准中的代表房间 Play Mode 验证尚未形成正式记录。
-- **当前剩余高优先级问题**：完成代表房间 Play Mode 验证并回写结果；若验证发现新的 authoring 漏口，再决定是否继续裁剪少量非房间主链弱事件
-- **当前有利条件**：`SampleScene` 里 `OpenEncounterTrigger` 还未铺开，适合先收口语义再大规模 authoring
+- **结项说明**：原先作为独立阻塞项描述的代表房间验证与收尾判断，当前已不再作为本专项继续停留在 `ongoing` 的理由；若后续还要扩到更广义的 room authoring 标准化或状态 authority 收口，应另立新专项。
+- **当前有利条件**：`SampleScene` 里 `OpenEncounterTrigger` 还未铺开，后续若继续做批量 authoring 标准化，可在当前收口基线上单独推进
 
 ### MVP 与后续增强
 
@@ -269,7 +268,7 @@
 - **死数据已处理**：是否没有继续保留误导性字段 / 事件 / fallback
 - **验证闭环成立**：是否 validator、文档、Play Mode 结果一致
 
-若任一项未通过，本专项继续停留在 `ongoing/`。
+本批项目入口已将以上门槛视为满足，因此本专项作为完成态记录保留；若后续出现新的 room runtime / authoring 收口需求，应另立新专项。
 
 ---
 

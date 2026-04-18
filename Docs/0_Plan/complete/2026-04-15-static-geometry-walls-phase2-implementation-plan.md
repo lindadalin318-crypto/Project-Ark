@@ -1,6 +1,8 @@
 # Static Geometry Walls Phase 2 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Status:** 已完成 — 2026-04-16 14:54
+>
+> **For historical traceability:** 这份 implementation plan 已完成落地；以下 checkbox 仅保留执行轨迹，当前应视为完成态记录。
 
 **Goal:** 为 `Level Architect` 增加静态几何墙画布 starter，并把 `Door` 与 future trap / fall / teleport 的 geometry 验证边界收口到现役 workflow。
 
@@ -22,7 +24,7 @@
 
 - `Assets/Scripts/Level/Editor/LevelArchitect/RoomGeometryCanvasFactory.cs` — 静态墙画布 starter authority。只创建空 Tilemap 宿主与标准碰撞链，不生成墙形。
 - `Assets/Scripts/Level/Editor/LevelArchitect/RoomGeometryCanvasFactoryTests.cs` — geometry canvas starter 的 EditMode 回归测试。
-- `Docs/0_Plan/ongoing/2026-04-15-static-geometry-walls-phase2-implementation-plan.md` — 当前 implementation plan。
+- `Docs/0_Plan/complete/2026-04-15-static-geometry-walls-phase2-implementation-plan.md` — 当前 implementation plan。
 
 ### Modify
 
@@ -58,7 +60,7 @@
 - Verify: `Assets/Scripts/Level/Editor/LevelArchitect/RoomGeometryCanvasFactory.cs`
 - Verify: `Assets/Scripts/Level/Editor/LevelArchitect/RoomAuthoringHierarchy.cs`
 
-- [ ] **Step 1: 新建 `RoomGeometryCanvasFactoryTests.cs`，先把画布 starter 的最小行为写死**
+- [x] **Step 1: 新建 `RoomGeometryCanvasFactoryTests.cs`，先把画布 starter 的最小行为写死**
 
 Write this exact content to `Assets/Scripts/Level/Editor/LevelArchitect/RoomGeometryCanvasFactoryTests.cs`:
 
@@ -175,7 +177,7 @@ namespace ProjectArk.Level.Editor
 }
 ```
 
-- [ ] **Step 2: 运行这组 EditMode tests，确认它们现在会失败**
+- [x] **Step 2: 运行这组 EditMode tests，确认它们现在会失败**
 
 Run in Unity Editor:
 
@@ -189,7 +191,7 @@ Expected:
 - 报错应指向缺失的 `RoomGeometryCanvasFactory`
 - 这是预期结果，说明 geometry canvas starter 的行为已经被测试锁住
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add Assets/Scripts/Level/Editor/LevelArchitect/RoomGeometryCanvasFactoryTests.cs
@@ -204,7 +206,7 @@ git commit -m "test: add geometry canvas starter expectations"
 - Create: `Assets/Scripts/Level/Editor/LevelArchitect/RoomGeometryCanvasFactory.cs`
 - Test: `Assets/Scripts/Level/Editor/LevelArchitect/RoomGeometryCanvasFactoryTests.cs`
 
-- [ ] **Step 1: 新建 `RoomGeometryCanvasFactory.cs`，把画布 starter authority 从 runtime assist 中分离出来**
+- [x] **Step 1: 新建 `RoomGeometryCanvasFactory.cs`，把画布 starter authority 从 runtime assist 中分离出来**
 
 Write this exact content to `Assets/Scripts/Level/Editor/LevelArchitect/RoomGeometryCanvasFactory.cs`:
 
@@ -284,7 +286,7 @@ namespace ProjectArk.Level.Editor
 }
 ```
 
-- [ ] **Step 2: 再跑 `RoomGeometryCanvasFactoryTests`，确认 starter 行为通过**
+- [x] **Step 2: 再跑 `RoomGeometryCanvasFactoryTests`，确认 starter 行为通过**
 
 Run in Unity Editor:
 
@@ -298,7 +300,7 @@ Expected:
 - 创建对象位于 `Navigation/Geometry/OuterWalls` 或 `Navigation/Geometry/InnerWalls`
 - 新画布具备 `Tilemap + TilemapRenderer + TilemapCollider2D + Rigidbody2D(Static) + CompositeCollider2D`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add Assets/Scripts/Level/Editor/LevelArchitect/RoomGeometryCanvasFactory.cs Assets/Scripts/Level/Editor/LevelArchitect/RoomGeometryCanvasFactoryTests.cs
@@ -313,7 +315,7 @@ git commit -m "feat: add static wall canvas starter"
 - Modify: `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`
 - Verify: `Assets/Scripts/Level/Editor/LevelArchitect/RoomGeometryCanvasFactory.cs`
 
-- [ ] **Step 1: 给单房精修上下文增加 `Geometry Authoring` 区块**
+- [x] **Step 1: 给单房精修上下文增加 `Geometry Authoring` 区块**
 
 In `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`, update the single-room entry points and add a dedicated geometry section.
 
@@ -396,7 +398,7 @@ Finally, add these two methods near the existing `CreateRoomRuntimeAssist(...)` 
         }
 ```
 
-- [ ] **Step 2: 编译检查 `Level Architect` UI 改动不破坏现有 Editor 程序集**
+- [x] **Step 2: 编译检查 `Level Architect` UI 改动不破坏现有 Editor 程序集**
 
 Run:
 
@@ -410,7 +412,7 @@ Expected:
 - `ProjectArk.Level.Editor` 能通过编译
 - 不应出现 `RoomGeometryCanvasFactory`、`DrawRoomGeometryAuthoringSection`、`CreateRoomGeometryCanvas` 的未定义错误
 
-- [ ] **Step 3: 在 Unity Editor 里做一次最小 UI 冒烟**
+- [x] **Step 3: 在 Unity Editor 里做一次最小 UI 冒烟**
 
 Run in Unity Editor:
 
@@ -428,7 +430,7 @@ Expected:
 - 对象名为 `OuterWalls_Main`（重复创建时自动变成唯一名称）
 - 该区块的文案明确说明“这不是 Runtime Assist”
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs Assets/Scripts/Level/Editor/LevelArchitect/RoomGeometryCanvasFactory.cs
@@ -444,7 +446,7 @@ git commit -m "feat: expose geometry authoring in level architect"
 - Verify: `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs`
 - Verify: `Assets/Scripts/Level/Narrative/NarrativeFallTrigger.cs`
 
-- [ ] **Step 1: 在 `LevelValidatorTests.cs` 里补三条新的边界测试**
+- [x] **Step 1: 在 `LevelValidatorTests.cs` 里补三条新的边界测试**
 
 Append these tests near the existing geometry validation tests in `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidatorTests.cs`:
 
@@ -533,7 +535,7 @@ Append these tests near the existing geometry validation tests in `Assets/Script
         }
 ```
 
-- [ ] **Step 2: 运行 `LevelValidatorTests`，确认新规则现在还没实现所以会失败**
+- [x] **Step 2: 运行 `LevelValidatorTests`，确认新规则现在还没实现所以会失败**
 
 Run in Unity Editor:
 
@@ -547,7 +549,7 @@ Expected:
 - 错误点应集中在：`Door` 没有 preferred root warning，且 door-center-in-wall 还没有 geometry opening warning
 - `NarrativeFallTrigger` exclusion 测试应在实现前作为红灯存在（因为 warning 文案/规则尚未加进去）
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add Assets/Scripts/Level/Editor/LevelArchitect/LevelValidatorTests.cs
@@ -562,7 +564,7 @@ git commit -m "test: add door geometry boundary coverage"
 - Modify: `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs`
 - Test: `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidatorTests.cs`
 
-- [ ] **Step 1: 先把 `Door` 纳入 preferred root 检查**
+- [x] **Step 1: 先把 `Door` 纳入 preferred root 检查**
 
 In `ValidatePreferredAuthoringRoots()`, add this line before `ValidatePreferredRoot<ActivationGroup>(...)`:
 
@@ -570,7 +572,7 @@ In `ValidatePreferredAuthoringRoots()`, add this line before `ValidatePreferredR
             ValidatePreferredRoot<Door>("Door", "Navigation");
 ```
 
-- [ ] **Step 2: 在 door validator 主链里增加 geometry opening 协作检查，但只作用于 `Door`**
+- [x] **Step 2: 在 door validator 主链里增加 geometry opening 协作检查，但只作用于 `Door`**
 
 In `ValidateAll()`, insert this call right after `ValidateDoorTargetSpawnPoint(rooms);`:
 
@@ -658,7 +660,7 @@ This keeps the rule intentionally conservative:
 - 只检查 `Navigation/Geometry` 里的 Tilemap
 - 不扫描 `NarrativeFallTrigger`、hazard trigger、world event trigger 等 future transfer 元素
 
-- [ ] **Step 3: 重新跑 validator tests，并做一次整体编译**
+- [x] **Step 3: 重新跑 validator tests，并做一次整体编译**
 
 Run in Unity Editor:
 
@@ -682,7 +684,7 @@ Expected:
 - `Build succeeded.`
 - `LevelValidator` 没有新增命名、类型或 `using` 错误
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs Assets/Scripts/Level/Editor/LevelArchitect/LevelValidatorTests.cs
@@ -698,7 +700,7 @@ git commit -m "feat: harden door geometry validation boundaries"
 - Modify: `Docs/3_WorkflowsAndRules/LevelArchitect/Level_WorkflowSpec.md`
 - Modify: `Docs/5_ImplementationLog/ImplementationLog.md`
 
-- [ ] **Step 1: 在 `Level_CanonicalSpec.md` 固化 `Door` vs future transfer 的分类边界**
+- [x] **Step 1: 在 `Level_CanonicalSpec.md` 固化 `Door` vs future transfer 的分类边界**
 
 Under the room element classification section in `Docs/2_TechnicalDesign/Level/Level_CanonicalSpec.md`, add this exact note after the `Path / Environment / Directing` table:
 
@@ -711,7 +713,7 @@ Under the room element classification section in `Docs/2_TechnicalDesign/Level/L
 - 这类 future transfer 应按其真实语义落位到 `Hazards` 或 `Triggers` 等家族，并且**不强制要求墙体开口**。
 ```
 
-- [ ] **Step 2: 在 `Level_WorkflowSpec.md` 补齐 geometry starter 与 boundary case 的现役操作口径**
+- [x] **Step 2: 在 `Level_WorkflowSpec.md` 补齐 geometry starter 与 boundary case 的现役操作口径**
 
 In `Docs/3_WorkflowsAndRules/LevelArchitect/Level_WorkflowSpec.md`, update the static geometry section with this exact block:
 
@@ -721,7 +723,7 @@ In `Docs/3_WorkflowsAndRules/LevelArchitect/Level_WorkflowSpec.md`, update the s
 - future trap / fall / teleport 等非门型跨房间转移可以跨 room，但**不要求**墙体开口，也不应被 validator 误报为门洞问题。
 ```
 
-- [ ] **Step 3: 在 Unity Editor 里跑代表房间 authoring 验收，确认规则真实可用**
+- [x] **Step 3: 在 Unity Editor 里跑代表房间 authoring 验收，确认规则真实可用**
 
 Run in Unity Editor:
 
@@ -741,7 +743,7 @@ Expected:
 - `NarrativeFallTrigger` 不会因为“没有门洞”被报错
 - 整个流程仍然保持：geometry 走独立 starter，runtime assist 走独立 starter
 
-- [ ] **Step 4: 追加实现日志，并提交文档收口**
+- [x] **Step 4: 追加实现日志，并提交文档收口**
 
 At the top of `Docs/5_ImplementationLog/ImplementationLog.md`, prepend a new entry using the actual execution time and this content:
 
@@ -796,14 +798,15 @@ git commit -m "feat: add static geometry phase 2 authoring guards"
 
 ---
 
-## Execution Handoff
+## Completion Note
 
-**Plan complete and saved to** `Docs/0_Plan/ongoing/2026-04-15-static-geometry-walls-phase2-implementation-plan.md`。
+本计划涉及的代码、测试、`Level Architect` UI 接线、`Door` / future transfer validator 边界，以及 Unity Editor 代表房间 authoring 验收均已完成。
 
-**Two execution options:**
+收尾说明：
 
-**1. Subagent-Driven (recommended)** — 我按 task 派发新的执行 agent，逐段实现、逐段 review，适合这种 editor + validator + docs 的多点改动。
+- `Geometry Authoring` 画布 starter 已落地，并与 `Runtime Assist` 保持独立 authority
+- `LevelValidator` 已只对 `Door` 执行 geometry opening 协作检查，不会把 `NarrativeFallTrigger` 等 future transfer 误判为门洞问题
+- Unity 会话内 `EditMode` tests 已通过，`SampleScene` 中与本计划直接相关的 geometry authoring 脏数据已完成修复
+- 剩余 `CheckpointSO` / `EncounterSO` 等问题已明确收敛为**非本计划范围**
 
-**2. Inline Execution** — 我在当前会话里直接按这个 plan 开始落代码，并在关键节点停下来给你汇报。
-
-**Which approach?**
+**Plan complete and archived to** `Docs/0_Plan/complete/2026-04-15-static-geometry-walls-phase2-implementation-plan.md`。

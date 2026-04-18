@@ -2,6 +2,54 @@
 
 ---
 
+## 收口 Project Plan 中的 Level 活跃项与候选项完成态 — 2026-04-18 14:02
+
+### 修改文件
+- `Docs/0_Plan/Project_Plan.md`
+- `Docs/0_Plan/ongoing/README.md`
+- `Docs/0_Plan/complete/README.md`
+- `Docs/0_Plan/complete/LevelRoomRuntimeChain_Hardening.md`
+- `Docs/0_Plan/complete/LevelArchitect_Workbench.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 将 `Project_Plan.md` 中原本仍显示为活跃或待启动的 `LevelRoomRuntimeChain_Hardening`、`LevelArchitect_Workbench` 以及 `ShipVFX-PhaseB`、`Camera-Phase2`、`Level-Authoring-Standardization`、`Plan-Rollout-Phase2` 统一收口为完成态或已吸收状态。
+- 同步更新 `ongoing/README.md` 与 `complete/README.md`，让目录索引反映当前已无独立活跃专项，并把两份 Level 计划纳入完成归档入口。
+- 修正 `LevelRoomRuntimeChain_Hardening.md`、`LevelArchitect_Workbench.md` 在 `complete/` 目录下仍残留的“进行中 / ongoing 路径”语义，使正文状态与归档位置一致。
+
+### 目的
+- 消除 `Project Plan`、目录索引与 `complete` 文档正文之间的状态漂移，避免继续把已完成专项误读为活跃项或待启动候选。
+- 让后续查阅者从项目入口即可直接看到：当前这一批 Level 相关专项已经收口完成，不再需要从 `ongoing/` 或候选清单里继续追踪。
+
+### 技术
+- 采用“先改项目入口，再同步目录索引，最后回写归档正文与实现日志”的文档收尾顺序，避免出现入口和正文互相打架的半归档状态。
+- 对没有独立专项文档的候选项采用 `已完成或已吸收` 的入口级标记，而不是额外制造新的 complete 文档，保持计划树简洁。
+
+## 归档静态几何墙 Phase 2 计划并同步导航入口 — 2026-04-18 12:13
+
+### 删除文件
+- `Docs/0_Plan/ongoing/2026-04-15-static-geometry-walls-phase2-implementation-plan.md`
+
+### 修改文件
+- `Docs/0_Plan/ongoing/README.md`
+- `Docs/0_Plan/complete/README.md`
+- `Docs/0_Plan/Project_Plan.md`
+- `Docs/0_Plan/complete/2026-04-15-static-geometry-walls-phase2-implementation-plan.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 将 `静态几何墙 Phase 2` implementation plan 从 `ongoing/` 收口为完成态记录，补入状态头、全量完成复选框与 `Completion Note`，并归档到 `complete/`。
+- 同步更新 `ongoing/README.md`、`complete/README.md` 与 `Project_Plan.md`，让目录索引、项目状态入口和已完成专项导航一致反映 Phase 2 已完成。
+- 保留计划正文中的执行轨迹与验收上下文，避免后续再把这份文档误读为仍待执行的任务单。
+
+### 目的
+- 消除静态几何墙 Phase 2 “实现已完成但计划仍停在 ongoing” 的文档状态漂移。
+- 让后续查阅者能从 `complete/` 与 `Project_Plan.md` 直接找到这份已完成的 authoring / validator 收口记录。
+
+### 技术
+- 采用“先将计划改为完成态记录，再物理归档，再同步目录入口与项目导航”的收尾顺序，避免产生失效引用或 ongoing/complete 语义冲突。
+- 不重写已完成任务的历史内容，只收口状态、复选框与归档路径，保留执行轨迹可追溯性。
+
 ## 导入 Minishoot 墙体 starter pack 并生成首批 Tile 资产 — 2026-04-16 23:55
 
 ### 修改文件
