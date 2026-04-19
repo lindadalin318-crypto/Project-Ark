@@ -988,7 +988,7 @@ namespace ProjectArk.Level.Editor
             EditorGUILayout.EndHorizontal();
 
             GUILayout.Space(6f);
-            DrawRoomGeometryAuthoringSection(room, true);
+            DrawRoomWallAuthoringSection(room, true);
 
             EditorGUILayout.EndVertical();
         }
@@ -1122,7 +1122,7 @@ namespace ProjectArk.Level.Editor
             if (selectedRoom == null)
             {
                 string hint = _selectedRooms.Count <= 0
-                    ? "先单选一个房间，再从这里补 Checkpoint、Encounter Trigger、Biome Trigger 等标准 starter。"
+                    ? "先单选一个房间，再从这里补 Checkpoint、Hidden Area、Encounter Trigger、Biome Trigger 等标准 starter。"
                     : $"当前选中了 {_selectedRooms.Count} 个房间。Runtime Assist 只对单房显示，避免工具替你批量猜设计。";
                 EditorGUILayout.HelpBox(hint, MessageType.None);
                 return;
@@ -1146,10 +1146,10 @@ namespace ProjectArk.Level.Editor
                 EditorGUILayout.LabelField(compact ? "Runtime Assist / Starter Objects" : "Starter Objects", compact ? EditorStyles.miniBoldLabel : EditorStyles.boldLabel);
                 EditorGUILayout.LabelField($"Room: {GetRoomListLabel(room)}", EditorStyles.miniLabel);
                 EditorGUILayout.LabelField(
-                    "适合在结构与连接已基本稳定后，补第一批 runtime 对象起点。创建后会自动选中新对象，方便继续补 SO / phase / key / hazard 参数配置。",
+                    "适合在结构与连接已基本稳定后，补第一批非墙体 runtime 对象起点。创建后会自动选中新对象，方便继续补 SO / phase / key / hazard 参数配置。",
                     EditorStyles.wordWrappedMiniLabel);
                 EditorGUILayout.LabelField(
-                    "根节点分组：Elements → Checkpoint；Encounters → Open Encounter；Hazards → Contact / Zone / Timed；Triggers → Biome / Scheduled / World Event。",
+                    "根节点分组：Elements → Checkpoint；Encounters → Open Encounter；Hazards → Contact / Zone / Timed；Triggers → Hidden Area / Biome / Scheduled / World Event。墙相关 authoring 统一放在上方 Wall Authoring 模块，但隐藏遮挡 reveal 仍归 Triggers。",
                     EditorStyles.wordWrappedMiniLabel);
 
                 DrawRoomRuntimeAssistButtons(room, compact);
@@ -1207,12 +1207,18 @@ namespace ProjectArk.Level.Editor
             GUILayout.Space(2f);
             EditorGUILayout.LabelField("Triggers", EditorStyles.miniBoldLabel);
 
+            bool createHiddenAreaMask = false;
             bool createBiomeTrigger = false;
-            bool createScheduledBehaviour = false;
             using (new EditorGUILayout.HorizontalScope())
             {
+                createHiddenAreaMask = GUILayout.Button(LevelRuntimeAssistFactory.GetDisplayName(LevelRuntimeAssistFactory.RoomAssistType.HiddenAreaMask), GUILayout.Height(buttonHeight));
                 createBiomeTrigger = GUILayout.Button(LevelRuntimeAssistFactory.GetDisplayName(LevelRuntimeAssistFactory.RoomAssistType.BiomeTrigger), GUILayout.Height(buttonHeight));
-                createScheduledBehaviour = GUILayout.Button(LevelRuntimeAssistFactory.GetDisplayName(LevelRuntimeAssistFactory.RoomAssistType.ScheduledBehaviour), GUILayout.Height(buttonHeight));
+            }
+
+            if (createHiddenAreaMask)
+            {
+                CreateRoomRuntimeAssist(room, LevelRuntimeAssistFactory.RoomAssistType.HiddenAreaMask);
+                return;
             }
 
             if (createBiomeTrigger)
@@ -1221,13 +1227,21 @@ namespace ProjectArk.Level.Editor
                 return;
             }
 
+            bool createScheduledBehaviour = false;
+            bool createWorldEventTrigger = false;
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                createScheduledBehaviour = GUILayout.Button(LevelRuntimeAssistFactory.GetDisplayName(LevelRuntimeAssistFactory.RoomAssistType.ScheduledBehaviour), GUILayout.Height(buttonHeight));
+                createWorldEventTrigger = GUILayout.Button(LevelRuntimeAssistFactory.GetDisplayName(LevelRuntimeAssistFactory.RoomAssistType.WorldEventTrigger), GUILayout.Height(buttonHeight));
+            }
+
             if (createScheduledBehaviour)
             {
                 CreateRoomRuntimeAssist(room, LevelRuntimeAssistFactory.RoomAssistType.ScheduledBehaviour);
                 return;
             }
 
-            if (GUILayout.Button(LevelRuntimeAssistFactory.GetDisplayName(LevelRuntimeAssistFactory.RoomAssistType.WorldEventTrigger), GUILayout.Height(buttonHeight)))
+            if (createWorldEventTrigger)
             {
                 CreateRoomRuntimeAssist(room, LevelRuntimeAssistFactory.RoomAssistType.WorldEventTrigger);
             }
@@ -2121,7 +2135,7 @@ namespace ProjectArk.Level.Editor
             if (includeQuickEditSections)
             {
                 DrawConnectionInspector(room, doors);
-                DrawRoomGeometryAuthoringSection(room, true);
+                DrawRoomWallAuthoringSection(room, true);
                 DrawRoomRuntimeAssistSection(room, true);
             }
 
@@ -2497,7 +2511,7 @@ namespace ProjectArk.Level.Editor
             return $"{targetSpawnPoint.name} ({position.x:0.0}, {position.y:0.0})";
         }
 
-        private void DrawRoomGeometryAuthoringSection(Room room, bool compact)
+        private void DrawRoomWallAuthoringSection(Room room, bool compact)
         {
             if (room == null)
             {
@@ -2506,34 +2520,44 @@ namespace ProjectArk.Level.Editor
 
             using (new EditorGUILayout.VerticalScope("HelpBox"))
             {
-                EditorGUILayout.LabelField(compact ? "Geometry Authoring" : "Static Geometry Authoring", compact ? EditorStyles.miniBoldLabel : EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Wall Authoring", compact ? EditorStyles.miniBoldLabel : EditorStyles.boldLabel);
                 EditorGUILayout.LabelField($"Room: {GetRoomListLabel(room)}", EditorStyles.miniLabel);
                 EditorGUILayout.LabelField(
-                    "创建空 Tilemap 画布用于 scene-backed static wall authoring。它不是 Runtime Assist，不会生成墙形，只会准备标准 Geometry 宿主与碰撞链。",
+                    "把所有墙相关的 authoring 收在同一个入口。静态墙画布仍落在 Navigation/Geometry；Breakable Wall starter 仍落在 Elements。这里统一的是工具入口，不改各自 runtime owner。",
                     EditorStyles.wordWrappedMiniLabel);
                 EditorGUILayout.LabelField(
-                    "OuterWalls 用于主外轮廓；InnerWalls 用于房内阻挡与分隔。画布创建后请手工绘制 Tilemap，并用 Validate All 检查结构。",
+                    "OuterWalls 用于主外轮廓，InnerWalls 用于房内阻挡与分隔；Breakable Wall 用于秘密裂墙与可破坏通路。创建后请继续补 Tilemap 或表现引用，并跑 Validate All。",
                     EditorStyles.wordWrappedMiniLabel);
 
                 float buttonHeight = compact ? 20f : 22f;
+                bool createOuterWallCanvas = false;
+                bool createInnerWallCanvas = false;
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    if (GUILayout.Button(RoomGeometryCanvasFactory.GetDisplayName(RoomGeometryCanvasFactory.WallCanvasKind.OuterWalls), GUILayout.Height(buttonHeight)))
-                    {
-                        CreateRoomGeometryCanvas(room, RoomGeometryCanvasFactory.WallCanvasKind.OuterWalls);
-                        return;
-                    }
+                    createOuterWallCanvas = GUILayout.Button(LevelWallAuthoringModule.GetDisplayName(LevelWallAuthoringModule.WallToolKind.OuterWallCanvas), GUILayout.Height(buttonHeight));
+                    createInnerWallCanvas = GUILayout.Button(LevelWallAuthoringModule.GetDisplayName(LevelWallAuthoringModule.WallToolKind.InnerWallCanvas), GUILayout.Height(buttonHeight));
+                }
 
-                    if (GUILayout.Button(RoomGeometryCanvasFactory.GetDisplayName(RoomGeometryCanvasFactory.WallCanvasKind.InnerWalls), GUILayout.Height(buttonHeight)))
-                    {
-                        CreateRoomGeometryCanvas(room, RoomGeometryCanvasFactory.WallCanvasKind.InnerWalls);
-                        return;
-                    }
+                if (createOuterWallCanvas)
+                {
+                    CreateRoomWallAuthoringTool(room, LevelWallAuthoringModule.WallToolKind.OuterWallCanvas);
+                    return;
+                }
+
+                if (createInnerWallCanvas)
+                {
+                    CreateRoomWallAuthoringTool(room, LevelWallAuthoringModule.WallToolKind.InnerWallCanvas);
+                    return;
+                }
+
+                if (GUILayout.Button(LevelWallAuthoringModule.GetDisplayName(LevelWallAuthoringModule.WallToolKind.BreakableWallStarter), GUILayout.Height(buttonHeight)))
+                {
+                    CreateRoomWallAuthoringTool(room, LevelWallAuthoringModule.WallToolKind.BreakableWallStarter);
                 }
             }
         }
 
-        private void CreateRoomGeometryCanvas(Room room, RoomGeometryCanvasFactory.WallCanvasKind kind)
+        private void CreateRoomWallAuthoringTool(Room room, LevelWallAuthoringModule.WallToolKind toolKind)
         {
             if (room == null)
             {
@@ -2541,7 +2565,7 @@ namespace ProjectArk.Level.Editor
             }
 
             TrackRecentRoom(room);
-            var createdObject = RoomGeometryCanvasFactory.CreateCanvas(room, kind);
+            var createdObject = LevelWallAuthoringModule.Create(room, toolKind);
             if (createdObject == null)
             {
                 return;

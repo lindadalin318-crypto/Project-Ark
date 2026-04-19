@@ -212,6 +212,70 @@ namespace ProjectArk.Level.Editor
         }
 
         [Test]
+        public void ValidateAll_ReportsWarning_WhenBreakableWallPlacedOutsideElementsRoot()
+        {
+            var roomRig = CreateValidRoomRig("Room_BreakableWall_WrongRoot");
+            var wallObject = CreateGameObjectWithTriggerColliderAndComponent<BreakableWall>("BreakableWall_WrongRoot");
+            wallObject.AddComponent<DestroyableObject>();
+            wallObject.transform.SetParent(roomRig.TriggersRoot, false);
+
+            var results = LevelValidator.ValidateAll();
+
+            Assert.That(results.Any(result =>
+                result.TargetObject == wallObject.GetComponent<BreakableWall>() &&
+                result.Severity == LevelValidator.Severity.Warning &&
+                result.Message.Contains("BreakableWall") &&
+                result.Message.Contains("Elements")));
+        }
+
+        [Test]
+        public void ValidateAll_ReportsError_WhenBreakableWallMissingDestroyableObject()
+        {
+            var roomRig = CreateValidRoomRig("Room_BreakableWall_MissingDestroyable");
+            var wallObject = CreateGameObjectWithTriggerColliderAndComponent<BreakableWall>("BreakableWall_MissingDestroyable");
+            wallObject.transform.SetParent(roomRig.ElementsRoot, false);
+            Object.DestroyImmediate(wallObject.GetComponent<DestroyableObject>());
+
+            var results = LevelValidator.ValidateAll();
+
+            Assert.That(results.Any(result =>
+                result.TargetObject == wallObject.GetComponent<BreakableWall>() &&
+                result.Severity == LevelValidator.Severity.Error &&
+                result.Message.Contains("DestroyableObject")));
+        }
+
+        [Test]
+        public void ValidateAll_ReportsWarning_WhenBreakableWallIsNotOnWallLayer()
+        {
+            var roomRig = CreateValidRoomRig("Room_BreakableWall_WrongLayer");
+            var wallObject = CreateGameObjectWithTriggerColliderAndComponent<BreakableWall>("BreakableWall_WrongLayer");
+            wallObject.transform.SetParent(roomRig.ElementsRoot, false);
+            wallObject.AddComponent<DestroyableObject>();
+
+            var results = LevelValidator.ValidateAll();
+
+            Assert.That(results.Any(result =>
+                result.TargetObject == wallObject.GetComponent<BreakableWall>() &&
+                result.Severity == LevelValidator.Severity.Warning &&
+                result.Message.Contains("Wall layer")));
+        }
+
+        [Test]
+        public void ValidateAll_DoesNotReportBreakableWallIssues_WhenAuthoringIsValid()
+        {
+            var roomRig = CreateValidRoomRig("Room_BreakableWall_Valid");
+            var wallObject = CreateGameObjectWithTriggerColliderAndComponent<BreakableWall>("BreakableWall_Valid");
+            wallObject.transform.SetParent(roomRig.ElementsRoot, false);
+            wallObject.layer = LayerMask.NameToLayer("Wall");
+
+            var results = LevelValidator.ValidateAll();
+
+            Assert.That(results.Any(result =>
+                result.TargetObject == wallObject.GetComponent<BreakableWall>() &&
+                (result.Message.Contains("BreakableWall") || result.Message.Contains("DestroyableObject"))), Is.False);
+        }
+
+        [Test]
         public void ValidateAll_ReportsWarning_WhenNavigationGeometryRootMissing()
         {
             var roomRig = CreateValidRoomRig("Room_Geometry_MissingRoot");

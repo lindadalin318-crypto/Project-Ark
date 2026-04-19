@@ -1,6 +1,6 @@
 # Level Architect 当前支持元素权威矩阵
 
-**更新时间：** 2026-04-13 15:44  
+**更新时间：** 2026-04-19 09:52  
 **适用范围：** 当前仓库中的 `Level Architect` Unity Editor 工具链  
 **文档定位：** 这份文档回答的是：**`Level Architect` 现在到底能直接搭什么、改什么、看什么、验证什么。**
 
@@ -247,6 +247,7 @@
 | --- | --- | --- | --- |
 | `Checkpoint` | **引导式起点** | `Elements` | 会创建 collider + `Checkpoint` 组件；仍需手动指定 `CheckpointSO` |
 | `OpenEncounterTrigger` | **引导式起点** | `Encounters` | 会创建 trigger、子 `EnemySpawner`、`SpawnPoints`；仍需手动指定 `EncounterSO` |
+| `HiddenAreaMask` | **引导式起点** | `Triggers` | 会创建 trigger collider + `HiddenAreaMask` 组件，并附带 `Mask_Main` 可见体占位；创建后仍需补遮挡美术并调 reveal 范围。 |
 | `BiomeTrigger` | **引导式起点** | `Triggers` | 会创建触发器；仍需手动指定 `RoomAmbienceSO` |
 | `ScheduledBehaviour` | **引导式起点** | `Triggers` | 会创建 `ScheduledTarget` 子物体；仍需手动补 active phases / target |
 | `WorldEventTrigger` | **引导式起点** | `Triggers` | 会创建基础对象；仍需补世界阶段与效果 |
@@ -260,7 +261,6 @@
 | 元素 | 当前状态 | 说明 |
 
 | --- | --- | --- |
-| `HiddenAreaMask` | **运行时支持未开放** | `LevelValidator` 会检查，但 `Level Architect` 当前没有 starter 按钮 |
 | `ActivationGroup` | **运行时支持未开放** | validator 已覆盖根节点与成员检查，但无创建入口 |
 | `DestroyableObject` | **运行时支持未开放** | validator 已覆盖 preferred root，但无创建入口 |
 
@@ -295,6 +295,7 @@
 | Connection | Lock starter | **引导式起点** | `Connection Assist` |
 | Element | `Checkpoint` | **引导式起点** | `Runtime Assist` |
 | Element | `OpenEncounterTrigger` | **引导式起点** | `Runtime Assist` |
+| Element | `HiddenAreaMask` | **引导式起点** | `Runtime Assist` |
 | Element | `BiomeTrigger` | **引导式起点** | `Runtime Assist` |
 | Element | `ScheduledBehaviour` | **引导式起点** | `Runtime Assist` |
 | Element | `WorldEventTrigger` | **引导式起点** | `Runtime Assist` |
@@ -314,7 +315,7 @@
 | 项目 | 原因 |
 | --- | --- |
 | `rooms[].elements[]` 自动导入 | 当前不会自动生成场景对象 |
-| `HiddenAreaMask` / `ActivationGroup` / `DestroyableObject` 的 starter 创建 | 当前无 authoring 按钮 |
+| `ActivationGroup` / `DestroyableObject` 的 starter 创建 | 当前无 authoring 按钮 |
 | `PickupBase` / `CameraTrigger` / `NarrativeFallTrigger` 的统一工具化 authoring | 当前无正式入口 |
 
 | `GateID / Ceremony / RequiredKeyID / openDuringPhases` 的 Inspector 直接编辑 | 目前只有部分显示或间接改写，没有正式字段编辑 UI |

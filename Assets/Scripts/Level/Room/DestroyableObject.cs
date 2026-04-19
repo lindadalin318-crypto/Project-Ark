@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using ProjectArk.Core;
 
@@ -43,11 +44,25 @@ namespace ProjectArk.Level
         private string _resolvedFlagKey;
         private string _ownerRoomID;
         private SpriteRenderer _spriteRenderer;
+        private Collider2D _collider;
+
+        // ──────────────────── Events ────────────────────
+
+        /// <summary>
+        /// Raised exactly once when this object is destroyed by runtime damage.
+        /// Persistence restore paths do not rebroadcast the event.
+        /// </summary>
+        public event Action OnDestroyed;
 
         // ──────────────────── IDamageable ────────────────────
 
         /// <inheritdoc/>
         public bool IsAlive => !_isDestroyed;
+
+        /// <summary>
+        /// Whether the object has already entered its destroyed state.
+        /// </summary>
+        public bool IsDestroyed => _isDestroyed;
 
         /// <inheritdoc/>
         public void TakeDamage(DamagePayload payload)
@@ -63,7 +78,7 @@ namespace ProjectArk.Level
         }
 
         /// <inheritdoc/>
-        [System.Obsolete("Use TakeDamage(DamagePayload) instead")]
+        [Obsolete("Use TakeDamage(DamagePayload) instead")]
         public void TakeDamage(float damage, Vector2 knockbackDirection, float knockbackForce)
         {
             TakeDamage(new DamagePayload(damage, knockbackDirection, knockbackForce));
@@ -75,6 +90,7 @@ namespace ProjectArk.Level
         {
             _currentHP = _maxHP;
             _spriteRenderer = GetComponent<SpriteRenderer>();
+            _collider = GetComponent<Collider2D>();
 
             // Resolve flag key
             _resolvedFlagKey = string.IsNullOrEmpty(_flagKey) ? gameObject.name : _flagKey;
@@ -87,8 +103,7 @@ namespace ProjectArk.Level
             }
             else
             {
-                Debug.LogError($"[DestroyableObject] {gameObject.name}: No parent Room found! " +
-                               "DestroyableObject must be a child of a Room GameObject.");
+                Debug.LogError($"[DestroyableObject] {gameObject.name}: No parent Room found! DestroyableObject must be a child of a Room GameObject.");
             }
         }
 
@@ -100,8 +115,8 @@ namespace ProjectArk.Level
                 var registry = ServiceLocator.Get<RoomFlagRegistry>();
                 if (registry != null && registry.GetFlag(_ownerRoomID, _resolvedFlagKey))
                 {
-                    // Already destroyed in a previous visit — apply destroyed visual immediately
-                    ApplyDestroyedState(playEffects: false);
+                    // Already destroyed in a previous visit — apply destroyed visual immediately.
+                    ApplyDestroyedState(playEffects: false, raiseDestroyedEvent: false);
                 }
             }
         }
@@ -112,7 +127,7 @@ namespace ProjectArk.Level
         {
             if (_isDestroyed) return;
 
-            ApplyDestroyedState(playEffects: true);
+            ApplyDestroyedState(playEffects: true, raiseDestroyedEvent: true);
 
             // Persist destruction via RoomFlagRegistry
             if (!string.IsNullOrEmpty(_ownerRoomID))
@@ -124,14 +139,18 @@ namespace ProjectArk.Level
                 }
                 else
                 {
-                    Debug.LogWarning($"[DestroyableObject] {gameObject.name}: RoomFlagRegistry not found. " +
-                                     "Destruction will not persist.");
+                    Debug.LogWarning($"[DestroyableObject] {gameObject.name}: RoomFlagRegistry not found. Destruction will not persist.");
                 }
             }
         }
 
-        private void ApplyDestroyedState(bool playEffects)
+        private void ApplyDestroyedState(bool playEffects, bool raiseDestroyedEvent)
         {
+            if (_isDestroyed)
+            {
+                return;
+            }
+
             _isDestroyed = true;
             _currentHP = 0f;
 
@@ -154,18 +173,25 @@ namespace ProjectArk.Level
                 }
             }
 
-            // Visual: swap to destroyed sprite or deactivate
+            if (_collider != null)
+            {
+                _collider.enabled = false;
+            }
+
+            // Visual: swap to destroyed sprite or hide the intact renderer.
             if (_destroyedSprite != null && _spriteRenderer != null)
             {
                 _spriteRenderer.sprite = _destroyedSprite;
+                _spriteRenderer.enabled = true;
             }
-            else
+            else if (_spriteRenderer != null)
             {
-                // Disable the collider so it's no longer an obstacle, and hide visuals
-                var col = GetComponent<Collider2D>();
-                if (col != null) col.enabled = false;
+                _spriteRenderer.enabled = false;
+            }
 
-                if (_spriteRenderer != null) _spriteRenderer.enabled = false;
+            if (raiseDestroyedEvent)
+            {
+                OnDestroyed?.Invoke();
             }
         }
     }

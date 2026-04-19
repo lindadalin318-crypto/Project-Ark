@@ -15,7 +15,9 @@ namespace ProjectArk.Level.Editor
         public enum RoomAssistType
         {
             Checkpoint,
+            BreakableWall,
             OpenEncounterTrigger,
+            HiddenAreaMask,
             BiomeTrigger,
             ScheduledBehaviour,
             WorldEventTrigger,
@@ -41,7 +43,9 @@ namespace ProjectArk.Level.Editor
             return assistType switch
             {
                 RoomAssistType.Checkpoint => CreateCheckpoint(room),
+                RoomAssistType.BreakableWall => CreateBreakableWall(room),
                 RoomAssistType.OpenEncounterTrigger => CreateOpenEncounterTrigger(room),
+                RoomAssistType.HiddenAreaMask => CreateHiddenAreaMask(room),
                 RoomAssistType.BiomeTrigger => CreateBiomeTrigger(room),
                 RoomAssistType.ScheduledBehaviour => CreateScheduledBehaviour(room),
                 RoomAssistType.WorldEventTrigger => CreateWorldEventTrigger(room),
@@ -81,7 +85,9 @@ namespace ProjectArk.Level.Editor
             return assistType switch
             {
                 RoomAssistType.Checkpoint => "Checkpoint",
+                RoomAssistType.BreakableWall => "Breakable Wall",
                 RoomAssistType.OpenEncounterTrigger => "Open Encounter",
+                RoomAssistType.HiddenAreaMask => "Hidden Area",
                 RoomAssistType.BiomeTrigger => "Biome Trigger",
                 RoomAssistType.ScheduledBehaviour => "Scheduled",
                 RoomAssistType.WorldEventTrigger => "World Event",
@@ -107,6 +113,22 @@ namespace ProjectArk.Level.Editor
             return checkpointObject;
         }
 
+        private static GameObject CreateBreakableWall(Room room)
+        {
+            Transform root = EnsureAuthoringRoot(room, ELEMENTS_ROOT_NAME);
+            string objectName = GameObjectUtility.GetUniqueNameForSibling(root, $"BreakableWall_{room.RoomID}");
+            GameObject wallObject = CreateChild(root, objectName, GetRoomCenter(room));
+
+            EnsureSolidBoxCollider(wallObject, new Vector2(2f, 2f));
+            EnsureSpriteRenderer(wallObject);
+            ApplyNamedLayer(wallObject, "Wall", "BreakableWall starter");
+            Undo.AddComponent<DestroyableObject>(wallObject);
+            Undo.AddComponent<BreakableWall>(wallObject);
+
+            FinalizeCreatedObject(wallObject, $"[LevelRuntimeAssist] Created BreakableWall starter in room '{room.RoomID}'. Add subtle signal art and hidden reward setup before playtest.");
+            return wallObject;
+        }
+
         private static GameObject CreateOpenEncounterTrigger(Room room)
         {
             Transform root = EnsureAuthoringRoot(room, ENCOUNTERS_ROOT_NAME);
@@ -127,6 +149,23 @@ namespace ProjectArk.Level.Editor
 
             FinalizeCreatedObject(triggerObject, $"[LevelRuntimeAssist] Created OpenEncounterTrigger starter in room '{room.RoomID}'. Assign EncounterSO to finish setup.");
             return triggerObject;
+        }
+
+        private static GameObject CreateHiddenAreaMask(Room room)
+        {
+            Transform root = EnsureAuthoringRoot(room, TRIGGERS_ROOT_NAME);
+            string objectName = GameObjectUtility.GetUniqueNameForSibling(root, $"HiddenAreaMask_{room.RoomID}");
+            GameObject hiddenAreaObject = CreateChild(root, objectName, GetRoomCenter(room));
+
+            EnsureTriggerBoxCollider(hiddenAreaObject, GetSuggestedTriggerSize(room, 0.45f, 0.45f, new Vector2(6f, 4f)));
+            var hiddenAreaMask = Undo.AddComponent<HiddenAreaMask>(hiddenAreaObject);
+            ApplyPlayerLayer(hiddenAreaMask, "_playerLayer");
+
+            GameObject maskVisual = CreateChild(hiddenAreaObject.transform, "Mask_Main", hiddenAreaObject.transform.position);
+            EnsureSpriteRenderer(maskVisual);
+
+            FinalizeCreatedObject(hiddenAreaObject, $"[LevelRuntimeAssist] Created HiddenAreaMask starter in room '{room.RoomID}'. Add occluder art and tune reveal footprint before playtest.");
+            return hiddenAreaObject;
         }
 
         private static GameObject CreateBiomeTrigger(Room room)
@@ -249,6 +288,31 @@ namespace ProjectArk.Level.Editor
             EditorUtility.SetDirty(boxCollider);
         }
 
+        private static void EnsureSolidBoxCollider(GameObject gameObject, Vector2 size)
+        {
+            var boxCollider = gameObject.GetComponent<BoxCollider2D>();
+            if (boxCollider == null)
+            {
+                boxCollider = Undo.AddComponent<BoxCollider2D>(gameObject);
+            }
+
+            Undo.RecordObject(boxCollider, "Configure Solid Collider");
+            boxCollider.isTrigger = false;
+            boxCollider.size = size;
+            EditorUtility.SetDirty(boxCollider);
+        }
+
+        private static void EnsureSpriteRenderer(GameObject gameObject)
+        {
+            var spriteRenderer = gameObject.GetComponent<SpriteRenderer>();
+            if (spriteRenderer == null)
+            {
+                spriteRenderer = Undo.AddComponent<SpriteRenderer>(gameObject);
+            }
+
+            EditorUtility.SetDirty(spriteRenderer);
+        }
+
         private static void ApplyPlayerLayer(Component component, string fieldName)
         {
             if (component == null)
@@ -274,6 +338,25 @@ namespace ProjectArk.Level.Editor
             bits.intValue = 1 << playerLayer;
             serialized.ApplyModifiedProperties();
             EditorUtility.SetDirty(component);
+        }
+
+        private static void ApplyNamedLayer(GameObject gameObject, string layerName, string contextName)
+        {
+            if (gameObject == null)
+            {
+                return;
+            }
+
+            int layer = LayerMask.NameToLayer(layerName);
+            if (layer < 0)
+            {
+                Debug.LogWarning($"[LevelRuntimeAssist] {contextName} could not assign missing layer '{layerName}' on '{gameObject.name}'.");
+                return;
+            }
+
+            Undo.RecordObject(gameObject, $"Set {contextName} Layer");
+            gameObject.layer = layer;
+            EditorUtility.SetDirty(gameObject);
         }
 
         private static void SetObjectReference(Component component, string fieldName, Object value)

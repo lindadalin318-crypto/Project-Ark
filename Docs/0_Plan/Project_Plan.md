@@ -93,6 +93,7 @@
 - 已完成专项：[`./complete/Camera_MVP.md`](./complete/Camera_MVP.md)
 - 已完成专项：[`./complete/2026-04-15-static-geometry-walls-implementation-plan.md`](./complete/2026-04-15-static-geometry-walls-implementation-plan.md)
 - 已完成专项：[`./complete/2026-04-15-static-geometry-walls-phase2-implementation-plan.md`](./complete/2026-04-15-static-geometry-walls-phase2-implementation-plan.md)
+- 已完成专项：[`./complete/2026-04-18-breakable-secret-wall-mvp-implementation-plan.md`](./complete/2026-04-18-breakable-secret-wall-mvp-implementation-plan.md)
 - 已完成专项：[`./complete/LevelRoomRuntimeChain_Hardening.md`](./complete/LevelRoomRuntimeChain_Hardening.md)
 - 已完成专项：[`./complete/LevelArchitect_Workbench.md`](./complete/LevelArchitect_Workbench.md)
 
