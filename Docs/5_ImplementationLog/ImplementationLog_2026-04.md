@@ -27,7 +27,6 @@
 ## Docs migration second-pass cleanup — 2026-04-14 18:19
 
 - **新建文件**
-
   - `Docs/7_Reference/TechNotes/UnityMCP_Troubleshooting.md`
 - **删除文件**
   - `Docs/7_Reference/TechNotes/UnityMCP-Troubleshooting.md`

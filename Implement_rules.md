@@ -112,7 +112,7 @@
 当 `Ship/VFX` 完成这一轮 authority 收口治理后，至少要满足以下 5 条：
 
 1. **唯一权威**：每类引用只有一个权威来源。
-   - 例如：prefab 结构只能由一个工具生成，scene-only 接线只能由一个入口负责。
+  - 例如：prefab 结构只能由一个工具生成，scene-only 接线只能由一个入口负责。
 2. **无双轨主链**：不再保留不必要的 runtime fallback。
 3. **debug 不接管主链**：debug 工具默认只观察，不得持续覆盖正式运行态。
 4. **override 白名单化**：明确哪些 scene override 是允许的，哪些必须清零。
@@ -272,14 +272,16 @@
 
 > 说明：本表是 **治理执行约束**，用于收口“谁可以写”。对象路径、live 状态、owner 名称定义仍以 `ShipVFX_CanonicalSpec.md` 与 `ShipVFX_AssetRegistry.md` 为准。
 
-| 范围 | 对象 / 引用类型 | 唯一权威入口 | 明确禁止的并行写入者 | 备注 |
-| --- | --- | --- | --- | --- |
-| Prefab 结构 | `Ship.prefab` 的结构、根节点组件、关键节点、内部核心序列化引用 | `ShipPrefabRebuilder` | Runtime fallback、Debug 工具、手工 scene 修补代替 prefab 修正 | 含物理组件、运行时脚本组件、ShipStatsSO/InputActions/DashAfterImage 接线 |
-| Prefab 结构 | `BoostTrailRoot.prefab` 的结构、子节点、内部核心序列化引用 | `BoostTrailPrefabCreator` | `ShipPrefabRebuilder` 直接改写内部结构、Runtime fallback、Debug 工具 | `ShipPrefabRebuilder` 只负责把 nested prefab 集成进 `Ship.prefab` |
-| Scene-only 接线 | `BoostTrailBloomVolume` → `BoostTrailView._boostBloomVolume` 这类 scene-only 绑定 | `ShipBoostTrailSceneBinder` | Runtime 自动补线、Debug 工具、Prefab builder 越权写 scene | 这类引用允许存在于 scene，但必须有唯一绑定入口 |
-| 现役材质贴图回填 | 现役 `BoostTrail` 材质与贴图映射 | `MaterialTextureLinker` | Prefab builder 顺手写材质、Runtime 模糊查找贴图、Debug 工具临时写回 | 仅允许维护现役材质映射，不做全项目兜底搜索 |
-| Runtime 表现 | Boost 启停、持续层强度、burst 时序、sprite 切换 | `ShipView` / `BoostTrailView` / `ShipEngineVFX` / `ShipVisualJuice` | Editor 工具在 Play Mode 接管、Debug 持续 override、scene 数据修行为 | Runtime 只消费已准备好的引用，不负责修资产 |
-| Debug 预览 | Play Mode 观察、Solo Layer、Force Sustain Preview | `BoostTrailDebugManager` | 作为正式链路 owner、默认常开、隐式写回 prefab / scene / runtime 默认值 | 只允许 preview，不得成为主驱动 |
+
+| 范围            | 对象 / 引用类型                                                                     | 唯一权威入口                                                              | 明确禁止的并行写入者                                               | 备注                                                         |
+| ------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------- | ---------------------------------------------------------- |
+| Prefab 结构     | `Ship.prefab` 的结构、根节点组件、关键节点、内部核心序列化引用                                        | `ShipPrefabRebuilder`                                               | Runtime fallback、Debug 工具、手工 scene 修补代替 prefab 修正        | 含物理组件、运行时脚本组件、ShipStatsSO/InputActions/DashAfterImage 接线   |
+| Prefab 结构     | `BoostTrailRoot.prefab` 的结构、子节点、内部核心序列化引用                                     | `BoostTrailPrefabCreator`                                           | `ShipPrefabRebuilder` 直接改写内部结构、Runtime fallback、Debug 工具 | `ShipPrefabRebuilder` 只负责把 nested prefab 集成进 `Ship.prefab` |
+| Scene-only 接线 | `BoostTrailBloomVolume` → `BoostTrailView._boostBloomVolume` 这类 scene-only 绑定 | `ShipBoostTrailSceneBinder`                                         | Runtime 自动补线、Debug 工具、Prefab builder 越权写 scene           | 这类引用允许存在于 scene，但必须有唯一绑定入口                                 |
+| 现役材质贴图回填      | 现役 `BoostTrail` 材质与贴图映射                                                       | `MaterialTextureLinker`                                             | Prefab builder 顺手写材质、Runtime 模糊查找贴图、Debug 工具临时写回         | 仅允许维护现役材质映射，不做全项目兜底搜索                                      |
+| Runtime 表现    | Boost 启停、持续层强度、burst 时序、sprite 切换                                             | `ShipView` / `BoostTrailView` / `ShipEngineVFX` / `ShipVisualJuice` | Editor 工具在 Play Mode 接管、Debug 持续 override、scene 数据修行为    | Runtime 只消费已准备好的引用，不负责修资产                                  |
+| Debug 预览      | Play Mode 观察、Solo Layer、Force Sustain Preview                                 | `BoostTrailDebugManager`                                            | 作为正式链路 owner、默认常开、隐式写回 prefab / scene / runtime 默认值      | 只允许 preview，不得成为主驱动                                        |
+
 
 ### 3.14 Builder 执行模式规则（Audit / Preview / Apply）
 
@@ -432,6 +434,7 @@
 > **与 VFX 的区别**：VFX 的 Authority Matrix 主要用于收口多入口写同一链路；Level 模块更强调 Scene authoring、Door 连线、导入骨架与校验器之间的职责边界。
 >
 > **权威来源**：
+>
 > - 目标架构 / 数据结构 / 工具链边界：`Docs/2_TechnicalDesign/Level/Level_CanonicalSpec.md`
 > - 实现约束 / 踩坑治理：本文档本节
 > - 若两者冲突，以 `Level_CanonicalSpec.md` 为准
@@ -467,15 +470,17 @@ Level 模块的治理目标：
 
 > 说明：本表只保留仓库中**当前存在**的现役工具。工具的完整职责定义以 `Level_CanonicalSpec.md` §9 为准，本表只约束执行边界。
 
-| 对象类型 | 唯一写入者 | 禁止 | 备注 |
-|---------|-----------|------|------|
-| Editor 统一入口 | `LevelArchitectWindow` | 直接承担运行时 authority | 只编排 `Build / Quick Edit / Validate` 入口，不替代子工具权威 |
-| 标准房间模板骨架 | `RoomFactory` | 手动散建标准子节点、Runtime 补全 | 用于 Scene 内快速创建合规 `Room` |
-| Door 双向连线 | `DoorWiringService` | Runtime 自动补线、手动在 Inspector 大量逐个接线 | `GateID` 仍需与设计意图保持一致 |
-| 全局校验与显式修复 | `LevelValidator` | 任何工具隐式静默修复 | 默认只报告；只有显式 `Auto-Fix` 才允许写回 |
-| Scene View 可视化 | `PacingOverlayRenderer` / `RoomBlockoutRenderer` | 写入场景数据 | 只读显示 |
-| Scene View 白盒交互 | `BlockoutModeHandler` | 绕过 `LevelArchitectWindow` 状态直接改结构 | 只处理编辑交互，不定义数据权威 |
-| Runtime 房间加载 / 转场 | `RoomManager` / `DoorTransitionController` | Editor 工具在 Play Mode 接管 | Runtime 只消费已完成 authoring 的 Door 引用数据 |
+
+| 对象类型              | 唯一写入者                                            | 禁止                                | 备注                                              |
+| ----------------- | ------------------------------------------------ | --------------------------------- | ----------------------------------------------- |
+| Editor 统一入口       | `LevelArchitectWindow`                           | 直接承担运行时 authority                 | 只编排 `Build / Quick Edit / Validate` 入口，不替代子工具权威 |
+| 标准房间模板骨架          | `RoomFactory`                                    | 手动散建标准子节点、Runtime 补全              | 用于 Scene 内快速创建合规 `Room`                         |
+| Door 双向连线         | `DoorWiringService`                              | Runtime 自动补线、手动在 Inspector 大量逐个接线 | `GateID` 仍需与设计意图保持一致                            |
+| 全局校验与显式修复         | `LevelValidator`                                 | 任何工具隐式静默修复                        | 默认只报告；只有显式 `Auto-Fix` 才允许写回                     |
+| Scene View 可视化    | `PacingOverlayRenderer` / `RoomBlockoutRenderer` | 写入场景数据                            | 只读显示                                            |
+| Scene View 白盒交互   | `BlockoutModeHandler`                            | 绕过 `LevelArchitectWindow` 状态直接改结构 | 只处理编辑交互，不定义数据权威                                 |
+| Runtime 房间加载 / 转场 | `RoomManager` / `DoorTransitionController`       | Editor 工具在 Play Mode 接管           | Runtime 只消费已完成 authoring 的 Door 引用数据            |
+
 
 > **维护规则**：已删除、计划中、或一次性任务工具不在此处维护；历史沿革交给 `git log` 或对应设计文档，不再混入现役规则表。
 
@@ -532,15 +537,17 @@ Level 关键链路缺引用时，禁止静默 return：
 
 `Level` 房间元素的顶层 authoring 分类，统一使用 **六大玩法家族 + 一类基础设施件**：
 
-| 中文分类 | 英文标签 | 判断问题 | 当前代表 |
-| --- | --- | --- | --- |
-| **通路件** | `Path` | 它是不是在控制玩家怎么去别的地方？ | `Door` |
-| **交互件** | `Interact` | 玩家是不是要主动碰它、按它、拿它？ | `Checkpoint`、`Lock`、`PickupBase` |
-| **状态件** | `Stateful` | 房间是不是需要记住它已经变了？ | `DestroyableObject` |
-| **战斗件** | `Combat` | 它是不是在决定什么时候开打、怎么打、什么时候结束？ | `OpenEncounterTrigger`、`ArenaController`、`EnemySpawner` |
-| **环境机关件** | `Environment` | 它是不是在持续改变玩家的通行、生存或移动条件？ | `EnvironmentHazard` 及其子类 |
-| **导演件** | `Directing` | 它是不是在控制镜头、氛围、相位或演出状态？ | `BiomeTrigger`、`HiddenAreaMask`、`ScheduledBehaviour`、`ActivationGroup`、`WorldEventTrigger`、`CameraTrigger` |
-| **基础设施件** | `Infrastructure` | 它是不是在支撑房间系统运转，而不是直接提供玩法对象？ | `SpawnPoint`、`CameraConfiner` |
+
+| 中文分类      | 英文标签             | 判断问题                       | 当前代表                                                                                                       |
+| --------- | ---------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **通路件**   | `Path`           | 它是不是在控制玩家怎么去别的地方？          | `Door`                                                                                                     |
+| **交互件**   | `Interact`       | 玩家是不是要主动碰它、按它、拿它？          | `Checkpoint`、`Lock`、`PickupBase`                                                                           |
+| **状态件**   | `Stateful`       | 房间是不是需要记住它已经变了？            | `DestroyableObject`                                                                                        |
+| **战斗件**   | `Combat`         | 它是不是在决定什么时候开打、怎么打、什么时候结束？  | `OpenEncounterTrigger`、`ArenaController`、`EnemySpawner`                                                    |
+| **环境机关件** | `Environment`    | 它是不是在持续改变玩家的通行、生存或移动条件？    | `EnvironmentHazard` 及其子类                                                                                   |
+| **导演件**   | `Directing`      | 它是不是在控制镜头、氛围、相位或演出状态？      | `BiomeTrigger`、`HiddenAreaMask`、`ScheduledBehaviour`、`ActivationGroup`、`WorldEventTrigger`、`CameraTrigger` |
+| **基础设施件** | `Infrastructure` | 它是不是在支撑房间系统运转，而不是直接提供玩法对象？ | `SpawnPoint`、`CameraConfiner`                                                                              |
+
 
 补充约束：
 
@@ -938,7 +945,7 @@ Level 关键链路缺引用时，禁止静默 return：
 
 #### 11.4.2 程序化波纹对象存在，但 `Sprite` 实际全透明
 
-- **现象**：`EchoWavePreview_*` 这类运行时对象已经生成，`SpriteRenderer` 也 enabled，甚至中心 marker 可见，但真正的波环完全看不到，容易被误诊为 sorting、材质或镜头问题。
+- **现象**：`EchoWavePreview_`* 这类运行时对象已经生成，`SpriteRenderer` 也 enabled，甚至中心 marker 可见，但真正的波环完全看不到，容易被误诊为 sorting、材质或镜头问题。
 - **根因**：程序化 `Texture2D` 的 alpha mask 算错，导致生成出来的 ring texture `alphaNZ=0`；本次真实案例中，是把 Unity 的 `Mathf.SmoothStep(from, to, t)` 误当成阈值版 `smoothstep(edge0, edge1, x)` 使用，最终整张波环贴图完全透明。
 - **防御**：先做运行时纹理验证，再做美术调参。排查顺序固定为：
   1. 确认运行时对象和 `SpriteRenderer` 确实存在
@@ -953,7 +960,6 @@ Level 关键链路缺引用时，禁止静默 return：
 3. 代码层是否仍保留了必要的 Layer 过滤？
 4. 新增投射物家族时，是否同步检查了层与碰撞语义？
 5. 若新增了程序化 `Texture2D` / `Sprite` 预览物，是否验证过它不是“对象存在但整张贴图全透明”？
-
 
 ---
 
@@ -975,6 +981,7 @@ Level 关键链路缺引用时，禁止静默 return：
 > 本节定义当新模块需要在 `Implement_rules.md` 中追加规则时，应遵循的统一结构。
 >
 > **触发条件**（满足任一即应追加）：
+>
 > - 同类 bug 在该模块连续出现两次以上
 > - 多个入口（Runtime / Editor / Scene / Debug）同时改同一条链路
 > - 排查时间明显长于实现时间
@@ -982,6 +989,7 @@ Level 关键链路缺引用时，禁止静默 return：
 > - 新功能开发时需要先"考古"才能动手
 >
 > **与架构速写的关系**：
+>
 > - `Docs/2_TechnicalDesign/{ModuleName}/{ModuleName}_ArchBrief.md`：描述模块**是什么**——结构、职责、驱动关系
 > - `Implement_rules.md` 中的模块规则：描述模块**怎么改更不容易烂**——实现约束、踩坑防御、验收清单
 > - 两者互补，不重复。架构速写回答"谁管什么"，实现规则回答"改的时候要注意什么"
@@ -1030,13 +1038,15 @@ Level 关键链路缺引用时，禁止静默 return：
 
 ### 13.3 模块规则与架构速写的联动
 
-| 时机 | 架构速写 (`_ArchBrief.md`) | 模块规则 (`Implement_rules.md`) |
-|------|---------------------------|--------------------------------|
-| 新模块开发前 | ✅ 必须产出（工作流第 4 步） | ❌ 不需要，还没踩坑 |
-| 首次踩坑后 | 可能需要更新驱动关系 | ✅ 追加踩坑总结 + 对应防御规则 |
-| 模块复杂度增长 | Lv.1 → Lv.2 → 完整 Spec | 按需追加实现规则、工具矩阵 |
-| 多人 / 多 AI session 协作 | 确保结构描述准确 | ✅ 追加协作约束（如 authority matrix） |
-| 架构重构后 | 重写或大幅更新 | 清理过时规则，补新规则 |
+
+| 时机                   | 架构速写 (`_ArchBrief.md`) | 模块规则 (`Implement_rules.md`)  |
+| -------------------- | ---------------------- | ---------------------------- |
+| 新模块开发前               | ✅ 必须产出（工作流第 4 步）       | ❌ 不需要，还没踩坑                   |
+| 首次踩坑后                | 可能需要更新驱动关系             | ✅ 追加踩坑总结 + 对应防御规则            |
+| 模块复杂度增长              | Lv.1 → Lv.2 → 完整 Spec  | 按需追加实现规则、工具矩阵                |
+| 多人 / 多 AI session 协作 | 确保结构描述准确               | ✅ 追加协作约束（如 authority matrix） |
+| 架构重构后                | 重写或大幅更新                | 清理过时规则，补新规则                  |
+
 
 ### 13.4 已有模块的规则参考
 
@@ -1044,3 +1054,4 @@ Level 关键链路缺引用时，禁止静默 return：
 - **Level**：见本文档 Section 7（现役 authoring / validation 范例）
 - **全局 Unity / Editor 治理**：见 Section 8（跨模块底层 guardrails）
 - **Core / Infrastructure / UI / Combat / Projectile**：见 Section 9-11（由 `CLAUDE.md` 迁入的首批通用陷阱沉淀）
+
