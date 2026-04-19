@@ -2,6 +2,97 @@
 
 ---
 
+## 接入 HiddenAreaMask starter 并同步 Level Architect 口径 — 2026-04-19 09:54
+
+### 修改文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelRuntimeAssistFactory.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelRuntimeAssistFactoryTests.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`
+- `Docs/6_Diagnostics/LevelArchitect_SupportedElements_Matrix.md`
+- `Docs/3_WorkflowsAndRules/LevelArchitect/Level_WorkflowSpec.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 在 `LevelRuntimeAssistFactory` 中新增 `RoomAssistType.HiddenAreaMask`，将 `HiddenAreaMask` starter 正式接入 `Runtime Assist` 工厂分发、显示名和默认创建流程。
+- starter 默认会在 `Triggers` 根下创建 `HiddenAreaMask`、trigger collider、player layer 与 `Mask_Main` 可见体占位，维持“隐藏遮挡 = 导演件，不是实体墙 authoring 主链”的边界。
+- 在 `LevelRuntimeAssistFactoryTests` 中补入 `HiddenAreaMask` starter 回归测试，锁定其必须落在 `Triggers`、必须带 trigger collider、player layer 和最小遮挡可见体骨架。
+- 更新 `LevelArchitectWindow` 的 starter 区块与引导文案，并同步 `LevelArchitect_SupportedElements_Matrix.md`、`Level_WorkflowSpec.md`，让工具入口、工作流说明与支持矩阵统一反映 `HiddenAreaMask` 已开放为引导式起点。
+
+### 目的
+- 把上一轮确定的隐藏遮挡墙设计结论真正落进 `Level Architect` 的 starter-first authoring 链，而不是只停留在设计稿里。
+- 避免团队继续把 `HiddenAreaMask` 误读成“运行时已支持但编辑器未开放”的旧状态，减少后续搭建时的认知漂移。
+
+### 技术
+- 采用“保留 `HiddenAreaMask` 作为现有 runtime owner + 在编辑器侧补标准 starter 骨架”的接入方式，避免新增双轨 reveal owner。
+- 通过编辑器测试、支持矩阵和工作流手册三侧同时收口，形成代码入口与文档语义的一致性护栏。
+
+## 新增隐藏遮挡墙设计稿并收口语义边界 — 2026-04-18 17:06
+
+### 修改文件
+- `Docs/0_Plan/specs/2026-04-18-hidden-occlusion-wall-design.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 新建 `隐藏遮挡墙设计稿`，把 `HiddenAreaMask` 在 `Level` 模块中的定位正式收口为 **`Directing / Triggers` 的秘密 reveal 导演件**，明确它不是新的实体墙 runtime owner。
+- 在设计稿中补齐玩家体验目标、5 条完成标准、三种方案比较、最终推荐方案，以及与 `BreakableWall`、静态几何墙、未来 `ProjectileBarrier` 的职责边界。
+- 明确后续实现建议：优先补标准 authoring 模板与 `Level Architect` starter-first 入口，而不是重写运行时主链或把 reveal 逻辑并入当前 `Wall Authoring` 区块。
+
+### 目的
+- 防止后续把隐藏遮挡墙误实现成“会 reveal 的实体墙”或和 `BreakableWall`、几何主链混成一套系统。
+- 让后续实现、文档同步与 authoring 工具化都基于同一条清晰口径推进，降低再次考古和 scope 漂移的风险。
+
+### 技术
+- 采用“保留现有 `HiddenAreaMask` 作为唯一 runtime authority + 新增标准 authoring 模板约束”的设计收口方式，避免双轨 owner。
+- 按 `Level` 现役分类与 authoring 边界，把 reveal 行为、真实碰撞和奖励内容拆回各自 owner，保持 Scene 几何真相与导演语义解耦。
+
+## 归档 BreakableWall MVP 计划并同步文档入口 — 2026-04-18 16:17
+
+### 删除文件
+- `Docs/0_Plan/ongoing/2026-04-18-breakable-secret-wall-mvp-implementation-plan.md`
+
+### 修改文件
+- `Docs/0_Plan/complete/2026-04-18-breakable-secret-wall-mvp-implementation-plan.md`
+- `Docs/0_Plan/ongoing/README.md`
+- `Docs/0_Plan/complete/README.md`
+- `Docs/0_Plan/Project_Plan.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 将 `BreakableWall` 秘密裂墙 MVP 计划从 `ongoing/` 收口为完成态记录，并在正文头部补入完成状态与 `Completion Note`，明确本次按**功能闭环**归档。
+- 在完成说明中记录：运行时主链、`BreakableWall` 语义壳、starter、validator 以及后补的 `Wall` layer authoring 缺口都已落地；轻微信号则转为后续可选的美术 / 可读性增强，不作为本次完成判定前提。
+- 同步更新 `ongoing/README.md`、`complete/README.md` 与 `Project_Plan.md`，把这份计划从进行中入口移出，并补进已完成专项导航。
+
+### 目的
+- 消除 `BreakableWall` 功能已完成但计划文档仍停留在 `ongoing/` 的状态漂移。
+- 让后续查阅者能从 `complete/` 与 `Project_Plan` 直接看到：这项工作已经按当前功能目标收口完成，美术增强已明确留待后续。
+
+### 技术
+- 采用“先把正文改为完成态记录，再物理迁移文件，最后同步导航入口与实现日志”的归档顺序，避免出现失效路径或 ongoing/complete 语义冲突。
+- 对原计划中已决定延后的轻微信号需求，使用完成说明显式降级为可选增强，而不是在归档时静默抹平范围变化。
+
+## 修复 BreakableWall starter 默认 layer 并补强验证链 — 2026-04-18 16:00
+
+### 修改文件
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelRuntimeAssistFactory.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelRuntimeAssistFactoryTests.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs`
+- `Assets/Scripts/Level/Editor/LevelArchitect/LevelValidatorTests.cs`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 在 `LevelRuntimeAssistFactory` 的 `BreakableWall` starter 生成链中新增显式 layer authoring，创建时会直接把对象写到 `Wall` layer，避免激光类与环境命中链因为默认层错误而失效。
+- 为 `LevelRuntimeAssistFactoryTests` 补充回归断言，明确 `BreakableWall` starter 必须带有 `Wall` layer，防止后续重构再次漏掉该约束。
+- 为 `LevelValidator` 增加 `BreakableWall` layer 校验与自动修复入口，让旧场景或手工摆放的错误 authoring 也能在验证阶段被发现并修正。
+- 为 `LevelValidatorTests` 增加错误 layer 告警覆盖，并把合法样例补齐到 `Wall` layer，确保验证口径与新 authoring 规则一致。
+
+### 目的
+- 修复“`BreakableWall` 受伤逻辑正确，但因为不在 `Wall` layer 导致部分武器打不到”的真实 authoring 根因。
+- 把这条约束同时沉淀到 starter 与 validator，两头收口，减少后续场景配置阶段再次出现静默失配。
+
+### 技术
+- 采用“生成入口直接写正确 layer + validator 做防御性补检”的双保险方式收口场景 authoring 约束。
+- 使用编辑器测试覆盖 starter 与 validator 两侧行为，确保这次修复既修当前问题，也建立后续回归护栏。
+
 ## 收口 Project Plan 中的 Level 活跃项与候选项完成态 — 2026-04-18 14:02
 
 ### 修改文件
@@ -14663,3 +14754,23 @@ dotnet build 验证：0 错误，0 警告。
 - 内容：为 `Level Architect` 新增 `RoomGeometryCanvasFactory` 与对应 EditMode 测试，补齐 `OuterWalls` / `InnerWalls` 标准 Tilemap 画布 starter，并在 `LevelArchitectWindow` 的 `Quick Edit` 中加入独立 `Geometry Authoring` 区块，明确它只负责准备静态墙 authoring 宿主，不接管 `Runtime Assist` 语义补件链。同时在 `LevelValidator` / `LevelValidatorTests` 中补入 `Door` 推荐根与静态墙开口协作校验，并显式锁住 `NarrativeFallTrigger` 这类非门型跨房间转移不会因为“没有门洞”被误报。最后同步更新 `Level_CanonicalSpec` 与 `Level_WorkflowSpec`，将 `Door = 显式门型通路`、`trap / fall / teleport = 非门型 transfer`、`Navigation/Geometry` 标准骨架和 validator 边界固化为现役文档口径。
 - 目的：把“门洞协作规则”收口为只服务于 `Door` 的 authoring / validator 契约，同时给未来 trap、fall、teleport 类跨房间转移留出明确扩展位，避免后续工具链误把所有 room transfer 都要求成墙体开口。
 - 技术：采用 TDD（先补 `RoomGeometryCanvasFactoryTests` / `LevelValidatorTests` 再实现）、编辑器 authoring authority 分层（`Geometry Authoring` vs `Runtime Assist`）、以及 `Door` / future transfer 分类边界收口策略；通过 Unity EditMode tests 回归验证 `Door` 几何 opening 检查只作用于显式门型通路。
+
+
+## BreakableWall MVP 秘密裂墙实施计划落盘 - 2026-04-18 14:27
+- 新建/修改文件：`Docs/0_Plan/ongoing/2026-04-18-breakable-secret-wall-mvp-implementation-plan.md`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：新增 `BreakableWall` 秘密裂墙 MVP 的正式实施计划文档，明确这一轮采用 `DestroyableObject -> RoomFlagRegistry -> SaveBridge` 作为唯一受击与持久化主链，只新增薄语义壳 `BreakableWall` 承担可疑信号、破坏前后表现与 authoring 合约；同时把 `LevelRuntimeAssistFactory` starter、`LevelValidator` 护栏、`SampleScene` 单房验证切片、以及 `Level_CanonicalSpec` 的现役口径补齐顺序收口成可执行任务。
+- 目的：把“静态几何墙之后下一步做什么”从方向讨论推进到可直接开工的 MVP 计划，确保后续实现围绕探索回报型秘密裂墙展开，而不是回退成泛化 destroyable 拼装或一次性场景特例。
+- 技术：采用“泛化 runtime primitive + 语义外壳 + editor starter + validator guardrail + 单房切片验证”的分层方案；明确不扩 `Room` / `SaveBridge` 主链，不引入新的 `SO` 配置层，先以最小可玩切片验证空间永久改变与探索回报闭环。
+
+## BreakableWall MVP 运行时语义壳与编辑器护栏实装 - 2026-04-18 14:56
+- 新建/修改文件：`Assets/Scripts/Level/Room/DestroyableObject.cs`、`Assets/Scripts/Level/Room/BreakableWall.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/LevelRuntimeAssistFactory.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/LevelValidator.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/BreakableWallTests.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/LevelRuntimeAssistFactoryTests.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/LevelValidatorTests.cs`、`Docs/2_TechnicalDesign/Level/Level_CanonicalSpec.md`、`ProjectArk.Level.csproj`、`ProjectArk.Level.Editor.csproj`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：为 `DestroyableObject` 补上只读销毁状态与 `OnDestroyed` 事件出口，并统一在销毁时关闭碰撞；新增 `BreakableWall` 语义壳，接管秘密裂墙的可疑信号和 intact/destroyed 表现切换，但不重复受击或持久化链。同时在 `LevelRuntimeAssistFactory` / `LevelArchitectWindow` 中加入 `Breakable Wall` starter，在 `LevelValidator` 中补齐根节点、`DestroyableObject` 依赖和 `Collider2D` 约束，并新增对应 EditMode 测试。最后同步更新 `Level_CanonicalSpec` 的 Stateful 口径与工具覆盖说明。
+- 目的：把秘密裂墙从“计划中的特例”推进成 `Level` 模块的官方标准件，让关卡作者可以沿着 `DestroyableObject -> RoomFlagRegistry -> SaveBridge` 现役主链稳定 authoring，而不是继续手拼泛化 destroyable 组合。
+- 技术：采用 TDD（先补 `BreakableWallTests` / `LevelRuntimeAssistFactoryTests` / `LevelValidatorTests` 再实现），运行时沿用 `DestroyableObject` 作为泛化 primitive、`BreakableWall` 作为薄语义外壳，编辑器侧通过 `starter + validator` 建立 authoring 护栏；并通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**。
+
+## BreakableWall Wall Authoring 模块收口与窗口漏画修复 - 2026-04-18 15:40
+- 新建/修改文件：`Assets/Scripts/Level/Editor/LevelArchitect/LevelWallAuthoringModule.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/LevelWallAuthoringModuleTests.cs`、`Assets/Scripts/Level/Editor/LevelArchitect/LevelArchitectWindow.cs`、`Docs/2_TechnicalDesign/Level/Level_CanonicalSpec.md`、`ProjectArk.Level.Editor.csproj`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：定位并修复 `Level Architect` 中 `BreakableWall` 未显示的问题，根因是 `LevelArchitectWindow` 的 `Elements` 按钮绘制分支仍停留在只渲染 `Checkpoint`。在此基础上新增统一的 `LevelWallAuthoringModule`，把 `OuterWalls` / `InnerWalls` 画布与 `BreakableWall` starter 收到同一个 `Wall Authoring` 模块里，并让主 `Quick Edit` 与 detached inspector 都复用同一入口。与此同时，将普通 `Starter Objects` 文案改为非墙体对象入口，避免墙元素再次在两个工作面分裂。
+- 目的：解决 `BreakableWall` 按钮“代码里有 factory、窗口里却看不见”的 authoring 断层，并把所有墙相关工具收口成一个稳定入口，降低关卡作者在静态墙与秘密裂墙之间来回切换的认知成本。
+- 技术：采用“先定位根因，再做最小收口”的策略，不改 `Navigation/Geometry` 与 `Elements` 的运行时 owner，只在编辑器侧新增统一的 `Wall Authoring` 模块，并补 `LevelWallAuthoringModuleTests` 锁定模块构成与创建路由；通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**。
+

@@ -73,6 +73,61 @@ namespace ProjectArk.Level.Editor
             AssertHazardStarter(created.GetComponent<TimedHazard>());
         }
 
+        [Test]
+        public void CreateRoomAssist_CreatesBreakableWallStarterUnderElementsRoot()
+        {
+            var room = CreateRoom("Room_BreakableWall_Starter");
+
+            var created = LevelRuntimeAssistFactory.CreateRoomAssist(
+                room,
+                LevelRuntimeAssistFactory.RoomAssistType.BreakableWall);
+
+            Assert.That(created, Is.Not.Null);
+            Assert.That(created.name, Is.EqualTo("BreakableWall_Room_BreakableWall_Starter"));
+            Assert.That(created.transform.parent, Is.Not.Null);
+            Assert.That(created.transform.parent.name, Is.EqualTo("Elements"));
+            Assert.That(created.GetComponent<BreakableWall>(), Is.Not.Null);
+            Assert.That(created.GetComponent<DestroyableObject>(), Is.Not.Null);
+
+            var collider = created.GetComponent<BoxCollider2D>();
+            Assert.That(collider, Is.Not.Null);
+            Assert.That(collider.isTrigger, Is.False);
+            Assert.That(created.GetComponent<SpriteRenderer>(), Is.Not.Null);
+
+            int wallLayer = LayerMask.NameToLayer("Wall");
+            Assert.That(wallLayer, Is.Not.EqualTo(-1), "Project is missing the Wall layer required by breakable-wall authoring.");
+            Assert.That(created.layer, Is.EqualTo(wallLayer));
+        }
+
+        [Test]
+        public void CreateRoomAssist_CreatesHiddenAreaMaskStarterUnderTriggersRoot()
+        {
+            var room = CreateRoom("Room_HiddenAreaMask_Starter");
+
+            var created = LevelRuntimeAssistFactory.CreateRoomAssist(
+                room,
+                LevelRuntimeAssistFactory.RoomAssistType.HiddenAreaMask);
+
+            Assert.That(created, Is.Not.Null);
+            Assert.That(created.name, Is.EqualTo("HiddenAreaMask_Room_HiddenAreaMask_Starter"));
+            Assert.That(created.transform.parent, Is.Not.Null);
+            Assert.That(created.transform.parent.name, Is.EqualTo("Triggers"));
+
+            var hiddenAreaMask = created.GetComponent<HiddenAreaMask>();
+            Assert.That(hiddenAreaMask, Is.Not.Null);
+
+            var collider = created.GetComponent<BoxCollider2D>();
+            Assert.That(collider, Is.Not.Null);
+            Assert.That(collider.isTrigger, Is.True);
+
+            var serialized = new SerializedObject(hiddenAreaMask);
+            int bits = serialized.FindProperty("_playerLayer").FindPropertyRelative("m_Bits").intValue;
+            Assert.That(bits, Is.Not.EqualTo(0));
+
+            Assert.That(created.transform.Find("Mask_Main"), Is.Not.Null);
+            Assert.That(created.GetComponentsInChildren<SpriteRenderer>(true).Length, Is.GreaterThanOrEqualTo(1));
+        }
+
         private Room CreateRoom(string roomId)
         {
             var roomObject = new GameObject(roomId);

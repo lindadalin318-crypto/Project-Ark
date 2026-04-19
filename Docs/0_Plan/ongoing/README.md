@@ -10,6 +10,7 @@
 - `LevelArchitect_Workbench` 已完成并归档到 `complete/`
 - `2026-04-15-static-geometry-walls-implementation-plan.md` 已完成并归档到 `complete/`
 - `2026-04-15-static-geometry-walls-phase2-implementation-plan.md` 已完成并归档到 `complete/`
+- `2026-04-18-breakable-secret-wall-mvp-implementation-plan.md` 已按功能闭环完成并归档到 `complete/`
 - `Camera_MVP` 已验收完成，并已归档到 `complete/`
 - `ShipVFX_PhaseA` 在迁移核对时确认已完成，因此归档到了 `complete/`
 - 新生成的 implementation plan 默认先落在本目录，完成后再按需要移入 `complete/`

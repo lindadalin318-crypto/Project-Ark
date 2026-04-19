@@ -73,6 +73,7 @@ namespace ProjectArk.Level.Editor
             ValidateCheckpoints();
             ValidateOpenEncounterTriggers();
             ValidateHiddenAreaMasks();
+            ValidateBreakableWalls();
             ValidateBiomeTriggers();
             ValidateScheduledBehaviours();
             ValidateActivationGroups();
@@ -762,6 +763,71 @@ namespace ProjectArk.Level.Editor
             }
         }
 
+        private static void ValidateBreakableWalls()
+        {
+            var breakableWalls = UnityEngine.Object.FindObjectsByType<BreakableWall>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var breakableWall in breakableWalls)
+            {
+                if (breakableWall == null) continue;
+
+                if (breakableWall.GetComponentInParent<Room>() == null)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Warning,
+                        Message = $"BreakableWall '{breakableWall.gameObject.name}' is not nested under a Room.",
+                        TargetObject = breakableWall,
+                        CanAutoFix = false,
+                        FixAction = null
+                    });
+                }
+
+                if (breakableWall.GetComponent<DestroyableObject>() == null)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Error,
+                        Message = $"BreakableWall '{breakableWall.gameObject.name}' is missing DestroyableObject.",
+                        TargetObject = breakableWall,
+                        CanAutoFix = false,
+                        FixAction = null
+                    });
+                }
+
+                if (breakableWall.GetComponent<Collider2D>() == null)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Error,
+                        Message = $"BreakableWall '{breakableWall.gameObject.name}' is missing Collider2D.",
+                        TargetObject = breakableWall,
+                        CanAutoFix = true,
+                        FixAction = () =>
+                        {
+                            Undo.AddComponent<BoxCollider2D>(breakableWall.gameObject);
+                        }
+                    });
+                }
+
+                int wallLayer = LayerMask.NameToLayer("Wall");
+                if (wallLayer >= 0 && breakableWall.gameObject.layer != wallLayer)
+                {
+                    _lastResults.Add(new ValidationResult
+                    {
+                        Severity = Severity.Warning,
+                        Message = $"BreakableWall '{breakableWall.gameObject.name}' should be on Wall layer so environment-hit weapons can target it.",
+                        TargetObject = breakableWall,
+                        CanAutoFix = true,
+                        FixAction = () =>
+                        {
+                            Undo.RecordObject(breakableWall.gameObject, "Fix BreakableWall Layer");
+                            breakableWall.gameObject.layer = wallLayer;
+                        }
+                    });
+                }
+            }
+        }
+
         private static void ValidateBiomeTriggers()
         {
             var biomeTriggers = UnityEngine.Object.FindObjectsByType<BiomeTrigger>(FindObjectsInactive.Include, FindObjectsSortMode.None);
@@ -987,6 +1053,7 @@ namespace ProjectArk.Level.Editor
             ValidatePreferredRoot<Checkpoint>("Checkpoint", "Elements");
             ValidatePreferredRoot<Door>("Door", "Navigation");
             ValidatePreferredRoot<DestroyableObject>("DestroyableObject", "Elements");
+            ValidatePreferredRoot<BreakableWall>("BreakableWall", "Elements");
             ValidatePreferredRoot<OpenEncounterTrigger>("OpenEncounterTrigger", "Encounters");
             ValidatePreferredRoot<BiomeTrigger>("BiomeTrigger", "Triggers");
             ValidatePreferredRoot<HiddenAreaMask>("HiddenAreaMask", "Triggers");
