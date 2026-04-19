@@ -2,7 +2,213 @@
 
 ---
 
+## 程序化表现工作流升级：补立项检查卡并接入 Feature 流程 — 2026-04-19 09:51
+
+### 修改文件
+- `Docs/3_WorkflowsAndRules/Project/ProceduralPresentation_WorkflowSpec.md`
+- `CLAUDE.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 在 `ProceduralPresentation_WorkflowSpec.md` 中新增 **「程序化表现立项检查卡」**，把原本偏完整的说明压缩成一张 1 分钟可用的短卡，方便在日常对话、feature kickoff 与 AI 协作中直接贴用。
+- 将原有的开发期注入模板调整为“短模板优先、详细模板按需补充”的两层结构，降低使用门槛，避免每次一上来就被长模板压住。
+- 在 `CLAUDE.md` 的 **Feature 开发工作流** 中，把程序化表现检查正式嵌入第 2 步 `Scope` 确认：当功能涉及程序化纹理、程序化 mesh、占位 VFX、preview rig 等情形时，必须先完成检查卡，再进入 `Done` 定义与编码。
+
+### 目的
+- 把程序化表现的替换性设计从“建议做”升级为“现有工作流会主动触发”的默认动作，减少后续靠记忆执行的风险。
+- 让团队在日常迭代里既能快速贴卡收口设计，又能在需要时自然进入完整规范，而不是在轻量协作和重型文档之间来回跳。
+
+### 技术
+- 采用“短卡 + 详细模板 + 工作流触发”的三级收口方式：对话层先快收口，文档层保留完整语义，流程层负责强制触发。
+- 保持 `ProceduralPresentation_WorkflowSpec.md` 仍为项目级 workflow 文档，而 `CLAUDE.md` 只负责把触发入口嵌回现役 Feature 主流程。
+
+## 新增程序化表现工作流草案：定义可替换性与注入模板 — 2026-04-18 16:25
+
+
+### 修改文件
+- `Docs/3_WorkflowsAndRules/Project/ProceduralPresentation_WorkflowSpec.md`
+- `Docs/3_WorkflowsAndRules/README.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 新建项目级文档 `ProceduralPresentation_WorkflowSpec.md`，用于统一回答“什么时候先上程序化表现、怎样保证以后能被正式美术低痛替换”。
+- 文档草案收口了程序化表现的适用场景、核心原则、6 个 kickoff 必答问题、推荐最小结构、验收标准，以及可直接复制到 feature kickoff 的注入模板。
+- 同步更新 `Docs/3_WorkflowsAndRules/README.md`，把这份新规范接入现有文档索引，避免它成为“知道有但没人翻”的孤立文档。
+
+### 目的
+- 把程序化表现从“临时口头策略”升级为项目级 workflow 草案，为后续系统化接入 feature 工作流做准备。
+- 确保团队以后在使用程序化美术 / 特效验证手感时，从第一天就显式考虑替换缝、fallback 策略和诊断能力。
+
+### 技术
+- 采用 `3_WorkflowsAndRules/Project/` 作为项目级 authoring / rules 入口，和模块 `CanonicalSpec`、`Implement_rules.md` 分层协作。
+- 文档结构刻意保持短而硬：以问题模板、边界、替换缝和验收清单为核心，不先扩成大而全手册。
+
+## Combat 规则补记：沉淀 EchoWave 可见性排查 tips — 2026-04-18 16:13
+
+
+### 修改文件
+- `Implement_rules.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 将本次 `EchoWaveProceduralPreviewRig` 的真实排查结论沉淀进 `Implement_rules.md` 的 `Combat / Projectile` 章节，而不是只留在实现日志里。
+- 新增一条实现规则，明确要求：凡是战斗侧运行时动态生成 `Texture2D` / `Sprite` 的程序化预览物或占位 VFX，必须验证生成结果存在非零 alpha 像素，禁止出现“对象生成了，但贴图整张透明”的 silent no-op。
+- 新增一条踩坑总结，记录本次真实案例：`SpriteRenderer`、材质、可见性都正常，但 `ring texture` 因错误使用 `Mathf.SmoothStep` 导致 `alphaNZ=0`，正确排查顺序应先读运行时纹理 alpha，再做排序、材质和手感调参。
+- 在验收清单中补充了程序化 sprite 可见性检查项，方便以后做 sample、临时投射物预览、procedural wave 时快速自检。
+
+### 目的
+- 把一次已经踩实的 Combat 可见性坑升级为长期规则，减少未来重复从 sorting、材质、镜头开始盲猜的时间损耗。
+- 让后续排查 `EchoWave`、投射物 preview、程序化占位 VFX 时有固定入口和固定顺序。
+
+### 技术
+- 采用“实现规则 + 踩坑总结 + 验收清单”三段式沉淀方式，把一次性调试结论转成可执行的团队 guardrail。
+- 规则中特别注明 Unity `Mathf.SmoothStep` 与 shader 语义 `smoothstep` 的差异，防止同类 alpha mask bug 再次出现。
+
+## EchoWave 预览样例透明根因修复：纠正 ring texture 的 alpha 生成 — 2026-04-18 16:03
+
+
+### 修改文件
+- `Assets/Scripts/Combat/Samples/EchoWaveProceduralPreviewRig.cs`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 使用 Unity MCP 直接读取运行时 `SpriteRenderer` / `Texture2D` 状态后确认：wave 不可见的根因不是材质丢失，而是程序生成的 `EchoWaveProceduralRing` 纹理本身 `alphaNZ=0`，即整张贴图完全透明。
+- 修复 `CreateRingTexture(...)` 的 mask 计算：此前错误地把 Unity 的 `Mathf.SmoothStep(from, to, t)` 当成 `smoothstep(edge0, edge1, x)` 阈值函数来使用，导致 alpha 计算失真并在当前参数下落成全透明；现在改为 `Mathf.InverseLerp + Mathf.SmoothStep(0,1,t)` 的归一化写法。
+- 为 `EnsureRingSprite()` 增加非零 alpha 守卫：若未来再次生成全透明 ring texture，会直接输出错误日志，而不是继续静默生成“存在但看不见”的 wave sprite。
+
+### 目的
+- 彻底修复“中心点可见但 wave 完全不可见”的真实根因，恢复独立 EchoWave 样例作为可视化验证工具的基本可信度。
+- 给后续继续调节速度、轮廓宽度和颜色提供一个真正会出图的程序化底座，避免继续在错误渲染结果上做手感调参。
+
+### 技术
+- 结合 Unity MCP 的运行时纹理 alpha 检查与脚本实现比对，定位为程序化贴图生成逻辑 bug，而非单纯材质/排序问题。
+- 采用“归一化 mask + 透明守卫日志”的方式增强程序化 VFX 样例的可诊断性与抗回归能力。
+
+## EchoWave 预览样例手感再调：扩散降速并显著加厚轮廓 — 2026-04-18 15:56
+
+
+### 修改文件
+- `Assets/Scripts/Combat/Samples/EchoWaveProceduralPreviewRig.cs`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 将 `EchoWaveProceduralPreviewRig` 的默认扩散速度从 `5.5` 下调到 `1.83`，把占位波的扩散节奏放慢到原来的约三分之一，避免波圈在当前镜头尺度下“一闪而过”难以读清。
+- 将波环默认轮廓显著加厚：把 `_innerFill` 从 `0.62` 调整到 `0.20`，并把 `_edgeSoftness` 从 `0.08` 提到 `0.12`，让程序化波纹从“较薄细环”变成更厚、更容易在 `Game View` 中识别的占位轮廓。
+
+### 目的
+- 响应当前实机观察到的两个直接问题：扩散太快，以及轮廓太细，优先提升独立 sample 的可读性与停留感。
+- 继续把这套 sample 作为“先验证读感、再定正式美术”的临时试验台，而不是追求精细资产表现。
+
+### 技术
+- 通过调整程序化波纹的默认 authoring 参数（扩散速度、内径切空比例、边缘软化）直接改变运行时视觉节奏，不引入新的运行逻辑分支。
+- 保持该样例仍为独立的纯程序化 `SpriteRenderer` 方案，可随时删除回滚。
+
+## EchoWave 预览样例编译回归修复：补齐 `fillOpacity` 字段与调用点 — 2026-04-18 15:47
+
+
+### 修改文件
+- `Assets/Scripts/Combat/Samples/EchoWaveProceduralPreviewRig.cs`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 修复 `EchoWaveProceduralPreviewRig` 在可读性强化后出现的签名不同步问题：`CreateRingTexture(...)` 已升级为包含 `fillOpacity` 的四参数版本，但字段区与调用点未完整同步，导致 `CS7036` 编译错误。
+- 补回 `_fillOpacity` 配置字段、Inspector 范围约束与调用点传参，同时恢复更适合占位验证的默认视觉参数（更高 sorting order 与更醒目的波色），使程序化 sample 回到可编译、可见、可继续调参的状态。
+
+### 目的
+- 先消除当前阻断 Unity 编译的硬错误，恢复 EchoWave 独立预览样例的可运行性。
+- 避免 sample 处于“日志写了增强、代码却半落地”的不一致状态，降低后续继续排查可见性时的噪音。
+
+### 技术
+- 采用“字段定义 / OnValidate 约束 / 调用点传参”三处同步补齐的方式收口签名变更，避免只修单点再次留下半完成状态。
+- 保持该样例仍为纯程序化 `SpriteRenderer` 方案，不接入正式战斗链或新增资产依赖。
+
+## EchoWave 预览样例可读性强化：确认波环已渲染并提升默认对比度 — 2026-04-18 15:35
+
+
+### 修改文件
+- `Assets/Scripts/Combat/Samples/EchoWaveProceduralPreviewRig.cs`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 使用 Unity MCP 实时确认独立样例的波环对象已经在场景中生成并被 `SpriteRenderer` 渲染：运行中的 `EchoWavePreview_*` 子物体存在，`isVisible=true`，说明此前问题不是“没生成”，而是默认视觉参数在当前场景中不够醒目。
+- 将 sample 的默认波环排序层级提高到 `200`，并把 `innerFill / edgeSoftness / waveColor` 调整为更适合占位验证的高对比版本（更厚、更亮、更偏洋红），降低在复杂背景中被忽略的概率。
+- 为程序化波纹纹理增加一层低透明度填充（`_fillOpacity`），把原本纯空心细环升级为“强边缘 + 弱填充”的占位声波，以更快验证范围感和可读性。
+
+### 目的
+- 既然已经确认 wave 在运行时存在，就优先让它在 `Game View` 中“先能被一眼看见”，而不是继续把时间花在怀疑生成链是否失效上。
+- 让这套 sample 更贴合项目当前“先验证玩法和读感，后做正式美术”的工作节奏。
+
+### 技术
+- 结合 Unity MCP 的运行时对象检查与 `SpriteRenderer` 可见性数据做根因判断，而不是仅凭 Scene/Game 肉眼对比猜测问题位置。
+- 采用“提高排序优先级 + 提升默认对比度 + 增加弱填充”的程序化占位 VFX 调整策略，专门服务当前快速验证阶段。
+
+## EchoWave 预览样例诊断强化：修正 SpawnOrigin 误判并加入中心标记 — 2026-04-18 15:28
+
+### 修改文件
+- `Assets/Scripts/Combat/Samples/EchoWaveProceduralPreviewRig.cs`
+- `Assets/Scripts/Combat/Editor/EchoWaveProceduralPreviewMenu.cs`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 重写 `EchoWaveProceduralPreviewRig` 的缺省生成点判定：将 `Reset()` 改为不再把 `_spawnOrigin` 默认写成 `transform`，并引入 `HasExplicitSpawnOrigin`，避免“未显式指定生成点”被误判成“已指定”，导致主相机对齐逻辑静默失效。
+- 为 sample 增加运行时预览材质查找与回退（优先 `Universal Render Pipeline/2D/Sprite-Unlit-Default`，再退到 `Sprite-Lit-Default` / `Sprites/Default`），降低当前渲染链下 `SpriteRenderer` 默认材质不可见的风险。
+- 增加亮粉色 `Center Marker`、启动时的 `[EchoWavePreview] Ready...` 诊断日志，以及菜单创建时更明确的可见性提示，用于快速区分“对象没生成 / 生成了但没渲染 / 生成位置不对”三类问题。
+
+### 目的
+- 把独立 EchoWave 占位样例从“只能凭肉眼猜为什么看不到”升级为“自己就能暴露相机、生成点和材质状态”的诊断工具，缩短 Unity 场景验证回路。
+- 保持这套 sample 继续独立、可删，不接入现役战斗资产链，也不污染 prefab / SO / 正式 VFX 资源。
+
+### 技术
+- 采用“显式 SpawnOrigin 才视为手动锚点”的缺省语义修正，避免 `Reset()` 带来的 authoring 误导。
+- 采用“相机优先定位 + 运行时材质回退 + 中心标记 + 诊断日志”的最小调试闭环，专门服务当前程序化占位特效验证。
+
+## EchoWave 预览样例可见性修复：默认贴到主相机视野中心 — 2026-04-18 15:21
+
+
+### 修改文件
+- `Assets/Scripts/Combat/Samples/EchoWaveProceduralPreviewRig.cs`
+- `Assets/Scripts/Combat/Editor/EchoWaveProceduralPreviewMenu.cs`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 为 `EchoWaveProceduralPreviewRig` 增加 `_snapToMainCameraOnPlay` 与 `_spawnPlaneZ`，当未显式指定 `Spawn Origin` 时，在 Play Mode 开始时自动把预览 rig 放到 `MainCamera` 视野中心，再生成程序化声波圈。
+- 调整 `EchoWaveProceduralPreviewMenu` 的创建逻辑，使新建 sample rig 时优先落在主相机当前视野中心，而不是固定生成在世界原点。
+- 同步更新菜单提示文案，明确这套样例默认会对齐到 `MainCamera` 可见区域，减少“Scene View 看得到、Game View 看不到”的使用误解。
+
+### 目的
+- 修复独立 EchoWave 占位样例在不少场景里只能在 `Scene View` 看到而 `Game View` 不可见的问题，确保样例真正满足“创建后立刻进 Play Mode 就能看效果”的快速验证目标。
+- 保持样例继续独立、可删，不因为提高可见性而接入现役战斗链或污染其他资产。
+
+### 技术
+- 采用 `Camera.main.ViewportToWorldPoint` 将样例默认生成点映射到主相机视野中心。
+- 继续保持“显式 `Spawn Origin` 优先，缺省时自动对齐主相机”的轻量 sample 策略。
+
+## 新增独立的程序化 EchoWave 预览样例 — 2026-04-18 14:38
+
+
+### 新建文件
+- `Assets/Scripts/Combat/Samples/EchoWaveProceduralPreviewRig.cs`
+- `Assets/Scripts/Combat/Editor/EchoWaveProceduralPreviewMenu.cs`
+
+### 修改文件
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 新增 `EchoWaveProceduralPreviewRig`，作为完全独立于现有 `EchoWave` / `StarChart` / prefab / SO 资产链的程序化占位样例：运行时动态生成空心圆环纹理，通过 `SpriteRenderer` 循环播放“不断放大的声波圈”视觉，并支持直接在 Inspector 调整初始半径、扩张速度、生命周期、环厚、软边、颜色与淡出曲线。
+- 新增 `ProjectArk/Combat/Samples/Create Procedural EchoWave Preview Rig` 与对应清理菜单，允许在当前场景一键创建 / 删除 sample rig，不创建任何 prefab、材质、贴图或 ScriptableObject 资产。
+- 为 `Spawn Preview Wave` 的 `ContextMenu` 增加 Play Mode 限制，避免误在编辑态生成残留子物体，确保本测试件适合作为“看完就删”的临时预览工具。
+
+### 目的
+- 给当前“先验证玩法和可读性、后做正式美术”的阶段提供一个真正低成本的声波特效试验台，让团队先看到 EchoWave 占位效果，再决定是否并入现役战斗链。
+- 保持测试样例与现有生产资产完全隔离，避免因为一次占位试验污染 prefab、场景 authoring 或现役 `EchoWave` 逻辑。
+
+### 技术
+- 采用纯程序化 `SpriteRenderer` 圆环方案：运行时生成 ring texture，不依赖外部素材文件。
+- 采用“runtime sample rig + editor menu”双层结构：场景测试快，删除回滚也快，不引入新的主链依赖。
+
+
 ## 收口 Project Plan 中的 Level 活跃项与候选项完成态 — 2026-04-18 14:02
+
 
 ### 修改文件
 - `Docs/0_Plan/Project_Plan.md`

@@ -17,9 +17,11 @@
 - [`LevelArchitect/`](./LevelArchitect/): `Level Architect` 相关 workflow 与作者体验规则
 - `ShipVFX/`: Ship / VFX 工作流与治理规则预留目录
 - `DocsGovernance/`: 文档治理规则预留目录
-- `Project/`: 项目级 workflow / rules 预留目录
+- [`Project/`](./Project/): 项目级 workflow / rules
 
 ## 当前重点文档
 
 - [`LevelArchitect/Level_WorkflowSpec.md`](./LevelArchitect/Level_WorkflowSpec.md)
+- [`Project/ProceduralPresentation_WorkflowSpec.md`](./Project/ProceduralPresentation_WorkflowSpec.md)
 - [`../Implement_rules.md`](../Implement_rules.md) — 根目录例外入口，仍视为本体系的一部分
+

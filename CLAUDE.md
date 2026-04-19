@@ -352,6 +352,7 @@ Assets/
 ```
 1. 理解 Why    → 阅读 GDD 对应章节，理解设计意图
 2. 确认 Scope  → Goal / Scope / Architecture 三点确认
+   ↳ 若功能涉及程序化美术 / 程序化特效 / 临时占位可视化，必须先完成「程序化表现立项检查卡」
 3. 定义 Done   → 列出 3-5 条验收标准（必须包含架构质量项）
 4. 架构速写    → 产出「模块架构速写」（⚠️ 强制产出物，见下方详细规则）
 5. MVP 拆分    → 功能范围小但架构完整的最小可玩版本 + 未来增强
@@ -361,9 +362,27 @@ Assets/
 9. 记录日志    → 追加 ImplementationLog.md（⚠️ 严格执行，见下方详细规则）
 ```
 
+### 程序化表现立项检查（嵌入第 2 步 Scope 确认）
+
+当新功能包含以下任一项时，视为**必须触发**：
+
+- 程序生成的 `Texture2D` / `Sprite` / `Mesh`
+- `TrailRenderer` / `LineRenderer` / 程序化几何 / 占位 VFX
+- 为了快速验证手感而加入的独立 preview rig / sample / placeholder visual
+
+执行方式：
+
+1. 打开 `Docs/3_WorkflowsAndRules/Project/ProceduralPresentation_WorkflowSpec.md`
+2. 先填写第 `4.1` 节 **「程序化表现立项检查卡」**
+3. 若仍有实现语义未收口，再补第 `8.2` 节详细模板
+4. 只有在“替换缝 / fallback 策略 / gameplay 输入参数”三者都说清后，才进入 Done 定义与编码
+
+> **目标不是阻止使用程序化表现，而是从第一天起确保它可替换。**
+
 > **⚠️ 第 4 步"架构速写"是强制步骤，不可跳过。** 每次开发新模块或新子系统（≥2 个新脚本）时，必须在编码前产出架构速写文档。详细规则见下方「模块架构速写」章节。
 >
 > **⚠️ 第 9 步"记录日志"是强制步骤，不可跳过。** 每次创建、修改、删除文件后，必须在结束当前回合前将变更追加到 `Docs/5_ImplementationLog/ImplementationLog.md`。详细规则见本文档底部"实现日志"章节。
+
 
 ### 模块架构速写 (Module Architecture Brief)
 

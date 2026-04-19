@@ -936,12 +936,24 @@ Level 关键链路缺引用时，禁止静默 return：
 - **根因**：同 Layer 投射物默认仍在互相检测，项目设置和代码过滤至少有一层缺失。
 - **防御**：碰撞矩阵关闭 `PlayerProjectile` 自碰撞；代码层继续做 Layer 过滤，不把安全性只押在配置表上。
 
+#### 11.4.2 程序化波纹对象存在，但 `Sprite` 实际全透明
+
+- **现象**：`EchoWavePreview_*` 这类运行时对象已经生成，`SpriteRenderer` 也 enabled，甚至中心 marker 可见，但真正的波环完全看不到，容易被误诊为 sorting、材质或镜头问题。
+- **根因**：程序化 `Texture2D` 的 alpha mask 算错，导致生成出来的 ring texture `alphaNZ=0`；本次真实案例中，是把 Unity 的 `Mathf.SmoothStep(from, to, t)` 误当成阈值版 `smoothstep(edge0, edge1, x)` 使用，最终整张波环贴图完全透明。
+- **防御**：先做运行时纹理验证，再做美术调参。排查顺序固定为：
+  1. 确认运行时对象和 `SpriteRenderer` 确实存在
+  2. 直接读取 `sprite.texture` 的 alpha 分布（例如统计 `alphaNZ`）
+  3. 只有在纹理本身有非零 alpha 后，才继续调 sorting、颜色、线宽、扩散速度
+  4. 对程序化生成函数增加“全透明即报错”的守卫，避免 silent no-op
+
 ### 11.5 验收清单
 
 1. 相关 Physics2D 查询是否用了显式 `LayerMask`？
 2. `PlayerProjectile` / `EnemyProjectile` 等层对是否在碰撞矩阵中配置正确？
 3. 代码层是否仍保留了必要的 Layer 过滤？
 4. 新增投射物家族时，是否同步检查了层与碰撞语义？
+5. 若新增了程序化 `Texture2D` / `Sprite` 预览物，是否验证过它不是“对象存在但整张贴图全透明”？
+
 
 ---
 
