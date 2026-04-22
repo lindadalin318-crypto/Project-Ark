@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using ProjectArk.Core;
+using ProjectArk.Core.Save;
 using ProjectArk.SpaceLife.Data;
 using UnityEngine;
 
@@ -12,60 +13,64 @@ namespace ProjectArk.SpaceLife
         [Serializable]
         public class NPCRelationship
         {
-            public NPCDataSO npcData;
-            public int relationshipValue;
+            public string NpcId;
+            public int RelationshipValue;
         }
 
+        [Header("Save")]
+        [SerializeField] private int _saveSlot = 0;
+
         [Header("Data")]
-        [SerializeField] private List<NPCRelationship> _relationships = new List<NPCRelationship>();
+        [SerializeField] private List<NPCRelationship> _relationships = new();
 
         public event Action<NPCDataSO, int> OnRelationshipChanged;
 
+        private readonly Dictionary<string, NPCRelationship> _relationshipsByNpcId = new(StringComparer.Ordinal);
+        private bool _hasLoadedFromSave;
+
         private void Awake()
         {
+            RebuildLookupFromList();
             ServiceLocator.Register(this);
+        }
+
+        public bool HasRelationshipRecord(NPCDataSO npcData)
+        {
+            EnsureLoadedFromSave();
+            string npcId = ResolveNpcId(npcData);
+            return !string.IsNullOrWhiteSpace(npcId) && _relationshipsByNpcId.ContainsKey(npcId);
         }
 
         public int GetRelationship(NPCDataSO npcData)
         {
-            foreach (var relationship in _relationships)
+            EnsureLoadedFromSave();
+            string npcId = ResolveNpcId(npcData);
+            if (string.IsNullOrWhiteSpace(npcId))
             {
-                if (relationship.npcData == npcData)
-                {
-                    return relationship.relationshipValue;
-                }
+                return 0;
             }
 
-            if (npcData != null)
+            if (_relationshipsByNpcId.TryGetValue(npcId, out NPCRelationship relationship))
             {
-                return npcData.StartingRelationship;
+                return relationship.RelationshipValue;
             }
 
-            return 0;
+            return npcData != null ? npcData.StartingRelationship : 0;
         }
 
         public void SetRelationship(NPCDataSO npcData, int value)
         {
-            if (npcData == null) return;
-
-            value = Mathf.Clamp(value, 0, 100);
-
-            foreach (var relationship in _relationships)
+            EnsureLoadedFromSave();
+            string npcId = ResolveNpcId(npcData);
+            if (string.IsNullOrWhiteSpace(npcId))
             {
-                if (relationship.npcData == npcData)
-                {
-                    relationship.relationshipValue = value;
-                    OnRelationshipChanged?.Invoke(npcData, value);
-                    return;
-                }
+                return;
             }
 
-            _relationships.Add(new NPCRelationship
-            {
-                npcData = npcData,
-                relationshipValue = value
-            });
+            value = Mathf.Clamp(value, 0, 100);
+            GetOrCreateRelationship(npcId).RelationshipValue = value;
 
+            PersistCurrentRelationships();
             OnRelationshipChanged?.Invoke(npcData, value);
         }
 
@@ -73,6 +78,60 @@ namespace ProjectArk.SpaceLife
         {
             int currentValue = GetRelationship(npcData);
             SetRelationship(npcData, currentValue + delta);
+        }
+
+        public void LoadFromSave()
+        {
+            LoadFromSaveData(SaveManager.Load(_saveSlot));
+        }
+
+        public void LoadFromSaveData(PlayerSaveData data)
+        {
+            _relationships.Clear();
+            _relationshipsByNpcId.Clear();
+
+            List<RelationshipValueSaveData> savedValues = data?.Progress?.RelationshipValues;
+            if (savedValues != null)
+            {
+                for (int i = 0; i < savedValues.Count; i++)
+                {
+                    RelationshipValueSaveData entry = savedValues[i];
+                    if (entry == null || string.IsNullOrWhiteSpace(entry.NpcId))
+                    {
+                        continue;
+                    }
+
+                    GetOrCreateRelationship(entry.NpcId).RelationshipValue = Mathf.Clamp(entry.Value, 0, 100);
+                }
+            }
+
+            _hasLoadedFromSave = true;
+        }
+
+        public void SaveToSaveData(PlayerSaveData data)
+        {
+            EnsureLoadedFromSave();
+            if (data == null)
+            {
+                return;
+            }
+
+            data.Progress ??= new ProgressSaveData();
+            data.Progress.RelationshipValues ??= new List<RelationshipValueSaveData>();
+            data.Progress.RelationshipValues.Clear();
+
+            for (int i = 0; i < _relationships.Count; i++)
+            {
+                NPCRelationship relationship = _relationships[i];
+                if (relationship == null || string.IsNullOrWhiteSpace(relationship.NpcId))
+                {
+                    continue;
+                }
+
+                data.Progress.RelationshipValues.Add(new RelationshipValueSaveData(
+                    relationship.NpcId,
+                    Mathf.Clamp(relationship.RelationshipValue, 0, 100)));
+            }
         }
 
         public RelationshipLevel GetRelationshipLevel(NPCDataSO npcData)
@@ -124,6 +183,86 @@ namespace ProjectArk.SpaceLife
             }
 
             return Mathf.InverseLerp(minValue, maxValue, value);
+        }
+
+        private void EnsureLoadedFromSave()
+        {
+            if (_hasLoadedFromSave)
+            {
+                return;
+            }
+
+            LoadFromSave();
+        }
+
+        private void PersistCurrentRelationships()
+        {
+            var data = SaveManager.Load(_saveSlot) ?? new PlayerSaveData();
+            SaveToSaveData(data);
+            SaveManager.Save(data, _saveSlot);
+        }
+
+        private NPCRelationship GetOrCreateRelationship(string npcId)
+        {
+            if (_relationshipsByNpcId.TryGetValue(npcId, out NPCRelationship relationship))
+            {
+                return relationship;
+            }
+
+            relationship = new NPCRelationship
+            {
+                NpcId = npcId,
+                RelationshipValue = 0,
+            };
+
+            _relationships.Add(relationship);
+            _relationshipsByNpcId.Add(npcId, relationship);
+            return relationship;
+        }
+
+        private void RebuildLookupFromList()
+        {
+            _relationshipsByNpcId.Clear();
+
+            var normalized = new List<NPCRelationship>();
+            for (int i = 0; i < _relationships.Count; i++)
+            {
+                NPCRelationship relationship = _relationships[i];
+                if (relationship == null || string.IsNullOrWhiteSpace(relationship.NpcId))
+                {
+                    continue;
+                }
+
+                if (_relationshipsByNpcId.TryGetValue(relationship.NpcId, out NPCRelationship existing))
+                {
+                    existing.RelationshipValue = Mathf.Clamp(relationship.RelationshipValue, 0, 100);
+                    continue;
+                }
+
+                relationship.RelationshipValue = Mathf.Clamp(relationship.RelationshipValue, 0, 100);
+                _relationshipsByNpcId.Add(relationship.NpcId, relationship);
+                normalized.Add(relationship);
+            }
+
+            _relationships.Clear();
+            _relationships.AddRange(normalized);
+        }
+
+        private static string ResolveNpcId(NPCDataSO npcData)
+        {
+            if (npcData == null)
+            {
+                return string.Empty;
+            }
+
+            string npcId = npcData.NpcId;
+            if (string.IsNullOrWhiteSpace(npcId))
+            {
+                Debug.LogError($"[RelationshipManager] NPC '{npcData.name}' is missing NpcId.", npcData);
+                return string.Empty;
+            }
+
+            return npcId;
         }
 
         private void OnDestroy()

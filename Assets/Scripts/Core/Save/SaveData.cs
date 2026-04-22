@@ -179,6 +179,26 @@ namespace ProjectArk.Core.Save
 
         /// <summary> Generic key-value flags for quest/story state. </summary>
         public List<SaveFlag> Flags = new();
+
+        /// <summary> Persistent relationship values keyed by stable NPC ids. </summary>
+        public List<RelationshipValueSaveData> RelationshipValues = new();
+    }
+
+    /// <summary>
+    /// Serializable relationship value entry for a single NPC.
+    /// </summary>
+    [Serializable]
+    public class RelationshipValueSaveData
+    {
+        public string NpcId;
+        public int Value;
+
+        public RelationshipValueSaveData() { }
+        public RelationshipValueSaveData(string npcId, int value)
+        {
+            NpcId = npcId;
+            Value = value;
+        }
     }
 
     /// <summary>

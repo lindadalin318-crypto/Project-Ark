@@ -1,0 +1,24 @@
+{
+    "name": "ProjectArk.SpaceLife.Tests",
+    "rootNamespace": "ProjectArk.SpaceLife.Tests",
+    "references": [
+        "ProjectArk.SpaceLife",
+        "ProjectArk.Core",
+        "ProjectArk.Level",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

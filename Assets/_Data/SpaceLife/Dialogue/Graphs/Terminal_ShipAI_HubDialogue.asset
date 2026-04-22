@@ -1,0 +1,86 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d50eb6fd8e43426690f1e920232533b, type: 3}
+  m_Name: Terminal_ShipAI_HubDialogue
+  m_EditorClassIdentifier: ProjectArk.SpaceLife::ProjectArk.SpaceLife.Dialogue.DialogueGraphSO
+  _graphId: graph_ship_ai_terminal
+  _ownerId: ship_ai_terminal
+  _ownerType: 1
+  _entryRules:
+  - _entryNodeId: ship_ai_stage_one
+    _priority: 10
+    _conditions:
+    - _conditionType: 0
+      _compareOp: 3
+      _intValue: 1
+      _flagKey: 
+  - _entryNodeId: ship_ai_default
+    _priority: 0
+    _conditions: []
+  _nodes:
+  - _nodeId: ship_ai_default
+    _nodeType: 1
+    _speakerName: "\u8230\u8F7D AI"
+    _rawText: "\u8230\u6865\u65E5\u5FD7\u540C\u6B65\u5B8C\u6210\u3002\u5F53\u524D\u4EC5\u5F00\u653E\u57FA\u7840\u7EF4\u62A4\u63A5\u53E3\uFF1B\u66F4\u6DF1\u5C42\u60C5\u62A5\u4ECD\u53D7\u822A\u7A0B\u9636\u6BB5\u9650\u5236\u3002"
+    _nextNodeId: 
+    _choices:
+    - _choiceId: ship_ai_upgrade
+      _rawText: "\u8BF7\u6C42\u5347\u7EA7\u63A5\u53E3\u3002"
+      _conditions: []
+      _nextNodeId: 
+      _effects: []
+      _exitType: 2
+      _exitPayload: sample_upgrade_console
+    - _choiceId: ship_ai_locked_intel
+      _rawText: "\u4E3A\u4EC0\u4E48\u60C5\u62A5\u8FD8\u9501\u7740\uFF1F"
+      _conditions: []
+      _nextNodeId: ship_ai_locked_reply
+      _effects: []
+      _exitType: 0
+      _exitPayload: 
+    _effects: []
+  - _nodeId: ship_ai_locked_reply
+    _nodeType: 1
+    _speakerName: "\u8230\u8F7D AI"
+    _rawText: "\u6761\u4EF6\u672A\u6EE1\u8DB3\uFF1AWorldStage < 1\u3002\u6309 F7
+      \u53EF\u628A\u6837\u677F\u5B58\u6863\u5199\u5230\u9636\u6BB5 1\uFF0C\u518D\u56DE\u6765\u91CD\u65B0\u8BFB\u53D6\u7EC8\u7AEF\u3002"
+    _nextNodeId: 
+    _choices: []
+    _effects: []
+  - _nodeId: ship_ai_stage_one
+    _nodeType: 1
+    _speakerName: "\u8230\u8F7D AI"
+    _rawText: "\u68C0\u6D4B\u5230\u65B0\u7684\u822A\u7A0B\u9636\u6BB5\u3002\u989D\u5916\u60C5\u62A5\u7F13\u5B58\u4E0E\u5347\u7EA7\u5DE5\u4F4D\u5DF2\u7ECF\u89E3\u9501\u3002"
+    _nextNodeId: 
+    _choices:
+    - _choiceId: ship_ai_open_intel
+      _rawText: "\u8BFB\u53D6\u65B0\u60C5\u62A5\u3002"
+      _conditions: []
+      _nextNodeId: 
+      _effects: []
+      _exitType: 3
+      _exitPayload: sample_stage1_intel
+    - _choiceId: ship_ai_open_upgrade
+      _rawText: "\u6253\u5F00\u5347\u7EA7\u63A5\u53E3\u3002"
+      _conditions: []
+      _nextNodeId: 
+      _effects: []
+      _exitType: 2
+      _exitPayload: sample_upgrade_console
+    - _choiceId: ship_ai_sync_relationship_event
+      _rawText: "\u8BB0\u5F55\u8FD9\u6B21\u540C\u6B65\u3002"
+      _conditions: []
+      _nextNodeId: 
+      _effects: []
+      _exitType: 4
+      _exitPayload: ship_ai_sync_complete
+    _effects: []

@@ -1,4 +1,3 @@
-
 using System;
 using ProjectArk.Core;
 using ProjectArk.SpaceLife.Data;
@@ -9,8 +8,11 @@ namespace ProjectArk.SpaceLife
 {
     public class GiftUI : MonoBehaviour
     {
-        [Header("UI Elements")]
+        [Header("UI Root")]
         [SerializeField] private GameObject _giftPanel;
+        [SerializeField] private CanvasGroup _giftCanvasGroup;
+
+        [Header("UI Elements")]
         [SerializeField] private Transform _itemsContainer;
         [SerializeField] private GameObject _itemButtonPrefab;
         [SerializeField] private Text _npcNameText;
@@ -20,45 +22,99 @@ namespace ProjectArk.SpaceLife
         private GiftInventory _giftInventory;
 
         public event Action OnGiftGiven;
+        public event Action OnGiftClosed;
+
+        public bool IsVisible => _giftCanvasGroup != null && _giftCanvasGroup.alpha > 0.001f;
 
         private void Awake()
         {
+            EnsurePanelObjectIsActive();
+            ResolveCanvasGroup();
+            ApplyVisibility(false);
             ServiceLocator.Register(this);
         }
 
         private void Start()
         {
             _giftInventory = ServiceLocator.Get<GiftInventory>();
-            
-            if (_giftPanel != null)
-                _giftPanel.SetActive(false);
 
             if (_closeButton != null)
+            {
                 _closeButton.onClick.AddListener(CloseUI);
+            }
         }
 
         public void ShowGiftUI(NPCController npc)
         {
-            if (npc == null) return;
+            if (npc == null)
+            {
+                Debug.LogError("[GiftUI] Cannot open gift UI without an NPC context.");
+                return;
+            }
 
             _currentNPC = npc;
 
             if (_npcNameText != null)
+            {
                 _npcNameText.text = $"送礼物给 {npc.NPCName}";
+            }
 
-            if (_giftPanel != null)
-                _giftPanel.SetActive(true);
-
+            ApplyVisibility(true);
             RefreshItems();
+        }
+
+        public void GiveGift(NPCController npc, ItemSO gift)
+        {
+            if (npc == null || gift == null)
+            {
+                return;
+            }
+
+            if (_giftInventory == null)
+            {
+                Debug.LogError("[GiftUI] GiftInventory service is missing.");
+                return;
+            }
+
+            int relationshipChange = CalculateGiftValue(npc, gift);
+            if (_giftInventory.RemoveItem(gift))
+            {
+                npc.ChangeRelationship(relationshipChange);
+                Debug.Log($"[GiftUI] Gave {gift.ItemName} to {npc.NPCName}. +{relationshipChange} relationship");
+
+                OnGiftGiven?.Invoke();
+                CloseUI();
+            }
+        }
+
+        public void CloseUI()
+        {
+            bool wasVisible = IsVisible;
+            ApplyVisibility(false);
+            ClearItems();
+            _currentNPC = null;
+
+            if (_npcNameText != null)
+            {
+                _npcNameText.text = string.Empty;
+            }
+
+            if (wasVisible)
+            {
+                OnGiftClosed?.Invoke();
+            }
         }
 
         private void RefreshItems()
         {
             ClearItems();
 
-            if (_giftInventory == null) return;
+            if (_giftInventory == null)
+            {
+                return;
+            }
 
-            foreach (var item in _giftInventory.Items)
+            foreach (ItemSO item in _giftInventory.Items)
             {
                 CreateItemButton(item);
             }
@@ -66,22 +122,28 @@ namespace ProjectArk.SpaceLife
 
         private void ClearItems()
         {
-            if (_itemsContainer == null) return;
-
-            foreach (Transform child in _itemsContainer)
+            if (_itemsContainer == null)
             {
-                Destroy(child.gameObject);
+                return;
+            }
+
+            for (int i = _itemsContainer.childCount - 1; i >= 0; i--)
+            {
+                Destroy(_itemsContainer.GetChild(i).gameObject);
             }
         }
 
         private void CreateItemButton(ItemSO item)
         {
-            if (_itemButtonPrefab == null || _itemsContainer == null) return;
+            if (_itemButtonPrefab == null || _itemsContainer == null || item == null)
+            {
+                return;
+            }
 
-            GameObject buttonObj = Instantiate(_itemButtonPrefab, _itemsContainer);
-            Button button = buttonObj.GetComponent<Button>();
-            Text buttonText = buttonObj.GetComponentInChildren<Text>();
-            Image buttonImage = buttonObj.GetComponent<Image>();
+            GameObject buttonObject = Instantiate(_itemButtonPrefab, _itemsContainer);
+            Button button = buttonObject.GetComponent<Button>();
+            Text buttonText = buttonObject.GetComponentInChildren<Text>();
+            Image buttonImage = buttonObject.GetComponent<Image>();
 
             if (buttonText != null)
             {
@@ -101,26 +163,12 @@ namespace ProjectArk.SpaceLife
 
         private void OnItemSelected(ItemSO item)
         {
-            if (_currentNPC == null || item == null) return;
+            if (_currentNPC == null || item == null)
+            {
+                return;
+            }
 
             GiveGift(_currentNPC, item);
-        }
-
-        public void GiveGift(NPCController npc, ItemSO gift)
-        {
-            if (npc == null || gift == null) return;
-            if (_giftInventory == null) return;
-
-            int relationshipChange = CalculateGiftValue(npc, gift);
-
-            if (_giftInventory.RemoveItem(gift))
-            {
-                npc.ChangeRelationship(relationshipChange);
-                Debug.Log($"[GiftUI] Gave {gift.ItemName} to {npc.NPCName}. +{relationshipChange} relationship");
-
-                OnGiftGiven?.Invoke();
-                CloseUI();
-            }
         }
 
         private int CalculateGiftValue(NPCController npc, ItemSO gift)
@@ -131,7 +179,8 @@ namespace ProjectArk.SpaceLife
             {
                 return baseValue + 10;
             }
-            else if (npc.IsDislikedGift(gift))
+
+            if (npc.IsDislikedGift(gift))
             {
                 return -Mathf.Abs(baseValue) - 5;
             }
@@ -139,23 +188,61 @@ namespace ProjectArk.SpaceLife
             return baseValue;
         }
 
-        public void CloseUI()
+        private void ApplyVisibility(bool isVisible)
         {
-            if (_giftPanel != null)
-                _giftPanel.SetActive(false);
+            if (_giftCanvasGroup == null)
+            {
+                return;
+            }
 
-            _currentNPC = null;
+            _giftCanvasGroup.alpha = isVisible ? 1f : 0f;
+            _giftCanvasGroup.interactable = isVisible;
+            _giftCanvasGroup.blocksRaycasts = isVisible;
+        }
+
+        private void ResolveCanvasGroup()
+        {
+            if (_giftCanvasGroup != null)
+            {
+                return;
+            }
+
+            if (_giftPanel != null)
+            {
+                _giftCanvasGroup = _giftPanel.GetComponent<CanvasGroup>();
+            }
+
+            if (_giftCanvasGroup == null)
+            {
+                _giftCanvasGroup = GetComponent<CanvasGroup>();
+            }
+
+            if (_giftCanvasGroup == null)
+            {
+                Debug.LogError("[GiftUI] Missing CanvasGroup. Assign one on the gift panel root and keep the GameObject active.", this);
+            }
+        }
+
+        private void EnsurePanelObjectIsActive()
+        {
+            if (_giftPanel != null && !_giftPanel.activeSelf)
+            {
+                Debug.LogWarning("[GiftUI] Gift panel GameObject was inactive. Reactivating it so CanvasGroup visibility can work; please save the scene with the panel left active.", this);
+                _giftPanel.SetActive(true);
+            }
         }
 
         private void OnDestroy()
         {
             OnGiftGiven = null;
-            
+            OnGiftClosed = null;
+
             if (_closeButton != null)
+            {
                 _closeButton.onClick.RemoveListener(CloseUI);
+            }
 
             ServiceLocator.Unregister(this);
         }
     }
 }
-

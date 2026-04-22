@@ -2,6 +2,257 @@
 
 ---
 
+## SpaceLife Hub 对话系统 Task 7：通过 Unity MCP 执行 bootstrap，正式生成 SpaceLife 样板资产与场景接线 — 2026-04-21 13:08
+
+### 修改文件
+- `Assets/_Data/SpaceLife/Dialogue/DialogueDatabase.asset`
+- `Assets/_Data/SpaceLife/Dialogue/Graphs/NPC_Engineer_HubDialogue.asset`
+- `Assets/_Data/SpaceLife/Dialogue/Graphs/Terminal_ShipAI_HubDialogue.asset`
+- `Assets/_Data/SpaceLife/NPC/NPC_Engineer.asset`
+- `Assets/_Data/SpaceLife/Items/Gift_Engineer_CalibrationKit.asset`
+- `Assets/Scenes/SampleScene.unity`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 通过 Unity MCP 连接当前已打开的 `Project-Ark` 编辑器实例，确认 `SampleScene` 处于非播放、非编译、可执行工具状态后，直接执行菜单 `ProjectArk/Space Life/Dialogue/Bootstrap Hub Sample Slice`。
+- Unity Console 返回 `SpaceLifeDialogueSampleBootstrap` 的成功日志，确认 bootstrap 已在编辑器内真实执行，而不是停留在 batchmode 失败或脚本层准备阶段。
+- bootstrap 已正式生成 `DialogueDatabase`、工程师对话 graph、舰载 AI terminal 对话 graph、`NPC_Engineer` 数据资产与 `Gift_Engineer_CalibrationKit` 礼物资产，并把 `SampleScene` 接入 `SpaceLifeDialogueSampleSlice` 与 `ShipAITerminalSample` 等验证对象。
+- 本轮完成后，Task 7 的状态从“只差在 Unity 里执行一次菜单”切换为“资产已生成、场景已落盘，可直接进入 Play Mode 做 hub dialogue 竖切片验证”。
+
+### 目的
+- 把前一轮仅完成代码侧闭环的 Task 7 真正推进到 authored asset / scene wiring 已落地的完成态，消除“工具存在但内容尚未写入项目”的最后断层。
+- 为后续 Task 8 的 Play Mode 验收提供稳定起点：现在不再需要人工手动创建 graph、NPCData、gift item 或场景样板对象。
+
+### 技术
+- 使用 Unity MCP 的资源读取与菜单执行链（`editor/state` + `execute_menu_item`）替代外部 `batchmode`，绕开“同一项目已被另一个 Unity 实例占用”导致的第二实例启动失败。
+- 在执行前先用 MCP 保存 `SampleScene` 并清空 Console，执行后再通过 `read_console`、`manage_asset.get_info`、`find_gameobjects` 回读结果，确保成功不是猜测而是有编辑器内证据支撑。
+
+## SpaceLife Hub 对话系统 Task 7：补齐 sample bootstrap、Gift 模态锁与 world stage 样板调试链 — 2026-04-21 12:43
+
+### 修改文件
+- `Assets/Scripts/SpaceLife/Dialogue/DialogueServiceRouter.cs`
+- `Assets/Scripts/SpaceLife/Dialogue/SpaceLifeDialogueCoordinator.cs`
+- `Assets/Scripts/SpaceLife/Dialogue/SpaceLifeDialogueSampleDebugControls.cs`
+- `Assets/Scripts/SpaceLife/Editor/SpaceLifeDialogueSampleBootstrap.cs`
+- `Assets/Scripts/SpaceLife/Tests/DialogueServiceRouterTests.cs`
+- `Assets/Scripts/SpaceLife/DialogueUI.cs`
+- `ProjectArk.SpaceLife.csproj`
+- `ProjectArk.SpaceLife.Editor.csproj`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 将 `DialogueServiceRouter` 收口为更接近正式可玩状态：`OpenGift` 现在会在 `GiftUI` 打开期间调用 `SpaceLifeManager.SetHubInteractionLocked(true)`，并在 `GiftUI.OnGiftClosed` 时自动解锁，避免玩家在送礼模态打开时继续乱跑；同时 `OpenUpgrade / OpenIntel / TriggerRelationshipEvent` 若还没有正式接收 UI，会输出清晰的 payload 日志，占位显示服务出口已经触发。
+- 为 `SpaceLifeDialogueCoordinator.ResolveWorldStage()` 增加“无 `WorldProgressManager` 时回退读取当前存档 `Progress.WorldStage`”的逻辑，让 `SampleScene` 即使还没挂正式世界进度管理器，也能驱动 terminal graph 的阶段 gating。
+- 新建 `SpaceLifeDialogueSampleDebugControls`：在样板场景中可通过 `F6 / F7` 写入 `WorldStage 0/1` 到存档，用于重新打开 terminal 时观察 `WorldStage >= 1` 分支是否出现。
+- 新建 editor 工具 `SpaceLifeDialogueSampleBootstrap`，提供菜单 `ProjectArk/Space Life/Dialogue/Bootstrap Hub Sample Slice`：一键创建 `DialogueDatabase`、两份 graph、`NPCDataSO`、礼物 `ItemSO`，并把 `SampleScene` 中的 `DialogueUI / GiftUI / GiftInventory / DialogueServiceRouter / SpaceLifeDialogueCoordinator` 与 1 个 engineer NPC 样板、1 个 ship AI terminal 样板接成可验证切片。
+- 新增 `DialogueServiceRouterTests` 的 Gift 模态锁回归测试，锁定“OpenGift 持锁、GiftUI 关闭后解锁”的行为；同时补齐 `ProjectArk.SpaceLife.csproj` 与 `ProjectArk.SpaceLife.Editor.csproj` 的本地构建清单，让 `dotnet build Project-Ark.slnx` 继续保持 `0 errors`。
+- 尝试通过 Unity batchmode 直接执行 bootstrap，但当前被外部环境拦住：日志确认 `Project-Ark` 已被另一个 Unity 实例打开，Unity 不允许第二实例同时以同一项目启动，因此本回合未能自动把 `.asset` / `.unity` 变更真正写入磁盘。
+
+### 目的
+- 把 Task 7 从“还需要手工拼内容和接线”推进到“只差在当前打开的 Unity 编辑器里执行一次菜单项”，最大化收口可玩竖切片前的工程风险。
+- 让 Hub 对话样板在没有正式 Upgrade / Intel UI 的阶段也能完整观测到所有 service exit，并保证 Gift 模态与 world stage gating 在样板环境里可验证。
+
+### 技术
+- Gift 模态锁继续沿用 `SpaceLifeManager` 的引用计数式 `SetHubInteractionLocked(bool)`，由 `DialogueServiceRouter` 负责在 Gift 生命周期边界申请/释放锁，避免与 `DialogueUI` 的模态锁互相覆盖。
+- 样板内容 bootstrap 采用 Editor 反射写入私有序列化字段（`DialogueGraphSO / DialogueNodeData / DialogueChoiceData / NPCDataSO / ItemSO`），避免手改 `.asset` / `.unity` YAML 和手写 `.meta` 的高风险流程。
+- 样板世界阶段切换采用 `SaveManager.Load/Save` 写入 `Progress.WorldStage`，并由 `SpaceLifeDialogueCoordinator` 在运行时回退读取存档值，尽量不把 sample/debug 逻辑硬耦合进 `Level` 正式主链。
+
+## SpaceLife Hub 对话系统 Task 6：接通 NPC / Terminal 正式入口到 coordinator 主链 — 2026-04-21 12:14
+
+### 修改文件
+- `Assets/Scripts/SpaceLife/Dialogue/DialogueRunner.cs`
+- `Assets/Scripts/SpaceLife/Dialogue/SpaceLifeDialogueCoordinator.cs`
+- `Assets/Scripts/SpaceLife/TerminalDialogueInteractor.cs`
+- `Assets/Scripts/SpaceLife/NPCController.cs`
+- `ProjectArk.SpaceLife.csproj`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 新建 `SpaceLifeDialogueCoordinator`，把 `DialogueDatabase -> DialogueRunner -> DialogueUI -> DialogueServiceRouter` 串成单一正式入口，并在启动对话时组装 `DialogueContext`：读取 `WorldProgressManager.CurrentWorldStage`、`RelationshipManager` 当前关系值，以及 `SaveManager.Load(_saveSlot)` 中的 flags；关闭对话或 service exit 时统一解锁 `SpaceLifeManager.SetHubInteractionLocked(false)`。
+- `SpaceLifeDialogueCoordinator` 还负责在每次 choice/continue 后先保存 `DialogueFlagStore` 对应的 `PlayerSaveData`，再把 `DialogueRunner.CurrentContext.RelationshipValue` 回写到正式 `RelationshipManager`，避免 flag 与关系值各自写盘时互相覆盖。
+- 新建 `TerminalDialogueInteractor`，复用 `Interactable` 和稳定 `OwnerId`，让 terminal / AI 入口也走同一套 coordinator 主链，而不是再造第二条 UI owner 逻辑。
+- 将 `NPCController` 从旧 `DialogueUI` / `NPCInteractionUI` 原型链切到 `SpaceLifeDialogueCoordinator`：`OnInteract()` 现在直接委托 `StartDialogueFromNpc(this)`，不再本地用 `GetEntryLine()` 做 index-based 起始节点选择。
+- 为了让 `dotnet build` 继续真实覆盖这批新文件，本地补齐了 `ProjectArk.SpaceLife.csproj` 中的 `Dialogue/SpaceLifeDialogueCoordinator.cs`、`TerminalDialogueInteractor.cs` 编译清单与 `ProjectArk.Level.csproj` 项目引用；当前解决方案构建结果为 `0 errors`，只剩仓库既有 warning。
+
+### 目的
+- 把 Hub 对话的 authority 收口到唯一链路：所有正式入口都必须先进入 `SpaceLifeDialogueCoordinator`，再进入 `DialogueDomain`，杜绝旧 `NPCInteractionUI` 与新 runner 双轨并行。
+- 让 NPC 与 Terminal 都共享同一套运行时语义（世界阶段、关系值、flags、service exit），为真正可玩的 1 NPC + 1 Terminal 垂直切片打底。
+
+### 技术
+- 协调层采用 `ServiceLocator` 拉取 `DialogueUI`、`DialogueServiceRouter`、`SpaceLifeManager`、`RelationshipManager`、`WorldProgressManager`，保持 `DialogueDomain` 纯逻辑、无 `MonoBehaviour` 依赖。
+- 关系值同步利用 `DialogueRunner.CurrentContext` 暴露的只读上下文，在 coordinator 层做“`SaveManager.Save(flags) -> RelationshipManager.SetRelationship(...)`”顺序化写盘，避免状态互相踩写。
+
+## SpaceLife Hub 对话系统 Task 5：重构 Hub UI 为 CanvasGroup 模态 presenter，并收口 service router — 2026-04-21 11:58
+
+### 修改文件
+- `Assets/Scripts/SpaceLife/DialogueUI.cs`
+- `Assets/Scripts/SpaceLife/GiftUI.cs`
+- `Assets/Scripts/SpaceLife/Dialogue/DialogueRunner.cs`
+- `Assets/Scripts/SpaceLife/Dialogue/DialogueServiceRouter.cs`
+- `Assets/Scripts/SpaceLife/SpaceLifeManager.cs`
+- `Assets/Scripts/SpaceLife/Tests/DialogueRunnerTests.cs`
+- `Assets/Scripts/SpaceLife/Tests/DialogueServiceRouterTests.cs`
+- `ProjectArk.SpaceLife.csproj`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 将 `DialogueUI` 从旧 `SetActive` 对话框重构为 `CanvasGroup` presenter：新增 `PresentNode(...)` 回调式入口，显示 `DialogueNodeViewModel` 的 speaker / text / choices，并在无选项普通节点时生成“继续”按钮；同时保留 `ShowDialogue(DialogueLine, NPCController)` 兼容入口，把旧 index-based 原型临时包进同一套 presenter 壳。
+- 将 `GiftUI` 同步改为 `CanvasGroup` 控显隐，保留正式 `OpenGift` 出口所需的 `ShowGiftUI(...)` 行为，并补上 `IsVisible` 与 `OnGiftClosed`，为后续 coordinator 在 service exit 后安全恢复 Hub 控制做准备。
+- 为 `DialogueRunner` 增加 `Continue()`，并补齐“choice 没有 next / exit 时应结束对话”的收尾语义，让新 presenter 不会在无选项节点卡死在 UI 层。
+- 新建 `DialogueServiceRouter`，统一收口 `OpenGift / OpenUpgrade / OpenIntel / TriggerRelationshipEvent` 四类服务出口：`Gift` 直接打到 `GiftUI`，其他出口统一走带 payload 的序列化 `UnityEvent<string>`。
+- 在 `SpaceLifeManager` 中新增 `SetHubInteractionLocked(bool)`、玩家组件缓存和锁状态应用逻辑，明确只冻结 `PlayerController2D` 与 `PlayerInteraction`，不误伤 UI 输入；另外因为 Unity 生成的 `ProjectArk.SpaceLife.csproj` 还停留在旧快照，临时补齐了 `Assets/Scripts/SpaceLife/Dialogue/` 下的新文件清单，让 `dotnet build` 能真实覆盖 DialogueDomain 的改动而不是假通过。
+- 新增 `DialogueServiceRouterTests`，并在 `DialogueRunnerTests` 中补 `Continue()` 行为钉子；当前 `dotnet build Project-Ark.slnx` 已达到 `0 errors`，剩余 warning 为仓库既有的 editor 过时 API 噪声。
+
+### 目的
+- 让 Hub 对话真正拥有稳定的模态 UI 壳，彻底避开项目已经明确列为高风险的 `SetActive(false)` 面板显隐旧坑。
+- 把“对话分支进入服务”从 `NPC/UI` 层硬编码改为统一 service exit 出口，为下一步 `SpaceLifeDialogueCoordinator` 接管正式入口铺平路径。
+
+### 技术
+- UI 显隐统一改为 `CanvasGroup.alpha + interactable + blocksRaycasts`，并在 `Awake()` 中对历史遗留的 inactive 面板做一次性显式告警与恢复。
+- 服务出口采用 `DialogueServiceExit + DialogueServiceRouter + UnityEvent<string>` 组合，保持 `DialogueDomain` 纯逻辑，不直接耦合具体服务实现。
+- `SpaceLifeManager` 的模态锁采用引用计数式 `SetHubInteractionLocked(bool)`，避免 Gift / Dialogue 等后续嵌套模态覆盖彼此状态。
+
+## SpaceLife Hub 对话系统 Task 4：收口关系值与 dialogue flags 持久化 — 2026-04-21 11:31
+
+### 修改文件
+- `Assets/Scripts/SpaceLife/RelationshipManager.cs`
+- `Assets/Scripts/SpaceLife/NPCController.cs`
+- `Assets/Scripts/SpaceLife/Tests/DialogueFlagStoreTests.cs`
+- `Assets/Scripts/SpaceLife/Tests/RelationshipManagerPersistenceTests.cs`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 将 `RelationshipManager` 从“按 `NPCDataSO` 引用存值”改为“按稳定 `NpcId` 存值”，补上 `_saveSlot`、懒加载 `LoadFromSave()`、`LoadFromSaveData(PlayerSaveData)` 和 `SaveToSaveData(PlayerSaveData)`，并在 `SetRelationship / ChangeRelationship` 后立即写回当前存档槽。
+- 新建 `DialogueFlagStoreTests.cs` 与 `RelationshipManagerPersistenceTests.cs`，分别钉住 flag 的写入/覆盖/清除行为，以及关系值默认起始值、按 `NpcId` 读档和修改后 roundtrip 保存行为。
+- 为避免保存值被旧逻辑覆盖，额外修正 `NPCController.InitializeRelationship()`：只有在 `RelationshipManager` 确认**没有**该 NPC 的已存关系记录时，才注入 `StartingRelationship`。
+- 编译验证通过；新增改动未引入错误，当前终端输出中的 warning 仍为仓库中既有项。
+
+### 目的
+- 让对话中的关系变化和一次性 flag 真正跨会话持久存在，而不是停留在运行时内存状态。
+- 提前堵住“已存档关系值被 NPC 起始关系覆盖”的高频隐患，保证后续对话分支和赠礼反馈能稳定回读。
+
+### 技术
+- 关系值保存继续沿用 `JsonUtility` 友好的 list-of-pairs 方案，但 key 从运行时对象引用切换为稳定 `NpcId`。
+- 通过 `EnsureLoadedFromSave()` 懒加载解决 `RelationshipManager` 与 NPC 初始化顺序不确定的问题，而不需要把 `SaveBridge` 反向耦入 `SpaceLife`。
+
+## SpaceLife Hub 对话系统 Task 3：实现纯逻辑 runner、条件判断与统一 service exit — 2026-04-21 11:24
+
+### 修改文件
+- `Assets/Scripts/SpaceLife/Dialogue/DialogueContext.cs`
+- `Assets/Scripts/SpaceLife/Dialogue/DialogueNodeViewModel.cs`
+- `Assets/Scripts/SpaceLife/Dialogue/DialogueServiceExit.cs`
+- `Assets/Scripts/SpaceLife/Dialogue/DialogueFlagStore.cs`
+- `Assets/Scripts/SpaceLife/Dialogue/DialogueConditionEvaluator.cs`
+- `Assets/Scripts/SpaceLife/Dialogue/DialogueEffectExecutor.cs`
+- `Assets/Scripts/SpaceLife/Dialogue/DialogueRunner.cs`
+- `Assets/Scripts/SpaceLife/Tests/DialogueRunnerTests.cs`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 新建 `DialogueContext`、`DialogueFlagStore`、`DialogueConditionEvaluator`、`DialogueEffectExecutor` 和 `DialogueRunner`，把对话运行时切成纯逻辑链：入口规则解析、choice 条件过滤、节点跳转、flag 变更、关系值增减和统一 `DialogueServiceExit` 全部从 UI / NPC 脚本中剥离。
+- 新建 `DialogueNodeViewModel` 与 `DialogueServiceExit`，让 presenter 与外层协调器只消费只读节点视图和统一出口结果，而不直接读取 graph authored data 或在节点里硬编码开 UI。
+- `DialogueRunner` 当前已具备 5 个 MVP 核心能力：按 `WorldStage` 选择入口、按 `RelationshipValue / Flags` 过滤 choice、按 `NextNodeId` 跳转、从 choice/effect 产出 `OpenGift/OpenIntel/...` 出口，以及 `SetFlag` 立刻影响后续对话入口。
+- 先写了 `DialogueRunnerTests.cs` 作为行为钉子；与 Task 2 一样，当前主 `dotnet build` 仍无法覆盖新建 `SpaceLife.Tests` 装配，但新加的 `DialogueDomain` 运行时代码已经在 `ProjectArk.SpaceLife` 程序集中编译通过。
+
+### 目的
+- 把对话系统从静态内容资产推进到真正可测试、可复用的状态机层，为后续 UI presenter、NPC/Terminal 接入与场景样板提供稳定 runtime 核心。
+- 提前建立统一 `ServiceExit` 和纯逻辑条件/效果管线，避免后续继续在节点、UI 和交互脚本里分散写分支判断。
+
+### 技术
+- 运行时逻辑按“`Context -> ConditionEvaluator -> Runner -> ServiceExit`”组织，隔离 `MonoBehaviour` 依赖，便于后续 EditMode tests 和协调器接入。
+- flag 状态通过 `DialogueFlagStore` 同步到 `PlayerSaveData.Progress.Flags`，确保后续持久化收口时无需再改 runner 主逻辑。
+
+## SpaceLife Hub 对话系统 Task 2：建立 DialogueDomain authored data 真相源 — 2026-04-21 11:19
+
+### 修改文件
+- `Assets/Scripts/SpaceLife/Dialogue/DialogueEnums.cs`
+- `Assets/Scripts/SpaceLife/Dialogue/DialogueConditionData.cs`
+- `Assets/Scripts/SpaceLife/Dialogue/DialogueEffectData.cs`
+- `Assets/Scripts/SpaceLife/Dialogue/DialogueChoiceData.cs`
+- `Assets/Scripts/SpaceLife/Dialogue/DialogueNodeData.cs`
+- `Assets/Scripts/SpaceLife/Dialogue/DialogueEntryRuleData.cs`
+- `Assets/Scripts/SpaceLife/Dialogue/DialogueGraphSO.cs`
+- `Assets/Scripts/SpaceLife/Dialogue/DialogueDatabaseSO.cs`
+- `Assets/Scripts/SpaceLife/Tests/DialogueDatabaseTests.cs`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 新建 `DialogueEnums` 与 6 个 authored data 类型，把 owner、entry rule、node、choice、condition、effect 全部收口到 `Assets/Scripts/SpaceLife/Dialogue/`，并让 graph/choice/node 主链全面改用稳定字符串 ID，而不是数组 index。
+- 新建 `DialogueGraphSO`，明确 `GraphId`、`OwnerId`、`OwnerType`、`EntryRules`、`Nodes` 五类核心字段，并补上最小 guard：缺失 `GraphId/OwnerId`、空节点、缺失 `NodeId`、重复 `NodeId` 都会在运行时被拒绝。
+- 新建 `DialogueDatabaseSO`，采用 `List + Dictionary cache` 的简单结构按 `OwnerId` 查 graph，并在建 cache 阶段防御重复 `OwnerId` 与无效 graph，避免之后 runner 在错误 authored data 上 silent no-op。
+- 先写了 `DialogueDatabaseTests.cs` 来钉住 ownerId 查询、重复 ownerId 报错和缺失 `NodeId` 报错三个最小行为；当前受 Unity 测试装配尚未刷新影响，`dotnet build` 还不能覆盖这份新测试程序集，但主 `SpaceLife` 程序集中新建的数据层代码已编译通过。
+
+### 目的
+- 为后续 `DialogueRunner` 提供稳定、可扩展、可校验的 authored data 真相源，让 NPC 与 Terminal 都能挂在同一数据模型上。
+- 提前把高风险错误从“运行时走到半路才炸”前移到 graph/database 校验阶段，减少内容铺量后排查成本。
+
+### 技术
+- 采用 `ScriptableObject + [Serializable] data classes` 的 Unity 友好 authoring 结构，字段使用私有序列化 + 只读属性暴露。
+- 数据库缓存采用 `StringComparer.Ordinal` 的运行时字典，兼顾查找性能与稳定 ID 语义。
+
+## SpaceLife Hub 对话系统 Task 1：补齐程序集依赖、测试装配与关系值保存骨架 — 2026-04-21 11:15
+
+### 修改文件
+- `Assets/Scripts/SpaceLife/ProjectArk.SpaceLife.asmdef`
+- `Assets/Scripts/SpaceLife/Tests/ProjectArk.SpaceLife.Tests.asmdef`
+- `Assets/Scripts/Core/Save/SaveData.cs`
+- `Assets/Scripts/SpaceLife/Data/NPCDataSO.cs`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 给 `ProjectArk.SpaceLife.asmdef` 增加 `ProjectArk.Level` 单向引用，并新建 `ProjectArk.SpaceLife.Tests.asmdef`，按现有 NUnit EditMode tests 口径补上 `UnityEngine.TestRunner`、`UnityEditor.TestRunner` 与 `nunit.framework.dll` 依赖，为后续 `DialogueDomain` 测试装配落位。
+- 在 `ProgressSaveData` 中新增 `RelationshipValueSaveData` 与 `RelationshipValues` 列表，让关系值从一开始就具备稳定的 `NpcId -> Value` 持久化 schema，而不是继续依赖运行时 `NPCDataSO` 引用。
+- 在 `NPCDataSO` 中新增稳定 `NpcId`，并通过 `OnValidate` + getter 校验输出缺失错误；同时把旧 `DialogueNodes / EntryIndex` 字段明确标注为 legacy prototype 兼容数据，不再作为新对话系统主链 authored source。
+- 运行 `dotnet build Project-Ark.slnx` 验证本批改动；结果为 `0 errors`，仅存在仓库中原有 warning。
+
+### 目的
+- 先把 `SpaceLife -> Level` 的读取方向、`SpaceLife` 测试装配和关系值保存落点钉死，为后续对话图数据与 runner 实现提供稳定地基。
+- 提前消除“关系值靠 ScriptableObject 引用做 key”与“继续把 NPC 名字当稳定 ID”这两类高风险隐患，避免后续跨读档时出现状态漂移。
+
+### 技术
+- 采用现有项目的 asmdef 测试配置模式：`overrideReferences=true` + `nunit.framework.dll` + `UNITY_INCLUDE_TESTS`。
+- 保存结构采用 `JsonUtility` 友好的 list-of-pairs 方案，以 `NpcId` 作为运行时与持久化之间的稳定桥梁。
+
+## SpaceLife Hub 对话系统实现计划立项：拆出 MVP 任务序列与落地边界 — 2026-04-21 00:22
+
+### 修改文件
+- `Docs/0_Plan/ongoing/2026-04-21-spacelife-hub-dialogue-mvp-implementation-plan.md`
+- `Docs/0_Plan/ongoing/README.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 新建 `2026-04-21-spacelife-hub-dialogue-mvp-implementation-plan.md`，将刚刚确认的 `SpaceLife` Hub 对话系统方案拆成可执行的 implementation plan，覆盖程序集与测试装配、`DialogueDomain` 数据模型、runner、关系与 flag 持久化、`CanvasGroup` UI 重构、NPC/Terminal 接入、样板内容与场景验证。
+- 计划中明确收口了几个实现边界：`SaveBridge` 不反向依赖 `SpaceLife`，关系值改走 `PlayerSaveData` 内的独立数值字段；旧 `NPCInteractionUI` 不再是正式入口；新 graph 一律使用稳定 `OwnerId/NodeId`，禁止继续扩写 index-based 原型。
+- 同步更新 `Docs/0_Plan/ongoing/README.md`，将这份 SpaceLife Hub 对话计划标记为当前活跃专项，方便后续执行时按目录索引快速找到现役计划。
+
+### 目的
+- 把上一轮技术设计共识进一步收口为真正可执行的任务序列，让后续实现能按固定顺序推进，而不是重新边做边猜文件落位和测试策略。
+- 提前钉死 save 边界、UI authority 和服务出口协议，减少执行期再次滑回旧 `DialogueUI/NPCController` 强耦合原型的风险。
+
+### 技术
+- 采用“计划先收结构，再执行实现”的推进方式：先把 `DialogueDomain + SpaceLife 接入壳 + ServiceRouter + SaveData` 的责任链写清，再进入编码。
+- 计划中特别沿用现有 NUnit EditMode tests 模式，并把 `CanvasGroup` 显隐、单向程序集依赖与稳定 ID 跳转作为强制 guardrail 写入任务定义。
+
+## SpaceLife Hub 对话系统技术设计立项：确立 DialogueDomain 基线与 SO→CSV 演进路线 — 2026-04-20 23:47
+
+### 修改文件
+- `Docs/2_TechnicalDesign/SpaceLife/SpaceLife_HubDialogue_SystemDesign.md`
+- `Docs/2_TechnicalDesign/README.md`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 新建 `SpaceLife_HubDialogue_SystemDesign.md`，把已讨论确认的 Hub 对话系统方案正式沉淀为技术设计真相源，明确系统定位为 `DialogueDomain + SpaceLife 外壳接入`，而不是继续扩写旧 `DialogueUI` / `NPCController` 原型。
+- 文档中收口了本轮已经拍板的关键边界：`Hub-only`、先对话再进服务、世界进度与关系值双轴驱动、`SO MVP` authoring、未来 `CSV -> SO` 铺量，以及 `DialogueDomain / SpaceLife / UIPresenter / ServiceExit` 的 authority 划分。
+- 同步更新 `Docs/2_TechnicalDesign/README.md`，把 `SpaceLife` 目录与新文档加入技术设计索引和重点文档列表，避免该设计稿成为难以发现的孤立文档。
+
+### 目的
+- 把这次对话系统讨论从口头共识升级为现役技术设计基线，为后续进入实现、拆任务和补实现计划提供稳定真相源。
+- 提前锁定 runtime 数据结构与职责边界，避免后续实现又滑回 index-based 节点跳转、UI 持有业务逻辑、NPC 脚本直接开服务菜单的旧耦合模式。
+
+### 技术
+- 采用“独立 `DialogueDomain` + Hub 接入壳 + 统一 `ServiceExit`”的分层方式，确保对话系统既能支撑关系叙事，也能低耦合地挂接升级、情报与赠礼等服务。
+- 数据模型按“稳定 ID + 条件/效果描述”设计，让 runtime 从第一天就与 `SO` authoring 和未来 `CSV` 导入解耦。
+
 ## 程序化表现工作流升级：补立项检查卡并接入 Feature 流程 — 2026-04-19 09:51
 
 ### 修改文件

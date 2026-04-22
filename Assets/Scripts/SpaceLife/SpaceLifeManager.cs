@@ -1,10 +1,10 @@
 using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using UnityEngine;
 using ProjectArk.Core;
 using ProjectArk.Core.Audio;
 using ProjectArk.Ship;
+using UnityEngine;
 
 namespace ProjectArk.SpaceLife
 {
@@ -32,11 +32,15 @@ namespace ProjectArk.SpaceLife
         private TransitionUI _transitionUI;
         private GameObjectPool _playerPool;
         private CancellationTokenSource _transitionCts;
+        private PlayerController2D _playerController2D;
+        private PlayerInteraction _playerInteraction;
         private bool _shipWasActive;
         private bool _isTransitioning;
+        private int _hubInteractionLockDepth;
 
         public bool IsInSpaceLifeMode => _isInSpaceLifeMode;
         public bool IsTransitioning => _isTransitioning;
+        public bool IsHubInteractionLocked => _hubInteractionLockDepth > 0;
 
         public event Action OnEnterSpaceLife;
         public event Action OnExitSpaceLife;
@@ -49,22 +53,27 @@ namespace ProjectArk.SpaceLife
         private void Start()
         {
             Debug.Log("[SpaceLifeManager] Start called");
-            
+
             _audioManager = ServiceLocator.Get<AudioManager>();
             _transitionUI = ServiceLocator.Get<TransitionUI>();
 
             if (_spaceLifeCamera != null)
+            {
                 _spaceLifeCamera.gameObject.SetActive(false);
+            }
 
             if (_spaceLifeSceneRoot != null)
+            {
                 _spaceLifeSceneRoot.SetActive(false);
+            }
 
-            // Get SpaceLifeInputHandler via ServiceLocator only
             if (_spaceLifeInputHandler == null)
             {
                 _spaceLifeInputHandler = ServiceLocator.Get<SpaceLifeInputHandler>();
                 if (_spaceLifeInputHandler == null)
+                {
                     Debug.LogError("[SpaceLifeManager] CRITICAL: SpaceLifeInputHandler not found via ServiceLocator or Inspector. Ensure it is registered.");
+                }
             }
 
             if (_spaceLifeInputHandler != null)
@@ -73,39 +82,39 @@ namespace ProjectArk.SpaceLife
                 Debug.Log("[SpaceLifeManager] Disabled SpaceLifeInputHandler");
             }
 
-            // Auto-find _mainCamera via fallback
             if (_mainCamera == null)
             {
                 _mainCamera = Camera.main;
                 if (_mainCamera != null)
+                {
                     Debug.LogWarning("[SpaceLifeManager] WARNING: _mainCamera auto-found via Camera.main fallback. Please assign in Inspector.");
+                }
                 else
+                {
                     Debug.LogError("[SpaceLifeManager] CRITICAL: Main Camera not found. Ensure a Camera tagged 'MainCamera' exists in scene.");
+                }
             }
 
-            // Get Ship InputHandler from ServiceLocator only — no FindFirstObjectByType fallback
             _shipInputHandler = ServiceLocator.Get<InputHandler>();
-            
             if (_shipInputHandler == null)
             {
                 Debug.LogError("[SpaceLifeManager] CRITICAL: InputHandler not found via ServiceLocator. Ensure Ship Prefab is in scene and registers InputHandler.");
             }
-            
+
             Debug.Log($"[SpaceLifeManager] ShipInputHandler found: {_shipInputHandler != null}");
-            
+
             if (_shipInputHandler != null)
             {
-                // Auto-find _shipRoot via fallback
                 if (_shipRoot == null)
                 {
                     _shipRoot = _shipInputHandler.gameObject;
                     Debug.LogWarning("[SpaceLifeManager] WARNING: _shipRoot auto-found via ServiceLocator InputHandler. Please assign in Inspector.");
                 }
+
                 _shipInputHandler.OnToggleSpaceLifePerformed += ToggleSpaceLife;
                 Debug.Log("[SpaceLifeManager] Subscribed to Ship InputHandler ToggleSpaceLife");
             }
 
-            // Validate _spaceLifePlayerPrefab
             if (_spaceLifePlayerPrefab == null)
             {
                 Debug.LogError("[SpaceLifeManager] CRITICAL: _spaceLifePlayerPrefab is NOT assigned! SpaceLife mode will not function. Please assign Player2D_Prefab in Inspector.");
@@ -115,15 +124,17 @@ namespace ProjectArk.SpaceLife
             {
                 _playerPool = PoolManager.Instance.GetPool(_spaceLifePlayerPrefab, initialSize: 1, maxSize: 5);
             }
-            
+
             Debug.Log($"[SpaceLifeManager] Setup complete - PlayerPrefab: {_spaceLifePlayerPrefab != null}, ShipInputHandler: {_shipInputHandler != null}, SpaceLifeInputHandler: {_spaceLifeInputHandler != null}");
         }
 
         public void EnterSpaceLife()
         {
-            if (_isInSpaceLifeMode || _isTransitioning) return;
+            if (_isInSpaceLifeMode || _isTransitioning)
+            {
+                return;
+            }
 
-            // Pre-condition checks
             if (_spaceLifePlayerPrefab == null)
             {
                 Debug.LogError("[SpaceLifeManager] Cannot enter SpaceLife: _spaceLifePlayerPrefab is null! Please assign Player2D_Prefab.prefab in Inspector.");
@@ -131,6 +142,70 @@ namespace ProjectArk.SpaceLife
             }
 
             EnterSpaceLifeAsync().Forget();
+        }
+
+        public void ExitSpaceLife()
+        {
+            if (!_isInSpaceLifeMode || _isTransitioning)
+            {
+                return;
+            }
+
+            ExitSpaceLifeAsync().Forget();
+        }
+
+        public void ToggleSpaceLife()
+        {
+            Debug.Log($"[SpaceLifeManager] ToggleSpaceLife called! isInSpaceLifeMode={_isInSpaceLifeMode}, isTransitioning={_isTransitioning}");
+
+            if (_isTransitioning)
+            {
+                return;
+            }
+
+            if (!_isInSpaceLifeMode)
+            {
+                if (_spaceLifePlayerPrefab == null)
+                {
+                    Debug.LogError("[SpaceLifeManager] Cannot toggle to SpaceLife: _spaceLifePlayerPrefab is null. Assign Player2D_Prefab.prefab in Inspector.");
+                    return;
+                }
+
+                if (_spaceLifeCamera == null)
+                {
+                    Debug.LogError("[SpaceLifeManager] Cannot toggle to SpaceLife: _spaceLifeCamera is null. Ensure SpaceLife Camera exists in scene.");
+                    return;
+                }
+
+                if (_spaceLifeSceneRoot == null)
+                {
+                    Debug.LogError("[SpaceLifeManager] Cannot toggle to SpaceLife: _spaceLifeSceneRoot is null. Ensure SpaceLife Scene Root exists in scene.");
+                    return;
+                }
+            }
+
+            if (_isInSpaceLifeMode)
+            {
+                ExitSpaceLife();
+            }
+            else
+            {
+                EnterSpaceLife();
+            }
+        }
+
+        public void SetHubInteractionLocked(bool locked)
+        {
+            if (locked)
+            {
+                _hubInteractionLockDepth++;
+            }
+            else if (_hubInteractionLockDepth > 0)
+            {
+                _hubInteractionLockDepth--;
+            }
+
+            ApplyHubInteractionLockState();
         }
 
         private async UniTaskVoid EnterSpaceLifeAsync()
@@ -141,23 +216,29 @@ namespace ProjectArk.SpaceLife
 
             try
             {
-                var ct = _transitionCts.Token;
+                CancellationToken ct = _transitionCts.Token;
 
-                // Phase 1: Fade to black
                 if (_transitionUI != null)
+                {
                     await _transitionUI.FadeOutAsync(ct);
+                }
 
-                // Phase 2: Switch scene state
                 _isInSpaceLifeMode = true;
 
                 if (_mainCamera != null)
+                {
                     _mainCamera.gameObject.SetActive(false);
+                }
 
                 if (_spaceLifeCamera != null)
+                {
                     _spaceLifeCamera.gameObject.SetActive(true);
+                }
 
                 if (_spaceLifeSceneRoot != null)
+                {
                     _spaceLifeSceneRoot.SetActive(true);
+                }
 
                 if (_shipRoot != null)
                 {
@@ -166,18 +247,24 @@ namespace ProjectArk.SpaceLife
                 }
 
                 if (_shipInputHandler != null)
+                {
                     _shipInputHandler.enabled = false;
+                }
 
                 if (_spaceLifeInputHandler != null)
+                {
                     _spaceLifeInputHandler.enabled = true;
+                }
 
                 SpawnPlayer();
+                ApplyHubInteractionLockState();
                 PlaySFX(_enterSpaceLifeSFX);
                 OnEnterSpaceLife?.Invoke();
 
-                // Phase 3: Fade from black
                 if (_transitionUI != null)
+                {
                     await _transitionUI.FadeInAsync(ct);
+                }
 
                 Debug.Log("[SpaceLifeManager] Entered Space Life mode!");
             }
@@ -190,13 +277,6 @@ namespace ProjectArk.SpaceLife
             }
         }
 
-        public void ExitSpaceLife()
-        {
-            if (!_isInSpaceLifeMode || _isTransitioning) return;
-
-            ExitSpaceLifeAsync().Forget();
-        }
-
         private async UniTaskVoid ExitSpaceLifeAsync()
         {
             _isTransitioning = true;
@@ -205,41 +285,55 @@ namespace ProjectArk.SpaceLife
 
             try
             {
-                var ct = _transitionCts.Token;
+                CancellationToken ct = _transitionCts.Token;
 
-                // Phase 1: Fade to black
                 if (_transitionUI != null)
+                {
                     await _transitionUI.FadeOutAsync(ct);
+                }
 
-                // Phase 2: Switch scene state
                 _isInSpaceLifeMode = false;
+                _hubInteractionLockDepth = 0;
 
                 PlaySFX(_exitSpaceLifeSFX);
                 DestroyPlayer();
 
                 if (_spaceLifeCamera != null)
+                {
                     _spaceLifeCamera.gameObject.SetActive(false);
+                }
 
                 if (_spaceLifeSceneRoot != null)
+                {
                     _spaceLifeSceneRoot.SetActive(false);
+                }
 
                 if (_mainCamera != null)
+                {
                     _mainCamera.gameObject.SetActive(true);
+                }
 
                 if (_shipRoot != null)
+                {
                     _shipRoot.SetActive(_shipWasActive);
+                }
 
                 if (_shipInputHandler != null)
+                {
                     _shipInputHandler.enabled = true;
+                }
 
                 if (_spaceLifeInputHandler != null)
+                {
                     _spaceLifeInputHandler.enabled = false;
+                }
 
                 OnExitSpaceLife?.Invoke();
 
-                // Phase 3: Fade from black
                 if (_transitionUI != null)
+                {
                     await _transitionUI.FadeInAsync(ct);
+                }
 
                 Debug.Log("[SpaceLifeManager] Exited Space Life mode!");
             }
@@ -252,38 +346,6 @@ namespace ProjectArk.SpaceLife
             }
         }
 
-        public void ToggleSpaceLife()
-        {
-            Debug.Log($"[SpaceLifeManager] ToggleSpaceLife called! isInSpaceLifeMode={_isInSpaceLifeMode}, isTransitioning={_isTransitioning}");
-            
-            if (_isTransitioning) return;
-
-            // Pre-condition checks for entering SpaceLife
-            if (!_isInSpaceLifeMode)
-            {
-                if (_spaceLifePlayerPrefab == null)
-                {
-                    Debug.LogError("[SpaceLifeManager] Cannot toggle to SpaceLife: _spaceLifePlayerPrefab is null. Assign Player2D_Prefab.prefab in Inspector.");
-                    return;
-                }
-                if (_spaceLifeCamera == null)
-                {
-                    Debug.LogError("[SpaceLifeManager] Cannot toggle to SpaceLife: _spaceLifeCamera is null. Ensure SpaceLife Camera exists in scene.");
-                    return;
-                }
-                if (_spaceLifeSceneRoot == null)
-                {
-                    Debug.LogError("[SpaceLifeManager] Cannot toggle to SpaceLife: _spaceLifeSceneRoot is null. Ensure SpaceLife Scene Root exists in scene.");
-                    return;
-                }
-            }
-
-            if (_isInSpaceLifeMode)
-                ExitSpaceLife();
-            else
-                EnterSpaceLife();
-        }
-
         private void SpawnPlayer()
         {
             if (_spaceLifePlayerPrefab == null)
@@ -293,7 +355,9 @@ namespace ProjectArk.SpaceLife
             }
 
             if (_currentPlayer != null)
+            {
                 ReturnPlayerToPool();
+            }
 
             Transform spawnPoint = _spaceLifeSpawnPoint != null ? _spaceLifeSpawnPoint : transform;
 
@@ -305,30 +369,68 @@ namespace ProjectArk.SpaceLife
             {
                 _currentPlayer = Instantiate(_spaceLifePlayerPrefab, spawnPoint.position, spawnPoint.rotation);
             }
+
+            CacheHubPlayerControllers();
         }
 
         private void ReturnPlayerToPool()
         {
-            if (_currentPlayer == null) return;
+            if (_currentPlayer == null)
+            {
+                return;
+            }
 
             if (_playerPool != null)
             {
-                // Guard: don't return a destroyed object to the pool
                 if (_currentPlayer != null)
+                {
                     _playerPool.Return(_currentPlayer);
+                }
             }
-            else
+            else if (_currentPlayer != null)
             {
-                if (_currentPlayer != null)
-                    Destroy(_currentPlayer);
+                Destroy(_currentPlayer);
             }
 
             _currentPlayer = null;
+            _playerController2D = null;
+            _playerInteraction = null;
         }
 
         private void DestroyPlayer()
         {
             ReturnPlayerToPool();
+            _playerController2D = null;
+            _playerInteraction = null;
+        }
+
+        private void CacheHubPlayerControllers()
+        {
+            if (_currentPlayer == null)
+            {
+                _playerController2D = null;
+                _playerInteraction = null;
+                return;
+            }
+
+            _playerController2D = _currentPlayer.GetComponent<PlayerController2D>();
+            _playerInteraction = _currentPlayer.GetComponent<PlayerInteraction>();
+        }
+
+        private void ApplyHubInteractionLockState()
+        {
+            CacheHubPlayerControllers();
+            bool shouldEnableGameplay = _isInSpaceLifeMode && !IsHubInteractionLocked;
+
+            if (_playerController2D != null)
+            {
+                _playerController2D.enabled = shouldEnableGameplay;
+            }
+
+            if (_playerInteraction != null)
+            {
+                _playerInteraction.enabled = shouldEnableGameplay;
+            }
         }
 
         private void PlaySFX(AudioClip clip)
@@ -352,15 +454,14 @@ namespace ProjectArk.SpaceLife
         private void OnDestroy()
         {
             CancelTransition();
-            
             OnEnterSpaceLife = null;
             OnExitSpaceLife = null;
-            
+
             if (_shipInputHandler != null)
             {
                 _shipInputHandler.OnToggleSpaceLifePerformed -= ToggleSpaceLife;
             }
-            
+
             ServiceLocator.Unregister(this);
         }
     }

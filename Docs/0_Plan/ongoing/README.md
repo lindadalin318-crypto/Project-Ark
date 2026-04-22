@@ -5,7 +5,7 @@
 当前状态：
 
 - 首轮文档主树迁移已完成入口搭建
-- 当前无仍需单独跟踪的活跃专项
+- 当前活跃专项：`2026-04-21-spacelife-hub-dialogue-mvp-implementation-plan.md`
 - `LevelRoomRuntimeChain_Hardening` 已完成并归档到 `complete/`
 - `LevelArchitect_Workbench` 已完成并归档到 `complete/`
 - `2026-04-15-static-geometry-walls-implementation-plan.md` 已完成并归档到 `complete/`

@@ -22,6 +22,7 @@
 
 - [`Level/`](./Level/): 关卡系统现役技术真相源
 - [`Ship/`](./Ship/): Ship / VFX 现役技术真相源
+- [`SpaceLife/`](./SpaceLife/): 飞船内部 Hub 交互与对话系统技术设计
 - `Combat/`、`Enemy/`、`UI/`、`Core/`: 预留占位目录，后续按需要填充
 
 ## 当前重点文档
@@ -29,3 +30,4 @@
 - [`Level/Level_CanonicalSpec.md`](./Level/Level_CanonicalSpec.md)
 - [`Ship/ShipVFX_CanonicalSpec.md`](./Ship/ShipVFX_CanonicalSpec.md)
 - [`Ship/ShipVFX_AssetRegistry.md`](./Ship/ShipVFX_AssetRegistry.md)
+- [`SpaceLife/SpaceLife_HubDialogue_SystemDesign.md`](./SpaceLife/SpaceLife_HubDialogue_SystemDesign.md)
