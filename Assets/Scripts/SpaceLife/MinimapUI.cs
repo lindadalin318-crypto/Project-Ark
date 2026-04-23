@@ -21,15 +21,21 @@ namespace ProjectArk.SpaceLife
 
         private SpaceLifeRoomManager _roomManager;
         private SpaceLifeManager _spaceLifeManager;
+        private CanvasGroup _minimapCanvasGroup;
         private readonly List<GameObject> _roomButtons = new List<GameObject>();
+
+        private void Awake()
+        {
+            // uGUI 面板显隐统一走 CanvasGroup（见 Implement_rules.md §12.6 R5 + CLAUDE.md 陷阱表）
+            // 禁止 SetActive(false)：会推迟 Awake、可能被序列化为 inactive，导致首次 Open 时面板被 Awake 内逻辑瞬间关闭。
+            _minimapCanvasGroup = EnsureCanvasGroup(_minimapPanel);
+            SetPanelVisible(false);
+        }
 
         private void Start()
         {
             _roomManager = ServiceLocator.Get<SpaceLifeRoomManager>();
             _spaceLifeManager = ServiceLocator.Get<SpaceLifeManager>();
-
-            if (_minimapPanel != null)
-                _minimapPanel.SetActive(false);
 
             if (_roomManager != null)
             {
@@ -46,16 +52,42 @@ namespace ProjectArk.SpaceLife
 
         private void OnEnterSpaceLife()
         {
-            if (_minimapPanel != null)
-                _minimapPanel.SetActive(true);
-
+            SetPanelVisible(true);
             RefreshRoomButtons();
         }
 
         private void OnExitSpaceLife()
         {
-            if (_minimapPanel != null)
-                _minimapPanel.SetActive(false);
+            SetPanelVisible(false);
+        }
+
+        private void SetPanelVisible(bool visible)
+        {
+            if (_minimapCanvasGroup == null)
+            {
+                return;
+            }
+
+            _minimapCanvasGroup.alpha = visible ? 1f : 0f;
+            _minimapCanvasGroup.interactable = visible;
+            _minimapCanvasGroup.blocksRaycasts = visible;
+        }
+
+        private static CanvasGroup EnsureCanvasGroup(GameObject panel)
+        {
+            if (panel == null)
+            {
+                Debug.LogError("[MinimapUI] _minimapPanel is not assigned. Minimap show/hide will silently no-op.");
+                return null;
+            }
+
+            CanvasGroup group = panel.GetComponent<CanvasGroup>();
+            if (group == null)
+            {
+                group = panel.AddComponent<CanvasGroup>();
+            }
+
+            return group;
         }
 
         private void OnRoomChanged(SpaceLifeRoom room)

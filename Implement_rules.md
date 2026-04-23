@@ -22,6 +22,7 @@
 > - `Core / Infrastructure`
 > - `UI`
 > - `Combat / Projectile`
+> - `SpaceLife / Dialogue`
 >
 > 后续可以继续追加：
 >
@@ -963,7 +964,249 @@ Level 关键链路缺引用时，禁止静默 return：
 
 ---
 
-## 12. 后续可追加模块（占位）
+## 12. SpaceLife / Dialogue 模块规则
+
+> 本章沉淀自 `2026-04-22-spacelife-hub-dialogue-master-plan.md` (v1.1) Phase 0。
+> 首要目的：在 SpaceLife 模块落地 Hub + NPC 对话前，先把"谁是权威"钉死，避免 UI / Domain / Editor 三层再次出现多入口改同一条链的历史悲剧（见 §4 踩坑总结）。
+
+### 12.1 模块边界
+
+本节适用范围：
+
+- Runtime
+  - `Assets/Scripts/SpaceLife/` 所有非 Editor 子目录
+  - `Assets/Scripts/SpaceLife/Dialogue/`
+  - `Assets/Scripts/SpaceLife/Data/NPCDataSO.cs`（Legacy 字段处于降级中）
+  - `Assets/Scripts/SpaceLife/PlayerController2D.cs`
+  - `Assets/Scripts/SpaceLife/PlayerInteraction.cs`
+  - `Assets/Scripts/SpaceLife/SpaceLifeInputHandler.cs`
+  - `Assets/Scripts/SpaceLife/MinimapUI.cs`
+- Editor
+  - `Assets/Scripts/SpaceLife/Editor/`（含 `SpaceLifeSetupWindow` — 已冻结）
+- Prefab / Scene
+  - `Assets/_Prefabs/UI/DialogueUI.prefab`（Phase 2 重建）
+  - `Assets/_Prefabs/UI/GiftUI.prefab`（Phase 2 新建）
+  - `Assets/Scenes/SampleScene.unity`（Hub 场景，Coordinator 在此拖线）
+- 数据资产
+  - `Assets/_Data/SpaceLife/Dialogue/`（`DialogueDatabaseSO` / `DialogueGraphSO` authoring 目录）
+  - `Assets/_Data/SpaceLife/NPCs/`（`NPCDataSO` 资产）
+- Input
+  - `Assets/Input/ShipActions.inputactions`（Hub 模式下使用 "SpaceLife" ActionMap）
+- 相关文档
+  - 设计稿：`Docs/2_TechnicalDesign/SpaceLife/SpaceLife_HubDialogue_SystemDesign.md`
+  - Master Plan：`Docs/0_Plan/ongoing/2026-04-22-spacelife-hub-dialogue-master-plan.md`
+  - 04-21 MVP Plan：`Docs/0_Plan/ongoing/2026-04-21-spacelife-hub-dialogue-mvp-implementation-plan.md`（被 Master Plan 统摄）
+
+> **说明：** SpaceLife 目前没有独立的 `CanonicalSpec` / `AssetRegistry`。在 Master Plan 执行完成并归档前，本章节同时承载"治理约束"和"现役权威口径"。Phase 4 结束后，现役 owner / 路径 / 状态判断会迁移至 `SpaceLife_HubDialogue_SystemDesign.md`，本章节回归纯治理职责。
+
+### 12.2 模块目标
+
+SpaceLife / Dialogue 模块的治理目标：
+
+- **Domain / UI / Editor 三层边界清晰**：Domain 只产出 ViewModel，UI 只消费，Editor 工具只 Audit / Preview，禁止三层交叉写入
+- **避免 Setup Window 再次膨胀成"祖传工具"**：1,630 行 SetupWindow 是本项目最大的技术债之一，本轮明确冻结，后续重写走独立 Plan
+- **让新增 NPC / 对话分支无需重读整套 Domain 代码**：authoring → validator → runner → presenter 是一条干净的单向链路
+- **治理成熟度 15% → 60%+**：通过 Authority Matrix + 3 个必做 Validator + Scene Override 白名单 + 7 条设计决策落地
+
+换句话说：
+
+> **下一个 NPC 只改数据，不改架构。**
+
+### 12.3 Authority Matrix（五层权威表）
+
+> 本表与 Master Plan §4.1 的 Authority Matrix 同步。若后续 Master Plan 修正此表，以 Master Plan 为准并同步回来。
+
+| 范围 | 对象 / 引用类型 | 唯一权威入口 | 明确禁止的并行写入者 | 备注 |
+|---|---|---|---|---|
+| **Domain 数据** | `DialogueGraphSO` / `DialogueDatabaseSO` | 手工 authoring in `Assets/_Data/SpaceLife/Dialogue/` | Runtime 修改 SO、Editor 工具自动生成 graph 内容 | 运行时污染禁止写回 authored asset（对齐 §9.3 Runtime 不修改 SO） |
+| **Runtime 状态** | session state / context / flags / relationship | `DialogueRunner`（session） + `DialogueFlagStore`（flags） + `RelationshipManager`（relationship） | UI 直接修改业务状态、NPC 脚本自己按 index 选台词 | UI 只消费 ViewModel |
+| **UI Prefab 结构** | `DialogueUI.prefab` / `GiftUI.prefab` | 唯一一个 Editor 构建器（Phase 2 创建，暂定 `SpaceLifeUIPrefabBuilder`）只做 Apply | `SpaceLifeSetupWindow`、Scene 手工拼装、Runtime fallback | 禁止 Setup Window 参与 UI Prefab 构建 |
+| **Scene-only 接线** | `SpaceLifeDialogueCoordinator` 在 `SampleScene` 中的引用拖线（UI 实例、Router、Database） | 手工拖线（Phase 3），或唯一一个 Scene Binder（若 Phase 5 实现） | Runtime 自动 Find、SetupWindow 自动回填 | Scene-only 引用必须写进 Scene Override 白名单（见 §12.4） |
+| **Debug / Setup 工具** | `SpaceLifeSetupWindow` 等 Editor 工具 | 只允许 Audit / Preview（Phase 4 限定） | 在 Play Mode / `OnValidate` / `Awake` 中隐式接管主链 | Phase 4 明确降权，Phase 5 可选重写 |
+
+### 12.4 Scene Override 白名单（Phase 3 定稿版）
+
+> 本小节自 Phase 0 初稿升级为 Phase 3 **定稿**（2026-04-22）。依据 Phase 3 §7.4 要求，补充 Coordinator 接线模式转为 ServiceLocator、UIRoot 父挂载、历史 SerializeField 引用退役三项细节。
+
+#### 允许的 Scene Override / Scene-only 数据
+
+1. **UI Root Prefab 实例化**：`SpaceLifeUIRoot.prefab` 在 `SampleScene` 中作为 `SpaceLifeDialogueSampleSlice` 的子节点实例化（Prefab instance，允许 parent + position 作为 scene-only，不算非法 override）
+2. **Canvas 视觉层叠**：`SpaceLifeUIRoot` / `DialogueUI` / `GiftUI` 实例的 `Canvas.sortingOrder`（若场景需要特定层叠调整）
+3. **Coordinator 场景级资产引用**：`SpaceLifeDialogueCoordinator` 对 `DialogueDatabaseSO` 资产和场景中 `DialogueServiceRouter` 的 `[SerializeField]` 拖线（这两项仍保留 SerializeField，属于明确允许的 scene-only 接线）
+
+#### 必须跟随 Prefab / Builder，不允许漂移的内容
+
+- `DialogueUI.prefab` / `GiftUI.prefab` / `OptionButton.prefab` 内部子节点结构
+- `SpaceLifeUIRoot.prefab` 作为 nested prefab root 的结构
+- `CanvasGroup` 初始值（alpha=0 / interactable=false / blocksRaycasts=false）
+- RectTransform 布局（anchor / pivot / sizeDelta / anchoredPosition）
+- Presenter 脚本（`DialogueUIPresenter` / `GiftUIPresenter`）内部的 SerializeField 引用
+- 任何数值字段（字体大小、颜色、padding、间距、spacing 等）
+
+#### Phase 3 落地后已退役的接线模式
+
+- ❌ `SpaceLifeDialogueCoordinator._dialogueUI` 的 `[SerializeField]` 拖线 —— Phase 3 §7.1 已取消 SerializeField，字段改为纯私有并通过 `ServiceLocator.Get<IDialoguePresenter>()` 解析。场景中若残留该字段的 override 必须清除。
+- ❌ Runtime 自动 `FindObjectsOfType<DialogueUI>()` fallback —— Phase 2 重构时已全部删除。
+- ❌ `SpaceLifeSetupWindow` 对 `DialogueUI` / `GiftUI` 的回填能力 —— 由 §12.7 冻结声明统一禁止。
+
+#### 处理规则（漂移发生时）
+
+若发现"不允许 override"的字段在场景中漂移：
+
+1. **不得**用 Runtime fallback 补救（对齐 §3.3 / §3.5）
+2. 用 `ProjectArk > Space Life > Audit UI Prefab Overrides` 菜单定位漂移项
+3. 确认该字段的权威 owner（Prefab Builder / Prefab 本身 / 设计决策）
+4. 清理错误 override（Revert to Prefab Instance Overrides）
+5. 若同类漂移重复出现，把该字段加入 `SpaceLifeUIOverrideAudit` 黑名单检查项
+
+### 12.5 Phase 0 设计决策锁定（7 条）
+
+> 本清单是 Master Plan v1.1 §4.2 的**规则层固化**。决策一经落地，后续 Phase 1-5 不得随意推翻，若需变更必须先更新 Master Plan 并同步本节。
+
+| # | 决策 | 依据 | 违反此决策的表现 |
+|---|---|---|---|
+| D1 | 保留 `DialogueUI` 组件名，重构为 Presenter（不新建第二套面板） | 避免双轨 UI authority | 出现 `NewDialoguePresenter` / `DialogueUI_v2` 等并行类 |
+| D2 | `RelationshipManager` 直接读写 `PlayerSaveData`，不改 `SaveBridge` | 避免 `Level → SpaceLife` 反向耦合 | `SaveBridge` 中出现 `RelationshipManager` 引用 |
+| D3 | `Upgrade` / `Intel` / `RelationshipEvent` 统一走 `DialogueServiceRouter`，不在节点里 `OpenXXXUI()` | 对话只产出结果，不持有别系统逻辑 | `DialogueNode` 里出现 `UpgradeUI.Open()` 直调 |
+| D4 | 新 graph 不复用 `NPCDataSO.DialogueNodes`，另建 `DialogueGraphSO` | 旧结构 index-based、NPC 专属 | Phase 2+ 的新对话仍从 `NPCDataSO.DialogueNodes` 取数 |
+| D5 | MVP 隐藏不满足条件的选项，不做 disabled reason | 减少 Presenter 复杂度 | Presenter 出现 `ShowDisabledWithReason(reason)` 分支 |
+| D6 | **UI Prefab 体系从 0 建，不复用 SetupWindow 现有产物** | 避免把旧 UI owner 双轨带入新系统 | Phase 2 的 `DialogueUI.prefab` 由 SetupWindow 回填 |
+| D7 | **SetupWindow 在 Phase 1-3 期间冻结，禁止执行 Rebuild** | 用执行约束替代推翻重写 | Phase 1-3 期间有人跑 SetupWindow 的 Rebuild 操作 |
+
+### 12.6 实现规则
+
+#### R1. Domain 不持有 UI 接口，UI 接口由 Core 定义
+
+- `IDialoguePresenter` / `IGiftPresenter` 定义在 `Assets/Scripts/SpaceLife/Dialogue/` 下（作为 Core 层接口）
+- `DialogueRunner` / `DialogueCoordinator` 只通过 `ServiceLocator.Get<IDialoguePresenter>()` 获取，**不得**直接引用 `DialogueUI` 类型
+- **根因：** Phase 5 可能需要替换 UI 实现（如原生 UI Toolkit），接口隔离为此留活口
+
+#### R2. HubLock 采用引用计数而非 bool
+
+- `SpaceLifeManager.AcquireHubLock(object owner)` / `ReleaseHubLock(object owner)`
+- bool 版本（如曾存在）必须在 Phase 1 内废弃
+- **根因：** 对话 + 礼物 + 升级三类 UI 可能同时触发 lock，bool 会导致"第一个释放者把所有锁都解了"
+
+#### R3. `AssetDatabase.FindAssets` 类模糊查找必须收口到单一 Locator
+
+- Editor-only 场景下定位 `ShipActions.inputactions` 等关键资产，只允许通过 `ShipInputActionLocator`（Phase 1 P4 抽取）
+- Runtime 消费者调用 `#if UNITY_EDITOR` + `ShipInputActionLocator.FindShipActionsAsset()`，**禁止**自己写 `AssetDatabase.FindAssets(...)` 字符串查询
+- **根因：** 同类违规在 `PlayerController2D` / `PlayerInteraction` / `SpaceLifeInputHandler` 三处重复 = 典型第二真相源（对齐 §3.8 硬编码治理）
+
+#### R4. ActionMap 语义边界必须与模式边界一致
+
+- Hub 模式下的交互键（`Interact`）必须定义在 "SpaceLife" ActionMap 中，**不得**跨 map 读 "Ship" map 的键
+- 若某按键同时被 Ship 模式和 SpaceLife 模式使用，两个 map 中各自独立声明，不共享 action
+- **根因：** ActionMap 切换的语义是"切换输入上下文"，跨 map 读键会导致 Rebind UI 与多键位冲突时定位困难
+
+#### R5. 所有 SpaceLife 面板必须用 CanvasGroup 控显隐
+
+- `DialogueUIPresenter` / `GiftUIPresenter` / `MinimapUI` 及未来所有 SpaceLife UI 面板
+- GameObject 始终保持 `active=true`，`Awake()` 中只初始化 CanvasGroup 状态
+- **禁止** 调用 `SetActive(false)` / `SetActive(true)` 控制面板显隐
+- **根因：** 对齐 §10 UI 模块规则与 CLAUDE.md 已知陷阱（SetActive 会推迟 Awake，历史已踩坑）
+
+#### R6. Legacy API 必须显式标注 `[System.Obsolete]`
+
+- `NPCDataSO` 的 `_dialogueNodes` / `GetNodeAt()` / `GetEntryLine()` / `*EntryIndex` 是旧原型 API
+- 在 Phase 2 删除 Legacy 走线前，这些 API 必须带 `[System.Obsolete("...", false)]` 标注
+- 标注中必须写明"预计退役时间"与"替代方案"
+- **根因：** 对齐 §3.11 迁移纪律——旧路径不删，复杂度不会自己消失；`[Obsolete]` 是最低成本的降级信号
+
+#### R7. SetupWindow 冻结期禁令
+
+- Phase 1-3 执行期间，任何人（含 AI Agent）**禁止**：
+  - 在 `SpaceLifeSetupWindow` 中新增功能
+  - 执行 Setup Window 的 Rebuild / Apply 类操作
+  - 依赖 Setup Window 回填字段作为"正确初始状态"
+- Setup Window 必须在 Phase 4 显式冻结声明（代码注释 + Editor 警告 + Implement_rules 三处）
+- **根因：** 1,630 行的 Setup Window 是当前 SpaceLife 最大的 authority 污染源，冻结 = 用执行约束替代推翻重写
+
+#### R8. Silent No-Op 禁令（SpaceLife 版）
+
+- Coordinator 缺 Presenter 引用、Runner 缺 Database、Router 缺 Service 时，**禁止**静默 `return`
+- 至少满足以下之一（对齐 §3.5）：
+  - `Debug.LogError(...)` 带明确上下文
+  - Inspector 红字提示
+  - `Coordinator Dependency Audit` 报告（Phase 3 必做 Validator 之一）
+- **根因：** SpaceLife 历史上多次因为缺字段静默失败，浪费数小时排查
+
+### 12.7 改动前必须回答的 5 个问题
+
+对 SpaceLife / Dialogue 做任何非微小改动前：
+
+1. 这次改动的**唯一运行时入口**是谁？（Runner / Coordinator / Presenter / Manager？）
+2. 涉及的 **UI Prefab** 谁负责构建？（`SpaceLifeUIPrefabBuilder` 还是手工？）
+3. 涉及的 **Scene-only 引用**是否在白名单中？（§12.4）
+4. 是否会触发 **Setup Window 的冻结红线**？（R7）
+5. 是否在违反 **D1-D7 的任一条决策**？（§12.5）
+
+若任一问题答不清，不应直接编码——先补文档或对齐 Master Plan。
+
+### 12.8 踩坑总结（持续追加）
+
+#### 坑 1：`DialogueUI` 旧 Legacy 走线与新 Presenter 并存导致双轨
+
+- **现象：** 新对话节点触发后，画面显示为旧 `DialogueUI.ShowDialogue(line)` 的硬编码 UI，新 Presenter 的 ViewModel 被静默吞掉
+- **根因：** Legacy 方法未删除 + 没有 `[Obsolete]` 警告，新代码容易误调旧 API
+- **防御：** Phase 1 给 `NPCDataSO` Legacy 字段打 `[Obsolete]`；Phase 2 删除 `DialogueUI.ShowDialogue(line)` 的 Legacy 走线
+
+#### 坑 2：`SpaceLifeSetupWindow` 自动回填 Coordinator 引用
+
+- **现象：** Coordinator 的 Database 引用被 Setup Window 在 `OnValidate` 阶段隐式写回，导致手工清空后下次保存又恢复
+- **根因：** Editor 工具越权写 Scene-only 引用，违反 Authority Matrix 第 3 / 4 行
+- **防御：** Setup Window 冻结声明 + Phase 3 必做 `Coordinator Dependency Audit` 确认引用来源
+
+#### 坑 3：`PlayerInteraction` 从 "Ship" ActionMap 读 `Interact`
+
+- **现象：** Hub 模式下按 E 能触发交互（表现正常），但按键解绑逻辑写在 "Ship" map 里，未来做 Rebind UI 时会出现"SpaceLife 模式下也能解绑 Ship 模式的键"的语义混乱
+- **根因：** ActionMap 语义边界与模式边界不一致（R4）
+- **防御：** Phase 1 P5 迁移 `Interact` 到 "SpaceLife" map
+
+#### 坑 4：`AssetDatabase.FindAssets("ShipActions t:InputActionAsset")` 在 3 个文件重复
+
+- **现象：** 三个独立 Runtime 类在 `#if UNITY_EDITOR` 块中各自写字符串查询，`ShipActions.inputactions` 一旦改名或移动，三处都要同步
+- **根因：** 没有 Locator 抽象层（R3）
+- **防御：** Phase 1 P4 抽取 `ShipInputActionLocator`
+
+### 12.9 验收清单
+
+每次对 SpaceLife / Dialogue 做完改动后，至少检查：
+
+1. 是否新增了第二真相源？（Domain / UI / Editor 是否交叉写入）
+2. 是否新增了 `AssetDatabase.FindAssets` / `GameObject.Find` / fallback 分支？
+3. 是否触发了 SetupWindow 冻结红线？（R7）
+4. 涉及的 Scene Override 是否都在白名单中？（§12.4）
+5. 关键依赖缺失时，是否会 Silent No-Op？（R8）
+6. 是否违反了 D1-D7 任一条设计决策？（§12.5）
+7. 是否需要新增 / 更新 Validator？（`DialogueDatabaseValidator` / `UI Prefab Override Audit` / `Coordinator Dependency Audit`）
+
+### 12.10 推荐工作流
+
+#### 新需求（新 NPC / 新对话分支）
+
+1. 确认属于 **Domain 数据层** 改动 → 直接 authoring `DialogueGraphSO` / `DialogueDatabaseSO`
+2. 运行 `DialogueDatabaseValidator`（Phase 1 后可用）
+3. Play Mode 验证
+4. **不要**改 Runner / Presenter / Coordinator 代码
+
+#### 难定位 bug
+
+1. 先 `read_console` 看日志（对齐 MCP 使用原则）
+2. 确认触发的是 **新 Presenter** 还是 **Legacy 走线**（坑 1）
+3. 确认 Coordinator 的引用是否被 SetupWindow 隐式接管（坑 2）
+4. 确认 Scene Override 是否漂移（§12.4）
+5. 若以上都不是根因，补 Validator / Audit，而不是加 Debug.Log
+
+#### 新功能（Phase 5 之后）
+
+1. 先读 `SpaceLife_HubDialogue_SystemDesign.md` 确认现役 owner
+2. 对照 Authority Matrix 确认新功能应落到哪一层
+3. 若触发 D6 / D7 / R7 的红线，必须先开新 Plan 推翻对应决策
+
+---
+
+## 13. 后续可追加模块（占位）
 
 后续可按同样结构继续追加：
 
@@ -976,7 +1219,7 @@ Level 关键链路缺引用时，禁止静默 return：
 
 ---
 
-## 13. 通用模块规则模板
+## 14. 通用模块规则模板
 
 > 本节定义当新模块需要在 `Implement_rules.md` 中追加规则时，应遵循的统一结构。
 >
@@ -994,7 +1237,7 @@ Level 关键链路缺引用时，禁止静默 return：
 > - `Implement_rules.md` 中的模块规则：描述模块**怎么改更不容易烂**——实现约束、踩坑防御、验收清单
 > - 两者互补，不重复。架构速写回答"谁管什么"，实现规则回答"改的时候要注意什么"
 
-### 13.1 模块规则统一结构
+### 14.1 模块规则统一结构
 
 每个模块追加到 `Implement_rules.md` 时，应包含以下章节（按需启用，不必一次写全）：
 
@@ -1029,14 +1272,14 @@ Level 关键链路缺引用时，禁止静默 return：
 - 难定位 bug 怎么查
 ```
 
-### 13.2 规则质量标准
+### 14.2 规则质量标准
 
 - **可执行**：每条规则都能转化为具体检查动作，禁止模糊表述（如"注意代码质量"）
 - **有根因**：每条规则都要说明"为什么"，没有根因的规则不写
 - **不重复**：与 `CLAUDE.md` 的架构原则 / 代码规范不重复；此处只写该模块特有的约束
 - **不过时**：定期审查，已不再适用的规则标记 `[已废弃]` 并说明原因，不要静默删除
 
-### 13.3 模块规则与架构速写的联动
+### 14.3 模块规则与架构速写的联动
 
 
 | 时机                   | 架构速写 (`_ArchBrief.md`) | 模块规则 (`Implement_rules.md`)  |
@@ -1048,10 +1291,11 @@ Level 关键链路缺引用时，禁止静默 return：
 | 架构重构后                | 重写或大幅更新                | 清理过时规则，补新规则                  |
 
 
-### 13.4 已有模块的规则参考
+### 14.4 已有模块的规则参考
 
 - **Ship / VFX**：见本文档 Section 2-6（当前最完整的模块规则范例）
 - **Level**：见本文档 Section 7（现役 authoring / validation 范例）
 - **全局 Unity / Editor 治理**：见 Section 8（跨模块底层 guardrails）
 - **Core / Infrastructure / UI / Combat / Projectile**：见 Section 9-11（由 `CLAUDE.md` 迁入的首批通用陷阱沉淀）
+- **SpaceLife / Dialogue**：见 Section 12（2026-04-22 Master Plan v1.1 Phase 0 沉淀，含 Authority Matrix 五层 + Scene Override 白名单 + 7 条设计决策锁定）
 

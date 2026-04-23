@@ -85,3 +85,20 @@
 - **技术**
   - 文档架构重构：按职责分区、按主题归档、按稳定命名词法重建 `Docs` 主树。
   - 导航治理：使用总索引 + 一级目录 README + 相对路径链接，建立更稳定的索引体系。
+---
+
+## SpaceLifeDialogueCoordinator — WorldProgressManager 降级为可选依赖 — 2026-04-22 22:39
+
+- **修改文件**
+  - `Assets/Scripts/SpaceLife/Dialogue/SpaceLifeDialogueCoordinator.cs`
+- **内容**
+  - 把 `WorldProgressManager` 从 `AuditDependenciesOnStart()` 的硬依赖列表中移除，不再作为 Start 期审计的必检项。
+  - 在 audit 函数中补注释说明该依赖是有意保持为可选（intentionally optional），并解释 fallback 链路：优先 `WorldProgressManager.CurrentWorldStage`，缺席时降级到 `PlayerSaveData.Progress.WorldStage`，无存档时回落到 0。
+  - 同步为 `ResolveWorldStage()` 补完整 XML doc，点明"full-flow integration"与"standalone SpaceLife demo"两种运行语义。
+- **目的**
+  - 让 SpaceLife 作为独立 hub 切片能在没有 Level 模块运行时管理器的场景中直接跑通对话 demo，无需强制挂载 `WorldProgressManager`。
+  - 消除 audit 的硬依赖判定与 `ResolveWorldStage()` 的软依赖处理之间的自相矛盾：之前 audit 会直接禁用组件，导致即便 fallback 代码已写好也走不到。
+  - 遵循 Implement_rules.md §3.7 "Runtime/Editor/Scene 三层职责隔离"——SpaceLife 模块不应强制依赖 Level 模块的管理器存在；未来完整流程整合时挂上 `WorldProgressManager` 自动生效，零迁移成本。
+- **技术**
+  - 可选依赖模式：字段保留 + ServiceLocator 解析保留 + audit 移除 + 运行时 null-check fallback 已覆盖两种路径。
+  - 保持 `ServiceLocator.Get<WorldProgressManager>()` 解析调用不变，让 Level 模块存在时仍然能接管。

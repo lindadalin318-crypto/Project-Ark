@@ -82,8 +82,8 @@ namespace ProjectArk.SpaceLife.Editor
         {
             Transform sampleRoot = GetOrCreateSampleSliceRoot();
 
-            DialogueUI dialogueUi = UnityEngine.Object.FindAnyObjectByType<DialogueUI>();
-            GiftUI giftUi = UnityEngine.Object.FindAnyObjectByType<GiftUI>();
+            DialogueUIPresenter dialogueUi = UnityEngine.Object.FindAnyObjectByType<DialogueUIPresenter>();
+            GiftUIPresenter giftUi = UnityEngine.Object.FindAnyObjectByType<GiftUIPresenter>();
             GiftInventory giftInventory = GetOrCreateSingleton<GiftInventory>(sampleRoot, nameof(GiftInventory));
             DialogueServiceRouter router = GetOrCreateSingleton<DialogueServiceRouter>(sampleRoot, RouterObjectName);
             SpaceLifeDialogueCoordinator coordinator = GetOrCreateSingleton<SpaceLifeDialogueCoordinator>(sampleRoot, CoordinatorObjectName);
@@ -102,16 +102,16 @@ namespace ProjectArk.SpaceLife.Editor
 
             if (dialogueUi == null)
             {
-                Debug.LogError("[SpaceLifeDialogueSampleBootstrap] DialogueUI was not found in SampleScene. Run the existing SpaceLife UI setup before validating the sample slice.");
+                Debug.LogError("[SpaceLifeDialogueSampleBootstrap] DialogueUIPresenter was not found in SampleScene. Run the existing SpaceLife UI setup before validating the sample slice.");
             }
 
             if (giftUi == null)
             {
-                Debug.LogError("[SpaceLifeDialogueSampleBootstrap] GiftUI was not found in SampleScene. OpenGift will not be playable until the existing GiftUI scene object is restored.");
+                Debug.LogError("[SpaceLifeDialogueSampleBootstrap] GiftUIPresenter was not found in SampleScene. OpenGift will not be playable until the existing GiftUIPresenter scene object is restored.");
             }
         }
 
-        private static void ConfigureRouter(DialogueServiceRouter router, GiftUI giftUi)
+        private static void ConfigureRouter(DialogueServiceRouter router, GiftUIPresenter giftUi)
         {
             if (router == null)
             {
@@ -122,7 +122,7 @@ namespace ProjectArk.SpaceLife.Editor
             EditorUtility.SetDirty(router);
         }
 
-        private static void ConfigureCoordinator(SpaceLifeDialogueCoordinator coordinator, DialogueDatabaseSO database, DialogueUI dialogueUi, DialogueServiceRouter router)
+        private static void ConfigureCoordinator(SpaceLifeDialogueCoordinator coordinator, DialogueDatabaseSO database, DialogueUIPresenter dialogueUi, DialogueServiceRouter router)
         {
             if (coordinator == null)
             {

@@ -37,10 +37,10 @@ namespace ProjectArk.SpaceLife
 
             if (_inputActions != null)
             {
-                var shipMap = _inputActions.FindActionMap("Ship");
-                if (shipMap != null)
+                var spaceLifeMap = _inputActions.FindActionMap("SpaceLife");
+                if (spaceLifeMap != null)
                 {
-                    _interactAction = shipMap.FindAction("Interact");
+                    _interactAction = spaceLifeMap.FindAction("Interact");
                 }
             }
         }
@@ -60,17 +60,11 @@ namespace ProjectArk.SpaceLife
 #if UNITY_EDITOR
         private void TryFindInputActionAsset()
         {
-            var guids = UnityEditor.AssetDatabase.FindAssets("ShipActions t:InputActionAsset");
-            foreach (var guid in guids)
+            var asset = ProjectArk.SpaceLife.EditorSupport.ShipInputActionLocator.Find(out var path);
+            if (asset != null)
             {
-                var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
-                var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<InputActionAsset>(path);
-                if (asset != null)
-                {
-                    _inputActions = asset;
-                    Debug.Log($"[PlayerInteraction] Auto-found InputActionAsset: {path}");
-                    break;
-                }
+                _inputActions = asset;
+                Debug.Log($"[PlayerInteraction] Auto-found InputActionAsset: {path}");
             }
         }
 #endif
@@ -91,9 +85,9 @@ namespace ProjectArk.SpaceLife
             if (_interactAction != null && _inputActions != null)
             {
                 _interactAction.performed -= OnInteractActionPerformed;
-                
-                var shipMap = _inputActions.FindActionMap("Ship");
-                if (shipMap != null && shipMap.enabled)
+
+                var spaceLifeMap = _inputActions.FindActionMap("SpaceLife");
+                if (spaceLifeMap != null && spaceLifeMap.enabled)
                 {
                     _interactAction.Disable();
                 }

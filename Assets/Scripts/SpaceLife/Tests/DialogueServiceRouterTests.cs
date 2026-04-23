@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
+using ProjectArk.SpaceLife.Data;
 using ProjectArk.SpaceLife.Dialogue;
 using UnityEngine;
 
@@ -51,7 +52,7 @@ namespace ProjectArk.SpaceLife.Tests
 
             var giftRoot = new GameObject("GiftUI");
             giftRoot.AddComponent<CanvasGroup>();
-            var giftUi = giftRoot.AddComponent<GiftUI>();
+            var giftUi = giftRoot.AddComponent<GiftUIPresenter>();
             _createdObjects.Add(giftRoot);
 
             var router = CreateRouter();
@@ -61,6 +62,11 @@ namespace ProjectArk.SpaceLife.Tests
             var npcRoot = new GameObject("NPC");
             npcRoot.AddComponent<Interactable>();
             var npc = npcRoot.AddComponent<NPCController>();
+            var npcData = ScriptableObject.CreateInstance<NPCDataSO>();
+            SetPrivateField(npcData, "_npcId", "test_npc");
+            SetPrivateField(npcData, "_npcName", "TestNpc");
+            SetPrivateField(npc, "_npcData", npcData);
+            _createdObjects.Add(npcData);
             _createdObjects.Add(npcRoot);
 
             bool routed = router.TryRoute(new DialogueServiceExit(DialogueServiceExitType.OpenGift), npc);
@@ -69,7 +75,7 @@ namespace ProjectArk.SpaceLife.Tests
             Assert.IsTrue(giftUi.IsVisible);
             Assert.IsTrue(manager.IsHubInteractionLocked);
 
-            giftUi.CloseUI();
+            giftUi.HideGiftUI();
 
             Assert.IsFalse(manager.IsHubInteractionLocked);
         }

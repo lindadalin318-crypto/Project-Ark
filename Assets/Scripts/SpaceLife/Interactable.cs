@@ -38,6 +38,8 @@ namespace ProjectArk.SpaceLife
 
         private void Start()
         {
+            // Try to cache eagerly; if Player2D has not spawned yet
+            // (e.g. before entering SpaceLife mode), we will retry lazily in Update.
             _cachedPlayer = ServiceLocator.Get<PlayerController2D>();
         }
 
@@ -49,10 +51,19 @@ namespace ProjectArk.SpaceLife
 
         private void CheckPlayerInRange()
         {
+            // Lazy re-resolve: PlayerController2D is spawned on-demand when
+            // entering SpaceLife mode. If we cached null at Start() (before
+            // spawn) or the cached reference became stale (pool return /
+            // exit-reenter SpaceLife), re-query ServiceLocator every frame
+            // until we get a valid reference.
             if (_cachedPlayer == null)
             {
-                _isInRange = false;
-                return;
+                _cachedPlayer = ServiceLocator.Get<PlayerController2D>();
+                if (_cachedPlayer == null)
+                {
+                    _isInRange = false;
+                    return;
+                }
             }
 
             float distance = Vector2.Distance(transform.position, _cachedPlayer.transform.position);

@@ -38,6 +38,54 @@ namespace ProjectArk.SpaceLife.Dialogue
             _graphByOwnerId = null;
         }
 
+        /// <summary>
+        /// Aggregating authoring-time validator. Collects ALL errors found across the database
+        /// (does not fail-fast). Returns an empty list when the database is fully valid.
+        /// Covers:
+        ///   - Graph list has no null entries
+        ///   - GraphId is unique across all graphs
+        ///   - OwnerId is unique across all graphs
+        ///   - Each graph passes <see cref="DialogueGraphSO.ValidateAll"/> (node identity, entry rules,
+        ///     Choice.NextNodeId / Node.NextNodeId / EntryRule.EntryNodeId reference integrity)
+        /// </summary>
+        public List<string> ValidateDatabase()
+        {
+            var errors = new List<string>();
+
+            if (_graphs == null || _graphs.Count == 0)
+            {
+                errors.Add($"[DialogueDatabaseSO] '{name}' has no graphs.");
+                return errors;
+            }
+
+            var graphIds = new HashSet<string>(StringComparer.Ordinal);
+            var ownerIds = new HashSet<string>(StringComparer.Ordinal);
+
+            for (int i = 0; i < _graphs.Count; i++)
+            {
+                DialogueGraphSO graph = _graphs[i];
+                if (graph == null)
+                {
+                    errors.Add($"[DialogueDatabaseSO] '{name}' has a null graph at index {i}.");
+                    continue;
+                }
+
+                graph.ValidateAll(errors);
+
+                if (!string.IsNullOrWhiteSpace(graph.GraphId) && !graphIds.Add(graph.GraphId))
+                {
+                    errors.Add($"[DialogueDatabaseSO] Duplicate GraphId detected: {graph.GraphId}.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(graph.OwnerId) && !ownerIds.Add(graph.OwnerId))
+                {
+                    errors.Add($"[DialogueDatabaseSO] Duplicate OwnerId detected: {graph.OwnerId}.");
+                }
+            }
+
+            return errors;
+        }
+
         private bool TryBuildCache()
         {
             if (_graphByOwnerId != null)

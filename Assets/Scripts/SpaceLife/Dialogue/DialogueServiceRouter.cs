@@ -13,7 +13,7 @@ namespace ProjectArk.SpaceLife.Dialogue
         }
 
         [Header("Dependencies")]
-        [SerializeField] private GiftUI _giftUI;
+        [SerializeField] private GiftUIPresenter _giftUI;
         [SerializeField] private SpaceLifeManager _spaceLifeManager;
 
         [Header("Service Exits")]
@@ -60,10 +60,10 @@ namespace ProjectArk.SpaceLife.Dialogue
                 return false;
             }
 
-            GiftUI giftUi = ResolveGiftUi();
+            GiftUIPresenter giftUi = ResolveGiftUi();
             if (giftUi == null)
             {
-                Debug.LogError("[DialogueServiceRouter] GiftUI is missing and OpenGift cannot be routed.", this);
+                Debug.LogError("[DialogueServiceRouter] GiftUIPresenter is missing and OpenGift cannot be routed.", this);
                 return false;
             }
 
@@ -85,14 +85,14 @@ namespace ProjectArk.SpaceLife.Dialogue
             return true;
         }
 
-        private void EnsureGiftUiSubscription(GiftUI giftUi)
+        private void EnsureGiftUiSubscription(GiftUIPresenter giftUi)
         {
             if (_giftUiSubscribed || giftUi == null)
             {
                 return;
             }
 
-            giftUi.OnGiftClosed += HandleGiftUiClosed;
+            giftUi.OnGiftFinished += HandleGiftUiClosed;
             _giftUiSubscribed = true;
         }
 
@@ -109,7 +109,7 @@ namespace ProjectArk.SpaceLife.Dialogue
                 return;
             }
 
-            manager.SetHubInteractionLocked(true);
+            manager.AcquireHubLock(this);
             _giftUiLockApplied = true;
         }
 
@@ -121,15 +121,15 @@ namespace ProjectArk.SpaceLife.Dialogue
                 return;
             }
 
-            manager.SetHubInteractionLocked(false);
+            manager.ReleaseHubLock(this);
             _giftUiLockApplied = false;
         }
 
-        private GiftUI ResolveGiftUi()
+        private GiftUIPresenter ResolveGiftUi()
         {
             if (_giftUI == null)
             {
-                _giftUI = ServiceLocator.Get<GiftUI>();
+                _giftUI = ServiceLocator.Get<GiftUIPresenter>();
             }
 
             return _giftUI;
@@ -149,7 +149,7 @@ namespace ProjectArk.SpaceLife.Dialogue
         {
             if (_giftUiSubscribed && _giftUI != null)
             {
-                _giftUI.OnGiftClosed -= HandleGiftUiClosed;
+                _giftUI.OnGiftFinished -= HandleGiftUiClosed;
             }
 
             UnlockGiftUiInteraction();

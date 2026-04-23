@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using ProjectArk.Core;
@@ -36,11 +37,11 @@ namespace ProjectArk.SpaceLife
         private PlayerInteraction _playerInteraction;
         private bool _shipWasActive;
         private bool _isTransitioning;
-        private int _hubInteractionLockDepth;
+        private readonly HashSet<object> _lockOwners = new HashSet<object>();
 
         public bool IsInSpaceLifeMode => _isInSpaceLifeMode;
         public bool IsTransitioning => _isTransitioning;
-        public bool IsHubInteractionLocked => _hubInteractionLockDepth > 0;
+        public bool IsHubInteractionLocked => _lockOwners.Count > 0;
 
         public event Action OnEnterSpaceLife;
         public event Action OnExitSpaceLife;
@@ -194,15 +195,45 @@ namespace ProjectArk.SpaceLife
             }
         }
 
-        public void SetHubInteractionLocked(bool locked)
+        /// <summary>
+        /// Acquires an owner-keyed hub interaction lock. While at least one owner
+        /// holds a lock, hub gameplay controls (movement, interact) are disabled.
+        /// Re-acquiring with the same owner is a programmer error and is logged.
+        /// </summary>
+        public void AcquireHubLock(object owner)
         {
-            if (locked)
+            if (owner == null)
             {
-                _hubInteractionLockDepth++;
+                Debug.LogError("[SpaceLifeManager] AcquireHubLock called with null owner. Ignored.");
+                return;
             }
-            else if (_hubInteractionLockDepth > 0)
+
+            if (!_lockOwners.Add(owner))
             {
-                _hubInteractionLockDepth--;
+                Debug.LogError($"[SpaceLifeManager] AcquireHubLock: owner '{owner}' already holds the lock. Re-acquire is a logic error.");
+                return;
+            }
+
+            ApplyHubInteractionLockState();
+        }
+
+        /// <summary>
+        /// Releases a previously-acquired owner-keyed hub interaction lock.
+        /// Releasing an owner that never acquired the lock is a programmer error
+        /// and is logged.
+        /// </summary>
+        public void ReleaseHubLock(object owner)
+        {
+            if (owner == null)
+            {
+                Debug.LogError("[SpaceLifeManager] ReleaseHubLock called with null owner. Ignored.");
+                return;
+            }
+
+            if (!_lockOwners.Remove(owner))
+            {
+                Debug.LogError($"[SpaceLifeManager] ReleaseHubLock: owner '{owner}' does not hold the lock. Release without prior acquire is a logic error.");
+                return;
             }
 
             ApplyHubInteractionLockState();
@@ -293,7 +324,7 @@ namespace ProjectArk.SpaceLife
                 }
 
                 _isInSpaceLifeMode = false;
-                _hubInteractionLockDepth = 0;
+                _lockOwners.Clear();
 
                 PlaySFX(_exitSpaceLifeSFX);
                 DestroyPlayer();

@@ -5,28 +5,49 @@ using ProjectArk.SpaceLife.Data;
 namespace ProjectArk.SpaceLife.Editor
 {
     /// <summary>
-    /// Legacy helper container for `Space Life` editor utilities.
-    /// Scene bootstrap has been hidden from the `ProjectArk` menu and consolidated into `SpaceLifeSetupWindow`.
-    /// Data asset creation entries remain exposed under `ProjectArk/Space Life/Data`.
+    /// Shared editor utilities for the SpaceLife module.
+    /// Scene bootstrap has been fully consolidated into <see cref="SpaceLifeSetupWindow"/>.
+    /// This class intentionally keeps only:
+    ///   - Data-asset MenuItems (surface ScriptableObject creation under ProjectArk/Space Life/Data)
+    ///   - Small helpers shared with the setup window (sprite generation, input action lookup)
+    /// Do NOT add scene-creation entry points here — route them through the Setup Wizard.
     /// </summary>
     public static class SpaceLifeMenuItems
     {
+        // ------------------------------------------------------------
+        // Data-asset MenuItems (authored-data surface area)
+        // ------------------------------------------------------------
 
-        internal static UnityEngine.Object FindInputActionAsset()
+        [MenuItem("ProjectArk/Space Life/Data/Create NPC Data", priority = 60)]
+        public static void CreateNPCData()
         {
-            var guids = AssetDatabase.FindAssets("ShipActions t:InputActionAsset");
-            foreach (var guid in guids)
-            {
-                var path = AssetDatabase.GUIDToAssetPath(guid);
-                var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
-                if (asset != null)
-                {
-                    return asset;
-                }
-            }
-            return null;
+            CreateScriptableObject<NPCDataSO>("NewNPCData");
         }
 
+        [MenuItem("ProjectArk/Space Life/Data/Create Item Data", priority = 61)]
+        public static void CreateItemData()
+        {
+            CreateScriptableObject<ItemSO>("NewItem");
+        }
+
+        // ------------------------------------------------------------
+        // Helpers shared with SpaceLifeSetupWindow
+        // ------------------------------------------------------------
+
+        /// <summary>
+        /// Locates the <c>ShipActions</c> InputActionAsset used by SpaceLife input handlers.
+        /// Returns <c>null</c> if not found. Delegates to
+        /// <see cref="ProjectArk.SpaceLife.EditorSupport.ShipInputActionLocator"/>
+        /// (single source of truth for <c>ShipActions</c> lookup).
+        /// </summary>
+        internal static UnityEngine.Object FindInputActionAsset()
+        {
+            return ProjectArk.SpaceLife.EditorSupport.ShipInputActionLocator.FindAsObject(out _);
+        }
+
+        /// <summary>
+        /// Creates a 64x64 solid-color sprite used as a procedural placeholder (background, NPC body).
+        /// </summary>
         internal static Sprite CreateSquareSprite(Color color)
         {
             Texture2D texture = new Texture2D(64, 64);
@@ -44,14 +65,13 @@ namespace ProjectArk.SpaceLife.Editor
         }
 
         /// <summary>
-        /// Creates a procedural capsule-shaped sprite (rounded rectangle).
-        /// Width=32, Height=64 with semicircle caps at top and bottom.
+        /// Creates a procedural capsule-shaped sprite (32x64 rounded rectangle) for the Player2D placeholder.
         /// </summary>
         internal static Sprite CreateCapsuleSprite(Color color)
         {
             const int width = 32;
             const int height = 64;
-            const int radius = width / 2; // 16px semicircle caps
+            const int radius = width / 2;
 
             Texture2D texture = new Texture2D(width, height);
             Color transparent = new Color(0, 0, 0, 0);
@@ -67,19 +87,16 @@ namespace ProjectArk.SpaceLife.Editor
 
                     if (y < radius)
                     {
-                        // Bottom cap
                         cy = y - (radius - 0.5f);
                         inside = (cx * cx + cy * cy) <= (radius * radius);
                     }
                     else if (y >= height - radius)
                     {
-                        // Top cap
                         cy = y - (height - radius - 0.5f);
                         inside = (cx * cx + cy * cy) <= (radius * radius);
                     }
                     else
                     {
-                        // Middle rectangle
                         inside = true;
                     }
 
@@ -96,184 +113,9 @@ namespace ProjectArk.SpaceLife.Editor
             return Sprite.Create(texture, rect, pivot, 64);
         }
 
-        public static void CreateSpaceLifeManager()
-        {
-            CreateSingleton<SpaceLifeManager>("SpaceLifeManager");
-        }
-
-        public static void CreateSpaceLifeInputHandler()
-        {
-            var go = CreateSingleton<SpaceLifeInputHandler>("SpaceLifeInputHandler");
-            if (go != null)
-            {
-                var handler = go.GetComponent<SpaceLifeInputHandler>();
-                var inputAsset = FindInputActionAsset();
-                if (inputAsset != null && handler != null)
-                {
-                    var serializedObject = new SerializedObject(handler);
-                    var property = serializedObject.FindProperty("_inputActions");
-                    property.objectReferenceValue = inputAsset;
-                    serializedObject.ApplyModifiedProperties();
-                    Debug.Log($"[SpaceLifeMenuItems] Auto-assigned InputActionAsset to SpaceLifeInputHandler");
-                }
-            }
-        }
-
-        public static void CreatePlayerController()
-        {
-            if (Object.FindFirstObjectByType<PlayerController2D>() != null)
-            {
-                if (!EditorUtility.DisplayDialog(
-                    "Player Exists",
-                    "A PlayerController2D already exists in the scene.\n" +
-                    "Do you want to create another one?",
-                    "Yes",
-                    "No"))
-                {
-                    return;
-                }
-            }
-
-            GameObject go = new GameObject("Player2D");
-            var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = CreateCapsuleSprite(Color.white);
-            sr.sortingOrder = 10;
-            go.AddComponent<Rigidbody2D>().gravityScale = 0f;
-            go.AddComponent<CapsuleCollider2D>();
-            var playerController = go.AddComponent<PlayerController2D>();
-            var playerInteraction = go.AddComponent<PlayerInteraction>();
-            
-            var inputAsset = FindInputActionAsset();
-            if (inputAsset != null)
-            {
-                var serializedController = new SerializedObject(playerController);
-                var controllerProp = serializedController.FindProperty("_inputActions");
-                controllerProp.objectReferenceValue = inputAsset;
-                serializedController.ApplyModifiedProperties();
-                
-                var serializedInteraction = new SerializedObject(playerInteraction);
-                var interactionProp = serializedInteraction.FindProperty("_inputActions");
-                interactionProp.objectReferenceValue = inputAsset;
-                serializedInteraction.ApplyModifiedProperties();
-                
-                Debug.Log($"[SpaceLifeMenuItems] Auto-assigned InputActionAsset to Player2D");
-            }
-            
-            Selection.activeGameObject = go;
-            Undo.RegisterCreatedObjectUndo(go, "Create Player2D");
-            Debug.Log("[SpaceLife] Created Player2D");
-        }
-
-        public static void CreateRoomManager()
-        {
-            CreateSingleton<SpaceLifeRoomManager>("SpaceLifeRoomManager");
-        }
-
-        public static void CreateRelationshipManager()
-        {
-            CreateSingleton<RelationshipManager>("RelationshipManager");
-        }
-
-        public static void CreateGiftInventory()
-        {
-            CreateSingleton<GiftInventory>("GiftInventory");
-        }
-
-        public static void CreateNPC()
-        {
-            GameObject npcGo = new GameObject("NPC");
-            npcGo.AddComponent<NPCController>();
-            npcGo.AddComponent<Interactable>();
-            var collider = npcGo.AddComponent<CapsuleCollider2D>();
-            collider.isTrigger = true;
-            
-            Selection.activeGameObject = npcGo;
-            Undo.RegisterCreatedObjectUndo(npcGo, "Create NPC");
-            Debug.Log("[SpaceLife] NPC created");
-        }
-
-        public static void CreateRoom()
-        {
-            GameObject roomGo = new GameObject("Room");
-            roomGo.AddComponent<SpaceLifeRoom>();
-            
-            Selection.activeGameObject = roomGo;
-            Undo.RegisterCreatedObjectUndo(roomGo, "Create Room");
-            Debug.Log("[SpaceLife] Room created");
-        }
-
-        public static void CreateDoor()
-        {
-            GameObject doorGo = new GameObject("Door");
-            doorGo.AddComponent<SpaceLifeDoor>();
-            doorGo.AddComponent<Interactable>();
-            
-            Selection.activeGameObject = doorGo;
-            Undo.RegisterCreatedObjectUndo(doorGo, "Create Door");
-            Debug.Log("[SpaceLife] Door created");
-        }
-
-        public static void CreateInteractable()
-        {
-            GameObject go = new GameObject("Interactable");
-            go.AddComponent<Interactable>();
-            
-            Selection.activeGameObject = go;
-            Undo.RegisterCreatedObjectUndo(go, "Create Interactable");
-            Debug.Log("[SpaceLife] Interactable created");
-        }
-
-        public static void CreateDialogueUI()
-        {
-            CreateSingleton<DialogueUI>("DialogueUI");
-        }
-
-        public static void CreateGiftUI()
-        {
-            CreateSingleton<GiftUI>("GiftUI");
-        }
-
-        public static void CreateMinimapUI()
-        {
-            CreateSingleton<MinimapUI>("MinimapUI");
-        }
-
-        public static void CreateTransitionUI()
-        {
-            CreateSingleton<TransitionUI>("TransitionUI");
-        }
-
-        [MenuItem("ProjectArk/Space Life/Data/Create NPC Data", priority = 60)]
-        public static void CreateNPCData()
-        {
-            CreateScriptableObject<NPCDataSO>("NewNPCData");
-        }
-
-        [MenuItem("ProjectArk/Space Life/Data/Create Item Data", priority = 61)]
-        public static void CreateItemData()
-        {
-            CreateScriptableObject<ItemSO>("NewItem");
-        }
-
-        private static GameObject CreateSingleton<T>(string name) where T : MonoBehaviour
-        {
-            if (Object.FindFirstObjectByType<T>() != null)
-            {
-                Debug.LogWarning($"[SpaceLife] {name} already exists!");
-                var existing = Object.FindFirstObjectByType<T>().gameObject;
-                Selection.activeObject = existing;
-                return existing;
-            }
-            else
-            {
-                GameObject go = new GameObject(name);
-                go.AddComponent<T>();
-                Selection.activeGameObject = go;
-                Undo.RegisterCreatedObjectUndo(go, $"Create {name}");
-                Debug.Log($"[SpaceLife] {name} created");
-                return go;
-            }
-        }
+        // ------------------------------------------------------------
+        // Internal utilities
+        // ------------------------------------------------------------
 
         private static void CreateScriptableObject<T>(string defaultName) where T : ScriptableObject
         {
@@ -290,7 +132,7 @@ namespace ProjectArk.SpaceLife.Editor
             AssetDatabase.CreateAsset(asset, path);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            
+
             Selection.activeObject = asset;
             Debug.Log($"[SpaceLife] {typeof(T).Name} created at {path}");
         }

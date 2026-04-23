@@ -73,17 +73,11 @@ namespace ProjectArk.SpaceLife
 #if UNITY_EDITOR
         private void TryFindInputActionAsset()
         {
-            var guids = UnityEditor.AssetDatabase.FindAssets("ShipActions t:InputActionAsset");
-            foreach (var guid in guids)
+            var asset = ProjectArk.SpaceLife.EditorSupport.ShipInputActionLocator.Find(out var path);
+            if (asset != null)
             {
-                var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
-                var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<InputActionAsset>(path);
-                if (asset != null)
-                {
-                    _inputActions = asset;
-                    Debug.Log($"[PlayerController2D] Auto-found InputActionAsset: {path}");
-                    break;
-                }
+                _inputActions = asset;
+                Debug.Log($"[PlayerController2D] Auto-found InputActionAsset: {path}");
             }
         }
 #endif

@@ -1,4 +1,5 @@
 
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -7,6 +8,13 @@ namespace ProjectArk.SpaceLife.Data
     /// <summary>
     /// Authored data for an NPC character in SpaceLife mode.
     /// </summary>
+    /// <remarks>
+    /// Legacy flat-list dialogue API (<see cref="DialogueNodes"/>, <see cref="GetEntryLine"/>, <see cref="GetNodeAt"/>,
+    /// <see cref="DefaultEntryIndex"/>, <see cref="FriendlyEntryIndex"/>, <see cref="BestFriendEntryIndex"/>) is marked
+    /// <see cref="ObsoleteAttribute"/>. New dialogue runtime must consume <c>DialogueDatabaseSO</c> + <c>DialogueGraphSO</c>
+    /// keyed by <see cref="NpcId"/>. Legacy fields/methods are retained during Phase 1-2 migration to avoid breaking
+    /// existing save data; planned removal: after Phase 2 completion + save data migration (see Master Plan §5.2 P7).
+    /// </remarks>
     [CreateAssetMenu(fileName = "NPCData", menuName = "Project Ark/Space Life/NPC Data")]
     public class NPCDataSO : ScriptableObject
     {
@@ -52,15 +60,19 @@ namespace ProjectArk.SpaceLife.Data
         public int StartingRelationship => _startingRelationship;
 
         /// <summary>Legacy flat pool of all dialogue lines for this NPC.</summary>
+        [Obsolete("Legacy prototype API. Use DialogueGraphSO / DialogueDatabaseSO keyed by NpcId instead. Scheduled for removal after Phase 2 + save migration.", false)]
         public IReadOnlyList<DialogueLine> DialogueNodes => _dialogueNodes;
 
         /// <summary>Legacy prototype entry index for the flat dialogue list.</summary>
+        [Obsolete("Legacy prototype API. Replaced by DialogueGraphSO.EntryRules. Scheduled for removal after Phase 2 + save migration.", false)]
         public int DefaultEntryIndex => _defaultEntryIndex;
 
         /// <summary>Legacy prototype entry index for the flat dialogue list.</summary>
+        [Obsolete("Legacy prototype API. Replaced by DialogueGraphSO.EntryRules. Scheduled for removal after Phase 2 + save migration.", false)]
         public int FriendlyEntryIndex => _friendlyEntryIndex;
 
         /// <summary>Legacy prototype entry index for the flat dialogue list.</summary>
+        [Obsolete("Legacy prototype API. Replaced by DialogueGraphSO.EntryRules. Scheduled for removal after Phase 2 + save migration.", false)]
         public int BestFriendEntryIndex => _bestFriendEntryIndex;
 
         public IReadOnlyList<ItemSO> LikedGifts => _likedGifts;
@@ -85,6 +97,7 @@ namespace ProjectArk.SpaceLife.Data
         /// <summary>
         /// Returns the entry DialogueLine for the given relationship value, or null if none configured.
         /// </summary>
+        [Obsolete("Legacy prototype API. Entry resolution now lives in DialogueRunner + DialogueGraphSO.EntryRules. Scheduled for removal after Phase 2 + save migration.", false)]
         public DialogueLine GetEntryLine(int relationship)
         {
             int index = relationship >= 80 ? _bestFriendEntryIndex
@@ -97,6 +110,7 @@ namespace ProjectArk.SpaceLife.Data
         /// <summary>
         /// Returns the DialogueLine at <paramref name="index"/>, or null if out of range / -1.
         /// </summary>
+        [Obsolete("Legacy prototype API. DialogueGraphSO nodes are keyed by NodeId, not index. Scheduled for removal after Phase 2 + save migration.", false)]
         public DialogueLine GetNodeAt(int index)
         {
             if (index < 0 || index >= _dialogueNodes.Count) return null;

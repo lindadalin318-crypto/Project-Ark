@@ -2,6 +2,233 @@
 
 ---
 
+## SpaceLife Master Plan v1.1 Phase 1 完成：Domain 层/基础设施 7 条审计补丁 P1-P7 落地 — 2026-04-22 20:40
+
+### 修改文件
+
+**新建（3）**：
+- `Assets/Scripts/SpaceLife/Dialogue/IDialoguePresenter.cs`（P1：Domain 层 UI 接口）
+- `Assets/Scripts/SpaceLife/Dialogue/IGiftPresenter.cs`（P1：Domain 层礼物 UI 接口）
+- `Assets/Scripts/SpaceLife/ShipInputActionLocator.cs`（P4：`ShipActions` InputActionAsset 查找唯一入口；整体 `#if UNITY_EDITOR`）
+- `Assets/Scripts/SpaceLife/Editor/DialogueDatabaseValidatorMenu.cs`（P3：`ProjectArk/Space Life/Validate Dialogue Database` Editor 菜单）
+
+**修改（10）**：
+- `Assets/Scripts/SpaceLife/SpaceLifeManager.cs`（P2：HubLock 从 `int _hubInteractionLockDepth` 引用计数升级为 `HashSet<object> _lockOwners` owner-based；新增 `AcquireHubLock(object)` / `ReleaseHubLock(object)`，删除 `SetHubInteractionLocked(bool)`；null owner / 重复 acquire / 释放不存在 owner 全部 `Debug.LogError`；`ExitSpaceLifeAsync` 复位改用 `_lockOwners.Clear()`）
+- `Assets/Scripts/SpaceLife/Dialogue/DialogueServiceRouter.cs`（P2：`LockGiftUiInteraction` / `UnlockGiftUiInteraction` 迁移到 `AcquireHubLock(this)` / `ReleaseHubLock(this)`）
+- `Assets/Scripts/SpaceLife/Dialogue/SpaceLifeDialogueCoordinator.cs`（P2：`LockHubInteractions` / `UnlockHubInteractions` 迁移到 `AcquireHubLock(this)` / `ReleaseHubLock(this)`）
+- `Assets/Scripts/SpaceLife/Dialogue/DialogueGraphSO.cs`（P3：新增 `ValidateAll(List<string> errors)` 聚合 API，覆盖 GraphId/OwnerId/NodeId/EntryRules/Choice/NextNodeId 完整性全检；保留原 `TryValidate(out string error)` fail-fast 供 runtime 构缓存用）
+- `Assets/Scripts/SpaceLife/Dialogue/DialogueDatabaseSO.cs`（P3：新增 `ValidateDatabase()` 聚合 API，检查 null 图/GraphId 重复/OwnerId 重复 + 聚合每个图的 ValidateAll）
+- `Assets/Scripts/SpaceLife/Tests/DialogueDatabaseTests.cs`（P3：追加 7 个 `ValidateDatabase` 测试 + 辅助方法 `CreateEntryRule` / `CreateChoice` / `CreateGraph(entryRules, nodes[])` overload）
+- `Assets/Scripts/SpaceLife/PlayerController2D.cs`（P4：`TryFindInputActionAsset` 改调用 `ProjectArk.SpaceLife.EditorSupport.ShipInputActionLocator.Find`）
+- `Assets/Scripts/SpaceLife/SpaceLifeInputHandler.cs`（P4：同上）
+- `Assets/Scripts/SpaceLife/PlayerInteraction.cs`（P4 + P5：`TryFindInputActionAsset` 改调用 Locator；`Awake` / `OnDisable` 中的 ActionMap 从 `"Ship"` 全部迁移到 `"SpaceLife"`，`Interact` action 改读 `SpaceLife.Interact`）
+- `Assets/Scripts/SpaceLife/Editor/SpaceLifeMenuItems.cs`（P4：`FindInputActionAsset` 降级为 Locator 薄代理；移除重复的 `AssetDatabase.FindAssets` 实现）
+- `Assets/Scripts/SpaceLife/MinimapUI.cs`（P6：三处 `_minimapPanel.SetActive(...)` 改为 CanvasGroup alpha/interactable/blocksRaycasts；新增 `Awake` 初始化 + `EnsureCanvasGroup` + `SetPanelVisible` 统一入口）
+- `Assets/Scripts/SpaceLife/Data/NPCDataSO.cs`（P7：类头 `<remarks>` 标注 Legacy API 弃用计划；`DialogueNodes` / `DefaultEntryIndex` / `FriendlyEntryIndex` / `BestFriendEntryIndex` / `GetEntryLine(int)` / `GetNodeAt(int)` 六个成员标 `[Obsolete(..., false)]` 降级为 warning）
+
+**配套（1）**：
+- `ProjectArk.SpaceLife.csproj`（手动补充 `<Compile Include="Assets/Scripts/SpaceLife/ShipInputActionLocator.cs" />` 让 `dotnet build` 真实覆盖新文件，避免 Unity csproj 生成器滞后导致的假通过）
+
+### 内容
+
+**Phase 1 核心交付：7 条审计补丁（P1-P7）全部落地 + dotnet build 0 错误通过**
+
+对照 Master Plan v1.1 §5.2 补丁清单逐条完成：
+
+- **P1（Presenter 接口）**：`IDialoguePresenter` / `IGiftPresenter` 进驻 Domain 层。接口签名严格保持 Domain→Presentation 单向依赖：`IDialoguePresenter` 用 `DialogueNodeViewModel`（Domain 投影）而非 `DialogueNodeData`（authored SO）；`IGiftPresenter.ShowGiftUI(string npcId)` 用 `string` 而非 `NPCDataSO`，避免 Domain 反向依赖 Data 层。
+- **P2（HubLock owner-based）**：从 `int _hubInteractionLockDepth` 升级为 `HashSet<object> _lockOwners`，杜绝"Gift 和 Dialogue 同时 acquire 但只 release 一次导致永久锁"的隐患；重复 acquire 同一 owner / release 未 acquire 的 owner 全部 `Debug.LogError`，遵循 Implement_rules.md §12.6 R2。删除旧 `SetHubInteractionLocked(bool)`，对齐 Implement_rules.md §3.3"禁止新增默认 Fallback / Legacy Path"。
+- **P3（DialogueDatabase 聚合 Validator）**：`ValidateAll(List<string>)` 覆盖 Master Plan 要求的全部场景：GraphId/OwnerId 缺失、节点数为 0、NodeId 缺失/重复/null、EntryRules 至少 1 条、EntryRule.EntryNodeId 存在性、Node.NextNodeId 存在性、Choice.NextNodeId 存在性、ChoiceId 缺失。`DialogueDatabaseSO.ValidateDatabase()` 在上层聚合 GraphId/OwnerId 重复。7 个测试覆盖正路径 + 6 种错误场景。Editor 菜单支持选中资产定点校验 + 项目全量扫描两种模式。保留原 `TryValidate(out string error)` fail-fast 供 runtime 构缓存用（语义不同）。
+- **P4（ShipInputActionLocator 唯一入口）**：消除 4 处 `AssetDatabase.FindAssets("ShipActions t:InputActionAsset")` 重复（3 Runtime + 1 Editor）。Locator 采取"canonical path 优先 + filter search 回落"双策略，确定性优先兼顾移动容错。Locator 文件放在 Runtime 程序集目录（非 Editor 目录），用文件级 `#if UNITY_EDITOR` 包装——根因：Runtime→Editor asmdef 反向依赖不被 Unity 允许，即使调用点已 `#if UNITY_EDITOR` 守卫。`ProjectArk.SpaceLife.EditorSupport` 命名空间与 `ProjectArk.SpaceLife.Editor`（独立 Editor asmdef）刻意区分，避免未来同名混淆。
+- **P5（PlayerInteraction → SpaceLife map）**：`PlayerInteraction.Interact` 从 `"Ship"` ActionMap 迁移到 `"SpaceLife"` ActionMap。根因：`PlayerInteraction` 是 Hub 场景下的 2D 玩家交互组件，与 `Ship.InputHandler` 的飞船交互是两套独立语义；之前共用 `Ship.Interact` 是历史原型残留。迁移后 Hub 模式的 `Interact` 完全走 `SpaceLife.Interact`，与 `SpaceLifeInputHandler` 的 `ToggleSpaceLife` / `PlayerController2D` 的 `Move` 统一在同一 map 内，对齐 Implement_rules.md §12.5 D4 / §12.6 R4"ActionMap 语义边界"。
+- **P6（MinimapUI CanvasGroup 控显隐）**：消除 `_minimapPanel.SetActive(...)` 对齐 CLAUDE.md 踩坑表和 Implement_rules.md §12.6 R5。根因：`SetActive(false)` 会推迟 `Awake()` 执行，且 Editor 脚本调用后 inactive 状态会被序列化进场景，导致 Play Mode 首次开面板时 `Awake` 内的 `SetActive(false)` 触发连锁副作用。新实现：`Awake` 中 `EnsureCanvasGroup` 获取/创建 `CanvasGroup`，`SetPanelVisible(bool)` 统一切换 `alpha` / `interactable` / `blocksRaycasts`；GameObject 始终保持 active。
+- **P7（NPCDataSO Legacy `[Obsolete]`）**：`DialogueNodes` / `DefaultEntryIndex` / `FriendlyEntryIndex` / `BestFriendEntryIndex` / `GetEntryLine(int)` / `GetNodeAt(int)` 六个原型期成员全部标 `[Obsolete("... Scheduled for removal after Phase 2 + save migration.", false)]`（`false` 为 warning 级别）。类头 `<remarks>` 标注弃用原因与替代方案（`DialogueGraphSO` / `DialogueDatabaseSO` keyed by NpcId）。编译器 `DialogueUI.cs:198` 已产生预期的 CS0618 warning，验证 Obsolete 传播链路正确。保留原 API 是为向后兼容已有 NPC 资产，Phase 2 save migration 完成后将删除。
+
+### 验收
+
+**`dotnet build Project-Ark.slnx` 0 错误通过**（28 警告，全部为预存在的 `FindFirstObjectByType` 老 API 警告 + 本次 P7 刻意添加的 `CS0618` Obsolete 警告，均为预期）。
+
+### 目的
+
+- **补丁式推进 Phase 1**：通过 Master Plan v1.1 §5.2 的 7 条审计补丁原地修正既有实现，而非重新立项。Phase 1 原始目标（Task 1-4 新建 Domain 基础文件）在实地核查后发现全部已存在；真实痛点是"基础设施边界模糊、Legacy 双轨未清理、硬编码分散、UI 控显隐陷阱"。补丁式推进把治理收敛到 7 个最小原子变更，每条都直接对齐 Implement_rules.md §12 的某一条规则。
+- **Authority Matrix 第一次真实落地**：P2（HubLock）/ P4（Locator）/ P6（CanvasGroup）三条补丁是 Authority Matrix 五层权威的第一次跨层协作——Runtime 状态层（P2）、Editor 工具层（P4）、UI Prefab 结构层（P6）在同一个 PR 内同步收口。未来排查任何 HubLock 异常 / InputActionAsset 查找异常 / Minimap 显隐异常，都能用"查 Authority Matrix 对应行 → 找唯一入口"的固定动线，无需再考古。
+- **Phase 2 前置准备就位**：Phase 2 目标是 DialogueUI 实现 `IDialoguePresenter`（P1 新接口）+ GiftUI 实现 `IGiftPresenter` + 通过 ServiceLocator 注入 DialogueServiceRouter。P1 的两个接口就是 Phase 2 的"插座"，没有 P1 就谈不上 Phase 2。P3 的 Validator 是 Phase 2 authoring 资产的"质量保障装置"——策划/关卡作者新建 `DialogueGraphSO` 时，一键菜单就能暴露全部引用错误，避免 Play Mode 中 silent no-op。
+- **ImplementationLog 职责闭环**：Phase 1 完成的同时追加日志，避免 Phase 1 变成"又一个架构大修但没人知道改了什么"的历史悲剧（参照 ImplementationLog §256 的 Ship/VFX 事件）。
+
+### 技术
+
+- **owner-based HashSet vs 引用计数**：Master Plan 最初建议的 `_hubLockCount`（整数引用计数）在"Gift 打开+对话中断"这种异步交错场景下会出现"Gift acquire 但在 dialogue 内部被 release 提前一次"导致 count 下溢到负值或 0 提前解锁。`HashSet<object>` owner-based 天然防重复 acquire（同一 owner 第二次 acquire → LogError），release 时必须能找到对应 owner（找不到 → LogError），语义更严格，是 Implement_rules.md §12.6 R2 的正解。
+- **Locator 放在 Runtime 程序集但整体 `#if UNITY_EDITOR`**：直觉上"Editor 工具应放 Editor 程序集"，但 Runtime 的 `TryFindInputActionAsset` 辅助方法也要调用它；若放 Editor 程序集，Runtime 需要反向引用 Editor asmdef，违反 Unity asmdef 单向依赖规则。正解是"文件放 Runtime asmdef + 全文件 `#if UNITY_EDITOR` 包装"，让 Editor 和 Runtime 共享但仅在 Edit Mode 参与编译。这是"asmdef 物理边界 vs 逻辑 Editor-only 边界"的常见陷阱。
+- **Locator 用 canonical path 优先 + filter search 回落**：`AssetDatabase.FindAssets` 返回顺序不确定性是长期隐患（Ship/VFX 曾因此踩过多次坑）。新 Locator 先 `LoadAssetAtPath("Assets/Input/ShipActions.inputactions")` 确定性查找，仅当 canonical path 不可用时才回落到 filter search——这样正常场景完全绕开不确定性，文件移动场景仍有容错。
+- **ValidateAll 聚合 vs TryValidate fail-fast 并存**：两者不是冗余。`TryValidate(out string error)` 给 runtime 构缓存（`DialogueDatabaseSO.BuildLookup`）用，任何错误立即跳过该 graph；`ValidateAll(List<string>)` 给 authoring Validator 用，必须收集所有错误一次性反馈给作者，不能 fail-fast。两种语义必须显式区分。
+- **csproj 手动补 Compile Include**：Unity 自动生成的 `ProjectArk.SpaceLife.csproj` 快照可能滞后于文件系统（新文件未被 AssetDatabase 刷新时，`GUIDToAssetPath` 找不到 → Unity 不写进 csproj → dotnet build 漏编译），导致"dotnet build 通过但 Unity 编译失败"或反之。对策：新文件加入后，若 dotnet build 报 "命名空间不存在"，优先检查 csproj 的 `<Compile Include>` 列表；临时手动追加可保证 dotnet build 覆盖真实文件集，待 Unity 下次刷新 csproj 时会自动同步（手动追加项会被 Unity 覆盖，但此时新增的文件已被 Unity 正式纳入，无副作用）。
+- **`[Obsolete]` 级联警告自抑制**：标 `[Obsolete]` 的方法内部调用其他 `[Obsolete]` 方法（如 `GetEntryLine` 调 `GetNodeAt`），C# 编译器认定为"deprecated context"，不再产生额外警告——无需 `#pragma warning disable`。这是 C# 官方语义，Microsoft Roslyn 和旧 `csc` 行为一致。
+
+### 状态
+
+Phase 1 所有补丁已完成，验收通过。
+
+**Phase 2 前置条件已就位**：
+- `IDialoguePresenter` / `IGiftPresenter` 接口待 `DialogueUI` / `GiftUI` 实现
+- `ServiceLocator` 注册路径已在 `SpaceLifeDialogueCoordinator.Awake` 中占位
+- `DialogueRunner` 仅依赖 `IDialoguePresenter`，Phase 2 UI 层重写不影响 Domain 层
+
+**Master Plan 前进路径**：按 §4 路线图进入 Phase 2（UI 接口实现与 ServiceLocator 装配）。
+
+---
+
+## SpaceLife Master Plan v1.1 Phase 0 完成：`Implement_rules.md §12 SpaceLife / Dialogue 模块规则` 写入 — 2026-04-22 16:58
+
+### 修改文件
+- `Implement_rules.md`（新增 §12 SpaceLife / Dialogue 模块规则 全章节；§13/§14 重编号）
+- `Docs/0_Plan/ongoing/2026-04-22-spacelife-hub-dialogue-master-plan.md`（Phase 0 验收全勾选；头部状态标注更新；§8 引用 → §12 统一修正 7 处）
+- `Docs/0_Plan/ongoing/README.md`（标注 Master Plan v1.1 Phase 0 已完成 + 交付物清单）
+
+### 内容
+- **Phase 0 核心交付：Authority Matrix 落地 + 7 条设计决策 + 8 条实现规则 + 4 条踩坑总结 + Scene Override 白名单初稿**
+- 在 `Implement_rules.md` 插入新 `§12. SpaceLife / Dialogue 模块规则`，位置选在 `§11 Combat / Projectile` 之后 `§13 后续可追加模块（占位）` 之前（原 §12/§13 重编号为 §13/§14），子编号（`14.1`-`14.4`）同步更新
+  - 口径决策：不用 Master Plan 原文的 "§8" 编号（§8 已被"全局 Unity / Editor 治理"占用），改用 §12，保持"业务模块章节按启用顺序递增"（Ship §2 → Level §7 → SpaceLife §12）
+- `§12` 章节结构（10 个子节）：
+  - §12.1 模块边界（Runtime / Editor / Prefab+Scene / 数据资产 / Input / 相关文档 六层目录清单）
+  - §12.2 模块目标（三点 + 一句话口号：下一个 NPC 只改数据，不改架构）
+  - §12.3 Authority Matrix（五层权威表：Domain 数据 / Runtime 状态 / UI Prefab 结构 / Scene-only 接线 / Debug+Setup 工具）
+  - §12.4 Scene Override 白名单（允许项 2 条 / 禁止项 5 条 / 处理规则 5 步）
+  - §12.5 Phase 0 设计决策锁定（D1-D7 带依据 + 违反表现）
+  - §12.6 实现规则（R1-R8：IPresenter 接口、HubLock 引用计数、ShipInputActionLocator、ActionMap 边界、CanvasGroup 强制、Legacy `[Obsolete]` 强制、SetupWindow 冻结、Silent No-Op 禁令）
+  - §12.7 改动前必须回答的 5 个问题
+  - §12.8 踩坑总结（坑 1-4：Legacy 双轨、SetupWindow 越权、ActionMap 跨 map 读、AssetDatabase.FindAssets 重复）
+  - §12.9 验收清单（7 条 checklist）
+  - §12.10 推荐工作流（新需求 / bug 排查 / 新功能 三条路径）
+- Master Plan 章节引用统一：原文 7 处 `§8` 指向 `Implement_rules.md` 的引用全部改为 `§12`（含 §0 职责分工表 Phase 4 Plan 一行 + §4.1 Phase 0 Deliverable 标题 + §4.3 Phase 0 验收 + §8.1 Phase 4 Deliverable 文件清单与验收 + §8.3 SetupWindow 冻结声明的三处内部引用 + §9 Phase 5 补丁文件清单 + §12 最终完成标志治理线）
+- Master Plan 章节引用**不改**的情况：指向 Master Plan 自身的 §8 / §8.3 / §8.5 等（这些是 Master Plan 内部章节号），已在检查中确认无误
+- `Implement_rules.md` 顶部"当前已启用章节"清单追加 `SpaceLife / Dialogue`
+- §14.4"已有模块的规则参考"追加 SpaceLife 条目，标注其为 "2026-04-22 Master Plan v1.1 Phase 0 沉淀"
+- Phase 0 验收 5 条全部勾选完成；Master Plan 头部状态标注由"方案 B 已采纳，Phase 0 即将进入"更新为"Phase 0 已完成，Phase 1 即将进入"
+
+### 目的
+- **治理先行**：在写任何 SpaceLife 代码前，先把"谁是权威"钉死在规则文档里，避免 Phase 1-3 执行时再次出现 Ship/VFX 模块早期"Runtime + PrefabCreator + Rebuilder + SceneBinder + DebugManager 五路抢写一条链"的历史悲剧
+- **决策固化**：7 条设计决策（D1-D7）从 Master Plan 的"一次性决策"提升为"规则层约束"——后续任何 Phase 都不得推翻，若需变更必须先更新 Master Plan 并同步规则文档
+- **违规有据**：8 条实现规则（R1-R8）每条都带"根因"，未来任何 `AssetDatabase.FindAssets` / `SetActive` / SetupWindow 越权都能被直接引用条款拒绝
+- **踩坑预写**：4 条踩坑总结是 Phase 1-3 执行时几乎必然会触发的场景，提前写进规则文档可以在触发时立即识别，而不是"每次重新判断一遍是否违规"
+- **新入口就位**：未来对 SpaceLife 模块的任何改动，入口清单（§12.7 的 5 个问题）是强制检查项，从结构上降低"上来就写代码"的冲动
+
+### 技术
+- 章节编号策略：业务模块章节按启用顺序递增（§2 Ship → §7 Level → §12 SpaceLife），不复用语义相近但已被占用的编号（如 §8）；这样历史章节号稳定，避免连锁破坏已有引用
+- Authority Matrix 五层是项目统一范式（来自 Ship/VFX §2.4），每行必须有"唯一权威入口 + 明确禁止的并行写入者 + 备注"三要素，缺一不可
+- Legacy API 降级用 `[System.Obsolete(..., false)]`（`false` 表示仅 warning，不 error），兼顾存档兼容与编译器提示
+- Scene Override 白名单采用"允许项 + 禁止项"双清单，而非单向列表；双清单的价值在于"禁止项暴露了 Prefab 的职责边界"，新人看禁止项就能理解 Prefab 的权威性
+- Master Plan v1.x 的章节引用修正只用 `replace_in_file` 精确替换，不用批量 regex——因为 "§8" 在 Master Plan 内部有双重含义（指向规则文档 vs 指向 Master Plan 自己的章节），需要逐条判断
+
+---
+
+## SpaceLife 模块完整审计 + Master Plan 采纳方案 B：吸收 4 项高优治理遗漏 — 2026-04-22 16:47
+
+### 修改文件
+- `Docs/0_Plan/ongoing/2026-04-22-spacelife-hub-dialogue-master-plan.md`（v1.0 → v1.1）
+
+### 内容
+- 对整个 SpaceLife 模块（~42 个文件 / ~6,500 行代码）执行完整审计，覆盖 Runtime / Editor / Data / Tests 四层
+- 审计结论摘要：
+  - **Dialogue 子系统（Runner/Coordinator/Router/Evaluator）是项目架构标杆**，不需要重构
+  - **SpaceLifeManager / RoomManager / RelationshipManager / GiftInventory 健康**
+  - **Data 层 SO**（DialogueDatabaseSO / DialogueGraphSO）带 `OnValidate` + `InvalidateCache` + `TryValidate`，是项目 SO 标杆
+  - 主要债务集中在 **UI Presenter 层**（DialogueUI Legacy 走线 + SetActive 兜底）和 **Editor Bootstrap 工具链**（1,630 行 SetupWindow）
+  - **治理成熟度（按 Implement_rules.md 13 项条款对照）约 15%**
+- 审计结论与 Master Plan v1.0 的 6 必做 + 2 降级方案高度吻合
+- **额外发现 4 项高优治理遗漏**，Master Plan v1.0 未明确覆盖：
+  1. `AssetDatabase.FindAssets("ShipActions t:InputActionAsset")` 在 3 个文件重复（违反 §3.8 硬编码治理）
+  2. `PlayerInteraction.Interact` 从 "Ship" ActionMap 读键（跨 map 读键，语义边界模糊）
+  3. `MinimapUI` 使用 `SetActive` 控显隐 3 处（违反 CanvasGroup 统一规则）
+  4. `NPCDataSO` Legacy 字段未声明弃用（违反 §3.11 迁移纪律）
+- 四选一方案对比后采纳 **方案 B：Master Plan + 4 项高优遗漏**：
+  - 方案 A（原样推进）5-6d / 方案 B（+4 遗漏）**6-7d** / 方案 C（扩大全模块治理）8-10d / 方案 D（推翻重构）15-20d
+  - 选择 B 的核心理由：+0.8d 边际成本极低；与 Phase 1 Domain 层打补丁天然契合；避免"治理半途"；不破坏 Master Plan 主节奏
+- Master Plan v1.1 主要变更：
+  - Phase 1 §5.2 补丁从 3 条（P1-P3）扩至 7 条，新增 P4 `ShipInputActionLocator` 抽取 / P5 `PlayerInteraction` 键位迁移到 "SpaceLife" map / P6 `MinimapUI` 改 CanvasGroup / P7 `NPCDataSO` Legacy 字段标 `[Obsolete]`
+  - §3 总工期估算：Phase 1 由 1d 升至 **1.5-1.8d**，必做合计 5-6d → **6-7d**，含 Phase 5: 6-8d → **7-9d**
+  - 新增 §8.5 "审计发现的额外治理项（方案 B 选择依据）"，完整记录审计结论、4 项遗漏明细、方案对比、采纳理由与不吸收项
+  - §11 执行顺序图 + §12 最终完成标志（治理线 5 条 → 6 条：新增"审计高优 4 项治理完成"）同步更新
+  - §14 变更日志追加 v1.1 记录
+
+### 目的
+- **审计先于执行**：在进入 Phase 0 前，先确认 Master Plan 的范围是否匹配真实债务结构，避免动手后发现"Plan 没覆盖真正的洞"
+- **一次性清理审计发现**：4 项高优遗漏若不在本轮解决，会在 Phase 1-3 继续消耗注意力（每次看到那 3 处 `AssetDatabase.FindAssets` 都要重新判断是否违规）
+- **保持 Q7 决策理性**：方案 B 在 Master Plan v1.0 的 6 必做 + 2 降级结构上**只做局部扩容**，不推翻任何已定决策（SetupWindow 依然冻结、Validator 依然拆档）
+- **沉淀审计方法论**：本轮审计模式（Runtime/Editor/Data/Tests 四层 + 按 Implement_rules 13 项条款对照）可复用到未来其他模块（Combat / Enemy / Level 后续模块规则）
+
+### 技术
+- 审计手段：`search_content` + `read_file` 批量并行扫描 + `Implement_rules.md` 条款对照矩阵
+- 工期增量决策基于"边际成本 × 边际收益"的简单 ROI 模型
+- Master Plan 的版本号语义：v1.x 为同方案内的局部扩容/修正，v2.0 才是方案级变更
+- `[System.Obsolete]` attribute 用于 Legacy API 降级，比直接删字段更安全（保留存档兼容）
+
+---
+
+## SpaceLife Hub Dialogue Master Plan 创建：Q7 决策 6 必做 + 2 降级，统摄 04-21 MVP Task 清单 — 2026-04-22 16:29
+
+### 新建文件
+- `Docs/0_Plan/ongoing/2026-04-22-spacelife-hub-dialogue-master-plan.md`
+
+### 修改文件
+- `Docs/0_Plan/ongoing/README.md`（登记新 Master Plan，并说明它统摄 04-21 MVP Plan）
+
+### 内容
+- 基于前期 Q1-Q7 讨论结论，创建 SpaceLife Hub Dialogue Master Plan v1.0，采用 Q7 "6 必做 + 2 降级" 方案：
+  - **必做（6 条）**：UI Prefab 从 0 建（1）、Presenter 重构（2）、Coordinator 接线（3）、Scene 样板（5）、SO 内容占位（6）、Authority Matrix 专章（7）
+  - **降级（2 条）**：SetupWindow 推翻重写（4）降级为 Phase 4 冻结声明 + Phase 5 可选；Validator（8）拆档为必做 3 条 + 可选 2 条
+- 将实施工作拆分为 6 个 Phase：
+  - Phase 0（0.5d）：Authority Matrix + 7 设计决策锁定
+  - Phase 1（1d）：Domain 层 Task 1-4 + 3 补丁（IPresenter 接口 + HubLock 引用计数 + DialogueDatabaseValidator）
+  - Phase 2（2-3d）：UI Prefab 从 0 建 + DialogueUI/GiftUI 重构为 Presenter + 删除 NPCInteractionUI + UI Override Audit
+  - Phase 3（1-1.5d）：NPC/Terminal 接线 + Scene 样板 + SO 占位 + Coordinator Dependency Audit
+  - Phase 4（0.5d）：文档收口 + 旧 Plan 归档 + SetupWindow 冻结声明三处落位
+  - Phase 5（可选，1-2d）：SetupWindow 推翻重写 + Silent Fail 全扫
+- 明确 Master Plan 与 Phase Plan 的职责分工：Master Plan 定 "谁是权威 / 范围裁剪 / 降级决策"，Phase Plan 直接沿用 04-21 Plan 的 Task 1-8 做 "做什么"
+- 建立 Authority Matrix（五层权威表）、Scene Override 白名单初稿、10 条 Master Plan Done 完成标志（5 条功能线 + 5 条治理线）
+- 写入 5 条风险与防御（UI Builder silent-fail / Scene override 漂移 / Presenter 解耦不彻底 / SetupWindow 冻结被忽视 / Phase 5 被无限延后）
+- 总工期估算：必做 5-6 天，含 Phase 5 共 6-8 天，相比 Q7 全选 8-10 天方案节省 30-40% 工期
+
+### 目的
+- **治理先于执行**：在 Phase 1 开工前，先把 "谁是 UI Prefab 权威 / 谁是 Scene 接线权威 / 旧 NPCInteractionUI 命运 / SetupWindow 如何处理" 这些边界问题钉死，避免 Phase 2-3 中再次出现 UI owner 双轨。
+- **用执行约束替代工具重写**：SetupWindow 的破坏力根源是 "Rebuild 破坏手工接线 + silent fail"，但 Phase 2 的 "UI Prefab 零 override + 唯一 Builder" 架构 + Phase 3 的 Coordinator Dependency Audit 已经消除了这两点破坏力，因此不必花 0.5-1 天推翻重写，只需在 Phase 4 写 "禁止在 Phase 1-3 期间运行 Rebuild" 的执行约束即可，且该冻结状态可长期合法存在。
+- **Validator 拆档控制成本**：全量 Validator 是 2-3 天工程且边际收益递减，拆成必做 3 条（0.5-1 天，保护可玩闭环）+ 可选 2 条（延到 Phase 5）后，保护力度不降但工期减半。
+- **Master Plan 完成标志 10 条并列**：功能线 5 条与治理线 5 条缺一不可，避免 "能跑但下次重构再踩同一坑" 或 "架构漂亮但不能玩" 的单边失败。
+
+### 技术
+- 文档结构对齐 `Implement_rules.md` 模块治理规则的格式：目标 / 范围裁剪 / Phase 拆分 / 风险防御 / 完成标志 / 后续工作
+- Authority Matrix 表格结构参照 `Implement_rules.md §3.13 Ship/VFX Phase A Authority Matrix` 的五列式（范围 / 对象 / 唯一权威 / 禁止并行写入者 / 备注）
+- Scene Override 白名单参照 `Implement_rules.md §3.15 Ship/VFX Scene Override 白名单` 的 "允许 / 禁止 / 处理规则" 三段式
+- Phase 1-3 中标注 "沿用 04-21 Plan Task X"，避免 Task 级实施清单重复编写；但每处沿用都附带 Master Plan 维度的 "适配调整" 表（如 Task 6 的 `DialogueUI` 类型引用升级为 `IDialoguePresenter` 接口引用，Task 7 的场景 UI 拖拽源改为 Phase 2 生成的 Prefab）
+
+---
+
+## SpaceLife SetupWindow 完整审计与重写：UI 建全层级、精简死代码、对齐 Implement_rules — 2026-04-22 15:41
+
+### 修改文件
+- `Assets/Scripts/SpaceLife/Editor/SpaceLifeSetupWindow.cs`（重写）
+- `Assets/Scripts/SpaceLife/Editor/SpaceLifeMenuItems.cs`（精简）
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 对 SpaceLife 场景设置向导 `SpaceLifeSetupWindow` 完整审计，识别 10 项问题：`CreateDialogueUI`/`CreateGiftUI`/`CreateMinimapUI`/`CreateNPCInteractionUI`/`CreateTransitionUI` 仅 `AddComponent` 而不建 UI 层级；`CreateTransitionUI` 仍写入已被移除的 `_centerText`；Canvas 在 UI 之后才创建导致 UI 短暂挂在根节点；`CreateInteractableSystem` / `ConnectAllSystems` 为空实现；`SpaceLifeMenuItems` 中 14 个 `public static CreateXxx` 方法无人调用形成死代码。
+- 重写 `SpaceLifeSetupWindow`：Phase 1-5 全部补齐 UI 层级（Canvas + CanvasScaler + GraphicRaycaster + EventSystem，UI 面板带 Image 背景 + CanvasGroup + 子节点：头像 / 说话人 / 正文 / 选项容器 / 关闭按钮等），通过 `SerializedObject` 统一接线所有 `[SerializeField]` 字段；Phase 5 重建 `CreateTransitionUI` 只写新字段 `_fadeOverlay`（CanvasGroup + 黑色 Image），不再引用 obsolete `_centerText`；新增 `ReparentStrayUI` 作为防御性 pass，把散落到根节点的 SpaceLife UI 回收到 `SpaceLifeCanvas` 下。
+- 精简 `SpaceLifeMenuItems`：删除 14 个无人调用的 `public static CreateXxx` 方法，仅保留 `[MenuItem]` 驱动的 `CreateNPCData` / `CreateItemData` 以及 `SpaceLifeSetupWindow` 使用的 `internal FindInputActionAsset` / `CreateSquareSprite` / `CreateCapsuleSprite` 与私有 `CreateScriptableObject<T>`。
+- 按 Implement_rules 陷阱表规定，所有面板显隐改用 `CanvasGroup (alpha + interactable + blocksRaycasts)`，禁止 `SetActive(false)`；`EnsureOptionButtonPrefab` 生成 `OptionButton_Prefab.prefab` 供 `DialogueUI`/`GiftUI`/`MinimapUI` 共享。
+- 运行 `dotnet build Project-Ark.slnx` 验证通过：0 错误，86 个警告全部来自 Unity 弃用 API（`FindFirstObjectByType` / `FindObjectsSortMode`），与本次改动无关。
+
+### 目的
+- 让 `SpaceLifeSetupWindow` 成为 SpaceLife 场景构建的唯一权威入口（对齐 `Implement_rules.md` 的"单一真相源 / 禁止双轨主链"原则）：跑完 AllPhases 后所有 UI 必须是带完整 Canvas 层级 + CanvasGroup 的成品，`SpaceLifeDialogueSampleBootstrap` 可直接接到现成 UI 上，`DialogueUI.Awake()` 的 `ResolveCanvasGroup` 不再因为缺 CanvasGroup 而 `Debug.LogError`。
+- 清除 `SpaceLifeMenuItems` 中的 14 个死代码 `CreateXxx` 方法，消除"改 UI 有两个入口 / 不知道该用哪个"的认知负担，收口为"Setup Wizard 做场景装配，MenuItems 只做 data asset 创建 + helper"的职责分层。
+- 修复 `CreateTransitionUI` 的 obsolete `_centerText` 引用，让迁移半状态彻底收尾（对齐 Implement_rules "迁移纪律"）。
+
+### 技术
+- `EditorWindow` + 分 Phase 执行（Phase1_CoreBasics / Phase2_NPCSystem / Phase3_RelationshipGifting / Phase4_RoomsScenes / Phase5_FullIntegration / AllPhases），每个 `CreateXxx` 幂等：先 `FindFirstObjectByType` 存在则跳过。
+- UI 层级构建统一走 helpers：`GetOrCreateSpaceLifeCanvas` / `BuildPanel` / `BuildText` / `BuildImage` / `BuildButton` / `EnsureOptionButtonPrefab` / `SetStretchAll` / `SetPanelHidden` / `EnsureFolder`，对齐 Canvas 优先 + CanvasGroup 驱动显隐 + 共享 button prefab 的模式。
+- `EnsureEventSystem` 优先挂 `UnityEngine.InputSystem.UI.InputSystemUIInputModule`（通过 `Type.GetType` 反射检测可用性），退路回落 `StandaloneInputModule`，对齐项目 New Input System 主链。
+- 所有 `[SerializeField]` 字段通过 `SerializedObject.FindProperty(...).objectReferenceValue = ...` + `ApplyModifiedProperties()` 接线，支持 Undo 并生成可被 prefab/scene 序列化的正式引用。
+- `ReparentStrayUI` 使用 `Object.FindObjectsByType<MonoBehaviour>` 扫描 `DialogueUI`/`GiftUI`/`NPCInteractionUI`/`MinimapUI`/`TransitionUI` 实例，若不在 `SpaceLifeCanvas` 下则 `SetParent(canvas, false)` + `SetStretchAll` 回收。
+
+---
+
 ## SpaceLife Hub 对话系统 Task 7：通过 Unity MCP 执行 bootstrap，正式生成 SpaceLife 样板资产与场景接线 — 2026-04-21 13:08
 
 ### 修改文件
@@ -15120,3 +15347,24 @@ dotnet build 验证：0 错误，0 警告。
 - 内容：为 `Level Architect` 新增 `RoomGeometryCanvasFactory` 与对应 EditMode 测试，补齐 `OuterWalls` / `InnerWalls` 标准 Tilemap 画布 starter，并在 `LevelArchitectWindow` 的 `Quick Edit` 中加入独立 `Geometry Authoring` 区块，明确它只负责准备静态墙 authoring 宿主，不接管 `Runtime Assist` 语义补件链。同时在 `LevelValidator` / `LevelValidatorTests` 中补入 `Door` 推荐根与静态墙开口协作校验，并显式锁住 `NarrativeFallTrigger` 这类非门型跨房间转移不会因为“没有门洞”被误报。最后同步更新 `Level_CanonicalSpec` 与 `Level_WorkflowSpec`，将 `Door = 显式门型通路`、`trap / fall / teleport = 非门型 transfer`、`Navigation/Geometry` 标准骨架和 validator 边界固化为现役文档口径。
 - 目的：把“门洞协作规则”收口为只服务于 `Door` 的 authoring / validator 契约，同时给未来 trap、fall、teleport 类跨房间转移留出明确扩展位，避免后续工具链误把所有 room transfer 都要求成墙体开口。
 - 技术：采用 TDD（先补 `RoomGeometryCanvasFactoryTests` / `LevelValidatorTests` 再实现）、编辑器 authoring authority 分层（`Geometry Authoring` vs `Runtime Assist`）、以及 `Door` / future transfer 分类边界收口策略；通过 Unity EditMode tests 回归验证 `Door` 几何 opening 检查只作用于显式门型通路。
+
+
+## SpaceLife Hub Dialogue Master Plan Phase 2-P1/P5：UI Prefab Builder 与 Override Audit - 2026-04-22 21:20
+- 新建/修改文件：`Assets/Scripts/SpaceLife/Editor/SpaceLifeUIPrefabBuilder.cs`（本轮新建）、`Assets/Scripts/SpaceLife/Editor/SpaceLifeUIOverrideAudit.cs`（本轮新建）、`ProjectArk.SpaceLife.Editor.csproj`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：完成 Master Plan v1.1 Phase 2 的最后两项编码工作。`SpaceLifeUIPrefabBuilder`（§6.1.3 所要求的 UI Prefab 唯一权威 Builder）提供 Apply / Audit 双模式菜单：`ProjectArk > Space Life > Build UI Prefabs (Apply)` 带确认弹窗与进度条，按 `OptionButton → DialogueUI → GiftUI → SpaceLifeUIRoot` 顺序在 `Assets/_Prefabs/UI/SpaceLife/` 下破坏式生成 4 个 Prefab；其中 `SpaceLifeUIRoot` 通过 `PrefabUtility.InstantiatePrefab` 嵌套 `DialogueUI` 与 `GiftUI` 保持 live link，Presenter 序列化字段统一通过 `SerializedObject` + `ApplyModifiedPropertiesWithoutUndo()` 写入，所有 Panel `CanvasGroup` 初始化为 `alpha=0 / interactable=false / blocksRaycasts=false`（遵循 Implement_rules.md §12.6 R5，禁止 `SetActive(false)`）。Audit 模式只读输出 Prefab 存在性、子节点结构、Presenter 序列化字段状态的 StringBuilder 报告。`SpaceLifeUIOverrideAudit`（§6.3 所要求的 Validator #2）提供 `ProjectArk > Space Life > Audit UI Prefab Overrides` 菜单，遍历所有已加载场景中的 `DialogueUIPresenter` / `GiftUIPresenter` 实例，通过 `PrefabUtility.GetNearestPrefabInstanceRoot` 定位到 Prefab 根（支持 nested prefab），再用 `PrefabUtility.GetPropertyModifications` 读取 override 列表，仅放行 §4.1 白名单内的 `m_SortingOrder` 与 `m_Name`，其余一律累加为违规并在报告末尾触发 `Debug.LogError`。两个工具均遵循 Implement_rules.md §3.14 "Builder Execution Modes"：只通过显式菜单触发，绝不在 `OnValidate` / `Awake` / Play Mode 启动流程中隐式运行；Audit 工具只读，绝不写入。
+- 目的：让 SpaceLife 对话 UI 的 Prefab 结构权威从此只归一个 Builder 所有，消除旧 `SpaceLifeSetupWindow` 与 Scene 手工接线双轨污染的隐患（Phase 0 Authority Matrix 的承诺落地）；并建立"零 override"约束的自动化防御线，后续场景出现 override 漂移时能被 Validator 主动捕获并报错，而不是靠 runtime fallback 静默补救。完成后 Phase 2 唯二剩余编码项全部就位，进入 Phase 3 的唯一阻塞已移除。
+- 技术：Builder 独立持有全部 UI 构建辅助方法（`BuildPanel` / `BuildText` / `BuildImage` / `BuildButton` / `SetStretchAll`），不复用 `SpaceLifeSetupWindow` helper，实现 authority 真正收口；Apply 流程使用 `EditorUtility.DisplayDialog` 弹窗确认 + `EditorUtility.DisplayProgressBar` + `try/finally ClearProgressBar` 组合保证破坏式生成的用户可见性与异常安全；Override Audit 用 `SceneManager.sceneCount` + `GetSceneAt(i)` 扫描所有已加载场景而不仅限 `SampleScene`，为后续多场景 authoring 预留扩展；白名单采用 `HashSet<string>` 精确匹配 propertyPath 而不做前缀模糊匹配，避免误放行；`FindObjectsByType(Type, FindObjectsInactive.Include)` 使用非过时 overload。最终通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**（25 个 warning 全部为 `SpaceLifeSetupWindow.cs` 历史遗留的 `FindFirstObjectByType` / `FindObjectsSortMode` 过时警告，本轮新代码未引入任何新警告）。
+
+
+## SpaceLife Hub Dialogue Master Plan Phase 3：Coordinator 接口重构 + Dependency Audit + Scene 接线 + 白名单定稿 - 2026-04-22 21:59
+- 新建/修改文件：`Assets/Scripts/SpaceLife/Dialogue/IDialoguePresenter.cs`、`Assets/Scripts/SpaceLife/Dialogue/SpaceLifeDialogueCoordinator.cs`、`Assets/Scenes/SampleScene.unity`、`Implement_rules.md`、`Docs/5_ImplementationLog/ImplementationLog.md`；复用 `Assets/_Data/SpaceLife/Dialogue/DialogueDatabase.asset` 及其 2 个 Graph 子资产（04-21 遗留内容完整）；清理 3 个 MCP 误创建的空骨架 `.asset` + 3 个 `.meta`。
+- 内容：完成 Master Plan v1.1 Phase 3 的四项收尾工作。**§7.1 接口重构**：在 `IDialoguePresenter` 新增 `SetSpeakerAvatar(Sprite)`（配合 `using UnityEngine;`），`SpaceLifeDialogueCoordinator` 的 `_dialogueUI` 字段从 `[SerializeField] DialogueUIPresenter` 改为纯私有 `IDialoguePresenter`，所有调用点通过接口解析，彻底切断 Coordinator 对具体 MonoBehaviour 子类型的编译期依赖。**§7.3 Dependency Audit**：Coordinator 生命周期重新分拆——`Awake()` 只做 `ServiceLocator.Register(this)` 以保证其他 MonoBehaviour 的 `Start()` 能解析到自己；`Start()` 新增 `ResolveDependencies()`（改为 `ServiceLocator.Get<IDialoguePresenter>()` / `Get<IGiftPresenter>()`，不再用 `FindAnyObjectByType`）+ `AuditDependenciesOnStart()`（StringBuilder 汇总 6 项缺失依赖：DialogueUI / GiftUI / DialogueDatabase / ServiceRouter / SaveSlot / PlayerTransform）。审计失败时同时 `ServiceLocator.Unregister(this)` + `enabled = false` + 设 `_dependencyAuditPassed = false` 闸门；`StartDialogueFromNpc` / `StartDialogueFromTerminal` 入口各加 `if (!_dependencyAuditPassed) { LogError; return; }` 早退分支，防止外部通过已持有的引用绕过 `enabled = false` 仍触发功能。**§7.2 SO 占位**：放弃创建新的空骨架，改为直接复用 04-21 已存在的 `DialogueDatabase.asset`（内含 `NPC_Engineer_HubDialogue` 与 `Terminal_ShipAI_HubDialogue` 两条完整 graph + entryRules + choices + effects），用 `delete_file` 清理 MCP 首次误创建的 `DialogueDatabase 1.asset` / `NPC_Companion_Graph.asset` / `Terminal_Core_Graph.asset` 及对应 `.meta`。**Scene 接线**：通过 Unity MCP `manage_gameobject(action=create, prefab_path="Assets/_Prefabs/UI/SpaceLife/SpaceLifeUIRoot.prefab", parent="SpaceLifeDialogueSampleSlice")` 在 `SampleScene` 内首次实例化 UI Root Prefab（包含 nested `DialogueUI` + `GiftUI`，Canvas ScreenSpaceOverlay），再用 `manage_scene(action=save)` 持久化；Coordinator 在场景中的 `_dialogueDatabase` / `_serviceRouter` / `_saveSlot` 序列化字段经 MCP 查询确认完好。**§7.4 Scene Override 白名单定稿**：`Implement_rules.md §12.4` 从 Phase 0 初稿升级为终稿——"允许的 Scene Override" 列出 3 项具体场景引用（`SpaceLifeUIRoot` Prefab 实例化 / Canvas `sortingOrder` / Coordinator 资产字段 scene 级拖线）；"必须跟随 Prefab / Builder" 列表细化；新增 "Phase 3 落地后已退役的接线模式" 子节，明确标注 `_dialogueUI` SerializeField 直拖 / Runtime auto Find Presenter / SetupWindow 场景回填三项已全部废弃；"处理规则" 指向 `SpaceLifeUIOverrideAudit` 菜单作为漂移检测线。
+- 目的：让 Coordinator 的依赖解析与场景内 Prefab 结构解耦到只剩"服务注册 + 接口依赖"两条细线，彻底退役 Phase 0 Authority Matrix 中承诺作废的旧接线模式（SerializeField 直拖 / Runtime auto Find / SetupWindow 回填）。Dependency Audit 把 Implement_rules.md §3.5 "禁止 silent no-op" 的抽象原则落地为具体代码：任何关键依赖缺失都会在 Start 帧立即输出带字段清单的 `Debug.LogError`，而不是靠 runtime fallback 拖到第一次 `StartDialogueFromNpc` 才暴露。`enabled = false` 闸门 + `_dependencyAuditPassed` 双保险解决了"Unity 的 `enabled = false` 只抑制 Update 消息、不阻止公共方法被外部调用"的隐性陷阱。Scene 接线完成后，Phase 3 验收的剩余项（Play Mode 手工走通 NPC 对话 / Terminal 条件选项 / Gift UI 切换 / 关系值存档恢复）转交用户在 Unity Editor 中完成，代码层与 authoring 层均无剩余阻塞。
+- 技术：**生命周期分拆策略**——踩中并规避了 Unity Awake 顺序不保证陷阱（`DialogueUIPresenter.Awake()` 做 ServiceLocator Register，若 Coordinator Awake 先执行则 Audit 必然失败），方案是 Awake 只保留自己的 Register，其余依赖解析与审计推迟到 Start（此时所有 MonoBehaviour 的 Awake 都已完成）。**闸门防御模式**——单靠 `enabled = false` 不足以阻止外部 NPCController / TerminalDialogueInteractor 通过已持有的 Coordinator 引用调用公共方法，追加 `_dependencyAuditPassed` bool 闸门 + 早退日志，把"enabled 只抑制消息"的 Unity 陷阱显式化为代码层防御。**复用优于创建策略**——MCP `manage_scriptable_object(action=create)` 因文件名冲突自动重命名为 `DialogueDatabase 1.asset` 时立刻识别为信号，改为复用 04-21 遗留的完整资产而非坚持创建空骨架，实际减少 3 份占位资产 + 避免 SO 内容真实度倒退。**write_to_file 重写 Coordinator**——考虑到 §7.1 与 §7.3 对字段、Awake、Start、两个入口方法都有成对改动，单次 write_to_file 重写 452 行优于多次 replace_in_file 叠加，避免了字段声明与方法体不同步的中间态。**MCP 工效**——`manage_gameobject(create, prefab_path)` + `manage_scene(save)` 两次调用完成场景内 Prefab 实例化 + 持久化，对比手工操作省去打开 Hierarchy / 拖入 Prefab / Ctrl+S 三步；`FetchMcpResource mcpforunity://scene/gameobject/{id}/components` 替代手动读 YAML 验证序列化字段完好性。最终通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**（28 个 warning 全部为 pre-existing SpaceLifeSetupWindow / 其他历史警告，本轮新代码未引入任何新警告）；Unity Console 通过 MCP `read_console` 确认无编译错误。
+
+
+## SpaceLife Interactable 懒解析 PlayerController2D 修复 - 2026-04-22 23:11
+- 新建/修改文件：`Assets/Scripts/SpaceLife/Interactable.cs`
+- 内容：修复 `Interactable.CheckPlayerInRange()` 因 `_cachedPlayer` 只在 `Start()` 做一次性缓存导致的"黄点永远不亮"问题。根因：Engineer（`EngineerDialogueSample`）挂在主场景根对象 `SpaceLifeDialogueSampleSlice` 下，`m_IsActive=1`，所以 Play Mode Frame 0 就跑 `Start()`，此时 Player2D 还没从对象池 spawn，`ServiceLocator.Get<PlayerController2D>()` 返回 null，`_cachedPlayer` 被固化为 null，之后按 Tab 进入 SpaceLife、Player2D 被 `SpaceLifeManager.SpawnPlayer()` 注册进 ServiceLocator 之后，Engineer 的 Interactable 永远不会再查询，每帧 `CheckPlayerInRange()` 第一行短路返回 `_isInRange = false`，黄点（`InteractionIndicator`）永远不激活。修复方案：把"缓存失效时重新拉取"作为显式逻辑放入 `CheckPlayerInRange()` 开头——若 `_cachedPlayer == null`（首次 spawn 前 / 池回收后 / 退出重进 SpaceLife 后）就从 `ServiceLocator.Get<PlayerController2D>()` 重新拉，拉到则进入距离判定，拉不到才 `_isInRange = false; return;`。`Start()` 中仍保留一次即时缓存（性能优化：如果 Player2D 已经先于 Interactable 存在，立即拿到，省下 Update 轮询）。
+- 目的：修掉"按 Tab 进 SpaceLife、人物能动，但走近 Engineer 看不到黄点、按 E 无反应"问题中"黄点不亮"这一半。E 键链路（PlayerInteraction 的 `OnTriggerEnter2D` 收集 + `_interactAction.performed` 触发 `Interact()`）与 Interactable 的范围检测是两套独立链路，修完后 Interactable 层的距离判定恢复工作，Engineer 头顶的自动生成黄色 Sprite 指示器将在 Player2D 进入 2m 范围内时正确显示。
+- 技术：**懒解析模式（Lazy Resolve Pattern）**——对"依赖方生命周期早于被依赖方"的常见 Unity 陷阱（`Start()` 中查询一个尚未生成的 ServiceLocator 条目）采用"缓存 + 过期重拉"策略。相比于把 `Interactable` 挪进 `SpaceLifeScene` 树下（根治方案，涉及场景结构搬迁、4 个空壳 NPC_Engineer 清理），当前修复只改 3 行代码就恢复工作，作为最小可验证补丁先行落地。Engineer 不在 `SpaceLifeManager._spaceLifeSceneRoot` 下的架构问题记作后续结构迁移项。最终通过 `read_lints` 检查目标文件 **0 lint**。
