@@ -1,8 +1,12 @@
 # SpaceLife Hub 对话系统技术设计
 
-**日期：** 2026-04-20  
-**状态：** 已达成设计共识，待进入实现  
+**日期：** 2026-04-20（初稿） / 2026-04-23（Phase 1-3 落地同步）  
+**状态：** MVP 已实现并通过 Phase 1-3 验收（Master Plan v1.1）  
 **适用对象：** `SpaceLife`、Hub 船内对话、船员 NPC、终端 / AI、关系成长、服务入口、未来 `CSV -> SO` 铺量
+
+> **现役真相源声明（2026-04-23 追加）**  
+> 本文档现在同时承担 **设计共识 (Why/What)** 与 **现役真相 (What shipped)** 两职。若本文描述与代码冲突，以下列 §14 "实现落地状态" 与 `Implement_rules.md §12` 为准；设计初稿（§1-§13）保留以追溯设计意图。  
+> 对 Hub 对话做任何非微小改动前，必须先读完 §14 与 `Implement_rules.md §12`。
 
 ---
 
@@ -613,3 +617,118 @@ MVP 里对话节点 / 选项允许写入的内容应保持克制：
 - **先对话，再进服务**
 - **世界进度 + 关系值双轴驱动**
 - **SO MVP，但 runtime 结构天然兼容 CSV 铺量**
+
+---
+
+## 14. 实现落地状态（2026-04-23 同步自 Master Plan v1.1 Phase 1-3）
+
+> 本章是 Master Plan v1.1 `2026-04-22-spacelife-hub-dialogue-master-plan.md` Phase 1-3 落地完成后，对 §1-§13 设计稿中与现役实现有差异的口径补正。  
+> 后续修改 SpaceLife Hub 对话系统时，§14 + `Implement_rules.md §12` 具有最高优先级。
+
+### 14.1 现役 runtime 文件清单
+
+**Domain 层（`Assets/Scripts/SpaceLife/Dialogue/`）：**
+
+- `IDialoguePresenter.cs` — 对话 UI 接口（D1 决策：接口在 `SpaceLife.Dialogue` 命名空间下，不在独立 `Core` 程序集）
+- `IGiftPresenter.cs` — 礼物 UI 接口
+- `DialogueGraphSO.cs` / `DialogueDatabaseSO.cs` — SO 数据层，authoring 路径 `Assets/_Data/SpaceLife/Dialogue/`
+- `DialogueNodeData.cs` / `DialogueChoiceData.cs` / `DialogueConditionData.cs` / `DialogueEffectData.cs` — 数据载体
+- `DialogueContext.cs` — 上下文构造
+- `DialogueRunner.cs` — session 运行器（Domain 纯逻辑，无 UI 依赖）
+- `DialogueFlagStore.cs` — 一次性 flag 写读（对齐 §8.1）
+- `DialogueServiceRouter.cs` — 服务出口路由（对齐 §5.4 / D3）
+- `SpaceLifeDialogueCoordinator.cs` — Scene-side 交互壳
+- `TerminalDialogueInteractor.cs` — 终端交互入口（Phase 3 实装）
+- `NPCController.cs` — NPC 交互入口（Phase 3 改造，不再持 DialogueUI 引用）
+
+**UI Presenter（`Assets/Scripts/SpaceLife/`）：**
+
+- `DialogueUIPresenter.cs` — 对话面板（实现 `IDialoguePresenter`，CanvasGroup 控显隐，R5）
+- `GiftUIPresenter.cs` — 礼物面板（实现 `IGiftPresenter`）
+- `NPCInteractionUI` 已于 Phase 2 **删除**，UI owner 唯一化（对齐 D6）
+
+**Editor 工具（`Assets/Scripts/SpaceLife/Editor/`）：**
+
+- `SpaceLifeUIPrefabBuilder.cs` — UI Prefab 唯一权威 Builder（Apply / Audit 双模式）
+- `SpaceLifeUIOverrideAudit.cs` — Scene Override 审计（Validator #2）
+- `DialogueDatabaseValidatorMenu.cs` — DialogueDatabase 校验（Validator #1）
+- `SpaceLifeSetupWindow.cs` — **已冻结**（见 §14.6 与 Implement_rules §12.7）
+
+### 14.2 存档方案落地口径
+
+**设计稿 §8** 提到 flag 与 relationship 进入存档，落地方案为：
+
+- `RelationshipManager` **直接读写** `PlayerSaveData.spaceLifeRelationships`（D2 决策，不经 SaveBridge）
+- `DialogueFlagStore` 使用 `PlayerSaveData.spaceLifeDialogueFlags`（string → bool 字典）
+- 存档槽位由 `SaveSlotContext` 提供，对话 Coordinator 通过注入/解析拿到当前 slot
+- 写入时机：Choice 提交 → `DialogueEffect` 执行 → `FlagStore.SetFlag()` → `SaveManager.Save(slot)`
+
+### 14.3 `IDialoguePresenter` 接口路径与依赖解析
+
+设计稿 §5.3 使用 `DialogueUIPresenter` 直接类名讨论，实际落地已抽象为接口：
+
+- 接口位置：`Assets/Scripts/SpaceLife/Dialogue/IDialoguePresenter.cs`
+- 命名空间：`ProjectArk.SpaceLife.Dialogue`
+- **Coordinator 通过 `ServiceLocator.Get<IDialoguePresenter>()` 解析**，不再使用 `[SerializeField] DialogueUIPresenter` 拖线（Phase 3 §7.1 改造）
+- `DialogueUIPresenter.Awake()` 调用 `ServiceLocator.Register<IDialoguePresenter>(this)`，`OnDestroy()` 注销
+- 同理 `IGiftPresenter` / `GiftUIPresenter`
+
+### 14.4 UI Prefab 权威口径
+
+- 现役 Prefab 位置：`Assets/_Prefabs/UI/SpaceLife/`
+  - `OptionButton.prefab`
+  - `DialogueUI.prefab`
+  - `GiftUI.prefab`
+  - `SpaceLifeUIRoot.prefab`（nested prefab root，嵌套前两者保持 live link）
+- 唯一构建入口：`ProjectArk > Space Life > Build UI Prefabs (Apply)`（确认弹窗 + 进度条 + 破坏式重建）
+- Audit 模式：`ProjectArk > Space Life > Build UI Prefabs (Audit)`（只读对比）
+- **所有 Panel 初始 CanvasGroup：** `alpha=0 / interactable=false / blocksRaycasts=false`
+- **GameObject 始终保持 active**（对齐 R5 / §10 UI 模块规则 / CLAUDE.md SetActive 陷阱）
+
+### 14.5 Coordinator Dependency Audit 口径
+
+`SpaceLifeDialogueCoordinator` Phase 3 落地的生命周期：
+
+```
+Awake():
+  ServiceLocator.Register(this)   // 让后续 Start() 能解析到自己
+
+Start():
+  ResolveDependencies()            // ServiceLocator.Get<IDialoguePresenter>/IGiftPresenter
+  AuditDependenciesOnStart()       // StringBuilder 汇总 6 项缺失依赖并 Debug.LogError
+  if (audit失败):
+    ServiceLocator.Unregister(this)
+    enabled = false
+    _dependencyAuditPassed = false
+
+StartDialogueFromNpc / StartDialogueFromTerminal:
+  if (!_dependencyAuditPassed) { Debug.LogError; return; }  // 早退闸门
+```
+
+审计覆盖 6 项：`IDialoguePresenter` / `IGiftPresenter` / `DialogueDatabaseSO` / `DialogueServiceRouter` / `SaveSlotContext` / `PlayerTransform`。
+
+### 14.6 `SpaceLifeSetupWindow` 冻结状态
+
+- 自 2026-04-22 Phase 4 起进入 **长期冻结**
+- 冻结范围：Rebuild / Apply 等写入操作一律禁止
+- 冻结期限：**直至 Master Plan Phase 5（可选）推翻重写完成；若 Phase 5 不启动，本冻结状态为合理的长期稳态**
+- 冻结声明三处：
+  1. `Implement_rules.md §12.7 / §12.11`
+  2. `SpaceLifeSetupWindow.cs` 文件顶部 FROZEN 注释
+  3. `SpaceLifeSetupWindow.OnGUI()` 顶部红色 HelpBox 警告
+
+### 14.7 与 §1-§13 设计稿的差异速查
+
+| 设计稿章节 | 差异点 | 现役口径 |
+|---|---|---|
+| §5.3 | UI 层由"DialogueUIPresenter"具体类承载 | 改由 `IDialoguePresenter` 接口承载，Presenter 通过 ServiceLocator 注册 |
+| §5.5 | 存档通过 `SpaceLife.SaveBridge` | 直接由 `RelationshipManager` / `DialogueFlagStore` 读写 `PlayerSaveData`（D2） |
+| §9 | 旧 `NPCInteractionUI` 作为交互视觉 | 已删除，交互感由场景实例（高亮 / 提示）承担，UI owner 唯一化 |
+| §10.1 MVP 切片 | 1 船员 + 1 终端演示 | 已落地：`SampleScene` 中 NPC_Engineer + Terminal 各 1 |
+| §12 实现守则 | 6 条守则 | 已升级为 `Implement_rules.md §12.6` R1-R8 共 8 条（增 R7 冻结、R8 Silent No-Op） |
+
+---
+
+> **关于本章的维护纪律**  
+> §14 是"现役真相"，不是"设计意图"。当以后要扩展 NPC、改存档方案、替换 UI 实现时，**先判断是否需要先更新本章 + `Implement_rules.md §12`**，再开始编码。  
+> 如果本章已过时，`Docs/5_ImplementationLog/ImplementationLog.md` 会是比它更可靠的历史真相（按日期倒序记录每一次实际变更）。

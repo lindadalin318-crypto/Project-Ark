@@ -2,6 +2,167 @@
 
 ---
 
+## Core Loop 设计文档 v0.1 起草（Hybrid Draft） — 2026-04-23 16:15
+
+### 新建文件
+
+- `Docs/1_GameDesign/CoreLoop.md`（v0.1，Hybrid Draft，约 280 行）
+
+### 内容
+
+采用**设问式 + 推荐式混合结构**（选项 C）起草 Core Loop 文档，明确团队内部"玩家此刻在做什么、感受到什么"的判断基准。章节结构：
+
+- **§0 为什么需要 Core Loop**：✅ 已锁定。解释本文档的团队决策工具属性
+- **§1 60 秒循环**：核心决策留给主设计师
+  - §1.1 ❓ 待定：三个候选主轴（A 战斗 / B 探索 / C 构筑），每个候选附节拍示例 + 支持理由 + 反对理由 + 我的推荐（B + 70% 信心）
+  - §1.2 🔵 推荐版：以候选 B 为蓝本的 60 秒节拍图 + 关键节拍表（进入/扫视/触发/战斗脉冲/清场/过门）
+  - §1.3 ❓ 待定：一句话 Loop 描述（25 字内），提供 3 个候选仅供参考
+- **§2 三根支柱**：
+  - §2.1 ✅ 已锁定：直接继承 World Bible 的 Design Pillars
+  - §2.2 🔵 推荐版：派生出可机制化落地的"玩法支柱"（读懂式战斗 / 环境即叙事 / 选择即消耗）
+  - §2.3 🔵 推荐版：三根支柱的张力三角图 + 否决示例
+- **§3 MVP 证明**：🔵 推荐版
+  - §3.1 三个"玩家瞬间"验收标准（第一次听懂/第一次犹豫/第一次认知升级）
+  - §3.2 MVP 技术验收清单（6 项）
+  - §3.3 可扩展性验证（"1 天内产出第二个房间"测试）
+- **§4 与现有模块对应**：✅ 已锁定。60 秒节拍 → 已实现模块的映射表，标注空白项
+- **§5 下一步**：明确 v1.0 定稿需要主设计师回答的 2 个问题
+
+### 目的
+
+- 解决项目缺乏"60 秒循环统一答案"的问题——当前战斗/探索/构筑三线并行，新功能缺乏优先级判断尺
+- 提供决策工具：后续任何新功能提案必须能对应到三根玩法支柱中的至少一根
+- 为即将到来的 `Moment_to_Moment_Combat.md`（战斗手感专篇）做锚点
+
+### 技术
+
+- 采用 **Hybrid Draft** 文档模式：显式区分 ❓ 待定 / 🔵 推荐版 / ✅ 已锁定 三种段落状态，避免把架构师判断伪装成用户决策
+- 引用源：`World_Bible.md`（0.2 Design Pillars、0.3 情感基调、0.4 禁忌清单）、`Ark_MasterDesign.md`（§3 模块清单）、`Sheba_FeatureRequirements.md`（精确时间线作为 Core Loop 的第一个验证场）
+- 与 `Implement_rules.md` 呼应："可扩展的标准不是这次终于跑起来了，而是下次同类需求还能快、还能稳" 作为 MVP 之后的可扩展性验证判据
+
+---
+
+## SpaceLife Master Plan v1.1 Phase 4 完成：文档收口 + 旧 Plan 归档 + SetupWindow 冻结声明 — 2026-04-23 15:50
+
+### 修改文件
+
+**新增章节（3 处）**：
+- `Docs/2_TechnicalDesign/SpaceLife/SpaceLife_HubDialogue_SystemDesign.md` — 头部追加"现役真相源声明"；末尾追加 `§14 实现落地状态`（7 小节：runtime 文件清单 / 存档方案 / 接口解析 / UI Prefab 权威 / Coordinator Audit 口径 / SetupWindow 冻结 / 与设计稿差异速查表）
+- `Implement_rules.md §12.8` 追加 3 条踩坑总结（坑 5 `SetActive(false)` 初始化顺序坑 / 坑 6 UI owner 双轨 / 坑 7 Silent No-Op）
+- `Implement_rules.md §12.11` 全新独立章节 "`SpaceLifeSetupWindow` 冻结声明（Phase 4 定稿）"（冻结对象 / 冻结内容 5 项 / 合法操作 / 现役权威入口替代表 / 唯一解除条件 / 违反处理流程）
+
+**修改章节（3 处）**：
+- `Implement_rules.md §12.6 R7` 升级表述：由"Phase 1-3 执行期间"的临时冻结改为"2026-04-23 起长期冻结"，并交叉引用 §12.11
+- `Implement_rules.md §12.9` 追加 "Phase 4 专项验收" 5 条判据
+- `Docs/0_Plan/ongoing/README.md` 重写：Master Plan v1.1 与 MVP Plan 改为历史归档记录，明确"没有正在推进的专项 Plan" + Phase 5 作为合理稳态的说明
+
+**代码冻结声明（1 文件，3 处注入）**：
+- `Assets/Scripts/SpaceLife/Editor/SpaceLifeSetupWindow.cs`
+  - 文件顶部：14 行 FROZEN 警示注释 + XMLdoc 完全重写标注冻结状态与替代入口
+  - `OnGUI()`：新增 `DrawFreezeBanner()` 作为第一个绘制步骤，MessageType.Error 红色 HelpBox
+  - `ExecuteSetup()`：方法首部注入冻结守卫 —— `EditorUtility.DisplayDialog` 强提示 + `Debug.LogWarning` + `return`；原实现用 `#pragma warning disable/restore CS0162` 包裹，保留但不再可达，为 Phase 5 解冻时的参考实现
+
+**归档移动（git mv）**：
+- `Docs/0_Plan/ongoing/2026-04-22-spacelife-hub-dialogue-master-plan.md` → `Docs/0_Plan/complete/`
+- `Docs/0_Plan/ongoing/2026-04-21-spacelife-hub-dialogue-mvp-implementation-plan.md` → `Docs/0_Plan/complete/`
+
+### 内容
+
+完成 Master Plan v1.1 Phase 4 §8.1 / §8.2 / §8.3 三项收口工作。
+
+**§8.1 文档收口**：`SpaceLife_HubDialogue_SystemDesign.md` 原本是 2026-04-20 的设计共识稿，描述的是"计划做成什么样"；本次追加 §14 把 Phase 1-3 实际落地的 7 个维度（runtime 文件清单、存档落地口径、`IDialoguePresenter` 接口路径与依赖解析、UI Prefab 权威入口、Coordinator Dependency Audit 的 6 项审计覆盖、SetupWindow 冻结状态、与 §1-§13 的 5 处差异速查）写回设计稿，让它同时承担"设计意图"与"现役真相源"。设计稿头部明确"若本文与代码冲突，以 §14 与 Implement_rules.md §12 为准"，保留 §1-§13 的设计稿体追溯设计 Why。`Implement_rules.md §12.8` 补齐 3 条踩坑总结覆盖本轮最关键的三个模式：`SetActive(false)` 推迟 `Awake` 导致 Presenter 初始化失败的陷阱、`DialogueUI` + `NPCInteractionUI` 双 UI owner 的历史病灶、Coordinator 静默 return 让"什么都没发生"难排查的根因。
+
+**§8.2 旧 Plan 归档**：用 `git mv` 而非 `mv` 移动两份 Plan 到 `complete/`，保留 git 历史连续性。`ongoing/README.md` 重写为"没有正在推进的专项 Plan"状态，明确 Phase 5（SetupWindow 推翻重写）作为 Master Plan §9 / §12 风险条款中声明的合理稳态，不是"待办"——若以后要启动，开新 Plan 而非重启已归档的 Master Plan。
+
+**§8.3 SetupWindow 冻结声明**：按 Master Plan §8.3 要求，冻结声明必须三处就位缺一不可。本次落地：
+1. `Implement_rules.md §12.11` 新增独立章节而非嵌入 R7，因为冻结是长期稳态约束，应作为独立治理条款长期可查
+2. 代码注释：文件顶部 + XMLdoc 双处强提示，让任何阅读代码的人（人或 AI）在看到第一行就知道这是冻结工具
+3. OnGUI HelpBox + ExecuteSetup 守卫：单一绘制提示不足（可能被忽略），因此在执行入口同时注入强制拦截 —— 即使用户通过任何路径（按钮点击、反射调用、脚本唤起）进入 `ExecuteSetup()`，都会被 Dialog + LogWarning + return 三重阻断。原实现保留在 `#pragma warning disable CS0162` 块内，为 Phase 5 解冻时的参考留活口
+
+**§8.4 Phase 4 验收**：`dotnet build Project-Ark.slnx` 0 警告 0 错误；设计稿 / ImplementationLog / 旧 Plan 归档 / 冻结三处声明全部就位。
+
+### 目的
+
+- **让下一次修改 SpaceLife 不用"考古"**：以后开发者（人或 AI）读 `Implement_rules.md §12` + `SpaceLife_HubDialogue_SystemDesign.md §14` 就能拿到完整现役真相，不需要翻 Master Plan 细节或逐个文件 grep
+- **给 SetupWindow 一个终局**：这份 1,630 行遗留工具不需要"尽快重写"，而是"长期冻结 = 合理稳态"。通过三处冻结声明 + Execute 层硬守卫，让它既保留历史参考价值，又不能再次造成 authority 污染
+- **关闭 Master Plan v1.1 的整个循环**：Phase 0-4 全部完成并归档，`ongoing/` 目录回归"没有正在推进的专项"状态。后续有新需求应开新 Plan，不应重启已归档 Master Plan
+
+### 技术
+
+- **"现役真相源"双轨文档化（Single-Source Split）**：`CanonicalSpec` / `AssetRegistry` 是 Ship/VFX 模块的模板，SpaceLife 暂不拆分独立 Canonical，而是让 `SpaceLife_HubDialogue_SystemDesign.md §14` + `Implement_rules.md §12` 合并承载。当未来 SpaceLife 扩展到多 Hub / 多 NPC 类型 / 多存档层时，再考虑拆分独立 CanonicalSpec
+- **三处冻结声明作为"Governance Defense in Depth"**：仅代码注释容易被忽略、仅 Editor UI 容易被绕过、仅 Implement_rules 是文档没有运行时效力。三者叠加形成"阅读代码就看见 + 打开工具就看见 + 点击执行就被拦截"的三层防御，对齐 `Implement_rules.md §3.5` "宁可响亮失败，也不要静默失效"
+- **`#pragma warning disable CS0162` 保留遗留实现**：不删除原 `ExecuteSetup` 旧代码是为了给 Phase 5 解冻时留"需求溯源参考"，但用 pragma 屏蔽"unreachable code"警告保持 0 警告编译纪律。该 pragma 是局部作用域，不污染其他代码路径
+- **`git mv` 而非 `mv`**：归档 Plan 文件时保留 git 历史连续性，未来通过 `git log --follow` 能追溯到 ongoing 阶段的完整编辑历史
+
+## SpaceLife 对话选项长文案显示修复 — 2026-04-23 15:20
+
+### 修改文件
+- `Assets/Scripts/SpaceLife/DialogueUIPresenter.cs`
+- `Assets/Scripts/SpaceLife/Tests/DialogueUIPresenterTests.cs`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 继续排查用户反馈“根本没看到 `记住了，我之后再来找你。` 被完整显示”后，确认根因不在对话图或 flag，而在 **Presenter 的选项表现层**：对话选项直接复用了共享 `OptionButton` 的通用默认样式，按钮高度固定、标签居中、没有内边距；同时对话底部 `OptionsContainer` 仍按单行底条处理，多选节点会把按钮硬挤在 48px 高的区域里
+- 在 `DialogueUIPresenter` 中新增一层 **运行时选项布局正规化**：每次实例化 choice/utility button 时，主动补齐 `LayoutElement`，把按钮高度统一到 44px，并把文案 `Text` 改为 `MiddleLeft + Wrap + Overflow`，同时给标签加左右/上下 padding，避免长中文句子贴边或被裁切
+- `DialogueUIPresenter` 现在会缓存 `DialogueText` 与 `OptionsContainer` 的默认布局，并在 `RenderNode()` 中根据当前选项数动态扩展底部选项区、同步上推正文区域；`HideDialogue()` 时再恢复默认布局，避免多选节点撑大的高度泄漏到下一段对话
+- 补充 `DialogueUIPresenterTests.cs`，新增两条 Presenter 级回归约束：长文案选项按钮必须具备可读布局（高度 / 左对齐 / padding / wrap），多选节点必须扩展底部选项区并上推正文区
+- Unity 运行时验证结果：首见节点按钮已变为 `1492x44`、`MiddleLeft`、左右 padding `16`；切到 `engineer_small_talk` 后，选项区从默认 `top=56 height=48` 扩展到 `top=100 height=92`，正文底边同步抬升到 `108`
+
+### 目的
+- 修复 SpaceLife 工程师首见对话最直接的可用性问题：玩家实际上并不是“没点确认”，而是 **确认文案本身没有被完整、清晰地呈现出来**，导致交互路径判断失真
+- 把对话选项的可读性保障收口到 `DialogueUIPresenter`，让现有场景实例即使仍引用通用按钮 prefab，也能在运行时获得对话专用的可读布局，不依赖再次手工重搭 UI 资产
+
+### 技术
+- **Presenter 级运行时布局正规化（Runtime Layout Normalization）**：不改对话图语义，只在表现层实例化按钮时补齐 `LayoutElement + Text padding + overflow` 等约束，把“通用共享按钮”纠正为“对话可读按钮”
+- **动态选项区自适应（Adaptive Option Strip Sizing）**：根据当前 `choices.Count` 计算所需高度，动态调整 `OptionsContainer` 顶边和正文底边，避免多选节点继续挤在单行底条中
+- **布局状态缓存与复位（Layout State Cache / Restore）**：缓存默认 inset，并在 `HideDialogue()` 恢复，防止一个多选节点把后续所有对话都永久撑高，符合项目对 UI 状态复位的治理要求
+
+## SpaceLife 工程师首见对话关闭路径修复 — 2026-04-23 15:00
+
+### 修改文件
+- `Assets/Scripts/SpaceLife/DialogueUIPresenter.cs`
+- `Assets/Scripts/SpaceLife/Tests/DialogueUIPresenterTests.cs`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 继续排查“按 F5 后第一次能回到首见，但第二次还是首见”时，先在运行时验证 `DialogueUIPresenter` 的真实 UI 状态，确认 `engineer_first_meeting` 节点并不是没生成选项：`OptionsContainer` 下确实会实例化出 1 颗按钮，文本就是“记住了，我之后再来找你。”
+- 真正的问题在于 **右上角 `X` 始终可用**。玩家如果读完首见文案后直接点 `X`，`SpaceLifeDialogueCoordinator.HandleCloseRequested()` 只会保存当前存档并关闭 UI，不会代替玩家提交 `first_meeting_ack`，因此 `spacelife.engineer.first_met` 永远不会被写入，下一次自然还是 `engineer_first_meeting`
+- 为此在 `DialogueUIPresenter.RenderNode()` 中新增单点 UX 规则：**只有“单一 authored choice”的节点会隐藏右上角 `X`**。这样 `engineer_first_meeting` 这种单一确认节点不能再被绕过；而 `engineer_small_talk` 这种多选节点（状态 / 送礼）仍保留退出能力
+- `HideDialogue()` 现在会显式恢复 close button 可见性，避免从首见节点退出后把按钮隐藏状态泄漏到后续无 choice 或多 choice 节点
+- 补充 `DialogueUIPresenterTests.cs`，沉淀三条 presenter 级行为约束：单一显式 choice 隐藏 `X`；多 choice 保留 `X`；返回无显式 choice 节点时 `X` 会恢复
+- 运行时闭环验证结果：`firstNode=engineer_first_meeting closeVisible=False | afterChoiceNode=engineer_small_talk closeVisible=True | choiceCountAfterChoice=2`，以及 `reopenedNode=engineer_small_talk closeVisible=True choiceCount=2`
+
+### 目的
+- 修复 SpaceLife 工程师首见分支最隐蔽的 UX 漏口：逻辑和存档其实正常，但玩家路径可以通过 `X` 绕过唯一确认 choice，导致首见 flag 永远不落盘，表面上看就像“第一次和第二次一直同一句”
+- 把这个修复收口在 presenter 层，而不是去污染 `DialogueRunner` / `SpaceLifeDialogueCoordinator` 的 authored choice 语义；对话图仍然决定什么时候写 flag，UI 只负责不让玩家误走一条破坏 authored 语义的关闭路径
+
+### 技术
+- **单一确认节点关闭闸门（Single-Choice Close Gate）**：close button 不再按“只要有对话就永远可关”的粗粒度策略工作，而是根据当前 node 的交互结构决定。只有 `choices.Count == 1` 的节点会隐藏 `X`，多 choice 节点继续允许退出，不会把普通分支对话变成强制提交
+- **Presenter 层最小修复**：本次没有改 `DialogueRunner.Choose()`、`HandleCloseRequested()`、flag 存储或 entryRules 解析，避免把“UI 绕过”问题错误地下沉到 Domain / Save 层；这符合项目“先修 authority 正确层级”的治理原则
+- **运行时状态验证优先**：在真正改代码前，先用 Unity Play Mode 直接读取 `OptionsContainer.childCount`、按钮文本和 close button 可见性，确认问题不是“按钮没生成 / entryRules 坏了”，而是“按钮生成了但 UX 允许绕过”
+
+## SpaceLife 工程师样例对话重置入口补充 — 2026-04-23 14:29
+
+### 修改文件
+- `Assets/Scripts/SpaceLife/Dialogue/SpaceLifeDialogueSampleDebugControls.cs`
+- `Docs/5_ImplementationLog/ImplementationLog.md`
+
+### 内容
+- 在 `SpaceLifeDialogueSampleDebugControls` 中新增 **工程师样例对话重置入口**，补充热键 `F5` 和 `ContextMenu("Reset Sample Dialogue/Engineer First Meeting")`
+- 重置逻辑不再要求手动删除整个 slot：改为只清理 `spacelife.engineer.first_met` flag，以及 `engineer_hub` 的关系值存档记录，再把结果写回当前 `_saveSlot`
+- 重置完成后会主动调用 `RelationshipManager.LoadFromSave()`，避免运行中仍保留旧的内存态关系缓存
+- 启动日志同步更新，明确提示：`F5` 用于重置工程师首次会面状态，`F6/F7` 仍用于切换样例 `WorldStage`
+- 用 Unity Play Mode 做了 fresh 闭环验证：`flagAfterReset=False | firstNode=engineer_first_meeting | firstChoice=first_meeting_ack | flagAfterChoice=True | secondNode=engineer_small_talk`
+
+### 目的
+- 修复 SpaceLife 样例场景当前最大的验证摩擦：用户即使逻辑没坏，也会因为旧存档里残留的 `spacelife.engineer.first_met=True` 而误以为“工程师第一次和第二次永远同一句”
+- 把“回到干净首次会面状态”的能力收口到样例调试脚本本身，避免后续每次验证都依赖手动删档、猜 slot、或怀疑 `entryRules` 是否失效
+
+### 技术
+- **样例状态定点回卷（Targeted Sample State Reset）**：本次没有粗暴 `Delete(slot)`，而是只移除工程师首次会面 flag 与关系值记录，保留其他样例/系统状态，降低调试动作对整份存档的副作用
+- **运行时缓存同步刷新**：在保存重置结果后立即刷新 `RelationshipManager` 的已加载状态，避免 Save 已更新但内存态仍沿用旧值造成“文件正确、表现错误”的假象
+- **验证回路内建化**：把 `first_meeting` 与 `small_talk` 的切换前置条件直接做成热键/菜单项，缩短 SpaceLife 对话 authoring 的迭代闭环，符合项目“迭代速度优先”的原则
+
 ## SpaceLife Master Plan v1.1 Phase 1 完成：Domain 层/基础设施 7 条审计补丁 P1-P7 落地 — 2026-04-22 20:40
 
 ### 修改文件
@@ -15368,3 +15529,40 @@ dotnet build 验证：0 错误，0 警告。
 - 内容：修复 `Interactable.CheckPlayerInRange()` 因 `_cachedPlayer` 只在 `Start()` 做一次性缓存导致的"黄点永远不亮"问题。根因：Engineer（`EngineerDialogueSample`）挂在主场景根对象 `SpaceLifeDialogueSampleSlice` 下，`m_IsActive=1`，所以 Play Mode Frame 0 就跑 `Start()`，此时 Player2D 还没从对象池 spawn，`ServiceLocator.Get<PlayerController2D>()` 返回 null，`_cachedPlayer` 被固化为 null，之后按 Tab 进入 SpaceLife、Player2D 被 `SpaceLifeManager.SpawnPlayer()` 注册进 ServiceLocator 之后，Engineer 的 Interactable 永远不会再查询，每帧 `CheckPlayerInRange()` 第一行短路返回 `_isInRange = false`，黄点（`InteractionIndicator`）永远不激活。修复方案：把"缓存失效时重新拉取"作为显式逻辑放入 `CheckPlayerInRange()` 开头——若 `_cachedPlayer == null`（首次 spawn 前 / 池回收后 / 退出重进 SpaceLife 后）就从 `ServiceLocator.Get<PlayerController2D>()` 重新拉，拉到则进入距离判定，拉不到才 `_isInRange = false; return;`。`Start()` 中仍保留一次即时缓存（性能优化：如果 Player2D 已经先于 Interactable 存在，立即拿到，省下 Update 轮询）。
 - 目的：修掉"按 Tab 进 SpaceLife、人物能动，但走近 Engineer 看不到黄点、按 E 无反应"问题中"黄点不亮"这一半。E 键链路（PlayerInteraction 的 `OnTriggerEnter2D` 收集 + `_interactAction.performed` 触发 `Interact()`）与 Interactable 的范围检测是两套独立链路，修完后 Interactable 层的距离判定恢复工作，Engineer 头顶的自动生成黄色 Sprite 指示器将在 Player2D 进入 2m 范围内时正确显示。
 - 技术：**懒解析模式（Lazy Resolve Pattern）**——对"依赖方生命周期早于被依赖方"的常见 Unity 陷阱（`Start()` 中查询一个尚未生成的 ServiceLocator 条目）采用"缓存 + 过期重拉"策略。相比于把 `Interactable` 挪进 `SpaceLifeScene` 树下（根治方案，涉及场景结构搬迁、4 个空壳 NPC_Engineer 清理），当前修复只改 3 行代码就恢复工作，作为最小可验证补丁先行落地。Engineer 不在 `SpaceLifeManager._spaceLifeSceneRoot` 下的架构问题记作后续结构迁移项。最终通过 `read_lints` 检查目标文件 **0 lint**。
+
+## SpaceLife Interactable 范围感知调试日志 - 2026-04-23 12:07
+- 新建/修改文件：`Assets/Scripts/SpaceLife/Interactable.cs`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：在 `Interactable` 中新增可配置字段 `_logRangeDetection`（默认开启），并把 `Update()` 流程改为在每帧距离判定前记录上一帧 `wasInRange` 状态；当 `PlayerController2D` 首次进入交互范围、`_isInRange` 从 `false -> true` 跳变时，调用 `LogRangeDetection()` 向 Console 打印一次调试日志，内容包含玩家名、目标交互体名、实时距离与配置范围。日志只在 `UNITY_EDITOR || DEVELOPMENT_BUILD` 下生效，避免正式发布环境被该调试输出污染，也避免因为持续停留在范围内而每帧刷屏。
+- 目的：给当前 Engineer / SpaceLife 主角感知链提供一个直接可见的验证信号。即使黄色提示方块仍因 Sprite 未配置而不可见，只要玩家真的进入 Engineer 的交互范围，Console 也会立刻出现 `Detected player ... near ...` 日志，帮助区分“范围检测失效”和“提示器显示失效”这两类问题。
+- 技术：**状态边沿日志（Edge-triggered Debug Logging）**——不在 `CheckPlayerInRange()` 每次命中时直接 `Debug.Log`，而是通过上一帧/当前帧布尔状态对比，只在进入边沿打印一次，兼顾可观察性与 Console 卫生。结合编译条件 `UNITY_EDITOR || DEVELOPMENT_BUILD` 和 `this` 作为上下文对象，既方便在 Editor 中快速定位触发来源，又不会把临时诊断日志泄露到正式运行环境。最终通过 `read_lints` 检查目标文件 **0 lint**。
+
+## SpaceLife Interactable 黄色提示器可见性修复 - 2026-04-23 12:14
+- 新建/修改文件：`Assets/Scripts/SpaceLife/Interactable.cs`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：确认 Engineer 的 `Interactable` 已经能正确检测到 `PlayerController2D`，但自动生成的 `InteractionIndicator` 只有 `SpriteRenderer.color = Color.yellow` 与 `sortingOrder`，没有实际 `sprite`，因此即使 `_indicator.SetActive(true)` 也不会渲染任何黄方块。本轮在 `Interactable` 内新增自动指示器的常量配置与静态缓存 `_autoIndicatorSprite`，为自动创建的提示器程序化生成一个 16x16 的白色方块 sprite，并在 `EnsureIndicator()` 中给 `SpriteRenderer` 显式赋 `sprite`、设置 `sortingLayerName`、缩放和浮动偏移，确保进入交互范围时头顶确实会出现一个小型黄色标记。
+- 目的：修掉“检测链已通但视觉提示完全缺失”的显示层问题，让 SpaceLife 的交互反馈重新符合可读性原则。这样玩家靠近 `EngineerDialogueSample` 时，不仅 Console 能看到检测日志，场景中也会同步出现明确的头顶提示，避免把显示问题误判为感知问题。
+- 技术：**程序化运行时占位 Sprite（Procedural Runtime Placeholder Sprite）**——参考项目内已有 `Sprite.Create` 运行时生成图形的模式，为未预挂 prefab/asset 的最小提示器补一个可见的 fallback，而不是继续依赖“只有颜色没有图像”的空 `SpriteRenderer`。采用静态缓存避免多个 `Interactable` 重复分配纹理；使用 `HideFlags.HideAndDontSave` 将该运行时资源限定在会话期内，避免污染资产。最终通过 `read_lints` 检查目标文件 **0 lint**，并通过 `dotnet build Project-Ark.slnx` 验证本轮修改 **0 error**（保留既有 warning）。
+
+## SpaceLife 工程师双黄点与交互断链修复 - 2026-04-23 13:35
+- 新建/修改文件：`Assets/Scripts/SpaceLife/Interactable.cs`、`Assets/Scripts/SpaceLife/PlayerInteraction.cs`、`Assets/Scripts/SpaceLife/Tests/PlayerInteractionTests.cs`、`Assets/Scenes/SampleScene.unity`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：定位到当前症状其实来自两个独立问题叠加。**双黄点**：`SampleScene` 同时保留了样例切片里的 `EngineerDialogueSample` 和真实 Hub 场景里的 `NPC_Engineer`，两者都在前台参与交互提示，所以靠近工程师时会看到重复黄点；本轮先将样例切片中的 `EngineerDialogueSample` 设为 inactive，避免继续干扰实际 hub 验证。**按 E 无响应**：`Interactable` 用 `ServiceLocator.Get<PlayerController2D>()` 做直接距离判定并显示黄点，但 `PlayerInteraction` 仍完全依赖 `_nearbyInteractables` trigger 列表决定 `_nearestInteractable`，导致当 trigger 链未命中或与场景配置脱节时，会出现“黄点亮了但按键没有任何反应”的假阳性。本轮给 `Interactable` 增加活动实例注册表，在 `OnEnable/OnDisable` 维护有效交互体集合；`PlayerInteraction.FindNearestInteractable()` 保留 trigger 列表优先路径，但在列表为空时回退到 `Interactable.RegisteredInteractables` 做距离扫描，并用 `Mathf.Min(_interactionRange, interactable.InteractionRange)` 统一判定半径，让视觉提示和真正可交互目标重新对齐。同时补入 `PlayerInteractionTests.cs`，用一个最小 EditMode 测试表达“即使没有 trigger 接触记录，也应能基于距离找到范围内最近交互体”的目标行为。
+- 目的：恢复 SpaceLife hub 的基本可玩性与可读性：场景里只出现一个前台工程师提示点，玩家看到黄点时按 `E` 就应该能稳定命中最近工程师并继续对话链，而不是陷入“视觉上可交互、输入上无反应”的错觉状态。
+- 技术：**单一真相源收口（Single Source of Truth Convergence）**——把“是否可交互”的最终依据从脆弱的物理 trigger 单链，收口为“trigger 优先 + 距离兜底”的双层解析，并通过 `Interactable` 的活动注册表避免每帧 `FindObjectsByType` 的全场景扫描成本。场景层则采用最小破坏方式：不移除整套 sample slice 基础设施（其内仍承载 `SpaceLifeDialogueCoordinator` 等调试/验证组件），只关闭前台重复的 `EngineerDialogueSample`。本轮通过 `read_lints` 检查修改脚本 **0 lint**，并通过 `dotnet build Project-Ark.slnx` 验证 **0 error**（保留既有 warning）。
+
+## SpaceLife 交互键长按误配修复 - 2026-04-23 13:49
+- 新建/修改文件：`Assets/Input/ShipActions.inputactions`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：继续排查“黄点已出现但按 E 仍无反应”时，读取 `PlayerInteraction.cs`、`ShipActions.inputactions`、最近 Unity Console 与 Master Plan 文档后，确认问题不在 `NPCController` / `SpaceLifeDialogueCoordinator` / `DialogueUIPresenter`：这些依赖都已经注册成功，Console 里也没有 `Interacted with ...` 或 coordinator 审计失败日志。真正断点在输入资产本身——`Ship` 与 `SpaceLife` 两个 ActionMap 里的 `Interact` 都被配置成了 `Hold(duration=0.3)`，而设计文档 `2026-04-22-spacelife-hub-dialogue-master-plan.md` 明确要求的是“玩家在 `SampleScene` 按 E 就能跟 NPC / Terminal 对话”。本轮将两个 `Interact` action 的 `interactions` 字段都改为空字符串，使其恢复为普通按下即 `performed`；随后执行 Unity 资产刷新，并用 Unity MCP 直接读取导入后的 `InputActionAsset`，确认 `Ship.Interact interactions=''`、`SpaceLife.Interact interactions=''`，确保不是文本改了但编辑器仍停留旧配置。
+- 目的：修掉当前 SpaceLife hub 的最后一个高频假死点，让玩家看到黄点后**轻按一次 `E`** 就能触发 `PlayerInteraction.OnInteractActionPerformed()`，继续进入 `Interactable.Interact()` 与对话 UI 主链，而不需要知道项目内部曾错误配置成“长按 0.3 秒”这种隐藏条件。
+- 技术：**输入语义对齐（Input Intent Alignment）**——优先修复 authored input asset，而不是在代码层增加额外兼容分支（例如同时监听 `started` / `performed` 去掩盖 `Hold` 误配）。这样能保持 `ActionMap` 语义与设计文档一致，也避免未来重绑键位、手柄适配或 UI 提示时继续传播错误的“长按交互”约束。本轮通过 `read_lints` 检查目标资产路径 **0 lint**，并通过 Unity MCP `refresh_unity` + `execute_code` 回读确认输入资产已导入为最新状态。
+
+## SpaceLife 工程师二段对话场景激活修复 - 2026-04-23 14:05
+- 新建/修改文件：`Assets/Scenes/SampleScene.unity`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：继续排查“工程师每次都像第一次见面 / 甚至总是看到终端那句舰载 AI 文案”时，先核对了 `NPC_Engineer_HubDialogue.asset` 的 `entryRules`、`first_meeting_ack` 的 `SetFlag(spacelife.engineer.first_met)` 效果、`DialogueRunner.ResolveEntryNodeId()` 与 `SaveManager` 持久化链，确认逻辑代码本身没有明显错误。随后转到场景层做运行时取证：通过 Unity MCP 读取 `SampleScene` 中所有 `NPCController` 实例，发现当前场景里有多只同名 `NPC_Engineer` 空壳对象，而**唯一真正绑定 `NPC_Engineer.asset` 的对象其实是 `SpaceLifeDialogueSampleSlice/EngineerDialogueSample`**；但它在场景序列化里被设成了 `m_IsActive: 0`。这意味着上一轮为了消除重复黄点而关闭 `EngineerDialogueSample` 后，工程师对话样例链本身也一起被关掉，导致后续根本无法在正确工程师实例上验证 `engineer_first_meeting -> engineer_small_talk`。本轮将 `EngineerDialogueSample` 重新激活，保持它继续作为 Sample Slice 的唯一有效工程师入口。
+- 目的：恢复 SpaceLife hub 中工程师对话样例的可验证性，让用户现在能真的对着正确的工程师对象完成“第一次会面写 flag → 第二次进入走 small talk”的测试，而不是被错误场景对象或其它终端交互误导，继续怀疑 `entryRules` / SaveSlot 逻辑本身。
+- 技术：**场景权威回正（Scene Authority Correction）**——本次修复不在 `DialogueRunner`、`DialogueFlagStore` 或 `SpaceLifeDialogueCoordinator` 上继续叠兼容逻辑，而是回到场景 authority：让真正绑定 `NPC_Engineer.asset` 的那只样例对象重新成为可交互入口。随后在 Unity Play Mode 中做了 fresh 闭环验证：删除 slot 0 存档后，第一次进入得到 `firstNode=engineer_first_meeting`，选择 `first_meeting_ack` 后立刻切到 `afterChoice=engineer_small_talk`，并在 SaveSlot 中写入 `spacelife.engineer.first_met=True`；关闭对话再重开后，第二次进入得到 `secondNode=engineer_small_talk`，证明 `entryRules`、flag 写入与 SaveSlot 持久化链当前都已正常生效。本轮通过 `read_lints` 检查修改场景文件 **0 lint**。
+
+
+
+
+
+
+

@@ -1115,12 +1115,13 @@ SpaceLife / Dialogue 模块的治理目标：
 
 #### R7. SetupWindow 冻结期禁令
 
-- Phase 1-3 执行期间，任何人（含 AI Agent）**禁止**：
+- **SpaceLifeSetupWindow 自 Phase 4（2026-04-23）起进入长期冻结**，详细约束见 §12.11
+- 冻结期间，任何人（含 AI Agent）**禁止**：
   - 在 `SpaceLifeSetupWindow` 中新增功能
   - 执行 Setup Window 的 Rebuild / Apply 类操作
   - 依赖 Setup Window 回填字段作为"正确初始状态"
-- Setup Window 必须在 Phase 4 显式冻结声明（代码注释 + Editor 警告 + Implement_rules 三处）
-- **根因：** 1,630 行的 Setup Window 是当前 SpaceLife 最大的 authority 污染源，冻结 = 用执行约束替代推翻重写
+- Setup Window 必须保持三处冻结声明：`Implement_rules.md §12.11` + 代码注释 + Editor 警告 HelpBox
+- **根因：** 1,630 行的 Setup Window 是当前 SpaceLife 最大的 authority 污染源，冻结 = 用执行约束替代推翻重写；若 Phase 5 长期不启动，冻结状态即为合理稳态
 
 #### R8. Silent No-Op 禁令（SpaceLife 版）
 
@@ -1169,17 +1170,58 @@ SpaceLife / Dialogue 模块的治理目标：
 - **根因：** 没有 Locator 抽象层（R3）
 - **防御：** Phase 1 P4 抽取 `ShipInputActionLocator`
 
+#### 坑 5：`SetActive(false)` 初始化顺序坑（UI Presenter 落地时踩到）
+
+- **现象：** 新构建的 `DialogueUIPresenter` / `GiftUIPresenter` Prefab 放进场景后，第一次 `Open()` 调用不生效 —— 明明走到了 `CanvasGroup.alpha=1` 的赋值逻辑，画面仍然是黑的
+- **根因：** 早期 Editor 工具曾在生成 Prefab 时顺手把 Panel GameObject 设成 `m_IsActive: 0`（被序列化进 Prefab）。`SetActive(false)` 会推迟 `Awake()` 执行，Presenter 的 `CanvasGroup` 缓存与 `ServiceLocator.Register` 都发生在 `Awake()`，于是首次 `Open()` 里访问到的是 **未初始化的引用**；即使后续把 GameObject SetActive(true)，Register 也已错过 `SpaceLifeDialogueCoordinator.Start()` 的解析时点，Coordinator 因为 Audit 失败把自己 `enabled = false`
+- **防御：**
+  1. `SpaceLifeUIPrefabBuilder` 在生成 Prefab 时必须确保所有 UI 根节点 `GameObject.activeSelf = true`
+  2. Prefab 内所有 Panel 的初始显隐状态统一用 `CanvasGroup(alpha=0, interactable=false, blocksRaycasts=false)` 表达，**绝不调用 `SetActive`**（R5）
+  3. 发生过该坑的 Prefab 被修复后，需在 Unity Editor 中手动确认根节点的 active 勾选框是开启状态并保存场景；历史遗留的 `m_IsActive: 0` 不会因代码修复而自动消失（对齐 CLAUDE.md 常见陷阱表"uGUI 面板禁止用 SetActive 控制显隐"）
+
+#### 坑 6：UI owner 双轨（`DialogueUI` 与 `NPCInteractionUI` 并存）
+
+- **现象：** Phase 2 之前，`NPCController` 同时持有对 `DialogueUI` 和 `NPCInteractionUI` 两套 UI 的引用；修改对话交互路径时，有些修改落到 `DialogueUI`、有些落到 `NPCInteractionUI`，出现"看起来改了但没生效"的高频 bug
+- **根因：** UI authority 同时有两个合法 owner；修改任一方都只是局部正确
+- **防御：**
+  1. Phase 2 删除 `NPCInteractionUI`，NPC 的交互引导感（高亮 / 可交互提示）由场景实例的 Interactable 组件承担，对话面板唯一 owner 为 `DialogueUIPresenter`
+  2. 新的 UI 面板进入 SpaceLife 前，必须先回答"它替代谁、与谁并存、是否双轨"（§12.7 第 1-2 问）
+  3. 审计机制：`SpaceLifeUIOverrideAudit` 扫描场景中 `IDialoguePresenter` / `IGiftPresenter` 实例数，>1 时报错（防止同一接口被多个 Presenter 同时注册）
+
+#### 坑 7：Silent No-Op 让"看起来什么都没发生"
+
+- **现象：** Coordinator 的 Database 引用忘拖、或 Presenter 未挂场景时，按 E 触发 NPC 没有任何反应、Console 也无错 —— 排查路径会被误导到"按键绑定"或"碰撞体"
+- **根因：** Coordinator 早期版本的 `StartDialogueFromNpc` 带 `if (_database == null) return;` silent return，关键依赖缺失不响亮失败
+- **防御：**
+  1. 所有关键依赖改由 `AuditDependenciesOnStart()` 汇总检查，缺任一项 `Debug.LogError` 包含完整缺失清单并 `enabled = false`
+  2. 入口函数前置 `if (!_dependencyAuditPassed) return;` 闸门（配合 `Debug.LogError` 上下文提示 "Coordinator disabled due to failed audit"），而不是 silent
+  3. 通用原则：SpaceLife 模块内**任何** `if (x == null) return;` 都要被视为可疑代码，除非有注释说明为什么是合法的静默
+  4. Phase 5 若启动，`SilentFailScanner` 会把全模块的此类代码清单化
+
 ### 12.9 验收清单
 
 每次对 SpaceLife / Dialogue 做完改动后，至少检查：
 
 1. 是否新增了第二真相源？（Domain / UI / Editor 是否交叉写入）
 2. 是否新增了 `AssetDatabase.FindAssets` / `GameObject.Find` / fallback 分支？
-3. 是否触发了 SetupWindow 冻结红线？（R7）
+3. 是否触发了 SetupWindow 冻结红线？（R7 / §12.11）
 4. 涉及的 Scene Override 是否都在白名单中？（§12.4）
 5. 关键依赖缺失时，是否会 Silent No-Op？（R8）
 6. 是否违反了 D1-D7 任一条设计决策？（§12.5）
 7. 是否需要新增 / 更新 Validator？（`DialogueDatabaseValidator` / `UI Prefab Override Audit` / `Coordinator Dependency Audit`）
+
+#### Phase 4 专项验收（2026-04-23 追加）
+
+Master Plan v1.1 Phase 4 完成判据，后续若再启动 Plan 级工作时复用同一检查口径：
+
+1. **设计稿已同步到现役真相源：** `Docs/2_TechnicalDesign/SpaceLife/SpaceLife_HubDialogue_SystemDesign.md` 至少追加 "实现落地状态" 章节，明确 runtime 文件清单 / 存档方案 / 接口路径 / UI Prefab 权威入口 / Audit 口径 / SetupWindow 冻结状态六项
+2. **ImplementationLog 完整：** `Docs/5_ImplementationLog/ImplementationLog.md` 包含 Phase 0 / Phase 1 / Phase 2 / Phase 3 / Phase 4 各阶段的独立记录，按日期倒序编排
+3. **旧 Plan 归档：** `2026-04-21-spacelife-hub-dialogue-mvp-implementation-plan.md` 与 `2026-04-22-spacelife-hub-dialogue-master-plan.md` 均已移入 `Docs/0_Plan/complete/`，`Docs/0_Plan/ongoing/README.md` 同步更新
+4. **SetupWindow 冻结声明三处就位（详见 §12.11）：**
+   - `Implement_rules.md §12.11` 冻结执行约束
+   - `Assets/Scripts/SpaceLife/Editor/SpaceLifeSetupWindow.cs` 顶部 FROZEN 注释
+   - `SpaceLifeSetupWindow.OnGUI()` 顶部红色 `EditorGUILayout.HelpBox`
+5. **`dotnet build Project-Ark.slnx` 通过**，0 警告 0 错误
 
 ### 12.10 推荐工作流
 
@@ -1203,6 +1245,59 @@ SpaceLife / Dialogue 模块的治理目标：
 1. 先读 `SpaceLife_HubDialogue_SystemDesign.md` 确认现役 owner
 2. 对照 Authority Matrix 确认新功能应落到哪一层
 3. 若触发 D6 / D7 / R7 的红线，必须先开新 Plan 推翻对应决策
+
+### 12.11 `SpaceLifeSetupWindow` 冻结声明（Phase 4 定稿）
+
+> 本节是 Master Plan v1.1 Phase 4 §8.3 要求的**执行约束层声明**，与代码顶部 FROZEN 注释、Editor HelpBox 并列构成三处冻结证据。  
+> 本声明效力 **长期有效**，直至且仅直至 Phase 5（推翻重写）启动并完成。若 Phase 5 长期不启动，本冻结状态即为 SpaceLife 模块的**合理稳态**，不是"待办"。
+
+#### 冻结对象
+
+- `Assets/Scripts/SpaceLife/Editor/SpaceLifeSetupWindow.cs`（1,630 行遗留 Editor 工具）
+
+#### 冻结内容
+
+以下操作在冻结期间 **一律禁止**，无论执行者是人还是 AI Agent：
+
+1. 通过 `SpaceLifeSetupWindow` 的任何 Rebuild / Apply / Regenerate 按钮执行写入
+2. 依赖 `SpaceLifeSetupWindow` 生成或回填 `DialogueUI.prefab` / `GiftUI.prefab` / `SpaceLifeUIRoot.prefab` / `OptionButton.prefab` 的结构或序列化字段
+3. 依赖 `SpaceLifeSetupWindow` 自动回填 `SpaceLifeDialogueCoordinator` 在场景中的引用（Database / Router / Presenter）
+4. 在 `SpaceLifeSetupWindow` 中新增任何功能（新增按钮 / 新增分区 / 新增菜单）
+5. 把 `SpaceLifeSetupWindow` 设为"推荐入口"写进任何新文档或新 Plan
+
+#### 冻结期间的合法操作
+
+- 阅读代码（理解历史逻辑）
+- 为 Phase 5 写重写 Plan 时作为需求溯源参考
+- 作为反面教材在 Implement_rules 中被引用
+
+#### 现役权威入口（冻结期间的替代方案）
+
+| 任务 | 冻结前入口 | 现役唯一入口 |
+|---|---|---|
+| 生成 / 更新 SpaceLife UI Prefab | `SpaceLifeSetupWindow.Rebuild` | `ProjectArk > Space Life > Build UI Prefabs (Apply)` |
+| 审计 Scene 中 UI Prefab override | （无） | `ProjectArk > Space Life > Audit UI Prefab Overrides` |
+| 校验 `DialogueDatabase` 完整性 | （无） | `ProjectArk > Validate Dialogue Database` |
+| Coordinator 依赖接线 | `SpaceLifeSetupWindow` 自动回填 | 手工拖线 `DialogueDatabase` + `DialogueServiceRouter`，Presenter 由 `ServiceLocator` 自动解析（详见 §12.4 / §14.3） |
+
+#### 冻结解除条件
+
+**唯一合法解除路径**：启动 Master Plan 所定义的 Phase 5 "SetupWindow 推翻重写"，完成以下全部工作后方可解除：
+
+- 拆分为 `Audit` / `Preview` / `Apply` 三模式（对齐 §3.14 Builder 执行模式规则）
+- 所有 silent no-op 分支移除
+- 完整集成到 `Implement_rules.md §12` 规则体系
+- 更新本节记录冻结解除日期与原因
+
+在此之前，**任何绕过冻结的尝试（包括"只跑一次看看"）都视为违反治理规则**。
+
+#### 违反冻结时的处理
+
+若发现冻结被违反：
+
+1. 立即回滚本次 Rebuild / Apply 产生的 Prefab / Scene 变更
+2. 在 `ImplementationLog.md` 记录违规事件与回滚操作
+3. 若 Scene 中出现未预期的 override，执行 `Audit UI Prefab Overrides` 菜单清理（§12.4 处理规则）
 
 ---
 

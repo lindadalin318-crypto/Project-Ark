@@ -123,6 +123,29 @@ namespace ProjectArk.SpaceLife
                     _nearestInteractable = _nearbyInteractables[i];
                 }
             }
+
+            if (_nearestInteractable != null)
+            {
+                return;
+            }
+
+            foreach (Interactable interactable in Interactable.RegisteredInteractables)
+            {
+                if (interactable == null || !interactable.isActiveAndEnabled)
+                {
+                    continue;
+                }
+
+                float maxRange = Mathf.Min(_interactionRange, interactable.InteractionRange);
+                float distance = Vector2.Distance(transform.position, interactable.transform.position);
+                if (distance > maxRange || distance >= nearestDistance)
+                {
+                    continue;
+                }
+
+                nearestDistance = distance;
+                _nearestInteractable = interactable;
+            }
         }
 
         private void OnTriggerEnter2D(Collider2D other)

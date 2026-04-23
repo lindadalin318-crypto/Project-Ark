@@ -1,3 +1,18 @@
+// ⚠️ FROZEN since 2026-04-23 (Master Plan v1.1 Phase 4 §8.3). DO NOT RUN REBUILD.
+//
+// This window is retained for historical / reference purposes only.
+// UI Prefab authority has been transferred to SpaceLifeUIPrefabBuilder:
+//   ProjectArk > Space Life > Build UI Prefabs (Apply)
+//   ProjectArk > Space Life > Build UI Prefabs (Audit)
+//
+// See Implement_rules.md §12.11 (SpaceLifeSetupWindow Freeze Declaration) for:
+//   - the full list of prohibited operations
+//   - the current-authority replacements for each legacy task
+//   - the only legal path to unfreeze (complete Master Plan Phase 5 rewrite)
+//
+// Violation policy: any Rebuild/Apply executed here must be rolled back immediately
+// and logged in Docs/5_ImplementationLog/ImplementationLog.md as a governance breach.
+
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
@@ -5,16 +20,18 @@ using UnityEngine.UI;
 namespace ProjectArk.SpaceLife.Editor
 {
     /// <summary>
-    /// Primary editor entry point for SpaceLife scene setup.
-    /// Produces (or repairs) every required scene GameObject, UI hierarchy, prefab reference, and
-    /// serialized wire-up in one run, so downstream tooling (e.g.
-    /// <see cref="SpaceLifeDialogueSampleBootstrap"/>) can assume a fully-formed scene.
+    /// [FROZEN — 2026-04-23] Legacy editor entry point for SpaceLife scene setup.
     ///
-    /// Per <c>Implement_rules.md</c>:
-    ///   - This window is the single authoritative entry for SpaceLife scene construction.
-    ///   - UI panels use CanvasGroup (alpha/interactable/blocksRaycasts) for visibility — NEVER
-    ///     <c>SetActive(false)</c> on panel roots.
-    ///   - Setup is idempotent: running a phase multiple times must not duplicate objects.
+    /// ⚠️ This window is FROZEN under Master Plan v1.1 Phase 4 §8.3 and
+    /// <c>Implement_rules.md §12.11</c>. Do NOT use it to Rebuild/Apply any UI Prefab,
+    /// Coordinator wiring, or scene hierarchy.
+    ///
+    /// Current authority entry points (use these instead):
+    ///   - <c>ProjectArk > Space Life > Build UI Prefabs (Apply)</c> — UI Prefab generation
+    ///   - <c>ProjectArk > Space Life > Audit UI Prefab Overrides</c> — Scene override audit
+    ///   - <c>ProjectArk > Validate Dialogue Database</c> — DialogueDatabase validation
+    ///
+    /// Unfreeze is only possible by completing Master Plan Phase 5 (SetupWindow rewrite).
     /// </summary>
     public class SpaceLifeSetupWindow : EditorWindow
     {
@@ -61,6 +78,7 @@ namespace ProjectArk.SpaceLife.Editor
         {
             _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition);
 
+            DrawFreezeBanner();
             DrawHeader();
             DrawPhaseSelection();
             DrawOptions();
@@ -68,6 +86,21 @@ namespace ProjectArk.SpaceLife.Editor
             DrawStatus();
 
             EditorGUILayout.EndScrollView();
+        }
+
+        private void DrawFreezeBanner()
+        {
+            EditorGUILayout.Space(6);
+            EditorGUILayout.HelpBox(
+                "⚠️ FROZEN — This window is frozen since 2026-04-23.\n\n" +
+                "Do NOT execute Rebuild/Apply here. UI Prefab authority has moved to:\n" +
+                "  • ProjectArk > Space Life > Build UI Prefabs (Apply)\n" +
+                "  • ProjectArk > Space Life > Audit UI Prefab Overrides\n" +
+                "  • ProjectArk > Validate Dialogue Database\n\n" +
+                "Governance reference: Implement_rules.md §12.11 — Master Plan v1.1 Phase 4.\n" +
+                "Unfreeze is only possible after Phase 5 (SetupWindow rewrite) completes.",
+                MessageType.Error);
+            EditorGUILayout.Space(6);
         }
 
         private void DrawHeader()
@@ -385,6 +418,25 @@ namespace ProjectArk.SpaceLife.Editor
 
         private void ExecuteSetup()
         {
+            // ⚠️ Phase 4 freeze guard — see Implement_rules.md §12.11.
+            // This gate is the runtime enforcement of the freeze declaration. Keep it wired
+            // to every write-path entry in this window. Removing it requires completing
+            // Master Plan Phase 5 (SetupWindow rewrite) AND updating §12.11.
+            EditorUtility.DisplayDialog(
+                "SpaceLifeSetupWindow is FROZEN",
+                "This window has been frozen since 2026-04-23 (Master Plan v1.1 Phase 4).\n\n" +
+                "Rebuild/Apply operations are prohibited. Use these current-authority menus instead:\n\n" +
+                "  • ProjectArk > Space Life > Build UI Prefabs (Apply)\n" +
+                "  • ProjectArk > Space Life > Audit UI Prefab Overrides\n" +
+                "  • ProjectArk > Validate Dialogue Database\n\n" +
+                "See Implement_rules.md §12.11 for the full freeze declaration.",
+                "OK");
+            Debug.LogWarning(
+                "[SpaceLifeSetupWindow] Execute blocked: window is frozen since 2026-04-23. " +
+                "See Implement_rules.md §12.11 for current-authority entry points.");
+            return;
+
+#pragma warning disable CS0162 // Unreachable code detected — retained for Phase 5 unfreeze reference.
             bool confirmed = EditorUtility.DisplayDialog(
                 "Confirm Setup",
                 $"You are about to execute {_selectedPhase}.\n" +
@@ -420,6 +472,7 @@ namespace ProjectArk.SpaceLife.Editor
                 EditorUtility.DisplayDialog("Setup Failed",
                     $"An error occurred: {e.Message}\n\nCheck the Console for details.", "OK");
             }
+#pragma warning restore CS0162
         }
 
         private void ExecutePhase(SetupPhase phase)

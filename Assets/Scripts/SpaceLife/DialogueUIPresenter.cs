@@ -54,8 +54,21 @@ namespace ProjectArk.SpaceLife
         [Header("Settings")]
         [SerializeField] private float _typewriterSpeed = 0.05f;
 
+        [Header("Option Layout")]
+        [SerializeField] private float _choiceButtonHeight = 44f;
+        [SerializeField] private float _choiceButtonHorizontalPadding = 16f;
+        [SerializeField] private float _choiceButtonVerticalPadding = 6f;
+        [SerializeField] private float _dialogueToOptionsGap = 8f;
+
         private DialogueNodeViewModel _currentNode;
         private CancellationTokenSource _typewriterCts;
+        private RectTransform _dialogueTextRect;
+        private RectTransform _optionsRect;
+        private VerticalLayoutGroup _optionsLayoutGroup;
+        private float _defaultDialogueTextBottomInset;
+        private float _defaultOptionsTopInset;
+        private float _defaultOptionsBottomInset;
+        private bool _layoutDefaultsCached;
 
         /// <inheritdoc />
         public event Action<string> OnChoiceSelected;
@@ -103,6 +116,7 @@ namespace ProjectArk.SpaceLife
         {
             CancelTypewriter();
             ClearOptions();
+            SetCloseButtonVisible(true);
             ApplyVisibility(false);
 
             _currentNode = null;
@@ -126,6 +140,9 @@ namespace ProjectArk.SpaceLife
 
         private void RenderNode(DialogueNodeViewModel node)
         {
+            CacheLayoutDefaults();
+            NormalizeOptionsContainer();
+
             if (_speakerNameText != null)
             {
                 _speakerNameText.text = string.IsNullOrWhiteSpace(node.SpeakerName)
@@ -143,13 +160,17 @@ namespace ProjectArk.SpaceLife
             ClearOptions();
 
             IReadOnlyList<DialogueNodeViewModel.ChoiceViewModel> choices = node.Choices;
-            if (choices != null && choices.Count > 0)
+            bool hasExplicitChoices = choices != null && choices.Count > 0;
+            bool isSingleAcknowledgementChoice = hasExplicitChoices && choices.Count == 1;
+            SetCloseButtonVisible(!isSingleAcknowledgementChoice);
+            if (hasExplicitChoices)
             {
                 for (int i = 0; i < choices.Count; i++)
                 {
                     CreateChoiceButton(choices[i]);
                 }
 
+                ApplyOptionAreaLayout(choices.Count);
                 return;
             }
 
@@ -164,6 +185,8 @@ namespace ProjectArk.SpaceLife
             {
                 CreateUtilityButton("关闭", DialoguePresenterReservedChoices.Close);
             }
+
+            ApplyOptionAreaLayout(1);
         }
 
         private void RequestClose()
@@ -252,6 +275,8 @@ namespace ProjectArk.SpaceLife
                 buttonLabel.text = buttonText;
             }
 
+            ConfigureOptionButton(buttonObject, buttonLabel);
+
             if (button == null)
             {
                 Debug.LogError("[DialogueUIPresenter] Option button prefab is missing a Button component.", this);
@@ -261,6 +286,152 @@ namespace ProjectArk.SpaceLife
             // Capture the choice id in a local so the lambda keeps a stable reference.
             string capturedId = choiceId;
             button.onClick.AddListener(() => OnChoiceSelected?.Invoke(capturedId));
+        }
+
+        private void ConfigureOptionButton(GameObject buttonObject, Text buttonLabel)
+        {
+            if (buttonObject == null)
+            {
+                return;
+            }
+
+            RectTransform buttonRect = buttonObject.GetComponent<RectTransform>();
+            if (buttonRect != null)
+            {
+                buttonRect.anchorMin = new Vector2(0f, 0f);
+                buttonRect.anchorMax = new Vector2(1f, 0f);
+                buttonRect.pivot = new Vector2(0.5f, 0f);
+                buttonRect.sizeDelta = new Vector2(0f, _choiceButtonHeight);
+            }
+
+            LayoutElement layoutElement = buttonObject.GetComponent<LayoutElement>();
+            if (layoutElement == null)
+            {
+                layoutElement = buttonObject.AddComponent<LayoutElement>();
+            }
+
+            layoutElement.minHeight = _choiceButtonHeight;
+            layoutElement.preferredHeight = _choiceButtonHeight;
+            layoutElement.flexibleHeight = 0f;
+
+            if (buttonLabel == null)
+            {
+                return;
+            }
+
+            buttonLabel.alignment = TextAnchor.MiddleLeft;
+            buttonLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
+            buttonLabel.verticalOverflow = VerticalWrapMode.Overflow;
+            buttonLabel.resizeTextForBestFit = false;
+            buttonLabel.raycastTarget = false;
+
+            RectTransform labelRect = buttonLabel.transform as RectTransform;
+            if (labelRect == null)
+            {
+                return;
+            }
+
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.one;
+            labelRect.pivot = new Vector2(0.5f, 0.5f);
+            labelRect.offsetMin = new Vector2(_choiceButtonHorizontalPadding, _choiceButtonVerticalPadding);
+            labelRect.offsetMax = new Vector2(-_choiceButtonHorizontalPadding, -_choiceButtonVerticalPadding);
+        }
+
+        private void NormalizeOptionsContainer()
+        {
+            if (_optionsLayoutGroup == null && _optionsContainer != null)
+            {
+                _optionsLayoutGroup = _optionsContainer.GetComponent<VerticalLayoutGroup>();
+            }
+
+            if (_optionsLayoutGroup == null)
+            {
+                return;
+            }
+
+            _optionsLayoutGroup.childAlignment = TextAnchor.UpperLeft;
+            _optionsLayoutGroup.childControlWidth = true;
+            _optionsLayoutGroup.childControlHeight = true;
+            _optionsLayoutGroup.childForceExpandWidth = true;
+            _optionsLayoutGroup.childForceExpandHeight = false;
+        }
+
+        private void ApplyOptionAreaLayout(int optionCount)
+        {
+            CacheLayoutDefaults();
+
+            if (_optionsRect == null || _dialogueTextRect == null)
+            {
+                return;
+            }
+
+            float spacing = _optionsLayoutGroup != null ? _optionsLayoutGroup.spacing : 0f;
+            float requiredHeight = optionCount > 0
+                ? (optionCount * _choiceButtonHeight) + (Mathf.Max(0, optionCount - 1) * spacing)
+                : _defaultOptionsTopInset - _defaultOptionsBottomInset;
+
+            float targetOptionsTopInset = Mathf.Max(_defaultOptionsTopInset, _defaultOptionsBottomInset + requiredHeight);
+            _optionsRect.offsetMax = new Vector2(_optionsRect.offsetMax.x, targetOptionsTopInset);
+
+            float targetDialogueBottomInset = Mathf.Max(_defaultDialogueTextBottomInset, targetOptionsTopInset + _dialogueToOptionsGap);
+            _dialogueTextRect.offsetMin = new Vector2(_dialogueTextRect.offsetMin.x, targetDialogueBottomInset);
+
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_optionsRect);
+        }
+
+        private void RestoreOptionAreaLayout()
+        {
+            CacheLayoutDefaults();
+
+            if (_optionsRect != null)
+            {
+                _optionsRect.offsetMin = new Vector2(_optionsRect.offsetMin.x, _defaultOptionsBottomInset);
+                _optionsRect.offsetMax = new Vector2(_optionsRect.offsetMax.x, _defaultOptionsTopInset);
+            }
+
+            if (_dialogueTextRect != null)
+            {
+                _dialogueTextRect.offsetMin = new Vector2(_dialogueTextRect.offsetMin.x, _defaultDialogueTextBottomInset);
+            }
+        }
+
+        private void CacheLayoutDefaults()
+        {
+            if (_layoutDefaultsCached)
+            {
+                return;
+            }
+
+            _dialogueTextRect = _dialogueText != null ? _dialogueText.transform as RectTransform : null;
+            _optionsRect = _optionsContainer as RectTransform;
+            _optionsLayoutGroup = _optionsContainer != null ? _optionsContainer.GetComponent<VerticalLayoutGroup>() : null;
+
+            if (_dialogueTextRect == null || _optionsRect == null)
+            {
+                return;
+            }
+
+            _defaultDialogueTextBottomInset = _dialogueTextRect.offsetMin.y;
+            _defaultOptionsBottomInset = _optionsRect.offsetMin.y;
+            _defaultOptionsTopInset = _optionsRect.offsetMax.y;
+            _layoutDefaultsCached = true;
+        }
+
+        private void SetCloseButtonVisible(bool isVisible)
+        {
+            if (_closeButton == null)
+            {
+                return;
+            }
+
+            GameObject closeButtonObject = _closeButton.gameObject;
+            if (closeButtonObject.activeSelf == isVisible)
+            {
+                return;
+            }
+
+            closeButtonObject.SetActive(isVisible);
         }
 
         /// <summary>

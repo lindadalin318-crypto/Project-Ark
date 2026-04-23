@@ -57,7 +57,7 @@
                     "id": "a1b2c3d4-2000-4000-8000-000000000006",
                     "expectedControlType": "",
                     "processors": "",
-                    "interactions": "Hold(duration=0.3)",
+                    "interactions": "",
                     "initialStateCheck": false
                 },
                 {
@@ -361,7 +361,7 @@
                     "id": "e1000000-0000-4000-8000-000000000002",
                     "expectedControlType": "",
                     "processors": "",
-                    "interactions": "Hold(duration=0.3)",
+                    "interactions": "",
                     "initialStateCheck": false
                 },
                 {
