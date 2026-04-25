@@ -64,7 +64,7 @@ namespace ProjectArk.UI
                 _nameLabel.text = item.DisplayName;
 
             if (_slotSizeLabel != null)
-                _slotSizeLabel.text = $"[{item.SlotSize}]";
+                _slotSizeLabel.text = $"[{ItemShapeHelper.GetCells(item.Shape).Count}]";
 
             // Type dot: left-top corner colored circle
             if (_typeDot != null)

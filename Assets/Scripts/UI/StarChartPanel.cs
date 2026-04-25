@@ -228,7 +228,7 @@ namespace ProjectArk.UI
                             if (mgr != null && mgr.CurrentPayload?.Source == DragSource.Slot
                                 && item is LightSailSO draggedSail
                                 && sailLayer.Items.Contains(draggedSail))
-                                return sailLayer.FreeSpace + draggedSail.SlotSize > 0;
+                                return sailLayer.FreeSpace + ItemShapeHelper.GetCells(draggedSail.Shape).Count > 0;
                             return sailLayer.FreeSpace > 0;
                         };
                     }

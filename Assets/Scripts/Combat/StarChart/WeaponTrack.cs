@@ -155,7 +155,8 @@ namespace ProjectArk.Combat
         }
 
         /// <summary>
-        /// Legacy: equip a satellite by finding the first available slot.
+        /// Auto-fit equip: place satellite at the first available slot.
+        /// Complements the anchored overload for callers that don't care about position.
         /// </summary>
         public bool EquipSatellite(SatelliteSO sat)
         {

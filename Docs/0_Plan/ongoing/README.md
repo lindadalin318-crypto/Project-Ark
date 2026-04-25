@@ -5,7 +5,8 @@
 当前状态：
 
 - 首轮文档主树迁移已完成入口搭建
-- **没有正在推进的专项 Plan。** 上一轮专项（SpaceLife Hub Dialogue Master Plan v1.1）已于 2026-04-23 完成 Phase 1-4 并全部归档到 `complete/`。
+- **当前正在推进的专项：**
+  - [`2026-04-25-starchart-refactor-plan.md`](./2026-04-25-starchart-refactor-plan.md) — StarChart 模块审计改造方案（L1 纯清理 / L2 局部重构 / L3 结构拆分），承接 `Docs/6_Diagnostics/StarChart_Architecture_Audit.md` 的发现，按风险分级落地。2026-04-25 启动，L1 阶段可立即执行。
 - 历史归档记录：
   - `2026-04-22-spacelife-hub-dialogue-master-plan.md` — Master Plan v1.1，已归档到 `complete/`（2026-04-23）
   - `2026-04-21-spacelife-hub-dialogue-mvp-implementation-plan.md` — MVP Task 清单（被 Master Plan 统摄），已归档到 `complete/`（2026-04-23）

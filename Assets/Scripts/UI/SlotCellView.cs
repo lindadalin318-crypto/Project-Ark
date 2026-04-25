@@ -560,7 +560,7 @@ namespace ProjectArk.UI
                     && sailLayer.Items.Contains(draggedSailCheck);
 
                 if (isSailInternalMove && payload.Item is LightSailSO draggedSail)
-                    hasSpace = sailLayer.FreeSpace + draggedSail.SlotSize > 0;
+                    hasSpace = sailLayer.FreeSpace + ItemShapeHelper.GetCells(draggedSail.Shape).Count > 0;
                 else
                     hasSpace = HasSpaceForItem(payload.Item);
             }
@@ -582,7 +582,7 @@ namespace ProjectArk.UI
                         && payload.Item is SatelliteSO draggedSat
                         && satLayer.Items.Contains(draggedSat))
                         // SAT is always 1×1: excluding self always frees exactly 1 slot
-                        hasSpace = satLayer.FreeSpace + draggedSat.SlotSize > 0;
+                        hasSpace = satLayer.FreeSpace + ItemShapeHelper.GetCells(draggedSat.Shape).Count > 0;
                     else
                         hasSpace = satLayer?.FreeSpace > 0;
                 }

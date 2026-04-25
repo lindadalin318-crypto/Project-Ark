@@ -130,8 +130,8 @@ namespace ProjectArk.UI
         {
             var sb = new System.Text.StringBuilder();
 
-            // Slot size
-            sb.AppendLine($"SIZE  {item.SlotSize}");
+            // Slot size — Shape Contract C1 authority: count actual occupied cells, not SlotSize legacy field.
+            sb.AppendLine($"SIZE  {ItemShapeHelper.GetCells(item.Shape).Count}");
 
             // Heat cost
             if (!Mathf.Approximately(item.HeatCost, 0f))

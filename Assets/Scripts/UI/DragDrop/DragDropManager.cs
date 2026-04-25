@@ -513,8 +513,9 @@ namespace ProjectArk.UI
             if (isCoreLayer)
             {
                 var layer = track.CoreLayer;
-                // Evict items until there's enough free space
-                while (layer.FreeSpace < newItem.SlotSize && layer.Items.Count > 0)
+                // Evict items until there's enough free space (Shape Contract C1: GetCells authority).
+                int newItemCells = ItemShapeHelper.GetCells(newItem.Shape).Count;
+                while (layer.FreeSpace < newItemCells && layer.Items.Count > 0)
                 {
                     var victim = layer.Items[layer.Items.Count - 1];
                     EvictedItems.Add((victim, track));
@@ -524,7 +525,8 @@ namespace ProjectArk.UI
             else
             {
                 var layer = track.PrismLayer;
-                while (layer.FreeSpace < newItem.SlotSize && layer.Items.Count > 0)
+                int newItemCells = ItemShapeHelper.GetCells(newItem.Shape).Count;
+                while (layer.FreeSpace < newItemCells && layer.Items.Count > 0)
                 {
                     var victim = layer.Items[layer.Items.Count - 1];
                     EvictedItems.Add((victim, track));

@@ -54,13 +54,6 @@ namespace ProjectArk.Combat
         /// <summary> Fired after any track fires. Param: which track. </summary>
         public event Action<WeaponTrack.TrackId> OnTrackFired;
 
-        /// <summary>
-        /// Global static event broadcast when any weapon fires.
-        /// Enemies subscribe to this for auditory perception.
-        /// Params: (firePosition, noiseRadius).
-        /// </summary>
-        public static event Action<Vector2, float> OnWeaponFired;
-
         /// <summary> Default noise radius for weapon fire (units). </summary>
         private const float DEFAULT_NOISE_RADIUS = 15f;
 
@@ -365,8 +358,13 @@ namespace ProjectArk.Combat
 
         private void Update()
         {
-            // Guard: tracks must be initialized (Awake may have failed if components missing)
-            if (_loadouts == null) return;
+            // Guard: tracks must be initialized (Awake may have failed if components missing).
+            // Loud-fail policy: log once then disable to prevent per-frame silent no-op.
+            if (_loadouts == null)
+            {
+                ReportMissingDependencyAndDisable(nameof(_loadouts));
+                return;
+            }
 
             float dt = Time.deltaTime;
             ActiveSlot.PrimaryTrack.Tick(dt);
@@ -383,8 +381,13 @@ namespace ProjectArk.Combat
             for (int i = 0; i < activeSecondaryRunners.Count; i++)
                 activeSecondaryRunners[i]?.Tick(dt);
 
-            // Guard: inputHandler must be valid
-            if (_inputHandler == null) return;
+            // Guard: inputHandler must be valid.
+            // Loud-fail policy: log once then disable to prevent per-frame silent no-op.
+            if (_inputHandler == null)
+            {
+                ReportMissingDependencyAndDisable(nameof(_inputHandler));
+                return;
+            }
 
             // 主武器：左键
             if (_inputHandler.IsFireHeld && CanFireTrack(ActiveSlot.PrimaryTrack))
@@ -393,6 +396,21 @@ namespace ProjectArk.Combat
             // 副武器：右键
             if (_inputHandler.IsSecondaryFireHeld && CanFireTrack(ActiveSlot.SecondaryTrack))
                 ExecuteFire(ActiveSlot.SecondaryTrack);
+        }
+
+        /// <summary>
+        /// Loud-fail guard: emit a single LogError identifying the missing dependency,
+        /// then disable this component so the error does not spam the console every frame.
+        /// Per project policy (Implement_rules Loud Failure), silent Update no-op is forbidden.
+        /// </summary>
+        private void ReportMissingDependencyAndDisable(string dependencyName)
+        {
+            Debug.LogError(
+                $"[StarChartController] Missing required dependency '{dependencyName}' at Update(). " +
+                $"Component disabled to avoid per-frame silent no-op. " +
+                $"Check Awake() initialization and RequireComponent dependencies on GameObject '{gameObject.name}'.",
+                this);
+            enabled = false;
         }
 
         private void OnDestroy()
@@ -493,7 +511,6 @@ namespace ProjectArk.Combat
             OnTrackFired?.Invoke(track.Id);
 
             // Broadcast weapon fire for enemy auditory perception
-            OnWeaponFired?.Invoke(spawnPos, DEFAULT_NOISE_RADIUS);
             CombatEvents.RaiseWeaponFired(spawnPos, DEFAULT_NOISE_RADIUS);
         }
 

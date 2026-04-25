@@ -2,6 +2,296 @@
 
 ---
 
+## StarChart L2-4：StarChartController.Update 守卫收紧（Loud Failure） — 2026-04-25 15:45
+
+### 修改文件
+
+- `Assets/Scripts/Combat/StarChart/StarChartController.cs`
+
+### 内容
+
+按 Plan §4.4 方案 A 把 `Update()` 里两处 `if (x == null) return;` 的静默守卫升级为"响亮失败"模式：
+
+1. `_loadouts == null` 守卫：从 `return` 改为调用新增的 `ReportMissingDependencyAndDisable("_loadouts")`，内部打一次 `Debug.LogError` 并 `enabled = false`。
+2. `_inputHandler == null` 守卫：同样改为 `ReportMissingDependencyAndDisable("_inputHandler")`。
+
+`ReportMissingDependencyAndDisable(string)` 作为 private 辅助方法收口这两种错误，包含完整的诊断信息：缺失字段名、GameObject 名、原因建议（检查 Awake 与 RequireComponent）。LogError 调用传入 `this` 作为 context object，使 Console 中点击报错可以高亮定位到具体的 StarChartController 实例。
+
+### 前置审计（方案 A 可行性确认）
+
+Plan §4.4 要求先审计 "Awake 失败路径是否会 disable 组件" 再决定方案。实际阅读 StarChartController.Awake（cs:320-350）结论：
+
+- `[RequireComponent(typeof(InputHandler/ShipAiming/ShipMotor/AudioSource))]` 已由 Unity 保证 `GetComponent<T>()` 非 null——正常路径下 `_inputHandler` 不会 null
+- `_loadouts` 数组由 Awake 显式 `new LoadoutSlot[3]` 构造——正常路径下不会 null
+- 两个守卫触发只会发生在：组件被运行时 `Destroy(_inputHandler)` 破坏，或 Awake 本身没执行（组件被 disable）
+
+**结论**：方案 A 的 `enabled = false` 是安全的——这些错误本来就是异常路径的兜底，不是热路径，disable 后不会破坏任何正常功能，反而阻止错误刷屏。
+
+### 目的
+
+- 符合项目规则 "禁止 Silent No-Op"（Implement_rules §3.5：关键链路缺引用禁止静默 return）
+- 从"每帧跳过"升级为"首帧报错 + 关闭"：
+  - 开发期间：任何错误一次就能发现，不会被后续日志淹没
+  - 玩家侧：即使真的出现异常，也不会陷入每帧错误循环导致帧率掉
+- 为 L3-1（StarChartController 三段拆分）前的整洁化打下基础：拆分时不会把"静默守卫"这种模糊语义带进新类
+
+### 技术
+
+- 单文件局部改动（Update 方法 + 新增 5 行 private helper）
+- `enabled = false` 会自动阻止后续 Update/FixedUpdate/LateUpdate 调用，但 OnDestroy / OnDisable 仍会正常走，不影响清理逻辑
+- Debug.LogError 第二参数传入 `this` 作为 context，Unity Console 支持点击跳转到实例
+- 未引入新状态字段；错误只会触发一次是因为 `enabled = false` 阻止了后续 Update 进入
+- `read_lints` 空
+
+### 验证建议（交由 Unity Editor 验证）
+
+- 正常 Play Mode：开火一切正常，Console 无 LogError
+- 人为破坏 Inspector 引用：Play 中用 Debug Inspector 置空 `_inputHandler` → 下一帧应报 1 条 LogError，然后组件停止响应输入。再次破坏不会刷屏
+
+---
+
+## StarChart L2-3：新建 StarChartInventoryValidator Editor 工具 — 2026-04-25 15:35
+
+### 修改文件
+
+- 新建：`Assets/Scripts/Combat/Editor/StarChartInventoryValidator.cs`
+
+### 内容
+
+实现 Plan §4.3 指定的 DisplayName 唯一性校验工具：
+
+- 菜单项：`ProjectArk > Validate StarChart Inventory`
+- 自动通过 `AssetDatabase.FindAssets("t:StarChartInventorySO")` 扫描全项目所有 `PlayerInventory` 类型资产（支持多 Inventory 场景）
+- 对每个 Inventory 的 `OwnedItems` 做 3 类检查：
+  1. null 引用（`_ownedItems` 里的 Missing Reference）
+  2. DisplayName 空或空白
+  3. 同一 Inventory 内 DisplayName 重复（按名称分组后 count > 1 的 key）
+- 报告输出：
+  - 成功：Console Log + EditorUtility.DisplayDialog（✓ PASS + 扫描数量）
+  - 失败：Console **LogError**（分级：null / blank / duplicate）+ DisplayDialog（提示修复动机——duplicate 会导致 save/load resolver 取错 SO）
+- 重复项报告包含 **duplicate DisplayName** 和 **具体使用该名的所有 .asset 文件名**，方便一键定位修复
+
+### 动机
+
+CanonicalSpec §8.2 把 DisplayName 唯一性列为约束，但本项目至今无运行时/编辑器级检查。Export/Import 存档（`StarChartController.cs:925/966`）与 `StarChartInventorySO.FindCore/FindPrism/FindLightSail/FindSatellite` 都用 DisplayName 作为跨会话/跨存档 ID，一旦重名就会在加载时**静默取错**——这是典型的 "silent no-op + silent mis-lookup" 复合风险。本工具把"约束"落到"可执行检查"。
+
+### 目的
+
+- 消除 CanonicalSpec §8.2 约束的无强制状态
+- 为后续 content team 新增 Inventory 条目提供事前校验（策划加完新 SO → 运行菜单 → 确认无重名再提交）
+- 可作为后续 CI / pre-commit hook 的备选命令入口（Unity 支持 `-executeMethod` 调用 Editor static method）
+
+### 技术
+
+- Editor-only 脚本，程序集归属 `ProjectArk.Combat.Editor`（已 references `ProjectArk.UI`，可直接引用 `StarChartInventorySO`）
+- `AssetDatabase.FindAssets(\"t:StarChartInventorySO\")` 按类型自动扫描，零硬编码路径
+- 按分组（null / blank / duplicate）分别报告，避免一次 LogError 埋多类问题
+- `read_lints` 空；Unity 下次 AssetDatabase 刷新时会自动生成 .meta
+
+---
+
+## StarChart L2-2：UI + 运行时 7 处 SlotSize 改走 Shape Contract 权威 — 2026-04-25 15:25
+
+### 修改文件
+
+- `Assets/Scripts/UI/ItemDetailView.cs`（UI 显示）
+- `Assets/Scripts/UI/InventoryItemView.cs`（UI 显示）
+- `Assets/Scripts/UI/StarChartPanel.cs`（运行时 sail 内部移动空间判断）
+- `Assets/Scripts/UI/SlotCellView.cs`（运行时 sail + sat 内部移动判断，2 处）
+- `Assets/Scripts/UI/DragDrop/DragDropManager.cs`（运行时 Core/Prism 驱逐循环，2 处）
+- `Docs/0_Plan/ongoing/2026-04-25-starchart-refactor-plan.md`（L2-2 节扩充锚点清单）
+
+### 内容
+
+把所有消费 `item.SlotSize` 的 UI 与运行时逻辑统一切到 `ItemShapeHelper.GetCells(item.Shape).Count`，完成 L2-1 在消费侧的对接：
+
+| # | 文件:行 | 性质 | 改动 |
+|---|---|---|---|
+| 1 | `ItemDetailView.cs:134` | UI 显示 | `item.SlotSize` → `GetCells(item.Shape).Count` |
+| 2 | `InventoryItemView.cs:67` | UI 显示 | 同上（`draggedSail.SlotSize` → cell count） |
+| 3 | `StarChartPanel.cs:231` | sail 同层移动空间判断 | `draggedSail.SlotSize` → `GetCells(draggedSail.Shape).Count` |
+| 4 | `SlotCellView.cs:563` | sail 拖拽 hasSpace 判断 | 同上 |
+| 5 | `SlotCellView.cs:585` | sat 拖拽 hasSpace 判断 | `draggedSat.SlotSize` → `GetCells(draggedSat.Shape).Count` |
+| 6 | `DragDropManager.cs:517` | Core 层驱逐循环 | 提取 `int newItemCells = GetCells(newItem.Shape).Count;`，循环条件改为 `< newItemCells` |
+| 7 | `DragDropManager.cs:527` | Prism 层驱逐循环 | 同上 |
+
+Plan §四 L2-2 节的锚点清单从原 2 行（仅 UI 显示）扩充为 7 行完整表格，标记"Plan 原始草稿漏列"并在旁边折叠保留原草稿作为历史档案，避免上游文档泄漏不完整的范围描述。
+
+### 验证
+
+- 所有改动文件 `read_lints` 空。
+- `grep "\.SlotSize" Assets/Scripts` 仅剩 SlotLayer.cs 注释里的说明文字（非代码消费）。
+- `_slotSize` 字段本身、Editor 资产构造（`ShebaAssetCreator` / `Batch5AssetCreator`）、Tests 反射构造（`SlotLayerTests` / `SnapshotBuilderTests`）保留，这三类属于 L3-2 字段删除阶段的清扫范围，不在本批次 scope。
+- L2-1 的现役数据扫描已证明 21/21 SO `_slotSize == GetCells(_shape).Count`，本次切口径在现役数据下**零行为差**。
+
+### 目的
+
+- 与 L2-1 配对完成 Shape Contract C1（"GetCells 是唯一权威"）在 SlotLayer 两端（UsedSpace 生产端 + newItem 消费端）的同步收口
+- 防止未来任何 SO 的 `_slotSize` 和 `_shape` 出现口径分裂时，UI 显示 / 驱逐逻辑 / 空间判断这三条链跟随 `GetCells` 权威而不是 Legacy 字段
+- 让 L3-2（物理删除 `_slotSize` 字段）真正具备前置条件：本次改完后，全项目无任何业务代码消费 `item.SlotSize`
+
+### 技术
+
+- 纯口径切换；所有改动点都在同一行做替换（或提取 `newItemCells` 局部变量供循环复用，避免每轮重复调用 `GetCells`）
+- `GetCells` 返回 `IReadOnlyList<Vector2Int>`（预分配数组），零 GC
+- Plan 文档采用"锚点表 + 折叠旧草稿"的方式保存历史，既让当前版本一眼看清现状，又留痕原始草稿以便追溯
+
+---
+
+## StarChart L2-1：SlotLayer.UsedSpace 改走 Shape Contract 权威 — 2026-04-25 15:10
+
+### 修改文件
+
+- `Assets/Scripts/Combat/StarChart/SlotLayer.cs`
+
+### 内容
+
+把 `SlotLayer<T>.UsedSpace` 从 `Σ item.SlotSize`（读 1D 传统字段）改为 `Σ ItemShapeHelper.GetCells(item.Shape).Count`（读 Shape Contract C1 权威）。同步更新 XML 注释，明确 UsedSpace 口径由 `ItemShapeHelper.GetCells` 独占，不再读 `SlotSize`。
+
+### 前置审计（预执行风险预判）
+
+Plan §9 风险 #2 预判"若某现役 SO 的 `_shape` cell 数 ≠ `_slotSize`，本改动会触发意外驱逐/溢出"。执行前用 shell 脚本扫描 21 个现役 SO，输出 `_slotSize | _shape enum` 对照表：
+
+| _slotSize | _shape | GetCells.Count | 一致性 | SO 数量 |
+|---|---|---|---|---|
+| 1 | 空（默认 Shape1x1） | 1 | ✅ | 4 |
+| 1 | Shape1x1 (enum 0) | 1 | ✅ | 11 |
+| 2 | Shape1x2H (enum 1) | 2 | ✅ | 1 |
+| 2 | Shape2x1V (enum 2) | 2 | ✅ | 2 |
+| 3 | ShapeL (enum 3) | 3 | ✅ | 2 |
+| 4 | Shape2x2 (enum 5) | 4 | ✅ | 1 |
+
+**结论**：21/21 SO 两字段完全一致，L2-1 在现役数据下是**行为全等的纯权威切换**，不触发 Plan §9 风险 #2。
+
+### 目的
+
+- 收口 SlotLayer 的占用格数计算，让 Shape Contract C1（"`GetCells` 是唯一权威"）真正落到 UsedSpace/FreeSpace 这条驱逐判断链路上
+- 为 L3-2（移除 `_slotSize` 字段）铺路：本改动完成后，SlotLayer 侧已无 `SlotSize` 消费者
+- 现役数据在两字段一致性上已 100% 收敛，这次切权威是**证据驱动的安全改动**
+
+### 技术
+
+- 纯文件级单点替换（UsedSpace getter 内 `item.SlotSize` → `ItemShapeHelper.GetCells(item.Shape).Count`）
+- Shape Contract C1 API 稳定（早已是 Inventory/Track/Drop/Ghost 的共用权威）
+- `read_lints` 空；`SlotLayerTests` 现有 18 个用例均走 `CreateCore(slotSize)` 反射构造，因为默认 `_shape = Shape1x1` 对应 GetCells().Count = 1，所有用例的 SlotSize=1 预期与新算法一致，应全绿（本轮未跑 runtime test，交由下一次 Unity 侧测试运行确认）
+
+---
+
+## StarChart Refactor Plan 文档落位 + L1 批次清理 — 2026-04-25 15:00
+
+### 修改文件
+
+- 移动：`Docs/2_TechnicalDesign/Combat/StarChart_RefactorPlan.md` → `Docs/0_Plan/ongoing/2026-04-25-starchart-refactor-plan.md`
+- `Docs/0_Plan/ongoing/README.md`（登记当前专项）
+- `Docs/6_Diagnostics/StarChart_Architecture_Audit.md`（末尾补改造方案指针）
+- `Assets/Scripts/Combat/StarChart/StarChartController.cs`
+- `Assets/Scripts/Combat/StarChart/LoadoutSlot.cs`
+- `Assets/Scripts/Combat/StarChart/WeaponTrack.cs`
+
+### 内容
+
+**文档侧：**
+
+1. 按 `0_Plan/README` 规则，将 RefactorPlan 从 `2_TechnicalDesign/Combat/` 迁到 `0_Plan/ongoing/` 并加日期前缀（它是 implementation plan，不是 spec）。
+2. 更新 `ongoing/README.md`：把"没有正在推进的专项"改为登记本次 StarChart 改造专项，指向新位置。
+3. 审计文档末尾补一行指针，把读者导向改造方案的新位置。
+
+**代码侧（Plan §7 批次 1：L1 纯清理）：**
+
+4. **L1-1 删除 `StarChartController.OnWeaponFired` 静态事件** — 该静态事件已于 2026-04-23 迁移到 `CombatEvents.OnWeaponFired` 集中通道，本体变成双通道遗留物，全仓库 `grep` 无订阅者。删除声明（原 57-63 行）与 `Fire()` 里的 `?.Invoke` 调用（原 506 行），保留 `CombatEvents.RaiseWeaponFired`。消除 CanonicalSpec §7 记录的双通道广播。
+5. **L1-2 修复 `LoadoutSlot.cs:43` `SailLayer` 的缩进对齐** — 原为顶格（0 空格），与上下的 12 空格不齐，属纯格式瑕疵。改回 12 空格对齐。语义零变化。
+6. **L1-3 `WeaponTrack.EquipSatellite(sat)` 注释从 Legacy 改为 Auto-fit 语义** — 该重载对应 `SlotLayer.TryEquip` 的"首个可用位"自动放置路径，和新增的 anchored 重载属于互补关系，不是遗留残留。移除"Legacy:"措辞，改写为"Auto-fit equip: place satellite at the first available slot. Complements the anchored overload for callers that don't care about position."
+
+**验证：**
+
+- 三个源文件 `read_lints` 全部清空，无任何 C# 诊断。
+- 手工核对改后片段语法完整（`OnTrackFired` 单事件保留、`SailLayer` 对齐、`EquipSatellite(sat)` 注释措辞）。
+- `dotnet build Project-Ark.slnx` 因 **预先存在**的 VSTUC analyzer DLL 路径错位（Unity 生成 csproj 写死 `com.tencent.cloud.dotnetanalyzer.unityhost@1.2.1`，实际扩展已升级到 `1.2.2`）被阻塞。此问题与本批次改动无关，记录为环境遗留项；Unity Editor 侧编译由下一次 Unity 启动触发自动验证。
+
+### 目的
+
+- 把 StarChart 改造方案从"技术设计文档"升级为"正在执行的专项 Plan"，归位到 `0_Plan/ongoing/`，明确它是可落地的行动指南而不是共识稿。
+- 按 Plan §2 风险分级先吃掉最低风险的 L1 批次（纯清理/纯注释/纯格式），作为后续 L2 局部重构和 L3 结构拆分的信任地基。
+- L1 完成后，StarChartController 的 weapon-fired 广播通道从双通道收敛为单通道（`CombatEvents`），消除 CanonicalSpec §7 记录的重复广播隐患。
+
+### 技术
+
+- 文档迁移：按 `0_Plan/README.md` 对"ongoing vs specs"的职责区分（可执行 plan 进 ongoing，共识稿进 specs）。
+- 代码清理：纯删除 + 纯注释改动，不涉及任何接口变更、行为变更或调用路径调整；符合 Plan §8 纪律 1-2（"L1 只删不改 / 每次只做一类"）。
+- 验证策略：`read_lints` 做 C# 级诊断 + 片段级手工核对；`dotnet build` 因环境问题阻塞时走替代验证路径，Unity Editor 侧编译作为最终兜底。
+
+---
+
+## StarChart_AssetRegistry 审查与修正（方案 A 文档侧修正） — 2026-04-24 23:35
+
+### 修改文件
+
+- `Docs/2_TechnicalDesign/Combat/StarChart_AssetRegistry.md`
+
+### 内容
+
+对 Registry 全文做磁盘交叉核验（21 个 SO 资产 + 11 个 Prefab + PlayerInventory 聚合），按方案 A 执行**仅文档侧修正**，`ShebaP_Homing` 磁盘资产异常显式标注为⚠️ 留作后续独立任务修复，本轮不动 `.asset`：
+
+1. **字段命名口径收口（顶部 Header）**：补一块明确的字段命名口径 —— Core/Prism 的磁盘字段名是 `_family`（不是 Registry 初版里写的 `_coreFamily` / `_prismFamily`），`_slotSize` 标为 legacy 不再驱动逻辑。审计脚本必须用真实字段名。
+2. **§3.1 字段名修正 + DisplayName 唯一性限定词**：把 "`_coreFamily` 字段归属 Matter 家族" 改为 "`_family` 字段磁盘值 = `0` = `CoreFamily.Matter`"；把 "所有 Core 的 `_displayName` 互不重复" 限定为 "**在 Core 类型范围内互不重复**"（跨类型重名如 `Boomerang` 已在 §4.1 暴露）。
+3. **新增 §3.2 `_shape` 枚举映射表**：补 `_shape: 0-5` ↔ `ItemShape` 枚举 ↔ 文字记法 ↔ 占格数 ↔ 当前使用者的完整映射；标注 `ShapeLMirror (4)` 当前无资产使用；说明早期 Batch5 资产 YAML 可能缺 `_shape:` 字段走默认 0 是已知历史痕迹。
+4. **§4 PrismSO 表格 Family 列修正（3 处磁盘真值纠错）**：
+   - `ShebaP_Boomerang`：Registry 初版标 `Tint` → 实际磁盘 `_family = 1 = Rheology`（代码 `ShebaAssetCreator.cs:324` 也写 Rheology）
+   - `ShebaP_MinePlacer`：Registry 初版标 `Tint` → 实际磁盘 `_family = 0 = Fractal`（代码 `ShebaAssetCreator.cs:360` 也写 Fractal）
+   - `ShebaP_Homing`：Registry 初版标 `Tint` → 实际磁盘**字段完全缺失** → Unity 反序列化走默认 `0 = Fractal`；代码 `ShebaAssetCreator.cs:342` 意图写 `Tint` 但从未落盘
+5. **§4.2 Tint 通道生效清单重写**：按磁盘真值判定，Phase A 当前状态下**唯一走 Tint 通道跨家族生效的 Prism 是 `TintPrism_FrostSlow`**，其余 Sheba Prism 的行为注入路径逐条说清（数值调制 vs Anomaly Modifier 路径）。
+6. **新增 §4.3 `ShebaP_Homing` 磁盘异常记录**：明确事实（字段缺失）、代码意图（Tint）、后果（Tint 通道断链、UI 分类错误）、三种修复方案（A 手补 `_family: 3` / B 删资产重跑 Creator / C 确定就是 Fractal 改代码），本轮不执行。
+7. **§7.1 PlayerInventory GUID 补全**：从 "Unknown" 修为磁盘真值 `f9cc10f93b27143acbf2dfd19f4c14e9`；补充"数组顺序无语义"条目 —— 禁止 UI 依赖 `_ownedItems[i]` 索引，必须按 `InventoryFilter` / DisplayName 自行排序。
+8. **§8.1 新增步骤字段名修正**：新增星图部件流程里的 `_coreFamily` / `_prismFamily` 改为 `_family`；DisplayName "全局唯一" 限定为 "同类型全局唯一"。
+9. **§10.1 配额表内联**：把原 "详见 CanonicalSpec 第 6 节配额表" 改为直接内联具体数字（Matter 20/50, Light 5/20, Echo 5/15, Anomaly 10/30 + AnomalyModifier 10/30），同时保留 CanonicalSpec §6.1 引用作为来源。
+10. **§11.2 审计命令字段名修正 + 新增 §11.4 Family 字段审计**：§11.2 grep 模式补齐 `_family:` / `_slotSize:`；新增 §11.4 专门的 `_family` 字段扫描脚本，用于未来自动发现类似 `ShebaP_Homing` 这种字段缺失的资产异常。
+
+### 目的
+
+- 修正 Registry 初版里 3 个技术性错误（字段名不存在、PlayerInventory GUID 缺失、3 个 Prism Family 标错）
+- 把 `ShebaP_Homing` 磁盘字段缺失这个**真正的 bug**从"被 Registry 误记为真相"升级为"显式暴露的⚠️ 待修异常"，并提供三种修复选项
+- 补齐 Registry 信息完整度：`_shape` 枚举映射、`_slotSize` legacy 标注、`_ownedItems` 顺序无语义、`_family` 审计命令 —— 让 Registry 可作为审计脚本的唯一参考
+- 保持与 `Implement_rules.md` Phase A 治理原则一致：磁盘为真相源、字段名严格、异常宁可暴露不可隐藏
+
+### 技术
+
+- 全部通过 `replace_in_file` 做小范围替换，未改动 Registry 总体骨架
+- 所有修正前都用 `cat` / `grep` 直接读取 `.asset` YAML 磁盘值 + `find_in_file` 读 `ShebaAssetCreator.cs` 代码意图两路交叉验证
+- 对 `ShebaP_Homing` 磁盘异常采取"文档显式标注 + 代码意图留注"而非隐性修 YAML，遵循方案 A "不悄悄改资产" 的约束
+- Lint 通过（`read_lints` 无告警）
+
+---
+
+## StarChart_CanonicalSpec 覆盖面补全（方案 A 五处插入） — 2026-04-24 23:27
+
+### 修改文件
+
+- `Docs/2_TechnicalDesign/Combat/StarChart_CanonicalSpec.md`
+
+### 内容
+
+在完成 Spec 与项目代码的完整交叉核验后，发现 5 处**覆盖面遗漏 / 精度不够**的点（无技术性错误，仅信息不完整）。按方案 A 执行全部修订，全部为补充插入，不改动已有正确表述：
+
+1. **§2.3 末尾**：补 `SlotLayer` 硬上限 `MAX_COLS = MAX_ROWS = 4`，说明 `_grid[MAX_ROWS, MAX_COLS]` 按 4×4 预分配、超上限返回 false。
+2. **新增 §2.5**：记录 Satellite 独立运行时模型（`Tick → EvaluateTrigger → Execute + InternalCooldown`），明确 Satellite **不走 Spawn 链**、不参与 Snapshot，与 Sail 走 `ModifyProjectileParams` 接入 Spawn 链形成对比。
+3. **§3.5 共同逻辑**：精化 Sail `ModifyProjectileParams` 调用语义——每个 Spawn 分支（Matter/Light/Echo/Anomaly）**各自单独调一次**（四处调用点：`StarChartController.cs:546/575/606/631`），不是全局一次。
+4. **§8.1 Save 格式**：补齐 Layer 的 Rows 字段——`LoadoutSlotSaveData.SailLayerRows` + `TrackSaveData.CoreLayerRows / PrismLayerRows / SatLayerRows`（对应 SlotLayer 的 4×4 双维度）。说明早期存档 Import 时 Rows 会默认 1，通过 `SetLayerCols / SetLayerRows` 恢复。
+5. **§10.2 Legacy 分类**：把 `StarChartItemSO._slotSize` 从 `[Obsolete]` 清单中拆出，归为**注释级 legacy**（无 `[Obsolete]` 标注），与存档字段的 Obsolete legacy 退役时机独立。
+
+### 目的
+
+- 让 Spec 成为可直接施工的单一真相源，避免未来改存档 / 改 SlotLayer 时漏字段、漏上限、漏 API 调用点
+- 消除 Satellite 运行时模型的阅读歧义（读 §3 主链容易误判 Satellite 也在 Spawn 链里）
+- 精化 legacy 分类，方便退役计划时按类型分批处理
+
+### 技术
+
+- 全部通过 `replace_in_file` 做小范围插入，保持文档骨架与章节结构不变
+- 修订前交叉验证所有引用 API（`SetLayerCols` / `SetLayerRows` / `MAX_COLS` / 四处 ModifyProjectileParams 调用点）在代码中真实存在，杜绝虚构 API
+- 无新增 lint 错误
+
+---
+
 ## Core Loop 设计文档 v0.1 起草（Hybrid Draft） — 2026-04-23 16:15
 
 ### 新建文件
@@ -15566,3 +15856,20 @@ dotnet build 验证：0 错误，0 警告。
 
 
 
+## StarChart 治理立规 Step 1：CanonicalSpec 落地 - 2026-04-24 22:42
+- 新建/修改文件：`Docs/2_TechnicalDesign/Combat/StarChart_CanonicalSpec.md`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：按预先批准的 `Docs/2_TechnicalDesign/Combat/StarChart_Governance_Plan.md` 执行 Step 1，创建 StarChart 模块的现役真相源文档。全文约 450 行，严格覆盖 plan 大纲的 10 节结构：模块边界 / 核心概念与语义（四家族×四层矩阵、CoreFamily 扩展关系、Satellite Per-Track 归属）/ 现役发射主链（`StarChartController.ExecuteFire → SpawnProjectile (switch CoreFamily) → InstantiateModifiers`）/ 依赖反转与跨程序集边界（`IStarChartItemResolver` / `StarChartContext` 在 Combat 层定义、UI/Save 层实现）/ 运行时数据隔离（`ProjectileParams` 值类型快照 + `AddCopy` 防污染）/ 对象池配额（四家族各自预热策略 + Anomaly 额外预热 `AnomalyModifierPrefab`）/ UI 与战斗层通信（`CombatEvents` 静态事件总线 + Snapshot 缓存 dirty 标记）/ Save-Load 序列化（`DisplayName` 作为跨存档 ID + `StarChartSaveData` 三级嵌套）/ Editor 工具链与 Runtime 职责边界 / 非现役-已废弃链路（`StarChartItemSO._slotSize` legacy 字段等）。文档开头明确"代码 > 本 Spec > Registry > Rules"的冲突裁决优先级。扫码过程中发现并写入 10 个 plan 未提及但必须固化的关键事实：`MAX_PROJECTILES_PER_FIRE = 20` 硬上限 + 超额伤害均摊（5%/excess）、Snapshot 是 Track 层缓存且 Satellite 装卸不弄脏、LightSail 订阅 `HeatSystem.OnOverheated` 做 disable 闸门、Sail buff 注入顺序在 Snapshot 之后（`ToProjectileParams` 之后）、`CollectTintModifierPrefabs` 双重过滤（`PrismFamily.Tint` + prefab 带 `IProjectileModifier` 组件）、Layer 初始容量 2×1（修正 plan 中"1 column"含糊表述）、LaserBeam/EchoWave fallback 到 Matter 前必须先归还 pool、Anomaly 家族当前复用 `Projectile_Matter.prefab`（通过 GUID `178be1a279c3747f2b519ac5a7db13cc` 交叉验证 `AnomalyCore_Boomerang.asset` 的 `_projectilePrefab` 字段与 `Modifier_Boomerang.prefab` 的 GUID `af692c9f108eb45f4ad105251164c12c`）、`SnapshotBuilder.ApplyModifier` Multiply 先 Add 后除 `coreCount` 的聚合语义、`StarChartItemSO._slotSize` 与 `_shape` 的 legacy/现役关系。
+- 目的：建立 StarChart 模块的现役真相源，为后续 Step 2 `AssetRegistry` / Step 3 `Implement_rules.md` 第 8 节 StarChart 模块规则 / Step 4 `CLAUDE.md` 常见任务 B 更新提供引用基础。避免未来新增星图部件或排查战斗系统 bug 时需要重新考古 `StarChartController` / `SnapshotBuilder` / `WeaponTrack` 全链路——把"现役主链、owner、数据流、废弃链路"固化成可引用的文档，对应 `Implement_rules.md` 第 2.3 节 Phase A 治理完成标准的"唯一权威 / 无双轨主链 / 无静默失败 / override 白名单化"在 StarChart 模块的首次落地。
+- 技术：**代码优先的文档治理（Code-First Documentation Governance）**——所有结论必须有代码出处，禁止推测。本轮通过扫码 `StarChartController.cs` / `SnapshotBuilder.cs` / `WeaponTrack.cs` / `FiringSnapshot.cs` / `StarCoreSO.cs` / `PrismSO.cs` / `LightSailSO.cs` / `SatelliteSO.cs` / `StarChartEnums.cs` / `StatModifier.cs` / `LoadoutSlot.cs` / `IStarChartItemResolver.cs` / `StarChartContext.cs` / `StarChartItemSO.cs` / `ProjectileParams.cs` / `Projectile.cs` / `LaserBeam.cs` / `EchoWave.cs` / `IProjectileModifier.cs` / `FirePoint.cs` / `LightSailRunner.cs` / `SatelliteRunner.cs` / `LightSailBehavior.cs` / `SatelliteBehavior.cs` / `InputHandler.cs` / `Core/Save/SaveData.cs` / `Core/CombatEvents.cs` 合计 27 份源文件确认所有写入事实。对 Anomaly 家族 Projectile Prefab 引用关系采用 **GUID 交叉验证**（读取 `.asset` YAML 的 `m_FileID: 100100000 / guid:` 字段对照 `.meta` 文件的 `guid` 字段）而非推测；对 plan 中所有 `⚠️ TODO` 搁置口子全部在本轮扫准（无扫准结果才归入 `Unknown-Historical` 窄口），对应 plan 第 195 行的通则"Owner 工具栏必须从代码扫准后填写，禁止推测"。文档冲突裁决优先级"代码 > Spec > Registry > Rules"与 `Implement_rules.md` 开篇对 `CanonicalSpec` / `AssetRegistry` / `Implement_rules` 三者关系的定义对齐。
+
+## StarChart 治理立规 Step 2：AssetRegistry 落地 - 2026-04-24 22:55
+- 新建/修改文件：`Docs/2_TechnicalDesign/Combat/StarChart_AssetRegistry.md`、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：按预先批准的 `Docs/2_TechnicalDesign/Combat/StarChart_Governance_Plan.md` 执行 Step 2，创建 StarChart 模块的资产 owner 映射真相源文档。全文约 290 行，严格覆盖 plan 大纲的 12 节结构：资产目录结构 / Prefab Registry / StarCoreSO Registry / PrismSO Registry / LightSailSO Registry / SatelliteSO Registry / Inventory 聚合资产 / 资产新增流程（Canonical Path）/ 已废弃-Unknown-Historical 清单 / Scene-Prefab 现役硬约束 / 扫码复现方法 / Phase A 治理基线。文档开头继承 `CanonicalSpec` 的冲突裁决优先级并补充第二层："代码/.asset/.prefab 实际内容 > 本 Registry > CanonicalSpec > Implement_rules"。Phase A 资产基线：8 Cores + 9 Prisms + 3 Sails + 1 Satellite + 8 Prefabs + 2 Behavior Prefabs + 1 Inventory，`PlayerInventory.asset._ownedItems` 21 个 GUID 与 SO 数量完全吻合。扫码过程中通过 GUID 交叉验证发现并固化的关键事实：（1）`Batch5AssetCreator` 和 `ShebaAssetCreator` 两个 Creator 均标注 Legacy/Hidden from menu；（2）所有 8 个 Modifier-related Prefab 的 GUID 与引用方 SO 的 `_projectilePrefab` / `_projectileModifierPrefab` / `_anomalyModifierPrefab` 字段完全对齐；（3）`Modifier_Bounce` 被 `RheologyPrism_Accelerate` 和 `ShebaP_Bounce` 跨家族共用；（4）`Modifier_Boomerang` 被 `AnomalyCore_Boomerang`（作为 `_anomalyModifierPrefab`）和 `ShebaP_Boomerang`（作为 `_projectileModifierPrefab`）跨装备层共用；（5）DisplayName 冲突风险两处：`FractalPrism_TwinSplit` vs `ShebaP_TwinSplit` 均为 "Twin Split"、`ShebaP_Boomerang` 与 `AnomalyCore_Boomerang` 均为 "Boomerang"（Core/Prism 类型不同当前不冲突但需警惕）；（6）两个 Unknown-Historical 资产：`TestSpeedSail.asset`（`Feb 21 11:53` 时间戳，不在任何 Creator 代码中）、`SpeedDamageSailBehavior.prefab`（被 `ShebaAssetCreator` 仅读不建）；（7）`TestSpeedSail` 与 `ShebaSail_Scout` 共用同一 `_behaviorPrefab`；（8）Shape 字段实测分布：6 个 1x1、1 个 1x2H、2 个 2x1V、2 个 L-shape、1 个 2x2，与 `StarChartEnums.ItemShape` 枚举完全对齐。
+- 目的：建立 StarChart 模块现役资产的 owner 映射表，为"新增一个星图部件需要走哪条官方路径"提供唯一答案。与 Step 1 的 `CanonicalSpec`（回答"现役主链是什么"）形成互补——`CanonicalSpec` 管运行时语义，`AssetRegistry` 管资产归属。避免未来排查"这个 Prefab 归谁维护 / 这个 SO 是谁生成的"时需要重新 grep 全项目代码。为 Step 3 `Implement_rules.md` 第 8 节 StarChart 模块规则提供资产层的事实依据（特别是第 8.4 节的禁止事项和第 9 节的废弃归档），为 Step 4 `CLAUDE.md` 常见任务 B 的"创建新的星图部件"段落提供可引用的新增流程（第 8 节）。
+- 技术：**代码优先的文档治理（Code-First Documentation Governance）**——所有 owner 归属均从 Editor 代码（`Batch5AssetCreator.cs` 和 `ShebaAssetCreator.cs`）grep `AssetDatabase.CreateAsset` 精确扫出；所有资产引用关系均通过 GUID 交叉验证（`grep -E '^guid:' meta` 导出 + `grep 'guid:' asset` 对照 + `PlayerInventory.asset._ownedItems` 集合对账）。对扫不出 Creator 归属的 2 个资产（`TestSpeedSail.asset` 和 `SpeedDamageSailBehavior.prefab`）不做推测，明确归入 `Unknown-Historical` 窄口并记录时间戳证据。新增流程（第 8 节）明确"扩展或新建 AssetCreator"是唯一官方入口，禁止手工在 Project 窗口右键创建（违反 PlayerInventory 一致性约束）。第 11 节提供扫码复现命令（bash one-liner），支持任何时候从磁盘重新验证本 Registry 内容。对应 `Implement_rules.md` 第 2.3 节 Phase A 治理完成标准的"唯一权威 / override 白名单化 / 无静默失败"在 StarChart 资产层的落地——资产 owner 唯一、Unknown-Historical 透明暴露而非静默、Inventory 一致性约束明确。
+
+## StarChart 治理立规 Step 3：Implement_rules 追加 Section 13 - 2026-04-24 23:05
+- 新建/修改文件：`Implement_rules.md`（追加 Section 13 StarChart 模块规则，并把原 Section 13/14 顺延为 14/15）、`Docs/5_ImplementationLog/ImplementationLog.md`
+- 内容：按预先批准的 `Docs/2_TechnicalDesign/Combat/StarChart_Governance_Plan.md` 执行 Step 3，把 StarChart 模块的施工规则 / 踩坑总结 / 验收清单正式固化到 `Implement_rules.md`。新 Section 13 共 6 个子章节：13.1 模块边界（Runtime / Editor / Data / Behavior Prefab 四层路径 + 关联文档三件套 + 与 Section 11 的分工说明）、13.2 模块目标（四条治理目标：可预测施工 / 防御性复位肌肉记忆 / Modifier 注入路径清晰 / Inventory 一致性主动维护）、13.3 实现规则（三部分：新武器施工八条清单 + 硬约束禁止事项 7 条 + Debug/Preview 工具约束 + Modifier 注入双路径分路表）、13.4 踩坑总结（8 条历史踩坑：对象池三连坑 / Tint-Anomaly 混淆 / StatModifier 初始化边缘 / DisplayName 静默冲突 / PlayerInventory dangling 历史疑云 / 新 Core 忘改 switch / Anomaly 复用 Matter Projectile 隐性假设 / AssetCreator 权威化）、13.5 验收清单（8 条 checklist 与 13.3.1 一一对齐）、13.6 推荐工作流（新武器开发 6 步 + 难定位 bug 4 步）。章节头部明确冲突裁决优先级：现役链路 / owner / 路径定义以 CanonicalSpec 和 AssetRegistry 为准。同步调整：原 Section 13（后续可追加模块占位）顺延为 Section 14；原 Section 14（通用模块规则模板）顺延为 Section 15，其子章节 14.1/14.2/14.3/14.4 全部重编为 15.1/15.2/15.3/15.4；Section 12 SpaceLife 中表格内的 `§14.3` 交叉引用同步改为 `§15.3`；Section 15.4 "已有模块的规则参考" 中新增 StarChart 条目（指向 Section 13 + 配套三份文档）。
+- 目的：完成 StarChart 立规计划的第三份产出物，把 Step 1 CanonicalSpec（回答"现役主链是什么"）+ Step 2 AssetRegistry（回答"资产归谁"）+ Step 3 Implement_rules（回答"施工应该怎么做"）三份文档闭环起来。Section 13 与 Section 11 Combat/Projectile 明确分工：Section 11 管跨 StarChart 的投射物层碰撞配置 + 程序化 Texture alpha 验证；Section 13 管 StarChart 特有的 SO/Prefab 施工、Modifier 双路径、Inventory 一致性、对象池五项复位。通过 §13.3.4 表格把 Tint 和 Anomaly 两条 Modifier 注入分路一次性钉死（Tint → `PrismSO._projectileModifierPrefab` → `CoreSnapshot.TintModifierPrefabs` → `InstantiateModifiers`；Anomaly → `StarCoreSO._anomalyModifierPrefab` → `CoreSnapshot.AnomalyModifierPrefab` → `SpawnAnomalyEntity`），避免未来新 Core/Prism 再次踩历史坑。验收清单 §13.5 的 8 条与施工清单 §13.3.1 的 8 条严格一一对齐，形成"施工即自检"的闭环。
+- 技术：**模块治理章节的嵌入式扩展（Embedded Module Section Extension）**——在既有大文档中新增模块规则章节时，采用"插入 + 顺延 + 同步交叉引用"三步法：（1）插入位置选在最接近主题的位置（Section 12 SpaceLife 之后、Section 13 占位之前）而非直接追加末尾，保证新章节与已有 Combat 相关章节（Section 11）在逻辑上邻近；（2）原占位 / 模板章节编号顺延（13→14、14→15），其子章节的所有编号同步重编（14.1/2/3/4 → 15.1/2/3/4）；（3）跨章节交叉引用同步修改（`§14.3` → `§15.3`），最后的"已有模块参考"表追加新章节条目以维护索引完整性。对应 `Implement_rules.md` §14 通用模块规则模板的结构约束——Section 13 严格按"N.1 模块边界 / N.2 模块目标 / N.3 实现规则 / N.4 踩坑总结 / N.5 验收清单 / N.6 推荐工作流"六段结构落地，每条规则都给根因、每条踩坑都给"现象-根因-防御"三段式、每条约束都可转化为具体检查动作（无"注意代码质量"之类的模糊表述）。整个 Section 13 不重复 `CLAUDE.md` 的架构原则，只写 StarChart 特有的约束，符合通用模板的"不重复"标准。
