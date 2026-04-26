@@ -63,6 +63,16 @@ namespace ProjectArk.Combat
             set => _lifetimeTimer = value;
         }
 
+        // --- Procedural fallback defaults ---
+        // Used only when the prefab has no sprite / no TrailRenderer AND the Core SO
+        // does not supply its own trail parameters. Not intended as the long-term owner.
+        // Per ProceduralPresentation_WorkflowSpec §3.5 / §7-3, every usage of these
+        // defaults must be surfaced via Debug.LogWarning so missing assets don't
+        // silently reach shipping.
+        private const float DEFAULT_TRAIL_TIME = 0.15f;
+        private const float DEFAULT_TRAIL_WIDTH = 0.085f;
+        private static readonly Color DEFAULT_TRAIL_COLOR = Color.white;
+
         private void Awake()
         {
             _rigidbody = GetComponent<Rigidbody2D>();
@@ -73,24 +83,41 @@ namespace ProjectArk.Combat
             // Prevents invisible projectiles when the prefab was created without a sprite.
             var sr = GetComponent<SpriteRenderer>();
             if (sr != null && sr.sprite == null)
+            {
                 sr.sprite = CreateFallbackSprite(8);
+                Debug.LogWarning(
+                    $"[Projectile] Missing sprite on '{name}' — generated 8px procedural fallback. " +
+                    $"Assign a real sprite to the prefab's SpriteRenderer, or treat this bullet via a Core that supplies its own visual.",
+                    this);
+            }
 
             // Ensure TrailRenderer exists and is properly configured
             // (replicates the classic BasicBullet trail effect).
+            // NOTE: parameters here are default fallback values; the Core SO's
+            // TrailTime / TrailWidth / TrailColor (if set) will override these
+            // at Initialize() time.
             if (_trail == null)
             {
                 _trail = gameObject.AddComponent<TrailRenderer>();
-                ConfigureTrail(_trail, sr);
+                ConfigureTrail(_trail, sr, DEFAULT_TRAIL_TIME, DEFAULT_TRAIL_WIDTH, DEFAULT_TRAIL_COLOR);
+                Debug.LogWarning(
+                    $"[Projectile] '{name}' has no TrailRenderer — added one at runtime with default parameters " +
+                    $"(time={DEFAULT_TRAIL_TIME:F2}, width={DEFAULT_TRAIL_WIDTH:F3}). " +
+                    $"For shipping, add a pre-configured TrailRenderer to the prefab or drive the parameters from StarCoreSO.",
+                    this);
             }
         }
 
         /// <summary>
-        /// Configures a TrailRenderer to match the classic BasicBullet trail:
-        /// short white-to-transparent fade that tapers from bullet width to zero.
+        /// Configures a TrailRenderer with the classic BasicBullet trail style:
+        /// short color-to-transparent fade that tapers from a given head width to zero.
+        /// Parameters come from <see cref="StarCoreSO"/> when available, otherwise from
+        /// <see cref="DEFAULT_TRAIL_TIME"/> / <see cref="DEFAULT_TRAIL_WIDTH"/> / <see cref="DEFAULT_TRAIL_COLOR"/>.
         /// </summary>
-        private static void ConfigureTrail(TrailRenderer trail, SpriteRenderer sr)
+        private static void ConfigureTrail(TrailRenderer trail, SpriteRenderer sr,
+                                           float trailTime, float trailWidth, Color trailColor)
         {
-            trail.time = 0.15f;
+            trail.time = trailTime;
             trail.minVertexDistance = 0.1f;
             trail.autodestruct = false;
             trail.emitting = true;
@@ -102,16 +129,16 @@ namespace ProjectArk.Combat
             trail.receiveShadows = false;
             trail.generateLightingData = false;
 
-            // Width curve: taper from 0.085 at head to 0 at tail
+            // Width curve: taper from head width to 0 at tail
             trail.widthMultiplier = 1f;
             trail.widthCurve = new AnimationCurve(
-                new Keyframe(0f, 0.085f),
+                new Keyframe(0f, trailWidth),
                 new Keyframe(1f, 0f));
 
-            // Color gradient: solid white → transparent white (inherits sprite tint)
+            // Color gradient: solid color → transparent color (inherits sprite tint on top)
             var grad = new Gradient();
             grad.SetKeys(
-                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[] { new GradientColorKey(trailColor, 0f), new GradientColorKey(trailColor, 1f) },
                 new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0f, 1f) });
             trail.colorGradient = grad;
 
@@ -169,6 +196,9 @@ namespace ProjectArk.Combat
             _impactVFXPrefab = parms.ImpactVFXPrefab;
             _isAlive = true;
 
+            // Apply Core-driven trail overrides if supplied (negative / transparent => keep fallback).
+            ApplyTrailOverrides(parms);
+
             _rigidbody.linearVelocity = Direction * Speed;
 
             _modifiers.Clear();
@@ -177,6 +207,29 @@ namespace ProjectArk.Combat
 
             for (int i = 0; i < _modifiers.Count; i++)
                 _modifiers[i].OnProjectileSpawned(this);
+        }
+
+        /// <summary>
+        /// Overrides the TrailRenderer configuration with per-Core parameters
+        /// when the caller provided them. Negative dimensions / alpha==0 are
+        /// treated as "not specified" and the existing trail configuration is kept.
+        /// </summary>
+        private void ApplyTrailOverrides(ProjectileParams parms)
+        {
+            if (_trail == null) return;
+
+            bool hasTime = parms.TrailTime > 0f;
+            bool hasWidth = parms.TrailWidth > 0f;
+            bool hasColor = parms.TrailColor.a > 0f;
+
+            if (!hasTime && !hasWidth && !hasColor) return;
+
+            var sr = GetComponent<SpriteRenderer>();
+            float time = hasTime ? parms.TrailTime : DEFAULT_TRAIL_TIME;
+            float width = hasWidth ? parms.TrailWidth : DEFAULT_TRAIL_WIDTH;
+            Color color = hasColor ? parms.TrailColor : DEFAULT_TRAIL_COLOR;
+            ConfigureTrail(_trail, sr, time, width, color);
+            _trail.Clear();
         }
 
         private void Update()

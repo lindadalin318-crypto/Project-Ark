@@ -7,6 +7,12 @@ namespace ProjectArk.Combat
     /// Lightweight value type carrying all data a Projectile needs for initialization.
     /// Decouples Projectile from StarCoreSO,
     /// allowing the Star Chart pipeline to pass prism-modified values.
+    ///
+    /// Also carries per-Core visual parameters (<see cref="TrailTime"/>, <see cref="TrailWidth"/>,
+    /// <see cref="TrailColor"/>). Negative / NaN values are interpreted as "not specified";
+    /// Projectile will keep its prefab / fallback defaults in that case. This keeps the
+    /// pipeline data-driven per architecture principle §1 (no hardcoded visual magic numbers
+    /// inside gameplay scripts).
     /// </summary>
     public readonly struct ProjectileParams
     {
@@ -17,9 +23,19 @@ namespace ProjectArk.Combat
         public readonly GameObject ImpactVFXPrefab;
         public readonly DamageType DamageType;
 
+        // --- Visual ---
+        /// <summary> Trail time from StarCoreSO. <=0 means "use prefab / fallback default". </summary>
+        public readonly float TrailTime;
+        /// <summary> Trail head width from StarCoreSO. <=0 means "use prefab / fallback default". </summary>
+        public readonly float TrailWidth;
+        /// <summary> Trail head color from StarCoreSO. alpha &lt;= 0 means "use prefab / fallback default". </summary>
+        public readonly Color TrailColor;
+
         public ProjectileParams(float damage, float speed, float lifetime,
                                 float knockback, GameObject impactVFXPrefab,
-                                DamageType damageType = DamageType.Physical)
+                                DamageType damageType = DamageType.Physical,
+                                float trailTime = -1f, float trailWidth = -1f,
+                                Color trailColor = default)
         {
             Damage = damage;
             Speed = speed;
@@ -27,6 +43,9 @@ namespace ProjectArk.Combat
             Knockback = knockback;
             ImpactVFXPrefab = impactVFXPrefab;
             DamageType = damageType;
+            TrailTime = trailTime;
+            TrailWidth = trailWidth;
+            TrailColor = trailColor;
         }
 
         /// <summary>
@@ -36,7 +55,8 @@ namespace ProjectArk.Combat
         public ProjectileParams WithDamageMultiplied(float multiplier)
         {
             return new ProjectileParams(
-                Damage * multiplier, Speed, Lifetime, Knockback, ImpactVFXPrefab, DamageType);
+                Damage * multiplier, Speed, Lifetime, Knockback, ImpactVFXPrefab, DamageType,
+                TrailTime, TrailWidth, TrailColor);
         }
     }
 }

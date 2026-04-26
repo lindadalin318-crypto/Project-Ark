@@ -9,6 +9,40 @@
 
 ---
 
+## 0.0 全部件一览（21 项，一目了然）
+
+> 顺序：Cores (8) → Prisms (9) → Sails (3) → Satellites (1)。
+> 等级图例：🟢 Functional ｜ 🟡 Partial ｜ 🔴 Broken ｜ ⚪ Stub。
+> "当前生效路径"列用一句话概括**此刻运行时真正在跑**的那条链；详细字段与来源见 §2-§5。
+
+| # | 类型 | DisplayName | 家族 / 类别 | Shape / 行为 prefab | 等级 | 当前生效路径 |
+|---|---|---|---|---|---|---|
+| 1 | Core | Matter Core | 0 Matter | 1×1 | 🟢 | Matter 管线 → `Projectile_Matter` |
+| 2 | Core | Light Core | 1 Light | 1×1 | 🟢 | Light 管线 → `LaserBeam_Light` |
+| 3 | Core | Echo Core | 2 Echo | 2×1V | 🟢 | Echo 管线 → `EchoWave_Echo` |
+| 4 | Core | Anomaly Core | 3 Anomaly | 1×1 | 🟢 | Anomaly 管线 + `Modifier_Boomerang` 入池 |
+| 5 | Core | Sheba Machine Gun | 0 Matter | 1×2H | 🟢 | Matter 管线（高射速/低伤/散布） |
+| 6 | Core | Sheba Shotgun | 0 Matter | L | 🟢 | Matter 管线（spread=30 散弹） |
+| 7 | Core | Sheba Focus Laser | 1 Light | 1×1 | 🟢 | Light 管线（精准激光） |
+| 8 | Core | Sheba Pulse Wave | 2 Echo | 2×2 | 🟢 | Echo 管线（范围波） |
+| 9 | Prism | Fractal Twin Split | 0 Fractal | — | 🟢 | 数值：+2 弹道 +15° spread |
+| 10 | Prism | Rheology Accelerate | 1 Rheology | `Modifier_Bounce`⚠️ | 🟡 | 数值：×1.5 速度；Modifier 不注入（家族非 Tint） |
+| 11 | Prism | Tint Frost Slow | 2 Tint | `Modifier_SlowOnHit` | 🟢 | **行为：命中减速（Tint 注入）** |
+| 12 | Prism | Sheba Twin Split | 0 Fractal | — | 🟢 | 数值：+2 弹道 +15° spread |
+| 13 | Prism | Sheba Rapid Fire | 1 Rheology | — | 🟢 | 数值：×1.3 射速 |
+| 14 | Prism | Sheba Boomerang | 1 Rheology | `Modifier_Boomerang` | 🟡 | 数值家族生效；Modifier 按 Creator 设计舍弃 |
+| 15 | Prism | Sheba Bounce | 1 Rheology | `Modifier_Bounce` | 🟡 | 数值家族生效；Modifier 按 Creator 设计舍弃 |
+| 16 | Prism | Sheba Homing | 2 Tint ✅ L1-4 | `Modifier_Homing` | 🟢 | **行为：Homing 注入（L1-4 后打通）** |
+| 17 | Prism | Sheba Mine Placer | 0 Fractal | `Modifier_MinePlacer` | 🟡 | 数值家族生效；Modifier 按 Creator 设计舍弃 |
+| 18 | Sail | Standard Sail | — | (none) | ⚪ | 明确 baseline，无效果 |
+| 19 | Sail | Scout Sail | — | `SpeedDamageSailBehavior` | 🟡 | 数据完整；behavior prefab 内部未验证 |
+| 20 | Sail | Speed Damage Sail | — | `SpeedDamageSailBehavior`（与 Scout 同） | 🟡 | 同上，与 Scout 双轨重复 |
+| 21 | Satellite | Auto Turret | — | `Sat_AutoTurret`（CD 1.5s） | 🟡 | 数据完整；behavior prefab 内部未验证 |
+
+**治理后速览**：🟢 13 ／ 🟡 6 ／ 🔴 0 ／ ⚪ 1。关键 Prism 当前生效路径"真实激活数"= 2（Tint Frost Slow + Sheba Homing）。
+
+---
+
 ## 0. 诊断摘要（TL;DR）
 
 | 指标 | 数值 | 备注 |
@@ -53,7 +87,7 @@
 
 ## 2. StarCoreSO（8 个 / Cores/）
 
-| Asset | `_family` | `_shape` | Heat | 行为通道 | 等级 | 备注 |
+| Asset | `_family` | `_shape` | Heat | 当前生效路径 | 等级 | 备注 |
 |---|---|---|---|---|---|---|
 | `MatterCore_StandardBullet` | 0 Matter | 0 (1×1) | 5 | Matter 管线 → `Projectile_Matter` | 🟢 | 基线 Core，参数完整 |
 | `LightCore_BasicLaser` | 1 Light | 0 (1×1) | 4 | Light 管线 → `LaserBeam_Light` | 🟢 | 基线 Core |
@@ -185,7 +219,7 @@
 
 **结论**：`Modifier_Boomerang` 因为被 Anomaly Core 以"随 projectile 入池"的路径使用，本身的 `IProjectileModifier` 实现类验证是通过了的。这是一个意外的好消息：若未来决定让 `ShebaP_Boomerang` 真正走 Prism 注入路径，只需改 Creator 的 `_family` 并重新生成资产，prefab 本身不需要改。
 
-### 7.3 行为通道完成度断层（治理后）
+### 7.3 当前生效路径完成度断层（治理后）
 
 | 通道 | 现役状态 |
 |---|---|
@@ -210,7 +244,106 @@
 
 ---
 
-## 9. 参考文档与代码锚点
+## 9. 特效（VFX / 程序化表现）审查（2026-04-26 新增）
+
+> **审查依据**：`Docs/3_WorkflowsAndRules/Project/ProceduralPresentation_WorkflowSpec.md`
+> **审查重心**：Cores 家族（8 个），附带梳理 Prism / Sail / Satellite 的特效现状
+> **审查口径**：区分 **"契约/替换缝是否存在"**（代码层已预留字段）与 **"现役是否真的有可见特效"**（SO/Prefab 中是否真填了资产）
+
+### 9.1 Cores 特效全景（8 / 8 项现役均处于"特效契约存在但资产未填"的状态）
+
+**特效相关的契约**（`StarCoreSO.cs` 已预留的 3 个字段 + 1 个参数）：
+
+| 字段 | 用途 | 运行时消费者 |
+|---|---|---|
+| `_muzzleFlashPrefab` | 射击瞬间的枪口特效 | `ProjectileSpawner.SpawnMuzzleFlash` + `WeaponTrack.GetMuzzleFlashPool`（via PoolManager）|
+| `_impactVFXPrefab` | 命中瞬间的特效 | `Projectile.SpawnImpactVFX` / `LaserBeam.SpawnImpactVFX` / `EchoWave.SpawnImpactVFX` |
+| `_fireSound` + `_fireSoundPitchVariance` | 射击音效 | `ProjectileSpawner.PlayFireSound`（一次射击一次）|
+| `_anomalyModifierPrefab` | Anomaly 专属行为体（不是视觉特效，但会随 projectile 可视化） | `WeaponTrack` 对象池 |
+
+**Cores 现役资产填写情况**（全部 8 个 SO 的三个 VFX/Audio 字段 `{fileID: 0}`）：
+
+| # | Core | MuzzleFlash | ImpactVFX | FireSound | 投射物视觉来源 | 当前特效生态位 |
+|---|---|:-:|:-:|:-:|---|---|
+| 1 | Matter Core | ⬜️ 空 | ⬜️ 空 | ⬜️ 空 | `Projectile_Matter.prefab`（SpriteRenderer + 运行时程序化 Trail） | 只靠投射物自身 |
+| 2 | Light Core | ⬜️ 空 | ⬜️ 空 | ⬜️ 空 | `LaserBeam_Light.prefab`（LineRenderer，内建色/宽曲线） | 只靠激光线本体 |
+| 3 | Echo Core | ⬜️ 空 | ⬜️ 空 | ⬜️ 空 | `EchoWave_Echo.prefab`（空 SpriteRenderer + 淡紫色） | 只靠波前单色 |
+| 4 | Anomaly Core | ⬜️ 空 | ⬜️ 空 | ⬜️ 空 | 复用 `Projectile_Matter.prefab` | 同 Matter，靠程序化 Trail 区分度为零 |
+| 5 | Sheba Machine Gun | ⬜️ 空 | ⬜️ 空 | ⬜️ 空 | 复用 `Projectile_Matter.prefab` | 同 Matter |
+| 6 | Sheba Shotgun | ⬜️ 空 | ⬜️ 空 | ⬜️ 空 | 复用 `Projectile_Matter.prefab` | 同 Matter |
+| 7 | Sheba Focus Laser | ⬜️ 空 | ⬜️ 空 | ⬜️ 空 | 复用 `LaserBeam_Light.prefab` | 同 Light |
+| 8 | Sheba Pulse Wave | ⬜️ 空 | ⬜️ 空 | ⬜️ 空 | 复用 `EchoWave_Echo.prefab` | 同 Echo |
+
+**legend**：⬜️ 空 = `{fileID: 0}`（SO 字段未填资产）
+
+### 9.2 "契约存在，资产未填"这件事本身按 Workflow Spec 是什么级别的问题
+
+套用 `ProceduralPresentation_WorkflowSpec.md` 的 6 个立项检查问题：
+
+| 检查问题 | 当前 Cores 的回答 | 合规性 |
+|---|---|---|
+| 1. 是临时占位还是长期 shipping？ | Matter `Projectile.Awake` 里 **强制 fallback 一个 8px 程序化 sprite + 运行时 AddComponent TrailRenderer**，作用域是"长期允许的 fallback"但未写明 | 🟡 fallback 存在但未白纸黑字标明归属 |
+| 2. gameplay 依赖的核心输入参数？ | 颜色/时长/宽度等 Trail 参数写死在 `Projectile.ConfigureTrail`（硬编码），不是走 SO | 🔴 参数没有契约化，违反 §3.2 |
+| 3. 替换缝在哪层？ | 替换缝存在（填 `_muzzleFlashPrefab` / `_impactVFXPrefab` 即可），但没有 TrailPrefab / BulletVisualPrefab 字段，bullet 外观只能替 `_projectilePrefab` 整个 | 🟡 muzzle/impact 有缝，bullet 自身无缝 |
+| 4. 当前 procedural 是否只在 View 层？ | `Projectile.Awake` 里做 `AddComponent<TrailRenderer>()` + 程序化造 sprite —— 属于 gameplay 脚本直接生成视觉资源，**违反 §5.2 "不要让 gameplay 代码直接 `new Texture2D()`/操作 renderer"** | 🔴 preview 侵入 gameplay |
+| 5. 缺资产时允许 fallback 还是报错？ | Sprite 缺失 → 静默生成占位；MuzzleFlash/ImpactVFX 缺失 → 静默 return；FireSound 缺失 → 静默 return | 🔴 **silent no-op × 3**，违反 §3.5 / §7-3 |
+| 6. 如何证明可替换？ | 未验证。仅从代码路径推断"填字段应当能接管"，但项目里 8 个 Core 无一填过，**替换缝从未真正被使用过** | 🔴 替换缝是"理论存在"而非"真实存在" |
+
+**结论**：Cores 的 VFX 层**契约层面合规 60%，执行层面合规 0%**。
+- ✅ 正确的部分：`MuzzleFlash` / `ImpactVFX` / `FireSound` 走的是 `SO 字段 → Snapshot → Spawner` 的干净管线，属于"替换缝已建好"。
+- ❌ 错的部分：
+  1. bullet 自身视觉（Sprite + Trail）**没有走契约**，由 `Projectile.Awake` 硬编码 fallback，gameplay 脚本同时承担 View 职责。
+  2. 所有 fallback 都是**静默**的，没有 `Debug.LogWarning`，没有 validator 能告诉你"8 个 Core 的 VFX 都是空的"。
+  3. 替换缝存在却从未被使用，Workflow Spec §7-6 的验收标准"preview rig 职责清楚：它是验证工具，不是默认长期 owner"当前是"默认长期 owner 就是 fallback"。
+
+### 9.3 Prism / Sail / Satellite 的特效生态位
+
+| 类别 | 资产数 | 有专属特效路径的数量 | 现状简述 |
+|---|---|---|---|
+| **Prism（数值型）**：Twin Split / Rapid Fire | 3 | 0 | 纯 `_statModifiers`，不触发任何视觉，**按设计不应有特效** |
+| **Prism（Tint 激活）**：Frost Slow / Homing | 2 | 0（命中反馈复用 Core 的 ImpactVFX） | Modifier 本身是行为 prefab（`Modifier_SlowOnHit` / `Modifier_Homing`），**没有视觉分量**；减速/追踪状态在屏幕上看不到反馈 |
+| **Prism（Modifier 装饰字段，未激活）**：Rheology Accelerate / Boomerang / Bounce / MinePlacer | 4 | 0 | 行为通道未接通，无视觉讨论价值 |
+| **Sail**：Scout / TestSpeedSail / Standard | 3 | 0 | `SpeedDamageSailBehavior` 是行为 prefab，未见视觉组件 |
+| **Satellite**：Auto Turret | 1 | 0 | `Sat_AutoTurret` 未深入诊断视觉层 |
+
+**关键盲点**：**Tint Prism 激活后玩家如何知道自己的子弹获得了新效果？**
+
+- `Frost Slow`（减速命中）→ 目前没有"子弹变蓝/变冷"的视觉 tint，玩家只能靠敌人行为推断。
+- `Homing`（追踪）→ 弹道轨迹会自动表现，**唯一一个不需要额外特效也能 readable 的 Tint Prism**。
+
+这正是 Workflow Spec §3.1 所说"程序化表现的第一职责是让功能可见、可玩、可调"所没有覆盖的——**Prism 根本连程序化 preview 都没做**，而不是做了劣化版。
+
+### 9.4 特效债务优先级清单（按 ROI 排序）
+
+| 优先级 | 事项 | 原因 | 预估工时 |
+|---|---|---|---|
+| **P0** | **为 4 种 Core 家族各配一个最小可读的 MuzzleFlash + ImpactVFX** | 替换缝已建好但从未使用；玩家现在看不到"射击发生了"的瞬时反馈，违反开发哲学 §1"手感优先" | 4 family × 2 VFX prefab = 约 4–8 h |
+| **P0** | **`Projectile.Awake` 的程序化 Trail/Sprite fallback 必须显式报 warning**（缺 Sprite / 缺 Core 视觉字段时至少 `Debug.LogWarning`）| 当前是 silent no-op × N，违反 `Implement_rules.md` §3.5 和 Workflow Spec §3.5 | 30 min |
+| **P1** | **为 Tint Prism（Frost Slow / Homing）定义"命中 tint 颜色"字段**，让 ProjectileSpawner 能在 projectile 上覆盖一个 tint（例如 Frost = 冷蓝）| 当前 Tint Prism 激活后玩家无视觉反馈；等正式美术做弹体染色系统太晚 | 2–3 h（含字段 + 运行时 SpriteRenderer 覆盖）|
+| **P1** | **把 `Projectile.ConfigureTrail` 的硬编码参数抽到 `StarCoreSO`**（至少 `trailColor` / `trailTime` / `trailWidth`）| 现在想让 Light/Matter 子弹看起来不一样只能改 prefab，不能改 SO，违反数据驱动原则 | 1–2 h |
+| **P2** | **新增一个审计工具**：遍历所有 `StarCoreSO`，报告 `_muzzleFlashPrefab == null` / `_impactVFXPrefab == null` / `_fireSound == null` 的资产数 | 把"哪些 Core 还没有特效"从"需要人去 Inspector 一个个点"变成"一个菜单项一键看完" | 1 h |
+| **P2** | **`EchoWave_Echo.prefab` 现在只有单色 SpriteRenderer（甚至没 sprite）** | 波前扩散感完全靠 `_visualScaleMultiplier` 线性放大一个方块；连"圆环"都没有。是当前视觉最弱的 Core | 1–2 h（至少做个径向渐变纹理）|
+| **P3** | 决策 Sail/Satellite 行为的视觉层归属：是归"程序化 preview"还是"等正式美术" | 当前没有任何 Sail/Sat 有视觉投入，玩家无法感知装备状态 | 待设计 |
+
+### 9.5 审查结论一句话
+
+> **Cores 现役的特效状态是"管线做完了 80%，资产填了 0%"**。契约层面已经是替换缝友好的架构，只是运行时全员走 fallback，而 fallback 又是静默 + 硬编码的，违反了 Workflow Spec 的多条硬规则。P0 修复不是"做华丽特效"，而是"让替换缝被真实使用 + 让 silent no-op 不再静默"。
+
+### 9.6 下一步建议的最小可玩增量
+
+按 Workflow Spec §5 的 MVP 模板，建议先做这样一个最小 Batch：
+
+1. 用程序化手段生成 4 个 family 各一张 **占位 MuzzleFlash**（`Texture2D` + 1 frame ParticleSystem 就够）
+2. 用程序化手段生成 4 个 family 各一张 **占位 ImpactVFX**（同上）
+3. 把 4 个基线 Core 的 SO 字段填上这 8 个 prefab，验证"填 SO → 出特效"链路真的通
+4. 给 `Projectile.Awake` 的 Sprite fallback 加 `Debug.LogWarning("[Projectile] Missing sprite, using procedural fallback. Asset: ...")`
+5. 追加一个 `StarChartAuditor` 规则："Core has no MuzzleFlashPrefab" 警告
+
+完成这 5 步后，Cores 的特效层就从"替换缝空转"升级到"替换缝真实运作"，符合 Workflow Spec §7 的验收标准 1 / 3 / 4 / 6。
+
+---
+
+## 10. 参考文档与代码锚点
 
 - 字段命名口径：`Docs/2_TechnicalDesign/Combat/StarChart_AssetRegistry.md` §0
 - 资产 owner 真相源：同上 §3 / §4 / §5
@@ -218,3 +351,7 @@
 - 家族枚举定义：`Assets/Scripts/Combat/StarChart/StarChartEnums.cs:13-27`
 - 形状枚举定义：同上 `StarChartEnums.cs:56-80`
 - 现役 Inventory：`Assets/_Data/StarChart/PlayerInventory.asset`（21 GUID 已交叉验证）
+- 特效审查依据（§9）：`Docs/3_WorkflowsAndRules/Project/ProceduralPresentation_WorkflowSpec.md`
+- Core VFX 字段定义：`Assets/Scripts/Combat/StarChart/StarCoreSO.cs:52-60`
+- VFX 运行时消费：`Assets/Scripts/Combat/StarChart/ProjectileSpawner.cs:213-232`（muzzle + fire sound）、`Assets/Scripts/Combat/Projectile/Projectile.cs:227-233`（impact）
+- 程序化 fallback 位置：`Assets/Scripts/Combat/Projectile/Projectile.cs:67-85`（Awake 中的 sprite + TrailRenderer 自动装配）

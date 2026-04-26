@@ -26,6 +26,9 @@ namespace ProjectArk.Combat
         public GameObject ProjectilePrefab;
         public GameObject MuzzleFlashPrefab;
         public GameObject ImpactVFXPrefab;
+        public float TrailTime;
+        public float TrailWidth;
+        public Color TrailColor;
         public AudioClip FireSound;
         public float FireSoundPitchVariance;
         public CoreFamily Family;
@@ -42,7 +45,9 @@ namespace ProjectArk.Combat
         /// </summary>
         public ProjectileParams ToProjectileParams()
         {
-            return new ProjectileParams(Damage, ProjectileSpeed, Lifetime, Knockback, ImpactVFXPrefab, DamageType);
+            return new ProjectileParams(
+                Damage, ProjectileSpeed, Lifetime, Knockback, ImpactVFXPrefab, DamageType,
+                TrailTime, TrailWidth, TrailColor);
         }
     }
 

@@ -53,6 +53,16 @@ namespace ProjectArk.Combat
         [SerializeField] private GameObject _muzzleFlashPrefab;
         [SerializeField] private GameObject _impactVFXPrefab;
 
+        [Header("VFX — Projectile Trail (Matter / Anomaly only)")]
+        [Tooltip("Trail lifetime in seconds. <= 0 means 'use prefab / fallback default'. Only consumed by Matter / Anomaly projectiles.")]
+        [SerializeField] private float _trailTime = -1f;
+
+        [Tooltip("Trail head width. <= 0 means 'use prefab / fallback default'. Only consumed by Matter / Anomaly projectiles.")]
+        [SerializeField] private float _trailWidth = -1f;
+
+        [Tooltip("Trail head color. Alpha 0 means 'use prefab / fallback default'. Only consumed by Matter / Anomaly projectiles.")]
+        [SerializeField] private Color _trailColor = new Color(0f, 0f, 0f, 0f);
+
         [Header("Audio")]
         [SerializeField] private AudioClip _fireSound;
 
@@ -75,6 +85,9 @@ namespace ProjectArk.Combat
         public GameObject AnomalyModifierPrefab => _anomalyModifierPrefab;
         public GameObject MuzzleFlashPrefab => _muzzleFlashPrefab;
         public GameObject ImpactVFXPrefab => _impactVFXPrefab;
+        public float TrailTime => _trailTime;
+        public float TrailWidth => _trailWidth;
+        public Color TrailColor => _trailColor;
         public AudioClip FireSound => _fireSound;
         public float FireSoundPitchVariance => _fireSoundPitchVariance;
     }

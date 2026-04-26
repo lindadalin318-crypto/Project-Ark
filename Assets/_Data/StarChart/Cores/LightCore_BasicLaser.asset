@@ -19,6 +19,7 @@ MonoBehaviour:
   _shape: 0
   _heatCost: 4
   _family: 1
+  _damageType: 0
   _projectilePrefab: {fileID: 1560740897334003585, guid: 2016ff32cc94f433183601f0d25cabaf, type: 3}
   _fireRate: 4
   _baseDamage: 8
@@ -28,7 +29,7 @@ MonoBehaviour:
   _knockback: 0.3
   _recoilForce: 0.2
   _anomalyModifierPrefab: {fileID: 0}
-  _muzzleFlashPrefab: {fileID: 0}
-  _impactVFXPrefab: {fileID: 0}
+  _muzzleFlashPrefab: {fileID: 7023595988605242721, guid: 6a2d5ec9f4df946d7bcddebf666613a0, type: 3}
+  _impactVFXPrefab: {fileID: 6441885075933851693, guid: b96e65209da8d4b648c305587a19eb31, type: 3}
   _fireSound: {fileID: 0}
   _fireSoundPitchVariance: 0.1
