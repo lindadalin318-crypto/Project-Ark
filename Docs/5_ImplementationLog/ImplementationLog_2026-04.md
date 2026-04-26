@@ -271,3 +271,14 @@
   - 存档路径（`ImportTrack` / `ExportTrack`）没有改动，仍然走相同的 `SetLayerCols`。如果存档值比当前小，现在会被 **缩回**，这是一致性修复；如果更大，行为和之前一样扩展。
   - 编译验证：`dotnet build Project-Ark.slnx` 全通过，0 错误；所有警告均为 Unity 6 既有的 `GetInstanceID / FindObjectsSortMode` 过时 API 提示，与本次改动无关。
 
+
+---
+
+## TrackView Debug Row Overrides（对称 Col 的 Row 调试字段） — 2026-04-26 16:12
+
+- **修改文件**
+  - `Assets/Scripts/UI/TrackView.cs`（新增 `_debugCoreRows` / `_debugPrismRows` / `_debugSatRows` 三个 `[Range(0,4)]` 字段；`ApplyDebugSlotCounts()` 追加 rows 分支，对称调用 `WeaponTrack.SetLayerRows`；`ResetDebugSlotCounts()` 清零新字段并调用 `SetLayerRows(1,1,1)` 复位）
+- **内容**：TrackView 之前只暴露 `_debugCoreCols / _debugPrismCols / _debugSatCols`，而 `WeaponTrack.SetLayerRows` API 早已就绪但从未被 UI 调用过。对称补齐 rows 维度，右键 `Apply Debug Slot Counts` 会同步调 Cols 和 Rows。
+- **目的**：用户反馈"Prism 改为 4 列后 Homing 依然放不进去"，根因是 Homing 形状是 `Shape2x1V`（2 行高），Prism 层始终只有 1 行。补 Row debug 后可把 Prism 设为 `2×2` / `2×1` 等多行布局以容纳垂直形状。
+- **技术**：对称 pattern；`_track.CoreLayer.Rows` 作为 0 值的 fallback（跟 Cols 完全一致的语义）。
+- **已知物理约束（未治理）**：`TypeColumn._cells` 是固定 4 格 Prefab（代码注释仍写 "2×2 grid"），视图层上限永远是 `Rows*Cols ≤ 4`。也就是说 `1×4` / `2×2` / `4×1` 可行，但数据层虽然支持的 `4×2=8`、`3×3=9` 等组合**视图无法表达**，第 5+ 格会 silent 丢失。对应"方案 B 的可配合形状集合"实际为所有 `Rows*Cols≤4` 的布局。若未来要突破 4 格上限，需把 `TypeColumn` 的 cells 改为动态生成 + GridLayoutGroup 自动排版。

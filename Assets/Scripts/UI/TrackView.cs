@@ -50,6 +50,18 @@ namespace ProjectArk.UI
                  "Supports BOTH expand and shrink at runtime. See Core tooltip for details.")]
         [SerializeField] [Range(0, 4)] private int _debugSatCols = 0;
 
+        [Tooltip("Override Core layer row count. 0 = use save data. Range 1-4. " +
+                 "Supports BOTH expand and shrink at runtime. Shrinking evicts items whose " +
+                 "footprint no longer fits. Required for fitting shapes that are taller than 1 " +
+                 "row (e.g. Shape2x1V, ShapeL, ShapeLMirror).")]
+        [SerializeField] [Range(0, 4)] private int _debugCoreRows = 0;
+        [Tooltip("Override Prism layer row count. 0 = use save data. Range 1-4. " +
+                 "Supports BOTH expand and shrink at runtime. See Core Rows tooltip for details.")]
+        [SerializeField] [Range(0, 4)] private int _debugPrismRows = 0;
+        [Tooltip("Override SAT layer row count. 0 = use save data. Range 1-4. " +
+                 "Supports BOTH expand and shrink at runtime. See Core Rows tooltip for details.")]
+        [SerializeField] [Range(0, 4)] private int _debugSatRows = 0;
+
         /// <summary> Fired when a cell with an equipped item is clicked (for unequip). </summary>
         public event Action<StarChartItemSO> OnCellClicked;
 
@@ -186,6 +198,13 @@ namespace ProjectArk.UI
                 int satCols   = _debugSatCols   > 0 ? _debugSatCols   : _track.SatLayer.Cols;
                 _track.SetLayerCols(coreCols, prismCols, satCols);
             }
+            if (_debugCoreRows > 0 || _debugPrismRows > 0 || _debugSatRows > 0)
+            {
+                int coreRows  = _debugCoreRows  > 0 ? _debugCoreRows  : _track.CoreLayer.Rows;
+                int prismRows = _debugPrismRows > 0 ? _debugPrismRows : _track.PrismLayer.Rows;
+                int satRows   = _debugSatRows   > 0 ? _debugSatRows   : _track.SatLayer.Rows;
+                _track.SetLayerRows(coreRows, prismRows, satRows);
+            }
         }
 
         /// <summary>
@@ -211,12 +230,16 @@ namespace ProjectArk.UI
             _debugCoreCols = 0;
             _debugPrismCols = 0;
             _debugSatCols = 0;
+            _debugCoreRows = 0;
+            _debugPrismRows = 0;
+            _debugSatRows = 0;
             if (_track != null)
             {
                 // Fall back to the default authored starting grid (2x1) so shrinking
                 // takes effect immediately; save-driven values will be re-applied on
                 // the next ImportTrack call.
                 _track.SetLayerCols(2, 2, 2);
+                _track.SetLayerRows(1, 1, 1);
                 Refresh();
             }
         }
