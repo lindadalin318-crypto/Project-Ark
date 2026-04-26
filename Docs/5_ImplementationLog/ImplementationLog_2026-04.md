@@ -219,3 +219,20 @@
   - 对象池接入：`PooledVFX.OnGetFromPool` 自动播放粒子、Duration 到期自动回收，无需新增池化代码。
   - Unity 6 domain reload 不保证陷阱：新 Editor 菜单在 script compilation 后未必立即注册到 AppDomain，故本轮通过 Unity MCP `execute_code` 内联执行生成逻辑完成 bootstrap；后续用户主动 focus Unity 触发 domain reload 后，`ProjectArk/Create Core VFX Placeholder Prefabs` 菜单即可正常使用（用于未来重建 / 调参）。
 
+---
+
+## 修 StarChartSaveSerializer struct null-check 编译错误 — 2026-04-26 14:56
+
+- **修改文件**
+  - `Assets/Scripts/Combat/StarChart/StarChartSaveSerializer.cs`（第 66 行附近）
+- **内容**
+  - 将 `_context = context ?? throw new ArgumentNullException(nameof(context));` 改为 `_context = context;`，并补一行说明注释：`StarChartContext is a readonly struct — cannot be null, so no null-check is applicable.`
+- **目的**
+  - 消除长期存在的编译错误 `CS0019: Operator '??' cannot be applied to operands of type 'StarChartContext' and '<throw expression>'`。
+  - 该错误是在 L3-1 Phase A 把 `StarChartContext` 从 class 改为 `readonly struct` 后遗留的构造器 null-check 笔误——struct 不可能为 null，`??` 自然无意义。
+  - 在上一轮（VFX 占位收尾）中被标记为 "pre-existing、与本轮无关、留给后续 StarChart 重构 Batch"；本轮用户主动要求先处理，顺手消除掉。
+- **技术**
+  - 纯局部修正，不改变任何运行时行为（struct 本身就永远不为 null）。
+  - 其它 5 个 `?? throw new ArgumentNullException(...)` 校验（`_loadouts` / `_lightSailRunners` / `_primarySatRunners` / `_secondarySatRunners` / `_disposeSlotRunners` / `_initializeAllPools`）都是引用类型，保持不变。
+  - `dotnet build ProjectArk.Combat.csproj` 验证：0 错误、3 个无关的 Unity 6 废弃 API 警告（`GetInstanceID` / `FindObjectsSortMode`）。
+

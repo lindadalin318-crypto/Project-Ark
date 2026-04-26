@@ -63,7 +63,8 @@ namespace ProjectArk.Combat
             _lightSailRunners = lightSailRunners ?? throw new ArgumentNullException(nameof(lightSailRunners));
             _primarySatRunners = primarySatRunners ?? throw new ArgumentNullException(nameof(primarySatRunners));
             _secondarySatRunners = secondarySatRunners ?? throw new ArgumentNullException(nameof(secondarySatRunners));
-            _context = context ?? throw new ArgumentNullException(nameof(context));
+            // StarChartContext is a readonly struct — cannot be null, so no null-check is applicable.
+            _context = context;
             _disposeSlotRunners = disposeSlotRunners ?? throw new ArgumentNullException(nameof(disposeSlotRunners));
             _initializeAllPools = initializeAllPools ?? throw new ArgumentNullException(nameof(initializeAllPools));
         }
