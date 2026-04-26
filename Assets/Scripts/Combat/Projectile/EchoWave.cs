@@ -97,7 +97,7 @@ namespace ProjectArk.Combat
 
         /// <summary>
         /// Initialize and activate the echo wave.
-        /// Called by StarChartController.SpawnEchoWave().
+        /// Called by ProjectileSpawner.SpawnEchoWave().
         /// </summary>
         /// <param name="origin">Spawn position (world space).</param>
         /// <param name="direction">Fire direction (for sector waves).</param>

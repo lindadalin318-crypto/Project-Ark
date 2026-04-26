@@ -21,7 +21,7 @@ namespace ProjectArk.UI
     /// <summary>
     /// Semi-transparent ghost that follows the mouse during a drag operation.
     /// Shows drop state via border color and replace hint label.
-    /// Supports shape-aware rendering: adjusts height based on SlotSize (1-3).
+    /// Supports shape-aware rendering: resizes to the item's 2D ItemShape bounding box.
     /// Must live under the StarChart Canvas with <c>CanvasGroup.blocksRaycasts = false</c>.
     /// </summary>
     [RequireComponent(typeof(CanvasGroup))]
@@ -132,26 +132,6 @@ namespace ProjectArk.UI
         }
 
         /// <summary>
-        /// Adjust the ghost shape to match the item's SlotSize (legacy 1D).
-        /// Dynamically creates/updates cell grid images.
-        /// </summary>
-        public void SetShape(int slotSize)
-        {
-            slotSize = Mathf.Clamp(slotSize, 1, 3);
-            _currentSlotSize = slotSize;
-
-            // Calculate new height: N cells + (N-1) gaps
-            float newHeight = slotSize * _cellHeight + (slotSize - 1) * _cellGap;
-            float width = _ghostSize.x;
-
-            if (_rectTransform != null)
-                _rectTransform.sizeDelta = new Vector2(width, newHeight);
-
-            // Rebuild cell grid images
-            RebuildCellGrid(slotSize, width, newHeight);
-        }
-
-        /// <summary>
         /// Adjust the ghost shape to match the item's 2D ItemShape.
         /// Resizes the ghost to the shape's bounding box and rebuilds the cell grid.
         /// </summary>
@@ -177,41 +157,6 @@ namespace ProjectArk.UI
                 StarChartTheme.GetTypeColor(itemType).b,
                 0.22f);
             RebuildShapeGrid(shape, newWidth, newHeight, cellColor);
-        }
-
-        private void RebuildCellGrid(int slotSize, float width, float totalHeight)
-        {
-            // Destroy old cell images
-            if (_cellImages != null)
-            {
-                foreach (var img in _cellImages)
-                    if (img != null) Destroy(img.gameObject);
-            }
-
-            _cellImages = new Image[slotSize];
-
-            for (int i = 0; i < slotSize; i++)
-            {
-                var cellGo = new GameObject($"GhostCell_{i}", typeof(RectTransform), typeof(Image));
-                cellGo.transform.SetParent(transform, false);
-
-                // Place cell behind icon/border (sibling index 0)
-                cellGo.transform.SetAsFirstSibling();
-
-                var cellRect = cellGo.GetComponent<RectTransform>();
-                cellRect.anchorMin = new Vector2(0f, 1f);
-                cellRect.anchorMax = new Vector2(1f, 1f);
-                cellRect.pivot = new Vector2(0.5f, 1f);
-
-                // Position from top: each cell offset by (cellHeight + gap) * i
-                float yOffset = -(i * (_cellHeight + _cellGap));
-                cellRect.anchoredPosition = new Vector2(0f, yOffset);
-                cellRect.sizeDelta = new Vector2(0f, _cellHeight);
-
-                var cellImg = cellGo.GetComponent<Image>();
-                cellImg.color = Color.white;
-                _cellImages[i] = cellImg;
-            }
         }
 
         private void RebuildShapeGrid(ItemShape shape, float totalWidth, float totalHeight, Color cellColor)

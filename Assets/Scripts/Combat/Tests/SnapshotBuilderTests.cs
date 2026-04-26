@@ -19,6 +19,9 @@ namespace ProjectArk.Combat.Tests
                                               float speed = 20f, float lifetime = 2f,
                                               int slotSize = 1)
         {
+            // slotSize parameter retained for backward-compat test signatures;
+            // actual occupancy is now driven by ItemShape (default 1×1 on new ScriptableObject).
+            _ = slotSize;
             var core = ScriptableObject.CreateInstance<StarCoreSO>();
             // Use serialized field reflection to set values (since fields are private/serialized)
             SetPrivateField(core, "_baseDamage", damage);
@@ -29,16 +32,17 @@ namespace ProjectArk.Combat.Tests
             SetPrivateField(core, "_recoilForce", 0.5f);
             SetPrivateField(core, "_spread", 0f);
             SetPrivateField(core, "_family", CoreFamily.Matter);
-            SetPrivateField(core, "_slotSize", slotSize);
             SetPrivateField(core, "_heatCost", 5f);
             return core;
         }
 
         private static PrismSO CreatePrism(StatModifier[] modifiers, int slotSize = 1)
         {
+            // slotSize parameter retained for backward-compat test signatures;
+            // actual occupancy is now driven by ItemShape (default 1×1 on new ScriptableObject).
+            _ = slotSize;
             var prism = ScriptableObject.CreateInstance<PrismSO>();
             SetPrivateField(prism, "_statModifiers", modifiers);
-            SetPrivateField(prism, "_slotSize", slotSize);
             SetPrivateField(prism, "_heatCost", 0f);
             SetPrivateField(prism, "_family", PrismFamily.Rheology);
             return prism;

@@ -72,7 +72,6 @@ namespace ProjectArk.Combat
         /// <summary>
         /// Total grid units currently in use — sum of actual occupied cell counts per shape.
         /// Authority: <see cref="ItemShapeHelper.GetCells"/> (Shape Contract C1).
-        /// Does NOT read item.SlotSize — that is a legacy 1D field kept for backward compat only.
         /// </summary>
         public int UsedSpace
         {

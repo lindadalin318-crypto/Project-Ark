@@ -22,7 +22,10 @@
 ### 1.1 Runtime 代码
 
 - `Assets/Scripts/Combat/StarChart/`（主目录）
-  - 控制器：`StarChartController.cs`
+  - 控制器：`StarChartController.cs`（顶层编排 + UI / Save 对外 API；内部委托下列三个协作器）
+  - 装备管理：`LoadoutManager.cs`（`Equip*` / `Unequip*` / `SwitchLoadout` / Slot 级别 Dispose / Rebuild，Pure C#，由 Controller 构造注入）
+  - 发射分发：`ProjectileSpawner.cs`（`SpawnProjectile` + 四个家族分支 + `InstantiateModifiers`，Pure C#，由 Controller 构造注入）
+  - 存档序列化：`StarChartSaveSerializer.cs`（`Export` / `Import` + 所有 `*Track*` 子例程，Pure C#，由 Controller 构造注入）
   - 轨道：`WeaponTrack.cs` / `LoadoutSlot.cs`
   - 快照与参数：`SnapshotBuilder.cs` / `FiringSnapshot.cs` / `ProjectileParams.cs`
   - SO 基类与子类：`StarChartItemSO.cs` / `StarCoreSO.cs` / `PrismSO.cs` / `LightSailSO.cs` / `SatelliteSO.cs`
@@ -76,7 +79,7 @@
 
 - **家族（Family）**：`Matter` / `Light` / `Echo` / `Anomaly`
   - 定义在 `StarChartEnums.cs` 的 `CoreFamily` 枚举
-  - 决定 `StarChartController.SpawnProjectile()` 走哪个分支（见 §3.5）
+  - 决定 `ProjectileSpawner.SpawnProjectile()` 走哪个分支（见 §3.5）
 - **四层装备类型**：`Core` / `Prism` / `LightSail` / `Satellite`
   - 定义在 `StarChartItemType` 枚举
   - 每种类型继承自 `StarChartItemSO`，共享 `DisplayName` / `Shape` / `HeatCost` 等基础字段
@@ -114,8 +117,8 @@
 
 ### 2.5 Satellite 独立运行时模型（不参与 Spawn 链）
 
-- **Satellite 不走 `ExecuteFire` / `SpawnProjectile` 分发链**，也不参与 Snapshot 聚合
-- 运行时循环：`StarChartController.Update` → `SatelliteRunner.Tick(dt)` → 对每个已装 Satellite 执行
+- **Satellite 不走 `ExecuteFire` / `ProjectileSpawner.SpawnProjectile` 分发链**，也不参与 Snapshot 聚合
+- 运行时循环：`StarChartController.Update` → `LoadoutManager.TickActive(dt)` → `SatelliteRunner.Tick(dt)` → 对每个已装 Satellite 执行
   - `EvaluateTrigger(ctx)`：按 SO 配置的触发条件（距离 / 计时 / 手动等）判断
   - 命中则 `Execute(ctx)`（具体行为由 `SatelliteBehavior` 子类实现，如 `AutoTurretBehavior`）
   - `InternalCooldown` 由 Runner 自身维护，与 Track 冷却**完全独立**
@@ -166,7 +169,7 @@
 
 ### 3.5 投射物分发（按 CoreFamily switch）
 
-**Owner**：`StarChartController.SpawnProjectile(track, coreSnap, direction, spawnPos)`
+**Owner**：`ProjectileSpawner.SpawnProjectile(track, coreSnap, direction, spawnPos)`（`internal` 方法，由 `StarChartController.ExecuteFire` 调用；Controller 只编排时序，分发职责在 Spawner）
 
 ```csharp
 switch (coreSnap.Family) {
@@ -191,7 +194,7 @@ switch (coreSnap.Family) {
 - 方向角：`angle = Mathf.Atan2(direction.y, direction.x) * Rad2Deg - 90f`
 - Pool：`track.GetProjectilePool(coreSnap.ProjectilePrefab)` 委托 `PoolManager`（初始预热策略在 `WeaponTrack.InitializePools` 按家族差异化：Matter 20/50, Light 5/20, Echo 5/15, Anomaly 10/30；Anomaly 额外预热 `AnomalyModifierPrefab` 10/30）
 - Spread 分布：多发时在 `[-Spread, +Spread]` 区间均匀扇形分布；单发且 Spread > 0 时随机偏移；Spread ≈ 0 时沿 `direction`
-- Modifier 注入：**先 `ToProjectileParams`，再由 Sail Runner `ModifyProjectileParams(ref parms)` 注入**（Sail 层不走 Snapshot）。**每个 Spawn 分支（Matter/Light/Echo/Anomaly）各自单独调用一次 `ModifyProjectileParams`**，不是全局一次——见 `StarChartController.cs:546 / 575 / 606 / 631` 四处调用点
+- Modifier 注入：**先 `ToProjectileParams`，再由 Sail Runner `ModifyProjectileParams(ref parms)` 注入**（Sail 层不走 Snapshot）。**每个 Spawn 分支（Matter/Light/Echo/Anomaly）各自单独调用一次 `ModifyProjectileParams`**，不是全局一次——见 `ProjectileSpawner.cs` 内 `SpawnMatterProjectile / SpawnLightBeam / SpawnEchoWave / SpawnAnomalyEntity` 四处调用点
 - **LaserBeam / EchoWave 的 fallback 路径必须先归还 pool** 再调 `SpawnMatterProjectile`（避免无组件对象泄漏池外）
 
 ### 3.6 Modifier 注入的两条独立路径
@@ -202,7 +205,7 @@ switch (coreSnap.Family) {
 
 - 数据流：`PrismSO.ProjectileModifierPrefab`（仅 `Family == Tint` 且有 `IProjectileModifier` 组件时收集）
 - 聚合点：`SnapshotBuilder.CollectTintModifierPrefabs` → `CoreSnapshot.TintModifierPrefabs`
-- 注入点：`StarChartController.InstantiateModifiers(targetObj, coreSnap.TintModifierPrefabs)`
+- 注入点：`ProjectileSpawner.InstantiateModifiers(targetObj, coreSnap.TintModifierPrefabs)`（`private static` 方法）
 - 适用：所有四个 `SpawnXxx` 分支**都调这一次**
 
 **路径 B：Anomaly Core → 仅 Anomaly 家族额外注入**
@@ -211,7 +214,7 @@ switch (coreSnap.Family) {
 - 注入点：**仅 `SpawnAnomalyEntity` 内部**再额外调一次 `InstantiateModifiers`，结果 `AddRange` 到 `modifiers` 列表后才 `projectile.Initialize(...)`
 - 适用：**仅 Anomaly 分支**
 
-**InstantiateModifiers 的实现**（`StarChartController.InstantiateModifiers`，static 方法）：
+**InstantiateModifiers 的实现**（`ProjectileSpawner.InstantiateModifiers`，`private static` 方法）：
 - 对 prefab 上的每个 `IProjectileModifier` 组件，在 `targetObj` 上 `AddComponent` 同类型
 - 用 `JsonUtility.ToJson(srcComponent)` + `JsonUtility.FromJsonOverwrite(json, newComponent)` 做**序列化字段深拷贝**
 - 避免多个 projectile 共享同一 modifier 实例
@@ -220,7 +223,7 @@ switch (coreSnap.Family) {
 
 按顺序（全部在 `ExecuteFire` 内）：
 
-1. **每个 Core 每发**：`SpawnProjectile`（循环）
+1. **每个 Core 每发**：`ProjectileSpawner.SpawnProjectile`（循环）
 2. **每个 Core 一次**：`SpawnMuzzleFlash(track, coreSnap, direction, spawnPos)`
 3. **每个 Core 一次**：`PlayFireSound(coreSnap)`（随机 pitch 在 `±FireSoundPitchVariance` 范围内）
 4. **Track 一次**：`_shipMotor.ApplyImpulse(-direction * snapshot.TotalRecoilForce)` 后坐力
@@ -240,7 +243,7 @@ switch (coreSnap.Family) {
 
 - **定义**：`Assets/Scripts/Combat/StarChart/IStarChartItemResolver.cs`（Combat 层）
 - **实现**：UI / Save 层（拥有 Inventory 资产的引用）
-- **用途**：`StarChartController.ImportFromSaveData(data, resolver)` 通过此接口把存档中的 `DisplayName` 解析成具体 SO
+- **用途**：`StarChartController.ImportFromSaveData(data, resolver)` 作为对外 API 入口（保持向后兼容），内部委托 `StarChartSaveSerializer.Import(data, resolver)` 解析存档；二者语义等价，`DisplayName` 解析仍走本接口
 - **方法**：`FindCore` / `FindPrism` / `FindLightSail` / `FindSatellite`
 - **约束**：Combat 层**不引用** UI / Save 的具体 Inventory 实现，只依赖这个接口
 
@@ -293,7 +296,7 @@ switch (coreSnap.Family) {
 
 ### 5.4 Modifier 深拷贝
 
-- `StarChartController.InstantiateModifiers` 使用 `AddComponent + JsonUtility.FromJsonOverwrite`
+- `ProjectileSpawner.InstantiateModifiers` 使用 `AddComponent + JsonUtility.FromJsonOverwrite`
 - **原因**：直接 `GetComponent` 从 prefab 取引用会导致多个 projectile 共享同一 modifier，运行时互相污染
 - **已踩过的坑**：历史上出现过"Modifier 组件累积"（见 `Implement_rules.md` 第 8.4 节）
 
@@ -490,7 +493,7 @@ SatLayerRows    : int
 
 ### 10.1 当前无已废弃主链
 
-经本次调查确认：`StarChartController` 现役主链**无 dead code / fallback 旁路**（除 §3.5 的 Light/Echo 无组件 fallback 到 Matter，这是**防御性降级**，不是 legacy）。
+经本次调查确认：`StarChartController` + `LoadoutManager` / `ProjectileSpawner` / `StarChartSaveSerializer` 三个协作器组成的现役主链**无 dead code / fallback 旁路**（除 §3.5 的 Light/Echo 无组件 fallback 到 Matter，这是**防御性降级**，不是 legacy）。
 
 ### 10.2 兼容分支清单（非废弃，仍在用）
 

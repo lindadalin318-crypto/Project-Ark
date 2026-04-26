@@ -153,7 +153,6 @@ namespace ProjectArk.Combat.Editor
             var so = ScriptableObject.CreateInstance<StarCoreSO>();
             SetField(so, "_displayName",     "Machine Gun");
             SetField(so, "_description",     "Sheba Core 1001: Rapid-fire physical rounds. Low heat, high volume.");
-            SetField(so, "_slotSize",        1);
             SetField(so, "_family",          CoreFamily.Matter);
             SetField(so, "_projectilePrefab", projectilePrefab);
             SetField(so, "_fireRate",        10f);
@@ -178,7 +177,6 @@ namespace ProjectArk.Combat.Editor
             var so = ScriptableObject.CreateInstance<StarCoreSO>();
             SetField(so, "_displayName",     "Focus Laser");
             SetField(so, "_description",     "Sheba Core 1016: Precision light beam. Zero spread, instant hit.");
-            SetField(so, "_slotSize",        1);
             SetField(so, "_family",          CoreFamily.Light);
             SetField(so, "_projectilePrefab", laserPrefab);
             SetField(so, "_fireRate",        4f);
@@ -203,7 +201,6 @@ namespace ProjectArk.Combat.Editor
             var so = ScriptableObject.CreateInstance<StarCoreSO>();
             SetField(so, "_displayName",     "Storm Scatter");
             SetField(so, "_description",     "Sheba Core 1002: Wide-spread shotgun burst. Devastating at close range.");
-            SetField(so, "_slotSize",        1);
             SetField(so, "_family",          CoreFamily.Matter);
             SetField(so, "_projectilePrefab", projectilePrefab);
             SetField(so, "_fireRate",        1.5f);
@@ -232,7 +229,6 @@ namespace ProjectArk.Combat.Editor
             var so = ScriptableObject.CreateInstance<StarCoreSO>();
             SetField(so, "_displayName",     "Pulse Wave");
             SetField(so, "_description",     "Sheba Core 1018: Expanding ring of force. Hits all nearby enemies.");
-            SetField(so, "_slotSize",        1);
             SetField(so, "_family",          CoreFamily.Echo);
             SetField(so, "_projectilePrefab", echoPrefab);
             SetField(so, "_fireRate",        0.5f);
@@ -261,7 +257,6 @@ namespace ProjectArk.Combat.Editor
             var so = ScriptableObject.CreateInstance<PrismSO>();
             SetField(so, "_displayName",  "Twin Split");
             SetField(so, "_description",  "Sheba Prism 2001: +2 projectiles with 15° spread.");
-            SetField(so, "_slotSize",     1);
             SetField(so, "_family",       PrismFamily.Fractal);
             SetField(so, "_statModifiers", new StatModifier[]
             {
@@ -282,7 +277,6 @@ namespace ProjectArk.Combat.Editor
             var so = ScriptableObject.CreateInstance<PrismSO>();
             SetField(so, "_displayName",  "Rapid Fire");
             SetField(so, "_description",  "Sheba Prism 2006: Fire rate ×1.3 for sustained pressure.");
-            SetField(so, "_slotSize",     1);
             SetField(so, "_family",       PrismFamily.Rheology);
             SetField(so, "_statModifiers", new StatModifier[]
             {
@@ -302,7 +296,6 @@ namespace ProjectArk.Combat.Editor
             var so = ScriptableObject.CreateInstance<PrismSO>();
             SetField(so, "_displayName",              "Bounce");
             SetField(so, "_description",              "Sheba Prism 2013: Projectiles bounce off walls up to 3 times.");
-            SetField(so, "_slotSize",                 1);
             SetField(so, "_family",                   PrismFamily.Rheology);
             SetField(so, "_statModifiers",            new StatModifier[0]);
             SetField(so, "_projectileModifierPrefab", bounceModPrefab);
@@ -320,7 +313,6 @@ namespace ProjectArk.Combat.Editor
             var so = ScriptableObject.CreateInstance<PrismSO>();
             SetField(so, "_displayName",              "Boomerang");
             SetField(so, "_description",              "Sheba Prism 2021: Projectiles decelerate, reverse, and return to sender.");
-            SetField(so, "_slotSize",                 1);
             SetField(so, "_family",                   PrismFamily.Rheology);
             SetField(so, "_statModifiers",            new StatModifier[0]);
             SetField(so, "_projectileModifierPrefab", boomerangModPrefab);
@@ -338,7 +330,6 @@ namespace ProjectArk.Combat.Editor
             var so = ScriptableObject.CreateInstance<PrismSO>();
             SetField(so, "_displayName",              "Homing");
             SetField(so, "_description",              "Sheba Prism 2024: Projectiles steer toward the nearest enemy within a 45° cone.");
-            SetField(so, "_slotSize",                 1);
             SetField(so, "_family",                   PrismFamily.Tint);
             SetField(so, "_statModifiers",            new StatModifier[0]);
             SetField(so, "_projectileModifierPrefab", homingModPrefab);
@@ -356,7 +347,6 @@ namespace ProjectArk.Combat.Editor
             var so = ScriptableObject.CreateInstance<PrismSO>();
             SetField(so, "_displayName",              "Mine Placer");
             SetField(so, "_description",              "Sheba Prism 2067: Projectiles stop in place and linger as proximity mines.");
-            SetField(so, "_slotSize",                 1);
             SetField(so, "_family",                   PrismFamily.Fractal);
             SetField(so, "_statModifiers",            new StatModifier[0]);
             SetField(so, "_projectileModifierPrefab", minePlacerModPrefab);
@@ -378,7 +368,6 @@ namespace ProjectArk.Combat.Editor
             var so = ScriptableObject.CreateInstance<LightSailSO>();
             SetField(so, "_displayName",         "Standard Sail");
             SetField(so, "_description",         "Sheba Sail 3005: No passive effect. The baseline for comparison.");
-            SetField(so, "_slotSize",            1);
             SetField(so, "_conditionDescription", "Always active");
             SetField(so, "_effectDescription",   "No effect");
             SetField(so, "_behaviorPrefab",      (GameObject)null);
@@ -396,7 +385,6 @@ namespace ProjectArk.Combat.Editor
             var so = ScriptableObject.CreateInstance<LightSailSO>();
             SetField(so, "_displayName",         "Scout Sail");
             SetField(so, "_description",         "Sheba Sail 3006: The faster you fly, the harder you hit. Speed > 5 grants +8% damage per unit.");
-            SetField(so, "_slotSize",            1);
             SetField(so, "_conditionDescription", "Speed > 5 units/s");
             SetField(so, "_effectDescription",   "+8% damage per unit of speed above 5");
             SetField(so, "_behaviorPrefab",      speedSailPrefab);
@@ -418,7 +406,6 @@ namespace ProjectArk.Combat.Editor
             var so = ScriptableObject.CreateInstance<SatelliteSO>();
             SetField(so, "_displayName",        "Auto Turret");
             SetField(so, "_description",        "Sheba Satellite 4005: Automatically fires at the nearest enemy every 1.5 seconds.");
-            SetField(so, "_slotSize",           1);
             SetField(so, "_triggerDescription", "Nearest enemy within 15 units");
             SetField(so, "_actionDescription",  "Fire one low-damage Matter projectile toward target");
             SetField(so, "_internalCooldown",   1.5f);

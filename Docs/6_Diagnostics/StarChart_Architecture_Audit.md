@@ -150,10 +150,10 @@
 |---|---|---|
 | Snapshot 单一构建路径 | ✅ | 任何 `CoreSnapshot` 只能来自 `SnapshotBuilder.BuildCoreSnapshot`；`WeaponTrack.TryFire` 是唯一调用方 |
 | SO 运行时不可变 | ✅ | SnapshotBuilder 读 `core.BaseDamage` 写入 `snapshot.Damage`，原 SO 不变 |
-| Modifier 深拷贝 | ✅ | `StarChartController.InstantiateModifiers:760-787` 用 JsonUtility 序列化拷贝 |
-| 事件卫生 | ✅ | `OnDestroy` 清所有事件（`StarChartController.cs:398-432`）；Runner.Dispose 取消 Heat 订阅（`LightSailRunner.cs:88-93`） |
+| Modifier 深拷贝 | ✅ | `ProjectileSpawner.InstantiateModifiers`（L3-1 Phase B 后由 Controller 迁入 Spawner） 用 JsonUtility 序列化拷贝 |
+| 事件卫生 | ✅ | `StarChartController.OnDestroy` 清所有事件 + `LoadoutManager.Dispose` 遍历 3 个 slot 的所有 runner；Runner.Dispose 取消 Heat 订阅（`LightSailRunner.cs:88-93`）。L3-1 拆分后该职责仍由 Controller / Manager 共同持有 |
 | LayerMask 显式声明 | ✅ | `AutoTurretBehavior._enemyLayer` 要求 Inspector 显式设置，无 `~0` 默认 |
-| ServiceLocator 生命周期 | ✅ | `StarChartController.cs:329 / 404` 注册 / 注销 |
+| ServiceLocator 生命周期 | ✅ | `StarChartController.Awake` / `OnDestroy` 注册 / 注销（行号随 L3-1 Phase C 拆分后漂移，不再固定） |
 | 禁止 FindObjectOfType | ✅ | 全模块 0 处使用 |
 | Pool 入口收敛 | ✅ | 所有 Pool 获取走 `WeaponTrack.GetProjectilePool` / `GetMuzzleFlashPool`，无散落调用 |
 | 依赖方向 | ✅ | UI → Combat → Core，无反向 |
@@ -309,9 +309,11 @@ OnWeaponFired?.Invoke(spawnPos, DEFAULT_NOISE_RADIUS);
 
 **成本**：P2 改动约 10 行代码。P3 改动约 15 个 .asset 文件 + 清除字段。
 
-#### 🟡 冗余 3：四个 Spawn 分支的样板重复
+#### 🟡 冗余 3：四个 Spawn 分支的样板重复 — 已迁出 Controller（L3-1 Phase B，2026-04-25）
 
-`StarChartController.SpawnMatterProjectile` / `SpawnLightBeam` / `SpawnEchoWave` / `SpawnAnomalyEntity`（`cs:528-645`）共 118 行，重复逻辑：
+> **Owner 更新**：以下四个 Spawn 分支已从 `StarChartController` 迁移到 `ProjectileSpawner`（L3-1 Phase B），锚点改为 `Assets/Scripts/Combat/StarChart/ProjectileSpawner.cs`。冗余现状不变，治理建议与原文一致。
+
+`ProjectileSpawner.SpawnMatterProjectile` / `SpawnLightBeam` / `SpawnEchoWave` / `SpawnAnomalyEntity` 共 ~118 行，重复逻辑：
 
 | 步骤 | 四分支是否相同 |
 |---|---|
@@ -473,35 +475,35 @@ if (_inputHandler == null) return;  // cs:387
 
 ## 7. 改造优先级排序
 
-### 7.1 P1（应尽快做，成本低）
+### 7.1 P1（应尽快做，成本低） — ✅ 全部完成（2026-04-25）
 
-| # | 任务 | 锚点 | 预计耗时 |
-|---|---|---|---|
-| 1 | 删除 `StarChartController.OnWeaponFired` 死代码 | `cs:62 / 496` | 3 分钟 |
-| 2 | 修正 `LoadoutSlot.cs:43` 缩进 | `LoadoutSlot.cs:43` | 1 分钟 |
-| 3 | `WeaponTrack.EquipSatellite(sat)` 改注释为 "Auto-fit" | `WeaponTrack.cs:157-160` | 1 分钟 |
-| 4 | 修复 `StarChart_Components_Inventory.md` 列出的 5 个 Prism `_family` 字段错误 | 见姊妹文档 §7 | 30-60 分钟 |
+| # | 任务 | 锚点 | 预计耗时 | 状态 |
+|---|---|---|---|---|
+| 1 | 删除 `StarChartController.OnWeaponFired` 死代码 | `cs:62 / 496` | 3 分钟 | ✅ 批次 1（L1-1） |
+| 2 | 修正 `LoadoutSlot.cs:43` 缩进 | `LoadoutSlot.cs:43` | 1 分钟 | ✅ 批次 1（L1-2） |
+| 3 | `WeaponTrack.EquipSatellite(sat)` 改注释为 "Auto-fit" | `WeaponTrack.cs:157-160` | 1 分钟 | ✅ 批次 1（L1-3） |
+| 4 | 修复 `StarChart_Components_Inventory.md` 列出的 Prism `_family` 字段错误 | 见姊妹文档 §7 | 30-60 分钟 | ✅ 批次 1（L1-4，仅补 `ShebaP_Homing._family: 2`；Boomerang / Bounce / MinePlacer 按 `ShebaAssetCreator` 代码真相保持 Rheology/Rheology/Fractal 不动，不再视为"错误"） |
 
-**合计 P1 投入：约 1 小时，显著降低认知噪音。**
+**合计 P1 投入：约 1 小时，显著降低认知噪音。** ✅ 已落地。
 
-### 7.2 P2（中优，可排期）
+### 7.2 P2（中优，可排期） — ✅ 全部完成（2026-04-25）
 
-| # | 任务 | 收益 | 预计耗时 |
-|---|---|---|---|
-| 5 | `StarChartController` 拆分（`LoadoutManager / SaveSerializer / ProjectileSpawner`） | 单文件 1016 → 280 行，可读性大增 | 3-4 小时 |
-| 6 | `SlotLayer.UsedSpace` 改为 `_shape` 单一权威 | 消除 `_slotSize` / `_shape` 双源风险 | 30 分钟 |
-| 7 | UI 侧（`ItemDetailView` / `InventoryItemView`）改读 `ItemShapeHelper.GetBounds` | 同上 | 30 分钟 |
-| 8 | Editor validator：`DisplayName` 全局唯一性检查 | 预防存档取错的静默 bug | 30 分钟 |
-| 9 | `Update` 空守卫收紧为"Awake 失败 → 响亮错误" | 消除静默失效 | 15 分钟 |
+| # | 任务 | 收益 | 预计耗时 | 状态 |
+|---|---|---|---|---|
+| 5 | `StarChartController` 拆分（`LoadoutManager / SaveSerializer / ProjectileSpawner`） | 单文件 1016 → 280 行，可读性大增 | 3-4 小时 | ✅ 批次 3（L3-1），拆出 `LoadoutManager.cs` / `ProjectileSpawner.cs` / `StarChartSaveSerializer.cs`，Controller 保留对外 API 作为 Facade |
+| 6 | `SlotLayer.UsedSpace` 改为 `_shape` 单一权威 | 消除 `_slotSize` / `_shape` 双源风险 | 30 分钟 | ✅ 批次 2（L2-1） |
+| 7 | UI 侧（`ItemDetailView` / `InventoryItemView`）改读 `ItemShapeHelper.GetBounds` | 同上 | 30 分钟 | ✅ 批次 2（L2-2） |
+| 8 | Editor validator：`DisplayName` 全局唯一性检查 | 预防存档取错的静默 bug | 30 分钟 | ✅ 批次 2（L2-3），首次运行发现 `ShebaP_TwinSplit` / `ShebaP_Boomerang` DisplayName 重名，已改为 `"Sheba Twin Split"` / `"Sheba Boomerang"` |
+| 9 | `Update` 空守卫收紧为"Awake 失败 → 响亮错误" | 消除静默失效 | 15 分钟 | ✅ 批次 2（L2-4） |
 
 ### 7.3 P3（低优，只在合适时机做）
 
-| # | 任务 | 触发条件 |
-|---|---|---|
-| 10 | `_slotSize` 字段移除 | 所有资产过一次 ShebaAssetCreator 重新生成后 |
-| 11 | `MAX_PROJECTILES_PER_FIRE` → 全局配置 SO | 策划需要大招功能时 |
-| 12 | `DEFAULT_NOISE_RADIUS` → Core SO 字段 | 需要消音武器时 |
-| 13 | `ISpawnable` 接口 + `ProjectileSpawner` 统一 | 新增第 5 个 CoreFamily 时 |
+| # | 任务 | 触发条件 | 状态 |
+|---|---|---|---|
+| 10 | `_slotSize` 字段移除 | 所有资产过一次 ShebaAssetCreator 重新生成后 | ✅ 批次 4（L3-2），已从 `StarChartItemSO.cs` 删除字段；磁盘 YAML 孤儿字段 Unity 下次保存时自动清除 |
+| 11 | `MAX_PROJECTILES_PER_FIRE` → 全局配置 SO | 策划需要大招功能时 | ⏸ 未触发 |
+| 12 | `DEFAULT_NOISE_RADIUS` → Core SO 字段 | 需要消音武器时 | ⏸ 未触发 |
+| 13 | `ISpawnable` 接口 + `ProjectileSpawner` 统一 | 新增第 5 个 CoreFamily 时 | ⏸ 未触发（`ProjectileSpawner` 已拆出，接口化留给后续） |
 
 ### 7.4 **不建议现在做**
 
@@ -550,6 +552,6 @@ if (_inputHandler == null) return;  // cs:387
 
 > **审计完成时间**：2026-04-25 14:41
 >
-> **下一步建议**：先落地 P1（约 1 小时），再规划 P2（下一个迭代窗口）。
+> **落地结果（2026-04-26 更新）**：P1 / P2 全部完成，P3 第 10 项（`_slotSize` 字段移除）完成。剩余 P3（#11 / #12 / #13）均为"未触发"状态，留待后续场景实际需要时处理。
 >
-> **改造落地方案（已独立成册）**：`Docs/0_Plan/ongoing/2026-04-25-starchart-refactor-plan.md`
+> **改造落地方案（已归档）**：`Docs/0_Plan/complete/2026-04-25-starchart-refactor-plan.md`

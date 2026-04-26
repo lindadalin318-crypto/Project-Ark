@@ -6,7 +6,7 @@ namespace ProjectArk.Combat.Tests
 {
     /// <summary>
     /// Unit tests for <see cref="SlotLayer{T}"/>.
-    /// Tests equip/unequip with SlotSize 1/2, overflow detection, clear,
+    /// Tests equip/unequip with 1×1 shape items, overflow detection, clear,
     /// and the progressive column/row dual-unlock system.
     /// </summary>
     [TestFixture]
@@ -14,8 +14,10 @@ namespace ProjectArk.Combat.Tests
     {
         private static StarCoreSO CreateCore(int slotSize)
         {
+            // slotSize parameter retained for backward-compat test signatures;
+            // actual occupancy is now driven by ItemShape (default 1×1 on new ScriptableObject).
+            _ = slotSize;
             var core = ScriptableObject.CreateInstance<StarCoreSO>();
-            SetPrivateField(core, "_slotSize", slotSize);
             SetPrivateField(core, "_baseDamage", 10f);
             SetPrivateField(core, "_fireRate", 5f);
             SetPrivateField(core, "_projectileSpeed", 20f);

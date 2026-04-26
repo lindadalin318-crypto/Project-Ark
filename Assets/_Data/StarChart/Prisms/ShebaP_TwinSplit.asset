@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2291e9cfe41037b498649ec909d12017, type: 3}
   m_Name: ShebaP_TwinSplit
   m_EditorClassIdentifier: ProjectArk.Combat::ProjectArk.Combat.PrismSO
-  _displayName: Twin Split
+  _displayName: Sheba Twin Split
   _description: "Sheba Prism 2001: +2 projectiles with 15\xB0 spread."
   _icon: {fileID: 0}
   _slotSize: 1

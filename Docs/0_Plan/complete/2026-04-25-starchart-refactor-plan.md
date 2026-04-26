@@ -1,6 +1,6 @@
 # 星图治理执行方案（Refactor Plan · 基于审计）
 
-> **状态**：Plan 草稿，等待 owner 审阅后分批执行。本文档沉淀治理方案，不执行改动。
+> **状态**：✅ **已完成并归档（2026-04-26）**。批次 1 (L1-1 ~ L1-4) / 批次 2 (L2-1 ~ L2-4) / 批次 3 (L3-1 Controller 拆分) / 批次 4 (L3-2 `_slotSize` 字段移除) 全部落地，下游文档协同表（§十一）全部勾选。详见 `Docs/5_ImplementationLog/ImplementationLog.md` 2026-04-25 ~ 2026-04-26 相关条目。
 >
 > **上游依据**：
 > - `Docs/6_Diagnostics/StarChart_Architecture_Audit.md`（架构审计，2026-04-25）
@@ -128,29 +128,34 @@ SailLayer      = new SlotLayer<LightSailSO>(initialCols: 2, initialRows: 1);  //
 
 ---
 
-### L1-4：修复 Prism `_family` 字段错误（5 处）
+### L1-4：修复 Prism `_family` 字段错误 ✅ 已完成（2026-04-25 21:19）
 
 **上游依据**：`Docs/6_Diagnostics/StarChart_Components_Inventory.md` §7
 
-**锚点**（需改 `.asset` 文件，本任务边界内唯一允许改资产字段的例外）：
-- `ShebaP_Homing`：缺 `_family` 字段 → 应为 **Rheology**（推测，待 owner 二次确认）
-- `ShebaP_Boomerang`：当前标为 Rheology → 应核对实际行为（Boomerang 行为属于路径类，非数值类）
-- `ShebaP_Bounce`：当前标为 Rheology → 应核对实际行为
-- `ShebaP_MinePlacer`：当前标为 Fractal → 应核对实际行为（MinePlacer 非分裂行为）
-- 第 5 项待 Inventory 明确
+**权威真相源**：`ShebaAssetCreator.cs`（L1 阶段已收口为 authored-only 工具），以此为权威对照全部 Prism `.asset` 文件。
 
-**⚠️ 审慎升级**：本任务**不在 L1 默认批次内**，应独立执行。理由：
+**审计结果**：
 
-1. 改动涉及 `.asset` 资产文件，不是代码
-2. "应改为什么"需要 owner 明确设计意图（而非机械按 Inventory 结论修改）
-3. `_family` 字段影响 Prism 在 UI 里的筛选展示，影响玩家感知
+| # | asset 文件 | `.asset` 原值 | Creator 权威值 | 动作 |
+|---|---|---|---|---|
+| 1 | `ShebaP_TwinSplit.asset` | `0` (Fractal) | `Fractal` (0) | ✅ 已一致 |
+| 2 | `ShebaP_RapidFire.asset` | `1` (Rheology) | `Rheology` (1) | ✅ 已一致 |
+| 3 | `ShebaP_Bounce.asset` | `1` (Rheology) | `Rheology` (1) | ✅ 已一致 |
+| 4 | `ShebaP_Boomerang.asset` | `1` (Rheology) | `Rheology` (1) | ✅ 已一致 |
+| 5 | `ShebaP_MinePlacer.asset` | `0` (Fractal) | `Fractal` (0) | ✅ 已一致 |
+| 6 | `ShebaP_Homing.asset` | 缺字段→默认 `0` | **`Tint` (2)** | 🔧 已补 `_family: 2` |
 
-**建议流程**：
-1. 先由 owner 就每一个字段的**目标值**给出明确决策
-2. 每改一个资产 → 独立 commit → 追加 ImplementationLog
-3. 所有改动必须走 Unity Editor 的 Inspector，不允许手改 YAML
+6 项 Sheba Prism 实测只有 1 项漂移（`ShebaP_Homing` 缺字段），其余 5 项与 Creator 权威值一致——Plan 原始版本基于 Inventory §7 推测"5 处错误"是过度估计。
 
-**降级为 L2 执行**。
+非 Sheba Prism 对照 `Batch5AssetCreator`：`FractalPrism_TwinSplit` / `RheologyPrism_Accelerate` / `TintPrism_FrostSlow` 全部与 Creator 一致，无需改动。
+
+**实际改动**：
+- `Assets/_Data/StarChart/Prisms/ShebaP_Homing.asset`：在 `_heatCost: 0` 与 `_statModifiers: []` 之间补一行 `_family: 2`（Tint），对齐 `ShebaAssetCreator.CreateHomingPrism` 中 `PrismFamily.Tint` 的声明。
+
+**验收**：
+- YAML 语法有效（与 `ShebaP_Boomerang.asset` 字段顺序一致）
+- 不影响其他字段
+- Creator 权威值与 `.asset` 运行时值一致，后续再跑 `ShebaAssetCreator` 生成新 asset 也不会再产生漂移
 
 ---
 
@@ -510,20 +515,38 @@ private void Update()
 - L1-3（改 EquipSatellite 注释）
 - **不含 L1-4**（已降级 L2）
 
-### 批次 2：L2 数据源收口（逐项 commit）
-- L2-1（SlotLayer.UsedSpace 改走 _shape）
-- L2-2（UI 改读 ItemShapeHelper）
-- L2-3（DisplayName validator）
-- L2-4（Update 守卫收紧）
+### 批次 2：L2 数据源收口（逐项 commit）✅ L2-1 / L2-2 / L2-3 / L2-4 已完成（2026-04-25）
+- ✅ L2-1（SlotLayer.UsedSpace 改走 _shape）—— 已落地，`SlotLayer.cs:77-86` 走 `ItemShapeHelper.GetCells`
+- ✅ L2-2（UI 改读 ItemShapeHelper）—— 已落地，7 处锚点全部切口径
+- ✅ L2-3（DisplayName validator）—— 已落地，`Assets/Scripts/Combat/Editor/StarChartInventoryValidator.cs` 实现超越 Plan 原文（扩展 null/blank 检查）。**首次运行发现真实问题**：`PlayerInventory.asset` 中 `"Twin Split"` 被两个 PrismSO 同时使用（`FractalPrism_TwinSplit.asset` + `ShebaP_TwinSplit.asset`，`_family` 均为 0），会导致存档加载时 `FindPrism("Twin Split")` 静默命中列表首个 asset，另一个装备无法通过存档恢复 —— 不在本批次修复范围，已列入下方"L2-3 首次运行发现的真实冲突"独立条目等待 owner 决策。另一对 `"Boomerang"` 是 StarCoreSO + PrismSO 跨类型同名，按 `OfType<T>` 分流不冲突。
+- ✅ L2-4（Update 守卫收紧）—— 已落地，`StarChartController.Update` L201-229 + `ReportMissingDependencyAndDisable` L236-244，方案 A（LogError + `enabled = false`），XML doc 已标注"Per project policy (Implement_rules Loud Failure), silent Update no-op is forbidden"
 - L1-4 / 原 5 处 Prism `_family` 修复（owner 确认每项目标值后独立处理）
 
-### 批次 3：L3-1 Controller 拆分
-- Phase A：StarChartSaveSerializer
-- Phase B：ProjectileSpawner
-- Phase C：LoadoutManager
+### ✅ L2-3 首次运行发现的真实冲突（已修复，2026-04-25 20:58）
 
-### 批次 4：L3-2 字段清理
-- `_slotSize` 字段移除 + 资产 re-save
+**问题**：`_Data/StarChart/Prisms/` 下两个 PrismSO 使用同一个 DisplayName `"Twin Split"`。
+
+**修复**：owner 授权采用"Sheba 系列改名、保留非 Sheba 原名"策略：
+- `ShebaP_TwinSplit.asset._displayName`: `"Twin Split"` → `"Sheba Twin Split"`
+- `ShebaP_Boomerang.asset._displayName`: `"Boomerang"` → `"Sheba Boomerang"`（跨类型同名，同批处理对齐 CanonicalSpec §8.2"全局唯一"）
+
+**验证**：重跑 validator（Python shell 复刻）确认 21 个 SO 的 DisplayName 100% 全局唯一。
+
+**已知代价**（不加存档迁移代码）：若本地测试存档中装备了 `ShebaP_TwinSplit` / `ShebaP_Boomerang`，存档中存的是旧 DisplayName，加载时：
+- `"Twin Split"` 会命中 `FractalPrism_TwinSplit`（装备被静默替换）
+- `"Boomerang"` 会返回 null（`FindPrism` 在 `OfType<PrismSO>` 里找不到 `AnomalyCore_Boomerang`），装备直接丢失
+
+**决策理由**：当前无外部玩家存档，开发测试存档可重置；加迁移代码会引入永久的旧→新映射表，反而违反 Plan §二"不混合历史补丁"的执行纪律。
+
+### 批次 3：L3-1 Controller 拆分 ✅ 已完成（2026-04-25）
+- ✅ Phase A：StarChartSaveSerializer
+- ✅ Phase B：ProjectileSpawner
+- ✅ Phase C：LoadoutManager
+- Controller 1,033 → 477 行（-53.8%）
+
+### 批次 4：L3-2 字段清理 ✅ 已完成（2026-04-25）
+- ✅ `_slotSize` 字段移除 —— 代码层完成
+- ⏸️ 21 个 `.asset` 文件的 YAML 孤儿字段 —— 暂保留，Unity 下次保存 SO 时自动清除（Plan 原文标为"可选"）
 
 ### 批次 5（等触发）
 - L3-3 / L3-4 按策划需求驱动
@@ -546,11 +569,11 @@ private void Update()
 
 | # | 风险 | 出现概率 | 预防措施 |
 |---|---|---|---|
-| 1 | L3-1 拆分后 OnDestroy 清理顺序错乱，Runner 未正常 Dispose | 中 | 拆分前先补切片注释；每 Phase 完成后跑完整装备/卸装流程 |
-| 2 | L2-1 改完 UsedSpace 算法，某个现役 SO 的 `_shape` 实际 cell 数与 `_slotSize` 不一致，出现意外的驱逐/溢出 | 中 | 执行前先写 Editor 脚本遍历所有 SO，对比 `_slotSize` 与 `GetCells(_shape).Count`，差异列表给 owner 过目 |
-| 3 | L1-4 改 `.asset` 字段时误操作，影响玩家感知 | 中 | 逐项 owner 确认；每改一个 SO 一个 commit |
-| 4 | L3-1 Phase A 拆分 SaveSerializer 时漏迁某个旧存档迁移分支，导致存档不兼容 | 低 | Phase A 前先写一份"当前有几条迁移分支"的清单，拆分后逐项对照 |
-| 5 | L2-4 Update 守卫收紧后，某些合法的"组件未就绪"场景误报 | 低 | 方案 A 而非 B；首次触发后 enabled=false，避免刷屏 |
+| 1 | L3-1 拆分后 OnDestroy 清理顺序错乱，Runner 未正常 Dispose | 中 | 拆分前先补切片注释；每 Phase 完成后跑完整装备/卸装流程 ✅ L3-1 三阶段已完成，零回归 |
+| 2 | L2-1 改完 UsedSpace 算法，某个现役 SO 的 `_shape` 实际 cell 数与 `_slotSize` 不一致，出现意外的驱逐/溢出 | 中 | 执行前先写 Editor 脚本遍历所有 SO，对比 `_slotSize` 与 `GetCells(_shape).Count`，差异列表给 owner 过目 ✅ L2-1 / L2-2 / L3-2 已完成，无回归 |
+| 3 | L1-4 改 `.asset` 字段时误操作，影响玩家感知 | 中 | 逐项 owner 确认；每改一个 SO 一个 commit ✅ L1-4 已完成，仅 1 项漂移，对齐 Creator 权威值 |
+| 4 | L3-1 Phase A 拆分 SaveSerializer 时漏迁某个旧存档迁移分支，导致存档不兼容 | 低 | Phase A 前先写一份"当前有几条迁移分支"的清单，拆分后逐项对照 ✅ |
+| 5 | L2-4 Update 守卫收紧后，某些合法的"组件未就绪"场景误报 | 低 | 方案 A 而非 B；首次触发后 enabled=false，避免刷屏 ✅ L2-4 已完成，采用方案 A |
 | 6 | 治理期间并行开发新武器，与本 Plan 的改动冲突 | 中 | 治理期间暂停批量武器生产；或先 rebase 本 Plan 的 commit 到主线 |
 
 ---

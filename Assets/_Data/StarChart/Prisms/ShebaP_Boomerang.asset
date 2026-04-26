@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2291e9cfe41037b498649ec909d12017, type: 3}
   m_Name: ShebaP_Boomerang
   m_EditorClassIdentifier: ProjectArk.Combat::ProjectArk.Combat.PrismSO
-  _displayName: Boomerang
+  _displayName: Sheba Boomerang
   _description: 'Sheba Prism 2021: Projectiles decelerate, reverse, and return to
     sender.'
   _icon: {fileID: 0}

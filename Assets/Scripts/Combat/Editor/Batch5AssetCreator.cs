@@ -196,7 +196,6 @@ namespace ProjectArk.Combat.Editor
             var so = ScriptableObject.CreateInstance<StarCoreSO>();
             SetPrivateField(so, "_displayName", "Standard Bullet");
             SetPrivateField(so, "_description", "A reliable physical projectile. Solid damage, predictable trajectory.");
-            SetPrivateField(so, "_slotSize", 1);
             SetPrivateField(so, "_family", CoreFamily.Matter);
             SetPrivateField(so, "_projectilePrefab", projectilePrefab);
             SetPrivateField(so, "_fireRate", 5f);
@@ -219,7 +218,6 @@ namespace ProjectArk.Combat.Editor
             var so = ScriptableObject.CreateInstance<StarCoreSO>();
             SetPrivateField(so, "_displayName", "Basic Laser");
             SetPrivateField(so, "_description", "Instant-hit light beam. Fast and precise, but no physical presence.");
-            SetPrivateField(so, "_slotSize", 1);
             SetPrivateField(so, "_family", CoreFamily.Light);
             SetPrivateField(so, "_projectilePrefab", laserBeamPrefab);
             SetPrivateField(so, "_fireRate", 4f);
@@ -242,7 +240,6 @@ namespace ProjectArk.Combat.Editor
             var so = ScriptableObject.CreateInstance<StarCoreSO>();
             SetPrivateField(so, "_displayName", "Basic Shockwave");
             SetPrivateField(so, "_description", "Expanding ring of force. Hits all nearby enemies, passes through walls.");
-            SetPrivateField(so, "_slotSize", 1);
             SetPrivateField(so, "_family", CoreFamily.Echo);
             SetPrivateField(so, "_projectilePrefab", echoWavePrefab);
             SetPrivateField(so, "_fireRate", 2f);
@@ -265,7 +262,6 @@ namespace ProjectArk.Combat.Editor
             var so = ScriptableObject.CreateInstance<StarCoreSO>();
             SetPrivateField(so, "_displayName", "Boomerang");
             SetPrivateField(so, "_description", "A curved projectile that returns to sender. Hits enemies on both passes.");
-            SetPrivateField(so, "_slotSize", 1);
             SetPrivateField(so, "_family", CoreFamily.Anomaly);
             SetPrivateField(so, "_projectilePrefab", projectilePrefab);
             SetPrivateField(so, "_anomalyModifierPrefab", boomerangModPrefab);
@@ -293,7 +289,6 @@ namespace ProjectArk.Combat.Editor
             var so = ScriptableObject.CreateInstance<PrismSO>();
             SetPrivateField(so, "_displayName", "Twin Split");
             SetPrivateField(so, "_description", "Fractal prism: +2 projectiles with 15° spread for fan-shaped coverage.");
-            SetPrivateField(so, "_slotSize", 1);
             SetPrivateField(so, "_family", PrismFamily.Fractal);
             SetPrivateField(so, "_statModifiers", new StatModifier[]
             {
@@ -323,7 +318,6 @@ namespace ProjectArk.Combat.Editor
             var so = ScriptableObject.CreateInstance<PrismSO>();
             SetPrivateField(so, "_displayName", "Accelerate");
             SetPrivateField(so, "_description", "Rheology prism: 1.5x projectile speed for faster, longer-range shots.");
-            SetPrivateField(so, "_slotSize", 1);
             SetPrivateField(so, "_family", PrismFamily.Rheology);
             SetPrivateField(so, "_statModifiers", new StatModifier[]
             {
@@ -347,7 +341,6 @@ namespace ProjectArk.Combat.Editor
             var so = ScriptableObject.CreateInstance<PrismSO>();
             SetPrivateField(so, "_displayName", "Frost Slow");
             SetPrivateField(so, "_description", "Tint prism: projectiles apply a slowing frost effect on hit.");
-            SetPrivateField(so, "_slotSize", 1);
             SetPrivateField(so, "_family", PrismFamily.Tint);
             SetPrivateField(so, "_statModifiers", new StatModifier[0]);
             SetPrivateField(so, "_projectileModifierPrefab", slowModPrefab);

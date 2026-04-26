@@ -51,7 +51,7 @@ namespace ProjectArk.Combat
 
         /// <summary>
         /// Fire the laser beam: perform raycast, render line, schedule fade-out.
-        /// Called by StarChartController.SpawnLightBeam().
+        /// Called by ProjectileSpawner.SpawnLightBeam().
         /// </summary>
         public void Fire(Vector2 origin, Vector2 direction, ProjectileParams parms,
                          List<IProjectileModifier> modifiers)

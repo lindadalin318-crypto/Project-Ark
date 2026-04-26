@@ -17,10 +17,6 @@ namespace ProjectArk.Combat
         [SerializeField] private Sprite _icon;
 
         [Header("Slot")]
-        [Tooltip("How many grid units this item occupies (1-3). Legacy field kept for backward compatibility.")]
-        [Range(1, 3)]
-        [SerializeField] private int _slotSize = 1;
-
         [Tooltip("2D shape this item occupies on the track grid.")]
         [SerializeField] private ItemShape _shape = ItemShape.Shape1x1;
 
@@ -33,9 +29,6 @@ namespace ProjectArk.Combat
         public string DisplayName => _displayName;
         public string Description => _description;
         public Sprite Icon => _icon;
-
-        /// <summary> Legacy 1D slot size. Derived from Shape for backward compatibility. </summary>
-        public int SlotSize => _slotSize;
 
         /// <summary> 2D shape this item occupies on the track grid. </summary>
         public ItemShape Shape => _shape;

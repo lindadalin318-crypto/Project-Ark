@@ -18,7 +18,7 @@
 > - Core 家族字段：`_family`（类型 `CoreFamily`），**不是** `_coreFamily`
 > - Prism 家族字段：`_family`（类型 `PrismFamily`），**不是** `_prismFamily`
 > - 形状字段：`_shape`（类型 `ItemShape`，int 枚举）
-> - Legacy 1D 尺寸：`_slotSize`（仅保留字段但不再驱动任何逻辑，见 §3.2）
+> - Legacy 1D 尺寸：`_slotSize`（**字段已于 2026-04-25 从 `StarChartItemSO.cs` 代码层移除**；部分 `.asset` YAML 仍残留 `_slotSize: N` 孤儿字段，Unity 下次保存该 SO 时会自动清除，不影响运行时）
 >
 > 审计脚本以及任何 grep 命令必须使用以上真实字段名，否则会全空返回。
 >
@@ -119,7 +119,7 @@ Assets/_Prefabs/StarChart/
 | 4 | `ShapeLMirror` | L-Mirror | 3 | **当前无资产使用** |
 | 5 | `Shape2x2` | 2x2 | 4 | `ShebaCore_PulseWave` |
 
-**Legacy `_slotSize` 字段**：所有 SO 仍保留 `_slotSize` int 字段（值 1-4），但已**不参与任何运行时逻辑**，仅作为历史兼容字段存在（从 `_shape` 派生）。审计脚本与新代码**必须以 `_shape` 为准**，忽略 `_slotSize`。
+**Legacy `_slotSize` 字段**：`StarChartItemSO.cs` 中的 `_slotSize` int 字段**已于 2026-04-25 代码层移除**（L3-2 落地），运行时与编辑器 Inspector 均不再显示该字段。部分 `.asset` YAML 仍残留 `_slotSize: N` 孤儿行，Unity 加载时会静默忽略，并在下次保存该 SO 时自动剔除。审计脚本与新代码**一律以 `_shape` 为准**，禁止继续读取 `_slotSize`。
 
 **⚠️ 早期资产可能缺失 `_shape` 字段**：`RheologyPrism_Accelerate` / `TintPrism_FrostSlow` 等 Batch5 时期 asset YAML 中不写 `_shape:`（走默认值 `0 = Shape1x1`，与其 `_slotSize = 1` 一致），属于已知历史痕迹，不影响行为。新增资产必须显式写入 `_shape`。
 
@@ -132,53 +132,45 @@ Assets/_Prefabs/StarChart/
 | `FractalPrism_TwinSplit` | `f814efbf637ba4c2785129f9e3e95da3` | `Batch5AssetCreator` | Fractal | "Twin Split" | 1x1 | — (数值型 Prism) |
 | `RheologyPrism_Accelerate` | `69e931aea30dd4d56b0918745582df3a` | `Batch5AssetCreator` | Rheology | "Accelerate" | 1x1 | `Modifier_Bounce` |
 | `TintPrism_FrostSlow` | `ac97e1b2088574045a4985b7acfac5bd` | `Batch5AssetCreator` | Tint | "Frost Slow" | 1x1 | `Modifier_SlowOnHit` |
-| `ShebaP_TwinSplit` | `b53795b9860ae4f4992a1393f5e3068b` | `ShebaAssetCreator` | Fractal | "Twin Split" ⚠️ | 1x1 | — (数值型) |
+| `ShebaP_TwinSplit` | `b53795b9860ae4f4992a1393f5e3068b` | `ShebaAssetCreator` | Fractal | "Sheba Twin Split" | 1x1 | — (数值型) |
 | `ShebaP_RapidFire` | `6b6e85f4c761ac848bb3970f5680469a` | `ShebaAssetCreator` | Rheology | "Rapid Fire" | 1x1 | — (数值型) |
 | `ShebaP_Bounce` | `a3bb00dd50f952546882190b62dbb342` | `ShebaAssetCreator` | Rheology | "Bounce" | 1x1 | `Modifier_Bounce` |
-| `ShebaP_Homing` | `9cb868cc31216704db6f937621990354` | `ShebaAssetCreator` | **⚠️ 磁盘字段缺失 → 默认 `Fractal`；代码意图 `Tint`** | "Homing" | 2x1V | `Modifier_Homing` |
+| `ShebaP_Homing` | `9cb868cc31216704db6f937621990354` | `ShebaAssetCreator` | Tint ✅ (L1-4 已补字段) | "Homing" | 2x1V | `Modifier_Homing` |
 | `ShebaP_MinePlacer` | `79874b085ec4cbf4d8f4c9f94cbb8492` | `ShebaAssetCreator` | Fractal | "Mine Placer" | L | `Modifier_MinePlacer` |
-| `ShebaP_Boomerang` | `c671e95a5d2602247bd20cacddde1759` | `ShebaAssetCreator` | Rheology | "Boomerang" ⚠️ | 1x1 | `Modifier_Boomerang` |
+| `ShebaP_Boomerang` | `c671e95a5d2602247bd20cacddde1759` | `ShebaAssetCreator` | Rheology | "Sheba Boomerang" | 1x1 | `Modifier_Boomerang` |
 
-### 4.1 DisplayName 冲突风险
+### 4.1 DisplayName 冲突治理（历史重名已全部消除）
 
-- **⚠️ `FractalPrism_TwinSplit` 与 `ShebaP_TwinSplit` 的 `_displayName` 均为 "Twin Split"**。
-- **⚠️ `ShebaP_Boomerang` 的 `_displayName` 为 "Boomerang"，与 `AnomalyCore_Boomerang` 相同**——但 Core 和 Prism 是不同类型，在 `LoadoutSlotSaveData` 中分开存储（`PrimaryCoreName` vs `PrimaryPrismNames`），**当前存档方案下不会冲突**，但 UI 展示层应警惕重名体验。
-- 若未来引入全局 DisplayName 唯一性强校验（见 `StarChart_CanonicalSpec.md` 第 8 节），**必须**先重命名上述冲突项。本文档记录此风险，不在本轮强制修正。
+- **✅ 2026-04-25 L2-3 落地**：`StarChartInventoryValidator.cs` 首次运行发现 `"Twin Split"` 被 `FractalPrism_TwinSplit` 与 `ShebaP_TwinSplit` 共用（均为 `_family: 0 Fractal`，`OfType<PrismSO>` 查找会静默命中列表首个 asset）。
+- **✅ 改名策略**：`ShebaP_TwinSplit._displayName` 改为 `"Sheba Twin Split"`；`ShebaP_Boomerang._displayName` 改为 `"Sheba Boomerang"`（同批对齐跨类型同名风险）。21 个 SO 的 DisplayName 现在**全局唯一**。
+- **存档迁移代价**：未加旧→新 DisplayName 映射表——本地测试存档若装备了重命名前的 Sheba Prism，加载时会退化为命中其他同名 SO 或直接丢失。由于开发阶段无外部玩家存档，接受此代价以避免永久的历史补丁。
 
 ### 4.2 Modifier Prefab 引用关系
 
 `SnapshotBuilder.CollectTintModifierPrefabs` 的双重过滤规则（`PrismFamily.Tint` + prefab 带 `IProjectileModifier` 组件）意味着：
 
 - 只有 **Tint 家族且持有 Modifier prefab** 的 Prism 会在所有家族发射时生效。
-- **按磁盘 `_family` 真值判定**的 Tint 通道生效清单（Phase A 实际状态）：
+- **按磁盘 `_family` 真值判定**的 Tint 通道生效清单（2026-04-25 L1-4 落地后实际状态）：
 
   | Prism | 磁盘 `_family` | 走 Tint 通道？ |
   |---|---|---|
-  | `TintPrism_FrostSlow` | `3 = Tint` | ✅ 是 |
-  | `ShebaP_Homing` | **字段缺失 → 默认 `0 = Fractal`** | ❌ **否**（因磁盘 bug，详见 §4.3） |
-  | `ShebaP_MinePlacer` | `0 = Fractal` | ❌ 否 |
-  | `ShebaP_Boomerang` | `1 = Rheology` | ❌ 否 |
-  | `ShebaP_Bounce` | `1 = Rheology` | ❌ 否 |
+  | `TintPrism_FrostSlow` | `2 = Tint` | ✅ 是 |
+  | `ShebaP_Homing` | `2 = Tint`（✅ L1-4 已补字段） | ✅ 是 |
+  | `ShebaP_MinePlacer` | `0 = Fractal`（按 Creator 权威保持，owner 决策为"数值型"） | ❌ 否 |
+  | `ShebaP_Boomerang` | `1 = Rheology`（按 Creator 权威保持） | ❌ 否 |
+  | `ShebaP_Bounce` | `1 = Rheology`（按 Creator 权威保持） | ❌ 否 |
 
-- 换言之，**当前 Phase A 磁盘状态下，唯一通过 Tint 通道跨家族生效的 Prism 是 `TintPrism_FrostSlow`**。其余持有 Modifier Prefab 的 Sheba Prism 的行为注入路径为：
-  - `ShebaP_Homing` / `ShebaP_MinePlacer`（`Family = Fractal`）：数值调制（`_statModifiers`）生效，但 Modifier Prefab **不会被 `CollectTintModifierPrefabs` 拾取**；当前仅在 `SnapshotBuilder.ApplyModifier` 的数值分支中起作用。
-  - `ShebaP_Boomerang` / `ShebaP_Bounce`（`Family = Rheology`）：数值调制生效；`Modifier_Boomerang` / `Modifier_Bounce` 的行为注入依赖 Anomaly 分支的 `AnomalyModifierPrefab` 路径（`ShebaP_Boomerang` 未走该路径，因为 Boomerang 行为只有 `AnomalyCore_Boomerang` 作为 Core 时才被注入）。
+- 换言之，**L1-4 之后通过 Tint 通道跨家族生效的 Prism 是 `TintPrism_FrostSlow` + `ShebaP_Homing` 两个**。其余持有 Modifier Prefab 的 Sheba Prism 按 owner 决策（以 `ShebaAssetCreator.cs` 为权威真相源）保持非-Tint 家族，Modifier Prefab 字段仅作设计备料保留，当前仅在数值修正层生效：
+  - `ShebaP_MinePlacer`（`Family = Fractal`）：数值调制生效，Modifier Prefab **不会被 `CollectTintModifierPrefabs` 拾取**。
+  - `ShebaP_Boomerang` / `ShebaP_Bounce`（`Family = Rheology`）：数值调制生效；若未来要激活行为注入需要 owner 显式把 `_family` 改为 Tint，或走 Anomaly Core 路径。
 
-### 4.3 ⚠️ `ShebaP_Homing` 磁盘 Family 字段缺失（已知资产异常，待单独修复）
+### 4.3 ~~`ShebaP_Homing` 磁盘 Family 字段缺失~~ ✅ 已修复（2026-04-25 L1-4）
 
-**事实**：`Assets/_Data/StarChart/Prisms/ShebaP_Homing.asset` 的 YAML **不包含 `_family:` 字段**。Unity 反序列化时走 C# 枚举默认值 = `0` = `PrismFamily.Fractal`。
+**历史事实**：`Assets/_Data/StarChart/Prisms/ShebaP_Homing.asset` 的 YAML 曾**不包含 `_family:` 字段**，Unity 反序列化走 C# 枚举默认值 `0 = Fractal`，导致 Tint 通道断链、UI 分类错误。
 
-**代码意图**：`ShebaAssetCreator.cs:342` 在创建时写的是 `SetField(so, "_family", PrismFamily.Tint);`，推定早期版本该赋值不存在或未生效，且 `ShebaAssetCreator.CreateShebaP_Homing` 在检测到资产已存在时 skip 重写，使得磁盘值一直未被修正。
+**修复（2026-04-25 L1-4）**：已在 asset YAML 中补 `_family: 2`（Tint）字段，位置参照 `ShebaP_Boomerang.asset` 的字段顺序。以 `ShebaAssetCreator.CreateShebaP_Homing` 的代码意图为权威真相源。
 
-**后果**：
-- `SnapshotBuilder.CollectTintModifierPrefabs` 不会拾取 `ShebaP_Homing._projectileModifierPrefab`。
-- `ShebaP_Homing` 当前仅作为 `Fractal` 家族数值型 Prism 生效，其 `Modifier_Homing.prefab` 行为注入路径断链。
-- UI 背包分类 / Family 过滤器若依赖 `_family` 判断，也会错误归类为 Fractal。
-
-**处置方案（本轮不执行，待单独任务）**：
-- **选项 A**（推荐）：在 asset YAML 中手动补 `_family: 3` 到 `_shape` 字段附近（Tint = 3）。
-- **选项 B**：删除 `ShebaP_Homing.asset` 后重跑 `ShebaAssetCreator.CreateShebaP_Homing`，让代码重新落盘。
-- **选项 C**：若决定 `ShebaP_Homing` 就应归类为 Fractal（`Modifier_Homing` 走别的注入路径），则更新代码意图而非磁盘值。
+**验证**：本文档 §4 表格 Homing 行 `_family` 已更新为 `Tint ✅`；§4.2 Tint 通道生效清单已列入 `ShebaP_Homing: ✅ 是`。
 
 本文档记录此异常，Registry 侧**以磁盘真值为准**标注为 Fractal（见 §4 表格），修复后应同步更新 §4 / §4.2。
 
@@ -334,7 +326,7 @@ for f in Assets/_Data/StarChart/Cores/*.asset Assets/_Data/StarChart/Prisms/*.as
 done
 ```
 
-注意：字段名是 `_family`（不是 `_coreFamily` / `_prismFamily`）。`_slotSize` 为 legacy 字段，仅作审计参考。
+注意：字段名是 `_family`（不是 `_coreFamily` / `_prismFamily`）。`_slotSize` 已从代码层移除（2026-04-25 L3-2），YAML 孤儿字段留作审计参考，**不要据此做出任何判断**。
 
 ### 11.3 验证 PlayerInventory 的 21 个 GUID 覆盖
 
