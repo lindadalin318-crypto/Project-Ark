@@ -236,3 +236,38 @@
   - 其它 5 个 `?? throw new ArgumentNullException(...)` 校验（`_loadouts` / `_lightSailRunners` / `_primarySatRunners` / `_secondarySatRunners` / `_disposeSlotRunners` / `_initializeAllPools`）都是引用类型，保持不变。
   - `dotnet build ProjectArk.Combat.csproj` 验证：0 错误、3 个无关的 Unity 6 废弃 API 警告（`GetInstanceID` / `FindObjectsSortMode`）。
 
+
+---
+
+## StarChart Debug 槽位字段支持可扩可缩 + 最小值 1 — 2026-04-26 15:32
+
+- **修改文件**
+  - `Assets/Scripts/Combat/StarChart/SlotLayer.cs`（新增 `TryShrinkColumn` / `TryShrinkRow` / 私有 `EvictItemsOutOfBounds`）
+  - `Assets/Scripts/Combat/StarChart/WeaponTrack.cs`（`SetLayerCols` / `SetLayerRows` 最小值 2→1，改为可扩可缩；新增内部 `ResizeCols` / `ResizeRows`）
+  - `Assets/Scripts/Combat/StarChart/LoadoutManager.cs`（`SetSailLayerCols` 改为可扩可缩）
+  - `Assets/Scripts/Combat/StarChart/StarChartController.cs`（`SetSailLayerCols` 文档同步）
+  - `Assets/Scripts/UI/TrackView.cs`（Tooltip 文案更新；新增 `[ContextMenu] Apply Debug Slot Counts` / `Reset Debug Slot Counts`）
+  - `Assets/Scripts/UI/StarChartPanel.cs`（Tooltip 文案更新；新增 `[ContextMenu] Apply Debug SAIL Cols` / `Reset Debug SAIL Cols`）
+
+- **内容**
+  - `SlotLayer<T>` 之前只有 `TryUnlockColumn` / `TryUnlockRow`（单调扩展），现在对称补上 `TryShrinkColumn` / `TryShrinkRow`。收缩时通过 `EvictItemsOutOfBounds(newCols, newRows)` 先把 **footprint 越出新边界** 的 item 全部 `RemoveItem` 驱逐，再调整 `Cols` / `Rows`，保证状态一致。
+  - `WeaponTrack.SetLayerCols` / `SetLayerRows` 原逻辑是 `while (layer.Cols < target) TryUnlockColumn()`，只能扩不能缩。现在改为：
+    - 先 `while (layer.Cols < target) TryUnlockColumn()` 扩展
+    - 再 `while (layer.Cols > target) TryShrinkColumn()` 收缩
+    - 任意 TryXxx 返回 false 即 break，防止死循环
+  - 最小值从 2 统一降为 1（`SetLayerCols`），语义上 1 列×1 行也是合法状态，和 Inspector `[Range(0, 4)]` 的 1 完全对齐。
+  - `LoadoutManager.SetSailLayerCols` 对称改造，调用新的 `TryShrinkColumn`。
+  - `TrackView` / `StarChartPanel` 的 Tooltip 明确写清：**"Supports BOTH expand and shrink. Shrinking evicts items whose footprint no longer fits."**
+  - 两边都新增 `[ContextMenu]` 方法：`Apply Debug ...` 在 Play Mode 中调完 Inspector 字段后手动触发重算并 `Refresh()`；`Reset Debug ...` 把字段清零并把 layer 缩回默认的 2x1。
+
+- **目的**
+  - 支持调试流程中随意扩缩 slot 数量，不再因为底层单调扩展导致"改 Inspector 没反应，必须清存档"。
+  - 统一四类 layer（Core / Prism / SAT / SAIL）的最小值为 1，Inspector 显示范围和实际生效范围完全一致，消除先前审查中发现的"填 1 却被静默提升到 2"的语义断层。
+  - 让 SAIL 和 Core/Prism/SAT 的可扩缩能力对称，`StarChartController.SetSailLayerCols` 的公共 API 语义也随之更新。
+
+- **技术**
+  - 收缩时的驱逐策略：用 `ItemShapeHelper.GetCells` 枚举每个 item 占据的 cell，判定是否全部落入 `[0, newCols) × [0, newRows)`，不满足者整件 `RemoveItem`。先收集到 `List<T>`，避免在 `_itemList` 迭代中 mutate。
+  - 不破坏现有调用方：`SetLayerCols(2, 2, 2)` / `SetLayerRows(1, 1, 1)` 的默认值和语义未变，只是现在当 current > target 时会主动缩回去，而不是静默不动。
+  - 存档路径（`ImportTrack` / `ExportTrack`）没有改动，仍然走相同的 `SetLayerCols`。如果存档值比当前小，现在会被 **缩回**，这是一致性修复；如果更大，行为和之前一样扩展。
+  - 编译验证：`dotnet build Project-Ark.slnx` 全通过，0 错误；所有警告均为 Unity 6 既有的 `GetInstanceID / FindObjectsSortMode` 过时 API 提示，与本次改动无关。
+

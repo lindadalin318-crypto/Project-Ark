@@ -131,6 +131,72 @@ namespace ProjectArk.Combat
             return true;
         }
 
+        /// <summary>
+        /// Attempts to shrink the grid by one column (remove rightmost column).
+        /// Returns true if successful; false if already at the minimum (1 column).
+        /// Any items whose footprint overlaps the column being removed are evicted
+        /// (fully removed from the layer). Callers are responsible for disposing
+        /// runtime state derived from the evicted items (e.g. Runners).
+        /// DEBUG / EDITOR use: intended to support live-shrinking via debug fields.
+        /// </summary>
+        public bool TryShrinkColumn()
+        {
+            if (Cols <= 1) return false;
+            int newCols = Cols - 1;
+            EvictItemsOutOfBounds(newCols, Rows);
+            Cols = newCols;
+            return true;
+        }
+
+        /// <summary>
+        /// Attempts to shrink the grid by one row (remove bottommost row).
+        /// Returns true if successful; false if already at the minimum (1 row).
+        /// Any items whose footprint overlaps the row being removed are evicted.
+        /// DEBUG / EDITOR use: intended to support live-shrinking via debug fields.
+        /// </summary>
+        public bool TryShrinkRow()
+        {
+            if (Rows <= 1) return false;
+            int newRows = Rows - 1;
+            EvictItemsOutOfBounds(Cols, newRows);
+            Rows = newRows;
+            return true;
+        }
+
+        /// <summary>
+        /// Remove every item whose footprint (anchor + shape) would no longer fit
+        /// inside a (newCols × newRows) grid. Used by TryShrinkColumn / TryShrinkRow
+        /// to keep the layer consistent when capacity shrinks.
+        /// </summary>
+        private void EvictItemsOutOfBounds(int newCols, int newRows)
+        {
+            // Collect first to avoid mutating _itemList during iteration.
+            List<T> toEvict = null;
+            foreach (var item in _itemList)
+            {
+                if (!_anchors.TryGetValue(item, out var anchor)) continue;
+                bool fits = true;
+                foreach (var offset in ItemShapeHelper.GetCells(item.Shape))
+                {
+                    int c = anchor.x + offset.x;
+                    int r = anchor.y + offset.y;
+                    if (c < 0 || c >= newCols || r < 0 || r >= newRows)
+                    {
+                        fits = false;
+                        break;
+                    }
+                }
+                if (!fits)
+                {
+                    toEvict ??= new List<T>();
+                    toEvict.Add(item);
+                }
+            }
+            if (toEvict == null) return;
+            foreach (var item in toEvict)
+                RemoveItem(item);
+        }
+
         // =====================================================================
         // Query API
         // =====================================================================

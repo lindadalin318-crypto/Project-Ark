@@ -174,29 +174,33 @@ namespace ProjectArk.Combat
         }
 
         /// <summary>
-        /// Restores the unlocked column counts for Core, Prism, and SAT layers from save data.
-        /// Called during ImportTrack before re-equipping items.
+        /// Restores (or debug-overrides) the unlocked column counts for Core, Prism, and SAT layers.
+        /// Supports BOTH expansion and shrinking:
+        ///   - If target > current, columns are unlocked one by one.
+        ///   - If target &lt; current, columns are shrunk and any items whose footprint
+        ///     would fall outside the new grid are evicted from the layer.
+        /// Called during ImportTrack before re-equipping items, and from debug overrides
+        /// (e.g. TrackView debug fields) at runtime.
+        /// Valid range: [1, MAX_COLS]. Values outside are clamped silently.
         /// </summary>
         public void SetLayerCols(int coreCols, int prismCols, int satCols = 2)
         {
             // Clamp to valid range without UnityEngine.Mathf (WeaponTrack is pure C#)
-            // Minimum is 2 (initial state = 2 cols × 1 row)
-            int targetCore  = coreCols  < 2 ? 2 : coreCols  > SlotLayer<StarCoreSO>.MAX_COLS ? SlotLayer<StarCoreSO>.MAX_COLS : coreCols;
-            int targetPrism = prismCols < 2 ? 2 : prismCols > SlotLayer<PrismSO>.MAX_COLS    ? SlotLayer<PrismSO>.MAX_COLS    : prismCols;
-            int targetSat   = satCols   < 2 ? 2 : satCols   > SlotLayer<SatelliteSO>.MAX_COLS ? SlotLayer<SatelliteSO>.MAX_COLS : satCols;
+            // Minimum is 1 (single-cell layer; supports debug / tutorial states).
+            int targetCore  = coreCols  < 1 ? 1 : coreCols  > SlotLayer<StarCoreSO>.MAX_COLS ? SlotLayer<StarCoreSO>.MAX_COLS : coreCols;
+            int targetPrism = prismCols < 1 ? 1 : prismCols > SlotLayer<PrismSO>.MAX_COLS    ? SlotLayer<PrismSO>.MAX_COLS    : prismCols;
+            int targetSat   = satCols   < 1 ? 1 : satCols   > SlotLayer<SatelliteSO>.MAX_COLS ? SlotLayer<SatelliteSO>.MAX_COLS : satCols;
 
-            // Unlock columns one by one until we reach the saved count
-            while (_coreLayer.Cols < targetCore)
-                _coreLayer.TryUnlockColumn();
-            while (_prismLayer.Cols < targetPrism)
-                _prismLayer.TryUnlockColumn();
-            while (_satLayer.Cols < targetSat)
-                _satLayer.TryUnlockColumn();
+            // Expand or shrink each layer to match target.
+            ResizeCols(_coreLayer,  targetCore);
+            ResizeCols(_prismLayer, targetPrism);
+            ResizeCols(_satLayer,   targetSat);
         }
 
         /// <summary>
-        /// Restores the unlocked row counts for Core, Prism, and SAT layers from save data.
-        /// Called during ImportTrack before re-equipping items.
+        /// Restores (or debug-overrides) the unlocked row counts for Core, Prism, and SAT layers.
+        /// Supports BOTH expansion and shrinking (same semantics as SetLayerCols).
+        /// Valid range: [1, MAX_ROWS].
         /// </summary>
         public void SetLayerRows(int coreRows, int prismRows, int satRows = 1)
         {
@@ -205,13 +209,33 @@ namespace ProjectArk.Combat
             int targetPrism = prismRows < 1 ? 1 : prismRows > SlotLayer<PrismSO>.MAX_ROWS    ? SlotLayer<PrismSO>.MAX_ROWS    : prismRows;
             int targetSat   = satRows   < 1 ? 1 : satRows   > SlotLayer<SatelliteSO>.MAX_ROWS ? SlotLayer<SatelliteSO>.MAX_ROWS : satRows;
 
-            // Unlock rows one by one until we reach the saved count
-            while (_coreLayer.Rows < targetCore)
-                _coreLayer.TryUnlockRow();
-            while (_prismLayer.Rows < targetPrism)
-                _prismLayer.TryUnlockRow();
-            while (_satLayer.Rows < targetSat)
-                _satLayer.TryUnlockRow();
+            ResizeRows(_coreLayer,  targetCore);
+            ResizeRows(_prismLayer, targetPrism);
+            ResizeRows(_satLayer,   targetSat);
+        }
+
+        /// <summary>
+        /// Expand or shrink <paramref name="layer"/>.Cols to <paramref name="targetCols"/>.
+        /// Shrinking evicts any items whose footprint would fall outside the new grid.
+        /// </summary>
+        private static void ResizeCols<T>(SlotLayer<T> layer, int targetCols) where T : StarChartItemSO
+        {
+            while (layer.Cols < targetCols)
+                if (!layer.TryUnlockColumn()) break;
+            while (layer.Cols > targetCols)
+                if (!layer.TryShrinkColumn()) break;
+        }
+
+        /// <summary>
+        /// Expand or shrink <paramref name="layer"/>.Rows to <paramref name="targetRows"/>.
+        /// Shrinking evicts any items whose footprint would fall outside the new grid.
+        /// </summary>
+        private static void ResizeRows<T>(SlotLayer<T> layer, int targetRows) where T : StarChartItemSO
+        {
+            while (layer.Rows < targetRows)
+                if (!layer.TryUnlockRow()) break;
+            while (layer.Rows > targetRows)
+                if (!layer.TryShrinkRow()) break;
         }
 
         /// <summary> Clear all equipped items from both layers and the satellite layer. </summary>

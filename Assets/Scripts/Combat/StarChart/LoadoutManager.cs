@@ -109,15 +109,19 @@ namespace ProjectArk.Combat
         internal LightSailSO GetEquippedLightSail() => ActiveSlot.EquippedLightSailSO;
 
         /// <summary>
-        /// Expand the SAIL layer to the given column count.
-        /// Only expands (never shrinks), consistent with Core/Prism/SAT behavior.
+        /// Set the SAIL layer column count. Supports BOTH expansion and shrinking.
+        /// When shrinking, any sails whose footprint would fall outside the new grid
+        /// are evicted from the layer. Valid range: [1, MAX_COLS].
+        /// Used by save restore and by debug overrides (StarChartPanel debug field).
         /// </summary>
         internal void SetSailLayerCols(int cols)
         {
             var layer = ActiveSlot.SailLayer;
             int target = cols < 1 ? 1 : cols > SlotLayer<LightSailSO>.MAX_COLS ? SlotLayer<LightSailSO>.MAX_COLS : cols;
             while (layer.Cols < target)
-                layer.TryUnlockColumn();
+                if (!layer.TryUnlockColumn()) break;
+            while (layer.Cols > target)
+                if (!layer.TryShrinkColumn()) break;
         }
 
         /// <summary>

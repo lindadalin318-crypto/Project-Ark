@@ -101,8 +101,9 @@ namespace ProjectArk.Combat
         public LightSailSO GetEquippedLightSail() => _loadoutManager.GetEquippedLightSail();
 
         /// <summary>
-        /// Expand the SAIL layer to the given column count.
-        /// Only expands (never shrinks), consistent with Core/Prism/SAT behavior.
+        /// Set the SAIL layer column count. Supports BOTH expansion and shrinking.
+        /// When shrinking, sails whose footprint would no longer fit are evicted.
+        /// Valid range: [1, MAX_COLS]. Used by save restore and debug overrides.
         /// </summary>
         public void SetSailLayerCols(int cols) => _loadoutManager.SetSailLayerCols(cols);
 

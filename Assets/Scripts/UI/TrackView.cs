@@ -38,11 +38,16 @@ namespace ProjectArk.UI
         [SerializeField] private TypeColumn _satColumn;
 
         [Header("Debug: Slot Counts (0 = use save data)")]
-        [Tooltip("Override Core layer column count for debugging. 0 = use save data. Range 1-4.")]
+        [Tooltip("Override Core layer column count. 0 = use save data. Range 1-4. " +
+                 "Supports BOTH expand and shrink at runtime. Shrinking evicts items whose " +
+                 "footprint no longer fits. Right-click this component → 'Apply Debug Slot Counts' " +
+                 "to re-apply after changing values in Play Mode.")]
         [SerializeField] [Range(0, 4)] private int _debugCoreCols = 0;
-        [Tooltip("Override Prism layer column count for debugging. 0 = use save data. Range 1-4.")]
+        [Tooltip("Override Prism layer column count. 0 = use save data. Range 1-4. " +
+                 "Supports BOTH expand and shrink at runtime. See Core tooltip for details.")]
         [SerializeField] [Range(0, 4)] private int _debugPrismCols = 0;
-        [Tooltip("Override SAT layer column count for debugging. 0 = use save data. Range 1-4.")]
+        [Tooltip("Override SAT layer column count. 0 = use save data. Range 1-4. " +
+                 "Supports BOTH expand and shrink at runtime. See Core tooltip for details.")]
         [SerializeField] [Range(0, 4)] private int _debugSatCols = 0;
 
         /// <summary> Fired when a cell with an equipped item is clicked (for unequip). </summary>
@@ -168,6 +173,8 @@ namespace ProjectArk.UI
         /// <summary>
         /// Apply debug slot count overrides to the bound track's layers.
         /// Called from Awake (before Bind) and again from Bind if track is already set.
+        /// Supports BOTH expanding and shrinking — WeaponTrack.SetLayerCols handles eviction
+        /// of items whose footprint no longer fits after shrink.
         /// </summary>
         private void ApplyDebugSlotCounts()
         {
@@ -178,6 +185,39 @@ namespace ProjectArk.UI
                 int prismCols = _debugPrismCols > 0 ? _debugPrismCols : _track.PrismLayer.Cols;
                 int satCols   = _debugSatCols   > 0 ? _debugSatCols   : _track.SatLayer.Cols;
                 _track.SetLayerCols(coreCols, prismCols, satCols);
+            }
+        }
+
+        /// <summary>
+        /// Manual entry to re-apply debug slot count overrides. Useful in Play Mode
+        /// after tweaking Inspector fields, since Unity does not auto-propagate
+        /// [SerializeField] changes to any re-run logic.
+        /// Also forces a view refresh so the new column count is visible immediately.
+        /// </summary>
+        [ContextMenu("Apply Debug Slot Counts")]
+        private void ForceApplyDebugSlotCounts()
+        {
+            ApplyDebugSlotCounts();
+            Refresh();
+        }
+
+        /// <summary>
+        /// Reset all debug slot count overrides to 0 (use save data) and restore layers
+        /// to 2x1 default. Useful for clearing debug state before committing changes.
+        /// </summary>
+        [ContextMenu("Reset Debug Slot Counts")]
+        private void ResetDebugSlotCounts()
+        {
+            _debugCoreCols = 0;
+            _debugPrismCols = 0;
+            _debugSatCols = 0;
+            if (_track != null)
+            {
+                // Fall back to the default authored starting grid (2x1) so shrinking
+                // takes effect immediately; save-driven values will be re-applied on
+                // the next ImportTrack call.
+                _track.SetLayerCols(2, 2, 2);
+                Refresh();
             }
         }
 

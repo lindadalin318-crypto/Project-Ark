@@ -22,7 +22,10 @@ namespace ProjectArk.UI
         [Header("Shared SAIL Column")]
         [SerializeField] private TypeColumn _sharedSailColumn;
         [SerializeField] private DragHighlightLayer _sailHighlightLayer;
-        [Tooltip("Override SAIL layer column count for debugging. 0 = use save data. Range 1-4.")]
+        [Tooltip("Override SAIL layer column count. 0 = use save data. Range 1-4. " +
+                 "Supports BOTH expand and shrink at runtime. Shrinking evicts sails whose " +
+                 "footprint no longer fits. Right-click this component → 'Apply Debug SAIL Cols' " +
+                 "to re-apply after changing the value in Play Mode.")]
         [SerializeField] [Range(0, 4)] private int _debugSailCols = 0;
 
         [Header("Loadout")]
@@ -390,6 +393,34 @@ namespace ProjectArk.UI
         public void RefreshAllViews()
         {
             RefreshAll();
+        }
+
+        /// <summary>
+        /// Manually (re)apply the <see cref="_debugSailCols"/> override to the SAIL layer.
+        /// Supports BOTH expanding and shrinking via <see cref="StarChartController.SetSailLayerCols"/>.
+        /// Use this after tweaking the Inspector value in Play Mode to see the change.
+        /// </summary>
+        [ContextMenu("Apply Debug SAIL Cols")]
+        private void ForceApplyDebugSailCols()
+        {
+            if (_controller == null || _debugSailCols <= 0) return;
+            _controller.SetSailLayerCols(_debugSailCols);
+            RefreshSharedSailColumn();
+        }
+
+        /// <summary>
+        /// Reset the SAIL debug override to 0 and shrink the SAIL layer back to the
+        /// default starting width (2 cols). Useful for clearing debug state.
+        /// </summary>
+        [ContextMenu("Reset Debug SAIL Cols")]
+        private void ResetDebugSailCols()
+        {
+            _debugSailCols = 0;
+            if (_controller != null)
+            {
+                _controller.SetSailLayerCols(2);
+                RefreshSharedSailColumn();
+            }
         }
 
         /// <summary>
