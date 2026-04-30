@@ -163,19 +163,33 @@ namespace ProjectArk.UI
             if (col == null) return;
             col.Initialize(slotType, typeColor, this);
 
-            // Wire cell click and hover events
+            // Wire cell click and hover events — 抽成独立方法以便 RefreshColumn 在扩容
+            // 后对新 cell 重新走一遍 wiring，避免新 cell "存在但无事件订阅"。
+            WireColumnCells(col);
+
+            // SAT: no special delegate needed — uses SlotLayer<SatelliteSO> like Core/Prism
+            // (HasSpaceForItem delegate is only for legacy SAIL-style single-slot types)
+        }
+
+        /// <summary>
+        /// 为一列的所有 cell 订阅 click / pointer 事件。
+        /// 幂等：通过 <see cref="SlotCellView.IsTrackCellWired"/> 标志位防止重复订阅。
+        /// 调用时机：InitColumn 初始化时；RefreshColumn 动态扩容后（新克隆出的 cell 标志位为 false）。
+        /// </summary>
+        private void WireColumnCells(TypeColumn col)
+        {
+            if (col == null) return;
             var cells = col.Cells;
             for (int i = 0; i < cells.Length; i++)
             {
                 if (cells[i] == null) continue;
                 var captured = cells[i];
-                captured.OnClicked += () => HandleCellClick(captured);
+                if (captured.IsTrackCellWired) continue; // 已订阅过，跳过
+                captured.OnClicked        += () => HandleCellClick(captured);
                 captured.OnPointerEntered += (item) => HandleCellPointerEnter(captured, item);
-                captured.OnPointerExited += HandleCellPointerExit;
+                captured.OnPointerExited  += HandleCellPointerExit;
+                captured.IsTrackCellWired  = true;
             }
-
-            // SAT: no special delegate needed — uses SlotLayer<SatelliteSO> like Core/Prism
-            // (HasSpaceForItem delegate is only for legacy SAIL-style single-slot types)
         }
 
         // =====================================================================
@@ -364,10 +378,43 @@ namespace ProjectArk.UI
             where T : StarChartItemSO
         {
             if (col == null) return;
-            var cells = col.Cells;
 
             // Determine how many cells are currently unlocked
             int unlockedCount = layer != null ? layer.Rows * layer.Cols : 0;
+
+            // 动态伸缩 cells 数组（单一真相源：cells 数量必须 >= layer.Rows * layer.Cols）。
+            // 必须在设置 constraintCount 之前执行，让布局重建能一次性覆盖所有新 cell。
+            // 解决 "_cells 固定 4 格" 的瓶颈：支持 3×3 / 4×2 等任意容量。
+            if (layer != null && unlockedCount > 0)
+            {
+                col.EnsureCellCapacity(unlockedCount, this);
+                // 为新扩出来的 cell 补上 click/pointer 事件订阅（InitColumn 只覆盖初始 cells）。
+                // WireColumnCells 内部通过 IsTrackCellWired 防重复，所以对已连线的 cell 是 no-op。
+                WireColumnCells(col);
+            }
+
+            // 此处 col.Cells 已是伸缩后的新数组引用
+            var cells = col.Cells;
+
+            // 单一真相源：UI 显示的网格形状必须跟随逻辑 Cols，而不是 GridLayoutGroup 的硬编码值。
+            // 若 GridLayoutGroup.constraintCount 写死 2，而逻辑层 Cols=4 Rows=1，
+            // UI 会把 4 个线性格子折成视觉上的 2×2 假象，但 ItemShapeHelper.FitsInGrid
+            // 读的仍是逻辑 (Cols, Rows)=(4, 1)，L 型形状（需 2 行）将永远装不进去。
+            // 这里强制 constraintCount = layer.Cols，让所见即所得。
+            if (layer != null)
+            {
+                var gridLayout = col.GridContainer != null
+                    ? col.GridContainer.GetComponent<GridLayoutGroup>()
+                    : null;
+                if (gridLayout != null && gridLayout.constraintCount != layer.Cols)
+                {
+                    gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+                    gridLayout.constraintCount = Mathf.Max(1, layer.Cols);
+                    // 强制 GridLayoutGroup 立即重新布局，确保后续读取 cell RectTransform 时
+                    // anchoredPosition 已经是新 constraintCount 下的正确值。
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(col.GridContainer);
+                }
+            }
 
             // Show unlocked cells, hide locked cells via CanvasGroup (CLAUDE.md 第11条：禁止 SetActive)
             for (int i = 0; i < cells.Length; i++)

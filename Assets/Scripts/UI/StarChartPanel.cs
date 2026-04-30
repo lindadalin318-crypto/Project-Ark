@@ -215,46 +215,11 @@ namespace ProjectArk.UI
             {
                 _sharedSailColumn.Initialize(SlotType.LightSail, StarChartTheme.SailColor, null);
 
-                // Inject HasSpaceForItem delegate for shared SAIL column cells
-                // (cells have no OwnerTrack, so they need a direct delegate for drop validity)
-                foreach (var cell in _sharedSailColumn.Cells)
-                {
-                    if (cell != null)
-                    {
-                        cell.HasSpaceForItem = (item) =>
-                        {
-                            var sailLayer = _controller?.SailLayer;
-                            if (sailLayer == null) return false;
-                            // If the dragged SAIL is already in the layer, exclude it from the
-                            // free-space check so it can be moved to another slot within the column.
-                            var mgr = DragDropManager.Instance;
-                            if (mgr != null && mgr.CurrentPayload?.Source == DragSource.Slot
-                                && item is LightSailSO draggedSail
-                                && sailLayer.Items.Contains(draggedSail))
-                                return sailLayer.FreeSpace + ItemShapeHelper.GetCells(draggedSail.Shape).Count > 0;
-                            return sailLayer.FreeSpace > 0;
-                        };
-                    }
-                }
-
-                // Initialize the SAIL highlight layer — must be done AFTER Initialize() so
-                // GridContainer and Cells are wired up. Without this, _container is null and
-                // ShowHighlightAtCellIndex() returns immediately (no green/red highlight).
-                if (_sailHighlightLayer != null)
-                    _sailHighlightLayer.Initialize(
-                        _sharedSailColumn.GridContainer,
-                        _sharedSailColumn.Cells,
-                        2);
-
-                // Subscribe to Sail cell hover events for tooltip.
-                // Sail cells have OwnerTrack=null so they bypass TrackView.InitColumn();
-                // we must wire them up here directly.
-                foreach (var cell in _sharedSailColumn.Cells)
-                {
-                    if (cell == null) continue;
-                    cell.OnPointerEntered += HandleSailCellPointerEntered;
-                    cell.OnPointerExited  += HandleCellPointerExited;
-                }
+                // SAIL cells 与 Core/Prism/SAT 不同：它们的 OwnerTrack=null，不走 TrackView.InitColumn()
+                // 的自动 wire-up 路径，因此 HasSpaceForItem 委托、pointer 事件、高亮层 cells 数组
+                // 都需要在这里直接注入。这段 wiring 被抽成 WireSailCells()，以便 RefreshSharedSailColumn
+                // 在动态扩容 cells 后重新跑一次，让新 cell 也被正确连线。
+                WireSailCells();
             }
 
             // Apply debug SAIL column count override (only when > 0)
@@ -424,6 +389,54 @@ namespace ProjectArk.UI
         }
 
         /// <summary>
+        /// 为 SAIL 共享列的所有 cell 注入必要的委托和事件订阅。
+        /// 幂等：重复调用会先取消旧订阅再重新订阅，防止事件重复触发。
+        /// 调用时机：
+        ///   1. <see cref="Bind"/> 初始化时（首次绑定）
+        ///   2. <see cref="RefreshSharedSailColumn"/> 动态扩容 cells 后（让新 cell 也被连线）
+        /// </summary>
+        private void WireSailCells()
+        {
+            if (_sharedSailColumn == null) return;
+
+            // 1. 注入 HasSpaceForItem 委托 + 重新订阅 pointer 事件（先退订防重复）
+            foreach (var cell in _sharedSailColumn.Cells)
+            {
+                if (cell == null) continue;
+                cell.HasSpaceForItem = (item) =>
+                {
+                    var sailLayer = _controller?.SailLayer;
+                    if (sailLayer == null) return false;
+                    // If the dragged SAIL is already in the layer, exclude it from the
+                    // free-space check so it can be moved to another slot within the column.
+                    var mgr = DragDropManager.Instance;
+                    if (mgr != null && mgr.CurrentPayload?.Source == DragSource.Slot
+                        && item is LightSailSO draggedSail
+                        && sailLayer.Items.Contains(draggedSail))
+                        return sailLayer.FreeSpace + ItemShapeHelper.GetCells(draggedSail.Shape).Count > 0;
+                    return sailLayer.FreeSpace > 0;
+                };
+
+                // 先 -= 再 += 保证幂等（重复订阅同一委托会多次触发）
+                cell.OnPointerEntered -= HandleSailCellPointerEntered;
+                cell.OnPointerExited  -= HandleCellPointerExited;
+                cell.OnPointerEntered += HandleSailCellPointerEntered;
+                cell.OnPointerExited  += HandleCellPointerExited;
+            }
+
+            // 2. 重新绑定高亮层到最新 cells 数组（扩容后旧引用已失效）
+            //    gridCols 传 SailLayer.Cols 以跟随逻辑真相；若 SailLayer 未就绪则退回 2。
+            if (_sailHighlightLayer != null)
+            {
+                int gridCols = _controller?.SailLayer?.Cols ?? 2;
+                _sailHighlightLayer.Initialize(
+                    _sharedSailColumn.GridContainer,
+                    _sharedSailColumn.Cells,
+                    gridCols);
+            }
+        }
+
+        /// <summary>
         /// Refresh the shared SAIL column from the current loadout.
         /// Mirrors RefreshColumn() in TrackView: reads SailLayer.Rows * SailLayer.Cols
         /// to determine unlocked cell count; hides the rest via CanvasGroup.
@@ -431,12 +444,40 @@ namespace ProjectArk.UI
         public void RefreshSharedSailColumn()
         {
             if (_sharedSailColumn == null) return;
-            var cells = _sharedSailColumn.Cells;
-            if (cells == null || cells.Length == 0) return;
 
             // Read unlocked count from SailLayer (consistent with TrackView.RefreshColumn)
             var sailLayer = _controller?.SailLayer;
             int unlockedCount = sailLayer != null ? sailLayer.Rows * sailLayer.Cols : 0;
+
+            // 动态伸缩 cells 数组（单一真相源），并重新跑一次 SAIL 专属 wiring，
+            // 让新扩出来的 cell 也有 HasSpaceForItem 委托、pointer 事件订阅和高亮层引用。
+            bool capacityChanged = false;
+            if (sailLayer != null && unlockedCount > 0)
+            {
+                int before = _sharedSailColumn.Cells?.Length ?? 0;
+                _sharedSailColumn.EnsureCellCapacity(unlockedCount, null);
+                capacityChanged = _sharedSailColumn.Cells != null && _sharedSailColumn.Cells.Length != before;
+            }
+            if (capacityChanged)
+                WireSailCells();
+
+            var cells = _sharedSailColumn.Cells;
+            if (cells == null || cells.Length == 0) return;
+
+            // 单一真相源：UI 显示的网格形状必须跟随逻辑 Cols，而不是 GridLayoutGroup 的硬编码值。
+            // 见 TrackView.RefreshColumn 同名注释——SAIL 列同样遵守该规则。
+            if (sailLayer != null)
+            {
+                var gridLayout = _sharedSailColumn.GridContainer != null
+                    ? _sharedSailColumn.GridContainer.GetComponent<GridLayoutGroup>()
+                    : null;
+                if (gridLayout != null && gridLayout.constraintCount != sailLayer.Cols)
+                {
+                    gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+                    gridLayout.constraintCount = Mathf.Max(1, sailLayer.Cols);
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(_sharedSailColumn.GridContainer);
+                }
+            }
 
             // Show unlocked cells, hide locked cells via CanvasGroup
             // (CLAUDE.md: 禁止 SetActive, 用 CanvasGroup)

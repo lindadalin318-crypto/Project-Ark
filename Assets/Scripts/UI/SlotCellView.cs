@@ -66,6 +66,15 @@ namespace ProjectArk.UI
         /// <summary> The TypeColumn that owns this cell. Used for column-level drop preview. </summary>
         public TypeColumn OwnerColumn { get; set; }
 
+        /// <summary>
+        /// Tracks whether <see cref="TrackView.WireColumnCells"/> has already subscribed this cell's
+        /// events. Prevents double-subscription when a cell is re-visited by WireColumnCells after
+        /// <see cref="TypeColumn.EnsureCellCapacity"/> clones new cells into the column.
+        /// Because cloned cells start as a copy of cells[0], this flag is correctly `false` on new
+        /// clones (Unity Instantiate does NOT preserve C# event subscriptions, only serialized fields).
+        /// </summary>
+        public bool IsTrackCellWired { get; set; }
+
         /// <summary> True when this cell is displaying an item (not empty/spanned). </summary>
         public bool IsOccupied => DisplayedItem != null;
 

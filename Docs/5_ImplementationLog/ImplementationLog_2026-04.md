@@ -282,3 +282,110 @@
 - **目的**：用户反馈"Prism 改为 4 列后 Homing 依然放不进去"，根因是 Homing 形状是 `Shape2x1V`（2 行高），Prism 层始终只有 1 行。补 Row debug 后可把 Prism 设为 `2×2` / `2×1` 等多行布局以容纳垂直形状。
 - **技术**：对称 pattern；`_track.CoreLayer.Rows` 作为 0 值的 fallback（跟 Cols 完全一致的语义）。
 - **已知物理约束（未治理）**：`TypeColumn._cells` 是固定 4 格 Prefab（代码注释仍写 "2×2 grid"），视图层上限永远是 `Rows*Cols ≤ 4`。也就是说 `1×4` / `2×2` / `4×1` 可行，但数据层虽然支持的 `4×2=8`、`3×3=9` 等组合**视图无法表达**，第 5+ 格会 silent 丢失。对应"方案 B 的可配合形状集合"实际为所有 `Rows*Cols≤4` 的布局。若未来要突破 4 格上限，需把 `TypeColumn` 的 cells 改为动态生成 + GridLayoutGroup 自动排版。
+
+---
+
+## TrackView / StarChartPanel UI 网格形状对齐逻辑真相（constraintCount 跟随 Cols） — 2026-04-27 11:05
+
+- **修改文件**
+  - `Assets/Scripts/UI/TrackView.cs`（`RefreshColumn<T>()` 内新增 constraintCount 同步块）
+  - `Assets/Scripts/UI/StarChartPanel.cs`（`RefreshSharedSailColumn()` 内对称新增同步块）
+- **内容**：`GridLayoutGroup.constraintCount` 原本在 `UICanvasBuilder` 构建 UI 时硬编码写死为 2，导致 UI 视觉形状与逻辑层 `(Cols, Rows)` 真相脱节——例如 `_debugCoreCols=4` 且 `_debugCoreRows=1` 时，UI 会把 4 个线性格子折成视觉上的 2×2 假象，而 `ItemShapeHelper.FitsInGrid` 读的仍是 (4,1)，L 型（需 2 行）永远装不进去。本次改动让刷新时强制 `constraintCount = layer.Cols` 并立即 `LayoutRebuilder.ForceRebuildLayoutImmediate`，所见即所得。
+- **目的**：修复用户报告的 "debug cols=4 时 UI 显示 2×2 但无法装 L 型" bug，消除"显示真相源 ≠ 逻辑真相源"的架构违规（对应 `Implement_rules.md` 3.1 条：单一真相源）。
+- **技术**：每次 `RefreshColumn` / `RefreshSharedSailColumn` 进入时比较当前 `constraintCount` 与 `layer.Cols`，不等时写入 `FixedColumnCount` 约束并立即强制重建布局，保证后续 overlay 定位时 cell anchoredPosition 已是新值；仅在值变化时触发重建，避免每帧无谓开销。Core/Prism 的 `DragHighlightLayer` 已通过 `SetShapeHighlight` 里的 `SetGridCols(layer.Cols)` 自行同步，无需改动；SAIL 只用 `ShowHighlightAtCellIndex`（不依赖 gridCols），也无需改动。
+- **现在的行为对照表**：
+  - `Cols=4, Rows=1` → UI 显示 4×1 一字排开（真实逻辑）
+  - `Cols=2, Rows=2` → UI 显示 2×2 方形（真实逻辑）
+  - `Cols=4, Rows=2` → UI 显示 4×2（8 格，超过 `TypeColumn._cells` 长度 4 的部分会被 CanvasGroup 隐藏，这是另一条物理约束，已在 2026-04-26 条目中记录）
+- **视觉副作用**：`Cols` 越大一行越宽，TypeColumn 容器视觉宽度由 anchor 占比决定（约 33%）；单格 80px 情况下 `Cols=4` 需要 ~326px，若面板总宽不足需要美术侧拉宽列容器或缩小单格尺寸——这是 UI 布局问题，不影响逻辑正确性。
+
+---
+
+## TypeColumn._cells 动态伸缩（突破 4 格上限） — 2026-04-27 11:34
+
+- **修改文件**
+  - `Assets/Scripts/UI/TypeColumn.cs`（新增 `EnsureCellCapacity(int, TrackView)` 方法）
+  - `Assets/Scripts/UI/TrackView.cs`（`RefreshColumn<T>()` 在 constraintCount 同步前调用扩容；`InitColumn` 抽出 `WireColumnCells` 供扩容后补订阅使用）
+  - `Assets/Scripts/UI/StarChartPanel.cs`（`Bind()` 中 SAIL 连线逻辑抽成 `WireSailCells()`；`RefreshSharedSailColumn` 在扩容后重新调用它）
+  - `Assets/Scripts/UI/SlotCellView.cs`（新增 `IsTrackCellWired` 幂等标志位）
+- **内容**：`TypeColumn._cells` 原本硬编码长度 4（`UICanvasBuilder.BuildTypeColumn` 构建期一次性创建 4 个 Cell_i 并 `WireArrayField`）。当逻辑层 `SlotLayer.Rows * Cols > 4` 时（如 4×2=8、3×3=9），第 5+ 格的 `SetItem` 调用会被 `cellIndex < cells.Length` 守卫静默跳过，表现为"拖进去就消失"。本次改造让 cells 数量在运行时跟随 `layer.Rows * layer.Cols` 伸缩：扩容时以 `cells[0]` 为 Unity `Instantiate` 模板克隆（自动 remap 内部子节点引用），缩容时销毁尾部多余 cell。
+- **目的**：消除 UI 侧的容量真相源瓶颈，支持任意 `(Cols, Rows)` 组合，为后续 CORE 3×3、PRISM 4×2、SAT 2×3 等大容量需求打开空间。对应 `Implement_rules.md` 3.1 条（单一真相源）——cells 数量必须跟随逻辑层，不得保留"固定 4 格"的第二真相源。
+- **技术**：
+  1. **克隆而非独立构建**：`EnsureCellCapacity` 用 `Object.Instantiate(cells[0].gameObject, parent)` 克隆模板 cell，零维护成本——`BuildSlotCell` 将来怎么改（增加 SpriteMask、SpriteRenderer、额外子节点等），克隆出来的新 cell 会自动跟着变，不会出现"Editor 构建路径和运行时构建路径漂移"的双轨问题。
+  2. **Unity Instantiate 的引用 remap 特性**：`SlotCellView._backgroundImage / _iconImage / _button / _placeholderLabel` 指向的是自身的子 GameObject，Instantiate 会把这些引用自动映射到新副本的对应子节点，而非共享原 cell 的子节点（Unity 编辑器 Prefab 实例化的标准行为）。因此每个克隆 cell 的视觉组件是独立的。
+  3. **事件订阅幂等化**：扩容后的新 cell 没有继承 C# event 订阅（Unity Instantiate 只复制序列化字段，不复制 delegate 链），所以必须在扩容后重跑一次 wiring。为防止重复订阅，TrackView 引入 `SlotCellView.IsTrackCellWired` 标志位；SAIL 列的 `WireSailCells` 则先 `-=` 再 `+=` 实现幂等。
+  4. **SAIL 列的特殊性**：SAIL cells 不走 `TrackView.InitColumn` 路径（`OwnerTrack=null`），需要在 `StarChartPanel.Bind` 中直接注入 `HasSpaceForItem` 委托、订阅 pointer 事件、并将 `cells` 数组缓存到 `_sailHighlightLayer`。这 3 类 wiring 抽成 `WireSailCells()`，扩容后重新调用一次（重新 Initialize 高亮层 + 重新订阅事件 + 为新 cell 注入委托）。
+  5. **布局顺序**：`EnsureCellCapacity → WireColumnCells → 设置 constraintCount → LayoutRebuilder.ForceRebuildLayoutImmediate`，确保布局重建时已经有完整的 cell 集合。
+- **验收**：
+  - `_debugCoreCols=3, _debugCoreRows=3` → Core 列显示 9 格，可装下 T 型 / 十字 / L 型
+  - `_debugCoreCols=4, _debugCoreRows=2` → 8 格一字两排全部可见（旧版本被 CanvasGroup 隐藏第 5-8 格）
+  - 从大容量缩回 2×2 → 多余 cell 被销毁，无残留
+  - 拖拽、hover 高亮、tooltip、overlay 定位在新扩出来的 cell 上正常工作
+- **遗留**：`UICanvasBuilder.BuildTypeColumn` 初始仍创建 4 个 cell，这是"默认容量"，运行时会被 `EnsureCellCapacity` 覆盖。若以后希望更彻底地消除初始硬编码，可以把初始数量也读 `SlotLayer<T>.DEFAULT_COLS × DEFAULT_ROWS`，但属于锦上添花，不是必要改动。
+
+---
+
+## StarChart 数据管线设计文档（套餐 C 三份文档） — 2026-04-27 14:58
+
+- **新建文件**
+  - `Docs/2_TechnicalDesign/Combat/StarChart_DataPipeline.md`（主文档，全套架构规范）
+  - `Docs/2_TechnicalDesign/Combat/ProjectileMovement_Library.md`（H3 方案的 Movement 组件库设计）
+  - `Docs/2_TechnicalDesign/Combat/StarChart_DataPipeline_Plan.md`（分 7 Phase 实施计划，16-22h 工作量）
+- **内容**：选择性借鉴 Magicraft 数据驱动架构，交付套餐 C 激进方案的设计蓝图——包含 5 项能力：(1) CSV 单向导入（CSV → SO），(2) StarChartRegistry 静态 O(1) 查询，(3) CoreArchetype 枚举 + Movement 组件库（H3 方案：Movement 独立类 + Prefab 装配 + MovementParams 分号串覆盖参数），(4) 多语言字段占位（zh/en 双列），(5) 双向同步（SO → CSV 反向导出）。
+- **目的**：当前 CSV（13 Core + 18 Prism）与 SO 未对接，策划在 CSV 写数据、代码读 SO，形成数据孤岛；部件规划总量 90 个（Planning.csv），SO 手动维护会崩。建立 CSV 为权威数据源、SO 为运行时缓存的分层架构，满足 30+ 部件规模下的可维护性。对应 Implement_rules.md 3.1（单一真相源）与 3.5（宁可响亮失败）。
+- **技术**：
+  1. **借鉴 Magicraft 3 招**：POCO + 静态字典（Registry）、Copy() 运行时可变副本（我们的 CoreSnapshot 已等价实现）、abilityType 枚举分派（变种为 CoreArchetype）。
+  2. **排除 Magicraft 3 个坏味道**：`float1/float2/float3` 万能槽（换语义字段）、Enhance 的巨型 switch（我们的 IProjectileModifier 已更优）、字符串 Resources.Load（改 AssetDatabase 路径搜索 + Registry 缓存）。
+  3. **H3 Movement 组件库方案**：接口 `IProjectileMovement { OnSpawn / OnUpdate / OnReturnToPool }`；每个 Movement 独立类（StraightMovement / TrackingMovement / SerpentineMovement / BoomerangMovement / GravityMovement / ...），公开 `[SerializeField]` 参数；CSV 的 `MovementParams=Amplitude:5;Frequency:3` 通过反射的 `MovementParamApplier` 在 Spawn 时覆盖字段；同一 Prefab 可产多部件变体；对象池友好（组件常驻 Prefab，不 Runtime AddComponent）。
+  4. **分号串协议**：`Field:Value;Field:Value` 统一用于 StatModifiers / MovementParams / BehaviorTags；未知枚举/字段名 LogError 不静默跳过。
+  5. **Registry 设计**：启动时 `Resources.LoadAll<StarChartItemSO>("StarChart")` 扫描，Dictionary<string, SO> 缓存；SaveSystem 从"GUID 引用"升级为"string ID"，存档人类可读且支持部件改名。
+  6. **执行顺序（7 Phase）**：P1 Importer 基础 + StarCore 单表 → P2 Movement MVP（2 种 Archetype）→ P3 Registry + Resources 目录迁移 → P4 补齐另 3 子类 Importer → P5 多语言 + SaveSystem 升级 → P6 反向导出 → P7 清理期（删旧兼容）。每个 Phase 独立可交付 + 明确验收项。
+- **关键决策**：(1) 四张独立 CSV > 一张大表（列数合理、并行编辑无冲突）；(2) StatModifier 用分号串 > 展开成固定几组列（更灵活、上限可变）；(3) H3 > H1（纯 switch 违反 OCP） / H2（Prefab 爆炸）；(4) 套餐 C > A（只 CSV） / B（CSV+Registry+Archetype）——用户选择一次到位推到多语言占位 + 双向同步。
+- **非目标**：本次仅交付设计文档，不动代码；Magicraft 20 个具体法术复刻留待后续 Batch；Movement 组件库仅定义接口与 MVP 2 个实现（Straight / Tracking），其余 8 个 Movement 延至部件内容制作阶段。
+- **风险提示**：Phase 3 的 SO 迁移到 Resources 目录是最大风险点（可能破坏现有引用，需要 MoveAsset 而非复制+删除）；Phase 5 的 SaveSystem 升级需要保留至少 1 个月的旧 GUID fallback 兼容窗口。
+
+---
+
+## StarChart 数据管线文档红队审查修正（套餐 C → B+） — 2026-04-27 15:10
+
+- **修改文件**
+  - `Docs/2_TechnicalDesign/Combat/StarChart_DataPipeline.md`（v1.0 → v1.1，加修订历史 + 重写 §6 Registry + 改写 §7.3 + 替换 §8 + 更新 §10 §12）
+  - `Docs/2_TechnicalDesign/Combat/StarChart_DataPipeline_Plan.md`（v1.0 → v1.1，改写 Phase 3 + 废除 Phase 6 + 更新时间线 §8 §10 §11）
+  - `Docs/2_TechnicalDesign/Combat/ProjectileMovement_Library.md`（加修订历史，内容未变）
+- **内容**：对刚出炉 1 小时的"套餐 C 激进方案"做红队审查，发现三个盲点并修正——(a) 下意识照搬 Magicraft 的 `Resources.LoadAll` 模式，忽视 Unity Editor 下 AssetDatabase 是更好选择；(b) 把 "可能用到的双向同步 Exporter" 包装成激进亮点，违背"垂直切片优先"的项目哲学；(c) 错过 Magicraft 最精巧的设计 `SlotData` 槽位元数据（拟态/封印/槽位级等级），但诚实评估 GDD 现阶段不需要，按 YAGNI 不引入。
+- **目的**：避免先做完再后悔——红队审查是 pre-mortem 工具，在代码投入前质疑方案。按"先 Why 后 What"原则（Implement_rules.md 开发哲学 6），宁可文档阶段多花 30 分钟审查，也不在实施 10 小时后发现架构选错。
+- **技术**：
+  1. **Registry 方案重写**：从 `Resources.LoadAll<StarChartItemSO>("StarChart")`（要求所有 SO 迁移到 Resources 目录）改为 `StarChartManifest.asset`（ScriptableObject 承载 `StarChartItemSO[]` 清单）+ `AssetDatabase.FindAssets("t:StarChartItemSO")` 扫描。优点：SO 位置不变（现有引用不破）、不强制全量打包、未来切 Addressables 只需把 `StarChartItemSO[]` 改为 `AssetReference[]`。Importer 每次导入结尾自动刷新 Manifest，人工无需手改。
+  2. **Exporter 延期**：用真实使用频率表否定"SO → CSV 反向同步"是高频需求；定义未来重启条件（连续 3 次 Inspector 改不回 CSV / 批量改动 > 20 条 / 策划主动请求），不满足前延期。
+  3. **SlotData 不引入**：审查 Magicraft 的 `SlotData` 支持 `mimicSpellID`（拟态）+ `sealSlotOwner`（封印）+ `slotSpellExtraLevel`（槽位级加成），但我们 GDD 暂无这些机制需求，按 YAGNI 推迟。若将来需要，加一层 SlotData 预计 2-3h。
+  4. **保留不变的部分**：CSV 四张独立表、分号串协议、CoreArchetype + H3 Movement 库、IProjectileMovement 接口、MovementParamApplier 反射覆盖、双语占位字段、string ID（ItemId 字段）——这些经得起红队审查。
+  5. **工时节省**：套餐 C 原 16-22h → B+ 修正后 11-14h，节省 5-8h（删 Exporter 2-3h + 删 SO 搬家步骤 1-2h + Registry 方案简化 0-1h）。
+- **方法论**：本次红队审查由用户主动触发（"请再次审查一遍我们选择的方案"），采用 the-fool 风格的批判性审查——不护着自己之前的推荐，用真实使用频率、YAGNI 原则、垂直切片哲学逐条拷问每个设计点。结果是方案精简 30%、风险下降（取消高风险的 SO 搬家）、交付速度提升。应成为后续大规模设计决策的标准工序。
+- **决策责任人**：用户拍板 K1+L1+M2（接受修正 B+、不引入 SlotData、三份文档全改加修订历史）。
+- **下一步**：方案已稳定。等用户决定何时启动 Phase 1（Importer 基础设施 + StarCores，3-4h 可完成 MVP）。
+
+---
+
+## StarChart 数据管线文档 v1.1 审阅 + v1.2 代码对齐修正 — 2026-04-27 16:10
+
+- **修改文件**
+  - `Docs/2_TechnicalDesign/Combat/StarChart_DataPipeline.md`（v1.1 → v1.2）
+  - `Docs/2_TechnicalDesign/Combat/StarChart_DataPipeline_Plan.md`（v1.1 → v1.2）
+  - `Docs/2_TechnicalDesign/Combat/ProjectileMovement_Library.md`（v1.1 → v1.2）
+- **背景**：用户要求"先审阅 v1.1 再动工"。执行认真的自审后发现 11 个实际偏差——3 个阻碍 Phase 实施（Projectile.Initialize 签名错、ItemShape 枚举名错、命名空间不一致），3 个需澄清（Phase 1 Archetype 可用集、SO 命名规则、ID 格式），4 个文档笔误（残留 v1.0 术语 "套餐 C" / "Resources/StarChart/" / Phase 编号错位等），1 个架构规范缺失（Update vs FixedUpdate 未明确）。用户选择 N1+O2+P1（全部修 + 字母前缀 ID + InternalName 即 SO 文件名）。
+- **内容**：以"代码真相对齐"为目的修正三份文档的 11 个问题，不改变架构决策。关键变更：
+  1. **Library §2.1 接口**：命名空间从 `ProjectArk.Combat.Projectile` 改为 `ProjectArk.Combat`（与现有 Projectile.cs 对齐）；接口新增 `OnFixedUpdate(fixedDt)` 与 `OnUpdate(dt)` 双生命周期（v1.1 只有 `OnUpdate` 笼统放一起，不利于物理与视觉分层），明确"默认走 FixedUpdate 改 velocity，Update 只做 transform 视觉叠加"。
+  2. **Library §2.2 Projectile 集成**：Initialize 签名改为对齐实际代码 `(direction, parms, modifiers = null, shooter = null)`，第四参数 shooter 可选默认 null → **3 处现有调用点（ProjectileSpawner 两处 + AutoTurretBehavior 一处）Phase 2 实施时无需改动即可编译通过**。Projectile 新增 `_hasMovement` bool 缓存避免每帧 null 比较。
+  3. **主文档 §3.2 通用列**：Shape 枚举值对齐实际代码（Shape1x2H / Shape2x1V / ShapeL / ShapeLMirror），ID 列规则明确为 C001/P001/S001/T001 字母前缀，InternalName 列语义改为"SO 完整文件名（不含扩展名）"。
+  4. **主文档 §9.1 Archetype 可用集**：新增分 Phase 的可用值表——Phase 1 仅 Straight，Phase 2 新增 Tracking，Phase-M2/M3 后续扩展。策划现在清楚哪个 Archetype 值能用。
+  5. **Plan 新增 Phase 0**：预置阶段（0.5-1h），SO 重命名为 `{InternalName}.asset` + CSV ID 字母前缀化，避免 Phase 1 导入时新老命名并存。强制要求 Unity Editor 内 Rename（保留 GUID 不断引用），手动 Finder 改名会丢引用。
+  6. **Plan Phase 1/2 任务清单**：具体化 Phase 1 的 Archetype 仅 Straight、Phase 2 的 Projectile.Initialize 签名升级细节（前三参数不变 + 第四可选参数）。
+  7. **清理残留术语**：v1.0 的"套餐 C"、"Resources/StarChart/"、"Phase 5 清理"等全部替换为"B+ 方案"、"StarChartManifest.asset"、"Phase 7 清理"。修订历史表中保留作为历史说明。
+- **目的**：文档是施工蓝图。v1.1 文档与代码实际存在的偏差会在实施时制造编译错误和行为偏差，预期多花 1-2h 排查。v1.2 修正在动工前 25 分钟内完成，是典型的 "pre-mortem 10 倍 ROI" 投资。
+- **技术**：
+  1. **Initialize 向后兼容策略**：新参数 shooter 放末尾且默认 null。这样现有 3 处调用点代码完全不变即可编译（C# 默认参数规则），Phase 2 只需补传 shooter 给 TrackingMovement 需要的两处。**避免"破坏性变更 + 改动点散布"的反模式**。
+  2. **双生命周期接口**：OnFixedUpdate + OnUpdate 分离物理层与视觉层。StraightMovement 用 FixedUpdate 维持 velocity；SerpentineMovement 用 FixedUpdate 维持 velocity + Update 叠加正弦 transform 偏移。避免 Magicraft 风格"什么都塞 OnUpdate 后来悔不当初"的 shi 山。
+  3. **CoreArchetype Phase-gated 可用值**：CSV 填非当前 Phase 可用的 Archetype → Debug.LogError + 降级为 Straight（不阻断导入）。策划不会因为尝试 `Tracking` 前置值而整条 CSV 导入失败。
+  4. **SO 命名标准化策略**：选 P1（`{InternalName}.asset` 无前缀）让 CSV 的 InternalName 列成为唯一 SO 命名真相源。老 SO 通过 Unity Rename 一次性对齐，GUID 保留，引用不断。
+- **影响**：v1.2 是文档修正，**不涉及任何代码改动**。工作树本次变化仅三份文档 + 实现日志。Phase 0 新增总工时 +0.5-1h，Phase 1/2 实施风险下降（已排除签名不一致、枚举名错、命名空间错 3 个陷阱）。
+- **方法论反思**：v1.1 审查聚焦"架构决策"，v1.2 审查聚焦"代码真相对齐"。**两层审查缺一不可**——架构好但与代码不对齐，实施时仍会摔跤。后续大型设计决策应默认做"架构审查（红队 pre-mortem）+ 实施审查（代码对齐）"两轮。

@@ -215,6 +215,77 @@ namespace ProjectArk.UI
             SetDropCandidate(false);
         }
 
+        // ── 动态容量管理 ─────────────────────────────────────────────
+        // 运行时根据 SlotLayer.Rows * Cols 伸缩 _cells 数组。
+        // 克隆 _cells[0] 作为模板复制，零额外维护成本（BuildSlotCell 改动会自动同步）。
+        // Unity Instantiate 会自动 remap 内部引用（_backgroundImage / _iconImage 等指向自身子节点），
+        // 因此克隆出来的 cell 组件字段是独立的，不会共享引用。
+
+        /// <summary>
+        /// 确保 <see cref="_cells"/> 数组长度至少为 <paramref name="required"/>。
+        /// 扩容时以 cells[0] 为模板克隆新 cell；缩容时销毁多余 cell。
+        /// 所有新 cell 会按当前 <see cref="SlotType"/> / 主题色 / ownerTrack 完成 wire-up。
+        /// 必须在 TrackView.RefreshColumn 设置 GridLayoutGroup.constraintCount 之前调用，
+        /// 以便布局重建能看到完整的 cell 列表。
+        /// </summary>
+        /// <param name="required">所需 cell 数量（= layer.Rows * layer.Cols）</param>
+        /// <param name="ownerTrack">新 cell 的 owner track（SAIL 共享列传 null）</param>
+        public void EnsureCellCapacity(int required, TrackView ownerTrack)
+        {
+            if (required <= 0) required = 1;
+            if (_cells == null || _cells.Length == 0 || _cells[0] == null)
+            {
+                Debug.LogError($"[TypeColumn:{name}] EnsureCellCapacity 要求至少存在一个模板 cell (cells[0])，" +
+                               "但当前 _cells 为空或 cells[0]=null。跳过伸缩。");
+                return;
+            }
+
+            int current = _cells.Length;
+            if (current == required) return;
+
+            if (required > current)
+            {
+                // 扩容：以 cells[0] 为模板克隆
+                var template = _cells[0];
+                var parent = template.transform.parent;
+                var newArr = new SlotCellView[required];
+                for (int i = 0; i < current; i++) newArr[i] = _cells[i];
+                for (int i = current; i < required; i++)
+                {
+                    var clone = UnityEngine.Object.Instantiate(template.gameObject, parent);
+                    clone.name = $"Cell_{i}";
+                    var cellView = clone.GetComponent<SlotCellView>();
+                    if (cellView == null)
+                    {
+                        Debug.LogError($"[TypeColumn:{name}] 克隆出的 Cell_{i} 缺少 SlotCellView 组件");
+                        UnityEngine.Object.Destroy(clone);
+                        continue;
+                    }
+                    // Wire up identity（与 Initialize 内循环保持一致）
+                    cellView.SlotType = _slotType;
+                    cellView.CellIndex = i;
+                    cellView.OwnerTrack = ownerTrack;
+                    cellView.OwnerColumn = this;
+                    cellView.SetThemeColor(_typeColor);
+                    cellView.SetEmpty(); // 清掉模板可能带过来的显示状态
+                    newArr[i] = cellView;
+                }
+                _cells = newArr;
+            }
+            else
+            {
+                // 缩容：销毁尾部多余 cell
+                for (int i = required; i < current; i++)
+                {
+                    if (_cells[i] != null)
+                        UnityEngine.Object.Destroy(_cells[i].gameObject);
+                }
+                var newArr = new SlotCellView[required];
+                for (int i = 0; i < required; i++) newArr[i] = _cells[i];
+                _cells = newArr;
+            }
+        }
+
         /// <summary> Set highlight on a range of cells (for multi-size items). </summary>
         public void SetCellHighlight(int startIndex, int count, bool valid, bool isReplace = false)
         {
