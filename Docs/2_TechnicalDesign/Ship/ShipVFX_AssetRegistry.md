@@ -111,7 +111,18 @@
 | `BoostTrailImplementationStatus` | `BoostTrail_Shader_Implementation_Status.md` | Doc | Live | `Docs/Reference/BoostTrail_Shader_Implementation_Status.md` | Docs | 主拖尾实现状态说明 |
 | `GalacticGlitchBoostTrailResearch` | `GalacticGlitch_BoostTrail_VFX_Plan.md` | Doc | Reference | `Docs/Reference/GalacticGlitch_BoostTrail_VFX_Plan.md` | Reference | 上游逆向研究，不是现役规范 |
 
-## 8. 当前已知治理重点
+## 8. GGReplica Experimental Assets
+
+| Canonical Name | Physical Name | Type | Status | Current Path | Owner | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| `GGReplicaShipPrefab` | `Ship_GGReplica.prefab` | Prefab | Reference | `Assets/_Prefabs/Ship/Ship_GGReplica.prefab` | `GGReplicaPrefabBuilder` | Experimental A/B replica; not live chain |
+| `GGReplicaVisualProfile` | `GGReplicaShipVisualProfile.asset` | ScriptableObject | Reference | `Assets/_Data/Ship/GGReplicaShipVisualProfile.asset` | GGReplica | Five-state sprite/audio mapping |
+| `GGReplicaFeelProfile` | `GGReplicaShipFeelProfile.asset` | ScriptableObject | Reference | `Assets/_Data/Ship/GGReplicaShipFeelProfile.asset` | GGReplica | Boost/Dodge feel tuning |
+| `GGReplicaArtRoot` | `GGReplica/` | Art Folder | Reference | `Assets/_Art/Ship/GGReplica/` | GGReplica | Curated GG reference assets |
+| `GGReplicaTestScene` | `GGReplicaShipTest.unity` | Scene | Reference | `Assets/Scenes/GGReplicaShipTest.unity` | GGReplica | A/B validation scene |
+| `GGReplicaIsolationAuditor` | `GGReplicaAuditor` | Editor Tool | Reference | `Assets/Scripts/Ship/Editor/GGReplica/GGReplicaAuditor.cs` | GGReplica | Read-only isolation audit for replica prefab and live-chain pollution |
+
+## 9. 当前已知治理重点
 
 ### Phase A 治理状态：✅ 全部通过（2026-03-21 审计）
 
