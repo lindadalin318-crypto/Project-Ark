@@ -46,7 +46,18 @@ namespace ProjectArk.Ship.Editor
             new CopyEntry("DevXUnity/Sprite/Primary_d6.png", "Sprites/Primary_6.png", DefaultShipPPU, new Vector2(0.5f, 0.5f)),
             new CopyEntry("DevXUnity/Sprite/player_test_fire.png", "Sprites/player_test_fire.png", 707, new Vector2(0.5f, 0.3282f)),
             new CopyEntry("DevXUnity/Sprite/GrabGun_back_d3.png", "Sprites/GrabGun_Back_3.png", DefaultShipPPU, new Vector2(0.5f, 0.5f)),
-            new CopyEntry("DevXUnity/Sprite/reactor.png", "Sprites/reactor.png", DefaultShipPPU, new Vector2(0.5f, 0.5f))
+            new CopyEntry("DevXUnity/Sprite/reactor.png", "Sprites/reactor.png", DefaultShipPPU, new Vector2(0.5f, 0.5f)),
+            new CopyEntry("DevXUnity/Sprite/Secondary_d8.png", "Sprites/Secondary_8.png", DefaultShipPPU, new Vector2(0.5f, 0.5f)),
+            new CopyEntry("DevXUnity/Sprite/Secondary.png", "Sprites/Secondary_0.png", DefaultShipPPU, new Vector2(0.5f, 0.5f)),
+            new CopyEntry("DevXUnity/Sprite/Secondary_d17.png", "Sprites/Secondary_17.png", DefaultShipPPU, new Vector2(0.5f, 0.5f)),
+            new CopyEntry("DevXUnity/Sprite/Healing_d1.png", "Sprites/Healing_0.png", DefaultShipPPU, new Vector2(0.5f, 0.5f)),
+            new CopyEntry("DevXUnity/Sprite/Healing.png", "Sprites/Healing.png", DefaultShipPPU, new Vector2(0.5f, 0.5f)),
+            new CopyEntry("DevXUnity/Sprite/vfx_dot_001.png", "Sprites/vfx_dot_001.png", DefaultShipPPU, new Vector2(0.5f, 0.5f)),
+            new CopyEntry("DevXUnity/Sprite/GrabGun_Base_d9.png", "Sprites/GrabGun_Base_9.png", DefaultShipPPU, new Vector2(0.5f, 0.5f)),
+            new CopyEntry("DevXUnity/Sprite/GrabGun_Base_d8.png", "Sprites/GrabGun_Base_8.png", DefaultShipPPU, new Vector2(0.5f, 0.5f)),
+            new CopyEntry("DevXUnity/Sprite/GrabGun_Hand_d7.png", "Sprites/GrabGun_Hand_7.png", DefaultShipPPU, new Vector2(0.5f, 0.5f)),
+            new CopyEntry("DevXUnity/Sprite/scheme3_tp.png", "Sprites/scheme3_tp.png", DefaultShipPPU, new Vector2(0.5f, 0.5f)),
+            new CopyEntry("DevXUnity/Sprite/SHIP_PLAYER_DODGE_HALF.png", "Sprites/SHIP_PLAYER_DODGE_HALF.png", DefaultShipPPU, new Vector2(0.5f, 0.5f))
         };
 
         private static readonly CopyEntry[] AudioEntries =

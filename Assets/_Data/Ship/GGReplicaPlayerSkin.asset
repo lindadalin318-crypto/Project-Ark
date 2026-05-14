@@ -1,0 +1,91 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a117bc23e660452cb4f0b0b7d0ab39e, type: 3}
+  m_Name: GGReplicaPlayerSkin
+  m_EditorClassIdentifier: ProjectArk.Ship::ProjectArk.Ship.GGReplicaPlayerSkinSO
+  _stateToSpritesTable:
+  - State: 0
+    FadeDuration: 0.2
+    SolidSprite: {fileID: 21300000, guid: 42b639315b4454467a97526e3afcdc7c, type: 3}
+    LiquidSprite: {fileID: 21300000, guid: bd1394c5b47e34c089e9d35340aa8b50, type: 3}
+    HighlightSprite: {fileID: 21300000, guid: acf677ce4067f4d4c877f815e952a8be, type: 3}
+    SpritesOffset: {x: 0, y: 0, z: 0}
+  - State: 15
+    FadeDuration: 0.2
+    SolidSprite: {fileID: 21300000, guid: 42b639315b4454467a97526e3afcdc7c, type: 3}
+    LiquidSprite: {fileID: 21300000, guid: bd1394c5b47e34c089e9d35340aa8b50, type: 3}
+    HighlightSprite: {fileID: 21300000, guid: acf677ce4067f4d4c877f815e952a8be, type: 3}
+    SpritesOffset: {x: 0, y: 0, z: 0}
+  - State: 1
+    FadeDuration: 0.2
+    SolidSprite: {fileID: 21300000, guid: 1723119c67e9147ef80c4fd931a92a85, type: 3}
+    LiquidSprite: {fileID: 21300000, guid: 7f52e0e54cb8a4458a42bdca7e52da5a, type: 3}
+    HighlightSprite: {fileID: 21300000, guid: efbea4a3d9b314c8f96e907114f5023e, type: 3}
+    SpritesOffset: {x: 0, y: 0, z: 0}
+  - State: 2
+    FadeDuration: 0.2
+    SolidSprite: {fileID: 0}
+    LiquidSprite: {fileID: 0}
+    HighlightSprite: {fileID: 0}
+    SpritesOffset: {x: 0, y: 0, z: 0}
+  - State: 3
+    FadeDuration: 0.2
+    SolidSprite: {fileID: 21300000, guid: 27c6dcc610bf34fd7a455a65a576fdb6, type: 3}
+    LiquidSprite: {fileID: 21300000, guid: c74e304c3d7364ebfa36c38a8c0f34fd, type: 3}
+    HighlightSprite: {fileID: 21300000, guid: f74a5d401ef1f4216891583783791379, type: 3}
+    SpritesOffset: {x: 0, y: 0, z: 0}
+  - State: 4
+    FadeDuration: 0
+    SolidSprite: {fileID: 21300000, guid: 27c6dcc610bf34fd7a455a65a576fdb6, type: 3}
+    LiquidSprite: {fileID: 21300000, guid: c74e304c3d7364ebfa36c38a8c0f34fd, type: 3}
+    HighlightSprite: {fileID: 21300000, guid: f74a5d401ef1f4216891583783791379, type: 3}
+    SpritesOffset: {x: 0, y: 0, z: 0}
+  - State: 8
+    FadeDuration: 0
+    SolidSprite: {fileID: 21300000, guid: 27c6dcc610bf34fd7a455a65a576fdb6, type: 3}
+    LiquidSprite: {fileID: 21300000, guid: c74e304c3d7364ebfa36c38a8c0f34fd, type: 3}
+    HighlightSprite: {fileID: 21300000, guid: f74a5d401ef1f4216891583783791379, type: 3}
+    SpritesOffset: {x: 0, y: 0, z: 0}
+  - State: 5
+    FadeDuration: 0.2
+    SolidSprite: {fileID: 21300000, guid: 780b18ca27bd24c99b13271bb2ca04bc, type: 3}
+    LiquidSprite: {fileID: 21300000, guid: 0dd343997d0b04f6999d5f8a09ba3e05, type: 3}
+    HighlightSprite: {fileID: 21300000, guid: a672810c2271945b9a38659f1d2ca8b4, type: 3}
+    SpritesOffset: {x: 0, y: 0, z: 0}
+  - State: 6
+    FadeDuration: 0.2
+    SolidSprite: {fileID: 21300000, guid: 780b18ca27bd24c99b13271bb2ca04bc, type: 3}
+    LiquidSprite: {fileID: 21300000, guid: 0dd343997d0b04f6999d5f8a09ba3e05, type: 3}
+    HighlightSprite: {fileID: 21300000, guid: a672810c2271945b9a38659f1d2ca8b4, type: 3}
+    SpritesOffset: {x: 0, y: 0, z: 0}
+  - State: 7
+    FadeDuration: 0
+    SolidSprite: {fileID: 21300000, guid: 09b5a727ec5d54af3936e1d9bdb65536, type: 3}
+    LiquidSprite: {fileID: 21300000, guid: 09b5a727ec5d54af3936e1d9bdb65536, type: 3}
+    HighlightSprite: {fileID: 21300000, guid: 5a5241e372a454236a99de791825f11b, type: 3}
+    SpritesOffset: {x: 0, y: -0.1, z: 0}
+  - State: 9
+    FadeDuration: 0.2
+    SolidSprite: {fileID: 21300000, guid: dd28f9c05d9e942a69694b4e81d9c4c6, type: 3}
+    LiquidSprite: {fileID: 21300000, guid: b74082bd52a674a8d8dd6072aa37699d, type: 3}
+    HighlightSprite: {fileID: 21300000, guid: ce68b424065a54911959ed9ab987d38a, type: 3}
+    SpritesOffset: {x: 0, y: 0, z: 0}
+  _shipSpriteSolidGrabR: {fileID: 21300000, guid: 3f84f78b523614388a29786c29daf3a4, type: 3}
+  _shipSpriteSolidGrabL: {fileID: 21300000, guid: 3f84f78b523614388a29786c29daf3a4, type: 3}
+  _shipSpriteBack: {fileID: 21300000, guid: 869949eeb70f1404a887a5ea41a083fd, type: 3}
+  _reactorSprite: {fileID: 21300000, guid: 5a1b6d5ec2ab5429196be27566d198e0, type: 3}
+  _eyeSprite: {fileID: 21300000, guid: 5a1b6d5ec2ab5429196be27566d198e0, type: 3}
+  _viewSilhouetteSprite: {fileID: 21300000, guid: f062b97727628492f89dfa48dc2498ec, type: 3}
+  _dodgeSprite: {fileID: 21300000, guid: a55e5dd39807c45a5ba6980aef5269c4, type: 3}
+  _dodgeHalfSprite: {fileID: 21300000, guid: 58b5549c5ed4741a2ad873d3dc3d812e, type: 3}
+  _shipHighlightColor: {r: 0.54509807, g: 0.09019608, b: 1, a: 1}
+  _transitionColor: {r: 0.67058825, g: 0, b: 1, a: 1}
