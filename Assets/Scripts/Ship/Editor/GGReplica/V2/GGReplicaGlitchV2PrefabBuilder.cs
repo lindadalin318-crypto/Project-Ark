@@ -10,6 +10,7 @@ namespace ProjectArk.Ship.Editor
 
         private const string RootName = "Ship_GGReplicaV2";
         private const string VisualRootName = "GGGlitchVisualRoot";
+        private const string FeelProfilePath = "Assets/_Data/Ship/GGReplicaShipFeelProfile.asset";
         private const string MovementSolidPath = "Assets/_Art/Ship/GGReplica/Sprites/Movement_10.png";
         private const string MovementLiquidPath = "Assets/_Art/Ship/GGReplica/Sprites/Movement_3.png";
         private const string MovementHighlightPath = "Assets/_Art/Ship/GGReplica/Sprites/Movement_21.png";
@@ -34,6 +35,12 @@ namespace ProjectArk.Ship.Editor
                 var view = root.AddComponent<GGReplicaGlitchView>();
                 var motor = root.AddComponent<GGReplicaGlitchMotor>();
                 var input = root.AddComponent<GGReplicaGlitchInputDriver>();
+                var feelProfile = AssetDatabase.LoadAssetAtPath<GGReplicaShipFeelProfileSO>(FeelProfilePath);
+                if (feelProfile == null)
+                {
+                    Debug.LogError($"[GGReplicaGlitchV2PrefabBuilder] Missing feel profile: {FeelProfilePath}");
+                    return;
+                }
 
                 var visualRoot = CreateChild(root.transform, VisualRootName);
                 var bodyLayers = CreateChild(visualRoot, "BodyLayers");
@@ -85,6 +92,7 @@ namespace ProjectArk.Ship.Editor
 
                 SetSerialized(motor, "_body", body);
                 SetSerialized(motor, "_view", view);
+                SetSerialized(motor, "_feelProfile", feelProfile);
                 SetSerialized(input, "_motor", motor);
                 SetSerialized(view, "_visualRoot", visualRoot);
                 SetSerialized(view, "_boostModuleRoot", boostModule.gameObject);

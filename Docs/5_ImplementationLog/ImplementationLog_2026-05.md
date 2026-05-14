@@ -452,3 +452,21 @@
 - **内容**：开始执行 GGReplica V2 推倒重来路线，创建完全隔离的 `Ship_GGReplicaV2.prefab` 与 `GGReplicaGlitchV2Test.unity`，不再沿用旧 `GGReplicaPlayerViewAdapter` / `GGReplicaTestSwitcher` 的 0-9 换贴图验证方式。V2 prefab 从零构建，包含 `GGReplicaGlitchInputDriver`、`GGReplicaGlitchMotor`、`GGReplicaGlitchView`，以及 `GGGlitchVisualRoot` 下的 `BodyLayers`、`CoreModule`、`BoostModule`、`LQTrailModule`、`LQTrailsContainer`、`ShapeTrailModule`、`DarkTrailModule`、`FluxySolver`、`FluxyGrabModule`、`GrabModule`、`HealModule`、`DodgeModule`、`FireAimModule`、`ShapeShiftStateHitbox`、`vfx_boost_trail_loop_enhanced`、`vfx_boost_trail_burst_enhanced`、`ps_techno_flame_trail_R`、`ps_techno_flame_trail_quick`、`ps_techno_flame_trail_start`、`ps_ember_trail`、`startrails`、`startrails_long` 等原版 PlayerView 模块/VFX 对应节点。测试场景通过 WASD/方向键、Shift、Space、E、Q、鼠标左键驱动 Move/Boost/Dodge/Grab/Heal/FireAim，不再要求用户点击按钮。
 - **目的**：停止在错误的“ViewState 贴图表 + 少量材质参数”路线叠补丁，建立一个真正以 GG 原版基础 Glitch 飞船手感、输入、状态和 PlayerView 模块栈为中心的复刻入口。
 - **技术**：TDD + Editor automation。先新增 V2 PrefabBuilder/TestSceneBuilder/Runtime tests，RED 阶段确认缺少 V2 builder/runtime 类型；随后实现 runtime 输入帧、状态机、Rigidbody2D 运动/Boost/Dodge、模块化 View root toggle、trail/particle stack，以及两个 Editor builder。验证结果：V2 editor tests 2/2 通过；V2 runtime tests 2/2 通过；正式构建 `Ship_GGReplicaV2.prefab` 和 `GGReplicaGlitchV2Test.unity`，构建摘要 `trails=5`、`particles=8`；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误。当前仍是 V2 第一可玩切片，下一步需要继续按原版 `Player.prefab` 序列化参数细化粒子/trail 形态与时序。
+
+---
+
+## GGReplica V2 原版手感参数接入 — 2026-05-14 22:35
+
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchMotor.cs`
+  - `Assets/Scripts/Ship/GGReplica/GGReplicaShipFeelProfileSO.cs`
+  - `Assets/_Data/Ship/GGReplicaShipFeelProfile.asset`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilderTests.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaShipProfileTests.cs`
+  - `Assets/_Prefabs/Ship/Ship_GGReplicaV2.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：将 GGReplica V2 的 Boost/Dodge 从占位参数切换为 `GGReplicaShipFeelProfileSO` 驱动。新增 `DodgeStateDuration=0.225` 与 `DodgeLinearDamping=1.7` 配置；V2 Motor 现在使用原版 Glitch 调研参数：Boost 持续倍率 `1.2`、启动冲量 `4`、Boost 阻尼 `2.5`、Dodge 冲量 `13`、Dodge 最小状态时长 `0.225`，并在 Boost/Dodge 退出时恢复基础阻尼。V2 Prefab Builder 显式加载并写入 `Assets/_Data/Ship/GGReplicaShipFeelProfile.asset`。
+- **目的**：继续纠正 V2 第一切片中“可动但手感仍是占位”的问题，让 Shift/Space 的变速、冲量与状态停留更接近 Galactic Glitch 原版基础 Glitch 飞船。
+- **技术**：TDD + Unity MCP。RED：新增 `GGReplicaGlitchV2RuntimeTests` 两个 PlayMode 测试，先失败于 `GGReplicaGlitchMotor` 缺少 `_feelProfile` 字段；随后实现 Profile 接入和参数读取。验证结果：`GGReplicaGlitchV2RuntimeTests` PlayMode 4/4 通过；`GGReplicaGlitchV2PrefabBuilderTests.BuildPrefab_CreatesOriginalPlayerViewModuleRigAndInputRuntime` EditMode 1/1 通过；`GGReplicaShipProfileTests.FeelProfile_DefaultValues_MatchInitialGGReplicaTuning` PlayMode 1/1 通过；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误；`git diff --check` 通过。

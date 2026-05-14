@@ -60,6 +60,8 @@ namespace ProjectArk.Ship.Tests
             Assert.That(profile.DodgeInvulnerabilityTime, Is.EqualTo(0.15f));
             Assert.That(profile.DodgeCacheTime, Is.EqualTo(0.12f));
             Assert.That(profile.DodgeRechargeTime, Is.EqualTo(0.5f));
+            Assert.That(profile.DodgeStateDuration, Is.EqualTo(0.225f));
+            Assert.That(profile.DodgeLinearDamping, Is.EqualTo(1.7f));
             Assert.That(profile.MaxDodgeCharges, Is.EqualTo(1));
             Assert.That(profile.BoostSpeedMultiplier, Is.EqualTo(1.2f));
             Assert.That(profile.AfterBoostDrag, Is.EqualTo(2.5f));

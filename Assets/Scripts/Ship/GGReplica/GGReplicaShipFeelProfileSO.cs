@@ -11,6 +11,8 @@ namespace ProjectArk.Ship
         [Min(0f)] [SerializeField] private float _dodgeInvulnerabilityTime = 0.15f;
         [Min(0f)] [SerializeField] private float _dodgeCacheTime = 0.12f;
         [Min(0f)] [SerializeField] private float _dodgeRechargeTime = 0.5f;
+        [Min(0f)] [SerializeField] private float _dodgeStateDuration = 0.225f;
+        [Min(0f)] [SerializeField] private float _dodgeLinearDamping = 1.7f;
         [Min(1)] [SerializeField] private int _maxDodgeCharges = 1;
         [SerializeField] private float _speedModAfterDodge = 1.15f;
         [Min(0f)] [SerializeField] private float _speedModAfterDodgeTime = 0.2f;
@@ -29,6 +31,8 @@ namespace ProjectArk.Ship
         public float DodgeInvulnerabilityTime => _dodgeInvulnerabilityTime;
         public float DodgeCacheTime => _dodgeCacheTime;
         public float DodgeRechargeTime => _dodgeRechargeTime;
+        public float DodgeStateDuration => _dodgeStateDuration;
+        public float DodgeLinearDamping => _dodgeLinearDamping;
         public int MaxDodgeCharges => _maxDodgeCharges;
         public float SpeedModAfterDodge => _speedModAfterDodge;
         public float SpeedModAfterDodgeTime => _speedModAfterDodgeTime;

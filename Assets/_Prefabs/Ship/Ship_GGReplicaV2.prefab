@@ -24807,10 +24807,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectArk.Ship::ProjectArk.Ship.GGReplicaGlitchMotor
   _body: {fileID: 2668964526124879108}
   _view: {fileID: 311171082069794576}
+  _feelProfile: {fileID: 11400000, guid: ec15c78a4905b46dfba1c7b8cd5b3468, type: 2}
   _moveSpeed: 6
-  _boostMultiplier: 2.15
-  _dodgeSpeed: 18
-  _dodgeDuration: 0.16
 --- !u!114 &8854969961018994768
 MonoBehaviour:
   m_ObjectHideFlags: 0

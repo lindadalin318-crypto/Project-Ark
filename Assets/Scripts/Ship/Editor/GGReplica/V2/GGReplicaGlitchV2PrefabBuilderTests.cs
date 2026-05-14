@@ -77,6 +77,10 @@ namespace ProjectArk.Ship.Editor
             Assert.That(trails.Length, Is.GreaterThanOrEqualTo(2), "V2 must use a trail stack, not one decorative line.");
             Assert.That(trails.Any(t => t.sharedMaterial != null && t.sharedMaterial.name == "GGReplicaPlayerLQTrail"), Is.True);
 
+            var motor = prefab.GetComponent<GGReplicaGlitchMotor>();
+            var motorSO = new SerializedObject(motor);
+            AssertReference(motorSO, "_feelProfile", "Assets/_Data/Ship/GGReplicaShipFeelProfile.asset");
+
             var view = prefab.GetComponent<GGReplicaGlitchView>();
             var viewSO = new SerializedObject(view);
             Assert.That(viewSO.FindProperty("_visualRoot").objectReferenceValue, Is.SameAs(visualRoot));
@@ -84,6 +88,13 @@ namespace ProjectArk.Ship.Editor
             Assert.That(viewSO.FindProperty("_lqTrailsContainer").objectReferenceValue, Is.SameAs(visualRoot.Find("LQTrailsContainer").gameObject));
             Assert.That(viewSO.FindProperty("_grabModuleRoot").objectReferenceValue, Is.SameAs(visualRoot.Find("GrabModule").gameObject));
             Assert.That(viewSO.FindProperty("_healModuleRoot").objectReferenceValue, Is.SameAs(visualRoot.Find("HealModule").gameObject));
+        }
+
+        private static void AssertReference(SerializedObject serializedObject, string propertyName, string expectedAssetPath)
+        {
+            var expected = AssetDatabase.LoadAssetAtPath<Object>(expectedAssetPath);
+            Assert.That(expected, Is.Not.Null, $"Missing expected asset `{expectedAssetPath}`.");
+            Assert.That(serializedObject.FindProperty(propertyName).objectReferenceValue, Is.SameAs(expected), $"{propertyName} should reference `{expectedAssetPath}`.");
         }
 
         private static void AssertLayerRenderer(Transform parent, string childName)

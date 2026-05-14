@@ -17,6 +17,8 @@ MonoBehaviour:
   _dodgeInvulnerabilityTime: 0.15
   _dodgeCacheTime: 0.12
   _dodgeRechargeTime: 0.5
+  _dodgeStateDuration: 0.225
+  _dodgeLinearDamping: 1.7
   _maxDodgeCharges: 1
   _speedModAfterDodge: 1.15
   _speedModAfterDodgeTime: 0.2

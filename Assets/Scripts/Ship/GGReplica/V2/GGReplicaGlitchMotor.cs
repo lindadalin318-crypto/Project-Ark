@@ -7,12 +7,11 @@ namespace ProjectArk.Ship
     {
         [SerializeField] private Rigidbody2D _body;
         [SerializeField] private GGReplicaGlitchView _view;
+        [SerializeField] private GGReplicaShipFeelProfileSO _feelProfile;
         [SerializeField, Min(0f)] private float _moveSpeed = 6f;
-        [SerializeField, Min(1f)] private float _boostMultiplier = 2.15f;
-        [SerializeField, Min(0f)] private float _dodgeSpeed = 18f;
-        [SerializeField, Min(0f)] private float _dodgeDuration = 0.16f;
 
         private float _dodgeTimer;
+        private float _baseLinearDamping;
         private Vector2 _lastMove = Vector2.right;
 
         public GGReplicaGlitchState CurrentState { get; private set; } = GGReplicaGlitchState.Idle;
@@ -23,6 +22,7 @@ namespace ProjectArk.Ship
             if (_view == null) _view = GetComponent<GGReplicaGlitchView>();
             _body.gravityScale = 0f;
             _body.linearDamping = 4f;
+            _baseLinearDamping = _body.linearDamping;
         }
 
         private void FixedUpdate()
@@ -32,6 +32,7 @@ namespace ProjectArk.Ship
                 _dodgeTimer -= Time.fixedDeltaTime;
                 if (_dodgeTimer <= 0f)
                 {
+                    _body.linearDamping = _baseLinearDamping;
                     ApplyState(_body.linearVelocity.sqrMagnitude > 0.01f ? GGReplicaGlitchState.Move : GGReplicaGlitchState.Idle);
                 }
             }
@@ -47,10 +48,17 @@ namespace ProjectArk.Ship
                 _lastMove = move.normalized;
             }
 
+            bool wantsBoost = input.BoostHeld && move.sqrMagnitude > 0.001f;
+            if (CurrentState == GGReplicaGlitchState.BoostHold && !wantsBoost)
+            {
+                _body.linearDamping = _baseLinearDamping;
+            }
+
             if (input.DodgePressed)
             {
-                _dodgeTimer = _dodgeDuration;
-                _body.linearVelocity = _lastMove * _dodgeSpeed;
+                _dodgeTimer = DodgeStateDuration;
+                _body.linearDamping = DodgeLinearDamping;
+                _body.linearVelocity = _lastMove * DodgeForce;
                 ApplyState(GGReplicaGlitchState.DodgeBurst);
                 return;
             }
@@ -78,11 +86,17 @@ namespace ProjectArk.Ship
                 return;
             }
 
-            float speed = input.BoostHeld ? _moveSpeed * _boostMultiplier : _moveSpeed;
+            float speed = wantsBoost ? _moveSpeed * BoostSpeedMultiplier : _moveSpeed;
             _body.linearVelocity = move * speed;
 
-            if (input.BoostHeld && move.sqrMagnitude > 0.001f)
+            if (wantsBoost)
             {
+                if (CurrentState != GGReplicaGlitchState.BoostHold)
+                {
+                    _body.linearVelocity += _lastMove * BoostStartImpulse;
+                    _body.linearDamping = AfterBoostDrag;
+                }
+
                 ApplyState(GGReplicaGlitchState.BoostHold);
             }
             else if (move.sqrMagnitude > 0.001f)
@@ -94,6 +108,18 @@ namespace ProjectArk.Ship
                 ApplyState(GGReplicaGlitchState.Idle);
             }
         }
+
+        private float DodgeForce => _feelProfile != null ? _feelProfile.DodgeForce : 13f;
+
+        private float DodgeStateDuration => _feelProfile != null ? _feelProfile.DodgeStateDuration : 0.225f;
+
+        private float DodgeLinearDamping => _feelProfile != null ? _feelProfile.DodgeLinearDamping : 1.7f;
+
+        private float BoostSpeedMultiplier => _feelProfile != null ? _feelProfile.BoostSpeedMultiplier : 1.2f;
+
+        private float BoostStartImpulse => _feelProfile != null ? _feelProfile.BoostStartImpulse : 4f;
+
+        private float AfterBoostDrag => _feelProfile != null ? _feelProfile.AfterBoostDrag : 2.5f;
 
         private void ApplyState(GGReplicaGlitchState state)
         {
