@@ -98,6 +98,7 @@ Top-Down 2D Action Adventure + Metroidvania + Soulslike Atmosphere
 
 | 文档 | 路径 | 内容 |
 |------|------|------|
+| 关卡设计柱 | `Docs/1_GameDesign/Ark_LevelDesignPillars.md` | 跨星球关卡设计第一性原理（Heart-Wonder 体系） |
 | 世界观圣经 | `Docs/1_GameDesign/World_Bible.md` | 完整世界观设定 |
 | 示巴星圣经 | `Docs/1_GameDesign/Sheba_Planet_Bible.md` | 示巴星完整设定 |
 | Bellringer 角色设计 | `Docs/1_GameDesign/Bellringer_Character_Design.md` | NPC 角色设定 |

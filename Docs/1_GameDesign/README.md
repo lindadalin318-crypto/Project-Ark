@@ -15,6 +15,7 @@
 ## 当前主入口
 
 - [`Ark_MasterDesign.md`](./Ark_MasterDesign.md): 唯一总设计入口
+- [`Ark_LevelDesignPillars.md`](./Ark_LevelDesignPillars.md): 跨星球关卡设计柱（Heart-Wonder 体系）
 - [`World_Bible.md`](./World_Bible.md): 世界设定专题
 - [`Sheba_Planet_Bible.md`](./Sheba_Planet_Bible.md): 示巴星设定专题
 - [`Sheba_FeatureRequirements.md`](./Sheba_FeatureRequirements.md): 示巴星现役需求主稿
