@@ -470,3 +470,344 @@
 - **内容**：将 GGReplica V2 的 Boost/Dodge 从占位参数切换为 `GGReplicaShipFeelProfileSO` 驱动。新增 `DodgeStateDuration=0.225` 与 `DodgeLinearDamping=1.7` 配置；V2 Motor 现在使用原版 Glitch 调研参数：Boost 持续倍率 `1.2`、启动冲量 `4`、Boost 阻尼 `2.5`、Dodge 冲量 `13`、Dodge 最小状态时长 `0.225`，并在 Boost/Dodge 退出时恢复基础阻尼。V2 Prefab Builder 显式加载并写入 `Assets/_Data/Ship/GGReplicaShipFeelProfile.asset`。
 - **目的**：继续纠正 V2 第一切片中“可动但手感仍是占位”的问题，让 Shift/Space 的变速、冲量与状态停留更接近 Galactic Glitch 原版基础 Glitch 飞船。
 - **技术**：TDD + Unity MCP。RED：新增 `GGReplicaGlitchV2RuntimeTests` 两个 PlayMode 测试，先失败于 `GGReplicaGlitchMotor` 缺少 `_feelProfile` 字段；随后实现 Profile 接入和参数读取。验证结果：`GGReplicaGlitchV2RuntimeTests` PlayMode 4/4 通过；`GGReplicaGlitchV2PrefabBuilderTests.BuildPrefab_CreatesOriginalPlayerViewModuleRigAndInputRuntime` EditMode 1/1 通过；`GGReplicaShipProfileTests.FeelProfile_DefaultValues_MatchInitialGGReplicaTuning` PlayMode 1/1 通过；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误；`git diff --check` 通过。
+
+---
+
+## GGReplica V2 Boost/Dodge 视觉时序 — 2026-05-14 23:02
+
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchView.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilderTests.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Assets/_Prefabs/Ship/Ship_GGReplicaV2.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：继续推进 GGReplica V2 的原版 PlayerView 复刻，将 `GGReplicaGlitchView` 从“状态切换时立即开关粒子”推进到 Boost/Dodge 分阶段视觉时序。Boost 进入时现在播放一次点火 burst，并在 `GGReplicaShipFeelProfileSO.BoostIgniteDuration` 窗口结束后停止 burst，同时保留 sustain 粒子和 trail；Dodge 进入时播放 Dodge burst，并在 `DodgeStateDuration` 窗口内衰减 `Dodge_Sprite` ghost alpha 与 core scale，窗口结束后清空 burst。Builder 现在为 View 写入 Feel Profile，并区分 `_boostBurstParticles` 与 `_dodgeBurstParticles`，避免 Boost 和 Dodge 粒子串用。
+- **目的**：回应“继续做 V2 的视觉时序”，让 Shift Boost 与 Space Dodge 不再只是静态根节点开关，而是更接近 GG 原版 `PlayerViewBoostModule.OnBoostStart` 与 `PlayerViewFluxyTrailModule.OnDodgeStart/End` 的事件式视觉节奏。
+- **技术**：TDD + Unity 运行时计时。新增 PlayMode 规格测试 `View_BoostIgnition_PlaysBurstOnlyDuringIgniteWindowThenKeepsSustain` 与 `View_DodgeVisuals_FadeGhostAndStopBurstAfterDodgeWindow`，以反射调用 `TickVisuals(float)` 验证时序窗口。实现使用 `Update()` 推进轻量计时器，不新增 Coroutine；粒子停止使用 `StopEmittingAndClear` 防止 one-shot 残留。验证结果：`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误；`git diff --check` 通过。Unity MCP 当前处于 disconnected/connecting，命令行 Unity 测试因已有 Editor 实例打开同一项目被拒绝，PlayMode 测试需在 Unity MCP 恢复后补跑。
+
+---
+
+## GGReplica V2 DevXUnity Fake Fluxy Trail — 2026-05-14 23:25
+
+- **新建文件**
+  - `Assets/_Art/Ship/GGReplica/Shaders/GGReplicaFakeFluxy.shader`
+  - `Assets/_Art/Ship/GGReplica/Materials/GGReplicaFakeFluxy.mat`（Unity 自动生成 `.meta`）
+- **修改文件**
+  - `Assets/Scripts/Ship/Editor/GGReplica/GGReplicaMaterialAssetBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/GGReplicaMaterialAssetBuilderTests.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilderTests.cs`
+  - `Assets/_Prefabs/Ship/Ship_GGReplicaV2.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：按用户要求将本轮参考重点切回 `DevXUnity/`，从 `DevXUnity/Material/vfx_helping hand_fake_fluxy.mat.meta` 提取 fake Fluxy 材质参数，新增 Project Ark-owned `GGReplicaFakeFluxy.shader` 与 `GGReplicaFakeFluxy.mat`。材质参数接入 DevXUnity 证据：`_BaseColor=(0,0,0,0)`、`_GlowColor=(1.1607844,0,2.9960785,0)`、`_DistortionOffset=-1`、`_DepthOffset=-0.3`、`_NoiseScale=6`、`_RimWidth=0.07`、`_FlowPower=3.77`。V2 Prefab Builder 现在将 `LQTrailModule/fluxy_like_lq_trail` 从通用 `GGReplicaPlayerLQTrail` 切换为 `GGReplicaFakeFluxy`。
+- **目的**：让 V2 的 Fluxy-like trail 不再只是普通 LQTrail 的重复线条，而是开始按 DevXUnity 中 `vfx_helping hand_fake_fluxy` 的材质证据还原 GG 原版 Glitch 飞船/抓取相关的液体拖尾观感。
+- **技术**：TDD + Unity Editor automation。RED：`GGReplicaMaterialAssetBuilderTests.BuildVisualMaterials_CreatesMaterialsWithOriginalGGParameters` 先失败于 `GGReplicaFakeFluxy.mat` 缺失；随后新增 shader/material builder 逻辑并更新 V2 Prefab Builder。验证结果：材质 Builder EditMode 1/1 通过；V2 Prefab Builder EditMode 1/1 通过；V2 Runtime PlayMode 6/6 通过；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误；`git diff --check` 通过。
+
+---
+
+## GGReplica V2 DevXUnity EngineTrail Boost 材质 — 2026-05-14 23:45
+
+- **新建文件**
+  - `Assets/_Art/Ship/GGReplica/Shaders/GGReplicaEngineTrail.shader`
+  - `Assets/_Art/Ship/GGReplica/Materials/GGReplicaEngineTrail.mat`（Unity 自动生成 `.meta`）
+- **修改文件**
+  - `Assets/Scripts/Ship/Editor/GGReplica/GGReplicaMaterialAssetBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/GGReplicaMaterialAssetBuilderTests.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilderTests.cs`
+  - `Assets/_Prefabs/Ship/Ship_GGReplicaV2.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：继续按 `DevXUnity/` 作为主要参考源，从 `DevXUnity/Material/EngineTrail1.mat.meta` 提取 Boost/engine trail 材质参数，新增 Project Ark-owned `GGReplicaEngineTrail.shader` 与 `GGReplicaEngineTrail.mat`。接入参数包括 `BottomColor=(1,0,0.91456747,1)`、`TopColor=(0.0990566,0.8460265,1,1)`、`GhostColor=(0.09211465,0.8490566,0.6468398,0.3882353)`、`MixEffect=1`、`NoiseScale=1.31`、`Spread=2`、`Power=7`、`WobbleSpeed=0.4`、三层速度向量 `(-2,0,1,1)` / `(-1,0,1,1)` / `(-1.61,0,1,0.51)`。V2 Prefab Builder 现在把 `vfx_boost_trail_loop_enhanced`、`vfx_boost_trail_burst_enhanced`、`ps_techno_flame_trail_R`、`ps_techno_flame_trail_quick`、`ps_techno_flame_trail_start` 的 `ParticleSystemRenderer.sharedMaterial` 指向 `GGReplicaEngineTrail`。
+- **目的**：让 V2 Boost flame/trail 不再使用默认粒子材质或仅靠 `startColor`，而是开始按 DevXUnity 中 `EngineTrail1` 的 shader graph 参数还原 GG 原版 Boost 火焰拖尾的青紫渐变、ghost 混色与多层流动噪声。
+- **技术**：TDD + Unity Editor automation。RED：材质 Builder 测试先失败于 `GGReplicaEngineTrail.mat` 缺失；随后新增 shader/material builder 逻辑与 V2 Prefab Builder 粒子材质接线。验证结果：材质 Builder EditMode 1/1 通过；V2 Prefab Builder EditMode 1/1 通过；V2 Runtime PlayMode 6/6 通过；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误；`git diff --check` 通过。
+
+---
+
+## GGReplica V2 DevXUnity DodgeParticles 材质 — 2026-05-14 23:55
+
+- **新建文件**
+  - `Assets/_Art/Ship/GGReplica/Shaders/GGReplicaDodgeParticles.shader`
+  - `Assets/_Art/Ship/GGReplica/Materials/GGReplicaDodgeParticles.mat`（Unity 自动生成 `.meta`）
+- **修改文件**
+  - `Assets/Scripts/Ship/Editor/GGReplica/GGReplicaMaterialAssetBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/GGReplicaMaterialAssetBuilderTests.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilderTests.cs`
+  - `Assets/_Prefabs/Ship/Ship_GGReplicaV2.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：继续按 `DevXUnity/` 作为主要参考源，从 `DevXUnity/Material/DodgeParticlesNew.mat.meta` 提取 Dodge 粒子材质参数，新增 Project Ark-owned `GGReplicaDodgeParticles.shader` 与 `GGReplicaDodgeParticles.mat`。接入参数包括 `_Color=(1,0.78035855,0,1)`、`_TintColor=(1,1,1,1)`、`_EmissionColor=(0,0,0,1)`、`_InvFade=3`、`_SrcBlend=1`、`_DstBlend=0`、`_ZWrite=1`。V2 Prefab Builder 现在把 `DodgeModule/ps_dodge_shell` 的 `ParticleSystemRenderer.sharedMaterial` 指向 `GGReplicaDodgeParticles`。
+- **目的**：让 V2 Dodge shell 不再只靠紫色 `startColor` 和默认粒子材质，而是按 DevXUnity 中 `DodgeParticlesNew` 的材质证据还原 GG 原版 Dodge 粒子的橙金色硬边 shell 质感。
+- **技术**：TDD + Unity Editor automation。RED：材质 Builder 测试先失败于 `GGReplicaDodgeParticles.mat` 缺失；随后新增 shader/material builder 逻辑与 V2 Prefab Builder Dodge 粒子材质接线。验证结果：材质 Builder EditMode 1/1 通过；V2 Prefab Builder EditMode 1/1 通过；V2 Runtime PlayMode 6/6 通过；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误；`git diff --check` 通过。
+
+---
+
+## GGReplica V2 DevXUnity Boost/Dodge 音效时序 — 2026-05-15 00:17
+
+- **新建文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchAudioFeedback.cs`（Unity 自动生成 `.meta`）
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchMotor.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilderTests.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Assets/_Prefabs/Ship/Ship_GGReplicaV2.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：继续按 `DevXUnity/AudioClip` 作为主要参考源，将 V2 的 Boost/Dodge 原版音效接入输入驱动状态机。新增 `GGReplicaGlitchAudioFeedback`，从 `GGReplicaShipVisualProfileSO` 读取已导入的 `SND_PLAYER_BOOST_IGNITE.wav`、`SND_PLAYER_BOOST.wav`、`PLAYER_DODGE.wav`：进入 `BoostHold` 时播放 ignite one-shot 并启动 loop；退出 Boost 或进入 Dodge 时停止 loop；进入 `DodgeBurst` 时播放 Dodge one-shot。`GGReplicaGlitchMotor` 现在在状态切换时同步通知 `GGReplicaGlitchAudioFeedback`。V2 Prefab Builder 自动添加 `AudioSource` 与音频反馈组件，并接入 `GGReplicaShipVisualProfile.asset`。
+- **目的**：让 V2 的操作反馈从“只有视觉变化”推进到 GG 原版输入节奏：Shift Boost 有点火声与持续推进声，Space Dodge 有独立 Dodge 声，进一步接近原版基础 Glitch 飞船手感。
+- **技术**：TDD + Unity MCP。RED：先新增 `Motor_StateTransitions_NotifyV2AudioFeedback` 与 Builder 接线断言，编译失败于缺少 `GGReplicaGlitchAudioFeedback`；随后实现组件、Motor 通知与 Prefab 接线。验证结果：V2 Runtime PlayMode 7/7 通过；V2 Prefab Builder EditMode 1/1 通过；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误；Unity Console 无新增测试失败错误。
+
+---
+
+## GGReplica V2 DevXUnity FireAim 音效接入 — 2026-05-15 00:37
+
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchAudioFeedback.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：继续按 `DevXUnity/AudioClip` 作为主要参考源，将 V2 `FireAim` 状态接入原版射击音效。测试中锁定 `PLAYER_NORMAL_SHOT.wav` 作为 `GGReplicaShipVisualProfileSO.FireClip`；`GGReplicaGlitchAudioFeedback` 现在进入 `FireAim` 时会停止 Boost loop，并播放 `FireClip` one-shot，避免射击瞄准态继续残留 Boost 推进声。
+- **目的**：补齐 V2 的基础攻击/瞄准状态听觉反馈，让鼠标左键 `FireAim` 不再只有视觉/速度变化，开始对齐 GG 原版基础 Glitch 飞船的射击反馈。
+- **技术**：TDD。RED：`Motor_StateTransitions_NotifyV2AudioFeedback` 先失败于进入 `FireAim` 后 `_lastOneShotClip` 仍为 `SND_PLAYER_BOOST_IGNITE`，未播放 `PLAYER_NORMAL_SHOT`；GREEN：在 `GGReplicaGlitchAudioFeedback.ApplyState` 中新增 `FireAim` 分支，停止 loop 并播放 `FireClip`。验证结果：`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误；Unity MCP 当前返回 `no_unity_session`，命令行 Unity PlayMode 测试未生成结果文件，因此 FireAim PlayMode 绿色验证需在 Unity 会话恢复后补跑。
+
+
+## ChargeRusher 敌人行为复刻 - 2026-05-15 00:47
+
+- **新建/修改文件：**
+  - `Assets/Scripts/Combat/Enemy/AttackDataSO.cs`
+  - `Assets/Scripts/Combat/Enemy/ChargeRusherBrain.cs`
+  - `Assets/Scripts/Combat/Enemy/States/ChargeState.cs`
+  - `Assets/Scripts/Combat/Enemy/States/ChaseState.cs`
+  - `ProjectArk.Enemy.csproj`
+- **内容：** 新增 `AttackType.Charge` 与 Charge 参数，新增 `ChargeRusherBrain` 和 `ChargeState`，将近身攻击入口从普通 `EngageState` 路由到专用冲刺状态，复刻 Minishoot 的暂停蓄力抖动、锁定方向、高速冲刺、撞墙/超时恢复流程。
+- **目的：** 提供一只可读、可躲、可惩罚的 Signal-Window 型冲撞敌，作为 Minishoot 敌人迁移的第一个 Project Ark 原生原型。
+- **技术：** 复用现有 HFSM、`EnemyEntity`、`EnemyPerception`、`EnemyDirector` 与 `DamagePayload` 统一伤害管线；数值放入 `AttackDataSO`；蓄力视觉退出时恢复 Sprite 原始颜色与本地坐标，避免状态泄漏。
+- **验证：** `read_lints` 检查新增/修改脚本无错误；`dotnet build Project-Ark.slnx` 编译成功，剩余警告为项目既有警告，非本次改动引入。
+
+---
+
+## GGReplica V2 DevXUnity Grab hand 视觉接入 — 2026-05-15 01:01
+
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchView.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilderTests.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Assets/_Prefabs/Ship/Ship_GGReplicaV2.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：继续按 `DevXUnity/` 作为主要参考源推进 V2 Grab 状态复刻。参考 `DevXUnity/Sprite/GrabGun_Hand_d7.png` 与 `DevXUnity/Material/vfx_helping hand_fake_fluxy.mat.meta`，将 V2 `GrabModule` 的左右 `Ship_Sprite_Solid_Grab_R/L` 改为使用 `GGReplicaFakeFluxy` 材质；`GGReplicaGlitchView` 新增 `_grabRenderers`，进入 `GrabHold` 时缓存闭合位置并将双手向外展开、轻微上移、放大到 `1.15x`，退出 Grab 时恢复原始位置和缩放。V2 Prefab Builder 自动写入 `_grabRenderers`，现有 `Ship_GGReplicaV2.prefab` 也同步了材质与序列化引用。
+- **目的**：让 `E` Grab 状态不再只是显示两张手部贴图，而是开始有基于 DevXUnity fake Fluxy 材质的能量手视觉和明确的展开/收回状态反馈。
+- **技术**：TDD。新增 PlayMode 规格测试 `View_GrabHold_ExtendsHandsWithFakeFluxyEmphasisAndRestoresOnExit`，要求 Grab hands 展开、放大并在退出时恢复；更新 V2 Prefab Builder 测试，要求 Grab hands 使用 `GGReplicaFakeFluxy` 且 `_grabRenderers` 数组接线为 2。验证结果：`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误；`git diff --check` 通过。Unity MCP 当前仍返回 `no_unity_session`，Grab PlayMode/EditMode 测试需 Unity 会话恢复后补跑。
+
+---
+
+## ChargeRusher 资产自动化接入 - 2026-05-15 10:07
+
+- **修改文件：**
+  - `Assets/Scripts/Combat/Editor/EnemyAssetCreator.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容：** 在 `EnemyAssetCreator` 中新增 `ProjectArk/Create ChargeRusher Enemy Assets` 菜单入口，可一键创建/复用 `ChargeRusherCharge.asset`、`EnemyStats_ChargeRusher.asset` 与 `Enemy_ChargeRusher.prefab`。生成的 Prefab 自动配置 `SpriteRenderer`、`Rigidbody2D`、`CircleCollider2D`、`EnemyEntity`、`EnemyPerception` 与 `ChargeRusherBrain`，并写入 Player/Wall 感知 LayerMask。
+- **目的：** 将上一阶段完成的 `ChargeRusherBrain` / `ChargeState` 行为代码推进到 Unity 可玩闭环，降低后续敌人资产创建成本，让测试房间可以快速拖入 ChargeRusher 做 Play Mode 手感调参。
+- **技术：** 复用现有 Editor 资产生成工具链与 `AttackDataSO` 数据驱动模式；Charge 数值全部写入 `AttackDataSO` / `EnemyStatsSO`，包括 `ChargeSpeed=12`、`ChargeMaxDuration=0.6`、`ChargeAnticipation=0.08`、`TelegraphDuration=0.45`、`RecoveryDuration=0.75`，避免运行时代码 hardcode。
+- **验证：** `read_lints` 检查 `EnemyAssetCreator.cs` 无错误；`dotnet build ProjectArk.Combat.Editor.csproj /p:BuildProjectReferences=false` 成功，剩余 4 个警告来自既有 `EchoWaveProceduralPreviewMenu` 过时 API。全项目 `dotnet build Project-Ark.slnx` 当前被既有 `GGReplicaShipVisualProfileSO.HealClip` 缺失错误阻塞，非本次改动引入。
+
+---
+
+## GGReplica V2 DevXUnity Heal Hold 反馈接入 — 2026-05-15 10:14
+
+- **修改文件**
+  - `Assets/Scripts/Ship/Editor/GGReplica/GGReplicaAssetImporter.cs`
+  - `Assets/Scripts/Ship/GGReplica/GGReplicaShipVisualProfileSO.cs`
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchAudioFeedback.cs`
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchView.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilderTests.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：继续按 `DevXUnity/` 作为主要参考源补齐 V2 `Heal` 状态反馈。`GGReplicaShipVisualProfileSO` 新增 `_healClip` / `HealClip`，`GGReplicaGlitchAudioFeedback` 在进入 `Heal` 时停止 Boost loop 并播放治疗音效；`GGReplicaAssetImporter` 将 `DevXUnity/AudioClip/PlayerHealingProgress.wav` 纳入 curated audio 列表。`GGReplicaGlitchView` 新增 `_healRenderers`、`_healParticles` 与 Heal pulse 计时，进入 Heal 时启用 `Healing_0` / `vfx_dot_001` 青绿色缩放脉冲并播放专用 Heal 粒子，退出时复位 sprite/particle，且不再串用 Boost ignition burst。V2 Prefab Builder 创建并接线 `HealModule/Healing_0`、`HealModule/vfx_dot_001` 与 `ps_glitch_heal`。
+- **目的**：让 `Q` Heal Hold 不再只是打开一个空的 `HealModule` 根节点或染色机体，而是具备可听、可见、可复位的治疗状态反馈，继续靠近 GG 原版基础 Glitch 飞船的 Heal ViewState 感知。
+- **技术**：TDD。RED：先扩展 `GGReplicaGlitchV2RuntimeTests`，通过 `dotnet build Project-Ark.slnx` 验证失败于 `GGReplicaShipVisualProfileSO` 缺少 `HealClip`。GREEN：补齐 Profile API、音频状态分支、Heal sprite/particle runtime 字段与 Prefab Builder 接线。验证结果：`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误（86 个既有/生成 warning）；相关脚本 `read_lints` 0 条；`git diff --check` 通过。Unity MCP 本轮仍超时 / `no_unity_session`，命令行 Unity 因已有 Editor 实例打开同一项目被拒绝，因此 V2 PlayMode/EditMode focused tests、Importer 执行与 `Ship_GGReplicaV2.prefab` 实体重建需在 Unity 会话恢复后补跑。
+
+---
+
+## GGReplica V2 Heal Hold Unity 重建与验证 — 2026-05-15 11:14
+
+- **新建文件**
+  - `Assets/_Art/Ship/GGReplica/Audio/PlayerHealingProgress.wav`（及 Unity 生成 `.meta`）
+- **修改文件**
+  - `Assets/_Data/Ship/GGReplicaShipVisualProfile.asset`
+  - `Assets/_Prefabs/Ship/Ship_GGReplicaV2.prefab`
+  - `Assets/Scenes/GGReplicaGlitchV2Test.unity`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：Unity MCP 恢复后，执行 GGReplica curated importer，将 `PlayerHealingProgress.wav` 真正导入到 `Assets/_Art/Ship/GGReplica/Audio/`；通过 `SerializedObject` 将 `GGReplicaShipVisualProfile.asset._healClip` 指向该音频；重新运行 `BuildVisualMaterials`、`Build Glitch V2 Prefab` 与 `Build Glitch V2 Test Scene`，把 Heal sprite/particle/audio 接线写入实际 Prefab 和测试场景。
+- **目的**：闭环上一条 Heal Hold 代码实现，确保 Unity 资产、SO、Prefab、测试场景都消费同一条 Heal 反馈链，而不是停留在代码可编译但 Prefab 未重建的半完成状态。
+- **技术**：Unity MCP `execute_code` 执行 Editor 侧导入/回填/重建；随后运行 focused Unity Test Runner。验证结果：EditMode `GGReplicaGlitchV2PrefabBuilderTests`、`GGReplicaGlitchV2TestSceneBuilderTests`、`GGReplicaMaterialAssetBuilderTests` 共 3/3 通过；PlayMode `GGReplicaGlitchV2RuntimeTests` 9/9 通过；Console 清理后仅剩 TestRunner 普通日志，无 error/warning；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误 0 警告；`git diff --check` 通过。Unity 自动改动的 `ProjectSettings/EditorSettings.asset` 已还原，Prefab 中空 `m_Name` 尾随空格已清理。
+
+---
+
+## GGReplica V2 FireAim 主攻击视觉层接入 — 2026-05-15 11:30
+
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchView.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilderTests.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Assets/_Prefabs/Ship/Ship_GGReplicaV2.prefab`
+  - `Assets/Scenes/GGReplicaGlitchV2Test.unity`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：继续推进 GGReplica V2 原版 Glitch 飞船状态反馈，为鼠标左键 `FireAim` 接入可见主攻击视觉层。参考 `DevXUnity_exported/Assets/Prefab/Player.prefab` 中 `MainAttackState`、`MainAttackFireState`、`MainAttackStateHitbox` 与 `GlitchEnergyReadyParticles (weapon once)` 命名证据，`GGReplicaGlitchView` 新增 `_fireAimRenderers`、`_fireAimParticles` 与 FireAim pulse 计时；进入 `FireAim` 时启用 primary attack sprite 层、粉紫色缩放脉冲和专用 weapon once 粒子，退出时复位 renderer/particle。`ApplyBurstParticles` 不再让 FireAim 复用 Boost ignition burst。V2 Prefab Builder 创建并接线 FireAimModule 下的三个 MainAttack sprite 层与专用粒子。
+- **目的**：让 `FireAim` 不再只是机体染粉和播放射击音效，而是拥有独立的主攻击视觉模块，继续把 V2 从“输入状态能切换”推进到“每个 GG 基础状态都有可读的模块反馈”。
+- **技术**：TDD。RED：新增 `View_FireAim_ShowsPrimaryAttackLayersAndDedicatedShotParticles`，Unity PlayMode 先失败于 `GGReplicaGlitchView` 缺少 `_fireAimRenderers` 字段；Prefab Builder 测试先要求 `FireAimModule/MainAttackState`、`MainAttackFireState`、`MainAttackStateHitbox`、`GlitchEnergyReadyParticles (weapon once)` 和对应序列化数组。GREEN：实现 FireAim runtime 字段、脉冲逻辑和 Builder 接线，并重建 `Ship_GGReplicaV2.prefab` / `GGReplicaGlitchV2Test.unity`。验证结果：新增 FireAim PlayMode 单测 1/1 通过；V2 EditMode focused tests 3/3 通过；V2 Runtime PlayMode tests 10/10 通过；Console 无 error/warning；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误 0 警告；`git diff --check` 通过。Unity 自动改动的 `ProjectSettings/EditorSettings.asset` 已还原，Prefab 空 `m_Name` 尾随空格已清理。
+
+---
+
+## GGReplica V2 Aim Direction 朝向旋转修复 — 2026-05-15 11:49
+
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchState.cs`
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchInputDriver.cs`
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchMotor.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Assets/_Prefabs/Ship/Ship_GGReplicaV2.prefab`
+  - `Assets/Scenes/GGReplicaGlitchV2Test.unity`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：修复用户反馈“sprite 不会随着朝向转向”的根因。V2 原先的 `GGReplicaGlitchInputFrame` 只有 WASD 移动和状态按钮，没有瞄准方向；`GGReplicaGlitchMotor` 只写 `linearVelocity` 和状态，不写 `Rigidbody2D.rotation` / `angularVelocity`，因此整套 `GGGlitchVisualRoot` 虽然挂在飞船根节点下，但根节点本身永远不转。现在输入帧新增 `AimDirection`，`GGReplicaGlitchInputDriver` 从 `Mouse.current` + `Camera.main.ScreenToWorldPoint` 计算鼠标世界方向，缺相机时回退到移动方向；`GGReplicaGlitchMotor` 记录 `_lastAimDirection`，在 `FixedUpdate` 中用与现役 `ShipAiming` 对齐的 GGSteering 角速度模型转向，并显式更新 `Rigidbody2D` 旋转，让 PlayerView sprites 随朝向可见旋转。WASD 移动仍保持世界空间，不被瞄准方向污染。
+- **目的**：把 V2 从“状态特效在静态机体上播放”修正为“基础 Glitch 飞船随鼠标/瞄准方向转向”的必要行为，靠近原版 GG 鼠标模式的 WASD 移动 + 鼠标朝向分离手感。
+- **技术**：系统化调试 + TDD。先确认代码链路缺少 aim 数据流：InputDriver 不采集鼠标方向、InputFrame 无 aim 字段、Motor 无旋转逻辑。RED：新增 `Motor_AimDirection_RotatesShipTowardAimIndependentlyFromMove`，先通过 `dotnet build` 失败于 `GGReplicaGlitchInputFrame` 缺少 7 参数构造，补字段后 Unity PlayMode 再失败于 `Rigidbody2D.rotation` 仍为 0。GREEN：实现 aimDirection 输入、GGSteering 式角速度旋转和 `MoveRotation` / `rotation` 更新。验证结果：新增朝向 PlayMode 单测 1/1 通过；V2 Runtime PlayMode tests 11/11 通过；V2 Prefab/Scene EditMode tests 2/2 通过；Console 无 error/warning；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误（86 个既有/生成 warning）；`git diff --check` 通过。重建 `Ship_GGReplicaV2.prefab` / `GGReplicaGlitchV2Test.unity` 后已清理 Prefab 空 `m_Name` 尾随空格。
+
+
+## Minishoot Charged Rusher ReferenceOnly 原型资产接入 — 2026-05-15 12:21
+
+- **新建/修改文件**：
+  - `Assets/_ReferenceOnly/Minishoot/ChargedRusher/Sprites/ChargerT1S1.png`（及 Unity 生成 `.meta`）
+  - `Assets/_ReferenceOnly/Minishoot/ChargedRusher/Sprites/ChargerT1S2.png`（及 Unity 生成 `.meta`）
+  - `Assets/_ReferenceOnly/Minishoot/ChargedRusher/Sprites/ChargerT1S3.png`（及 Unity 生成 `.meta`）
+  - `Assets/_ReferenceOnly/Minishoot/ChargedRusher/Sprites/ChargerT2S1.png`（及 Unity 生成 `.meta`）
+  - `Assets/_ReferenceOnly/Minishoot/ChargedRusher/Sprites/ChargerT2S2.png`（及 Unity 生成 `.meta`）
+  - `Assets/_ReferenceOnly/Minishoot/ChargedRusher/Sprites/ChargerT2S3.png`（及 Unity 生成 `.meta`）
+  - `Assets/_ReferenceOnly/Minishoot/ChargedRusher/Sprites/ChargerT3S1.png`（及 Unity 生成 `.meta`）
+  - `Assets/_ReferenceOnly/Minishoot/ChargedRusher/Sprites/ChargerT3S2.png`（及 Unity 生成 `.meta`）
+  - `Assets/_ReferenceOnly/Minishoot/ChargedRusher/Sprites/ChargerT3S3.png`（及 Unity 生成 `.meta`）
+  - `Assets/_ReferenceOnly/Minishoot/ChargedRusher/Sprites/Overcharge.png`（及 Unity 生成 `.meta`）
+  - `Assets/_ReferenceOnly/Minishoot/ChargedRusher/Audio/EnergyRecharged.ogg`（及 Unity 生成 `.meta`）
+  - `Assets/_ReferenceOnly/Minishoot/ChargedRusher/Audio/EnergyRechargedB.ogg`（及 Unity 生成 `.meta`）
+  - `Assets/_ReferenceOnly/Minishoot/ChargedRusher/Audio/EnergyRechargedPartially.ogg`（及 Unity 生成 `.meta`）
+  - `Assets/_ReferenceOnly/Minishoot/ChargedRusher/Prefabs/Enemy_ChargeRusher_REF_Minshoot.prefab`（及 Unity 生成 `.meta`）
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：将 Minishoot Charged Rusher 最小 Sprite/Audio 资产集导入到 `Assets/_ReferenceOnly/Minishoot/ChargedRusher/` 隔离目录。未复制外部 `.meta`，由 Unity 在 Project Ark 内自动生成 GUID 和导入设置。基于现有 `Enemy_ChargeRusher.prefab` 创建 `Enemy_ChargeRusher_REF_Minshoot.prefab` ReferenceOnly 副本，保留现有 `EnemyEntity`、`EnemyPerception`、`ChargeRusherBrain` 与 `EnemyStats_ChargeRusher` 行为链，只替换根 `SpriteRenderer` 为 Minishoot Charger 贴图并添加临时 `AudioSource`。
+- **目的**：在不污染正式美术与敌人主链的前提下，快速验证 Charged Rusher 的 Minishoot 风格视觉锚点，用于本地原型和内部 Demo。正式 `Assets/_Prefabs/Enemies/Enemy_ChargeRusher.prefab` 保持不变，后续可直接删除或替换 `_ReferenceOnly` 目录。
+- **技术**：使用 Unity AssetDatabase / PrefabUtility 生成项目内 Prefab 引用，避免手写 `.meta` 或手写 Unity 序列化 fileID。采用 ReferenceOnly 隔离目录策略，将商业参考资产与正式 `Art/`、`_Art/`、`_Prefabs/` 主链分离。
+
+
+## Minishoot ChargeRusher ReferenceOnly 表现层 v2 — 2026-05-15 12:32
+
+- **新建/修改文件**：
+  - `Assets/Scripts/Combat/Enemy/ChargeRusherReferencePhaseResolver.cs`（及 Unity 生成 `.meta`）
+  - `Assets/Scripts/Combat/Enemy/ChargeRusherReferenceVisual.cs`（及 Unity 生成 `.meta`）
+  - `Assets/Scripts/Combat/Tests/ChargeRusherReferencePhaseResolverTests.cs`（及 Unity 生成 `.meta`）
+  - `Assets/_ReferenceOnly/Minishoot/ChargedRusher/Prefabs/Enemy_ChargeRusher_REF_Minshoot.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：新增 ReferenceOnly 专用 `ChargeRusherReferenceVisual`，只读取现有 `EnemyBrain.StateMachine.CurrentState`，根据 `ChargeState` 内的累计时间切换 Telegraph / Dashing / Recovery 表现；新增纯 C# `ChargeRusherReferencePhaseResolver` 与 NUnit 测试覆盖阶段解析。ReferenceOnly Prefab 已挂接该组件，并配置 `ChargerT3S1`、`Overcharge`、`ChargerT3S3`、`ChargerT3S2` 以及临时蓄力/冲锋音效。
+- **目的**：继续复刻 Minishoot Charged Rusher 的读招表现，让本地原型在不改正式敌人主链的前提下拥有更清晰的 Telegraph → Attack → Recovery 视觉节奏。
+- **技术**：采用可删 ReferenceOnly 表现组件，运行时不驱动 AI、不修改 SO、不 Instantiate；Prefab 引用通过 Unity `PrefabUtility` / `SerializedObject` 写入，避免手写 `.meta` 或 fileID。验证结果：`dotnet build Project-Ark.slnx` 通过；Unity Console 清空后刷新检查无 error/warning。
+
+---
+
+## GGReplica V2 原版 PlayerSkin 状态贴图表接入 — 2026-05-15 12:40
+
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchView.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilderTests.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Assets/_Prefabs/Ship/Ship_GGReplicaV2.prefab`
+  - `Assets/Scenes/GGReplicaGlitchV2Test.unity`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：继续推进 GGReplica V2 的“一比一复刻”目标，将 V2 机体三层 body sprite 从固定 `Movement_10/3/21` 改为消费已有 `GGReplicaPlayerSkin.asset.stateToSpritesTable`。`GGReplicaGlitchView` 新增 `_playerSkin`、`_bodyLayersRoot`、`_solidRenderer`、`_liquidRenderer`、`_highlightRenderer` 引用，并将 V2 输入状态映射到原版 `GGReplicaViewState`：Idle/Move→Idle，BoostHold→Boost，DodgeBurst→Dodge（null body pack，保留上一帧 body sprite），GrabHold→Grab，Heal→Heal，FireAim→Fire。进入状态时按 pack 切换 Solid/Liquid/Highlight sprite 并应用 `SpritesOffset`。V2 Prefab Builder 加载 `GGReplicaPlayerSkin.asset`，写入 PlayerSkin 和三层 renderer 引用。
+- **目的**：修复 V2 “状态特效在变，但机体 sprite 本体不变”的偏差，让 Boost / Fire / Heal / Grab 等状态开始使用原版 `PlayerSkinDefault` 的状态贴图表，而不是只靠染色和附加特效伪装状态变化。
+- **技术**：TDD。RED：新增 `View_StateChanges_ApplyOriginalPlayerSkinSpritePacks`，Unity PlayMode 先失败于 `GGReplicaGlitchView` 缺少 `_playerSkin` 字段；Prefab Builder 测试要求 `_playerSkin`、`_bodyLayersRoot`、`_solidRenderer`、`_liquidRenderer`、`_highlightRenderer` 均完成接线。GREEN：实现状态映射和 sprite pack 应用，重建 `GGReplicaPlayerSkin.asset`、`Ship_GGReplicaV2.prefab` 与 `GGReplicaGlitchV2Test.unity`。验证结果：新增 PlayerSkin sprite pack PlayMode 单测 1/1 通过；V2 Runtime PlayMode tests 12/12 通过；V2 Prefab Builder EditMode 单测 1/1 通过；最终 Prefab 检查返回 `OK: V2 prefab has PlayerSkin and body renderer wiring`；Console 无 error/warning；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误 0 警告；`git diff --check` 通过。重建 Prefab 后已清理空 `m_Name` 尾随空格。
+
+---
+
+## GGReplica V2 Dodge CoreModule half/shell 细化 — 2026-05-15 13:18
+
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchView.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilderTests.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Assets/_Prefabs/Ship/Ship_GGReplicaV2.prefab`
+  - `Assets/Scenes/GGReplicaGlitchV2Test.unity`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：继续按原版 `PlayerViewCoreModule` 复刻 Dodge 表现。参考 `PlayerViewCoreModule.cs` 中 `coreSR`、`shellGlow`、`shellFade`、`dodgeFadeInTime`、`dodgeFadeOutTime`、`dodgeScale`、`dodgeScaleInDuration`、`dodgeScaleOutDuration` 字段，以及原版 `Player.prefab` 中 `AdditiveCore_Dodge`、`Dodge_Sprite (used for old outline trail)`、`SHIP_PLAYER_DODGE_HALF` 相关节点证据。`GGReplicaGlitchView` 新增 `_dodgeHalfRenderer` 与 `_dodgeAdditiveCoreRenderer`，Dodge 中启用半身 shell silhouette、橙金 additive core、旧 outline trail sprite、core scale/fade 和 dodge shell 粒子；Dodge 窗口结束后统一隐藏并复位 scale/color。V2 Prefab Builder 创建 `DodgeModule/DodgeHalf_Sprite`、`DodgeModule/AdditiveCore_Dodge`、`DodgeModule/Dodge_Sprite (used for old outline trail)` 并写入 View 引用。
+- **目的**：让 `Space` Dodge 不再只是紫色 ghost + core 放大，而是开始接近原版 GG 的 CoreModule shell/half/additive-core 分层表现，强化“一比一复刻”的状态可读性。
+- **技术**：TDD。RED：扩展 `View_DodgeVisuals_FadeGhostAndStopBurstAfterDodgeWindow`，Unity PlayMode 先失败于 `GGReplicaGlitchView` 缺少 `_dodgeHalfRenderer`；Prefab Builder 测试要求新增原版命名节点和 `_dodgeHalfRenderer` / `_dodgeAdditiveCoreRenderer` 引用。GREEN：实现 runtime 层启停/缩放/alpha 和 Builder 接线；重建 `Ship_GGReplicaV2.prefab` 与 `GGReplicaGlitchV2Test.unity`。验证结果：新增 Dodge half/additive core PlayMode 单测 1/1 通过；V2 Runtime PlayMode tests 12/12 通过；V2 Prefab Builder EditMode 单测 1/1 通过；Console 无 error/warning；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误 0 警告；`git diff --check` 通过。重建 Prefab 后已清理空 `m_Name` 尾随空格。
+
+
+## Minishoot ChargeRusher ReferenceOnly 冲锋残影与 Burst — 2026-05-15 13:04
+
+- **新建/修改文件**：
+  - `Assets/Scripts/Combat/Enemy/ChargeRusherReferenceAfterimageSampler.cs`（及 Unity 自动生成 `.meta`）
+  - `Assets/Scripts/Combat/Enemy/ChargeRusherReferenceDashJuice.cs`（及 Unity 自动生成 `.meta`）
+  - `Assets/Scripts/Combat/Enemy/ChargeRusherReferencePhaseResolver.cs`
+  - `Assets/Scripts/Combat/Tests/ChargeRusherReferencePhaseResolverTests.cs`
+  - `Assets/Scripts/Combat/Tests/ChargeRusherReferenceAfterimageSamplerTests.cs`（临时测试文件已中和为说明注释，避免 Unity 生成工程显式 include 导致重复测试类）
+  - `Assets/_ReferenceOnly/Minishoot/ChargedRusher/Prefabs/Enemy_ChargeRusher_REF_Minshoot.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：新增 ReferenceOnly 专用 `ChargeRusherReferenceDashJuice`，在 `Awake` 预创建 5 个残影 `SpriteRenderer` 子对象，冲锋阶段通过 `ChargeRusherReferenceAfterimageSampler` 按 0.045 秒节流复用残影，并在进入 `Dashing` 时触发 0.08 秒短 burst。扩展 `ChargeRusherReferencePhaseResolverTests.cs` 覆盖残影采样规则。
+- **目的**：继续复刻 Minishoot Charged Rusher 的冲锋读招表现，让 Telegraph → Dash → Recovery 中的 Dash 阶段更有速度感和攻击确认，不改正式 `Enemy_ChargeRusher` 主链。
+- **技术**：残影组件只读取 `EnemyBrain.StateMachine.CurrentState` 与 `SpriteRenderer`，不驱动 AI、不修改 SO、不在战斗中 Instantiate；Prefab 引用通过 Unity `PrefabUtility` / `SerializedObject` 写入。修复过程中移除了 `ChargeRusherReferencePhaseResolver.cs` 中误留的重复采样器定义，保持一文件一类。验证结果：`dotnet build /Users/dada/Documents/GitHub/Project-Ark/Project-Ark.slnx` 通过；Unity Console 清空后无脚本编译错误，仅剩 TestRunner/PerformanceTesting 的测试结果保存日志。
+
+
+## Minishoot ChargeRusher ReferenceOnly 命中反馈 — 2026-05-15 13:30
+
+- **新建/修改文件**：
+  - `Assets/Scripts/Combat/Enemy/ChargeRusherReferenceImpactGate.cs`（及 Unity 自动生成 `.meta`）
+  - `Assets/Scripts/Combat/Enemy/ChargeRusherReferenceImpactFeedback.cs`（及 Unity 自动生成 `.meta`）
+  - `Assets/Scripts/Combat/Tests/ChargeRusherReferencePhaseResolverTests.cs`
+  - `Assets/_ReferenceOnly/Minishoot/ChargedRusher/Prefabs/Enemy_ChargeRusher_REF_Minshoot.prefab`
+  - `ProjectArk.Enemy.csproj`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：新增 ReferenceOnly 专用 `ChargeRusherReferenceImpactGate`，用测试覆盖“只在 Dashing 阶段触发、每次冲锋只触发一次、离开 Dashing 后复位”。新增 `ChargeRusherReferenceImpactFeedback`，监听 ReferenceOnly Prefab 的 2D trigger/collision，在冲锋接触时播放一次预创建 `SpriteRenderer` spark、短 hit flash 和可选音效。Prefab 已挂接该组件并配置 `_sparkLifetime=0.12`、`_flashDuration=0.06`、`_sparkSortingOffset=2`。
+- **目的**：继续提升 Minishoot Charged Rusher 的可读攻击反馈，让玩家在 Dash 命中/擦身时获得明确 impact cue，同时保持 Telegraph → Dash → Recovery 的 Signal-Window 读招模型。
+- **技术**：组件只观察 `EnemyBrain.StateMachine.CurrentState` 和碰撞事件，不调用 `IDamageable.TakeDamage`、不修改正式 `ChargeState` / `Enemy_ChargeRusher` 主链；spark 对象在 `Awake` 预创建，运行中仅复用显隐，避免战斗中 Instantiate。Unity `.meta` 通过 AssetDatabase 导入自动生成，Prefab 通过 `PrefabUtility` / `SerializedObject` 写入。验证结果：先通过 RED 测到 `ChargeRusherReferenceImpactGate` 缺失，再实现 GREEN；`dotnet build /Users/dada/Documents/GitHub/Project-Ark/Project-Ark.slnx` 通过（仅既有 warning）；Unity Console 当前 0 error / 0 warning。
+
+---
+
+## GGReplica V2 Dodge ShapeTrail outline/additive 粒子拖尾 — 2026-05-15 13:44
+
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchView.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilderTests.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Assets/_Prefabs/Ship/Ship_GGReplicaV2.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：继续复刻 GG 原版 `PlayerViewShapeTrailModule.StartDodge/EndDodge` 路径。参考 `Player.prefab` 中 `ShapeTrailModule`、`ShapeTrail_Dodge (old outline trail)`、`AdditiveTrail_Dodge` 节点，以及 `PlayerViewShapeTrailModule.cs` 中 `dodgeTrail` / `coreTrail` 字段，`GGReplicaGlitchView` 新增 `_dodgeTrailParticles`；进入 `DodgeBurst` 时启动 outline/additive 两条 Dodge 粒子拖尾，退出状态或 Dodge 视觉窗口结束时停止并清空。V2 Prefab Builder 在 `ShapeTrailModule` 下创建原版命名节点，并写入 View 的序列化数组。
+- **目的**：让 `Space` Dodge 不再只有 CoreModule half/shell 和通用 TrailRenderer，而是补上原版 ShapeTrail 的旧轮廓拖尾与 additive core 拖尾，继续靠近 GG 基础 Glitch 飞船的一比一 Dodge 读感。
+- **技术**：TDD + Unity Editor automation。RED：新增 `View_DodgeShapeTrail_StartsOriginalOutlineAndAdditiveParticleTrails`，PlayMode 先失败于缺少 `_dodgeTrailParticles` 字段；Prefab Builder 规格扩展要求新增两个原版命名节点和 `_dodgeTrailParticles` 接线。GREEN：实现 runtime 粒子启停、Builder 节点创建与 prefab 重建。验证结果：`ProjectArk.Ship.Tests` PlayMode 37/37 通过；`ProjectArk.Ship.Editor` EditMode 9/9 通过；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误 0 警告；`git diff --check` 通过。Prefab 空 `m_Name` 尾随空格已清理；Unity Console 中剩余 error 为既有负向测试刻意输出。
+
+---
+
+## GGReplica V2 Fluxy Trail Dodge 强度转场 — 2026-05-15 14:37
+
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchView.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilderTests.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Assets/_Prefabs/Ship/Ship_GGReplicaV2.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：继续复刻原版 `PlayerViewFluxyTrailModule` 的 Dodge 路径。参考原版脚本中的 `dodgeColor`、`dodgeSize`、`dodgeInDuration`、`dodgeOutDuration`、`dodgeTrailForce`、`transitionDuration` 字段，以及 V2 已接入的 `GGReplicaFakeFluxy.mat`。`GGReplicaGlitchView` 新增 `_fluxyTrailRenderer` 和默认值缓存；进入 `DodgeBurst` 时把 `fluxy_like_lq_trail` 放大为 Dodge fluid 读感：增加 `TrailRenderer.widthMultiplier/time/localScale`、切换紫金 start/end color，并通过 `MaterialPropertyBlock` 提升 `_Alpha`、`_FlowPower`、`_NoiseScale`；Dodge 视觉窗口结束或退出状态时恢复默认 time/width/scale/color 并将 per-renderer `_Alpha` 降为 0。Boost/Move 状态保留较低强度的 Fluxy Trail。
+- **目的**：让 `fluxy_like_lq_trail` 不再只是挂着 FakeFluxy 材质的普通线条，而是在 Dodge 窗口内表现出更接近 GG 原版 Fluxy fluid target 被推开的强度、规模和流动速度，同时避免污染共享材质资产。
+- **技术**：TDD + MaterialPropertyBlock。RED：新增 `View_DodgeFluxyTrail_UsesOriginalDodgeIntensityWithoutMutatingSharedMaterial`，PlayMode 先失败于缺少 `_fluxyTrailRenderer` 字段；Prefab Builder 测试要求 `_fluxyTrailRenderer` 指向 `LQTrailModule/fluxy_like_lq_trail`。GREEN：实现 runtime Fluxy Trail 状态机、默认值恢复和 Builder 接线。验证结果：新增 Fluxy Trail PlayMode 单测 1/1 通过；V2 Prefab Builder focused EditMode 1/1 通过；`ProjectArk.Ship.Tests` PlayMode 38/38 通过；`ProjectArk.Ship.Editor` EditMode 9/9 通过。Prefab 空 `m_Name` 尾随空格已清理。
+
+
+## Minishoot ChargeRusher ReferenceOnly 命中顿帧 — 2026-05-15 14:41
+
+- **新建/修改文件**：
+  - `Assets/Scripts/Combat/Enemy/ChargeRusherReferenceImpactFeedback.cs`
+  - `Assets/_ReferenceOnly/Minishoot/ChargedRusher/Prefabs/Enemy_ChargeRusher_REF_Minshoot.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：在 ReferenceOnly `ChargeRusherReferenceImpactFeedback` 中新增 `_hitStopDuration` 配置，并在 `ImpactGate` 成功通过后调用现有 `HitStopEffect.Trigger()`。ReferenceOnly Prefab 已写入 `_hitStopDuration=0.025`。
+- **目的**：继续复刻 Minishoot Charged Rusher 的命中确认感，让 Dash 接触瞬间有短暂停顿重量，同时不扩大正式敌人伤害主链。
+- **技术**：复用 `ProjectArk.Core.HitStopEffect`，仅在 `Dashing` 命中且每次冲锋一次的既有门控后触发；没有新增运行时 Instantiate/Destroy，没有接入 `IDamageable` / `DamagePayload`。验证结果：`dotnet build /Users/dada/Documents/GitHub/Project-Ark/Project-Ark.slnx` 通过；Play Mode 反射触发验证显示 `hitStopDuration=0.025` 且触发后 `Time.timeScale=0`；Unity Console 仅剩既有 `MinimapUI._minimapPanel` 场景配置错误，非本轮改动引入。

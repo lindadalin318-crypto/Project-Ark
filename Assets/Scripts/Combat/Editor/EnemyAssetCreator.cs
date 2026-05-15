@@ -170,6 +170,178 @@ namespace ProjectArk.Combat.Enemy.Editor
         }
 
         // ════════════════════════════════════════════════════════════════
+        //  CHARGE RUSHER ENEMY
+        // ════════════════════════════════════════════════════════════════
+
+        [MenuItem("ProjectArk/Create ChargeRusher Enemy Assets")]
+        public static void CreateChargeRusherAssets()
+        {
+            EnsureFolder("Assets/_Data", "Enemies");
+            EnsureFolder("Assets/_Data/Enemies", "Attacks");
+            EnsureFolder("Assets/_Prefabs", "Enemies");
+
+            var chargeAttack = CreateChargeRusherAttack();
+
+            string statsPath = $"{ASSET_DIR}/EnemyStats_ChargeRusher.asset";
+            var stats = AssetDatabase.LoadAssetAtPath<EnemyStatsSO>(statsPath);
+
+            if (stats == null)
+            {
+                stats = ScriptableObject.CreateInstance<EnemyStatsSO>();
+
+                stats.EnemyName = "Charge Rusher";
+                stats.EnemyID = "enemy_charge_rusher";
+                stats.FactionID = "Enemy";
+
+                stats.MaxHP = 70f;
+                stats.MaxPoise = 35f;
+
+                stats.MoveSpeed = 4.2f;
+                stats.RotationSpeed = 540f;
+
+                stats.AttackDamage = 18f;
+                stats.AttackRange = 6.5f;
+                stats.AttackCooldown = 1.4f;
+                stats.AttackKnockback = 8f;
+
+                stats.TelegraphDuration = 0.45f;
+                stats.AttackActiveDuration = 0.6f;
+                stats.RecoveryDuration = 0.75f;
+
+                stats.SightRange = 13f;
+                stats.SightAngle = 90f;
+                stats.HearingRange = 18f;
+
+                stats.LeashRange = 26f;
+                stats.MemoryDuration = 4f;
+
+                stats.HitFlashDuration = 0.1f;
+                stats.BaseColor = new Color(1f, 0.45f, 0.15f, 1f);
+
+                stats.Attacks = new AttackDataSO[] { chargeAttack };
+
+                AssetDatabase.CreateAsset(stats, statsPath);
+                Debug.Log($"[EnemyAssetCreator] Created SO: {statsPath}");
+            }
+            else
+            {
+                Debug.Log($"[EnemyAssetCreator] SO already exists: {statsPath}");
+            }
+
+            string prefabPath = $"{PREFAB_DIR}/Enemy_ChargeRusher.prefab";
+            var existingPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+
+            if (existingPrefab != null)
+            {
+                Debug.Log($"[EnemyAssetCreator] Prefab already exists: {prefabPath}");
+            }
+            else
+            {
+                var go = new GameObject("Enemy_ChargeRusher");
+
+                int enemyLayer = LayerMask.NameToLayer("Enemy");
+                if (enemyLayer >= 0)
+                    go.layer = enemyLayer;
+                else
+                    Debug.LogWarning("[EnemyAssetCreator] 'Enemy' layer not found! Please add it in TagManager.");
+
+                var sr = go.AddComponent<SpriteRenderer>();
+                sr.color = stats.BaseColor;
+                sr.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
+
+                var rb = go.AddComponent<Rigidbody2D>();
+                rb.bodyType = RigidbodyType2D.Dynamic;
+                rb.gravityScale = 0f;
+                rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+                rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+                rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+
+                var col = go.AddComponent<CircleCollider2D>();
+                col.radius = 0.4f;
+                col.isTrigger = false;
+
+                var entity = go.AddComponent<EnemyEntity>();
+                var perception = go.AddComponent<EnemyPerception>();
+                go.AddComponent<ChargeRusherBrain>();
+
+                var entitySO = new SerializedObject(entity);
+                entitySO.FindProperty("_stats").objectReferenceValue = stats;
+                entitySO.ApplyModifiedPropertiesWithoutUndo();
+
+                var perceptionSO = new SerializedObject(perception);
+                perceptionSO.FindProperty("_stats").objectReferenceValue = stats;
+
+                int playerLayer = LayerMask.NameToLayer("Player");
+                if (playerLayer >= 0)
+                    perceptionSO.FindProperty("_playerMask").intValue = 1 << playerLayer;
+
+                int wallLayer = LayerMask.NameToLayer("Wall");
+                if (wallLayer >= 0)
+                    perceptionSO.FindProperty("_obstacleMask").intValue = 1 << wallLayer;
+
+                perceptionSO.ApplyModifiedPropertiesWithoutUndo();
+
+                PrefabUtility.SaveAsPrefabAsset(go, prefabPath);
+                Object.DestroyImmediate(go);
+
+                Debug.Log($"<b>[EnemyAssetCreator] Created Prefab: {prefabPath}</b>");
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            EditorUtility.DisplayDialog(
+                "ChargeRusher Enemy Assets Created",
+                $"SO: {statsPath}\nPrefab: {prefabPath}\n" +
+                $"AttackData: {ATTACK_DIR}/ChargeRusherCharge.asset\n\n" +
+                "Components:\n" +
+                "• SpriteRenderer (orange charge placeholder)\n" +
+                "• Rigidbody2D (Dynamic, gravity=0, continuous collision, freeze rotation Z)\n" +
+                "• CircleCollider2D (radius=0.4)\n" +
+                "• EnemyEntity + EnemyPerception + ChargeRusherBrain\n\n" +
+                "Behavior: Chase → Telegraph → Locked Charge → Recovery",
+                "OK"
+            );
+        }
+
+        private static AttackDataSO CreateChargeRusherAttack()
+        {
+            string path = $"{ATTACK_DIR}/ChargeRusherCharge.asset";
+            var existing = AssetDatabase.LoadAssetAtPath<AttackDataSO>(path);
+            if (existing != null)
+            {
+                Debug.Log($"[EnemyAssetCreator] AttackData already exists: {path}");
+                return existing;
+            }
+
+            var attack = ScriptableObject.CreateInstance<AttackDataSO>();
+            attack.AttackName = "Charge Rusher Charge";
+            attack.Type = AttackType.Charge;
+
+            attack.TelegraphDuration = 0.45f;
+            attack.ActiveDuration = 0.6f;
+            attack.RecoveryDuration = 0.75f;
+
+            attack.Damage = 18f;
+            attack.Knockback = 8f;
+
+            attack.Shape = HitboxShape.Circle;
+            attack.HitboxRadius = 0.75f;
+            attack.HitboxOffset = 0.15f;
+
+            attack.ChargeSpeed = 12f;
+            attack.ChargeMaxDuration = 0.6f;
+            attack.ChargeAnticipation = 0.08f;
+            attack.ChargeHitInterval = 0f;
+
+            attack.TelegraphColor = new Color(1f, 0.15f, 0.05f, 1f);
+
+            AssetDatabase.CreateAsset(attack, path);
+            Debug.Log($"[EnemyAssetCreator] Created AttackData: {path}");
+            return attack;
+        }
+
+        // ════════════════════════════════════════════════════════════════
         //  SHOOTER ENEMY
         // ════════════════════════════════════════════════════════════════
 

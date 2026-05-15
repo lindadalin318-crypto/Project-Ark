@@ -26,6 +26,8 @@ namespace ProjectArk.Ship.Editor
             Assert.That(prefab.GetComponent<GGReplicaGlitchInputDriver>(), Is.Not.Null);
             Assert.That(prefab.GetComponent<GGReplicaGlitchMotor>(), Is.Not.Null);
             Assert.That(prefab.GetComponent<GGReplicaGlitchView>(), Is.Not.Null);
+            Assert.That(prefab.GetComponent<AudioSource>(), Is.Not.Null);
+            Assert.That(prefab.GetComponent<GGReplicaGlitchAudioFeedback>(), Is.Not.Null);
 
             var visualRoot = prefab.transform.Find("GGGlitchVisualRoot");
             Assert.That(visualRoot, Is.Not.Null);
@@ -42,7 +44,21 @@ namespace ProjectArk.Ship.Editor
                 "FluxySolver",
                 "FluxyGrabModule",
                 "GrabModule",
+                "Grab_Hands",
+                "FluxyGrabHolo_R",
+                "FluxyGrabHolo_L",
+                "GrabThrowPointer",
                 "HealModule",
+                "FireAimModule",
+                "AdditiveCore_Dodge",
+                "DodgeHalf_Sprite",
+                "Dodge_Sprite (used for old outline trail)",
+                "ShapeTrail_Dodge (old outline trail)",
+                "AdditiveTrail_Dodge",
+                "MainAttackState",
+                "MainAttackFireState",
+                "MainAttackStateHitbox",
+                "GlitchEnergyReadyParticles (weapon once)",
                 "vfx_boost_trail_loop_enhanced",
                 "vfx_boost_trail_burst_enhanced",
                 "ps_techno_flame_trail_R",
@@ -72,22 +88,65 @@ namespace ProjectArk.Ship.Editor
             Assert.That(boostParticles.Select(p => p.name), Does.Contain("vfx_boost_trail_loop_enhanced"));
             Assert.That(boostParticles.Select(p => p.name), Does.Contain("ps_techno_flame_trail_start"));
             Assert.That(boostParticles.Select(p => p.name), Does.Contain("ps_ember_trail"));
+            var flameTrail = boostParticles.First(p => p.name == "ps_techno_flame_trail_R").GetComponent<ParticleSystemRenderer>();
+            Assert.That(flameTrail.sharedMaterial, Is.Not.Null);
+            Assert.That(flameTrail.sharedMaterial.name, Is.EqualTo("GGReplicaEngineTrail"));
+            var dodgeShell = visualRoot.Find("DodgeModule/ps_dodge_shell")!.GetComponent<ParticleSystemRenderer>();
+            Assert.That(dodgeShell.sharedMaterial, Is.Not.Null);
+            Assert.That(dodgeShell.sharedMaterial.name, Is.EqualTo("GGReplicaDodgeParticles"));
+            var grabRight = visualRoot.Find("GrabModule/Ship_Sprite_Solid_Grab_R")!.GetComponent<SpriteRenderer>();
+            var grabLeft = visualRoot.Find("GrabModule/Ship_Sprite_Solid_Grab_L")!.GetComponent<SpriteRenderer>();
+            Assert.That(grabRight.sharedMaterial, Is.Not.Null);
+            Assert.That(grabRight.sharedMaterial.name, Is.EqualTo("GGReplicaFakeFluxy"));
+            Assert.That(grabLeft.sharedMaterial.name, Is.EqualTo("GGReplicaFakeFluxy"));
 
             var trails = visualRoot.Find("LQTrailsContainer")!.GetComponentsInChildren<TrailRenderer>(true);
             Assert.That(trails.Length, Is.GreaterThanOrEqualTo(2), "V2 must use a trail stack, not one decorative line.");
             Assert.That(trails.Any(t => t.sharedMaterial != null && t.sharedMaterial.name == "GGReplicaPlayerLQTrail"), Is.True);
+            var fluxyTrail = visualRoot.Find("LQTrailModule/fluxy_like_lq_trail")!.GetComponent<TrailRenderer>();
+            Assert.That(fluxyTrail.sharedMaterial, Is.Not.Null);
+            Assert.That(fluxyTrail.sharedMaterial.name, Is.EqualTo("GGReplicaFakeFluxy"));
+
+            var audio = prefab.GetComponent<GGReplicaGlitchAudioFeedback>();
+            var audioSO = new SerializedObject(audio);
+            AssertReference(audioSO, "_profile", "Assets/_Data/Ship/GGReplicaShipVisualProfile.asset");
+            Assert.That(audioSO.FindProperty("_audioSource").objectReferenceValue, Is.SameAs(prefab.GetComponent<AudioSource>()));
 
             var motor = prefab.GetComponent<GGReplicaGlitchMotor>();
             var motorSO = new SerializedObject(motor);
             AssertReference(motorSO, "_feelProfile", "Assets/_Data/Ship/GGReplicaShipFeelProfile.asset");
+            Assert.That(motorSO.FindProperty("_audioFeedback").objectReferenceValue, Is.SameAs(audio));
 
             var view = prefab.GetComponent<GGReplicaGlitchView>();
             var viewSO = new SerializedObject(view);
             Assert.That(viewSO.FindProperty("_visualRoot").objectReferenceValue, Is.SameAs(visualRoot));
+            AssertReference(viewSO, "_feelProfile", "Assets/_Data/Ship/GGReplicaShipFeelProfile.asset");
+            AssertReference(viewSO, "_playerSkin", "Assets/_Data/Ship/GGReplicaPlayerSkin.asset");
+            Assert.That(viewSO.FindProperty("_bodyLayersRoot").objectReferenceValue, Is.SameAs(visualRoot.Find("BodyLayers")));
+            Assert.That(viewSO.FindProperty("_solidRenderer").objectReferenceValue, Is.SameAs(body.Find("Ship_Sprite_Solid").GetComponent<SpriteRenderer>()));
+            Assert.That(viewSO.FindProperty("_liquidRenderer").objectReferenceValue, Is.SameAs(body.Find("Ship_Sprite_Liquid").GetComponent<SpriteRenderer>()));
+            Assert.That(viewSO.FindProperty("_highlightRenderer").objectReferenceValue, Is.SameAs(body.Find("Ship_Sprite_HL").GetComponent<SpriteRenderer>()));
             Assert.That(viewSO.FindProperty("_boostModuleRoot").objectReferenceValue, Is.SameAs(visualRoot.Find("BoostModule").gameObject));
+            Assert.That(viewSO.FindProperty("_boostBurstParticles").arraySize, Is.GreaterThanOrEqualTo(2));
+            Assert.That(viewSO.FindProperty("_dodgeBurstParticles").arraySize, Is.EqualTo(1));
+            Assert.That(viewSO.FindProperty("_dodgeTrailParticles").arraySize, Is.EqualTo(2));
+            Assert.That(viewSO.FindProperty("_fluxyTrailRenderer").objectReferenceValue, Is.SameAs(fluxyTrail));
+            Assert.That(viewSO.FindProperty("_dodgeHalfRenderer").objectReferenceValue, Is.SameAs(visualRoot.Find("DodgeModule/DodgeHalf_Sprite").GetComponent<SpriteRenderer>()));
+            Assert.That(viewSO.FindProperty("_dodgeAdditiveCoreRenderer").objectReferenceValue, Is.SameAs(visualRoot.Find("DodgeModule/AdditiveCore_Dodge").GetComponent<SpriteRenderer>()));
             Assert.That(viewSO.FindProperty("_lqTrailsContainer").objectReferenceValue, Is.SameAs(visualRoot.Find("LQTrailsContainer").gameObject));
             Assert.That(viewSO.FindProperty("_grabModuleRoot").objectReferenceValue, Is.SameAs(visualRoot.Find("GrabModule").gameObject));
+            Assert.That(viewSO.FindProperty("_fluxyGrabModuleRoot").objectReferenceValue, Is.SameAs(visualRoot.Find("FluxyGrabModule").gameObject));
+            Assert.That(viewSO.FindProperty("_grabRenderers").arraySize, Is.EqualTo(2));
+            Assert.That(viewSO.FindProperty("_grabFluxyRenderers").arraySize, Is.EqualTo(2));
+            Assert.That(viewSO.FindProperty("_grabThrowPointer").objectReferenceValue, Is.SameAs(visualRoot.Find("FluxyGrabModule/GrabThrowPointer").GetComponent<LineRenderer>()));
             Assert.That(viewSO.FindProperty("_healModuleRoot").objectReferenceValue, Is.SameAs(visualRoot.Find("HealModule").gameObject));
+            Assert.That(viewSO.FindProperty("_healParticles").arraySize, Is.EqualTo(1));
+            Assert.That(viewSO.FindProperty("_healRenderers").arraySize, Is.GreaterThanOrEqualTo(2));
+            Assert.That(visualRoot.Find("HealModule/Healing_0"), Is.Not.Null);
+            Assert.That(visualRoot.Find("HealModule/vfx_dot_001"), Is.Not.Null);
+            Assert.That(viewSO.FindProperty("_fireAimModuleRoot").objectReferenceValue, Is.SameAs(visualRoot.Find("FireAimModule").gameObject));
+            Assert.That(viewSO.FindProperty("_fireAimParticles").arraySize, Is.EqualTo(1));
+            Assert.That(viewSO.FindProperty("_fireAimRenderers").arraySize, Is.GreaterThanOrEqualTo(3));
         }
 
         private static void AssertReference(SerializedObject serializedObject, string propertyName, string expectedAssetPath)

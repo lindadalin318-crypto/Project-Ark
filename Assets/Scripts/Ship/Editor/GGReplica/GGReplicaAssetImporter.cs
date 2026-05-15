@@ -66,6 +66,7 @@ namespace ProjectArk.Ship.Editor
             new CopyEntry("DevXUnity/AudioClip/SND_PLAYER_BOOST_IGNITE.wav", "Audio/SND_PLAYER_BOOST_IGNITE.wav", 0, Vector2.zero),
             new CopyEntry("DevXUnity/AudioClip/PLAYER_DODGE.wav", "Audio/PLAYER_DODGE.wav", 0, Vector2.zero),
             new CopyEntry("DevXUnity/AudioClip/PLAYER_NORMAL_SHOT.wav", "Audio/PLAYER_NORMAL_SHOT.wav", 0, Vector2.zero),
+            new CopyEntry("DevXUnity/AudioClip/PlayerHealingProgress.wav", "Audio/PlayerHealingProgress.wav", 0, Vector2.zero),
             new CopyEntry("DevXUnity/AudioClip/PLAYER_FIRST_SHOT.wav", "Audio/PLAYER_FIRST_SHOT.wav", 0, Vector2.zero),
             new CopyEntry("DevXUnity/AudioClip/PLAYER_LAST_SHOT.wav", "Audio/PLAYER_LAST_SHOT.wav", 0, Vector2.zero),
             new CopyEntry("DevXUnity/AudioClip/PLAYER_DEATH.wav", "Audio/PLAYER_DEATH.wav", 0, Vector2.zero)

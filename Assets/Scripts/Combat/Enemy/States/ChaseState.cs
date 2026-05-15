@@ -76,6 +76,22 @@ namespace ProjectArk.Combat.Enemy
                     return;
                 }
             }
+            else if (_brain is ChargeRusherBrain chargeBrain)
+            {
+                // ChargeRusher: close enough to commit → telegraph, lock direction, dash.
+                if (perception.DistanceToTarget < stats.AttackRange)
+                {
+                    if (TryRequestToken())
+                    {
+                        _brain.StateMachine.TransitionTo(chargeBrain.ChargeState);
+                    }
+                    else
+                    {
+                        _brain.StateMachine.TransitionTo(_brain.OrbitState);
+                    }
+                    return;
+                }
+            }
             else
             {
                 // Rusher-type: close enough to melee attack → engage (if token available)

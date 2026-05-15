@@ -50,3 +50,4 @@ MonoBehaviour:
   _boostLoopClip: {fileID: 8300000, guid: 952c9592e372d4cebbba4a43822a6948, type: 3}
   _dodgeClip: {fileID: 8300000, guid: 49392cf5af9944d71a42db6bb0539c5e, type: 3}
   _fireClip: {fileID: 8300000, guid: b956d273a002a418fa5379e30c2f385c, type: 3}
+  _healClip: {fileID: 8300000, guid: 526aee9bbc281415fbd77a00100ebe0e, type: 3}

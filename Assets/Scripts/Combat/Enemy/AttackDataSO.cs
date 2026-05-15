@@ -12,7 +12,9 @@ namespace ProjectArk.Combat
         /// <summary> Fires one or more projectiles from the enemy projectile pool. </summary>
         Projectile,
         /// <summary> Instant-hit laser beam using raycast + LineRenderer. </summary>
-        Laser
+        Laser,
+        /// <summary> Minishoot-style committed dash attack with locked direction. </summary>
+        Charge
     }
 
     /// <summary>
@@ -130,6 +132,24 @@ namespace ProjectArk.Combat
         [Tooltip("Visual width of the laser beam.")]
         [Min(0.01f)]
         public float LaserWidth = 0.3f;
+
+        // ──────────────────── Charge Type ────────────────────
+        [Header("Charge Only")]
+        [Tooltip("Dash travel speed in units per second. Mirrors Minishoot AICharge Movable speed.")]
+        [Min(0.1f)]
+        public float ChargeSpeed = 12f;
+
+        [Tooltip("Maximum committed dash duration before forcing recovery.")]
+        [Min(0.05f)]
+        public float ChargeMaxDuration = 0.7f;
+
+        [Tooltip("Lead time used when locking the dash direction. 0 = aim at current target position.")]
+        [Min(0f)]
+        public float ChargeAnticipation = 0f;
+
+        [Tooltip("How often the active dash overlap can damage the same target. 0 = only once per charge.")]
+        [Min(0f)]
+        public float ChargeHitInterval = 0f;
 
         // ──────────────────── Visual ────────────────────
         [Header("Visuals")]

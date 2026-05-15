@@ -39,6 +39,7 @@ namespace ProjectArk.Ship
         [SerializeField] private AudioClip _boostLoopClip;
         [SerializeField] private AudioClip _dodgeClip;
         [SerializeField] private AudioClip _fireClip;
+        [SerializeField] private AudioClip _healClip;
 
         public Sprite BackSprite => _backSprite;
         public Sprite CoreSprite => _coreSprite;
@@ -47,6 +48,7 @@ namespace ProjectArk.Ship
         public AudioClip BoostLoopClip => _boostLoopClip;
         public AudioClip DodgeClip => _dodgeClip;
         public AudioClip FireClip => _fireClip;
+        public AudioClip HealClip => _healClip;
 
         public bool TryGetPack(GGReplicaVisualState state, out GGReplicaSpritePack pack)
         {
