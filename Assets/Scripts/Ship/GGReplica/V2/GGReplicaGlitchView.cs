@@ -16,6 +16,7 @@ namespace ProjectArk.Ship
         [SerializeField] private GameObject _lqTrailsContainer;
         [SerializeField] private GameObject _grabModuleRoot;
         [SerializeField] private GameObject _fluxyGrabModuleRoot;
+        [SerializeField] private GameObject _holdModuleRoot;
         [SerializeField] private GameObject _healModuleRoot;
         [SerializeField] private GameObject _dodgeModuleRoot;
         [SerializeField] private GameObject _fireAimModuleRoot;
@@ -38,6 +39,12 @@ namespace ProjectArk.Ship
         [SerializeField] private SpriteRenderer _grabReleaseRenderer;
         [SerializeField] private ParticleSystem[] _grabReleaseParticles = System.Array.Empty<ParticleSystem>();
         [SerializeField] private LineRenderer _grabReleaseThrowLine;
+        [SerializeField] private SpriteRenderer _grabTargetRenderer;
+        [SerializeField] private SpriteRenderer _grabTargetOverlayRenderer;
+        [SerializeField] private ParticleSystem[] _holdParticles = System.Array.Empty<ParticleSystem>();
+        [SerializeField] private SpriteRenderer _holdFieldRenderer;
+        [SerializeField] private SpriteRenderer _holdProgressRenderer;
+        [SerializeField] private LineRenderer _holdTetherLine;
         [SerializeField] private SpriteRenderer[] _healRenderers = System.Array.Empty<SpriteRenderer>();
         [SerializeField] private SpriteRenderer[] _fireAimRenderers = System.Array.Empty<SpriteRenderer>();
         [SerializeField] private SpriteRenderer _coreRenderer;
@@ -94,6 +101,7 @@ namespace ProjectArk.Ship
             SetActive(_lqTrailsContainer, boosting || moving || dodging);
             SetActive(_grabModuleRoot, grabbing);
             SetActive(_fluxyGrabModuleRoot, grabbing || exitingGrab || _grabReleaseTimer > 0f);
+            SetActive(_holdModuleRoot, grabbing);
             SetActive(_healModuleRoot, healing);
             SetActive(_dodgeModuleRoot, dodging);
             SetActive(_fireAimModuleRoot, firing);
@@ -101,6 +109,7 @@ namespace ProjectArk.Ship
             SetTrailEmitting(boosting || dodging);
             SetParticles(_boostParticles, boosting);
             SetParticles(_dodgeTrailParticles, dodging);
+            SetParticles(_holdParticles, grabbing);
             SetParticles(_healParticles, healing);
             SetParticles(_fireAimParticles, firing);
             ApplyViewSpritePack(state);
@@ -169,6 +178,8 @@ namespace ProjectArk.Ship
                 bool locked = _grabHoldTimer >= GrabLockDelay;
                 SetGrabFluxyVisuals(true, locked ? 1f : 0.45f);
                 SetGrabLockVisuals(locked, locked ? 1f : 0f);
+                SetGrabTargetVisuals(true, locked ? 1f : 0.55f, locked);
+                SetHoldFieldVisuals(true, Mathf.Clamp01(_grabHoldTimer / GrabHoldFieldChargeDuration));
             }
 
             if (_grabReleaseTimer > 0f)
@@ -421,6 +432,12 @@ namespace ProjectArk.Ship
                 StopParticles(_grabReleaseParticles);
             }
 
+            if (exitingGrab)
+            {
+                SetGrabTargetVisuals(false, 0f, false);
+                SetHoldFieldVisuals(false, 0f);
+            }
+
             EnsureGrabClosedPositions();
             for (int i = 0; i < _grabRenderers.Length; i++)
             {
@@ -485,6 +502,83 @@ namespace ProjectArk.Ship
             _grabLockRenderer.transform.localScale = locked ? Vector3.one * Mathf.Lerp(1.05f, 1.36f, clamped) : Vector3.one;
             _grabLockRenderer.color = locked ? new Color(0.25f, 1f, 1f, Mathf.Lerp(0.45f, 0.82f, clamped)) : Color.clear;
             SetGrabFluxyBlock(_grabLockRenderer, locked ? Mathf.Lerp(0.48f, 0.82f, clamped) : 0f, locked ? Mathf.Lerp(4.8f, 6.6f, clamped) : 3.77f);
+        }
+
+        private void SetHoldFieldVisuals(bool active, float intensity)
+        {
+            float clamped = Mathf.Clamp01(intensity);
+            Vector3 targetPosition = GetGrabTargetPosition(clamped);
+            if (_holdFieldRenderer != null)
+            {
+                _holdFieldRenderer.enabled = active;
+                _holdFieldRenderer.transform.localPosition = targetPosition;
+                _holdFieldRenderer.transform.localScale = active ? Vector3.one * Mathf.Lerp(0.95f, 1.25f, clamped) : Vector3.one;
+                _holdFieldRenderer.color = active ? new Color(0.25f, 1f, 1f, Mathf.Lerp(0.22f, 0.58f, clamped)) : Color.clear;
+                SetGrabFluxyBlock(_holdFieldRenderer, active ? Mathf.Lerp(0.22f, 0.58f, clamped) : 0f, active ? Mathf.Lerp(4.4f, 6.4f, clamped) : 3.77f);
+            }
+
+            if (_holdProgressRenderer != null)
+            {
+                _holdProgressRenderer.enabled = active;
+                _holdProgressRenderer.transform.localPosition = targetPosition;
+                _holdProgressRenderer.transform.localScale = active ? Vector3.one * Mathf.Lerp(1.05f, 1.58f, clamped) : Vector3.one;
+                _holdProgressRenderer.color = active ? new Color(1f, 0.22f, 1f, Mathf.Lerp(0.26f, 0.82f, clamped)) : Color.clear;
+                SetGrabFluxyBlock(_holdProgressRenderer, active ? Mathf.Lerp(0.26f, 0.82f, clamped) : 0f, active ? Mathf.Lerp(5.2f, 7.4f, clamped) : 3.77f);
+            }
+
+            if (_holdTetherLine != null)
+            {
+                _holdTetherLine.enabled = active;
+                _holdTetherLine.useWorldSpace = false;
+                _holdTetherLine.positionCount = 2;
+                _holdTetherLine.startWidth = active ? Mathf.Lerp(0.025f, 0.07f, clamped) : 0.025f;
+                _holdTetherLine.endWidth = active ? Mathf.Lerp(0.01f, 0.04f, clamped) : 0.01f;
+                _holdTetherLine.startColor = active ? new Color(0.9f, 0.1f, 1f, Mathf.Lerp(0.22f, 0.65f, clamped)) : Color.clear;
+                _holdTetherLine.endColor = active ? new Color(0.25f, 1f, 1f, Mathf.Lerp(0.12f, 0.45f, clamped)) : Color.clear;
+                _holdTetherLine.SetPosition(0, Vector3.zero);
+                _holdTetherLine.SetPosition(1, targetPosition);
+                SetGrabFluxyBlock(_holdTetherLine, active ? Mathf.Lerp(0.22f, 0.65f, clamped) : 0f, active ? Mathf.Lerp(4.8f, 6.8f, clamped) : 3.77f);
+            }
+        }
+
+        private Vector3 GetGrabTargetPosition(float intensity)
+        {
+            if (_grabTargetRenderer != null && _grabTargetRenderer.enabled)
+            {
+                return _grabTargetRenderer.transform.localPosition;
+            }
+
+            return new Vector3(0f, Mathf.Lerp(0.95f, 1.28f, Mathf.Clamp01(intensity)), 0f);
+        }
+
+        private void SetGrabTargetVisuals(bool active, float intensity, bool locked)
+        {
+            float clamped = Mathf.Clamp01(intensity);
+            Vector3 targetPosition = new Vector3(0f, Mathf.Lerp(0.95f, 1.28f, clamped), 0f);
+            if (_grabTargetRenderer != null)
+            {
+                _grabTargetRenderer.enabled = active;
+                _grabTargetRenderer.transform.localPosition = active ? targetPosition : Vector3.zero;
+                _grabTargetRenderer.transform.localScale = active ? Vector3.one * Mathf.Lerp(0.82f, 1.12f, clamped) : Vector3.one;
+                _grabTargetRenderer.color = active ? new Color(0.2f, 1f, 1f, Mathf.Lerp(0.35f, 0.78f, clamped)) : Color.clear;
+                SetGrabFluxyBlock(_grabTargetRenderer, active ? Mathf.Lerp(0.36f, 0.78f, clamped) : 0f, active ? Mathf.Lerp(4.4f, 6.2f, clamped) : 3.77f);
+            }
+
+            if (_grabTargetOverlayRenderer != null)
+            {
+                _grabTargetOverlayRenderer.enabled = active && locked;
+                _grabTargetOverlayRenderer.transform.localPosition = targetPosition;
+                _grabTargetOverlayRenderer.transform.localScale = locked ? Vector3.one * Mathf.Lerp(1f, 1.36f, clamped) : Vector3.one;
+                _grabTargetOverlayRenderer.color = locked ? new Color(1f, 0.38f, 1f, Mathf.Lerp(0.42f, 0.86f, clamped)) : Color.clear;
+                SetGrabFluxyBlock(_grabTargetOverlayRenderer, locked ? Mathf.Lerp(0.42f, 0.86f, clamped) : 0f, locked ? Mathf.Lerp(5.4f, 7.2f, clamped) : 3.77f);
+            }
+
+            if (active && _grabThrowPointer != null)
+            {
+                _grabThrowPointer.positionCount = 2;
+                _grabThrowPointer.SetPosition(0, Vector3.zero);
+                _grabThrowPointer.SetPosition(1, targetPosition);
+            }
         }
 
         private void SetGrabReleaseVisuals(bool active, float intensity)
@@ -611,6 +705,8 @@ namespace ProjectArk.Ship
         private const float GrabLockDelay = 0.18f;
 
         private const float GrabReleaseDuration = 0.16f;
+
+        private const float GrabHoldFieldChargeDuration = 0.5f;
 
         private void SetBodyColor(bool boosting, bool dodging, bool grabbing, bool healing, bool firing)
         {

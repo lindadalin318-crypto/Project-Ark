@@ -77,3 +77,6 @@ Docs/.tmp.driveupload/
 /Docs/.tmp.driveupload
 .DS_Store
 **/.DS_Store
+
+# Local decompiled reference assets
+/Minishoot/

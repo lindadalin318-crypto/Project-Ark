@@ -73,6 +73,7 @@ namespace ProjectArk.Ship.Editor
                 var fluxySolver = CreateChild(visualRoot, "FluxySolver");
                 var fluxyGrabModule = CreateChild(visualRoot, "FluxyGrabModule");
                 var grabModule = CreateChild(visualRoot, "GrabModule");
+                var holdModule = CreateChild(visualRoot, "HoldModule");
                 var healModule = CreateChild(visualRoot, "HealModule");
                 var dodgeModule = CreateChild(visualRoot, "DodgeModule");
                 var fireAimModule = CreateChild(visualRoot, "FireAimModule");
@@ -130,8 +131,18 @@ namespace ProjectArk.Ship.Editor
                 var grabReleaseBurstMain = grabReleaseBurst.main;
                 grabReleaseBurstMain.loop = false;
                 var grabReleaseThrowLine = CreateLine(fluxyGrabModule, "GrabReleaseThrowLine", LoadMaterial(GGReplicaMaterialAssetBuilder.FakeFluxyMaterialPath));
+                var grabTargetHolo = CreateSpriteLayer(fluxyGrabModule, "GrabTargetHolo", "Assets/_Art/Ship/GGReplica/Sprites/vfx_dot_001.png", 12, LoadMaterial(GGReplicaMaterialAssetBuilder.FakeFluxyMaterialPath));
+                var grabRippableOverlay = CreateSpriteLayer(fluxyGrabModule, "GrabRippableOverlay", "Assets/_Art/Ship/GGReplica/Sprites/scheme3_tp.png", 13, LoadMaterial(GGReplicaMaterialAssetBuilder.FakeFluxyMaterialPath));
+                var holdParticles = CreateParticle(holdModule, "HoldParticles", new Color(0.4f, 1f, 1f, 0.72f), 36f, 0.32f, GGReplicaMaterialAssetBuilder.FakeFluxyMaterialPath);
+                var holdFieldRing = CreateSpriteLayer(holdModule, "HoldFieldRing", "Assets/_Art/Ship/GGReplica/Sprites/vfx_dot_001.png", 9, LoadMaterial(GGReplicaMaterialAssetBuilder.FakeFluxyMaterialPath));
+                var holdProgress = CreateSpriteLayer(holdModule, "HoldProgress", "Assets/_Art/Ship/GGReplica/Sprites/vfx_dot_001.png", 10, LoadMaterial(GGReplicaMaterialAssetBuilder.FakeFluxyMaterialPath));
+                var holdTetherLine = CreateLine(holdModule, "HoldTetherLine", LoadMaterial(GGReplicaMaterialAssetBuilder.FakeFluxyMaterialPath));
                 grabLockRing.enabled = false;
                 grabReleasePulse.enabled = false;
+                grabTargetHolo.enabled = false;
+                grabRippableOverlay.enabled = false;
+                holdFieldRing.enabled = false;
+                holdProgress.enabled = false;
 
                 SetSerialized(motor, "_body", body);
                 SetSerialized(motor, "_view", view);
@@ -148,6 +159,7 @@ namespace ProjectArk.Ship.Editor
                 SetSerialized(view, "_lqTrailsContainer", lqTrailsContainer.gameObject);
                 SetSerialized(view, "_grabModuleRoot", grabModule.gameObject);
                 SetSerialized(view, "_fluxyGrabModuleRoot", fluxyGrabModule.gameObject);
+                SetSerialized(view, "_holdModuleRoot", holdModule.gameObject);
                 SetSerialized(view, "_healModuleRoot", healModule.gameObject);
                 SetSerialized(view, "_dodgeModuleRoot", dodgeModule.gameObject);
                 SetSerialized(view, "_fireAimModuleRoot", fireAimModule.gameObject);
@@ -170,6 +182,12 @@ namespace ProjectArk.Ship.Editor
                 SetSerialized(view, "_grabReleaseRenderer", grabReleasePulse);
                 SetSerializedArray(view, "_grabReleaseParticles", new Object[] { grabReleaseBurst });
                 SetSerialized(view, "_grabReleaseThrowLine", grabReleaseThrowLine);
+                SetSerialized(view, "_grabTargetRenderer", grabTargetHolo);
+                SetSerialized(view, "_grabTargetOverlayRenderer", grabRippableOverlay);
+                SetSerializedArray(view, "_holdParticles", new Object[] { holdParticles });
+                SetSerialized(view, "_holdFieldRenderer", holdFieldRing);
+                SetSerialized(view, "_holdProgressRenderer", holdProgress);
+                SetSerialized(view, "_holdTetherLine", holdTetherLine);
                 SetSerializedArray(view, "_healRenderers", new Object[] { healShell, healDot });
                 SetSerializedArray(view, "_fireAimRenderers", new Object[] { firePrimary, fireGlow, fireHitboxHint });
                 SetSerialized(view, "_coreRenderer", core);

@@ -528,6 +528,107 @@ namespace ProjectArk.Ship.Tests
         }
 
         [Test]
+        public void View_GrabHold_ShowsLocalInteractTargetAndLockOverlay()
+        {
+            var root = new GameObject("GGReplicaGlitchV2GrabTargetRig");
+            try
+            {
+                var view = root.AddComponent<GGReplicaGlitchView>();
+                var fluxyGrabRoot = new GameObject("FluxyGrabModule");
+                fluxyGrabRoot.transform.SetParent(root.transform, false);
+                var target = new GameObject("GrabTargetHolo").AddComponent<SpriteRenderer>();
+                var overlay = new GameObject("GrabRippableOverlay").AddComponent<SpriteRenderer>();
+                var pointer = new GameObject("GrabThrowPointer").AddComponent<LineRenderer>();
+                target.transform.SetParent(fluxyGrabRoot.transform, false);
+                overlay.transform.SetParent(fluxyGrabRoot.transform, false);
+                pointer.transform.SetParent(fluxyGrabRoot.transform, false);
+
+                SetPrivateField(view, "_fluxyGrabModuleRoot", fluxyGrabRoot);
+                SetPrivateField(view, "_grabTargetRenderer", target);
+                SetPrivateField(view, "_grabTargetOverlayRenderer", overlay);
+                SetPrivateField(view, "_grabThrowPointer", pointer);
+
+                view.ApplyState(GGReplicaGlitchState.GrabHold);
+                InvokePrivate(view, "TickVisuals", 0.06f);
+
+                Assert.That(target.enabled, Is.True, "OnSelect should give the local placeholder target a visible lock point.");
+                Assert.That(overlay.enabled, Is.False);
+                Assert.That(target.transform.localPosition.y, Is.GreaterThan(0.9f));
+                Assert.That(pointer.GetPosition(1).y, Is.EqualTo(target.transform.localPosition.y).Within(0.001f));
+
+                InvokePrivate(view, "TickVisuals", 0.18f);
+
+                Assert.That(overlay.enabled, Is.True, "OnLock should add a rippable/locked overlay on the local target.");
+                Assert.That(overlay.color.a, Is.GreaterThan(0.5f));
+                Assert.That(target.transform.localScale.x, Is.GreaterThan(1f));
+
+                view.ApplyState(GGReplicaGlitchState.Idle);
+                InvokePrivate(view, "TickVisuals", 0.2f);
+
+                Assert.That(target.enabled, Is.False);
+                Assert.That(overlay.enabled, Is.False);
+                Assert.That(target.transform.localScale, Is.EqualTo(Vector3.one));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void View_GrabHold_ShowsHoldFieldProgressWhileMaintainingTarget()
+        {
+            var root = new GameObject("GGReplicaGlitchV2HoldFieldRig");
+            try
+            {
+                var view = root.AddComponent<GGReplicaGlitchView>();
+                var holdRoot = new GameObject("HoldModule");
+                holdRoot.transform.SetParent(root.transform, false);
+                var holdField = new GameObject("HoldFieldRing").AddComponent<SpriteRenderer>();
+                var holdProgress = new GameObject("HoldProgress").AddComponent<SpriteRenderer>();
+                var holdLine = new GameObject("HoldTetherLine").AddComponent<LineRenderer>();
+                var holdParticles = new GameObject("HoldParticles").AddComponent<ParticleSystem>();
+                holdField.transform.SetParent(holdRoot.transform, false);
+                holdProgress.transform.SetParent(holdRoot.transform, false);
+                holdLine.transform.SetParent(holdRoot.transform, false);
+                holdParticles.transform.SetParent(holdRoot.transform, false);
+
+                SetPrivateField(view, "_holdModuleRoot", holdRoot);
+                SetPrivateField(view, "_holdFieldRenderer", holdField);
+                SetPrivateField(view, "_holdProgressRenderer", holdProgress);
+                SetPrivateField(view, "_holdTetherLine", holdLine);
+                SetPrivateField(view, "_holdParticles", new[] { holdParticles });
+
+                view.ApplyState(GGReplicaGlitchState.GrabHold);
+                InvokePrivate(view, "TickVisuals", 0.12f);
+
+                Assert.That(holdRoot.activeSelf, Is.True);
+                Assert.That(holdParticles.isPlaying, Is.True, "Original HoldModule/HoldParticles should read as a maintained field while Grab is held.");
+                Assert.That(holdField.enabled, Is.True);
+                Assert.That(holdProgress.enabled, Is.True);
+                Assert.That(holdLine.enabled, Is.True);
+                Assert.That(holdLine.positionCount, Is.EqualTo(2));
+                Assert.That(holdProgress.color.a, Is.GreaterThan(0.2f));
+
+                InvokePrivate(view, "TickVisuals", 0.42f);
+
+                Assert.That(holdProgress.transform.localScale.x, Is.GreaterThan(holdField.transform.localScale.x), "HoldProgress should grow as the local hold field charges.");
+
+                view.ApplyState(GGReplicaGlitchState.Idle);
+
+                Assert.That(holdParticles.isPlaying, Is.False);
+                Assert.That(holdField.enabled, Is.False);
+                Assert.That(holdProgress.enabled, Is.False);
+                Assert.That(holdLine.enabled, Is.False);
+                Assert.That(holdProgress.transform.localScale, Is.EqualTo(Vector3.one));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
         public void View_FireAim_ShowsPrimaryAttackLayersAndDedicatedShotParticles()
         {
             var root = new GameObject("GGReplicaGlitchV2FireAimRig");

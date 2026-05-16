@@ -883,3 +883,45 @@
 - **内容**：继续细化原版 `PlayerViewFluxyGrabModule.OnRelease` 的本地可见版本。`GGReplicaGlitchView` 新增 `_grabReleaseParticles` 与 `_grabReleaseThrowLine`；松开 `E` 退出 `GrabHold` 时，除了既有 `GrabReleasePulse`，现在会播放一次 `GrabReleaseBurst` 粒子，并启用三点 `GrabReleaseThrowLine`，用紫青渐变、宽度收束和中点上扬模拟液体甩出 / 指针收束。Release 窗口结束后停止粒子、隐藏 line，并关闭 `FluxyGrabModule`。V2 Prefab Builder 在 `FluxyGrabModule` 下创建 `GrabReleaseBurst` 和 `GrabReleaseThrowLine`，并写入 View 引用。
 - **目的**：让 Grab 松开瞬间不再只是静态 pulse，而是具备更接近 GG 原版 `OnRelease` 的“液体甩出 / throw pointer fade”反馈，增强 `E` 释放时的操作确认感。
 - **技术**：TDD + ParticleSystem + LineRenderer + MaterialPropertyBlock。RED：新增 `View_GrabRelease_PlaysBurstAndCollapsesThrowLine`，PlayMode 先失败于缺少 `_grabReleaseParticles` 字段；Prefab Builder 测试要求新增 `GrabReleaseBurst` / `GrabReleaseThrowLine` 节点和序列化接线。GREEN：实现 release burst 触发、throw line 三点曲线、窗口结束复位和 Builder 生成逻辑。验证结果：新增 Grab Release PlayMode 单测 1/1 通过；V2 Prefab Builder focused EditMode 1/1 通过；`ProjectArk.Ship.Tests` PlayMode 41/41 通过；`ProjectArk.Ship.Editor` EditMode 9/9 通过；`Ship_GGReplicaV2.prefab` 已包含 `GrabReleaseBurst`、`GrabReleaseThrowLine`、`_grabReleaseParticles`、`_grabReleaseThrowLine`；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误（86 个 warning）；`git diff --check` 通过。Unity Console 当前 error 为既有负向测试刻意输出。
+
+---
+
+## GGReplica V2 Grab 本地目标假影反馈 — 2026-05-16 10:41
+
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchView.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilderTests.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Assets/_Prefabs/Ship/Ship_GGReplicaV2.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：继续复刻原版 `PlayerViewFluxyGrabModule` 的 `interactTarget` / `hologramPrefab` / `rippableOverlayPrefab` 语义，在尚未接入真实 `GravGunInteractable` 目标系统前，先加入本地 placeholder target。`GGReplicaGlitchView` 新增 `_grabTargetRenderer` 与 `_grabTargetOverlayRenderer`；`GrabHold` select 阶段显示 `GrabTargetHolo`，并把 `GrabThrowPointer` 指向目标假影；lock 阶段显示 `GrabRippableOverlay`，目标 scale/alpha/flow 强化；退出 Grab 后目标与 overlay 复位隐藏。V2 Prefab Builder 在 `FluxyGrabModule` 下创建 `GrabTargetHolo` 与 `GrabRippableOverlay`，并写入 View 引用。
+- **目的**：让 `OnSelect / OnLock / OnRelease` 的视觉有明确落点，不再只围绕飞船自身播放，从而更接近 GG 原版 Grab 对“可交互目标”的读感，同时仍不引入真实物理抓取或目标选择系统。
+- **技术**：TDD + 本地 placeholder target + MaterialPropertyBlock。RED：新增 `View_GrabHold_ShowsLocalInteractTargetAndLockOverlay`，PlayMode 先失败于缺少 `_grabTargetRenderer` 字段；Prefab Builder 测试要求新增 `GrabTargetHolo` / `GrabRippableOverlay` 节点和序列化接线。GREEN：实现目标假影位置/缩放/颜色/材质强度、pointer 指向目标、lock overlay 和退出复位。验证结果：新增 Grab target PlayMode 单测 1/1 通过；V2 Prefab Builder focused EditMode 1/1 通过；`ProjectArk.Ship.Tests` PlayMode 42/42 通过；`ProjectArk.Ship.Editor` EditMode 9/9 通过；`Ship_GGReplicaV2.prefab` 已包含 `GrabTargetHolo`、`GrabRippableOverlay`、`_grabTargetRenderer`、`_grabTargetOverlayRenderer`；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误 0 警告；`git diff --check` 通过。Unity Console 当前 error 为既有负向测试刻意输出。
+
+
+---
+
+## Minishoot 解包目录 Git Ignore — 2026-05-16 10:59
+
+- **修改文件**
+  - `.gitignore`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：在仓库根 `.gitignore` 末尾追加 `/Minishoot/`，并标注为本地解包参考资产目录。确认 `Minishoot` 目录已存在，包含 DevXUnity、ExportedProject、AuxiliaryFiles 等大量解包文件与程序集。
+- **目的**：避免 Minishoot 解包参考文件、大型 DLL、导出工程与临时 `.DS_Store` 被 Git 跟踪，保留其作为本地 ReferenceOnly 资料使用。
+- **技术**：Git ignore 根路径规则。使用 `/Minishoot/` 精确忽略仓库根目录下的解包文件夹，不影响其他可能同名子目录。
+
+---
+
+## GGReplica V2 Grab HoldModule 持续抓取场反馈 — 2026-05-16 10:52
+
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchView.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilderTests.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Assets/_Prefabs/Ship/Ship_GGReplicaV2.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：继续复刻原版 `PlayerViewHoldModule` / `HoldModule` 的持续抓取场语义。参考原版 `PlayerViewHoldModule` 中的 `fadeTime`、`sr`、`progressTween`，以及 `Player.prefab` 中 `HoldModule`、`HoldParticles`、`HoldProgress` 节点。`GGReplicaGlitchView` 新增 `_holdModuleRoot`、`_holdParticles`、`_holdFieldRenderer`、`_holdProgressRenderer`、`_holdTetherLine`；`GrabHold` 期间启用 HoldModule、播放 HoldParticles，并按 `_grabHoldTimer / GrabHoldFieldChargeDuration` 推进持续场环、进度环与牵引线强度；退出 Grab 后停止粒子并隐藏复位。V2 Prefab Builder 在 `GGGlitchVisualRoot/HoldModule` 下创建 `HoldParticles`、`HoldFieldRing`、`HoldProgress`、`HoldTetherLine`，并写入 View 引用。
+- **目的**：让 `E` 持续抓取不只是 select/lock/release 瞬时反馈，而是在按住期间持续显示一个稳定的 hold field，使 Grab 的维持状态更接近 GG 原版 PlayerView 的 HoldModule 读感。
+- **技术**：TDD + ParticleSystem + LineRenderer + MaterialPropertyBlock。RED：新增 `View_GrabHold_ShowsHoldFieldProgressWhileMaintainingTarget`，PlayMode 先失败于缺少 `_holdModuleRoot` 字段；Prefab Builder 测试要求新增 `HoldModule`、`HoldParticles`、`HoldProgress`、`HoldFieldRing`、`HoldTetherLine` 节点和序列化接线。GREEN：实现 Hold field runtime 状态、充能进度、场环/进度环/牵引线与 Builder 生成逻辑。验证结果：新增 HoldModule PlayMode 单测 1/1 通过；V2 Prefab Builder focused EditMode 1/1 通过；`ProjectArk.Ship.Tests` PlayMode 43/43 通过；`ProjectArk.Ship.Editor` EditMode 9/9 通过；`Ship_GGReplicaV2.prefab` 已包含 `HoldModule`、`HoldParticles`、`HoldProgress`、`HoldFieldRing`、`HoldTetherLine`、`_holdModuleRoot`、`_holdParticles`、`_holdFieldRenderer`、`_holdProgressRenderer`、`_holdTetherLine`；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误（86 个 warning）；`git diff --check` 通过。Unity Console 当前 error 为既有负向测试刻意输出。
