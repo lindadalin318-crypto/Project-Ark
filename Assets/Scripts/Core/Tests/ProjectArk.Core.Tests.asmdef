@@ -2,11 +2,11 @@
     "name": "ProjectArk.Core.Tests",
     "rootNamespace": "ProjectArk.Core.Tests",
     "references": [
-        "ProjectArk.Core",
-        "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "ProjectArk.Core"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": true,

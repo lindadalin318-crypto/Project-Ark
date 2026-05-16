@@ -1,4 +1,3 @@
-
 ---
 
 ## GGReplica 飞船迁移设计 Spec — 2026-05-13 15:15
@@ -811,3 +810,76 @@
 - **内容**：在 ReferenceOnly `ChargeRusherReferenceImpactFeedback` 中新增 `_hitStopDuration` 配置，并在 `ImpactGate` 成功通过后调用现有 `HitStopEffect.Trigger()`。ReferenceOnly Prefab 已写入 `_hitStopDuration=0.025`。
 - **目的**：继续复刻 Minishoot Charged Rusher 的命中确认感，让 Dash 接触瞬间有短暂停顿重量，同时不扩大正式敌人伤害主链。
 - **技术**：复用 `ProjectArk.Core.HitStopEffect`，仅在 `Dashing` 命中且每次冲锋一次的既有门控后触发；没有新增运行时 Instantiate/Destroy，没有接入 `IDamageable` / `DamagePayload`。验证结果：`dotnet build /Users/dada/Documents/GitHub/Project-Ark/Project-Ark.slnx` 通过；Play Mode 反射触发验证显示 `hitStopDuration=0.025` 且触发后 `Time.timeScale=0`；Unity Console 仅剩既有 `MinimapUI._minimapPanel` 场景配置错误，非本轮改动引入。
+
+---
+
+## GGReplica V2 FluxyGrab 液体抓取反馈 — 2026-05-15 14:48
+
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchView.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilderTests.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Assets/_Prefabs/Ship/Ship_GGReplicaV2.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：继续复刻原版 `PlayerViewFluxyGrabModule`。参考原版脚本中的 `interactTarget`、`hologramPrefab`、`rippableOverlayPrefab`、`throwPointer`、`ViewData(texture/size/pivotOffset)` 字段，以及 `Player.prefab` 中 `FluxyGrabModule`、`Grab_Hands`、`Ship_Sprite_Solid_Grab_R/L` 节点证据。`GGReplicaGlitchView` 新增 `_fluxyGrabModuleRoot`、`_grabFluxyRenderers` 与 `_grabThrowPointer`；进入 `GrabHold` 时除了原有左右 Grab hand 外，现在启用 fake fluxy hologram 手部、紫青 throw pointer 线、per-renderer `_Alpha/_FlowPower/_NoiseScale`，退出时隐藏并复位 scale / alpha。V2 Prefab Builder 在 `FluxyGrabModule` 下创建 `Grab_Hands`、`FluxyGrabHolo_R`、`FluxyGrabHolo_L`、`GrabThrowPointer`，并写入 View 引用。
+- **目的**：让 `E` Grab 不再只是两张手 sprite 外移，而是开始具备 GG 原版 FluxyGrab 的液体目标 / hologram / 牵引线读感，提高抓取状态的可读性和“一比一复刻”接近度。
+- **技术**：TDD + MaterialPropertyBlock + LineRenderer。RED：新增 `View_GrabHold_ShowsFluxyGrabHoloAndThrowPointerWithoutMutatingSharedMaterial`，PlayMode 先失败于缺少 `_fluxyGrabModuleRoot` 字段；Prefab Builder 测试要求新增 FluxyGrab 原版命名节点和序列化接线。GREEN：实现 runtime FluxyGrab 视觉控制、Builder 节点创建与 prefab 重建。验证结果：新增 FluxyGrab PlayMode 单测 1/1 通过；V2 Prefab Builder focused EditMode 1/1 通过；`ProjectArk.Ship.Tests` PlayMode 39/39 通过；`ProjectArk.Ship.Editor` EditMode 9/9 通过；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误（90 个既有/生成 warning）。Prefab 空 `m_Name` 尾随空格已清理，Unity Console 当前 0 error。
+
+---
+
+## GGReplica V2 Grab 选中/锁定/释放三段反馈 — 2026-05-15 14:58
+
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchView.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilderTests.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Assets/Scripts/Core/Tests/ProjectArk.Core.Tests.asmdef`
+  - `Assets/_Prefabs/Ship/Ship_GGReplicaV2.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：继续复刻原版 `PlayerViewFluxyGrabModule.OnSelect / OnLock / OnRelease` 的节奏，在当前 V2 没有真实 `GravGunInteractable` 目标系统前，先做本地可见版本。`GGReplicaGlitchView` 新增 `_grabLockRenderer`、`_grabReleaseRenderer`、`_grabHoldTimer`、`_grabReleaseTimer`；进入 `GrabHold` 后先显示 select 强度的 holo / pointer，按住超过 `GrabLockDelay=0.18s` 后启用 cyan lock ring 并加粗 pointer，松开 `E` 退出 Grab 时保留 `FluxyGrabModule` 短时间并播放 release pulse，随后隐藏并复位。V2 Prefab Builder 增加 `GrabLockRing` 与 `GrabReleasePulse` 节点和 View 接线测试，并已通过 `ProjectArk.Ship.Editor` 重建 `Ship_GGReplicaV2.prefab`。补测过程中发现 `ProjectArk.Core.Tests.asmdef` 同时使用显式 `UnityEngine.TestRunner` / `UnityEditor.TestRunner` 引用和旧版 `optionalUnityReferences: TestAssemblies`，导致 Unity Test Runner 初始化时报 duplicate references；已移除旧版 optionalUnityReferences。
+- **目的**：让 Grab 的操作节奏从“按住显示、松开消失”推进到“选中 → 锁定 → 释放”的三段可读反馈，更接近原版 GG GravGun/FluxyGrab 的交互读感，同时不引入目标选择/物理抓取系统；并恢复 Unity Test Runner 的可用性，保证后续验证闭环稳定。
+- **技术**：TDD + MaterialPropertyBlock + 计时状态机。RED：新增 `View_GrabHold_ProgressesSelectLockAndReleaseFeedback`，PlayMode 先失败于缺少 `_grabLockRenderer` 字段；Prefab Builder 测试要求新增 `GrabLockRing` / `GrabReleasePulse` 节点和序列化接线。GREEN：实现 hold/release 计时、lock ring、release pulse 和 Builder 生成逻辑。补测结果：`Ship_GGReplicaV2.prefab` 已包含 `GrabThrowPointer`、`FluxyGrabHolo_R/L`、`GrabLockRing`、`GrabReleasePulse` 以及 `_grabThrowPointer` / `_grabLockRenderer` / `_grabReleaseRenderer` 引用；`ProjectArk.Ship.Editor` EditMode 9/9 通过；`ProjectArk.Ship.Tests` PlayMode 40/40 通过；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误 0 警告；`git diff --check` 通过。Unity Console 当前 error 为既有负向测试刻意输出。
+
+---
+
+## Minishoot ChargeRusher ReferenceOnly 命中镜头震动 — 2026-05-15 14:52
+
+- **新建/修改文件**：
+  - `Assets/Scripts/Core/CameraShakeService.cs`（及 Unity 自动生成 `.meta`）
+  - `Assets/Scripts/Core/Tests/CameraShakeServiceTests.cs`（及 Unity 自动生成 `.meta`）
+  - `Assets/Scripts/Combat/Enemy/ChargeRusherReferenceImpactFeedback.cs`
+  - `Assets/_ReferenceOnly/Minishoot/ChargedRusher/Prefabs/Enemy_ChargeRusher_REF_Minshoot.prefab`
+  - `Assets/Scenes/SampleScene.unity`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：新增 Core 层 `CameraShakeService`，挂载在相机/相机 rig 上后会通过 `ServiceLocator` 注册，提供 `Shake(duration, amplitude, frequency)` 与确定性 `Step(unscaledDeltaTime)`；使用 unscaled time 推进，结束时恢复初始 localPosition。`ChargeRusherReferenceImpactFeedback` 新增 `_cameraShakeDuration/_cameraShakeAmplitude/_cameraShakeFrequency`，在既有 ImpactGate 通过后触发镜头震动；若服务缺失则只输出一次 warning。ReferenceOnly Prefab 写入默认 `0.08s / 0.08 amplitude / 26Hz`；`SampleScene` 的 `Main Camera` 已挂接 `CameraShakeService`。
+- **目的**：继续复刻 Minishoot Charged Rusher 的命中确认感，在 hit flash、spark、hitstop 之外加入短促镜头冲击，同时保持正式敌人主链、伤害管线与 `Enemy_ChargeRusher` Prefab 不变。
+- **技术**：轻量服务定位 + optional dependency。Enemy 层只依赖 Core 层服务，不直接查找或操作相机，避免运行时 `FindObjectOfType` 和相机实现耦合；shake 不产生运行时 Instantiate/Destroy。新增 EditMode 测试覆盖服务注册、参数夹取与持续时间结束复位。验证结果：`dotnet build Project-Ark.slnx --no-restore` 通过；`validate_script` 对 `CameraShakeService` 与 `ChargeRusherReferenceImpactFeedback` 均为 0 error；Unity Console 当前 0 error / 0 warning；`git diff --check` 通过。Unity MCP Test Runner 以程序集/测试名过滤运行时返回 `total: 0`，未发现用例，未作为失败处理。
+
+---
+
+## CameraShakeService 测试发现修复 — 2026-05-15 15:58
+
+- **修改文件**
+  - `Assets/Scripts/Core/Tests/ProjectArk.Core.Tests.asmdef`
+  - `Assets/Scripts/Core/Tests/CameraShakeServiceTests.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：修复 `ProjectArk.Core.Tests` 在 Unity Test Runner 中 EditMode 运行时返回 `total: 0` 的问题。将 Core 测试程序集限定为 `Editor` 平台，使 `CameraShakeServiceTests`、`DamageCalculatorTests`、`HeatSystemTests` 被归类到 EditMode 测试树；同时调整 `CameraShakeServiceTests` 的 EditMode 初始化方式，通过反射直接调用 `CameraShakeService.Awake()`，避免 `SendMessage("Awake")` 在 EditMode 中触发 Unity 内部 `ShouldRunBehaviour()` 断言。
+- **目的**：让新增的镜头震动服务测试和既有 Core 单元测试能被 Unity EditMode Test Runner 稳定发现与执行，避免后续把 `total: 0` 误判为测试通过。
+- **技术**：Unity asmdef 平台分类修正 + NUnit EditMode 测试适配 + 生命周期入口显式调用。验证结果：`dotnet build Project-Ark.slnx --no-restore` 通过；Unity EditMode `ProjectArk.Core.Tests` 发现并执行 17 个测试，17 passed / 0 failed；Unity Console 仅剩 Test Framework 自身运行提示，无项目编译错误。
+
+---
+
+## GGReplica V2 Grab Release burst/throw 收束反馈 — 2026-05-15 16:13
+
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchView.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilderTests.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Assets/_Prefabs/Ship/Ship_GGReplicaV2.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：继续细化原版 `PlayerViewFluxyGrabModule.OnRelease` 的本地可见版本。`GGReplicaGlitchView` 新增 `_grabReleaseParticles` 与 `_grabReleaseThrowLine`；松开 `E` 退出 `GrabHold` 时，除了既有 `GrabReleasePulse`，现在会播放一次 `GrabReleaseBurst` 粒子，并启用三点 `GrabReleaseThrowLine`，用紫青渐变、宽度收束和中点上扬模拟液体甩出 / 指针收束。Release 窗口结束后停止粒子、隐藏 line，并关闭 `FluxyGrabModule`。V2 Prefab Builder 在 `FluxyGrabModule` 下创建 `GrabReleaseBurst` 和 `GrabReleaseThrowLine`，并写入 View 引用。
+- **目的**：让 Grab 松开瞬间不再只是静态 pulse，而是具备更接近 GG 原版 `OnRelease` 的“液体甩出 / throw pointer fade”反馈，增强 `E` 释放时的操作确认感。
+- **技术**：TDD + ParticleSystem + LineRenderer + MaterialPropertyBlock。RED：新增 `View_GrabRelease_PlaysBurstAndCollapsesThrowLine`，PlayMode 先失败于缺少 `_grabReleaseParticles` 字段；Prefab Builder 测试要求新增 `GrabReleaseBurst` / `GrabReleaseThrowLine` 节点和序列化接线。GREEN：实现 release burst 触发、throw line 三点曲线、窗口结束复位和 Builder 生成逻辑。验证结果：新增 Grab Release PlayMode 单测 1/1 通过；V2 Prefab Builder focused EditMode 1/1 通过；`ProjectArk.Ship.Tests` PlayMode 41/41 通过；`ProjectArk.Ship.Editor` EditMode 9/9 通过；`Ship_GGReplicaV2.prefab` 已包含 `GrabReleaseBurst`、`GrabReleaseThrowLine`、`_grabReleaseParticles`、`_grabReleaseThrowLine`；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误（86 个 warning）；`git diff --check` 通过。Unity Console 当前 error 为既有负向测试刻意输出。

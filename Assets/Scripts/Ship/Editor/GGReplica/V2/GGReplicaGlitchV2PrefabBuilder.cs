@@ -112,11 +112,26 @@ namespace ProjectArk.Ship.Editor
                 var shapeTrail = CreateTrail(shapeTrailModule, "shape_trail", 0.25f, 2f);
                 var fluxyTrail = CreateTrail(lqTrailModule, "fluxy_like_lq_trail", 0.6f, 3.5f, GGReplicaMaterialAssetBuilder.FakeFluxyMaterialPath);
 
+                var grabHandsRoot = CreateChild(fluxyGrabModule, "Grab_Hands");
                 var grabRight = CreateSpriteLayer(grabModule, "Ship_Sprite_Solid_Grab_R", "Assets/_Art/Ship/GGReplica/Sprites/GrabGun_Hand_7.png", 5, LoadMaterial(GGReplicaMaterialAssetBuilder.FakeFluxyMaterialPath));
                 var grabLeft = CreateSpriteLayer(grabModule, "Ship_Sprite_Solid_Grab_L", "Assets/_Art/Ship/GGReplica/Sprites/GrabGun_Hand_7.png", 5, LoadMaterial(GGReplicaMaterialAssetBuilder.FakeFluxyMaterialPath));
                 grabRight.transform.localPosition = new Vector3(0.42f, -0.1f, 0f);
                 grabLeft.transform.localPosition = new Vector3(-0.42f, -0.1f, 0f);
                 grabLeft.flipX = true;
+                var fluxyGrabRight = CreateSpriteLayer(grabHandsRoot, "FluxyGrabHolo_R", "Assets/_Art/Ship/GGReplica/Sprites/GrabGun_Hand_7.png", 8, LoadMaterial(GGReplicaMaterialAssetBuilder.FakeFluxyMaterialPath));
+                var fluxyGrabLeft = CreateSpriteLayer(grabHandsRoot, "FluxyGrabHolo_L", "Assets/_Art/Ship/GGReplica/Sprites/GrabGun_Hand_7.png", 8, LoadMaterial(GGReplicaMaterialAssetBuilder.FakeFluxyMaterialPath));
+                fluxyGrabLeft.flipX = true;
+                fluxyGrabRight.enabled = false;
+                fluxyGrabLeft.enabled = false;
+                var grabThrowPointer = CreateLine(fluxyGrabModule, "GrabThrowPointer", LoadMaterial(GGReplicaMaterialAssetBuilder.FakeFluxyMaterialPath));
+                var grabLockRing = CreateSpriteLayer(fluxyGrabModule, "GrabLockRing", "Assets/_Art/Ship/GGReplica/Sprites/vfx_dot_001.png", 10, LoadMaterial(GGReplicaMaterialAssetBuilder.FakeFluxyMaterialPath));
+                var grabReleasePulse = CreateSpriteLayer(fluxyGrabModule, "GrabReleasePulse", "Assets/_Art/Ship/GGReplica/Sprites/vfx_dot_001.png", 11, LoadMaterial(GGReplicaMaterialAssetBuilder.FakeFluxyMaterialPath));
+                var grabReleaseBurst = CreateParticle(fluxyGrabModule, "GrabReleaseBurst", new Color(1f, 0.12f, 1f, 0.86f), 80f, 0.12f, GGReplicaMaterialAssetBuilder.FakeFluxyMaterialPath);
+                var grabReleaseBurstMain = grabReleaseBurst.main;
+                grabReleaseBurstMain.loop = false;
+                var grabReleaseThrowLine = CreateLine(fluxyGrabModule, "GrabReleaseThrowLine", LoadMaterial(GGReplicaMaterialAssetBuilder.FakeFluxyMaterialPath));
+                grabLockRing.enabled = false;
+                grabReleasePulse.enabled = false;
 
                 SetSerialized(motor, "_body", body);
                 SetSerialized(motor, "_view", view);
@@ -132,6 +147,7 @@ namespace ProjectArk.Ship.Editor
                 SetSerialized(view, "_boostModuleRoot", boostModule.gameObject);
                 SetSerialized(view, "_lqTrailsContainer", lqTrailsContainer.gameObject);
                 SetSerialized(view, "_grabModuleRoot", grabModule.gameObject);
+                SetSerialized(view, "_fluxyGrabModuleRoot", fluxyGrabModule.gameObject);
                 SetSerialized(view, "_healModuleRoot", healModule.gameObject);
                 SetSerialized(view, "_dodgeModuleRoot", dodgeModule.gameObject);
                 SetSerialized(view, "_fireAimModuleRoot", fireAimModule.gameObject);
@@ -148,6 +164,12 @@ namespace ProjectArk.Ship.Editor
                 SetSerialized(view, "_liquidRenderer", liquid);
                 SetSerialized(view, "_highlightRenderer", highlight);
                 SetSerializedArray(view, "_grabRenderers", new Object[] { grabRight, grabLeft });
+                SetSerializedArray(view, "_grabFluxyRenderers", new Object[] { fluxyGrabRight, fluxyGrabLeft });
+                SetSerialized(view, "_grabThrowPointer", grabThrowPointer);
+                SetSerialized(view, "_grabLockRenderer", grabLockRing);
+                SetSerialized(view, "_grabReleaseRenderer", grabReleasePulse);
+                SetSerializedArray(view, "_grabReleaseParticles", new Object[] { grabReleaseBurst });
+                SetSerialized(view, "_grabReleaseThrowLine", grabReleaseThrowLine);
                 SetSerializedArray(view, "_healRenderers", new Object[] { healShell, healDot });
                 SetSerializedArray(view, "_fireAimRenderers", new Object[] { firePrimary, fireGlow, fireHitboxHint });
                 SetSerialized(view, "_coreRenderer", core);
@@ -235,6 +257,22 @@ namespace ProjectArk.Ship.Editor
             trail.numCapVertices = 8;
             trail.emitting = false;
             return trail;
+        }
+
+        private static LineRenderer CreateLine(Transform parent, string name, Material material)
+        {
+            var child = CreateChild(parent, name);
+            var line = child.gameObject.AddComponent<LineRenderer>();
+            line.sharedMaterial = material;
+            line.useWorldSpace = false;
+            line.positionCount = 2;
+            line.startWidth = 0.04f;
+            line.endWidth = 0.015f;
+            line.numCapVertices = 6;
+            line.enabled = false;
+            line.SetPosition(0, new Vector3(-0.74f, -0.08f, 0f));
+            line.SetPosition(1, new Vector3(0.74f, -0.08f, 0f));
+            return line;
         }
 
         private static Material LoadMaterial(string path)

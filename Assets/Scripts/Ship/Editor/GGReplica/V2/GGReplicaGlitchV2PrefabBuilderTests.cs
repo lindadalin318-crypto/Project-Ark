@@ -48,6 +48,10 @@ namespace ProjectArk.Ship.Editor
                 "FluxyGrabHolo_R",
                 "FluxyGrabHolo_L",
                 "GrabThrowPointer",
+                "GrabLockRing",
+                "GrabReleasePulse",
+                "GrabReleaseBurst",
+                "GrabReleaseThrowLine",
                 "HealModule",
                 "FireAimModule",
                 "AdditiveCore_Dodge",
@@ -139,6 +143,10 @@ namespace ProjectArk.Ship.Editor
             Assert.That(viewSO.FindProperty("_grabRenderers").arraySize, Is.EqualTo(2));
             Assert.That(viewSO.FindProperty("_grabFluxyRenderers").arraySize, Is.EqualTo(2));
             Assert.That(viewSO.FindProperty("_grabThrowPointer").objectReferenceValue, Is.SameAs(visualRoot.Find("FluxyGrabModule/GrabThrowPointer").GetComponent<LineRenderer>()));
+            Assert.That(viewSO.FindProperty("_grabLockRenderer").objectReferenceValue, Is.SameAs(visualRoot.Find("FluxyGrabModule/GrabLockRing").GetComponent<SpriteRenderer>()));
+            Assert.That(viewSO.FindProperty("_grabReleaseRenderer").objectReferenceValue, Is.SameAs(visualRoot.Find("FluxyGrabModule/GrabReleasePulse").GetComponent<SpriteRenderer>()));
+            Assert.That(viewSO.FindProperty("_grabReleaseParticles").arraySize, Is.EqualTo(1));
+            Assert.That(viewSO.FindProperty("_grabReleaseThrowLine").objectReferenceValue, Is.SameAs(visualRoot.Find("FluxyGrabModule/GrabReleaseThrowLine").GetComponent<LineRenderer>()));
             Assert.That(viewSO.FindProperty("_healModuleRoot").objectReferenceValue, Is.SameAs(visualRoot.Find("HealModule").gameObject));
             Assert.That(viewSO.FindProperty("_healParticles").arraySize, Is.EqualTo(1));
             Assert.That(viewSO.FindProperty("_healRenderers").arraySize, Is.GreaterThanOrEqualTo(2));

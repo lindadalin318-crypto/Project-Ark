@@ -387,4 +387,7 @@ MonoBehaviour:
   _flashColor: {r: 1, g: 1, b: 0.78, a: 1}
   _flashScale: {x: 1.18, y: 1.18, z: 1}
   _hitStopDuration: 0.025
+  _cameraShakeDuration: 0.08
+  _cameraShakeAmplitude: 0.08
+  _cameraShakeFrequency: 26
   _impactClip: {fileID: 0}

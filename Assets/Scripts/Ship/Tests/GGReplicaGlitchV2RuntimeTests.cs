@@ -408,21 +408,121 @@ namespace ProjectArk.Ship.Tests
                 Assert.That(holoRight.color.a, Is.GreaterThan(0.55f));
                 Assert.That(throwPointer.enabled, Is.True);
                 Assert.That(throwPointer.positionCount, Is.EqualTo(2));
-                AssertFloatProperty(holoRight, "_Alpha", 0.86f);
-                AssertFloatProperty(throwPointer, "_Alpha", 0.72f);
+                AssertFloatProperty(holoRight, "_Alpha", 0.6345f);
+                AssertFloatProperty(throwPointer, "_Alpha", 0.522f);
                 Assert.That(material.GetFloat("_Alpha"), Is.EqualTo(0.62f).Within(0.001f), "FluxyGrab runtime must not mutate GGReplicaFakeFluxy.mat/shared material.");
 
                 view.ApplyState(GGReplicaGlitchState.Idle);
 
-                Assert.That(fluxyGrabRoot.activeSelf, Is.False);
+                Assert.That(fluxyGrabRoot.activeSelf, Is.True, "Release pulse keeps FluxyGrabModule alive briefly after E is released.");
+
+                InvokePrivate(view, "TickVisuals", 0.2f);
+
                 Assert.That(holoRight.enabled, Is.False);
                 Assert.That(throwPointer.enabled, Is.False);
                 Assert.That(holoRight.transform.localScale, Is.EqualTo(Vector3.one));
                 AssertFloatProperty(holoRight, "_Alpha", 0f);
+                Assert.That(fluxyGrabRoot.activeSelf, Is.False);
             }
             finally
             {
                 if (material != null) Object.DestroyImmediate(material);
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void View_GrabHold_ProgressesSelectLockAndReleaseFeedback()
+        {
+            var root = new GameObject("GGReplicaGlitchV2GrabPhaseRig");
+            try
+            {
+                var view = root.AddComponent<GGReplicaGlitchView>();
+                var fluxyGrabRoot = new GameObject("FluxyGrabModule");
+                fluxyGrabRoot.transform.SetParent(root.transform, false);
+                var holo = new GameObject("FluxyGrabHolo_R").AddComponent<SpriteRenderer>();
+                var pointer = new GameObject("GrabThrowPointer").AddComponent<LineRenderer>();
+                var lockRing = new GameObject("GrabLockRing").AddComponent<SpriteRenderer>();
+                var releasePulse = new GameObject("GrabReleasePulse").AddComponent<SpriteRenderer>();
+                holo.transform.SetParent(fluxyGrabRoot.transform, false);
+                pointer.transform.SetParent(fluxyGrabRoot.transform, false);
+                lockRing.transform.SetParent(fluxyGrabRoot.transform, false);
+                releasePulse.transform.SetParent(fluxyGrabRoot.transform, false);
+
+                SetPrivateField(view, "_fluxyGrabModuleRoot", fluxyGrabRoot);
+                SetPrivateField(view, "_grabFluxyRenderers", new[] { holo });
+                SetPrivateField(view, "_grabThrowPointer", pointer);
+                SetPrivateField(view, "_grabLockRenderer", lockRing);
+                SetPrivateField(view, "_grabReleaseRenderer", releasePulse);
+
+                view.ApplyState(GGReplicaGlitchState.GrabHold);
+                InvokePrivate(view, "TickVisuals", 0.06f);
+
+                Assert.That(holo.enabled, Is.True, "OnSelect should show the hologram before lock.");
+                Assert.That(lockRing.enabled, Is.False, "Lock ring should wait for the local lock timing instead of appearing instantly.");
+
+                InvokePrivate(view, "TickVisuals", 0.18f);
+
+                Assert.That(lockRing.enabled, Is.True, "OnLock should add a stronger confirmation layer while Grab is held.");
+                Assert.That(lockRing.color.a, Is.GreaterThan(0.55f));
+                Assert.That(pointer.startWidth, Is.GreaterThan(0.06f));
+
+                view.ApplyState(GGReplicaGlitchState.Idle);
+
+                Assert.That(releasePulse.enabled, Is.True, "OnRelease should leave a short pulse after E is released.");
+                Assert.That(fluxyGrabRoot.activeSelf, Is.True);
+
+                InvokePrivate(view, "TickVisuals", 0.2f);
+
+                Assert.That(releasePulse.enabled, Is.False);
+                Assert.That(lockRing.enabled, Is.False);
+                Assert.That(fluxyGrabRoot.activeSelf, Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void View_GrabRelease_PlaysBurstAndCollapsesThrowLine()
+        {
+            var root = new GameObject("GGReplicaGlitchV2GrabReleaseBurstRig");
+            try
+            {
+                var view = root.AddComponent<GGReplicaGlitchView>();
+                var fluxyGrabRoot = new GameObject("FluxyGrabModule");
+                fluxyGrabRoot.transform.SetParent(root.transform, false);
+                var releasePulse = new GameObject("GrabReleasePulse").AddComponent<SpriteRenderer>();
+                var releaseBurst = new GameObject("GrabReleaseBurst").AddComponent<ParticleSystem>();
+                var releaseThrowLine = new GameObject("GrabReleaseThrowLine").AddComponent<LineRenderer>();
+                releasePulse.transform.SetParent(fluxyGrabRoot.transform, false);
+                releaseBurst.transform.SetParent(fluxyGrabRoot.transform, false);
+                releaseThrowLine.transform.SetParent(fluxyGrabRoot.transform, false);
+
+                SetPrivateField(view, "_fluxyGrabModuleRoot", fluxyGrabRoot);
+                SetPrivateField(view, "_grabReleaseRenderer", releasePulse);
+                SetPrivateField(view, "_grabReleaseParticles", new[] { releaseBurst });
+                SetPrivateField(view, "_grabReleaseThrowLine", releaseThrowLine);
+
+                view.ApplyState(GGReplicaGlitchState.GrabHold);
+                InvokePrivate(view, "TickVisuals", 0.24f);
+                view.ApplyState(GGReplicaGlitchState.Idle);
+
+                Assert.That(releaseBurst.isPlaying, Is.True, "Original OnRelease should feel like a liquid throw/burst, not only a static pulse.");
+                Assert.That(releaseThrowLine.enabled, Is.True);
+                Assert.That(releaseThrowLine.positionCount, Is.EqualTo(3));
+                Assert.That(releaseThrowLine.startWidth, Is.GreaterThan(releaseThrowLine.endWidth));
+                Assert.That(releaseThrowLine.GetPosition(0).x, Is.LessThan(0f));
+                Assert.That(releaseThrowLine.GetPosition(2).x, Is.GreaterThan(0f));
+
+                InvokePrivate(view, "TickVisuals", 0.2f);
+
+                Assert.That(releaseBurst.isPlaying, Is.False);
+                Assert.That(releaseThrowLine.enabled, Is.False);
+            }
+            finally
+            {
                 Object.DestroyImmediate(root);
             }
         }

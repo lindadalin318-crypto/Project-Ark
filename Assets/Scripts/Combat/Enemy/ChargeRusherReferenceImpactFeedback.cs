@@ -36,6 +36,11 @@ namespace ProjectArk.Combat.Enemy
         [Header("Hit Stop")]
         [SerializeField, Min(0f)] private float _hitStopDuration = 0.025f;
 
+        [Header("Camera Shake")]
+        [SerializeField, Min(0f)] private float _cameraShakeDuration = 0.08f;
+        [SerializeField, Min(0f)] private float _cameraShakeAmplitude = 0.08f;
+        [SerializeField, Min(0f)] private float _cameraShakeFrequency = 26f;
+
         [Header("Audio")]
         [SerializeField] private AudioClip _impactClip;
 
@@ -50,6 +55,7 @@ namespace ProjectArk.Combat.Enemy
         private float _sparkTimer;
         private bool _flashActive;
         private float _flashTimer;
+        private bool _hasLoggedMissingCameraShake;
 
         private void Awake()
         {
@@ -145,6 +151,7 @@ namespace ProjectArk.Combat.Enemy
                 return;
 
             TriggerHitStop();
+            TriggerCameraShake();
             PlaySpark(impactPosition);
             StartFlash();
             PlayOneShot(_impactClip);
@@ -156,6 +163,24 @@ namespace ProjectArk.Combat.Enemy
                 return;
 
             HitStopEffect.Trigger(_hitStopDuration);
+        }
+
+        private void TriggerCameraShake()
+        {
+            if (_cameraShakeDuration <= 0f)
+                return;
+
+            if (ServiceLocator.TryGet<CameraShakeService>(out var cameraShake))
+            {
+                cameraShake.Shake(_cameraShakeDuration, _cameraShakeAmplitude, _cameraShakeFrequency);
+                return;
+            }
+
+            if (_hasLoggedMissingCameraShake)
+                return;
+
+            _hasLoggedMissingCameraShake = true;
+            Debug.LogWarning($"[{nameof(ChargeRusherReferenceImpactFeedback)}] CameraShakeService is missing; impact camera shake skipped.", this);
         }
 
         private void BuildSparkRenderer()

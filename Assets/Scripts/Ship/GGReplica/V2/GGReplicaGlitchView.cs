@@ -34,6 +34,10 @@ namespace ProjectArk.Ship
         [SerializeField] private SpriteRenderer[] _grabRenderers = System.Array.Empty<SpriteRenderer>();
         [SerializeField] private SpriteRenderer[] _grabFluxyRenderers = System.Array.Empty<SpriteRenderer>();
         [SerializeField] private LineRenderer _grabThrowPointer;
+        [SerializeField] private SpriteRenderer _grabLockRenderer;
+        [SerializeField] private SpriteRenderer _grabReleaseRenderer;
+        [SerializeField] private ParticleSystem[] _grabReleaseParticles = System.Array.Empty<ParticleSystem>();
+        [SerializeField] private LineRenderer _grabReleaseThrowLine;
         [SerializeField] private SpriteRenderer[] _healRenderers = System.Array.Empty<SpriteRenderer>();
         [SerializeField] private SpriteRenderer[] _fireAimRenderers = System.Array.Empty<SpriteRenderer>();
         [SerializeField] private SpriteRenderer _coreRenderer;
@@ -57,6 +61,8 @@ namespace ProjectArk.Ship
         private Vector3 _fluxyDefaultScale;
         private float _boostBurstTimer;
         private float _dodgeVisualTimer;
+        private float _grabHoldTimer;
+        private float _grabReleaseTimer;
         private float _healPulseTimer;
         private float _fireAimPulseTimer;
 
@@ -73,6 +79,8 @@ namespace ProjectArk.Ship
             CurrentState = state;
             bool enteringBoost = state == GGReplicaGlitchState.BoostHold && previousState != GGReplicaGlitchState.BoostHold;
             bool enteringDodge = state == GGReplicaGlitchState.DodgeBurst && previousState != GGReplicaGlitchState.DodgeBurst;
+            bool enteringGrab = state == GGReplicaGlitchState.GrabHold && previousState != GGReplicaGlitchState.GrabHold;
+            bool exitingGrab = previousState == GGReplicaGlitchState.GrabHold && state != GGReplicaGlitchState.GrabHold;
             bool enteringHeal = state == GGReplicaGlitchState.Heal && previousState != GGReplicaGlitchState.Heal;
             bool enteringFireAim = state == GGReplicaGlitchState.FireAim && previousState != GGReplicaGlitchState.FireAim;
             bool moving = state == GGReplicaGlitchState.Move;
@@ -85,7 +93,7 @@ namespace ProjectArk.Ship
             SetActive(_boostModuleRoot, boosting);
             SetActive(_lqTrailsContainer, boosting || moving || dodging);
             SetActive(_grabModuleRoot, grabbing);
-            SetActive(_fluxyGrabModuleRoot, grabbing);
+            SetActive(_fluxyGrabModuleRoot, grabbing || exitingGrab || _grabReleaseTimer > 0f);
             SetActive(_healModuleRoot, healing);
             SetActive(_dodgeModuleRoot, dodging);
             SetActive(_fireAimModuleRoot, firing);
@@ -103,7 +111,7 @@ namespace ProjectArk.Ship
                 SetFluxyTrailState(boosting || moving, boosting ? 0.65f : moving ? 0.35f : 0f, false);
             }
 
-            ApplyGrabVisuals(grabbing);
+            ApplyGrabVisuals(grabbing, enteringGrab, exitingGrab);
             ApplyHealVisuals(healing, enteringHeal);
             ApplyFireAimVisuals(firing, enteringFireAim);
             SetBodyColor(boosting, dodging, grabbing, healing, firing);
@@ -157,8 +165,24 @@ namespace ProjectArk.Ship
 
             if (CurrentState == GGReplicaGlitchState.GrabHold)
             {
-                float pulse = 0.5f + Mathf.Sin(Time.time * 12f) * 0.5f;
-                SetGrabFluxyVisuals(true, pulse);
+                _grabHoldTimer += deltaTime;
+                bool locked = _grabHoldTimer >= GrabLockDelay;
+                SetGrabFluxyVisuals(true, locked ? 1f : 0.45f);
+                SetGrabLockVisuals(locked, locked ? 1f : 0f);
+            }
+
+            if (_grabReleaseTimer > 0f)
+            {
+                _grabReleaseTimer -= deltaTime;
+                float intensity = Mathf.Clamp01(_grabReleaseTimer / GrabReleaseDuration);
+                SetGrabReleaseVisuals(intensity > 0f, intensity);
+                SetGrabReleaseThrowVisuals(intensity > 0f, intensity);
+                if (intensity <= 0f)
+                {
+                    StopParticles(_grabReleaseParticles);
+                }
+
+                SetActive(_fluxyGrabModuleRoot, intensity > 0f);
             }
         }
 
@@ -386,8 +410,17 @@ namespace ProjectArk.Ship
             _fluxyTrailRenderer.SetPropertyBlock(_fluxyTrailBlock);
         }
 
-        private void ApplyGrabVisuals(bool grabbing)
+        private void ApplyGrabVisuals(bool grabbing, bool enteringGrab, bool exitingGrab)
         {
+            if (enteringGrab)
+            {
+                _grabHoldTimer = 0f;
+                _grabReleaseTimer = 0f;
+                SetGrabReleaseVisuals(false, 0f);
+                SetGrabReleaseThrowVisuals(false, 0f);
+                StopParticles(_grabReleaseParticles);
+            }
+
             EnsureGrabClosedPositions();
             for (int i = 0; i < _grabRenderers.Length; i++)
             {
@@ -401,7 +434,16 @@ namespace ProjectArk.Ship
                 renderer.color = grabbing ? Color.white : Color.white;
             }
 
-            SetGrabFluxyVisuals(grabbing, grabbing ? 1f : 0f);
+            SetGrabFluxyVisuals(grabbing, grabbing ? 0.45f : 0f);
+            SetGrabLockVisuals(false, 0f);
+            if (exitingGrab)
+            {
+                _grabHoldTimer = 0f;
+                _grabReleaseTimer = GrabReleaseDuration;
+                SetGrabReleaseVisuals(true, 1f);
+                SetGrabReleaseThrowVisuals(true, 1f);
+                PlayParticles(_grabReleaseParticles);
+            }
         }
 
         private void SetGrabFluxyVisuals(bool grabbing, float intensity)
@@ -433,6 +475,45 @@ namespace ProjectArk.Ship
                 _grabThrowPointer.SetPosition(1, new Vector3(0.74f, -0.08f, 0f));
                 SetGrabFluxyBlock(_grabThrowPointer, grabbing ? Mathf.Lerp(0.36f, 0.72f, clamped) : 0f, grabbing ? Mathf.Lerp(4.2f, 5.8f, clamped) : 3.77f);
             }
+        }
+
+        private void SetGrabLockVisuals(bool locked, float intensity)
+        {
+            if (_grabLockRenderer == null) return;
+            float clamped = Mathf.Clamp01(intensity);
+            _grabLockRenderer.enabled = locked;
+            _grabLockRenderer.transform.localScale = locked ? Vector3.one * Mathf.Lerp(1.05f, 1.36f, clamped) : Vector3.one;
+            _grabLockRenderer.color = locked ? new Color(0.25f, 1f, 1f, Mathf.Lerp(0.45f, 0.82f, clamped)) : Color.clear;
+            SetGrabFluxyBlock(_grabLockRenderer, locked ? Mathf.Lerp(0.48f, 0.82f, clamped) : 0f, locked ? Mathf.Lerp(4.8f, 6.6f, clamped) : 3.77f);
+        }
+
+        private void SetGrabReleaseVisuals(bool active, float intensity)
+        {
+            if (_grabReleaseRenderer == null) return;
+            float clamped = Mathf.Clamp01(intensity);
+            _grabReleaseRenderer.enabled = active;
+            _grabReleaseRenderer.transform.localScale = active ? Vector3.one * Mathf.Lerp(1.8f, 0.9f, 1f - clamped) : Vector3.one;
+            _grabReleaseRenderer.color = active ? new Color(1f, 0.2f, 1f, Mathf.Lerp(0.1f, 0.78f, clamped)) : Color.clear;
+            SetGrabFluxyBlock(_grabReleaseRenderer, active ? Mathf.Lerp(0.1f, 0.78f, clamped) : 0f, active ? Mathf.Lerp(6.4f, 3.77f, 1f - clamped) : 3.77f);
+        }
+
+        private void SetGrabReleaseThrowVisuals(bool active, float intensity)
+        {
+            if (_grabReleaseThrowLine == null) return;
+            float clamped = Mathf.Clamp01(intensity);
+            _grabReleaseThrowLine.enabled = active;
+            _grabReleaseThrowLine.useWorldSpace = false;
+            _grabReleaseThrowLine.positionCount = 3;
+            _grabReleaseThrowLine.startWidth = active ? Mathf.Lerp(0.035f, 0.12f, clamped) : 0.035f;
+            _grabReleaseThrowLine.endWidth = active ? Mathf.Lerp(0.01f, 0.04f, clamped) : 0.01f;
+            _grabReleaseThrowLine.startColor = active ? new Color(1f, 0f, 1f, Mathf.Lerp(0.05f, 0.86f, clamped)) : Color.clear;
+            _grabReleaseThrowLine.endColor = active ? new Color(0.25f, 1f, 1f, Mathf.Lerp(0.03f, 0.42f, clamped)) : Color.clear;
+            float reach = Mathf.Lerp(0.18f, 0.92f, clamped);
+            float lift = Mathf.Lerp(0.02f, 0.2f, clamped);
+            _grabReleaseThrowLine.SetPosition(0, new Vector3(-reach, -0.08f, 0f));
+            _grabReleaseThrowLine.SetPosition(1, new Vector3(0f, lift, 0f));
+            _grabReleaseThrowLine.SetPosition(2, new Vector3(reach, -0.08f, 0f));
+            SetGrabFluxyBlock(_grabReleaseThrowLine, active ? Mathf.Lerp(0.08f, 0.86f, clamped) : 0f, active ? Mathf.Lerp(6.8f, 3.77f, 1f - clamped) : 3.77f);
         }
 
         private void SetGrabFluxyBlock(Renderer renderer, float alpha, float flowPower)
@@ -526,6 +607,10 @@ namespace ProjectArk.Ship
         private float BoostIgniteDuration => _feelProfile != null ? _feelProfile.BoostIgniteDuration : 0.08f;
 
         private float DodgeVisualDuration => _feelProfile != null ? _feelProfile.DodgeStateDuration : 0.225f;
+
+        private const float GrabLockDelay = 0.18f;
+
+        private const float GrabReleaseDuration = 0.16f;
 
         private void SetBodyColor(bool boosting, bool dodging, bool grabbing, bool healing, bool firing)
         {
