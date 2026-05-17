@@ -1,7 +1,11 @@
 using UnityEngine;
 using ProjectArk.Core;
+using ProjectArk.Combat.HyperWind;
+using ProjectArk.HyperWind;
 
 namespace ProjectArk.Combat.Enemy
+
+
 {
     /// <summary>
     /// Enemy projectile entity. Moves in a straight line, hits Player layer,
@@ -9,21 +13,41 @@ namespace ProjectArk.Combat.Enemy
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
     [RequireComponent(typeof(Collider2D))]
-    public class EnemyProjectile : MonoBehaviour, IPoolable
+    public class EnemyProjectile : MonoBehaviour, IPoolable, ICycloneCaptureTarget
+
     {
         private Rigidbody2D _rigidbody;
+        private Collider2D _collider;
         private PoolReference _poolRef;
         private TrailRenderer _trail;
+
 
         private float _damage;
         private float _knockback;
         private float _speed;
         private float _lifetimeTimer;
         private bool _isAlive;
+        private bool _isCycloneCaptured;
 
         private Vector3 _originalScale;
 
+
+        [Header("HyperWind")]
+        [Tooltip("When enabled, enemy physical projectiles drift under IWindFieldService.")]
+        [SerializeField] private bool _enableWindFieldDrift = true;
+
+        [Tooltip("Acceleration applied from sampled wind velocity. Higher values bend projectile trajectories faster.")]
+        [SerializeField] [Min(0f)] private float _windDriftAcceleration = 2f;
+
+        [Tooltip("Maximum accumulated wind drift velocity added on top of the projectile's authored velocity.")]
+        [SerializeField] [Min(0f)] private float _maxWindDriftSpeed = 8f;
+
+        private IWindFieldService _windFieldService;
+        private Vector2 _windDriftVelocity;
+        private bool _windDriftApplied;
+
         // Cached layer indices
+
         private static int _enemyLayer = -1;
         private static int EnemyLayer => _enemyLayer >= 0 ? _enemyLayer : (_enemyLayer = LayerMask.NameToLayer("Enemy"));
 
@@ -31,12 +55,19 @@ namespace ProjectArk.Combat.Enemy
         public Vector2 Direction { get; set; }
         public float Speed => _speed;
         public float Damage => _damage;
+        public Transform CapturableTransform => transform;
+        public GameObject CapturableGameObject => gameObject;
+        public bool CanBeCapturedByCyclone => _isAlive && !_isCycloneCaptured && gameObject.activeInHierarchy;
+        public float CycloneBaseSpeed => _speed;
 
         private void Awake()
+
         {
             _rigidbody = GetComponent<Rigidbody2D>();
+            _collider = GetComponent<Collider2D>();
             _poolRef = GetComponent<PoolReference>();
             _trail = GetComponent<TrailRenderer>();
+
             _originalScale = transform.localScale;
 
             // Fallback sprite if none assigned
@@ -65,18 +96,35 @@ namespace ProjectArk.Combat.Enemy
             _knockback = knockback;
             _lifetimeTimer = lifetime;
             _isAlive = true;
+            _isCycloneCaptured = false;
+            if (_collider != null)
+            {
+                _collider.enabled = true;
+            }
+            _windDriftVelocity = Vector2.zero;
+            _windDriftApplied = false;
 
             _rigidbody.linearVelocity = Direction * _speed;
+
+
         }
 
         private void Update()
         {
             if (!_isAlive) return;
 
+            RemoveAppliedWindDrift();
+
             _lifetimeTimer -= Time.deltaTime;
             if (_lifetimeTimer <= 0f)
+            {
                 ReturnToPool();
+                return;
+            }
+
+            ApplyWindFieldDrift(Time.deltaTime);
         }
+
 
         private void OnTriggerEnter2D(Collider2D other)
         {
@@ -99,13 +147,122 @@ namespace ProjectArk.Combat.Enemy
             ReturnToPool();
         }
 
+        private void ApplyWindFieldDrift(float deltaTime)
+        {
+            if (!_enableWindFieldDrift || _windDriftAcceleration <= 0f || _maxWindDriftSpeed <= 0f)
+            {
+                return;
+            }
+
+            if (_windFieldService == null && !ServiceLocator.TryGet(out _windFieldService))
+            {
+                return;
+            }
+
+            WindSample sample = _windFieldService.Sample(_rigidbody.position);
+            Vector2 windAcceleration = sample.Velocity * _windDriftAcceleration;
+            _windDriftVelocity += windAcceleration * deltaTime;
+            _windDriftVelocity = Vector2.ClampMagnitude(_windDriftVelocity, _maxWindDriftSpeed);
+
+            if (_windDriftVelocity.sqrMagnitude <= 0.0001f)
+            {
+                return;
+            }
+
+            _rigidbody.linearVelocity += _windDriftVelocity;
+            _windDriftApplied = true;
+
+            if (_rigidbody.linearVelocity.sqrMagnitude > 0.0001f)
+            {
+                Direction = _rigidbody.linearVelocity.normalized;
+            }
+        }
+
+        private void RemoveAppliedWindDrift()
+        {
+            if (!_windDriftApplied || _rigidbody == null)
+            {
+                return;
+            }
+
+            _rigidbody.linearVelocity -= _windDriftVelocity;
+            _windDriftApplied = false;
+        }
+
+        private void ResetWindDriftState()
+        {
+            _windDriftVelocity = Vector2.zero;
+            _windDriftApplied = false;
+        }
+
+        public void CaptureByCyclone()
+        {
+            if (!CanBeCapturedByCyclone)
+            {
+                return;
+            }
+
+            RemoveAppliedWindDrift();
+            _isAlive = false;
+            _isCycloneCaptured = true;
+            _rigidbody.linearVelocity = Vector2.zero;
+            if (_collider != null)
+            {
+                _collider.enabled = false;
+            }
+        }
+
+        public void ReleaseFromCyclone(Vector2 direction, float speedMultiplier, float damageMultiplier)
+        {
+            if (!_isCycloneCaptured)
+            {
+                return;
+            }
+
+            Vector2 releaseDirection = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector2.right;
+            float safeSpeedMultiplier = Mathf.Max(0.01f, speedMultiplier);
+            float safeDamageMultiplier = Mathf.Max(0f, damageMultiplier);
+
+            _isCycloneCaptured = false;
+            _isAlive = true;
+            if (_collider != null)
+            {
+                _collider.enabled = true;
+            }
+
+            ResetWindDriftState();
+            Direction = releaseDirection;
+            _speed *= safeSpeedMultiplier;
+            _damage *= safeDamageMultiplier;
+            _rigidbody.linearVelocity = Direction * _speed;
+        }
+
+        public void DiscardByCyclone()
+        {
+            if (_isCycloneCaptured)
+            {
+                _isCycloneCaptured = false;
+                if (_collider != null)
+                {
+                    _collider.enabled = true;
+                }
+            }
+
+            _isAlive = true;
+            ReturnToPool();
+        }
+
         private void ReturnToPool()
+
+
         {
             if (!_isAlive) return;
             _isAlive = false;
+            ResetWindDriftState();
             _rigidbody.linearVelocity = Vector2.zero;
 
             if (_poolRef != null)
+
                 _poolRef.ReturnToPool();
         }
 
@@ -114,18 +271,26 @@ namespace ProjectArk.Combat.Enemy
         public void OnGetFromPool()
         {
             _isAlive = true;
+            _isCycloneCaptured = false;
+            if (_collider != null)
+            {
+                _collider.enabled = true;
+            }
             transform.localScale = _originalScale;
             if (_trail != null)
+
                 _trail.Clear();
         }
 
         public void OnReturnToPool()
         {
             _isAlive = false;
+            ResetWindDriftState();
             _rigidbody.linearVelocity = Vector2.zero;
         }
 
         // ──────────────────── Trail Configuration ────────────────────
+
 
         private static void ConfigureTrail(TrailRenderer trail, SpriteRenderer sr)
         {

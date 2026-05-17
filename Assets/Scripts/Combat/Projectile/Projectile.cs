@@ -1,8 +1,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 using ProjectArk.Core;
+using ProjectArk.Combat.HyperWind;
+using ProjectArk.HyperWind;
 
 namespace ProjectArk.Combat
+
+
 {
     /// <summary>
     /// Physical projectile entity. Moves in a straight line via Rigidbody2D,
@@ -11,17 +15,22 @@ namespace ProjectArk.Combat
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
     [RequireComponent(typeof(Collider2D))]
-    public class Projectile : MonoBehaviour, IPoolable
+    public class Projectile : MonoBehaviour, IPoolable, ICycloneCaptureTarget
+
     {
         private Rigidbody2D _rigidbody;
+        private Collider2D _collider;
         private PoolReference _poolRef;
         private TrailRenderer _trail;
+
 
         private float _damage;
         private float _knockback;
         private float _lifetimeTimer;
         private bool _isAlive;
+        private bool _isCycloneCaptured;
         private DamageType _damageType;
+
 
         // Impact VFX prefab (from ProjectileParams)
         private GameObject _impactVFXPrefab;
@@ -29,7 +38,22 @@ namespace ProjectArk.Combat
         // 星图扩展钩子
         private readonly List<IProjectileModifier> _modifiers = new();
 
+        [Header("HyperWind")]
+        [Tooltip("When enabled, this physical projectile drifts under IWindFieldService. Laser/Echo families do not use this component.")]
+        [SerializeField] private bool _enableWindFieldDrift = true;
+
+        [Tooltip("Acceleration applied from sampled wind velocity. Higher values bend projectile trajectories faster.")]
+        [SerializeField] [Min(0f)] private float _windDriftAcceleration = 2f;
+
+        [Tooltip("Maximum accumulated wind drift velocity added on top of the projectile's authored velocity.")]
+        [SerializeField] [Min(0f)] private float _maxWindDriftSpeed = 8f;
+
+        private IWindFieldService _windFieldService;
+        private Vector2 _windDriftVelocity;
+        private bool _windDriftApplied;
+
         // Cached layer indices for collision filtering
+
         private static int _playerLayer = -1;
         private static int PlayerLayer => _playerLayer >= 0 ? _playerLayer : (_playerLayer = LayerMask.NameToLayer("Player"));
 
@@ -53,7 +77,13 @@ namespace ProjectArk.Combat
         /// </summary>
         public bool ShouldDestroyOnHit { get; set; } = true;
 
+        public Transform CapturableTransform => transform;
+        public GameObject CapturableGameObject => gameObject;
+        public bool CanBeCapturedByCyclone => _isAlive && !_isCycloneCaptured && gameObject.activeInHierarchy;
+        public float CycloneBaseSpeed => Speed;
+
         /// <summary>
+
         /// Remaining lifetime in seconds. Readable and writable by IProjectileModifier
         /// implementations (e.g. MinePlacerModifier extends it at spawn time).
         /// </summary>
@@ -72,12 +102,16 @@ namespace ProjectArk.Combat
         private const float DEFAULT_TRAIL_TIME = 0.15f;
         private const float DEFAULT_TRAIL_WIDTH = 0.085f;
         private static readonly Color DEFAULT_TRAIL_COLOR = Color.white;
+        private static readonly HashSet<string> MissingTrailWarningKeys = new();
 
         private void Awake()
+
         {
             _rigidbody = GetComponent<Rigidbody2D>();
+            _collider = GetComponent<Collider2D>();
             _poolRef = GetComponent<PoolReference>();
             _trail = GetComponent<TrailRenderer>();
+
 
             // Fallback: generate a procedural sprite if SpriteRenderer has none assigned.
             // Prevents invisible projectiles when the prefab was created without a sprite.
@@ -100,12 +134,19 @@ namespace ProjectArk.Combat
             {
                 _trail = gameObject.AddComponent<TrailRenderer>();
                 ConfigureTrail(_trail, sr, DEFAULT_TRAIL_TIME, DEFAULT_TRAIL_WIDTH, DEFAULT_TRAIL_COLOR);
-                Debug.LogWarning(
-                    $"[Projectile] '{name}' has no TrailRenderer — added one at runtime with default parameters " +
-                    $"(time={DEFAULT_TRAIL_TIME:F2}, width={DEFAULT_TRAIL_WIDTH:F3}). " +
-                    $"For shipping, add a pre-configured TrailRenderer to the prefab or drive the parameters from StarCoreSO.",
-                    this);
+
+                string warningKey = name.Replace("(Clone)", string.Empty).Trim();
+                if (MissingTrailWarningKeys.Add(warningKey))
+                {
+                    Debug.LogWarning(
+                        $"[Projectile] '{name}' has no TrailRenderer — added one at runtime with default parameters " +
+                        $"(time={DEFAULT_TRAIL_TIME:F2}, width={DEFAULT_TRAIL_WIDTH:F3}). " +
+                        $"For shipping, add a pre-configured TrailRenderer to the prefab or drive the parameters from StarCoreSO. " +
+                        $"This warning is reported once per projectile prefab key to avoid pool prewarm spam.",
+                        this);
+                }
             }
+
         }
 
         /// <summary>
@@ -195,8 +236,19 @@ namespace ProjectArk.Combat
             _lifetimeTimer = parms.Lifetime;
             _impactVFXPrefab = parms.ImpactVFXPrefab;
             _isAlive = true;
+            _isCycloneCaptured = false;
+            if (_collider != null)
+            {
+                _collider.enabled = true;
+            }
+            _windDriftVelocity = Vector2.zero;
+            _windDriftApplied = false;
+
+            CombatEvents.RaisePlayerProjectileFired(transform.position, Direction);
+
 
             // Apply Core-driven trail overrides if supplied (negative / transparent => keep fallback).
+
             ApplyTrailOverrides(parms);
 
             _rigidbody.linearVelocity = Direction * Speed;
@@ -236,6 +288,8 @@ namespace ProjectArk.Combat
         {
             if (!_isAlive) return;
 
+            RemoveAppliedWindDrift();
+
             _lifetimeTimer -= Time.deltaTime;
 
             if (_lifetimeTimer <= 0f)
@@ -246,7 +300,10 @@ namespace ProjectArk.Combat
 
             for (int i = 0; i < _modifiers.Count; i++)
                 _modifiers[i].OnProjectileUpdate(this, Time.deltaTime);
+
+            ApplyWindFieldDrift(Time.deltaTime);
         }
+
 
         private void OnTriggerEnter2D(Collider2D other)
         {
@@ -285,13 +342,122 @@ namespace ProjectArk.Combat
             pool.Get(transform.position, transform.rotation);
         }
 
+        private void ApplyWindFieldDrift(float deltaTime)
+        {
+            if (!_enableWindFieldDrift || _windDriftAcceleration <= 0f || _maxWindDriftSpeed <= 0f)
+            {
+                return;
+            }
+
+            if (_windFieldService == null && !ServiceLocator.TryGet(out _windFieldService))
+            {
+                return;
+            }
+
+            WindSample sample = _windFieldService.Sample(_rigidbody.position);
+            Vector2 windAcceleration = sample.Velocity * _windDriftAcceleration;
+            _windDriftVelocity += windAcceleration * deltaTime;
+            _windDriftVelocity = Vector2.ClampMagnitude(_windDriftVelocity, _maxWindDriftSpeed);
+
+            if (_windDriftVelocity.sqrMagnitude <= 0.0001f)
+            {
+                return;
+            }
+
+            _rigidbody.linearVelocity += _windDriftVelocity;
+            _windDriftApplied = true;
+
+            if (_rigidbody.linearVelocity.sqrMagnitude > 0.0001f)
+            {
+                Direction = _rigidbody.linearVelocity.normalized;
+            }
+        }
+
+        private void RemoveAppliedWindDrift()
+        {
+            if (!_windDriftApplied || _rigidbody == null)
+            {
+                return;
+            }
+
+            _rigidbody.linearVelocity -= _windDriftVelocity;
+            _windDriftApplied = false;
+        }
+
+        private void ResetWindDriftState()
+        {
+            _windDriftVelocity = Vector2.zero;
+            _windDriftApplied = false;
+        }
+
+        public void CaptureByCyclone()
+        {
+            if (!CanBeCapturedByCyclone)
+            {
+                return;
+            }
+
+            RemoveAppliedWindDrift();
+            _isAlive = false;
+            _isCycloneCaptured = true;
+            _rigidbody.linearVelocity = Vector2.zero;
+            if (_collider != null)
+            {
+                _collider.enabled = false;
+            }
+        }
+
+        public void ReleaseFromCyclone(Vector2 direction, float speedMultiplier, float damageMultiplier)
+        {
+            if (!_isCycloneCaptured)
+            {
+                return;
+            }
+
+            Vector2 releaseDirection = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector2.right;
+            float safeSpeedMultiplier = Mathf.Max(0.01f, speedMultiplier);
+            float safeDamageMultiplier = Mathf.Max(0f, damageMultiplier);
+
+            _isCycloneCaptured = false;
+            _isAlive = true;
+            if (_collider != null)
+            {
+                _collider.enabled = true;
+            }
+
+            ResetWindDriftState();
+            Direction = releaseDirection;
+            Speed *= safeSpeedMultiplier;
+            _damage *= safeDamageMultiplier;
+            _rigidbody.linearVelocity = Direction * Speed;
+        }
+
+        public void DiscardByCyclone()
+        {
+            if (_isCycloneCaptured)
+            {
+                _isCycloneCaptured = false;
+                if (_collider != null)
+                {
+                    _collider.enabled = true;
+                }
+            }
+
+            _isAlive = true;
+            ReturnToPool();
+        }
+
         private void ReturnToPool()
+
+
         {
             if (!_isAlive) return;
             _isAlive = false;
+            ResetWindDriftState();
             _rigidbody.linearVelocity = Vector2.zero;
 
             if (_poolRef != null)
+
                 _poolRef.ReturnToPool();
         }
 
@@ -315,9 +481,17 @@ namespace ProjectArk.Combat
         public void OnReturnToPool()
         {
             _isAlive = false;
+            _isCycloneCaptured = false;
+            ResetWindDriftState();
+            if (_collider != null)
+            {
+                _collider.enabled = true;
+            }
             _rigidbody.linearVelocity = Vector2.zero;
 
             // Destroy dynamically-added modifier components (e.g. BoomerangModifier)
+
+
             // to prevent component accumulation across pool reuses.
             for (int i = 0; i < _modifiers.Count; i++)
             {

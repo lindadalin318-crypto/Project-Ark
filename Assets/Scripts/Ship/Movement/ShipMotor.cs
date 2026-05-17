@@ -1,7 +1,10 @@
 using System;
+using ProjectArk.Core;
+using ProjectArk.HyperWind;
 using UnityEngine;
 
 namespace ProjectArk.Ship
+
 {
     /// <summary>
     /// 飞船物理移动 — Twin-Stick 世界方向移动模型（对应 GG 鼠标模式手感）：
@@ -26,8 +29,16 @@ namespace ProjectArk.Ship
     {
         [SerializeField] private ShipStatsSO _stats;
 
+        [Header("HyperWind")]
+        [Tooltip("When enabled, the ship samples IWindFieldService and adds wind as environmental velocity after player speed clamping.")]
+        [SerializeField] private bool _enableWindFieldInfluence = true;
+
+        [Tooltip("MVP tuning multiplier for how much sampled wind velocity affects the ship.")]
+        [SerializeField] [Min(0f)] private float _windVelocityMultiplier = 1f;
+
         // ══════════════════════════════════════════════════════════════
         // Events
+
         // ══════════════════════════════════════════════════════════════
 
         /// <summary>每物理帧发送归一化速度 (0..1)，供 VFX / Audio 订阅。</summary>
@@ -38,8 +49,11 @@ namespace ProjectArk.Ship
         // ══════════════════════════════════════════════════════════════
 
         public Vector2 CurrentVelocity  => _rb.linearVelocity;
+        public Vector2 CurrentWindVelocity => _appliedWindVelocity;
+        public Vector2 PlayerControlledVelocity => _rb != null ? _rb.linearVelocity - _appliedWindVelocity : Vector2.zero;
         public float   CurrentSpeed     => _rb.linearVelocity.magnitude;
         public float NormalizedSpeed  => RuntimeMaxSpeed > 0f
+
             ? Mathf.Clamp01(_rb.linearVelocity.magnitude / RuntimeMaxSpeed)
             : 0f;
 
@@ -98,9 +112,13 @@ namespace ProjectArk.Ship
         private Rigidbody2D  _rb;
         private InputHandler  _inputHandler;
         private ShipStateController _stateController; // optional — null-safe
+        private IWindFieldService _windFieldService;
+        private Vector2 _appliedWindVelocity;
+        private bool _windVelocityApplied;
         private float _previousNormalizedSpeed;
 
         // 当前帧移动输入（由 Update 写，FixedUpdate 读，避免漏帧）
+
         private Vector2 _moveInputThisFrame;
 
         // ══════════════════════════════════════════════════════════════
@@ -126,7 +144,13 @@ namespace ProjectArk.Ship
             ApplyPhysicsSettings();
         }
 
+        private void OnDisable()
+        {
+            RemoveAppliedWindVelocity();
+        }
+
         private void Update()
+
         {
             // 缓存输入向量给 FixedUpdate 使用（避免 Update/FixedUpdate 频率差异漏帧）
             _moveInputThisFrame = _inputHandler.MoveInput;
@@ -134,10 +158,13 @@ namespace ProjectArk.Ship
 
         private void FixedUpdate()
         {
+            RemoveAppliedWindVelocity();
             ApplyThrust();
             ClampSpeed();
+            ApplyWindFieldVelocity();
             EmitSpeedEvent();
         }
+
 
         // ══════════════════════════════════════════════════════════════
         // Physics Settings
@@ -174,7 +201,48 @@ namespace ProjectArk.Ship
         }
 
         // ══════════════════════════════════════════════════════════════
+        // HyperWind Environmental Velocity
+        // ══════════════════════════════════════════════════════════════
+
+        private void ApplyWindFieldVelocity()
+        {
+            if (!_enableWindFieldInfluence || _windVelocityMultiplier <= 0f)
+            {
+                return;
+            }
+
+            if (_windFieldService == null && !ServiceLocator.TryGet(out _windFieldService))
+            {
+                return;
+            }
+
+            WindSample sample = _windFieldService.Sample(_rb.position);
+            Vector2 windVelocity = sample.Velocity * _windVelocityMultiplier;
+            if (windVelocity.sqrMagnitude <= 0.0001f)
+            {
+                return;
+            }
+
+            _rb.linearVelocity += windVelocity;
+            _appliedWindVelocity = windVelocity;
+            _windVelocityApplied = true;
+        }
+
+        private void RemoveAppliedWindVelocity()
+        {
+            if (!_windVelocityApplied || _rb == null)
+            {
+                return;
+            }
+
+            _rb.linearVelocity -= _appliedWindVelocity;
+            _appliedWindVelocity = Vector2.zero;
+            _windVelocityApplied = false;
+        }
+
+        // ══════════════════════════════════════════════════════════════
         // Public API — External Impulse (Boost / Dash / 击退)
+
         // ══════════════════════════════════════════════════════════════
 
         /// <summary>
@@ -193,8 +261,10 @@ namespace ProjectArk.Ship
         /// </summary>
         public void SetVelocity(Vector2 velocity)
         {
+            RemoveAppliedWindVelocity();
             _rb.linearVelocity = velocity;
         }
+
 
         /// <summary>
         /// 向后兼容 ShipDash 旧接口。等同于 SetVelocity。

@@ -1,6 +1,254 @@
 ---
 
+## HyperWind 切片 D' Plan Closeout — 2026-05-17 23:20
+
+- **修改文件**
+  - `Docs/2_TechnicalDesign/HyperWind/HyperWind_ArchBrief.md`
+  - `Docs/0_Plan/ongoing/2026-05-16-hyperwind-slice-d-implementation-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：完成 HyperWind 切片 D' ongoing plan 收尾。将 `HyperWind_ArchBrief.md` 从 Batch 0 开工速写更新为 MVP closeout 架构事实，补充 `HyperWindArenaTestDirector`、`HyperWindArenaSceneConfigurator`、`GroundCyclone` 捕获/释放统计事件、运行时 capture layer 初始化、测试工具 owner 边界、程序化视觉替换缝与 closeout 约束。关闭 ongoing plan 中剩余的 `Step 0.3`、`Step 8.1`、`Step 8.3`，并把 Known risks 改写为 closeout 后的 follow-ups。
+- **目的**：将已通过人工验证的切片 D' 从“进行中实现计划”转为“已完成 MVP 记录”，方便后续进入下一批扩展或正式关卡集成时快速理解现役事实与遗留风险。
+- **技术**：文档 closeout，不新增运行时代码。`Step 8.1` 按 HyperWind-specific validation 口径关闭：HyperWind 编译与阻塞错误为 0；BoostTrail / SRP Batcher / AudioListener 属于非 HyperWind 既有 cleanup 项，单独留作 follow-up。
+
+---
+
+## HyperWind 切片 D' 首轮人工验证通过 — 2026-05-17 23:17
+
+
+- **修改文件**
+  - `Docs/0_Plan/ongoing/2026-05-16-hyperwind-slice-d-implementation-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：记录 HyperWind 切片 D' · 气旋竞技场增强版首轮人工验证结果。用户完成本地 Play Mode 验证并确认当前风感、气旋视觉/捕获释放、延迟齐射、敌弹反噬与 E1 风骑兵 MVP 均可接受，`Task 7.4` 与 `Task 8.2` 标记为完成。
+- **目的**：把“可玩性验证通过”从聊天上下文沉淀到 ongoing plan，作为后续继续迭代或进入下一批扩展的决策依据。
+- **技术**：不新增运行时代码；仅更新计划与日志状态。保留 `Task 8.1` 未完全关闭，因为 Console 仍有既有 BoostTrail / SRP Batcher / AudioListener 等非 HyperWind 阻塞项。
+
+---
+
+## HyperWind 切片 D' Log 复查与气旋 Layer 修复 — 2026-05-17 23:04
+
+
+- **修改文件**
+  - `Assets/Scripts/Combat/HyperWind/GroundCyclone.cs`
+  - `Docs/0_Plan/ongoing/2026-05-16-hyperwind-slice-d-implementation-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：复查 Unity Console 后确认自动烟测链路已经跑通一次：`HyperWindArenaTestDirector` 输出 `playerFired=66, enemyFired=7, cycloneCaptured=3, cycloneReleased=3`，说明玩家弹/敌弹生成、气旋捕获与释放事件链路成立。随后修复 `GroundCyclone` 多次提示 `Capture layer mask is empty` 的问题：运行时由 `GroundCycloneSpawner` + `AddComponent<GroundCyclone>()` 创建的气旋不会可靠执行 `Reset()`，导致 `_captureLayers` 为 0；现在 `Awake()` 会调用 `EnsureCaptureLayersConfigured()`，在运行时显式配置 `PlayerProjectile + Default`，`Reset()` 也复用同一配置方法。
+- **目的**：消除运行时气旋捕获层为空导致的重复 warning，避免后续误判 L8 玩法不稳定；同时保留当前项目没有 `EnemyProjectile` layer 的现实约束，继续用 `ICycloneCaptureTarget` 做二次过滤。
+- **技术**：没有使用 `~0` 全层 mask；默认 mask 仍是显式 `LayerMask.GetMask("PlayerProjectile", "Default")`。新增 `ConfigureDefaultCaptureLayers()` 作为唯一默认层配置入口，`Awake()` 覆盖 runtime AddComponent 路径，`Reset()` 覆盖 Editor/Prefab 创建路径。验证：`read_lints` 为 0，Unity `refresh_unity` 后 C# 编译错误为 0。
+
+---
+
+## HyperWind 切片 D' Task 8 推进：自动烟测仪表化 — 2026-05-17 22:06
+
+
+- **修改文件**
+  - `Assets/Scripts/Combat/Enemy/HyperWindArenaTestDirector.cs`
+  - `Assets/Scripts/Combat/HyperWind/GroundCyclone.cs`
+  - `Docs/0_Plan/ongoing/2026-05-16-hyperwind-slice-d-implementation-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：为 HyperWind 竞技场补充自动烟测仪表化。`HyperWindArenaTestDirector` 新增自动烟测发射配置：Play Mode 后会从多条纵向 lane 自动向中区发射玩家弹，减少验证气旋吸弹时对人工输入的依赖；同时统计 `PlayerProjectilesFired`、`EnemyProjectilesFired`、`CycloneCapturedProjectiles`、`CycloneReleasedProjectiles`、`AutoSmokeElapsed` 等公开读数，并在烟测结束时输出摘要。`GroundCyclone` 新增 `TotalCapturedCount` / `TotalReleasedCount` 以及 `OnAnyProjectileCaptured` / `OnAnyProjectileReleased` 事件，供测试导演记录捕获与释放结果。
+- **目的**：把 Task 8 的 Play Mode smoke test 从“看起来有对象生成”推进到“能客观回答气旋是否真的捕获/释放 projectile”，为之后手感调参与人工验收提供可复现诊断信号。
+- **技术**：使用事件订阅而不是测试导演主动查找气旋；`OnEnable` / `OnDisable` 成对订阅/取消订阅，避免静态事件僵尸引用。新增公开只读属性供 Unity MCP 查询运行时读数。验证：新增脚本修改 `read_lints` 为 0，Unity `refresh_unity` 后 C# 编译错误为 0。当前 MCP Play Mode 可进入但一直报告 `is_changing=true` / `playmode_transition`，`AutoSmokeElapsed` 停在约 `0.02s`，因此自动烟测摘要未能通过 MCP 闭环；需在 Unity 本地 Game View 中再做人工运行验证。
+
+---
+
+## HyperWind 切片 D' Task 7 推进：竞技场试玩桥接 — 2026-05-17 21:34
+
+
+- **新建文件**
+  - `Assets/Scripts/Combat/Enemy/HyperWindArenaTestDirector.cs`
+  - `Assets/Scripts/Combat/Editor/HyperWindArenaSceneConfigurator.cs`
+  - `Assets/Scripts/Combat/Enemy/HyperWindArenaTestDirector.cs.meta`（Unity 自动生成）
+  - `Assets/Scripts/Combat/Editor/HyperWindArenaSceneConfigurator.cs.meta`（Unity 自动生成）
+- **修改文件**
+  - `Assets/Scenes/HyperWind/HyperWind_SliceD_Test.unity`
+  - `Assets/Scripts/Combat/Projectile/Projectile.cs`
+  - `Docs/0_Plan/ongoing/2026-05-16-hyperwind-slice-d-implementation-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：为切片 D' 竞技场补齐可试玩桥接。新增 `HyperWindArenaTestDirector`，在测试场景中用池化玩家弹和敌弹制造持续弹幕流：玩家按住开火时从 `InputHandler` 读取瞄准方向发射 Matter projectile；敌方发射点按固定节奏轮流朝玩家发射 `EnemyProjectile`，用于验证气旋吸弹、方向继承齐射、敌弹反噬张力。新增 `HyperWindArenaSceneConfigurator` 显式 Editor 菜单 `ProjectArk > HyperWind > Configure Slice D Test Arena`，用于一键给 `HyperWind_SliceD_Test.unity` 补 `PoolManager`、竞技场导演、projectile prefab 引用、ship 引用，并重申 cyclone lane 每 10s 生成 1-2 个气旋。
+- **目的**：把前面已经完成的 G1/M1/S1/L8/E1 从单点烟测推进到“一个房间里同时发生”的可试玩验证形态，让后续 Play Mode 直接回答风感、节律、气旋视觉、延迟齐射、敌弹反噬 5 个问题。
+- **技术**：试玩桥接仍遵守池化原则，通过 `PoolManager.GetPool()` 预热并发射 projectile，不在战斗循环中直接 `Instantiate` 子弹；运行时不使用 `FindObjectOfType` / `FindAnyObjectByType`，玩家输入通过 `ServiceLocator.TryGet<InputHandler>()`，场景接线通过显式 Editor 菜单完成。Unity MCP 恢复后已执行配置菜单并保存 `HyperWind_SliceD_Test.unity`：`HyperWindRuntimeRoot` 挂有 `WindPhaseController` / `WindFieldManager` / `GroundCycloneSpawner` / `HyperWindArenaTestDirector`，场景中存在显式 `HyperWindPoolManager`。Play Mode 烟测生成 2 个 `GroundCyclone_Runtime`；新增代码编译错误为 0。针对对象池预热导致的 `Projectile_Matter(Clone)` 缺 TrailRenderer warning 刷屏，`Projectile` fallback 诊断改为每个 projectile prefab key 只报一次，保留诊断但不污染测试 Console。当前仍有既有 BoostTrail / SRP Batcher / AudioListener warning-error 项，未在本任务处理。
+
+
+---
+
+## HyperWind 切片 D' Task 6 完成：E1 风骑兵敌人 — 2026-05-17 12:22
+
+
+- **新建文件**
+  - `Assets/Scripts/Combat/Enemy/WindRiderWindAssist.cs`
+  - `Assets/_Prefabs/Enemies/Enemy_WindRider.prefab`
+  - `Assets/_Prefabs/Enemies/Enemy_WindRider.prefab.meta`（Unity 自动生成）
+- **修改文件**
+  - `Assets/Scenes/HyperWind/HyperWind_SliceD_Test.unity`
+  - `Docs/0_Plan/ongoing/2026-05-16-hyperwind-slice-d-implementation-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：完成 E1 风骑兵 MVP。新增 `WindRiderWindAssist`，作为 `ChargeRusher` 的风场辅助层：保留现有 `ChargeRusherBrain` / `ChargeState` 的 Telegraph → Dash → Recovery 可读攻击模型，在敌人移动方向与当前风向对齐时叠加一层临时风助速度，并将 sprite tint 向青色偏移作为顺风借力提示。基于 `Enemy_ChargeRusher.prefab` 创建 `Enemy_WindRider.prefab` 并添加该 assist 组件；在 `HyperWind_SliceD_Test.unity` 中放置 4 个 `WindRider_Test_*` 敌人作为后续竞技场验证对象。
+- **目的**：用最小成本完成“怪物-奇景融合”的第一版验证：风骑兵不是重写 AI，而是在现有可读冲锋敌人上叠加“顺风更危险”的生态关系。
+- **技术**：`WindRiderWindAssist` 在 `LateUpdate()` 中作为 transient velocity layer 工作：EnemyBrain / EnemyEntity 在 `Update()` 写入基础移动速度后，assist 读取 `IWindFieldService` 并只在速度方向与风向超过阈值时追加风助。修复了一次速度层时序问题：不在 `LateUpdate()` 开头扣除上一帧 assist，避免 `EnemyEntity.MoveAtSpeed()` 已重写基础速度后被错误过度扣速。Play Mode 烟测：右侧风 `(3, 0)` 中，顺风速度 `(5, 0)` → `(8.75, 0)`，assist `(3.75, 0)`；逆风速度 `(-5, 0)` 保持 `(-5, 0)`，assist `(0, 0)`。Unity Console error 为 0。
+
+---
+
+## HyperWind 切片 D' Task 5 完成：L8 程序化气旋视觉层 — 2026-05-17 12:08
+
+
+- **新建文件**
+  - `Assets/Scripts/Combat/HyperWind/GroundCyclonePhase.cs`
+  - `Assets/Scripts/Combat/HyperWind/GroundCycloneView.cs`
+- **修改文件**
+  - `Assets/Scripts/Combat/HyperWind/GroundCyclone.cs`
+  - `Assets/Scripts/Combat/HyperWind/GroundCycloneSpawner.cs`
+  - `Assets/Scenes/HyperWind/HyperWind_SliceD_Test.unity`
+  - `Docs/0_Plan/ongoing/2026-05-16-hyperwind-slice-d-implementation-plan.md`
+  - `Docs/2_TechnicalDesign/HyperWind/HyperWind_ArchBrief.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：完成 L8 的程序化视觉层。新增公开 `GroundCyclonePhase`，让视觉层读取气旋阶段；`GroundCyclone` 暴露 `CurrentPhase`、`PhaseProgress01`、`InfluenceRadius`、`OrbitRadius` 等视觉意图。新增 `GroundCycloneView`，使用 3 个 `LineRenderer` 绘制 Spawn 预警环/螺旋、Draw 期影响环/轨道环/稳定涡旋、Burst 期扩张爆发环。`GroundCycloneSpawner` 在无 prefab 的运行时气旋上自动添加 `GroundCycloneView`，测试场景 `HyperWindRuntimeRoot` 也已接入 spawner。
+- **目的**：让已经跑通的 L8 gameplay core 变成玩家可读的可视装置，先用程序化表现验证“气旋在场、正在吸、即将爆”的信息层次，同时保持后续可替换为正式美术。
+- **技术**：`GroundCycloneView` 只消费 `GroundCyclone` 的只读视觉意图，不参与捕获/释放/伤害逻辑；使用 `LineRenderer` 而非生成纹理，避免再次出现程序化贴图全透明问题，并加入材质/点数可见性诊断。Play Mode 烟测：测试场景中 spawner 生成 2 个 `GroundCyclone_Runtime`，均 `view=True`、`lineCount=3`、`visibleLineCount=3`，Console error 为 0。
+
+---
+
+## HyperWind 切片 D' Task 4 完成：L8 地面气旋 Gameplay Core — 2026-05-17 11:55
+
+
+- **新建文件**
+  - `Assets/Scripts/Combat/HyperWind/ICycloneCaptureTarget.cs`
+  - `Assets/Scripts/Combat/HyperWind/CapturedProjectileState.cs`
+  - `Assets/Scripts/Combat/HyperWind/GroundCyclone.cs`
+  - `Assets/Scripts/Combat/HyperWind/GroundCycloneSpawner.cs`
+- **修改文件**
+  - `Assets/Scripts/Combat/Projectile/Projectile.cs`
+  - `Assets/Scripts/Combat/Enemy/EnemyProjectile.cs`
+  - `Docs/0_Plan/ongoing/2026-05-16-hyperwind-slice-d-implementation-plan.md`
+  - `Docs/2_TechnicalDesign/HyperWind/HyperWind_ArchBrief.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：完成 L8 地面气旋 gameplay core。新增 `ICycloneCaptureTarget` 与 `CapturedProjectileState`，让玩家 `Projectile` 与敌方 `EnemyProjectile` 可被气旋捕获、暂停生命周期与碰撞、绕轨公转、按玩家最后射击方向释放，并按公转圈数获得速度/伤害倍率。新增 `GroundCyclone` 三阶段生命周期（Spawn / Draw / Burst）、容量上限 15、溢出丢弃、方向继承释放与倍率上限 ×2.5；新增 `GroundCycloneSpawner` 支持每批随机生成 1-2 个运行时气旋。
+- **目的**：把切片 D' 的核心装置“吸子弹→绕飞→强化→方向继承齐射”从设计案落成可运行 gameplay，为下一步 Task 5 程序化视觉层提供稳定逻辑底座。
+- **技术**：`GroundCyclone` 只依赖 `ICycloneCaptureTarget`，不依赖具体 projectile 实现或视觉表现；`Projectile` / `EnemyProjectile` 在回池和取出时都会重置气旋状态与 collider，避免对象池泄漏。Play Mode 烟测：玩家 Matter projectile 被捕获后释放，速度约 `(0, 11.08)`、伤害 `11.08`；敌方 projectile 被捕获后释放，速度约 `(11.08, 0)`、伤害 `11.08`。注意：项目当前没有 `EnemyProjectile` layer，`EnemyProjectile.prefab` 在 `Default` 层，因此 `GroundCyclone.Reset()` 暂时显式包含 `PlayerProjectile + Default`，并继续通过 `ICycloneCaptureTarget` 做二次过滤；后续若新增 `EnemyProjectile` layer，需同步检查 Physics2D 碰撞矩阵。
+
+---
+
+## HyperWind 切片 D' Task 3 完成：S1 子弹风偏与最后射击方向事件 — 2026-05-17 11:43
+
+
+- **修改文件**
+  - `Assets/Scripts/Combat/Projectile/Projectile.cs`
+  - `Assets/Scripts/Combat/Enemy/EnemyProjectile.cs`
+  - `Assets/Scripts/Core/CombatEvents.cs`
+  - `Docs/0_Plan/ongoing/2026-05-16-hyperwind-slice-d-implementation-plan.md`
+  - `Docs/2_TechnicalDesign/HyperWind/HyperWind_ArchBrief.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：完成 S1 子弹风偏基础接入。玩家 `Projectile` 与敌方 `EnemyProjectile` 均新增 HyperWind drift layer：每帧先移除上一帧 wind drift，再执行原有 projectile / modifier 更新，最后按 `IWindFieldService.Sample()` 累积一个有上限的 drift velocity，使弹道逐步弯曲而不是瞬移。新增 `CombatEvents.OnPlayerProjectileFired` / `RaisePlayerProjectileFired(position, direction)`，由 `Projectile.Initialize(...)` 在玩家物理子弹生成时广播，用于后续 L8 方向继承。
+- **目的**：让切片 D' 的 S1 “风偏弹道”进入可验证状态，并为 L8 地面气旋的“玩家最后一次射击方向”建立稳定事件源。
+- **技术**：玩家弹和敌弹都通过 `ServiceLocator.TryGet<IWindFieldService>()` 缓存风场服务；风偏状态在 `ReturnToPool()` / `OnReturnToPool()` 中重置，防止对象池状态泄漏。Play Mode 烟测结果：玩家子弹位于左区风 `(-3, 0)` 时速度从 `(0, 10)` 变为 `(-8, 10)`，敌方子弹位于右区风 `(3, 0)` 时速度从 `(0, 10)` 变为 `(8, 10)`；玩家子弹发射事件成功广播方向 `(0, 1)`。Unity Console error 为 0；测试场景仍有既有 `PoolManager` 缺失导致武器禁用提示，后续若要用正式武器射击验证，需要补场景 PoolManager 或轻量发射器。
+
+---
+
+## HyperWind 测试场景风区修正：从风墙改为可进入的外推风 — 2026-05-17 11:37
+
+
+- **修改文件**
+  - `Assets/Scenes/HyperWind/HyperWind_SliceD_Test.unity`
+  - `Docs/0_Plan/ongoing/2026-05-16-hyperwind-slice-d-implementation-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：针对手动验证反馈“飞船根本进不去左右空间”，确认场景里没有额外 `Collider2D` 或 3D Collider 阻挡；问题来自上一轮为了肉眼可见而把左右风区调成了 `±9` 的强风，且左右风向都会在边界处把船推回中区，等效成“风墙”。将测试场景改为 traversal-lab 参数：中心入口区无风，左区向左外推、右区向右外推，左右风速约 `3`，`HyperWind_TestShip` 风响应倍率回到 `1.0`。
+- **目的**：先确保玩家可以自由进入左右测试空间，再验证风感；避免测试场景本身把“风的存在”误做成不可穿越墙体。
+- **技术**：通过 Unity Editor 执行代码修改并保存 `WindFieldManager` 的三个矩形风区与场景说明文本。当前采样结果：左区 `(-3.00, 0.00)`，中区 `(0.00, 0.00)`，右区 `(3.00, 0.00)`。本轮还确认场景内仅有 `HyperWind_TestShip` 的 `CircleCollider2D`，没有边界 marker 碰撞体；Console 中出现的 `Physics2D.Simulate` 警告来自临时诊断代码，不影响场景数据。
+
+---
+
+## HyperWind 测试场景风感强化：把 M1 调到肉眼可见 — 2026-05-17 11:31
+
+
+- **修改文件**
+  - `Assets/Scenes/HyperWind/HyperWind_SliceD_Test.unity`
+  - `Docs/0_Plan/ongoing/2026-05-16-hyperwind-slice-d-implementation-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：针对手动场景验证反馈“根本没看到任何差别”，检查运行时确认风场服务和 `ShipMotor` 风速层都正常工作，但原始场景参数过弱：左/右侧风速约 `±1.63`，中区约 `0.49`，在正常飞船移动手感下不够明显。将 `HyperWind_SliceD_Test.unity` 调整为 lab validation 明显参数：左/右风区 base speed = `6`，中区 base speed = `1.5`，`HyperWind_TestShip` 的 `_windVelocityMultiplier = 1.5`。
+- **目的**：让 M1 在专用测试场景中先达到“肉眼一眼能看出风在推船”的验证强度，优先确认机制感知成立，再回头做正式竞技场的舒适调参。
+- **技术**：通过 Unity Editor 执行代码直接修改并保存测试场景中的 `WindFieldManager`、`WindPhaseController` 和 `ShipMotor` 序列化字段。Play Mode 烟测结果：左顺风 applied wind ≈ `(9.00, 0.00)`，中区 ≈ `(2.25, 0.00)`，右逆风 ≈ `(-9.00, 0.00)`，`PlayerControlledVelocity` 保持 `(0.00, 0.00)`，说明环境风仍是独立速度层。Console 无新增 HyperWind error；仅有既有 GGReplica 材质 SRP Batcher warning、`BoostTrailView` scene-only Bloom 引用警告、以及当前测试场景缺 `PoolManager` 导致武器禁用的提示（S1 前需要补测试场景 PoolManager）。
+
+---
+
+## HyperWind 切片 D' 测试场景创建：独立 M1/S1/L8 实验入口 — 2026-05-16 15:43
+
+
+- **新建文件**
+  - `Assets/Scenes/HyperWind/HyperWind_SliceD_Test.unity`
+  - `Assets/Scenes/HyperWind/HyperWind_SliceD_Test.unity.meta`（Unity 自动生成）
+- **修改文件**
+  - `Docs/0_Plan/ongoing/2026-05-16-hyperwind-slice-d-implementation-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：创建独立 HyperWind 测试场景 `HyperWind_SliceD_Test.unity`，作为切片 D' 的 lab scene。场景中包含 `HyperWindRuntimeRoot`（挂载 `WindPhaseController` + `WindFieldManager`）、`HyperWind_TestShip`（实例化现役 `Ship.prefab`）、`HyperWind_TestCamera`、左顺风/中区弱风/右逆风三段可视标记、边界 marker 与说明文本。
+- **目的**：将 M1/S1/L8 的验证入口从当前工作场景和正式关卡中隔离出来，避免污染 `SampleScene.unity` 或 `GGReplicaShipTest.unity`；为后续子弹风偏、单气旋实验、敌弹反噬和小竞技场提供稳定测试容器。
+- **技术**：通过 Unity Editor 执行代码创建并保存 `.unity` 场景，`.meta` 由 Unity 自动生成，未手写 meta。风场区域沿用 `WindFieldManager.Reset()` 的默认左顺风/中区弱风/右逆风布局。验证：AssetDatabase refresh 完成，场景文件存在；Unity Console error 为 0，仅有既有 GGReplica 材质 SRP Batcher warning。
+
+---
+
+## HyperWind 切片 D' Task 2 验证完成：M1 Play Mode 烟测通过 — 2026-05-16 14:29
+
+
+- **修改文件**
+  - `Docs/0_Plan/ongoing/2026-05-16-hyperwind-slice-d-implementation-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：使用 Unity MCP 进入 Play Mode，在运行时临时创建 `WindPhaseController` / `WindFieldManager` 验证入口，并手动对现有 `ShipMotor` 执行左顺风、中区弱风、右逆风三点采样与 `FixedUpdate()` 烟测。验证结果：左区 sample / applied wind velocity ≈ `(1.63, 0.00)`，中区 ≈ `(0.49, 0.00)`，右区 ≈ `(-1.63, 0.00)`；`PlayerControlledVelocity` 保持 `(0.00, 0.00)`，说明环境风速层确实在玩家速度 clamp 之后独立叠加。
+- **目的**：完成 ongoing plan 中 Task 2.4 的运行时验证，确认 M1 飞船风矢叠加的技术结构成立，再进入 S1 子弹风偏接入。
+- **技术**：验证对象全部为 Play Mode 临时 GameObject，未保存场景；通过 `ShipMotor.SetVelocity(Vector2.zero)` 清理旧风速层后再采样，避免测试代码直接写 `Rigidbody2D.linearVelocity` 造成误判。退出 Play Mode 后 Console error 为 0；仅出现既有 GGReplica 材质 SRP Batcher warning，与本次 HyperWind 改动无关。
+
+---
+
+## HyperWind 切片 D' Task 2 部分完成：M1 飞船风矢叠加接入 — 2026-05-16 14:12
+
+
+- **修改文件**
+  - `Assets/Scripts/Ship/Movement/ShipMotor.cs`
+  - `Assets/Scripts/Core/HyperWind/WindFieldManager.cs`
+  - `Docs/0_Plan/ongoing/2026-05-16-hyperwind-slice-d-implementation-plan.md`
+  - `Docs/2_TechnicalDesign/HyperWind/HyperWind_ArchBrief.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：在 `ShipMotor` 中接入 M1 风矢叠加的最小运行时实现。新增 HyperWind 开关 `_enableWindFieldInfluence`、风速倍率 `_windVelocityMultiplier`、调试属性 `CurrentWindVelocity` / `PlayerControlledVelocity`，并在 `FixedUpdate()` 中采用“移除旧风速 → 玩家推进 → `ClampSpeed()` → 叠加新风速”的顺序，使环境风速不会被玩家速度上限吃掉。直接设速 `SetVelocity()` 前也会清理已叠加风速，避免旧风速残留影响剧情/测试设速。
+- **目的**：完成切片 D' 的 M1 飞船风感接入地基，让飞船在风场中开始拥有顺风/逆风位移差异，同时保持现有玩家推进、Dash/Boost 冲量和速度上限逻辑的基本边界。
+- **技术**：通过 `ServiceLocator.TryGet<IWindFieldService>()` 缓存风场服务，避免每帧使用 `ServiceLocator.Get<T>()` 产生日志；环境风作为单独 velocity layer 每帧重算，不写入 `ShipStatsSO`，不新增 SO，不修改 prefab。为通过 Unity 编译，同步修复 `WindFieldManager` 中 target-typed `new(...) * float` 的 C# 语法兼容问题，改为显式 `new Vector3(...)`。`ongoing plan` 中 Task 2.1-2.3 已标记完成，Task 2.4 Play Mode 手感验证仍保留未完成。验证：`read_lints` 相关文件 0 diagnostics；Unity MCP 脚本编译后 Console error 为 0。
+
+
+---
+
+## HyperWind 切片 D' Ongoing Plan 补建 — 2026-05-16 14:09
+
+
+- **新建文件**
+  - `Docs/0_Plan/ongoing/2026-05-16-hyperwind-slice-d-implementation-plan.md`
+- **修改文件**
+  - `Docs/0_Plan/ongoing/README.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：补建 HyperWind 切片 D' · 气旋竞技场增强版的 ongoing implementation plan，用 checkbox task 形式串起已完成的 Batch 0-1、后续 M1/S1 风接入、L8 地面气旋、程序化视图、E1 风骑兵、竞技场装配与最终验证。同步更新 `Docs/0_Plan/ongoing/README.md`，把该计划列为当前正在推进的专项。
+- **目的**：修复启动 HyperWind 实现时只建了架构速写和代码地基、但没有建立 ongoing plan 的流程遗漏；让后续多 Batch 实现有可追踪任务源，避免仅靠聊天上下文推进。
+- **技术**：采用与现有 ongoing plan 一致的 checklist 结构，明确 source docs、global constraints、文件结构、Task 0-8、风险清单和日志要求；已完成项标记为 `[x]`，后续批次保留为 `[ ]`。
+
+---
+
+## HyperWind 切片 D' Batch 0-1：架构速写与风场地基服务 — 2026-05-16 14:04
+
+
+- **新建文件**
+  - `Docs/2_TechnicalDesign/HyperWind/HyperWind_ArchBrief.md`
+  - `Assets/Scripts/Core/HyperWind/WindSample.cs`
+  - `Assets/Scripts/Core/HyperWind/IWindFieldService.cs`
+  - `Assets/Scripts/Core/HyperWind/IWindPhaseService.cs`
+  - `Assets/Scripts/Core/HyperWind/WindPhaseController.cs`
+  - `Assets/Scripts/Core/HyperWind/WindFieldManager.cs`
+- **修改文件**
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：开始实现 `HyperWind_MechanicsBrief.md` 的切片 D' · 气旋竞技场增强版。先补 `HyperWind_ArchBrief.md`，明确 G1/G2/G3/M1/S1/L8/E1 的跨模块边界、程序化表现替换缝、首轮暂不做项与 Batch 1 验收标准。随后在 `Core/HyperWind` 下新增最小共享风场地基：`WindSample`、`IWindFieldService`、`IWindPhaseService`、`WindPhaseController`、`WindFieldManager`。`WindPhaseController` 提供弱相位、沙浪预警、声音预警、强相位与风速倍率；`WindFieldManager` 提供矩形风区采样、默认左顺风/中区弱风/右逆风布局，以及 SceneView gizmo 调试箭头。
+- **目的**：先让 HyperWind 的“风”成为可采样、可调试、可被 Ship/Combat/Level/Enemy 共同消费的基础服务，再进入 M1/S1 和 L8 气旋玩法，避免直接在 `ShipMotor` 或 `Projectile` 中硬写风逻辑。
+- **技术**：采用 `ServiceLocator.Register<IWindPhaseService>()` / `Register<IWindFieldService>()` 注册服务；首轮把接口和最小实现放入 `ProjectArk.Core` assembly 下的 `ProjectArk.HyperWind` 命名空间，避免 Batch 1 同时修改多份 asmdef。风场实现为 MVP 矩形区域采样，后续可替换为贴图/矢量场采样而不改变消费者接口。验证：`read_lints` 针对 `Assets/Scripts/Core/HyperWind` 与 `HyperWind_ArchBrief.md` 返回 0 diagnostics；Unity MCP `refresh_unity` 请求脚本编译后 editor 回到 ready，Console error 为 0；尝试执行 `dotnet build Project-Ark.slnx` 时因当前工作区缺少 Unity 生成的多个 `.csproj` 文件而失败，属于项目文件生成状态问题，不是本次新增代码的 C# 语法诊断。
+
+
+---
+
 ## GGReplica 飞船迁移设计 Spec — 2026-05-13 15:15
+
 
 - **新建文件**
   - `Docs/0_Plan/specs/2026-05-13-ggreplica-ship-migration-design.md`
