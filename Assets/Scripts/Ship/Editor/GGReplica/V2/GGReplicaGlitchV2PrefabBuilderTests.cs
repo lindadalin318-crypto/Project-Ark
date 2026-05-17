@@ -141,6 +141,13 @@ namespace ProjectArk.Ship.Editor
             Assert.That(viewSO.FindProperty("_boostBurstParticles").arraySize, Is.GreaterThanOrEqualTo(2));
             Assert.That(viewSO.FindProperty("_dodgeBurstParticles").arraySize, Is.EqualTo(1));
             Assert.That(viewSO.FindProperty("_dodgeTrailParticles").arraySize, Is.EqualTo(2));
+            Assert.That(viewSO.FindProperty("_lqTrailRenderers").arraySize, Is.EqualTo(2), "PlayerViewLQTrailModule should serialize startrails separately from Fluxy/Shape/Dark lanes.");
+            Assert.That(viewSO.FindProperty("_lqTrailRenderers").GetArrayElementAtIndex(0).objectReferenceValue, Is.SameAs(visualRoot.Find("LQTrailsContainer/startrails").GetComponent<TrailRenderer>()));
+            Assert.That(viewSO.FindProperty("_lqTrailRenderers").GetArrayElementAtIndex(1).objectReferenceValue, Is.SameAs(visualRoot.Find("LQTrailsContainer/startrails_long").GetComponent<TrailRenderer>()));
+            Assert.That(viewSO.FindProperty("_darkTrailRenderers").arraySize, Is.EqualTo(1));
+            Assert.That(viewSO.FindProperty("_darkTrailRenderers").GetArrayElementAtIndex(0).objectReferenceValue, Is.SameAs(visualRoot.Find("DarkTrailModule/dark_trail").GetComponent<TrailRenderer>()));
+            Assert.That(viewSO.FindProperty("_shapeTrailRenderers").arraySize, Is.EqualTo(1));
+            Assert.That(viewSO.FindProperty("_shapeTrailRenderers").GetArrayElementAtIndex(0).objectReferenceValue, Is.SameAs(visualRoot.Find("ShapeTrailModule/shape_trail").GetComponent<TrailRenderer>()));
             Assert.That(viewSO.FindProperty("_fluxyTrailRenderer").objectReferenceValue, Is.SameAs(fluxyTrail));
             Assert.That(viewSO.FindProperty("_dodgeHalfRenderer").objectReferenceValue, Is.SameAs(visualRoot.Find("DodgeModule/DodgeHalf_Sprite").GetComponent<SpriteRenderer>()));
             Assert.That(viewSO.FindProperty("_dodgeAdditiveCoreRenderer").objectReferenceValue, Is.SameAs(visualRoot.Find("DodgeModule/AdditiveCore_Dodge").GetComponent<SpriteRenderer>()));

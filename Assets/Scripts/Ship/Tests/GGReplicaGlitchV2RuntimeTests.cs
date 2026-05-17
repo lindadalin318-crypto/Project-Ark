@@ -95,6 +95,112 @@ namespace ProjectArk.Ship.Tests
         }
 
         [Test]
+        public void Motor_GrabCancelsBoostDragWhenBothAreHeld()
+        {
+            var root = new GameObject("GGReplicaGlitchV2BoostGrabPriorityRig");
+            var profile = ScriptableObject.CreateInstance<GGReplicaShipFeelProfileSO>();
+            try
+            {
+                var rb = root.AddComponent<Rigidbody2D>();
+                rb.gravityScale = 0f;
+                rb.linearDamping = 4f;
+                var view = root.AddComponent<GGReplicaGlitchView>();
+                var motor = root.AddComponent<GGReplicaGlitchMotor>();
+                SetPrivateField(motor, "_body", rb);
+                SetPrivateField(motor, "_view", view);
+                SetPrivateField(motor, "_feelProfile", profile);
+
+                motor.ApplyInput(new GGReplicaGlitchInputFrame(Vector2.right, true, false, false, false, false), 0.1f);
+                Assert.That(motor.CurrentState, Is.EqualTo(GGReplicaGlitchState.BoostHold));
+                Assert.That(rb.linearDamping, Is.EqualTo(profile.AfterBoostDrag).Within(0.001f));
+
+                motor.ApplyInput(new GGReplicaGlitchInputFrame(Vector2.right, true, false, true, false, false), 0.1f);
+
+                Assert.That(motor.CurrentState, Is.EqualTo(GGReplicaGlitchState.GrabHold), "Grab should soft-cancel Boost before the sustain loop can visually dominate the hold state.");
+                Assert.That(rb.linearDamping, Is.EqualTo(4f).Within(0.001f), "Leaving Boost for Grab must restore base drag; otherwise quick Boost→Grab keeps the slippery boost tail.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(profile);
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void Motor_DodgeWindow_ResumesHeldGrabAfterInterrupt()
+        {
+            var root = new GameObject("GGReplicaGlitchV2DodgeResumeGrabRig");
+            var profile = ScriptableObject.CreateInstance<GGReplicaShipFeelProfileSO>();
+            try
+            {
+                var rb = root.AddComponent<Rigidbody2D>();
+                rb.gravityScale = 0f;
+                var view = root.AddComponent<GGReplicaGlitchView>();
+                var motor = root.AddComponent<GGReplicaGlitchMotor>();
+                SetPrivateField(motor, "_body", rb);
+                SetPrivateField(motor, "_view", view);
+                SetPrivateField(motor, "_feelProfile", profile);
+
+                motor.ApplyInput(new GGReplicaGlitchInputFrame(Vector2.right, false, false, true, false, false), 0.1f);
+                Assert.That(motor.CurrentState, Is.EqualTo(GGReplicaGlitchState.GrabHold));
+
+                motor.ApplyInput(new GGReplicaGlitchInputFrame(Vector2.up, false, true, true, false, false), 0.1f);
+                Assert.That(motor.CurrentState, Is.EqualTo(GGReplicaGlitchState.DodgeBurst));
+
+                for (int i = 0; i < 14; i++)
+                {
+                    motor.ApplyInput(new GGReplicaGlitchInputFrame(Vector2.up, false, false, true, false, false), 0.02f);
+                    InvokePrivate(motor, "FixedUpdate");
+                }
+
+                Assert.That(motor.CurrentState, Is.EqualTo(GGReplicaGlitchState.GrabHold), "Held Grab should resume after the Dodge lockout instead of being eaten by the Dodge window.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(profile);
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void Motor_DodgeWindow_ResumesHeldBoostAfterInterrupt()
+        {
+            var root = new GameObject("GGReplicaGlitchV2DodgeResumeBoostRig");
+            var profile = ScriptableObject.CreateInstance<GGReplicaShipFeelProfileSO>();
+            try
+            {
+                var rb = root.AddComponent<Rigidbody2D>();
+                rb.gravityScale = 0f;
+                rb.linearDamping = 4f;
+                var view = root.AddComponent<GGReplicaGlitchView>();
+                var motor = root.AddComponent<GGReplicaGlitchMotor>();
+                SetPrivateField(motor, "_body", rb);
+                SetPrivateField(motor, "_view", view);
+                SetPrivateField(motor, "_feelProfile", profile);
+
+                motor.ApplyInput(new GGReplicaGlitchInputFrame(Vector2.right, true, false, false, false, false), 0.1f);
+                Assert.That(motor.CurrentState, Is.EqualTo(GGReplicaGlitchState.BoostHold));
+
+                motor.ApplyInput(new GGReplicaGlitchInputFrame(Vector2.up, true, true, false, false, false), 0.1f);
+                Assert.That(motor.CurrentState, Is.EqualTo(GGReplicaGlitchState.DodgeBurst));
+
+                for (int i = 0; i < 14; i++)
+                {
+                    motor.ApplyInput(new GGReplicaGlitchInputFrame(Vector2.up, true, false, false, false, false), 0.02f);
+                    InvokePrivate(motor, "FixedUpdate");
+                }
+
+                Assert.That(motor.CurrentState, Is.EqualTo(GGReplicaGlitchState.BoostHold), "Held Boost should resume after Dodge so Boost→Dodge→Boost chains keep the original rhythm.");
+                Assert.That(rb.linearDamping, Is.EqualTo(profile.AfterBoostDrag).Within(0.001f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(profile);
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
         public void Motor_UsesGGDodgeForceAndOriginalMinimumDodgeTime()
         {
             var root = new GameObject("GGReplicaGlitchV2ProfileDodgeRig");
@@ -120,6 +226,54 @@ namespace ProjectArk.Ship.Tests
                 }
 
                 Assert.That(motor.CurrentState, Is.EqualTo(GGReplicaGlitchState.DodgeBurst), "Original Glitch dodge keeps the burst state for about 0.225s, longer than the previous 0.16s placeholder.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(profile);
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void Motor_DodgePressedDuringDodge_RestartsVisualBurstWindow()
+        {
+            var root = new GameObject("GGReplicaGlitchV2DodgeRetriggerRig");
+            var profile = ScriptableObject.CreateInstance<GGReplicaShipFeelProfileSO>();
+            try
+            {
+                var rb = root.AddComponent<Rigidbody2D>();
+                rb.gravityScale = 0f;
+                var view = root.AddComponent<GGReplicaGlitchView>();
+                var motor = root.AddComponent<GGReplicaGlitchMotor>();
+                var dodgeRoot = new GameObject("DodgeModule");
+                dodgeRoot.transform.SetParent(root.transform, false);
+                var ghost = new GameObject("Dodge_Sprite (used for old outline trail)").AddComponent<SpriteRenderer>();
+                ghost.transform.SetParent(dodgeRoot.transform, false);
+                var burst = new GameObject("ps_dodge_shell").AddComponent<ParticleSystem>();
+                burst.transform.SetParent(dodgeRoot.transform, false);
+                SetPrivateField(view, "_feelProfile", profile);
+                SetPrivateField(view, "_dodgeModuleRoot", dodgeRoot);
+                SetPrivateField(view, "_dodgeGhostRenderer", ghost);
+                SetPrivateField(view, "_dodgeBurstParticles", new[] { burst });
+                SetPrivateField(motor, "_body", rb);
+                SetPrivateField(motor, "_view", view);
+                SetPrivateField(motor, "_feelProfile", profile);
+
+                motor.ApplyInput(new GGReplicaGlitchInputFrame(Vector2.up, false, true, false, false, false), 0.1f);
+                float fullAlpha = ghost.color.a;
+                burst.Simulate(0.1f, true, false, false);
+                float advancedBurstTime = burst.time;
+                InvokePrivate(view, "TickVisuals", profile.DodgeStateDuration * 0.75f);
+                float fadedAlpha = ghost.color.a;
+                Assert.That(fadedAlpha, Is.LessThan(fullAlpha), "The first Dodge visual window should have started fading before the second press.");
+                Assert.That(advancedBurstTime, Is.GreaterThan(0.05f), "Test setup should advance the first Dodge burst before re-triggering.");
+
+                motor.ApplyInput(new GGReplicaGlitchInputFrame(Vector2.right, false, true, false, false, false), 0.1f);
+
+                Assert.That(rb.linearVelocity.x, Is.EqualTo(profile.DodgeForce).Within(0.01f));
+                Assert.That(ghost.color.a, Is.GreaterThan(0.6f), "Pressing Dodge during Dodge should restart the original burst window instead of only refreshing physics.");
+                Assert.That(burst.isPlaying, Is.True);
+                Assert.That(burst.time, Is.LessThan(advancedBurstTime * 0.5f), "The Dodge burst particle should restart from the beginning, not continue the old emission.");
             }
             finally
             {
@@ -314,6 +468,144 @@ namespace ProjectArk.Ship.Tests
 
                 Assert.That(sustain.isPlaying, Is.True, "Sustain particles should keep playing while Boost is held.");
                 Assert.That(burst.isPlaying, Is.False, "Ignition burst should stop after the original boost ignite window.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(profile);
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void View_BoostExit_StopsEmittingWithoutClearingLiveParticles()
+        {
+            var root = new GameObject("GGReplicaGlitchV2BoostStopEmittingRig");
+            try
+            {
+                var view = root.AddComponent<GGReplicaGlitchView>();
+                var boostRoot = new GameObject("BoostModule");
+                boostRoot.transform.SetParent(root.transform, false);
+                var sustain = new GameObject("vfx_boost_trail_loop_enhanced").AddComponent<ParticleSystem>();
+                sustain.transform.SetParent(boostRoot.transform, false);
+                var main = sustain.main;
+                main.startLifetime = 1f;
+                main.startSpeed = 0f;
+                var emission = sustain.emission;
+                emission.rateOverTime = 80f;
+
+                SetPrivateField(view, "_boostModuleRoot", boostRoot);
+                SetPrivateField(view, "_boostParticles", new[] { sustain });
+
+                view.ApplyState(GGReplicaGlitchState.BoostHold);
+                sustain.Simulate(0.2f, true, false, false);
+                int liveParticles = sustain.particleCount;
+                Assert.That(liveParticles, Is.GreaterThan(0), "Test setup should create visible boost sustain particles before stopping.");
+
+                view.ApplyState(GGReplicaGlitchState.Idle);
+
+                Assert.That(sustain.isEmitting, Is.False);
+                Assert.That(sustain.particleCount, Is.GreaterThan(0), "Original PlayerViewBoostModule stops emission on BoostEnd; it should not clear the live flame tail instantly.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void View_BoostInterruptedByGrab_KeepsShortCutoffAfterimage()
+        {
+            var root = new GameObject("GGReplicaGlitchV2BoostGrabCutoffRig");
+            var profile = ScriptableObject.CreateInstance<GGReplicaShipFeelProfileSO>();
+            try
+            {
+                var view = root.AddComponent<GGReplicaGlitchView>();
+                var boostRoot = new GameObject("BoostModule");
+                boostRoot.transform.SetParent(root.transform, false);
+                var grabRoot = new GameObject("GrabModule");
+                grabRoot.transform.SetParent(root.transform, false);
+                var sustain = new GameObject("vfx_boost_trail_loop_enhanced").AddComponent<ParticleSystem>();
+                sustain.transform.SetParent(boostRoot.transform, false);
+                var burst = new GameObject("vfx_boost_trail_burst_enhanced").AddComponent<ParticleSystem>();
+                burst.transform.SetParent(boostRoot.transform, false);
+
+                SetPrivateField(view, "_feelProfile", profile);
+                SetPrivateField(view, "_boostModuleRoot", boostRoot);
+                SetPrivateField(view, "_grabModuleRoot", grabRoot);
+                SetPrivateField(view, "_boostParticles", new[] { sustain });
+                SetPrivateField(view, "_boostBurstParticles", new[] { burst });
+
+                view.ApplyState(GGReplicaGlitchState.BoostHold);
+                InvokePrivate(view, "TickVisuals", profile.BoostIgniteDuration + 0.01f);
+                Assert.That(burst.isPlaying, Is.False);
+
+                view.ApplyState(GGReplicaGlitchState.GrabHold);
+
+                Assert.That(grabRoot.activeSelf, Is.True);
+                Assert.That(sustain.isPlaying, Is.False, "Boost sustain must stop immediately when Grab takes priority.");
+                Assert.That(boostRoot.activeSelf, Is.True, "Boost should leave a short cutoff afterimage instead of disappearing in a hard pop.");
+                Assert.That(burst.isPlaying, Is.True, "The cutoff afterimage reuses the boost ignition burst as a one-frame interruption accent.");
+
+                InvokePrivate(view, "TickVisuals", 0.12f);
+
+                Assert.That(boostRoot.activeSelf, Is.False);
+                Assert.That(burst.isPlaying, Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(profile);
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void View_GrabInterruptedByDodge_PlaysShortCancelPulseWithoutThrowLine()
+        {
+            var root = new GameObject("GGReplicaGlitchV2GrabDodgeCancelRig");
+            var profile = ScriptableObject.CreateInstance<GGReplicaShipFeelProfileSO>();
+            try
+            {
+                var view = root.AddComponent<GGReplicaGlitchView>();
+                var dodgeRoot = new GameObject("DodgeModule");
+                dodgeRoot.transform.SetParent(root.transform, false);
+                var holdRoot = new GameObject("HoldModule");
+                holdRoot.transform.SetParent(root.transform, false);
+                var fluxyGrabRoot = new GameObject("FluxyGrabModule");
+                fluxyGrabRoot.transform.SetParent(root.transform, false);
+                var releasePulse = new GameObject("GrabReleasePulse").AddComponent<SpriteRenderer>();
+                var releaseThrowLine = new GameObject("GrabReleaseThrowLine").AddComponent<LineRenderer>();
+                var releaseBurst = new GameObject("GrabReleaseBurst").AddComponent<ParticleSystem>();
+                var dodgeGhost = new GameObject("Dodge_Sprite (used for old outline trail)").AddComponent<SpriteRenderer>();
+                releasePulse.transform.SetParent(fluxyGrabRoot.transform, false);
+                releaseThrowLine.transform.SetParent(fluxyGrabRoot.transform, false);
+                releaseBurst.transform.SetParent(fluxyGrabRoot.transform, false);
+                dodgeGhost.transform.SetParent(dodgeRoot.transform, false);
+
+                SetPrivateField(view, "_feelProfile", profile);
+                SetPrivateField(view, "_dodgeModuleRoot", dodgeRoot);
+                SetPrivateField(view, "_holdModuleRoot", holdRoot);
+                SetPrivateField(view, "_fluxyGrabModuleRoot", fluxyGrabRoot);
+                SetPrivateField(view, "_grabReleaseRenderer", releasePulse);
+                SetPrivateField(view, "_grabReleaseThrowLine", releaseThrowLine);
+                SetPrivateField(view, "_grabReleaseParticles", new[] { releaseBurst });
+                SetPrivateField(view, "_dodgeGhostRenderer", dodgeGhost);
+
+                view.ApplyState(GGReplicaGlitchState.GrabHold);
+                InvokePrivate(view, "TickVisuals", 0.24f);
+                view.ApplyState(GGReplicaGlitchState.DodgeBurst);
+
+                Assert.That(dodgeRoot.activeSelf, Is.True);
+                Assert.That(dodgeGhost.enabled, Is.True, "Dodge should visually win immediately when it interrupts Grab.");
+                Assert.That(holdRoot.activeSelf, Is.False, "The maintained hold field should shut off when Dodge cancels Grab.");
+                Assert.That(fluxyGrabRoot.activeSelf, Is.True, "Grab cancel should leave a short liquid pulse instead of disappearing instantly.");
+                Assert.That(releasePulse.enabled, Is.True);
+                Assert.That(releaseBurst.isPlaying, Is.True);
+                Assert.That(releaseThrowLine.enabled, Is.False, "A Dodge cancel is not a deliberate throw release, so it should not draw the full throw line.");
+
+                InvokePrivate(view, "TickVisuals", 0.1f);
+
+                Assert.That(fluxyGrabRoot.activeSelf, Is.False, "Cancel pulse should be shorter than the normal Grab release throw.");
+                Assert.That(releasePulse.enabled, Is.False);
             }
             finally
             {
@@ -787,6 +1079,62 @@ namespace ProjectArk.Ship.Tests
         }
 
         [Test]
+        public void View_TrailModules_MoveAndDodgeUseSeparateOriginalModuleLanes()
+        {
+            var root = new GameObject("GGReplicaGlitchV2TrailModuleSplitRig");
+            Material material = null;
+            try
+            {
+                var view = root.AddComponent<GGReplicaGlitchView>();
+                var lqRoot = new GameObject("LQTrailsContainer");
+                lqRoot.transform.SetParent(root.transform, false);
+                var starTrail = new GameObject("startrails").AddComponent<TrailRenderer>();
+                var starTrailLong = new GameObject("startrails_long").AddComponent<TrailRenderer>();
+                var darkTrail = new GameObject("dark_trail").AddComponent<TrailRenderer>();
+                var shapeTrail = new GameObject("shape_trail").AddComponent<TrailRenderer>();
+                var fluxyTrail = new GameObject("fluxy_like_lq_trail").AddComponent<TrailRenderer>();
+                starTrail.transform.SetParent(lqRoot.transform, false);
+                starTrailLong.transform.SetParent(lqRoot.transform, false);
+                darkTrail.transform.SetParent(root.transform, false);
+                shapeTrail.transform.SetParent(root.transform, false);
+                fluxyTrail.transform.SetParent(root.transform, false);
+                material = new Material(Shader.Find("Sprites/Default"));
+                material.SetFloat("_Alpha", 0.62f);
+                material.SetFloat("_FlowPower", 3.77f);
+                material.SetFloat("_NoiseScale", 6f);
+                fluxyTrail.sharedMaterial = material;
+
+                SetPrivateField(view, "_lqTrailsContainer", lqRoot);
+                SetPrivateField(view, "_lqTrailRenderers", new[] { starTrail, starTrailLong });
+                SetPrivateField(view, "_darkTrailRenderers", new[] { darkTrail });
+                SetPrivateField(view, "_shapeTrailRenderers", new[] { shapeTrail });
+                SetPrivateField(view, "_fluxyTrailRenderer", fluxyTrail);
+
+                view.ApplyState(GGReplicaGlitchState.Move);
+
+                Assert.That(lqRoot.activeSelf, Is.True, "PlayerViewLQTrailModule should own the base movement trail lane.");
+                Assert.That(starTrail.emitting, Is.True);
+                Assert.That(starTrailLong.emitting, Is.True);
+                Assert.That(darkTrail.emitting, Is.False, "DarkTrailModule is a distinct original lane and must not be toggled by the base LQ trail path.");
+                Assert.That(shapeTrail.emitting, Is.False, "ShapeTrailModule should not be toggled by Move.");
+                Assert.That(fluxyTrail.emitting, Is.False, "FluxyTrailModule should stay off until Dodge-style fluid emphasis.");
+
+                view.ApplyState(GGReplicaGlitchState.DodgeBurst);
+
+                Assert.That(starTrail.emitting, Is.False, "Dodge should not rely on the base LQ trail lane after the modules are split.");
+                Assert.That(starTrailLong.emitting, Is.False);
+                Assert.That(shapeTrail.emitting, Is.True, "PlayerViewShapeTrailModule owns the shape trail lane during Dodge.");
+                Assert.That(fluxyTrail.emitting, Is.True, "PlayerViewFluxyTrailModule owns the fluid Dodge trail lane.");
+                Assert.That(darkTrail.emitting, Is.False);
+            }
+            finally
+            {
+                if (material != null) Object.DestroyImmediate(material);
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
         public void View_DodgeFluxyTrail_UsesOriginalDodgeIntensityWithoutMutatingSharedMaterial()
         {
             var root = new GameObject("GGReplicaGlitchV2FluxyTrailRig");
@@ -808,7 +1156,6 @@ namespace ProjectArk.Ship.Tests
                 fluxyTrail.sharedMaterial = material;
 
                 SetPrivateField(view, "_feelProfile", profile);
-                SetPrivateField(view, "_trailRenderers", new[] { fluxyTrail });
                 SetPrivateField(view, "_fluxyTrailRenderer", fluxyTrail);
 
                 view.ApplyState(GGReplicaGlitchState.DodgeBurst);
@@ -902,7 +1249,7 @@ namespace ProjectArk.Ship.Tests
                 SetPrivateField(view, "_grabModuleRoot", grabRoot);
                 SetPrivateField(view, "_healModuleRoot", healRoot);
                 SetPrivateField(view, "_boostParticles", new[] { particle });
-                SetPrivateField(view, "_trailRenderers", new[] { trailA, trailB });
+                SetPrivateField(view, "_lqTrailRenderers", new[] { trailA, trailB });
 
                 view.ApplyState(GGReplicaGlitchState.Idle);
                 Assert.That(boostRoot.activeSelf, Is.False);
@@ -915,6 +1262,10 @@ namespace ProjectArk.Ship.Tests
 
                 view.ApplyState(GGReplicaGlitchState.GrabHold);
                 Assert.That(grabRoot.activeSelf, Is.True);
+                Assert.That(boostRoot.activeSelf, Is.True, "Boost leaves a short cutoff afterimage when Grab interrupts it.");
+                InvokePrivate(view, "TickVisuals", 0.12f);
+                particle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                InvokePrivate(view, "TickVisuals", 0.01f);
                 Assert.That(boostRoot.activeSelf, Is.False);
 
                 view.ApplyState(GGReplicaGlitchState.Heal);

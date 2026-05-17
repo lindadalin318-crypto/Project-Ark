@@ -61,7 +61,8 @@ namespace ProjectArk.Ship
             }
 
             bool wantsBoost = input.BoostHeld && move.sqrMagnitude > 0.001f;
-            if (CurrentState == GGReplicaGlitchState.BoostHold && !wantsBoost)
+            bool leavingBoost = CurrentState == GGReplicaGlitchState.BoostHold && (!wantsBoost || input.DodgePressed || input.GrabHeld || input.HealHeld || input.FireHeld);
+            if (leavingBoost)
             {
                 _body.linearDamping = _baseLinearDamping;
             }
@@ -71,7 +72,7 @@ namespace ProjectArk.Ship
                 _dodgeTimer = DodgeStateDuration;
                 _body.linearDamping = DodgeLinearDamping;
                 _body.linearVelocity = _lastMove * DodgeForce;
-                ApplyState(GGReplicaGlitchState.DodgeBurst);
+                ApplyState(GGReplicaGlitchState.DodgeBurst, true);
                 return;
             }
 
@@ -150,11 +151,11 @@ namespace ProjectArk.Ship
             _body.rotation = nextAngle;
         }
 
-        private void ApplyState(GGReplicaGlitchState state)
+        private void ApplyState(GGReplicaGlitchState state, bool forceReenter = false)
         {
-            if (CurrentState == state) return;
+            if (CurrentState == state && !forceReenter) return;
             CurrentState = state;
-            _view?.ApplyState(state);
+            _view?.ApplyState(state, forceReenter);
             _audioFeedback?.ApplyState(state);
         }
     }

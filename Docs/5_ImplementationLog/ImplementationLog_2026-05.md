@@ -925,3 +925,278 @@
 - **内容**：继续复刻原版 `PlayerViewHoldModule` / `HoldModule` 的持续抓取场语义。参考原版 `PlayerViewHoldModule` 中的 `fadeTime`、`sr`、`progressTween`，以及 `Player.prefab` 中 `HoldModule`、`HoldParticles`、`HoldProgress` 节点。`GGReplicaGlitchView` 新增 `_holdModuleRoot`、`_holdParticles`、`_holdFieldRenderer`、`_holdProgressRenderer`、`_holdTetherLine`；`GrabHold` 期间启用 HoldModule、播放 HoldParticles，并按 `_grabHoldTimer / GrabHoldFieldChargeDuration` 推进持续场环、进度环与牵引线强度；退出 Grab 后停止粒子并隐藏复位。V2 Prefab Builder 在 `GGGlitchVisualRoot/HoldModule` 下创建 `HoldParticles`、`HoldFieldRing`、`HoldProgress`、`HoldTetherLine`，并写入 View 引用。
 - **目的**：让 `E` 持续抓取不只是 select/lock/release 瞬时反馈，而是在按住期间持续显示一个稳定的 hold field，使 Grab 的维持状态更接近 GG 原版 PlayerView 的 HoldModule 读感。
 - **技术**：TDD + ParticleSystem + LineRenderer + MaterialPropertyBlock。RED：新增 `View_GrabHold_ShowsHoldFieldProgressWhileMaintainingTarget`，PlayMode 先失败于缺少 `_holdModuleRoot` 字段；Prefab Builder 测试要求新增 `HoldModule`、`HoldParticles`、`HoldProgress`、`HoldFieldRing`、`HoldTetherLine` 节点和序列化接线。GREEN：实现 Hold field runtime 状态、充能进度、场环/进度环/牵引线与 Builder 生成逻辑。验证结果：新增 HoldModule PlayMode 单测 1/1 通过；V2 Prefab Builder focused EditMode 1/1 通过；`ProjectArk.Ship.Tests` PlayMode 43/43 通过；`ProjectArk.Ship.Editor` EditMode 9/9 通过；`Ship_GGReplicaV2.prefab` 已包含 `HoldModule`、`HoldParticles`、`HoldProgress`、`HoldFieldRing`、`HoldTetherLine`、`_holdModuleRoot`、`_holdParticles`、`_holdFieldRenderer`、`_holdProgressRenderer`、`_holdTetherLine`；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 0 错误（86 个 warning）；`git diff --check` 通过。Unity Console 当前 error 为既有负向测试刻意输出。
+
+---
+
+## GGReplica V2 Boost/Dodge/Grab 中断节奏 — 2026-05-16 11:22
+
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchMotor.cs`
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchView.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：补充 Boost / Grab 快速切换的 PlayMode 规格；`GGReplicaGlitchMotor` 在 Boost 被 Grab / Dodge / Heal / Fire 等更高优先级状态打断时立即恢复基础阻尼，避免 AfterBoostDrag 泄漏到 Grab；`GGReplicaGlitchView` 新增 Boost cutoff afterimage 计时器，在 Boost 被 Dodge 或 Grab 打断时短暂保留 BoostModule 并复用 ignition burst 作为中断残影，同时立即停止 Boost sustain。
+- **目的**：让 V2 不只是单状态像原版，而是在 Boost→Grab / Boost→Dodge 这类快速切换中保留原版“先断开推进、再叠加高优先反馈”的节奏，避免硬切和滑行手感泄漏。
+- **技术**：TDD Red-Green；状态优先级仲裁仍集中在 `GGReplicaGlitchMotor.ApplyInput`，视觉中断反馈集中在 `GGReplicaGlitchView.ApplyState` / `TickVisuals`，未新增 Prefab 序列化字段，因此无需更新 Prefab Builder 接线。验证：新增 focused PlayMode 测试先 RED（2/2 失败，分别命中 Boost drag 泄漏与 BoostModule 硬切），实现后 `TestResults.xml` 显示新增 focused PlayMode 测试 2/2 通过；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 通过（0 错误）。Unity MCP 后续全量测试启动阶段有间歇性 timeout，未产生测试失败明细。
+
+
+---
+
+## Piercer ReferenceOnly MVP — 2026-05-16 11:18
+
+- **新建/修改文件**
+  - `Assets/Scripts/Combat/Enemy/PiercerReferencePhaseResolver.cs`
+  - `Assets/Scripts/Combat/Enemy/PiercerReferenceVisual.cs`
+  - `Assets/Scripts/Combat/Tests/PiercerReferencePhaseResolverTests.cs`
+  - `Assets/_ReferenceOnly/Minishoot/Piercer/Sprites/PiercerT1S1.png`
+  - `Assets/_ReferenceOnly/Minishoot/Piercer/Sprites/PiercerT1S2.png`
+  - `Assets/_ReferenceOnly/Minishoot/Piercer/Sprites/PiercerT1S3.png`
+  - `Assets/_ReferenceOnly/Minishoot/Piercer/Prefabs/Enemy_Piercer_REF_Minshoot.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：新增独立 `Piercer` ReferenceOnly MVP。`PiercerReferencePhaseResolver` 将现有 `ChargeState` elapsed time 映射为 Minishoot 原版 `AICharge` 风格的 `Pause -> Anticipation -> Dashing -> Recovery -> Idle` 表现阶段；`PiercerReferenceVisual` 只读取 `EnemyBrain.StateMachine.CurrentState` 并切换 `PiercerT1` 三帧 sprite、颜色、pause pulse 与 anticipation shake，不驱动移动、伤害或正式 AI 行为。从解包目录导入 `PiercerT1S1/S2/S3` 到独立 ReferenceOnly 目录，并创建 `Enemy_Piercer_REF_Minshoot.prefab`。
+
+- **目的**：将 Minishoot 原版 `AICharge` 证据链从已有 `ChargerT*` 外观分支中拆出，建立更干净的 `Piercer` ReferenceOnly 复刻分支；保留现有 `ChargedRusher` ReferenceOnly 原型不动，避免继续混淆 `ChargerT*` 视觉资源与 `PiercerT*` 原版冲锋行为证据。
+
+- **技术**：TDD 先添加 `PiercerReferencePhaseResolverTests`，并在 Unity Console 中确认 RED 阶段为缺少生产类型；用纯 C# resolver 承载可测试 Signal-Window 时序，MonoBehaviour 只负责表现读取和 sprite/颜色/scale/position juice；用 Unity Editor API 导入 Sprite、生成 Prefab 和校验序列化引用，避免手写 `.meta`。验证：`dotnet build Project-Ark.slnx` 全程序集成功；Unity 侧读取 prefab 确认 `ChargeRusherBrain`、`PiercerReferenceVisual`、`PiercerT1S1/S2/S3` 引用有效。Unity MCP 测试过滤本次返回 `total=0`，未作为通过依据。
+
+---
+
+## Piercer ReferenceOnly 独立 Brain 收口 — 2026-05-16 11:33
+
+- **新建/修改文件**
+  - `Assets/Scripts/Combat/Enemy/PiercerReferenceBrain.cs`
+  - `Assets/Scripts/Combat/Enemy/PiercerReferenceChargeState.cs`
+  - `Assets/Scripts/Combat/Enemy/PiercerReferencePhaseResolver.cs`
+  - `Assets/Scripts/Combat/Tests/PiercerReferencePhaseResolverTests.cs`
+  - `Assets/_ReferenceOnly/Minishoot/Piercer/Prefabs/Enemy_Piercer_REF_Minshoot.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：新增 `PiercerReferenceBrain` 与 `PiercerReferenceChargeState`，让 `Enemy_Piercer_REF_Minshoot.prefab` 不再借用 `ChargeRusherBrain` 作为 ReferenceOnly 行为壳；`PiercerReferenceVisual._brain` 现在指向独立 `PiercerReferenceBrain`。`PiercerReferencePhaseResolver` 增加对 `PiercerReferenceChargeState` 的支持，并补充对应测试用例。
+
+- **目的**：将 Minishoot `Piercer` 的 ReferenceOnly 证据链从 `ChargeRusher` 命名与行为壳中进一步拆出，降低后续复刻 `AICharge` 时的认知混淆，同时继续保持不影响正式敌人 AI 主链。
+
+- **技术**：`PiercerReferenceBrain` 继承 `EnemyBrain` 以满足现有组件约束，但只初始化一个纯标记状态 `PiercerReferenceChargeState`，不申请导演 token、不驱动正式攻击逻辑。使用 Unity Editor API 清理 prefab 中残留的 `ChargeRusherBrain` 并重接 `PiercerReferenceVisual._brain`。验证：`dotnet build Project-Ark.slnx` 成功；Unity 读取 prefab 确认 `hasPiercerBrain=True`、`hasChargeRusherBrain=False`、`visualBrainType=PiercerReferenceBrain`、resolver 对 `PiercerReferenceChargeState` 返回 `Pause`；清空 Console 后 error 数为 0。
+
+---
+
+## Piercer ReferenceOnly 循环预演 — 2026-05-16 11:44
+
+- **新建/修改文件**
+  - `Assets/Scripts/Combat/Enemy/PiercerReferencePhaseResolver.cs`
+  - `Assets/Scripts/Combat/Enemy/PiercerReferenceVisual.cs`
+  - `Assets/Scripts/Combat/Tests/PiercerReferencePhaseResolverTests.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：为 `PiercerReferencePhaseResolver` 新增 `ResolveLooping`，在 `Pause -> Anticipation -> Dashing -> Recovery` 之后保留可配置 `Idle` gap，再 wrap 回下一轮 `Pause`；`PiercerReferenceVisual` 新增 `_loopPreview` 与 `_idleGapDuration`，默认启用循环预演，让 `Enemy_Piercer_REF_Minshoot` 在 ReferenceOnly 场景中可以持续观察完整 Signal-Window 节奏。
+
+- **目的**：让 `Piercer` ReferenceOnly 原型不再只播放一次 `AICharge` 证据链，而是能持续预演 Telegraph/Attack/Recovery 闭环，方便后续手感调参和与原版 Minishoot 行为对照，同时不驱动正式移动、伤害或敌人 AI 主链。
+
+- **技术**：TDD 先添加 `ResolveLooping_WrapsElapsedTimeBackToPauseWindow`，确认缺少 `ResolveLooping` 的 RED 编译失败；随后抽出 `IsChargeState` 与 `ResolveChargeWindow`，保持原 `Resolve` 非循环语义不变，并新增 idle gap 用例覆盖循环间隔。验证：`dotnet build Project-Ark.slnx` 成功（仅既有警告）；Unity 读取 prefab 确认 `loopPreview=True`、`idleGap=0.3`、`phaseAfterWrap=Pause`、`phaseDuringGap=Idle`；Unity Console error 数为 0。
+
+---
+
+## GGReplica V2 Dodge 打断续接 — 2026-05-16 13:46
+
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchView.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：补充 Dodge 打断窗口的 PlayMode 规格，覆盖 `GrabHold -> DodgeBurst -> held Grab`、`BoostHold -> DodgeBurst -> held Boost`、`GrabHold -> DodgeBurst` 视觉取消脉冲。`GGReplicaGlitchView` 新增 `_grabReleaseThrowActive`，将正常 Grab release 与 Dodge cancel 分开：正常 release 保留 throw line，Dodge cancel 使用更短的 `GrabCancelDuration`，只保留液体 pulse / burst，不画完整投掷线。同步更新模块切换测试，使 Boost 被 Grab 打断时的 cutoff afterimage 成为明确预期。
+- **目的**：让 Dodge 作为最高优先级动作时，不再吞掉玩家持续按住的 Grab / Boost 输入，并让 Grab 被 Dodge 打断时读起来像“取消”而不是“投掷释放”，提升快速切换节奏感。
+- **技术**：TDD Red-Green；输入续接沿用现有 `ApplyInput` 在 Dodge lockout 期间持续接收 held input 的行为，视觉层通过 release/cancel 状态位进行表现分支，没有新增 Prefab 序列化引用，因此不需要重建 `Ship_GGReplicaV2.prefab`。验证：新增 focused PlayMode 测试先 RED（Grab cancel throw line 仍显示），实现后 focused 3/3 通过；`ProjectArk.Ship.Tests` PlayMode 全量 48/48 通过；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 通过（0 错误）；`git diff --check` 通过。
+
+---
+
+## Piercer ReferenceOnly 阶段调试标签 — 2026-05-16 13:42
+
+- **新建/修改文件**
+  - `Assets/Scripts/Combat/Enemy/PiercerReferencePhaseResolver.cs`
+  - `Assets/Scripts/Combat/Enemy/PiercerReferenceVisual.cs`
+  - `Assets/Scripts/Combat/Tests/PiercerReferencePhaseResolverTests.cs`
+  - `Assets/_ReferenceOnly/Minishoot/Piercer/Prefabs/Enemy_Piercer_REF_Minshoot.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：为 `PiercerReferencePhaseResolver` 新增 `FormatDebugLabel`，并在 `PiercerReferenceVisual` 中加入默认关闭的 `_showDebugPhaseLabel` 与 `_debugPhaseLabelOffset`。选中 ReferenceOnly Piercer 且开启开关后，会通过 Editor-only `OnDrawGizmosSelected` + `Handles.Label` 显示当前阶段、阶段计时与循环状态。同步将 prefab 上 `_loopPreview`、`_idleGapDuration`、`_showDebugPhaseLabel`、`_debugPhaseLabelOffset` 显式序列化，方便 Inspector 调参与审查。
+
+- **目的**：提升 `Piercer` ReferenceOnly Signal-Window 调参效率，让 Telegraph / Attack / Recovery 当前窗口在 Scene 视图中可读，同时保持默认关闭，不生成运行时 UI 对象，不污染正式敌人 AI、伤害、移动或对象池链路。
+
+- **技术**：TDD 先添加 `FormatDebugLabel_IncludesPhaseElapsedAndLoopState`，确认 RED 为缺少 `FormatDebugLabel`；随后实现纯 C# 格式化方法并在 Visual 层用 `#if UNITY_EDITOR` 包裹 Scene 标签绘制。验证：`dotnet build Project-Ark.slnx` 成功（仅既有 warning）；Unity SerializedObject 写入 prefab 默认值并保存成功；grep 确认 prefab YAML 存在 4 个新增/显式字段；Unity Console error 数为 0。
+
+---
+
+## GGReplica V2 Dodge 连按重触发 — 2026-05-16 13:54
+
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchMotor.cs`
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchView.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：补充 `Motor_DodgePressedDuringDodge_RestartsVisualBurstWindow` PlayMode 规格，覆盖 Dodge 窗口内再次按 Dodge 时“物理刷新但视觉不重启”的节奏断层。`GGReplicaGlitchMotor.ApplyState` 新增 `forceReenter` 参数，DodgePressed 始终强制重派发 Dodge 状态；`GGReplicaGlitchView.ApplyState` 新增默认关闭的 `forceReenter` 参数，用于同状态 Dodge 重入时重置 dodge visual timer、重新点燃 ghost / burst / fluxy trail。
+- **目的**：让连续 Dodge 或快速转向 Dodge 不再只有速度方向变化而缺少二次视觉/音频确认，保持原版 Glitch 的 burst 节奏可读性。
+- **技术**：TDD Red-Green；默认 `ApplyState(state)` 行为保持兼容，仅 Motor 在 DodgePressed 时调用强制重入，避免其它状态每帧重复触发。验证：新增 focused PlayMode 测试先 RED（ghost alpha 保持 faded 0.1875），实现后 focused 1/1 通过；`ProjectArk.Ship.Tests` PlayMode 全量 49/49 通过；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 通过（0 错误）；`git diff --check` 通过。
+
+---
+
+## GGReplica V2 Dodge 粒子重启 — 2026-05-16 14:02
+
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchView.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：扩展 `Motor_DodgePressedDuringDodge_RestartsVisualBurstWindow` 规格，要求 Dodge 连按时 `ps_dodge_shell` 等 burst 粒子从头播放，而不是只重置 ghost alpha。`GGReplicaGlitchView` 新增 `RestartParticles` helper，并在进入/重入 `DodgeBurst` 时使用它重启 `DodgeBurstParticles`。
+- **目的**：让连续 Dodge 的第二次输入有完整的粒子爆发反馈，避免视觉上只看到旧 emission 继续播放，提升快速 Dodge 转向的节奏确认。
+- **技术**：TDD Red-Green；先通过粒子 `Simulate` 推进首段 burst 时间，确认 RED 为二次 Dodge 后 `burst.time` 仍停在旧 emission 的 `0.1`，再改为 Stop+Play 重启粒子。验证：focused PlayMode 1/1 通过；`ProjectArk.Ship.Tests` PlayMode 全量 49/49 通过；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 通过（0 错误）；`git diff --check` 通过。
+
+---
+
+## Piercer ReferenceOnly 阶段进度标签 — 2026-05-16 13:58
+
+- **新建/修改文件**
+  - `Assets/Scripts/Combat/Enemy/PiercerReferencePhaseResolver.cs`
+  - `Assets/Scripts/Combat/Enemy/PiercerReferenceVisual.cs`
+  - `Assets/Scripts/Combat/Tests/PiercerReferencePhaseResolverTests.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：为 `PiercerReferencePhaseResolver` 新增 `ResolvePhaseProgress` 与 `FormatDetailedDebugLabel`，可计算当前 Signal-Window 阶段内归一化进度，并输出包含百分比的调试标签。`PiercerReferenceVisual` 的 Editor-only `OnDrawGizmosSelected` 改为显示 detailed label，例如 `Piercer REF | Anticipation | t=1.05s | p=25% | loop=on`。
+
+- **目的**：提升 `Piercer` ReferenceOnly Telegraph / Attack / Recovery 调参可读性，让选中 prefab 时不仅能看到当前阶段，还能看到当前阶段走到多少百分比，便于快速判断窗口节奏是否符合 Minishoot `AICharge` 参考手感。
+
+- **技术**：按 TDD 先添加 `ResolvePhaseProgress_ReturnsNormalizedProgressWithinCurrentWindow` 与 `FormatDetailedDebugLabel_IncludesPhaseProgressPercent`，确认 RED 为缺少 API；随后实现纯 C# resolver helper，并让 Visual 层只消费计算结果。验证：`dotnet build Project-Ark.slnx` 成功（仅既有 warning）；Unity `refresh_unity` 请求脚本编译后 Console error 数为 0；Unity Editor 内执行 resolver 调用得到 `progress=0.25` 与 detailed label 预期文本。
+
+---
+
+## Galactic Glitch 解包目录忽略 — 2026-05-16 14:06
+
+- **修改文件**
+  - `.gitignore`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：在本地解包参考资产忽略段中新增 `/Galactic Glitch/`，与现有 `/Minishoot/` 一起作为工作区内 reference-only 解包目录处理。
+- **目的**：避免将 Galactic Glitch 的 `DevXUnity`、`DevXUnity_exported`、`Il2CppDumper_Output`、反编译脚本等外部参考文件误加入版本库，同时保留本地搜索/对照能力。
+- **技术**：Git ignore 根目录锚定规则；验证 `git status --short --ignored` 显示 `!! "Galactic Glitch/"`。
+
+---
+
+## Piercer ReferenceOnly 阶段剩余时间标签 — 2026-05-16 14:09
+
+- **修改文件**
+  - `Assets/Scripts/Combat/Enemy/PiercerReferencePhaseResolver.cs`
+  - `Assets/Scripts/Combat/Enemy/PiercerReferenceVisual.cs`
+  - `Assets/Scripts/Combat/Tests/PiercerReferencePhaseResolverTests.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：为 `PiercerReferencePhaseResolver` 新增 `ResolvePhaseRemainingTime`，并扩展 `FormatDetailedDebugLabel`，使 Scene 选中标签在阶段进度百分比之外显示当前阶段剩余秒数，例如 `Piercer REF | Anticipation | t=1.05s | p=25% | left=0.15s | loop=on`。`PiercerReferenceVisual` 的 Editor-only `OnDrawGizmosSelected` 同步传入剩余时间。
+
+- **目的**：提升 ReferenceOnly Piercer Telegraph / Attack / Recovery 调参效率，让开发时能直接看到当前 Signal-Window 还剩多久，便于快速对齐 Minishoot `AICharge` 的读招节奏。
+
+- **技术**：TDD Red-Green；先添加 `ResolvePhaseRemainingTime_ReturnsSecondsLeftWithinCurrentWindow`、`ResolvePhaseRemainingTime_UsesWrappedElapsedTimeWhenLoopPreviewIsEnabled`、`ResolvePhaseRemainingTime_ReturnsZero_WhenCurrentStateIsNotChargeState`，并更新 detailed label 期望，确认 RED 为缺 API/参数；随后实现纯 C# window remaining helper，Visual 仅消费结果，不驱动 gameplay。验证：`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 成功（0 错误，仅既有 warning）；Unity Console error 数为 0；Unity Editor 内执行 resolver 调用得到 `progress=0.25; remaining=0.15; label=Piercer REF | Anticipation | t=1.05s | p=25% | left=0.15s | loop=on`。
+
+---
+
+## Piercer ReferenceOnly 循环位置标签 — 2026-05-16 14:30
+
+- **修改文件**
+  - `Assets/Scripts/Combat/Enemy/PiercerReferencePhaseResolver.cs`
+  - `Assets/Scripts/Combat/Enemy/PiercerReferenceVisual.cs`
+  - `Assets/Scripts/Combat/Tests/PiercerReferencePhaseResolverTests.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：为 `PiercerReferencePhaseResolver` 新增 `ResolveCycleElapsedTime` 与 `ResolveCycleDuration`，并扩展 `FormatDetailedDebugLabel` 输出完整循环位置，例如 `cycle=0.05/2.20s`。`PiercerReferenceVisual` 的 Editor-only `OnDrawGizmosSelected` 现在会同时显示当前阶段进度、阶段剩余时间、循环内时间和循环总时长。
+
+- **目的**：继续提升 ReferenceOnly Piercer 的 Signal-Window 调参效率。阶段进度/剩余时间解决“当前小窗口走到哪里”，循环位置解决“整段 Pause→Anticipation→Dash→Recovery→IdleGap 预览走到哪里”，便于判断 loop preview wrap 与 idle gap 节奏。
+
+- **技术**：TDD Red-Green；先添加 `ResolveCycleElapsedTime_UsesWrappedElapsedTimeWhenLoopPreviewIsEnabled`、`ResolveCycleElapsedTime_ReturnsSafeElapsedTimeWhenLoopPreviewIsDisabled`、`ResolveCycleElapsedTime_ReturnsZero_WhenCurrentStateIsNotChargeState`、`ResolveCycleDuration_ReturnsClampedChargeAndIdleGapDuration` 与 detailed label 期望，确认 RED 为缺少 API/签名；随后实现纯 C# cycle helper，并让 Visual 仅消费计算结果。验证：`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 成功（0 错误，仅既有 warning）；本地搜索确认 `PiercerReferenceVisual` 已传入 `cycleElapsedTime` 和 `cycleDuration`。Unity MCP 在脚本刷新后连续超时，未能完成 Unity Console 与 Editor 内 resolver 调用复验，因此本条 Unity Editor 验证状态记录为受阻。
+
+---
+
+## GGReplica V2 Boost 尾焰 StopEmitting — 2026-05-16 14:45
+
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchView.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：基于 `Docs/6_Diagnostics/GGReplica_V2_OriginalPlayerView_Audit.md` 对 `PlayerViewBoostModule` 的记录，以及 `2026-05-14-ggreplica-playerview-rebuild-plan.md` 中 Boost module API 的 `StopEmitting` 语义，补充 `View_BoostExit_StopsEmittingWithoutClearingLiveParticles` 规格。`GGReplicaGlitchView` 新增 Boost 专用粒子启停路径：Boost 结束时对 sustain 粒子使用 `ParticleSystemStopBehavior.StopEmitting`，保留 live particles 自然消散；Boost 根节点在 live particles 清空后再关闭。
+- **目的**：避免 Boost 结束时尾焰被 `StopEmittingAndClear` 硬清，进一步贴近原 GG 的 PlayerView module stack，而不是凭空硬切。
+- **技术**：TDD Red-Green；先验证 RED（Boost 退出后 live particle count 被清为 0），再引入 `SetBoostParticles`、可配置 `StopParticles` overload 与 `HasLiveParticles`。验证：focused PlayMode 1/1 通过；`ProjectArk.Ship.Tests` PlayMode 全量 50/50 通过；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 通过（0 错误）；`git diff --check` 通过。
+
+---
+
+## Piercer ReferenceOnly 工作区卫生清理 — 2026-05-17 11:27
+
+- **修改文件**
+  - `Anticipation`（删除空文件）
+  - `Dashing`（删除空文件）
+  - `Idle`（删除空文件）
+  - `Recovery`（删除空文件）
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：清理根目录下误生成的四个空临时文件 `Anticipation`、`Dashing`、`Idle`、`Recovery`。复查 `Assets/_ReferenceOnly/Minishoot/Piercer/` 后确认其中包含 Piercer ReferenceOnly prefab 与 sprite 资源，未清理该参考资产目录；同时未触碰当前工作区内既有的 `GGReplica` 修改。
+
+- **目的**：收口 Piercer ReferenceOnly 垂直切片的工作区卫生，避免阶段名空文件混入版本库或干扰后续 review。
+
+- **技术**：先用 `file Anticipation Dashing Idle Recovery` 确认四个条目均为空文件，再用 Python 按“存在且 size=0”条件删除，避免误删非空内容。验证：`git status --short` 不再显示四个根目录临时文件；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 成功（0 错误）。当前会话未连接 Unity Editor MCP，仅能完成 dotnet 编译复验，Unity Console / Editor 内复验需后续在 Editor 可用时执行。
+
+---
+
+## Piercer ReferenceOnly Debug Harness A 阶段 — 2026-05-17 11:56
+
+- **修改文件**
+  - `Assets/Scripts/Combat/Enemy/PiercerReferencePhaseResolver.cs`
+  - `Assets/Scripts/Combat/Enemy/PiercerReferenceVisual.cs`
+  - `Assets/Scripts/Combat/Enemy/PiercerReferenceDebugHarness.cs`
+  - `Assets/Scripts/Combat/Tests/PiercerReferencePhaseResolverTests.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：新增 `PiercerReferencePhaseSnapshot` 与 `ResolveSnapshot`，把 phase、phase progress、remaining time、cycle elapsed/duration 与 detailed label 收口成一次性查询结果。`PiercerReferenceVisual` 新增 `ConfigurePreviewTiming`、`ResetPreviewCycle` 与 `ResolveCurrentSnapshot`，并让 Scene label 复用 snapshot。新增 `PiercerReferenceDebugHarness`，用于 Play Mode 中以 ReferenceOnly 方式快速配置并重置 Piercer 的纯视觉 Signal-Window 预览。
+
+- **目的**：交付 A 阶段纯视觉调参 Harness，让开发者能在 2 分钟内进入 Play Mode 观察 `Pause → Anticipation → Dashing → Recovery → IdleGap` 的读招节奏；本阶段不做位移、不接碰撞、不造成伤害、不申请 EnemyDirector token，为后续 B 阶段轻量 Dash Preview 留出清晰边界。
+
+- **技术**：TDD Red-Green；先为 `ResolveSnapshot_ReturnsPhaseTimingAndDetailedLabelForHarness` 写 RED，确认 `PiercerReferencePhaseSnapshot` 与 `ResolveSnapshot` 缺失后失败，再实现只读 snapshot 聚合 API。Harness 通过显式 public 配置入口驱动 `PiercerReferenceVisual`，不使用反射、不新增 Coroutine、不运行时查找全局对象。验证：`dotnet build ProjectArk.Combat.Tests.csproj -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 成功；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 成功（0 错误，仅既有 warning）；Unity MCP `refresh_unity` 超时，但 `read_console` 读取 error 返回 0 条。
+
+---
+
+## GGReplica V2 尾迹三模块分层 — 2026-05-17 11:47
+
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchView.cs`
+  - `Assets/Scripts/Ship/Tests/GGReplicaGlitchV2RuntimeTests.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilderTests.cs`
+  - `Assets/_Prefabs/Ship/Ship_GGReplicaV2.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：基于 `GGReplica_V2_OriginalPlayerView_Audit.md` 与解包 `PlayerViewLQTrailModule`、`PlayerViewFluxyTrailModule`、`PlayerViewShapeTrailModule` 的字段/职责证据，将 V2 的统一 `_trailRenderers` 拆为 `_lqTrailRenderers`、`_darkTrailRenderers`、`_shapeTrailRenderers` 与既有 `_fluxyTrailRenderer`。`Move/Boost` 只驱动 LQ lane；`Dodge` 驱动 ShapeTrail lane 与 FluxyTrail lane；DarkTrail 暂保持独立但默认不由基础 LQ 路径打开。同步更新 Prefab Builder 与现有 `Ship_GGReplicaV2.prefab` 的序列化接线，并补充 runtime / builder 测试规格。
+- **目的**：落实简报中“`PlayerViewLQTrailModule`、`PlayerViewFluxyTrailModule`、`PlayerViewShapeTrailModule` 是独立系统，不是一个 TrailRenderer 数组”的约束，避免继续用统一开关驱动所有尾迹，提升 GG 飞船尾迹分层复刻的准确性。
+- **技术**：TDD 规格先行；新增 `View_TrailModules_MoveAndDodgeUseSeparateOriginalModuleLanes`，并扩展 `GGReplicaGlitchV2PrefabBuilderTests` 验证三类 trail 字段接线。运行时通过 `SetTrailEmitting(TrailRenderer[] trails, bool emitting)` 与 `HasTrailPositions` 管理 LQ root 生命周期；Prefab YAML 仅替换已知旧 `_trailRenderers` fileID 为新字段，未手写 `.meta`。验证：Unity MCP 恢复后补跑 `View_TrailModules_MoveAndDodgeUseSeparateOriginalModuleLanes` PlayMode focused 1/1 通过；`GGReplicaGlitchV2PrefabBuilderTests` EditMode focused 1/1 通过；`ProjectArk.Ship.Tests` PlayMode 全量 51/51 通过；`ProjectArk.Ship.Editor` EditMode 全量 9/9 通过；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 通过（0 错误）；`git diff --check` 通过。
+
+---
+
+## Piercer ReferenceOnly Debug Harness B 阶段 — 2026-05-17 12:01
+
+- **修改文件**
+  - `Assets/Scripts/Combat/Enemy/PiercerReferenceDashPreviewSampler.cs`
+  - `Assets/Scripts/Combat/Enemy/PiercerReferenceDebugDashPreview.cs`
+  - `Assets/Scripts/Combat/Tests/PiercerReferencePhaseResolverTests.cs`
+  - `Assets/_ReferenceOnly/Minishoot/Piercer/Prefabs/Enemy_Piercer_REF_Minshoot.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：新增 `PiercerReferenceDashPreviewSampler`，以 `PiercerReferencePhaseSnapshot` 为输入，只在 `Dashing` 阶段输出 eased dash offset，非 dash 阶段返回零。新增 `PiercerReferenceDebugDashPreview`，在 `LateUpdate` 中把采样 offset 应用到预览目标，并在禁用或关闭预览时复位。同步把 `PiercerReferenceDebugHarness` 与 `PiercerReferenceDebugDashPreview` 挂到 `Enemy_Piercer_REF_Minshoot.prefab` 根节点，确保 ReferenceOnly prefab 拖入场景后可以直接 Play Mode 预览。
+
+- **目的**：交付 B 阶段轻量位移预览，让 Piercer 的 Signal-Window 不仅能看到颜色/缩放/读招阶段，还能在 `Dashing` 窗口感受到短距离突进方向与节奏；本阶段仍不移动 gameplay collider、不造成伤害、不接 EnemyDirector token。
+
+- **技术**：TDD Red-Green；先为 `PiercerReferenceDashPreviewSampler` 写 RED，确认测试因缺少 sampler 类型失败，再实现纯 helper 并通过 Unity `manage_asset import` 让新脚本纳入 Unity 生成项目缓存。位移采用 `EaseOutCubic`，方向归一化，距离负值钳制为 0。验证：`dotnet build ProjectArk.Combat.Tests.csproj -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 成功；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 成功（0 错误，仅既有 warning）；Unity Console error 读取返回 0 条；`refresh_unity` wait 超时但 Console 未残留编译错误。
+
+---
+
+## Piercer ReferenceOnly Debug Harness C 阶段 — 2026-05-17 12:09
+
+- **修改文件**
+  - `Assets/Scripts/Combat/Enemy/PiercerReferenceDashPreviewSampler.cs`
+  - `Assets/Scripts/Combat/Enemy/PiercerReferenceDebugDashPreview.cs`
+  - `Assets/Scripts/Combat/Tests/PiercerReferencePhaseResolverTests.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：为 `PiercerReferenceDashPreviewSampler` 新增 `ResolveDirection`，把 dash preview 的 local/world direction 语义收口到纯逻辑 helper 中。`PiercerReferenceDebugDashPreview` 改为复用 sampler 解析方向，并移除自身重复的 `ResolveDirection`。新增测试覆盖：启用 local direction 时方向会被 owner rotation 转换；关闭 local direction 时输入向量就是 world direction，不受 owner rotation 影响。
+
+- **目的**：补齐 B 阶段 Play Mode 调参闭环中的方向语义，避免 Inspector 中 `_useLocalDirection=false` 时仍被 `TransformDirection` 旋转导致“世界方向”表现不符合字段含义。该阶段仍保持 ReferenceOnly 边界：不接碰撞、不造成伤害、不申请 EnemyDirector token。
+
+- **技术**：TDD Red-Green；先追加 `ResolveDirection_ReturnsLocalDirectionTransformedByOwner_WhenUseLocalDirectionIsEnabled` 与 `ResolveDirection_ReturnsWorldDirectionUnchanged_WhenUseLocalDirectionIsDisabled`，确认 focused 编译因缺少 `ResolveDirection` 失败，再实现最小纯函数并让 MonoBehaviour 调用。验证：`dotnet build ProjectArk.Combat.Tests.csproj -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 成功；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 成功（0 错误，仅既有 warning）；Unity Console error 读取返回 0 条；`manage_prefabs get_info` 确认 `Enemy_Piercer_REF_Minshoot.prefab` 根节点含 `PiercerReferenceDebugHarness` 与 `PiercerReferenceDebugDashPreview`。

@@ -170,7 +170,9 @@ namespace ProjectArk.Ship.Editor
                 SetSerializedArray(view, "_healParticles", new Object[] { healParticle });
                 SetSerializedArray(view, "_fireAimParticles", new Object[] { fireParticle });
                 SetSerializedArray(view, "_burstParticles", new Object[] { boostBurst, flameStart });
-                SetSerializedArray(view, "_trailRenderers", new Object[] { starTrail, starTrailLong, darkTrail, shapeTrail, fluxyTrail });
+                SetSerializedArray(view, "_lqTrailRenderers", new Object[] { starTrail, starTrailLong });
+                SetSerializedArray(view, "_darkTrailRenderers", new Object[] { darkTrail });
+                SetSerializedArray(view, "_shapeTrailRenderers", new Object[] { shapeTrail });
                 SetSerializedArray(view, "_bodyRenderers", new Object[] { solid, liquid, highlight, back, core });
                 SetSerialized(view, "_solidRenderer", solid);
                 SetSerialized(view, "_liquidRenderer", liquid);

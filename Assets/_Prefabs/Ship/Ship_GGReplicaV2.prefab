@@ -34957,12 +34957,13 @@ MonoBehaviour:
   _burstParticles:
   - {fileID: 2209694389624138003}
   - {fileID: 5020830267441885167}
-  _trailRenderers:
+  _lqTrailRenderers:
   - {fileID: 6820955676767114728}
   - {fileID: 3599850364150005482}
+  _darkTrailRenderers:
   - {fileID: 393533563200916381}
+  _shapeTrailRenderers:
   - {fileID: 3532427015708192988}
-  - {fileID: 7274783051445624708}
   _bodyRenderers:
   - {fileID: 277531819583163034}
   - {fileID: 4839207263211440335}

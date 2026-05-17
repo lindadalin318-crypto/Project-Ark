@@ -27,7 +27,9 @@ namespace ProjectArk.Ship
         [SerializeField] private ParticleSystem[] _healParticles = System.Array.Empty<ParticleSystem>();
         [SerializeField] private ParticleSystem[] _fireAimParticles = System.Array.Empty<ParticleSystem>();
         [SerializeField] private ParticleSystem[] _burstParticles = System.Array.Empty<ParticleSystem>();
-        [SerializeField] private TrailRenderer[] _trailRenderers = System.Array.Empty<TrailRenderer>();
+        [SerializeField] private TrailRenderer[] _lqTrailRenderers = System.Array.Empty<TrailRenderer>();
+        [SerializeField] private TrailRenderer[] _darkTrailRenderers = System.Array.Empty<TrailRenderer>();
+        [SerializeField] private TrailRenderer[] _shapeTrailRenderers = System.Array.Empty<TrailRenderer>();
         [SerializeField] private SpriteRenderer[] _bodyRenderers = System.Array.Empty<SpriteRenderer>();
         [SerializeField] private SpriteRenderer _solidRenderer;
         [SerializeField] private SpriteRenderer _liquidRenderer;
@@ -67,9 +69,11 @@ namespace ProjectArk.Ship
         private Color _fluxyDefaultEndColor;
         private Vector3 _fluxyDefaultScale;
         private float _boostBurstTimer;
+        private float _boostCutoffTimer;
         private float _dodgeVisualTimer;
         private float _grabHoldTimer;
         private float _grabReleaseTimer;
+        private bool _grabReleaseThrowActive;
         private float _healPulseTimer;
         private float _fireAimPulseTimer;
 
@@ -80,25 +84,28 @@ namespace ProjectArk.Ship
             ApplyState(GGReplicaGlitchState.Idle);
         }
 
-        public void ApplyState(GGReplicaGlitchState state)
+        public void ApplyState(GGReplicaGlitchState state, bool forceReenter = false)
         {
             GGReplicaGlitchState previousState = CurrentState;
             CurrentState = state;
-            bool enteringBoost = state == GGReplicaGlitchState.BoostHold && previousState != GGReplicaGlitchState.BoostHold;
-            bool enteringDodge = state == GGReplicaGlitchState.DodgeBurst && previousState != GGReplicaGlitchState.DodgeBurst;
+            bool enteringBoost = state == GGReplicaGlitchState.BoostHold && (forceReenter || previousState != GGReplicaGlitchState.BoostHold);
+            bool enteringDodge = state == GGReplicaGlitchState.DodgeBurst && (forceReenter || previousState != GGReplicaGlitchState.DodgeBurst);
             bool enteringGrab = state == GGReplicaGlitchState.GrabHold && previousState != GGReplicaGlitchState.GrabHold;
             bool exitingGrab = previousState == GGReplicaGlitchState.GrabHold && state != GGReplicaGlitchState.GrabHold;
             bool enteringHeal = state == GGReplicaGlitchState.Heal && previousState != GGReplicaGlitchState.Heal;
             bool enteringFireAim = state == GGReplicaGlitchState.FireAim && previousState != GGReplicaGlitchState.FireAim;
+            bool boostInterrupted = previousState == GGReplicaGlitchState.BoostHold && (state == GGReplicaGlitchState.DodgeBurst || state == GGReplicaGlitchState.GrabHold);
+            bool grabInterruptedByDodge = previousState == GGReplicaGlitchState.GrabHold && state == GGReplicaGlitchState.DodgeBurst;
             bool moving = state == GGReplicaGlitchState.Move;
             bool boosting = state == GGReplicaGlitchState.BoostHold;
             bool dodging = state == GGReplicaGlitchState.DodgeBurst;
             bool grabbing = state == GGReplicaGlitchState.GrabHold;
             bool healing = state == GGReplicaGlitchState.Heal;
             bool firing = state == GGReplicaGlitchState.FireAim;
+            bool boostTailVisible = !boosting && HasLiveParticles(_boostParticles);
 
-            SetActive(_boostModuleRoot, boosting);
-            SetActive(_lqTrailsContainer, boosting || moving || dodging);
+            SetActive(_boostModuleRoot, boosting || boostInterrupted || _boostCutoffTimer > 0f || boostTailVisible);
+            SetActive(_lqTrailsContainer, boosting || moving || HasTrailPositions(_lqTrailRenderers));
             SetActive(_grabModuleRoot, grabbing);
             SetActive(_fluxyGrabModuleRoot, grabbing || exitingGrab || _grabReleaseTimer > 0f);
             SetActive(_holdModuleRoot, grabbing);
@@ -106,21 +113,28 @@ namespace ProjectArk.Ship
             SetActive(_dodgeModuleRoot, dodging);
             SetActive(_fireAimModuleRoot, firing);
 
-            SetTrailEmitting(boosting || dodging);
-            SetParticles(_boostParticles, boosting);
+            SetTrailEmitting(_lqTrailRenderers, boosting || moving);
+            SetTrailEmitting(_shapeTrailRenderers, dodging);
+            SetTrailEmitting(_darkTrailRenderers, false);
+            SetBoostParticles(boosting);
             SetParticles(_dodgeTrailParticles, dodging);
             SetParticles(_holdParticles, grabbing);
             SetParticles(_healParticles, healing);
             SetParticles(_fireAimParticles, firing);
             ApplyViewSpritePack(state);
             ApplyBurstParticles(boosting, dodging, healing, firing, enteringBoost, enteringDodge);
+            if (boostInterrupted)
+            {
+                StartBoostCutoffAfterimage();
+            }
+
             ApplyDodgeVisuals(dodging, enteringDodge);
             if (!dodging)
             {
-                SetFluxyTrailState(boosting || moving, boosting ? 0.65f : moving ? 0.35f : 0f, false);
+                SetFluxyTrailState(false, 0f, false);
             }
 
-            ApplyGrabVisuals(grabbing, enteringGrab, exitingGrab);
+            ApplyGrabVisuals(grabbing, enteringGrab, exitingGrab, grabInterruptedByDodge);
             ApplyHealVisuals(healing, enteringHeal);
             ApplyFireAimVisuals(firing, enteringFireAim);
             SetBodyColor(boosting, dodging, grabbing, healing, firing);
@@ -140,6 +154,21 @@ namespace ProjectArk.Ship
                 {
                     StopParticles(BoostBurstParticles);
                 }
+            }
+
+            if (_boostCutoffTimer > 0f)
+            {
+                _boostCutoffTimer -= deltaTime;
+                if (_boostCutoffTimer <= 0f && CurrentState != GGReplicaGlitchState.BoostHold)
+                {
+                    StopParticles(BoostBurstParticles);
+                    SetActive(_boostModuleRoot, false);
+                }
+            }
+
+            if (CurrentState != GGReplicaGlitchState.BoostHold && _boostCutoffTimer <= 0f && _boostModuleRoot != null && _boostModuleRoot.activeSelf && !HasLiveParticles(_boostParticles))
+            {
+                SetActive(_boostModuleRoot, false);
             }
 
             if (_dodgeVisualTimer > 0f)
@@ -187,9 +216,10 @@ namespace ProjectArk.Ship
                 _grabReleaseTimer -= deltaTime;
                 float intensity = Mathf.Clamp01(_grabReleaseTimer / GrabReleaseDuration);
                 SetGrabReleaseVisuals(intensity > 0f, intensity);
-                SetGrabReleaseThrowVisuals(intensity > 0f, intensity);
+                SetGrabReleaseThrowVisuals(_grabReleaseThrowActive && intensity > 0f, intensity);
                 if (intensity <= 0f)
                 {
+                    _grabReleaseThrowActive = false;
                     StopParticles(_grabReleaseParticles);
                 }
 
@@ -197,13 +227,24 @@ namespace ProjectArk.Ship
             }
         }
 
-        private void SetTrailEmitting(bool emitting)
+        private static void SetTrailEmitting(TrailRenderer[] trails, bool emitting)
         {
-            foreach (var trail in _trailRenderers)
+            foreach (var trail in trails)
             {
                 if (trail == null) continue;
                 trail.emitting = emitting;
             }
+        }
+
+        private static bool HasTrailPositions(TrailRenderer[] trails)
+        {
+            foreach (var trail in trails)
+            {
+                if (trail == null) continue;
+                if (trail.positionCount > 0) return true;
+            }
+
+            return false;
         }
 
         private void ApplyViewSpritePack(GGReplicaGlitchState state)
@@ -249,6 +290,18 @@ namespace ProjectArk.Ship
             }
         }
 
+        private void SetBoostParticles(bool active)
+        {
+            if (active)
+            {
+                PlayParticles(_boostParticles);
+            }
+            else
+            {
+                StopParticles(_boostParticles, ParticleSystemStopBehavior.StopEmitting);
+            }
+        }
+
         private static void SetParticles(ParticleSystem[] particles, bool active)
         {
             if (active)
@@ -275,14 +328,40 @@ namespace ProjectArk.Ship
 
         private static void StopParticles(ParticleSystem[] particles)
         {
+            StopParticles(particles, ParticleSystemStopBehavior.StopEmittingAndClear);
+        }
+
+        private static void StopParticles(ParticleSystem[] particles, ParticleSystemStopBehavior stopBehavior)
+        {
             foreach (var particle in particles)
             {
                 if (particle == null) continue;
-                if (particle.isPlaying)
+                if (particle.isPlaying || particle.isEmitting)
                 {
-                    particle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                    particle.Stop(true, stopBehavior);
                 }
             }
+        }
+
+        private static void RestartParticles(ParticleSystem[] particles)
+        {
+            foreach (var particle in particles)
+            {
+                if (particle == null) continue;
+                particle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                particle.Play();
+            }
+        }
+
+        private static bool HasLiveParticles(ParticleSystem[] particles)
+        {
+            foreach (var particle in particles)
+            {
+                if (particle == null) continue;
+                if (particle.particleCount > 0) return true;
+            }
+
+            return false;
         }
 
         private void ApplyBurstParticles(bool boosting, bool dodging, bool healing, bool firing, bool enteringBoost, bool enteringDodge)
@@ -303,13 +382,19 @@ namespace ProjectArk.Ship
             {
                 if (enteringDodge)
                 {
-                    PlayParticles(DodgeBurstParticles);
+                    RestartParticles(DodgeBurstParticles);
                 }
 
                 return;
             }
 
             StopParticles(_burstParticles);
+        }
+
+        private void StartBoostCutoffAfterimage()
+        {
+            _boostCutoffTimer = BoostCutoffAfterimageDuration;
+            PlayParticles(BoostBurstParticles);
         }
 
         private void ApplyDodgeVisuals(bool dodging, bool enteringDodge)
@@ -421,12 +506,13 @@ namespace ProjectArk.Ship
             _fluxyTrailRenderer.SetPropertyBlock(_fluxyTrailBlock);
         }
 
-        private void ApplyGrabVisuals(bool grabbing, bool enteringGrab, bool exitingGrab)
+        private void ApplyGrabVisuals(bool grabbing, bool enteringGrab, bool exitingGrab, bool interruptedByDodge)
         {
             if (enteringGrab)
             {
                 _grabHoldTimer = 0f;
                 _grabReleaseTimer = 0f;
+                _grabReleaseThrowActive = false;
                 SetGrabReleaseVisuals(false, 0f);
                 SetGrabReleaseThrowVisuals(false, 0f);
                 StopParticles(_grabReleaseParticles);
@@ -456,9 +542,10 @@ namespace ProjectArk.Ship
             if (exitingGrab)
             {
                 _grabHoldTimer = 0f;
-                _grabReleaseTimer = GrabReleaseDuration;
+                _grabReleaseTimer = interruptedByDodge ? GrabCancelDuration : GrabReleaseDuration;
+                _grabReleaseThrowActive = !interruptedByDodge;
                 SetGrabReleaseVisuals(true, 1f);
-                SetGrabReleaseThrowVisuals(true, 1f);
+                SetGrabReleaseThrowVisuals(_grabReleaseThrowActive, 1f);
                 PlayParticles(_grabReleaseParticles);
             }
         }
@@ -700,11 +787,15 @@ namespace ProjectArk.Ship
 
         private float BoostIgniteDuration => _feelProfile != null ? _feelProfile.BoostIgniteDuration : 0.08f;
 
+        private const float BoostCutoffAfterimageDuration = 0.1f;
+
         private float DodgeVisualDuration => _feelProfile != null ? _feelProfile.DodgeStateDuration : 0.225f;
 
         private const float GrabLockDelay = 0.18f;
 
         private const float GrabReleaseDuration = 0.16f;
+
+        private const float GrabCancelDuration = 0.08f;
 
         private const float GrabHoldFieldChargeDuration = 0.5f;
 
