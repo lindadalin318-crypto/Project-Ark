@@ -40,8 +40,28 @@
 | `Mask` | 黑白控制图，白色代表要被效果影响，黑色代表不影响 | 控制闪白、溶解、过热、能量流动 |
 | `Normal Map` | 伪造凹凸光照的蓝紫色贴图 | 可选；让船体有金属凹凸感 |
 | `State` | 飞船当前视觉状态 | Normal、Dodge、Boost、Fire、Hit、Weaving、Overheat |
-| `Layer` | 飞船被拆成的视觉层 | Solid、Liquid、Highlight、Core、Back、Aura |
+| `Layer` | 飞船被拆成的视觉层 | Solid、Liquid、Highlight、Core、Back、Aura、Outline |
+| `Outline` | 轮廓/描边层，不等于 Highlight | 保证深色背景和高 Bloom 场景下仍能读清船体边界 |
 | `Prefab` | Unity 中可复用的对象模板 | `Ship.prefab`、`BoostTrailRoot.prefab` |
+
+### 0.4 参考项目反查结论
+
+本计划不是凭空设计，第一轮必须持续参考两个已解包项目：
+
+| 参考项目 | 主要参考价值 | 对本计划的约束 |
+| --- | --- | --- |
+| `Galactic Glitch` | 多层玩家飞船状态、`Movement / Boost / Primary / Secondary / GrabGun / Healing` 状态 Sprite、飞船高光 Shader、muzzle flash、trail、noise、ring、mask、glow 材质 | 本项目必须保留“状态映射表”和“层级拆分”意识，不能把某个状态的贴图误拿去当通用 Normal 图；尤其不能把 GrabGun 类状态图泛化成普通飞船主体 |
+| `Minishoot` | 极简高可读轮廓、`PlayerDash1-5`、`PlayerLeanLeft/Right`、`ShipPlayer` / `ShipPlayerShape` / `PlayerOutline` 材质、程序化 glow/ring/particle 材质 | 本项目必须补上 `Outline`、方向倾斜帧、Dash 帧序列、SpriteAtlas/导入一致性，以及程序化 VFX 材质参数表 |
+
+由此补充 7 条硬约束：
+
+1. **状态映射先于资产复用**：引用参考项目图片时，必须先确认它属于哪个状态；状态不明的图只能放 `Reference`，不能直接进正式生产清单。
+2. **Outline 独立于 Highlight**：`Outline` 负责可读性，`Highlight` 负责闪光/亮面；两者不能合并成一张图。
+3. **Dodge 需要帧序列意识**：除了一张 Ghost，还要考虑 `dash_01-05` 或 lean left/right 这种方向变化帧，避免闪避只有“透明复制图”。
+4. **Boost / Fire / Hit / Weaving / Overheat 都需要材质参数**：不只产贴图，还要记录 emission、blend、pulse、scroll、noise、dissolve 等参数范围。
+5. **VFX 可以来自程序化材质**：ring、spark、glow、muzzle、trail 不一定都要手绘 Sprite；可以用小纹理 + Shader / Particle 参数组合。
+6. **导入一致性必须被验收**：同一状态的多层 Sprite 必须尺寸、Pivot、PPU、压缩、Atlas Tag 一致。
+7. **毁坏/死亡参考暂不进入主链**：`WreckShip`、Debris、broken ship 可以作为后续 Death/Crash 参考，但不进入本轮 Normal-Dodge-Boost-Fire-Hit-Weaving-Overheat MVP。
 
 ---
 
@@ -138,7 +158,7 @@ tex_ship_canary_solid_normal_normal.png
 | `object` | `ship_canary` | 金丝雀号 |
 | `layer` | `solid` / `liquid` / `core` | 飞船视觉层 |
 | `state` | `normal` / `dodge` / `boost` | 状态 |
-| `map` | `albedo` / `emission` / `mask` / `normal` | 贴图用途 |
+| `map` | `albedo` / `emission` / `mask` / `normal` / `outline` | 贴图用途 |
 
 ### 1.7 文件格式
 
@@ -176,6 +196,20 @@ tex_ship_canary_solid_normal_normal.png
 | Generate Mip Maps | 关闭 |
 | Alpha Is Transparency | 开启 |
 | Pivot | `Center` |
+
+### 1.10 SpriteAtlas / 导入一致性
+
+参考 `Minishoot` 的简洁 Sprite 管线和 `Galactic Glitch` 的多层状态图，本项目第一轮必须建立导入一致性检查。
+
+| 项目 | 要求 |
+| --- | --- |
+| PPU | 同一套飞船层必须完全一致，跟当前 `Ship.prefab` 现役 PPU 对齐 |
+| Pivot | 所有 `ship_canary` 层使用 `Center`，不得单张偏移修图 |
+| SpriteAtlas | 正式 Sprite 进入 `CanaryShip` atlas；VFX 小图进入 `CanaryVFX` atlas |
+| Packing | 同一状态多层不可被不同压缩策略处理，否则叠合会出现边缘差 |
+| Import Preset | 后续应固化为 Unity Import Preset 或 Editor 校验，而不是手工记忆 |
+
+验收方式：随机抽取任意 3 个状态层叠合，切换黑/白/深蓝背景，不能出现抖动、偏移、脏边或压缩色块。
 
 ---
 
@@ -227,6 +261,7 @@ tex_ship_canary_solid_normal_normal.png
 | `1-G` | `spr_ship_canary_liquid_normal_emission.png` | Normal 状态能量发光 |
 | `1-H` | `spr_ship_canary_core_normal_emission.png` | 核心弱发光 |
 | `1-I` | `spr_ship_canary_highlight_normal_mask.png` | 后续闪白遮罩 |
+| `1-J` | `spr_ship_canary_outline_normal_outline.png` | 独立轮廓/描边，可选但强烈建议 |
 
 ### 2.3 1-A：`solid_normal_albedo` 需求
 
@@ -425,7 +460,29 @@ Emission 是发光贴图。
 - 关闭 Bloom 后，图像仍然可读。
 - 开启 Bloom 后，核心和能量线有轻微呼吸感。
 
-### 2.10 本阶段完成标准
+### 2.10 1-J：`outline_normal_outline` 建议需求
+
+`Outline` 的作用是保证可读性，不是表现受击闪白，也不是金属高光。参考 `Minishoot` 的 `PlayerOutline` / `ShipPlayerShape` 与 `Galactic Glitch` 的 `CLG_PlayerShipHighlight`，第一轮建议保留独立轮廓层。
+
+#### 它要表现什么
+
+- 飞船外轮廓和关键内部负形。
+- 在深色背景、Bloom 强光、弹幕密集时仍能读清船体边界。
+- 可以被材质染成低亮暗边或淡色描边。
+
+#### 它不要表现什么
+
+- 不要承担 HitFlash。
+- 不要替代 `highlight_normal_albedo`。
+- 不要画成厚重 UI 描边。
+
+#### 验收标准
+
+- 关闭 `Highlight` 后，飞船仍然有清晰边界。
+- 缩小到 `128 × 128` 时不会糊成黑团。
+- Bloom 打开时不被能量层完全吞掉。
+
+### 2.11 本阶段完成标准
 
 只有满足以下条件，才进入 Dodge / Boost 状态生产：
 
@@ -466,6 +523,8 @@ Dodge 不应该是一套完整新飞船，而是：
 | `2-B` | `spr_ship_canary_dodgeghost_dodge_mask.png` | 控制残影透明/溶解 | 建议 |
 | `2-C` | `spr_ship_canary_highlight_dodge_albedo.png` | Dodge 瞬间高光 | 建议 |
 | `2-D` | `spr_vfx_canary_dodge_streak_01.png` | 小型速度线 | 可选 |
+| `2-E` | `spr_ship_canary_lean_left_dodge_albedo.png` | 左向闪避/转向倾斜帧 | 可选但建议 |
+| `2-F` | `spr_ship_canary_lean_right_dodge_albedo.png` | 右向闪避/转向倾斜帧 | 可选但建议 |
 
 ### 3.2 2-A：`dodgeghost_dodge_albedo` 需求
 
@@ -550,7 +609,7 @@ Dodge 高光用于闪避开始的一瞬间。
 
 ### 3.5 Dodge Runtime 表现需求
 
-Dodge 不只是图，还需要播放方式。
+Dodge 不只是图，还需要播放方式。参考 `Minishoot` 的 `PlayerDash1-5` 与 `PlayerLeanLeft/Right`，如果后续手感需要更强方向性，优先补短帧序列，而不是把一张 Ghost 拉伸到所有方向。
 
 建议表现：
 
@@ -994,6 +1053,21 @@ Runtime = 什么时候切换、什么时候 tween
 
 运行时不要修改 authored Material。单对象变化使用 Material 实例或 `MaterialPropertyBlock`。
 
+### 10.4 材质参数矩阵
+
+参考两个解包项目中大量 `glow`、`ring`、`muzzle_flash`、`trail`、`noise`、`outline` 材质，本项目不能只记录“用了哪张图”，还要记录每个状态的材质参数。第一轮至少维护下表：
+
+| 状态 / 材质 | 必填参数 | 说明 |
+| --- | --- | --- |
+| `mat_ship_canary_liquid_normal` | `emissionIntensity`、`pulseSpeed` | Normal 必须克制，避免看起来像 Boost |
+| `mat_ship_canary_liquid_boost` | `emissionIntensity`、`scrollSpeed`、`noiseStrength` | 表现持续推进和能量流动 |
+| `mat_ship_canary_dodgeghost` | `alpha`、`dissolveAmount`、`fadeDuration` | Dodge 残影必须短、轻、可回收复位 |
+| `mat_ship_canary_weaving_aura` | `ringScale`、`pulseSpeed`、`blendMode` | Aura 不能遮挡 gameplay |
+| `mat_ship_canary_liquid_overheat` | `heatTint`、`pulseSpeed`、`noiseStrength` | 过热要危险但不能常驻纯红 |
+| `mat_vfx_canary_muzzle_flash` | `lifetime`、`additiveIntensity`、`colorFamily` | 连射时不能刷白屏幕 |
+
+这些参数后续应进入 `ShipVFX_AssetRegistry` 或专门的 VFX tuning 表。Runtime 只通过 `MaterialPropertyBlock` 或实例材质写运行时值，不写回 shared Material。
+
 ---
 
 ## 11. 第十大阶段：VFX Prefab 生产
@@ -1009,7 +1083,19 @@ Runtime = 什么时候切换、什么时候 tween
 | `VFX-5` | `OverheatSparkVFX` | `overheat_spark_01` | 是 |
 | `VFX-6` | `BoostTrailRoot` | 现役 BoostTrail 贴图 | 已有现役链 |
 
-### 11.2 对象池复位清单
+### 11.2 程序化 VFX 资产补充
+
+参考 `Galactic Glitch` 的 `vfx_noise_*`、`vfx_glow_ring`、`LMG_muzzle_flash_*`，以及 `Minishoot` 的 `CFX` glow/ring/spark 材质，本项目第一轮允许用程序化 VFX 降低手绘压力。
+
+| 资产 | 推荐实现 | 需要记录的内容 |
+| --- | --- | --- |
+| Ring / Aura | 小型 ring 纹理 + Additive 材质 + scale/pulse tween | 半径、alpha、pulse 曲线、遮挡风险 |
+| Spark | 1-2 张小火花 Sprite + ParticleSystem | 生命周期、速度、颜色、回池复位 |
+| Muzzle Flash | 扇形/尖形 Sprite + Additive 材质 | lifetime、颜色族、连射亮度上限 |
+| Trail Noise | 灰度噪声图 + UV scroll | scroll speed、dissolve、tiling |
+| Outline | 独立 outline Sprite 或 outline 材质 | 厚度、颜色、是否受状态染色 |
+
+### 11.3 对象池复位清单
 
 每个 VFX 回池时必须重置：
 
@@ -1068,6 +1154,19 @@ Runtime = 什么时候切换、什么时候 tween
 
 ## 13. 推荐执行顺序
 
+### Batch 0：参考项目反查与资产映射
+
+产出：
+
+```text
+Galactic Glitch 状态映射核对
+Minishoot Dash / Lean / Outline / Material 参考核对
+Reference-only 素材归档
+禁止误用清单
+```
+
+完成标准：每张参考图都知道来自哪个项目、哪个状态、用于什么目的；状态不明的图不得进入正式生产目录。
+
 ### Batch 1：只做主飞船 Normal
 
 产出：
@@ -1078,9 +1177,10 @@ spr_ship_canary_liquid_normal_albedo.png
 spr_ship_canary_highlight_normal_albedo.png
 spr_ship_canary_core_normal_albedo.png
 spr_ship_canary_back_normal_albedo.png
+spr_ship_canary_outline_normal_outline.png
 ```
 
-完成标准：五层叠合可读，`Solid` 单独可读。
+完成标准：五层叠合可读，`Solid` 单独可读；如果加入 `Outline`，关闭 `Highlight` 后仍能读清轮廓。
 
 ### Batch 2：做 Dodge
 
@@ -1090,10 +1190,11 @@ spr_ship_canary_back_normal_albedo.png
 spr_ship_canary_dodgeghost_dodge_albedo.png
 spr_ship_canary_dodgeghost_dodge_mask.png
 spr_ship_canary_highlight_dodge_albedo.png
+spr_ship_canary_lean_left_dodge_albedo.png
+spr_ship_canary_lean_right_dodge_albedo.png
 ```
 
-完成标准：能在 Play Mode 中看到短促残影。
-
+完成标准：能在 Play Mode 中看到短促残影；需要方向性时，优先用 lean / dash 短帧序列补充，而不是拉伸单张 Ghost。
 ### Batch 3：做 Boost
 
 产出：
@@ -1156,9 +1257,11 @@ Ship.prefab 接入
 VFX Prefab 接入
 ShipVFX_AssetRegistry 更新
 ImplementationLog 更新
+Material 参数矩阵更新
+SpriteAtlas / Import Preset 检查
 ```
 
-完成标准：Debug 关闭后，正式 Runtime 链路仍能驱动所有状态。
+完成标准：Debug 关闭后，正式 Runtime 链路仍能驱动所有状态；导入设置、材质参数、AssetRegistry 三者一致。
 
 ---
 
@@ -1172,6 +1275,9 @@ ImplementationLog 更新
 - 不要新增 `Boost+Hit+Weaving+Overheat` 这种组合状态图。
 - 不要在 Scene 实例上长期修到“看起来能用”。
 - 不要让 Debug 面板成为正式 Runtime owner。
+- 不要把 `Galactic Glitch` 的某个状态图脱离原状态语境直接复用，尤其不要把 GrabGun / Healing / Secondary 当成 Normal。
+- 不要把 `Minishoot` 的极简单层表现误解成“本项目也只需要一张 Player 图”；它的价值更多在轮廓、Dash 帧、Outline 和材质参数。
+- 不要把 `WreckShip`、Debris、broken ship 参考提前混入本轮主飞船状态；死亡/毁坏是后续独立批次。
 
 ---
 

@@ -1,0 +1,39 @@
+source project,source asset,reference folder path,status,note
+Minishoot,SupershotPlayerOutline.png,Batch_1_Normal/Outline/spr_ship_canary_outline_normal_outline.png,OK,Outline reference from Minishoot SupershotPlayerOutline
+Minishoot,SupershotPlayerOutline.png,Batch_1_Normal/Source/source_minishoot_supershot_player_outline.png,OK,Source outline reference
+Minishoot,PlayerLeanLeft1.png,Batch_2_Dodge/Lean/spr_ship_canary_lean_left_dodge_albedo.png,OK,Lean-left reference for dodge/turn frame
+Minishoot,PlayerLeanRight1.png,Batch_2_Dodge/Lean/spr_ship_canary_lean_right_dodge_albedo.png,OK,Lean-right reference for dodge/turn frame
+Minishoot,PlayerDash3.png,Batch_2_Dodge/Source/source_player_dash_03.png,OK,Missing dash source frame added after plan update
+Minishoot,PlayerDash5.png,Batch_2_Dodge/Source/source_player_dash_05.png,OK,Missing dash source frame added after plan update
+Minishoot,PlayerLeanLeft1.png,Batch_2_Dodge/Source/source_player_lean_left_01.png,OK,Lean-left source frame 01
+Minishoot,PlayerLeanLeft2.png,Batch_2_Dodge/Source/source_player_lean_left_02.png,OK,Lean-left source frame 02
+Minishoot,PlayerLeanLeft3.png,Batch_2_Dodge/Source/source_player_lean_left_03.png,OK,Lean-left source frame 03
+Minishoot,PlayerLeanRight1.png,Batch_2_Dodge/Source/source_player_lean_right_01.png,OK,Lean-right source frame 01
+Minishoot,PlayerLeanRight2.png,Batch_2_Dodge/Source/source_player_lean_right_02.png,OK,Lean-right source frame 02
+Minishoot,PlayerLeanRight3.png,Batch_2_Dodge/Source/source_player_lean_right_03.png,OK,Lean-right source frame 03
+Minishoot,PlayerOutline.mat,Batch_7_Unity_Material_Shader/Materials/mat_minishoot_player_outline_reference.mat,OK,Outline material reference
+Minishoot,ShipPlayer.mat,Batch_7_Unity_Material_Shader/Materials/mat_minishoot_ship_player_reference.mat,OK,Ship body material reference
+Minishoot,ShipPlayerShape.mat,Batch_7_Unity_Material_Shader/Materials/mat_minishoot_ship_player_shape_reference.mat,OK,Ship silhouette/shape material reference
+Minishoot,PlayerTrail.mat,Batch_7_Unity_Material_Shader/Materials/mat_minishoot_player_trail_reference.mat,OK,Player trail material reference
+Minishoot,PlayerTrailBoostSide.mat,Batch_7_Unity_Material_Shader/Materials/mat_minishoot_player_trail_boost_side_reference.mat,OK,Boost side trail material reference
+Minishoot,ring (additive).mat,Batch_7_Unity_Material_Shader/Materials/mat_minishoot_ring_additive_reference.mat,OK,Additive ring material reference
+Galactic Glitch,Movement_d10.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_normal_solid_Movement_10.png,OK,State 0/15 Normal solid
+Galactic Glitch,Movement_d3.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_normal_liquid_Movement_3.png,OK,State 0/15 Normal liquid
+Galactic Glitch,Movement_d21.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_normal_highlight_Movement_21.png,OK,State 0/15 Normal highlight
+Galactic Glitch,Boost_d2.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_boost_solid_Boost_2.png,OK,State 1 Boost solid
+Galactic Glitch,Boost_d16.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_boost_liquid_Boost_16.png,OK,State 1 Boost liquid
+Galactic Glitch,Boost_d8.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_boost_highlight_Boost_8.png,OK,State 1 Boost highlight
+Galactic Glitch,Primary_d4.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_primary_solid_Primary_4.png,OK,State 3/4/8 Primary solid
+Galactic Glitch,Primary.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_primary_liquid_Primary.png,OK,State 3/4/8 Primary liquid
+Galactic Glitch,Primary_d6.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_primary_highlight_Primary_6.png,OK,State 3/4/8 Primary highlight
+Galactic Glitch,Secondary_d8.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_secondary_solid_Secondary_8.png,OK,State 5/6 Secondary solid
+Galactic Glitch,Secondary.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_secondary_liquid_Secondary_0.png,OK,State 5/6 Secondary liquid; local export stores it as Secondary.png
+Galactic Glitch,Secondary_d17.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_secondary_highlight_Secondary_17.png,OK,State 5/6 Secondary highlight
+Galactic Glitch,GrabGun_Base_d9.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_grabgun_solid_GrabGun_Base_9.png,OK,State 7 GrabGun solid; do not use as Normal
+Galactic Glitch,GrabGun_Base_d9.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_grabgun_liquid_GrabGun_Base_9.png,OK,State 7 GrabGun liquid; do not use as Normal
+Galactic Glitch,GrabGun_Base_d8.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_grabgun_highlight_GrabGun_Base_8.png,OK,State 7 GrabGun highlight
+Galactic Glitch,GrabGun_Hand_d7.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_grabgun_hand_GrabGun_Hand_7.png,OK,State 7 grab hand attachment
+Galactic Glitch,GrabGun_back_d3.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_grabgun_back_GrabGun_Back_3.png,OK,State 7 back attachment
+Galactic Glitch,Healing.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_healing_solid_Healing_0.png,OK,State 9 Healing solid; local export stores only Healing.png / Healing_d1.png
+Galactic Glitch,Healing.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_healing_liquid_Healing.png,OK,State 9 Healing liquid
+Galactic Glitch,vfx_dot_001.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_healing_highlight_vfx_dot_001.png,OK,State 9 Healing highlight

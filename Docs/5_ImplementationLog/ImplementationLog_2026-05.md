@@ -1,5 +1,24 @@
 ---
 
+## Ship Art / VFX Minishoot 参考素材库整理 — 2026-05-18 22:10
+
+- **新建文件 / 文件夹**
+  - `Docs/7_Reference/ShipArtVFX_MinishootReference/`
+  - `Docs/7_Reference/ShipArtVFX_MinishootReference/Batch_1_Normal/`
+  - `Docs/7_Reference/ShipArtVFX_MinishootReference/Batch_2_Dodge/`
+  - `Docs/7_Reference/ShipArtVFX_MinishootReference/Batch_3_Boost/`
+  - `Docs/7_Reference/ShipArtVFX_MinishootReference/Batch_4_Fire_Hit/`
+  - `Docs/7_Reference/ShipArtVFX_MinishootReference/Batch_5_Weaving/`
+  - `Docs/7_Reference/ShipArtVFX_MinishootReference/Batch_6_Overheat/`
+  - `Docs/7_Reference/ShipArtVFX_MinishootReference/Batch_7_Unity_Material_Shader/`
+- **修改文件**
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：从 `Minishoot/DevXUnity` 解包素材中提取与飞船美术管线相关的参考素材，并按 `Ship_ArtVFX_Workflow.md` 的批次结构整理为 `Batch 1-7`。素材命名统一映射到计划中的 `spr_ship_canary_*`、`tex_ship_canary_*`、`mat_ship_canary_*`、`shader_ship_*` 口径，同时保留 `Source/source_*` 与 `source_map_batch7.csv` 方便追溯原始 Minishoot 文件。
+- **目的**：让后续制作金丝雀号主船体、Dodge、Boost、Fire/Hit、Weaving、Overheat、Material/Shader 时，可以直接打开对应批次看到参考资产类型和命名目标，降低“我到底该产出哪张图”的理解成本。
+- **技术**：文件级参考素材整理，不导入 Unity 运行链路，不创建 `.meta` 文件，不修改现役 `Ship.prefab` / `BoostTrailRoot.prefab` / `AssetRegistry`。分类遵循当前美术工作流的 `Batch 1 Normal → Batch 7 Unity/Material/Shader` 顺序，并继续保持参考素材与正式 Project Ark 资产隔离。
+
+---
+
 ## Ship Art / VFX 工作流细化为新手资产生产计划 — 2026-05-18 21:53
 
 - **修改文件**
@@ -1510,3 +1529,17 @@
 - **内容**：基于 `GGReplica_V2_OriginalPlayerView_Audit.md` 与解包 `PlayerViewShapeTrailModule` 的 `StartDodge` / `EndDodge`、`dodgeTrail`、`coreTrail`、`dodgeTrailFadeTime` 证据，为 V2 ShapeTrail 增加独立 `_shapeTrailTimer`。`DodgeBurst` 进入/强制重入时重启 `ShapeTrail` 粒子与 renderer；退出 Dodge 时对 `_dodgeTrailParticles` 使用 `StopEmitting` 并保留短残影窗口，窗口结束后再关闭 ShapeTrail renderer 与 DodgeModule。
 - **目的**：让 ShapeTrail 从“Dodge 状态硬开硬关”升级为更接近原 GG 的独立残影模块，避免 Dodge 退出瞬间清空 outline/additive trail，同时支持连续 Dodge 重触发时从头播放残影。
 - **技术**：模块分层延续上一轮 LQ/Fluxy/ShapeTrail 拆分；使用计时窗口模拟原版 `EndDodge` fade，而不是引入运行时 DOTween 依赖。验证：`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 通过（0 错误）；`git diff --check` 通过。Unity MCP 当前端口 `127.0.0.1:8080` 未监听，PlayMode focused / Ship 全量测试需 MCP 恢复后补跑。
+
+---
+
+## Ship Art/VFX Workflow 参考项目反查补充 — 2026-05-18 22:49
+
+- **修改文件**
+  - `Docs/3_WorkflowsAndRules/Ship/Ship_ArtVFX_Workflow.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：基于 `Galactic Glitch` 与 `Minishoot` 两个解包项目的实际资产结构，补充 Ship Art/VFX 生产计划中的遗漏项：新增 `0.4 参考项目反查结论`、`Outline` 层定义、SpriteAtlas / Import Preset / PPU / Pivot 一致性要求、Normal 阶段 `spr_ship_canary_outline_normal_outline.png`、Dodge 阶段 lean left/right 方向帧、材质参数矩阵、程序化 VFX 资产规则、`Batch 0` 参考项目反查批次，以及避免误用参考状态图的禁用项。
+
+- **目的**：让金丝雀号美术生产计划不只停留在单张 Sprite 清单，而是吸收 `Galactic Glitch` 的多状态分层/Shader/VFX 管线经验与 `Minishoot` 的高可读轮廓、Dash/Lean 帧、Outline/材质参数经验，避免后续把参考资产脱离状态语境误用，并提前固化导入一致性和材质参数记录要求。
+
+- **技术**：文档级 workflow 修订；通过文件名与资源目录扫描反查两个参考项目中的 `Movement / Boost / Primary / Secondary / GrabGun / Healing`、`PlayerDash1-5`、`PlayerLeanLeft/Right`、`PlayerOutline`、`ShipPlayer`、`glow`、`ring`、`muzzle_flash`、`trail`、`noise`、`mask` 等资产信号，再映射为 Project Ark 的资产生产约束。本次不修改运行时代码、Prefab 或 Unity 资产。

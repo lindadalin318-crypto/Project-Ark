@@ -1,0 +1,17 @@
+source_path,reference_path,purpose
+Material/PlayerOutline.mat,Materials/mat_ship_canary_solid_default_reference.mat,Batch 7 material shader texture reference
+Material/PlayerTrail.mat,Materials/mat_ship_canary_dodgeghost_reference.mat,Batch 7 material shader texture reference
+Material/PlayerTrailBoostSide.mat,Materials/mat_ship_canary_boost_trail_reference.mat,Batch 7 material shader texture reference
+Material/Flashable.mat,Materials/mat_ship_canary_highlight_hitflash_reference.mat,Batch 7 material shader texture reference
+Material/CFX3_GlowDot ADD.mat,Materials/mat_ship_canary_core_emission_reference.mat,Batch 7 material shader texture reference
+Material/CFX3_GlowStar ADD.mat,Materials/mat_ship_canary_weaving_aura_reference.mat,Batch 7 material shader texture reference
+Material/CFX_Flame2BW_Add.mat,Materials/mat_ship_canary_overheat_emission_reference.mat,Batch 7 material shader texture reference
+Shader Graphs/Shader Graphs_Ship.shader,Shaders/shader_ship_surface_reference.shader,Batch 7 material shader texture reference
+Shader Graphs/Shader Graphs_Flashable.shader,Shaders/shader_ship_highlight_flash_reference.shader,Batch 7 material shader texture reference
+Shader Graphs/Shader Graphs_Dissolve.shader,Shaders/shader_ship_dissolve_fade_reference.shader,Batch 7 material shader texture reference
+Shader Graphs/Shader Graphs_LightSimuShader.shader,Shaders/shader_ship_energy_pulse_reference.shader,Batch 7 material shader texture reference
+Texture2D/seamlessNoise.png,Textures/tex_ship_canary_shader_noise_reference.png,Batch 7 material shader texture reference
+Texture2D/CFX3_T_GlowDot.png,Textures/tex_ship_canary_additive_glow_reference.png,Batch 7 material shader texture reference
+Texture2D/LightHaloCircle.png,Textures/tex_ship_canary_aura_ring_reference.png,Batch 7 material shader texture reference
+Texture2D/cfxr uv distortion fire perlin.png,Textures/tex_ship_canary_overheat_distortion_reference.png,Batch 7 material shader texture reference
+Texture2D/portal_stripes_soft.png,Textures/tex_ship_canary_energy_flow_reference.png,Batch 7 material shader texture reference

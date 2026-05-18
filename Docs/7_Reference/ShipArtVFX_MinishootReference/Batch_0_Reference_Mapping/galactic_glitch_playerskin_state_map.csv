@@ -1,0 +1,21 @@
+state,layer,PlayerSkinDefault sprite,local source file,copied reference path,status,note
+Normal,solid,Movement_10,Movement_d10.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_normal_solid_Movement_10.png,OK,State 0/15 Normal solid
+Normal,liquid,Movement_3,Movement_d3.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_normal_liquid_Movement_3.png,OK,State 0/15 Normal liquid
+Normal,highlight,Movement_21,Movement_d21.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_normal_highlight_Movement_21.png,OK,State 0/15 Normal highlight
+Boost,solid,Boost_2,Boost_d2.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_boost_solid_Boost_2.png,OK,State 1 Boost solid
+Boost,liquid,Boost_16,Boost_d16.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_boost_liquid_Boost_16.png,OK,State 1 Boost liquid
+Boost,highlight,Boost_8,Boost_d8.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_boost_highlight_Boost_8.png,OK,State 1 Boost highlight
+Primary,solid,Primary_4,Primary_d4.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_primary_solid_Primary_4.png,OK,State 3/4/8 Primary solid
+Primary,liquid,Primary,Primary.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_primary_liquid_Primary.png,OK,State 3/4/8 Primary liquid
+Primary,highlight,Primary_6,Primary_d6.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_primary_highlight_Primary_6.png,OK,State 3/4/8 Primary highlight
+Secondary,solid,Secondary_8,Secondary_d8.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_secondary_solid_Secondary_8.png,OK,State 5/6 Secondary solid
+Secondary,liquid,Secondary_0,Secondary.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_secondary_liquid_Secondary_0.png,OK,State 5/6 Secondary liquid; local export stores it as Secondary.png
+Secondary,highlight,Secondary_17,Secondary_d17.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_secondary_highlight_Secondary_17.png,OK,State 5/6 Secondary highlight
+GrabGun,solid,GrabGun_Base_9,GrabGun_Base_d9.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_grabgun_solid_GrabGun_Base_9.png,OK,State 7 GrabGun solid; do not use as Normal
+GrabGun,liquid,GrabGun_Base_9,GrabGun_Base_d9.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_grabgun_liquid_GrabGun_Base_9.png,OK,State 7 GrabGun liquid; do not use as Normal
+GrabGun,highlight,GrabGun_Base_8,GrabGun_Base_d8.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_grabgun_highlight_GrabGun_Base_8.png,OK,State 7 GrabGun highlight
+GrabGun,hand,GrabGun_Hand_7,GrabGun_Hand_d7.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_grabgun_hand_GrabGun_Hand_7.png,OK,State 7 grab hand attachment
+GrabGun,back,GrabGun_Back_3,GrabGun_back_d3.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_grabgun_back_GrabGun_Back_3.png,OK,State 7 back attachment
+Healing,solid,Healing_0,Healing.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_healing_solid_Healing_0.png,OK,State 9 Healing solid; local export stores only Healing.png / Healing_d1.png
+Healing,liquid,Healing,Healing.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_healing_liquid_Healing.png,OK,State 9 Healing liquid
+Healing,highlight,vfx_dot_001,vfx_dot_001.png,Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/gg_healing_highlight_vfx_dot_001.png,OK,State 9 Healing highlight
