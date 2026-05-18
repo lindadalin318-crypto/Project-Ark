@@ -53,6 +53,7 @@ TemporaryDependencyNodeTargetIdentifier=netstandard2.1
 Assets/Scripts/Combat/Tests/
  ChargeRusherReferenceAfterimageSamplerTests.cs
  ChargeRusherReferencePhaseResolverTests.cs
+ PiercerReferencePhaseResolverTests.cs
  SlotLayerTests.cs
  SnapshotBuilderTests.cs
  StateMachineTests.cs
@@ -332,11 +333,8 @@ Library/
   UnityEngine.UI.dll
 Temp/bin/Debug/
  ProjectArk.Combat.dll
- ProjectArk.Core.Audio.dll
  ProjectArk.Core.dll
  ProjectArk.Enemy.dll
- ProjectArk.Heat.dll
- ProjectArk.Ship.dll
 
 [analyzerReferences]
 ../../../../../Applications/Unity/Unity-6000.4.6f1/Unity.app/Contents/Resources/BuildPipeline/Unity.SourceGenerators/

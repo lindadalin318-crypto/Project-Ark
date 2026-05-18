@@ -387,9 +387,7 @@ Library/ScriptAssemblies/
  UnityEditor.UI.dll
  UnityEngine.TestRunner.dll
  UnityEngine.UI.dll
-Temp/bin/Debug/
- ProjectArk.Core.dll
- ProjectArk.Ship.dll
+Temp/bin/Debug/ProjectArk.Ship.dll
 
 [analyzerReferences]
 ../../../../../Applications/Unity/Unity-6000.4.6f1/Unity.app/Contents/Resources/BuildPipeline/Unity.SourceGenerators/

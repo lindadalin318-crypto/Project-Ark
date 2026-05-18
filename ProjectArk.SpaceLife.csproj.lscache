@@ -403,11 +403,8 @@ Library/ScriptAssemblies/
  UnityEditor.UI.dll
  UnityEngine.UI.dll
 Temp/bin/Debug/
- ProjectArk.Combat.dll
  ProjectArk.Core.Audio.dll
  ProjectArk.Core.dll
- ProjectArk.Enemy.dll
- ProjectArk.Heat.dll
  ProjectArk.Level.dll
  ProjectArk.Ship.dll
 
