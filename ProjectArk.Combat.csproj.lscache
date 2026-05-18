@@ -50,6 +50,13 @@ TemporaryDependencyNodeTargetIdentifier=netstandard2.1
 /warnaserror+:NU1605
 
 [sourceFiles]
+Assets/Scripts/Combat/HyperWind/
+ CapturedProjectileState.cs
+ GroundCyclone.cs
+ GroundCyclonePhase.cs
+ GroundCycloneSpawner.cs
+ GroundCycloneView.cs
+ ICycloneCaptureTarget.cs
 Assets/Scripts/Combat/Projectile/
  BoomerangModifier.cs
  BounceModifier.cs

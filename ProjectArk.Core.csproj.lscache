@@ -57,6 +57,12 @@ Assets/Scripts/Core/
  DamagePayload.cs
  DamageType.cs
  HitStopEffect.cs
+ HyperWind/
+  IWindFieldService.cs
+  IWindPhaseService.cs
+  WindFieldManager.cs
+  WindPhaseController.cs
+  WindSample.cs
  IBlockable.cs
  IDamageable.cs
  IResistant.cs

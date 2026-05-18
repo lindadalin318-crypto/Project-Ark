@@ -76,8 +76,16 @@ Assets/Scripts/Combat/Enemy/
   IState.cs
   StateMachine.cs
  HitboxResolver.cs
+ HyperWindArenaTestDirector.cs
  ISpawnStrategy.cs
  LoopSpawnStrategy.cs
+ PiercerReferenceBrain.cs
+ PiercerReferenceChargeState.cs
+ PiercerReferenceDashPreviewSampler.cs
+ PiercerReferenceDebugDashPreview.cs
+ PiercerReferenceDebugHarness.cs
+ PiercerReferencePhaseResolver.cs
+ PiercerReferenceVisual.cs
  ShooterBrain.cs
  StalkerBrain.cs
  States/
@@ -108,6 +116,7 @@ Assets/Scripts/Combat/Enemy/
  ThreatSensor.cs
  TransitionRuleEvaluator.cs
  TurretBrain.cs
+ WindRiderWindAssist.cs
 Temp/obj/ProjectArk.Enemy/.NETStandard,Version=v2.1.AssemblyAttributes.cs
 
 [metadataReferences]
@@ -413,9 +422,7 @@ Library/ScriptAssemblies/
  UnityEngine.UI.dll
 Temp/bin/Debug/
  ProjectArk.Combat.dll
- ProjectArk.Core.Audio.dll
  ProjectArk.Core.dll
- ProjectArk.Heat.dll
  ProjectArk.Ship.dll
 
 [analyzerReferences]
