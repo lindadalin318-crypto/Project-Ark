@@ -71,6 +71,7 @@ namespace ProjectArk.Ship
         private float _boostBurstTimer;
         private float _boostCutoffTimer;
         private float _dodgeVisualTimer;
+        private float _shapeTrailTimer;
         private float _grabHoldTimer;
         private float _grabReleaseTimer;
         private bool _grabReleaseThrowActive;
@@ -90,6 +91,7 @@ namespace ProjectArk.Ship
             CurrentState = state;
             bool enteringBoost = state == GGReplicaGlitchState.BoostHold && (forceReenter || previousState != GGReplicaGlitchState.BoostHold);
             bool enteringDodge = state == GGReplicaGlitchState.DodgeBurst && (forceReenter || previousState != GGReplicaGlitchState.DodgeBurst);
+            bool exitingDodge = previousState == GGReplicaGlitchState.DodgeBurst && state != GGReplicaGlitchState.DodgeBurst;
             bool enteringGrab = state == GGReplicaGlitchState.GrabHold && previousState != GGReplicaGlitchState.GrabHold;
             bool exitingGrab = previousState == GGReplicaGlitchState.GrabHold && state != GGReplicaGlitchState.GrabHold;
             bool enteringHeal = state == GGReplicaGlitchState.Heal && previousState != GGReplicaGlitchState.Heal;
@@ -171,6 +173,17 @@ namespace ProjectArk.Ship
                 SetActive(_boostModuleRoot, false);
             }
 
+            if (_shapeTrailTimer > 0f)
+            {
+                _shapeTrailTimer -= deltaTime;
+                if (_shapeTrailTimer <= 0f && CurrentState != GGReplicaGlitchState.DodgeBurst)
+                {
+                    SetTrailEmitting(_shapeTrailRenderers, false);
+                    StopParticles(_dodgeTrailParticles);
+                    SetActive(_dodgeModuleRoot, false);
+                }
+            }
+
             if (_dodgeVisualTimer > 0f)
             {
                 _dodgeVisualTimer -= deltaTime;
@@ -245,6 +258,38 @@ namespace ProjectArk.Ship
             }
 
             return false;
+        }
+
+        private void ApplyShapeTrailVisuals(bool dodging, bool enteringDodge, bool exitingDodge)
+        {
+            if (enteringDodge)
+            {
+                _shapeTrailTimer = ShapeTrailFadeDuration;
+                SetTrailEmitting(_shapeTrailRenderers, true);
+                RestartParticles(_dodgeTrailParticles);
+                return;
+            }
+
+            if (dodging)
+            {
+                SetTrailEmitting(_shapeTrailRenderers, true);
+                PlayParticles(_dodgeTrailParticles);
+                return;
+            }
+
+            if (exitingDodge)
+            {
+                _shapeTrailTimer = ShapeTrailFadeDuration;
+                SetTrailEmitting(_shapeTrailRenderers, true);
+                StopParticles(_dodgeTrailParticles, ParticleSystemStopBehavior.StopEmitting);
+                return;
+            }
+
+            if (_shapeTrailTimer <= 0f)
+            {
+                SetTrailEmitting(_shapeTrailRenderers, false);
+                StopParticles(_dodgeTrailParticles);
+            }
         }
 
         private void ApplyViewSpritePack(GGReplicaGlitchState state)

@@ -1,5 +1,17 @@
 ---
 
+## Ship Art / VFX 工作流文档创建 — 2026-05-18 17:01
+
+- **新建文件**
+  - `Docs/3_WorkflowsAndRules/Ship/Ship_ArtVFX_Workflow.md`
+- **修改文件**
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：新增飞船美术与特效工作流文档，系统拆解金丝雀号从视觉目标、状态表、分层 Sprite、AI 生图、Unity 导入、Prefab 接入、Material / Shader、VFX Prefab、Runtime 状态驱动、Tween / Animator、Bloom / PostProcess、测试场景到资产注册固化的完整步骤。每个步骤均明确需要产出、推荐生产方式、验收标准和常见风险。
+- **目的**：为后续逐步跑通飞船美术模块提供统一生产路线，避免只依赖临时讨论或单次 AI 输出；同时确保新工作流对齐现役 `Ship/VFX` 主链，不替代 `ShipVFX_CanonicalSpec` 与 `ShipVFX_AssetRegistry`。
+- **技术**：文档工作流沉淀；结合 `Minishoot` 的清晰量产管线与 `Galactic Glitch` 的多层飞船 / Shader / VFX 状态表现路线，并遵守 Project Ark 的 `Ship/VFX` authority、对象池复位、Debug 不接管正式链、AssetRegistry 同步规则。
+
+---
+
 ## HyperWind 切片 D' Plan Closeout — 2026-05-17 23:20
 
 - **修改文件**
@@ -1476,3 +1488,14 @@
 - **内容**：新增一份横向参考分析文档，对比 `Minishoot` 与 `Galactic Glitch` 在美术模块上的实现差异，覆盖资源规模、飞船主体表现、场景环境、VFX、后处理、UI、动画体系、风险差异与 Project Ark 的混合落地路线。文档明确指出 `Minishoot` 更适合作为 Tilemap/Biome/量产场景管线参考，`Galactic Glitch` 更适合作为多层飞船状态、Shader、Trail、Boost/VFX 与状态化屏幕反馈参考。
 - **目的**：为 Project Ark 当前场景配置与验证阶段提供美术模块决策依据，避免把美术理解停留在单张 Sprite 层面，并帮助后续 `ShipSkinSO`、`PostProcessController`、`RoomVariantSO`、`AmbienceController`、Boost/Overheat/Weaving VFX 样板的优先级排序。
 - **技术**：基于既有 `Minishoot_Adventures_Structure_Analysis.md` 与 `GalacticGlitch_Structure_Analysis.md`，结合本轮对两个参考项目资源结构、脚本命名、Shader/Material/VFX 模块的调研结论，按美术管线维度整理为 Markdown 参考文档。本次仅新增文档，不修改运行时代码或 Unity 资产。
+
+---
+
+## GGReplica V2 ShapeTrail 残影窗口 — 2026-05-18 15:03
+
+- **修改文件**
+  - `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchView.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：基于 `GGReplica_V2_OriginalPlayerView_Audit.md` 与解包 `PlayerViewShapeTrailModule` 的 `StartDodge` / `EndDodge`、`dodgeTrail`、`coreTrail`、`dodgeTrailFadeTime` 证据，为 V2 ShapeTrail 增加独立 `_shapeTrailTimer`。`DodgeBurst` 进入/强制重入时重启 `ShapeTrail` 粒子与 renderer；退出 Dodge 时对 `_dodgeTrailParticles` 使用 `StopEmitting` 并保留短残影窗口，窗口结束后再关闭 ShapeTrail renderer 与 DodgeModule。
+- **目的**：让 ShapeTrail 从“Dodge 状态硬开硬关”升级为更接近原 GG 的独立残影模块，避免 Dodge 退出瞬间清空 outline/additive trail，同时支持连续 Dodge 重触发时从头播放残影。
+- **技术**：模块分层延续上一轮 LQ/Fluxy/ShapeTrail 拆分；使用计时窗口模拟原版 `EndDodge` fade，而不是引入运行时 DOTween 依赖。验证：`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 通过（0 错误）；`git diff --check` 通过。Unity MCP 当前端口 `127.0.0.1:8080` 未监听，PlayMode focused / Ship 全量测试需 MCP 恢复后补跑。
