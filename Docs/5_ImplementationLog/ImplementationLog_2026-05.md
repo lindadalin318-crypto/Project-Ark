@@ -1,5 +1,16 @@
 ---
 
+## Ship Art / VFX 工作流细化为新手资产生产计划 — 2026-05-18 21:53
+
+- **修改文件**
+  - `Docs/3_WorkflowsAndRules/Ship/Ship_ArtVFX_Workflow.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：将飞船美术工作流从阶段型路线图重构为更细粒度的资产生产清单。新增统一图片规格、像素尺寸、DPI 说明、透明背景、边距、命名规则、Unity Import Settings；并把主飞船 Normal、Dodge、Boost、Fire、Hit、Weaving、Overheat 拆到单张资产级别，明确每张 `Albedo`、`Emission`、`Mask`、可选 `Normal Map` 的用途、制作方式与验收标准。
+- **目的**：让没有美术经验的人也能按步骤生产金丝雀号飞船资产，避免停留在“做 Sprite / 做 Shader / 做 VFX”的粗粒度描述；同时把 Dodge state 等具体状态提前拆清楚，形成可逐批执行的美术管线。
+- **技术**：文档结构从 `Step 0-15` 改为 `统一规格 → 主飞船 Sprite → Dodge → Boost → Fire → Hit → Weaving → Overheat → Unity 接入 → Material/Shader → VFX Prefab → 测试验收`。继续遵守 `Ship/VFX` 现役主链、Prefab authority、Debug 不接管正式链、对象池复位与 AssetRegistry 同步约束。
+
+---
+
 ## Ship Art / VFX 工作流文档创建 — 2026-05-18 17:01
 
 - **新建文件**

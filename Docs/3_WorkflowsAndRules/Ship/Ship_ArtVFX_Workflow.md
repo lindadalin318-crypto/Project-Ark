@@ -1,476 +1,918 @@
 # Ship Art / VFX Workflow
 
-> **文档定位**：本文档描述 Project Ark 如何从 0 到 1 生产、接入、验证飞船美术与特效工作流。  
-> **适用对象**：金丝雀号主体美术、飞船状态 Sprite、Boost / Hit / Fire / Weaving / Overheat VFX、材质、Shader、后处理、验证场景。  
-> **不替代**：本文档不替代现役主链规范与资产注册表。现役链路、owner、路径、状态判断仍以 `Docs/2_TechnicalDesign/Ship/ShipVFX_CanonicalSpec.md` 与 `Docs/2_TechnicalDesign/Ship/ShipVFX_AssetRegistry.md` 为准。  
-> **参考输入**：`Docs/7_Reference/GameAnalysis/Minishoot_vs_GalacticGlitch_ArtModule_Comparison.md`、`Docs/7_Reference/GameAnalysis/GalacticGlitch_Structure_Analysis.md`、`Docs/7_Reference/GameAnalysis/ShipVFX_PlayerPerception_Reference.md`。
+> **文档定位**：本文档是 Project Ark 金丝雀号飞船美术模块的细粒度生产计划。它假设执行者没有专业美术经验，因此每一步都写清楚要做什么、输出什么文件、文件规格是什么、怎么判断能不能进入下一步。  
+> **适用对象**：主飞船 Sprite、Dodge/Boost/Fire/Hit/Weaving/Overheat 状态图、Albedo/Emission/Mask/Normal 等贴图、材质、Shader、VFX、Unity 导入、Prefab 接入与验证。  
+> **不替代**：现役主链、owner、路径、状态判断仍以 `Docs/2_TechnicalDesign/Ship/ShipVFX_CanonicalSpec.md` 与 `Docs/2_TechnicalDesign/Ship/ShipVFX_AssetRegistry.md` 为准。本文档只告诉我们“怎么一步步生产资产”。
 
 ---
 
-## 1. 总目标
+## 0. 先读：这份计划的使用方式
 
-Project Ark 的飞船美术模块不是“一张 Sprite 替换工程”，而是一套围绕玩家状态变化服务的视觉反馈系统。
+### 0.1 本文档解决什么问题
 
-金丝雀号最终应由以下模块共同组成：
+之前的计划更像路线图：知道要做 Sprite、Shader、VFX、Bloom，但对新手来说仍然会卡在“第一张图到底该画什么”“Dodge state 到底要几张图”“Normal 和 Albedo 是不是一回事”。
 
-```text
-飞船主体 Sprite 分层
-+ 状态 Sprite / 贴图变体
-+ Material 参数变体
-+ Shader / Shader Graph 表现算法
-+ ParticleSystem / TrailRenderer / Sprite VFX
-+ PrimeTween / Animator 状态过渡
-+ Bloom / PostProcess / Camera Juice
-+ Ship/VFX Runtime 主链
-+ Debug / Validator / Test Scene 验证闭环
-```
-
-### 1.1 核心原则
-
-- **手感优先**：飞船美术必须服务 Boost、射击、受击、编织、过热等玩家可感知状态。
-- **可读性优先**：缩小到实机尺寸后，朝向、状态、危险信号必须清楚。
-- **垂直切片优先**：先跑通 Normal → Boost → Hit → Fire → Weaving 的完整闭环，再扩展 LowHealth / Death / Respawn。
-- **少量 Shader，中量 Material，多层 Sprite，大量参数驱动**：避免为每个组合状态画整船或写独立 Shader。
-- **不新增第二真相源**：接入现有 `ShipView` / Worker / `BoostTrailView` / Prefab Builder / Scene Binder 主链。
-- **Debug 不接管正式链**：调试工具只观察与预览，不成为 Runtime owner。
-
----
-
-## 2. 最终工作流总览
+本版改成资产生产清单：
 
 ```text
-Step 0  定义视觉目标与玩家感受
-Step 1  建立飞船状态表
-Step 2  设计飞船视觉分层
-Step 3  生产概念图与参考板
-Step 4  生产 Normal 分层 Sprite
-Step 5  生产状态 Sprite / Overlay / Mask
-Step 6  Unity 导入与 Sprite 规范化
-Step 7  接入 Ship.prefab 多层视觉骨架
-Step 8  建立 Material / Shader 基础库
-Step 9  制作核心 VFX Prefab
-Step 10 接入 Runtime 状态驱动
-Step 11 加入 Animator / PrimeTween 过渡
-Step 12 加入 Bloom / PostProcess / Camera Juice
-Step 13 建立测试场景与调试面板
-Step 14 资产注册、审计、文档固化
-Step 15 迭代扩展新状态 / 新皮肤 / 新飞船
+先定义每张图的统一规格
+再生产主飞船基础图
+再逐个状态生产变体图
+再生产材质需要的辅助贴图
+最后才接入 Unity / Prefab / Runtime
 ```
 
-每一步都必须回答三件事：
+### 0.2 工作原则
 
-1. **这一步产出什么？**
-2. **推荐用什么方式生产？**
-3. **怎么确认它可以进入下一步？**
+- **一张图只解决一个问题**：主体归主体，发光归发光，遮罩归遮罩，不要把所有效果画死在一张图里。
+- **先做静态图，再做动态效果**：先确认静态 Sprite 可读，再上 Shader、VFX、Bloom。
+- **先 Normal，再状态**：所有状态图都从 Normal 图复制修改，不重新随机生成。
+- **先 Albedo，再 Emission/Mask/Normal**：先确定颜色与轮廓，再做发光和辅助贴图。
+- **每一步都能被验收**：如果某一步不能明确判断好坏，就说明规格还不够细。
 
----
+### 0.3 名词翻译
 
-## 3. Step 0：定义视觉目标与玩家感受
-
-### 3.1 目的
-
-在生成图片、写 Shader、做 Prefab 之前，先确认金丝雀号在玩家心中的定位。
-
-推荐方向：
-
-```text
-破旧工业探测船 + 神秘星图核心
-```
-
-也就是：
-
-- 船体本身像求生工具，有磨损、金属、暴露结构。
-- 能量核心来自星图遗物，有紫蓝色、符号、脉冲、编织感。
-- Boost / Weaving / Overheat 不是单纯变亮，而是船体状态发生变化。
-
-### 3.2 需要产出
-
-- `ShipVisualDirection` 文本说明。
-- 3-5 张飞船主体参考。
-- 3-5 张能量 / Boost / Aura / Overheat 参考。
-- 一组颜色关键词：主体色、能量色、危险色、受击色。
-- 一组禁止方向。
-
-### 3.3 推荐生产方式
-
-- 从 `Galactic Glitch` 提取飞船状态参考：多层、能量、高光、状态切换。
-- 从 `Minishoot` 提取可读性参考：轮廓清楚、弹幕环境中不糊。
-- 使用 AI 生图工具生成 mood board，但不要直接接受第一张图为最终资产。
-- 使用固定 prompt 模板约束视角、透明背景、轮廓、风格。
-
-### 3.4 推荐 Prompt 方向
-
-```text
-Top-down 2D spaceship, small fragile industrial scout ship, worn metal hull, mysterious star-map energy core, readable silhouette, transparent background, game sprite, orthographic top-down view, centered composition, clear nose direction, blue purple energy accents, no cockpit close-up, no perspective distortion
-```
-
-### 3.5 验收标准
-
-- 能用一句话说明金丝雀号的视觉气质。
-- 飞船主色、能量色、危险色已确定。
-- 视觉方向能服务 `Normal / Boost / Fire / Hit / Weaving / Overheat` 六类状态。
-- 缩小到实机显示尺寸后仍能看出朝向。
-
----
-
-## 4. Step 1：建立飞船状态表
-
-### 4.1 目的
-
-先定义“玩家会经历哪些视觉状态”，再决定哪些状态需要 Sprite、哪些需要 Material、哪些需要 VFX。
-
-### 4.2 推荐状态分类
-
-#### Base State
-
-Base State 是飞船主体或主要视觉层会变化的状态。
-
-| 状态 | 玩家感受 | MVP | 推荐表现 |
-| --- | --- | --- | --- |
-| `Normal` | 默认探索 / 战斗 | 是 | Body + Energy + Highlight 基础层 |
-| `Boost` | 瞬间推进、速度增加 | 是 | Energy 变亮、Engine/Trail 增强、Bloom pulse |
-| `Fire` | 武器发射反馈 | 是 | Muzzle flash、Energy pulse、轻微 recoil juice |
-| `Hit` | 受击、危险、短促反馈 | 是 | 白闪、火花、短震、i-frame flicker |
-| `Weaving` | 星图编织、能量展开 | 是 | Aura、紫蓝能量脉冲、后处理轻微变化 |
-| `Overheat` | 热量危险、系统过载 | 第二批 | 橙红警告、抖动、火花、vignette |
-| `LowHealth` | 受损、勉强运行 | 第二批 | Damage overlay、漏电、核心警告 |
-| `Death` | 爆炸、失控、终止 | 第二批 | 分层爆炸、碎片、屏幕冲击 |
-
-#### Overlay State
-
-Overlay State 不应重画整船，而是叠加在 Base State 上。
-
-| 状态 | 推荐实现 |
-| --- | --- |
-| `HitFlash` | `ShipHitVisuals` 同步驱动 5 层白闪 |
-| `Invulnerable` | Solid / HL / Core 闪烁 |
-| `HeatRising` | Energy / Core 颜色偏橙、抖动增强 |
-| `WeaponCharged` | Core / Muzzle socket 脉冲 |
-| `DashGhost` | `Dodge_Sprite` + `DashAfterImageSpawner` |
-
-#### Moment VFX
-
-Moment VFX 是一次性事件，不应变成常驻状态。
-
-| 事件 | 推荐实现 |
-| --- | --- |
-| `BoostStart` | FlameCore burst + Bloom burst + Trail ramp |
-| `BoostEnd` | Ember decay + Trail fade |
-| `WeaponFired` | MuzzleFlash VFX + Energy pulse |
-| `DamageTaken` | HitSpark + HitFlash + Camera impulse |
-| `WeavingEnter` | Aura 展开 + 后处理 pulse |
-| `OverheatStart` | 火花 + 红橙 pulse + 轻微 chromatic aberration |
-
-### 4.3 需要产出
-
-- `ShipStateVisualMatrix`：状态 → Sprite / Material / VFX / PostProcess 对照表。
-- `MVP State List`：第一批只做 `Normal / Boost / Fire / Hit / Weaving`。
-- `Future State List`：第二批做 `Overheat / LowHealth / Death / Respawn`。
-
-### 4.4 推荐生产方式
-
-- 先用 Markdown 表格定义状态，不急着创建 SO。
-- 每个状态写清：玩家感受、视觉表现、实现层级、验收标准。
-- 若状态组合超过两层，优先拆成 Base + Overlay + Moment，而不是新增完整状态图。
-
-### 4.5 验收标准
-
-- 任一状态都能说清楚“玩家此刻应该感受到什么”。
-- 不存在 `Boost+Hit+Weaving+Overheat` 这类整船组合图需求。
-- 每个状态都能归入 Sprite / Material / VFX / PostProcess / Camera 的某一层。
-
----
-
-## 5. Step 2：设计飞船视觉分层
-
-### 5.1 目的
-
-把飞船从“一张图”升级成可组合的多层视觉结构。
-
-当前现役链路已存在：
-
-```text
-ShipVisual
-├── Ship_Sprite_Back
-├── Ship_Sprite_Liquid
-├── Ship_Sprite_HL
-├── Ship_Sprite_Solid
-├── Ship_Sprite_Core
-├── Dodge_Sprite
-└── BoostTrailRoot
-```
-
-本文档后续生产都应围绕这条主链扩展，不另起第二套飞船视觉根节点。
-
-### 5.2 推荐层级职责
-
-| Canonical 语义 | 当前 Physical Name | 职责 |
+| 名词 | 新手解释 | 在本项目中的用途 |
 | --- | --- | --- |
-| `ShipBackSprite` | `Ship_Sprite_Back` | 船尾、推进器基底、后层装饰 |
-| `ShipLiquidSprite` | `Ship_Sprite_Liquid` | 能量、液态、状态色变化 |
-| `ShipHighlightSprite` | `Ship_Sprite_HL` | 高光、闪白、边缘强调 |
-| `ShipSolidSprite` | `Ship_Sprite_Solid` | 主体轮廓、实体结构 |
-| `ShipCoreSprite` | `Ship_Sprite_Core` | 核心、眼睛、反应堆、状态脉冲 |
-| `ShipDashGhostSprite` | `Dodge_Sprite` | Dash 静态残影 |
-| `BoostTrailRoot` | `BoostTrailRoot` | Boost 尾迹、火焰、余烬、能量层 |
-
-### 5.3 需要产出
-
-- 分层设计图或表格。
-- 每层的图像职责。
-- 每层是否需要独立 Sprite。
-- 每层是否需要独立 Material。
-- 每层是否会被 Runtime 动态改参数。
-
-### 5.4 推荐生产方式
-
-- 以 `Galactic Glitch` 的 `solid / liquid / highlight` 三层思路作为基础。
-- 但采用 Project Ark 当前现役节点命名，不照搬参考项目节点名。
-- 优先把状态变化放在 `Liquid / HL / Core / BoostTrailRoot`，不要频繁替换 `Solid` 主轮廓。
-- `Solid` 应保持最高可读性，确保 Bloom / Shader 失效时飞船仍能识别。
-
-### 5.5 验收标准
-
-- 关闭 `Liquid / HL / Core / BoostTrailRoot` 后，`Solid` 仍可读。
-- 打开全部层后，飞船不糊、不遮挡朝向。
-- 每层职责单一，不出现同一视觉效果由多个层重复承担。
-- 不新增与 `ShipVisual` 平行的第二视觉主链。
+| `Sprite` | Unity 里显示的 2D 图片 | 飞船主体、残影、光环、火花 |
+| `Albedo` | 不带发光的基础颜色图，也可以理解为“本体颜色” | 船体、金属、普通能量纹路 |
+| `Emission` | 发光图，黑色不亮，彩色区域发光 | 核心、能量线、尾焰、光环 |
+| `Mask` | 黑白控制图，白色代表要被效果影响，黑色代表不影响 | 控制闪白、溶解、过热、能量流动 |
+| `Normal Map` | 伪造凹凸光照的蓝紫色贴图 | 可选；让船体有金属凹凸感 |
+| `State` | 飞船当前视觉状态 | Normal、Dodge、Boost、Fire、Hit、Weaving、Overheat |
+| `Layer` | 飞船被拆成的视觉层 | Solid、Liquid、Highlight、Core、Back、Aura |
+| `Prefab` | Unity 中可复用的对象模板 | `Ship.prefab`、`BoostTrailRoot.prefab` |
 
 ---
 
-## 6. Step 3：生产概念图与参考板
+## 1. 全部图片的统一规格
 
-### 6.1 目的
+### 1.1 画布尺寸
 
-用 AI 工具或手绘快速探索飞船轮廓，但不直接进入 Unity。
-
-### 6.2 需要产出
-
-- 8-20 张飞船概念缩略图。
-- 3 张候选 Top-down 正交图。
-- 1 张最终选定轮廓图。
-- 1 份弃用原因记录：为什么没有选择其他方向。
-
-### 6.3 推荐生产方式
-
-#### AI 生图流程
+第一轮建议统一使用：
 
 ```text
-1. 先生成多张 silhouette / concept
-2. 选 1-3 个轮廓方向
-3. 针对选中轮廓做 top-down orthographic 重绘
-4. 锁定一张作为 source of truth
-5. 再基于这张图拆层，而不是每层重新随机生成
+Source working size: 1024 × 1024 px
+Unity export size:   512 × 512 px
+Preview check size:  128 × 128 px
 ```
 
-#### 图像要求
+解释：
 
-| 项目 | 要求 |
+- `1024 × 1024`：用于 AI 生图、手工清理、拆层，细节空间足够。
+- `512 × 512`：导入 Unity 的默认正式 Sprite 尺寸，够清晰，不太浪费显存。
+- `128 × 128`：模拟游戏中缩小后的可读性。如果 128px 看不清朝向，说明图失败。
+
+### 1.2 是否需要“十寸”
+
+游戏 Sprite 不按“十寸”这种印刷尺寸生产，应该按像素生产。  
+如果工具要求填写画布尺寸，可以用：
+
+```text
+1024 × 1024 px
+72 DPI
+Transparent background
+Square canvas
+```
+
+DPI 对 Unity 基本没有意义，Unity 只关心像素、Pixels Per Unit、Pivot、Import Settings。
+
+### 1.3 方向与中心点
+
+第一批统一约定：
+
+```text
+飞船鼻尖朝上
+飞船中心在画布中心
+Pivot = Center
+尾焰从画布下方向外延展
+```
+
+如果后续项目控制逻辑确认飞船默认朝右，可以整体旋转 90°，但本工作流先用“朝上”作为新手最容易理解的方向。
+
+### 1.4 边距
+
+| 区域 | 要求 |
 | --- | --- |
-| 视角 | Top-down / orthographic |
-| 朝向 | 全项目统一，推荐默认朝右或朝上，由项目当前控制逻辑决定 |
-| 画布 | 512×512 或 1024×1024 source |
-| 背景 | 透明或纯色方便抠图 |
-| 主体 | 居中、留出尾焰空间 |
-| 光源 | 固定方向，不随图变化 |
-| 轮廓 | 128px 预览下仍能看清 |
+| 船体主体 | 占画布高度约 55%-70% |
+| 左右留白 | 每侧至少 15% |
+| 上方留白 | 至少 10%，防止鼻尖裁切 |
+| 下方留白 | 至少 20%，给尾焰和 Boost 预留空间 |
 
-### 6.4 推荐工具
+### 1.5 透明背景
 
-- AI 生图：用于概念探索、轮廓、能量纹理方向。
-- Photoshop / Krita / Procreate：用于抠图、清理边缘、拆层。
-- Aseprite：如果转向低分辨率 Sprite 或做 frame animation。
-- Python / ImageMagick：用于批量裁切、透明边检查、尺寸统一。
-
-### 6.5 验收标准
-
-- 选定轮廓适合 Top-down 玩法。
-- 飞船朝向一眼可辨。
-- AI 生成细节不会干扰实机缩放后的识别。
-- 有明确 source image，后续拆层都基于它。
-
----
-
-## 7. Step 4：生产 Normal 分层 Sprite
-
-### 7.1 目的
-
-先做最基础、最稳定的默认飞船表现。Normal 是后续所有状态的基线。
-
-### 7.2 需要产出
-
-建议第一批至少产出：
+所有正式 Sprite 必须是：
 
 ```text
-spr_ship_canary_solid_normal.png
-spr_ship_canary_liquid_normal.png
-spr_ship_canary_highlight_normal.png
-spr_ship_canary_core_normal.png
-spr_ship_canary_back_normal.png
+PNG
+Transparent background
+Straight alpha preferred
+No white/black background baked into image
 ```
 
-如果暂时不做全部层，最低可接受：
+验收方式：把图放在黑、白、深蓝三种背景上看，不应该出现脏边、白边、黑边。
+
+### 1.6 命名规则
+
+统一格式：
 
 ```text
-spr_ship_canary_solid_normal.png
-spr_ship_canary_liquid_normal.png
-spr_ship_canary_highlight_normal.png
+[type]_[object]_[layer]_[state]_[map].[ext]
 ```
 
-### 7.3 推荐生产方式
-
-#### 手工 / AI 混合拆层
+示例：
 
 ```text
-1. 以最终概念图为基底
-2. 手工清理主体轮廓，得到 Solid
-3. 从主体中提取能量纹路，得到 Liquid
-4. 提取高光边缘或重绘，得到 Highlight
-5. 提取核心发光区域，得到 Core
-6. 提取尾部/推进器基底，得到 Back
+spr_ship_canary_solid_normal_albedo.png
+spr_ship_canary_liquid_boost_emission.png
+spr_ship_canary_highlight_hit_mask.png
+spr_ship_canary_dodgeghost_dodge_albedo.png
+tex_ship_canary_solid_normal_normal.png
 ```
 
-#### 每层图像规则
+字段解释：
 
-| 层 | 图像规则 |
+| 字段 | 示例 | 含义 |
+| --- | --- | --- |
+| `type` | `spr` / `tex` / `mat` | Sprite、Texture、Material |
+| `object` | `ship_canary` | 金丝雀号 |
+| `layer` | `solid` / `liquid` / `core` | 飞船视觉层 |
+| `state` | `normal` / `dodge` / `boost` | 状态 |
+| `map` | `albedo` / `emission` / `mask` / `normal` | 贴图用途 |
+
+### 1.7 文件格式
+
+| 用途 | 格式 | 说明 |
+| --- | --- | --- |
+| 正式 Sprite | `.png` | 透明背景 |
+| Source 分层文件 | `.psd` / `.kra` / `.clip` | Photoshop/Krita/Clip Studio 可编辑文件 |
+| AI 原始图 | `.png` / `.webp` | 放 Source，不直接进正式目录 |
+| Unity 材质 | `.mat` | Unity 内创建 |
+| Shader Graph | `.shadergraph` | Unity 内创建 |
+
+### 1.8 颜色规格
+
+第一轮建议：
+
+| 类型 | 推荐颜色 | 用途 |
+| --- | --- | --- |
+| 船体暗部 | 深灰蓝、旧金属灰 | `Solid` 主体 |
+| 船体亮部 | 暖灰、低饱和白 | 边缘高光 |
+| 主能量 | 蓝紫、青蓝 | `Liquid` / `Core` |
+| 编织能量 | 紫蓝 + 少量星图金 | `Weaving` |
+| 过热警告 | 橙红 | `Overheat` |
+| 受击闪白 | 白色 / 淡青白 | `Hit` |
+
+### 1.9 Unity 导入默认值
+
+| Import Setting | 推荐值 |
 | --- | --- |
-| `Solid` | 不依赖发光也能识别飞船；alpha 干净；避免过多细碎纹理 |
-| `Liquid` | 主要承载能量纹路和状态颜色；适合 Material 改色 |
-| `Highlight` | 高光 / 边缘 / 受击闪白；适合 additive 或 alpha tween |
-| `Core` | 小范围强状态信号；适合低血量 / overheat / weaving pulse |
-| `Back` | 尾部喷口和船后结构；为 Boost 提供视觉锚点 |
-
-### 7.4 验收标准
-
-- 所有层画布尺寸一致。
-- 所有层 pivot 一致。
-- 所有层叠合后与概念图一致。
-- 单独看 `Solid`，飞船仍可读。
-- 单独看 `Liquid / Highlight / Core`，知道它们不是主体，而是叠加层。
+| Texture Type | `Sprite (2D and UI)` |
+| Sprite Mode | `Single` |
+| Pixels Per Unit | 跟当前 `Ship.prefab` 一致，不单独发明 |
+| Mesh Type | `Full Rect` 起步 |
+| Filter Mode | `Bilinear` |
+| Compression | MVP 阶段 `None` 或高质量 |
+| Generate Mip Maps | 关闭 |
+| Alpha Is Transparency | 开启 |
+| Pivot | `Center` |
 
 ---
 
-## 8. Step 5：生产状态 Sprite / Overlay / Mask
+## 2. 第一大阶段：生产主飞船 Sprite
 
-### 8.1 目的
+### 2.0 本阶段目标
 
-为 `Boost / Fire / Hit / Weaving / Overheat` 生产必要的状态图，但避免组合爆炸。
-
-### 8.2 需要产出
-
-#### Boost
+本阶段只解决一个问题：
 
 ```text
-spr_ship_canary_liquid_boost.png
-spr_ship_canary_core_boost.png
-spr_ship_canary_back_boost.png
-tex_boost_trail_main.png
-tex_boost_noise_main.png
+做出金丝雀号在 Normal 状态下的主飞船视觉，并拆成 Unity 可以组合的层。
 ```
 
-#### Fire
+不要在本阶段做 Boost、Hit、Weaving、Overheat。那些是后续状态变体。
+
+### 2.1 主飞船 Normal 的玩家感受
+
+玩家看到 Normal 状态时应该感到：
 
 ```text
-spr_ship_canary_core_firepulse.png
-spr_vfx_muzzle_flash_canary.png
-tex_vfx_muzzle_flash_mask.png
+这是一艘脆弱但可靠的异星探测船，主体是破旧工业金属，内部有神秘星图能量核心。
 ```
 
-#### Hit
+关键词：
+
+- 小型。
+- 旧金属。
+- 明确鼻尖朝向。
+- 中央有能量核心。
+- 不像战斗机那么军用，也不像魔法飞盘。
+
+### 2.2 主飞船 Normal 必须产出的图
+
+第一批必须产出 5 张：
+
+| 编号 | 文件名 | 用途 | 必须做吗 |
+| --- | --- | --- | --- |
+| `1-A` | `spr_ship_canary_solid_normal_albedo.png` | 主体轮廓与金属船壳 | 必须 |
+| `1-B` | `spr_ship_canary_liquid_normal_albedo.png` | 蓝紫能量纹路，不强发光 | 必须 |
+| `1-C` | `spr_ship_canary_highlight_normal_albedo.png` | 边缘高光、金属亮面 | 必须 |
+| `1-D` | `spr_ship_canary_core_normal_albedo.png` | 中央核心底色 | 必须 |
+| `1-E` | `spr_ship_canary_back_normal_albedo.png` | 尾部喷口、后层结构 | 建议 |
+
+第二批可选产出：
+
+| 编号 | 文件名 | 用途 |
+| --- | --- | --- |
+| `1-F` | `tex_ship_canary_solid_normal_normal.png` | 船体凹凸感，可选 |
+| `1-G` | `spr_ship_canary_liquid_normal_emission.png` | Normal 状态能量发光 |
+| `1-H` | `spr_ship_canary_core_normal_emission.png` | 核心弱发光 |
+| `1-I` | `spr_ship_canary_highlight_normal_mask.png` | 后续闪白遮罩 |
+
+### 2.3 1-A：`solid_normal_albedo` 需求
+
+这张图是飞船最重要的一张图。
+
+#### 它要表现什么
+
+- 飞船完整轮廓。
+- 金属船壳。
+- 鼻尖方向。
+- 左右结构。
+- 主要阴影。
+
+#### 它不要表现什么
+
+- 不要画强发光。
+- 不要画尾焰。
+- 不要画受击闪白。
+- 不要把 Bloom 效果画死。
+- 不要把背景星空画进去。
+
+#### 制作方式
+
+1. 用 AI 或手绘得到一张完整飞船概念图。
+2. 把能量线、发光、光环临时关掉或擦掉。
+3. 保留金属主体、轮廓、结构块。
+4. 清理透明边缘。
+5. 导出为 `spr_ship_canary_solid_normal_albedo.png`。
+
+#### 验收标准
+
+- 缩小到 `128 × 128` 仍能看出飞船朝上。
+- 单独显示这张图时，飞船仍然成立。
+- 没有背景像素。
+- 没有强发光画死在主体上。
+
+### 2.4 1-B：`liquid_normal_albedo` 需求
+
+`Liquid` 不是水，它代表“可被状态改变的能量纹路层”。
+
+#### 它要表现什么
+
+- 船体内部或表面的星图能量纹路。
+- 默认状态的低亮度蓝紫色。
+- 可被 Boost / Weaving / Overheat 改色的区域。
+
+#### 它不要表现什么
+
+- 不要覆盖整艘船。
+- 不要遮住 `Solid` 的轮廓。
+- 不要画太亮，Normal 状态应该克制。
+
+#### 制作方式
+
+1. 复制完整飞船概念图。
+2. 只保留能量纹路和液态/星图线条。
+3. 删除金属船体主体。
+4. 把能量纹路调成低亮蓝紫。
+5. 导出透明 PNG。
+
+#### 验收标准
+
+- 单独看这张图时，只能看到能量纹路，不应该是一艘完整飞船。
+- 叠在 `Solid` 上时，能量纹路不遮挡飞船朝向。
+- 后续改成 Boost/Weaving/Overheat 颜色时有足够空间。
+
+### 2.5 1-C：`highlight_normal_albedo` 需求
+
+`Highlight` 用来增强金属边缘、受击闪白、视觉脉冲。
+
+#### 它要表现什么
+
+- 船体边缘高光。
+- 鼻尖、翼尖、金属凸起处的亮线。
+- 可以被 HitFlash 临时增强的区域。
+
+#### 它不要表现什么
+
+- 不要画成完整白色飞船。
+- 不要铺满大面积白色。
+- 不要包含能量核心的大块发光。
+
+#### 制作方式
+
+1. 在 `Solid` 上方新建图层。
+2. 用浅灰/淡青白画出少量边缘高光。
+3. 删除 `Solid` 本体，只保留高光线。
+4. 导出透明 PNG。
+
+#### 验收标准
+
+- 单独看像“高光线稿”，不是完整飞船。
+- 叠上去后飞船更清楚，但不刺眼。
+- 后续 HitFlash 可以把这层临时变白。
+
+### 2.6 1-D：`core_normal_albedo` 需求
+
+`Core` 是玩家判断状态的主要焦点之一。
+
+#### 它要表现什么
+
+- 中央星图核心。
+- 默认状态下的低亮能量点。
+- 后续 Fire / Weaving / Overheat 的状态锚点。
+
+#### 它不要表现什么
+
+- 不要比整艘船还大。
+- 不要做成 UI 图标。
+- 不要强到盖过主体轮廓。
+
+#### 制作方式
+
+1. 在飞船中心选择一个明确区域。
+2. 画核心外壳、内圈、能量点。
+3. 默认状态亮度控制在中低。
+4. 导出透明 PNG。
+
+#### 验收标准
+
+- 叠在飞船上后，玩家能知道“这里是核心”。
+- 不打开 Emission 时也能看见。
+- 不会抢走朝向信息。
+
+### 2.7 1-E：`back_normal_albedo` 需求
+
+`Back` 是 Boost 和尾焰的视觉锚点。
+
+#### 它要表现什么
+
+- 船尾结构。
+- 喷口底座。
+- 后层机械结构。
+
+#### 它不要表现什么
+
+- 不要画持续尾焰。
+- 不要画大面积粒子。
+- 不要和 `Solid` 重复太多。
+
+#### 制作方式
+
+1. 从完整飞船中提取尾部结构。
+2. 如果 `Solid` 已经包含完整尾部，可以只保留喷口和后层装饰。
+3. 导出透明 PNG。
+
+#### 验收标准
+
+- Boost Trail 能从这张图附近自然长出来。
+- 不打开 Boost 时也不突兀。
+- 不遮挡主体。
+
+### 2.8 1-F：`solid_normal_normal` 可选需求
+
+Normal Map 是可选项。第一轮如果没有把握，可以跳过。
+
+#### 它要表现什么
+
+- 船体金属凹凸。
+- 装甲板边缘。
+- 轻微体积感。
+
+#### 推荐工具
+
+- Photoshop Normal Map 插件。
+- Materialize。
+- Krita 法线贴图工具。
+- Unity 中临时用普通 Sprite Lit 材质测试。
+
+#### 验收标准
+
+- 法线不应该让飞船看起来像 3D 塑料玩具。
+- 光照方向变化时只产生轻微体积感。
+- 如果效果不好，宁可不用。
+
+### 2.9 1-G / 1-H：Normal Emission 需求
+
+Emission 是发光贴图。
+
+#### 它要表现什么
+
+- `Liquid` 的低亮能量发光。
+- `Core` 的低亮核心发光。
+
+#### 黑白规则
 
 ```text
-spr_ship_canary_highlight_hitmask.png
-spr_vfx_hit_spark_01.png
-spr_vfx_hit_spark_02.png
+黑色 = 不发光
+彩色 = 发光
+越亮 = 越强
 ```
 
-#### Weaving
+#### 验收标准
 
-```text
-spr_ship_canary_liquid_weaving.png
-spr_ship_canary_core_weaving.png
-spr_ship_canary_aura_weaving.png
-tex_weaving_noise.png
-tex_weaving_ring_mask.png
-```
+- Normal 状态不应该像 Boost。
+- 关闭 Bloom 后，图像仍然可读。
+- 开启 Bloom 后，核心和能量线有轻微呼吸感。
 
-#### Overheat
+### 2.10 本阶段完成标准
 
-```text
-spr_ship_canary_liquid_overheat.png
-spr_ship_canary_core_overheat.png
-tex_overheat_noise.png
-spr_vfx_overheat_spark.png
-```
+只有满足以下条件，才进入 Dodge / Boost 状态生产：
 
-### 8.3 推荐生产方式
-
-| 状态 | 推荐生产方式 |
-| --- | --- |
-| `Boost` | 基于 Normal 的 `Liquid / Back / Core` 改造，不重画整船；尾焰用独立纹理 + Trail / Particle |
-| `Fire` | 不换整船；用 muzzle flash、core pulse、短促 bloom 表达 |
-| `Hit` | 不重画整船；用 `Highlight` 白闪 + HitSpark 粒子 |
-| `Weaving` | 重点做 Aura / Liquid / Core；体现星图符号与紫蓝能量 |
-| `Overheat` | 重点做 Liquid/Core 颜色偏移、火花、热扰动；不让它像受击闪白 |
-
-### 8.4 关键限制
-
-禁止生产这类组合图：
-
-```text
-canary_boost_hit_weaving_overheat.png
-canary_fire_boost_hit.png
-canary_weaving_lowhealth_fire.png
-```
-
-遇到组合状态，使用：
-
-```text
-Base Sprite
-+ Overlay Material
-+ Moment VFX
-+ PostProcess Pulse
-```
-
-### 8.5 验收标准
-
-- 每个状态至少有一个“玩家一眼可见”的视觉信号。
-- 状态之间颜色与形状不混淆。
-- `Hit` 与 `Overheat` 不应都只是红/白闪。
-- `Weaving` 必须和普通 Boost 区分。
-- 状态图不制造组合爆炸。
+- `Solid` 单独可读。
+- `Solid + Liquid + Highlight + Core + Back` 叠合无偏移。
+- 所有图尺寸一致。
+- 所有图 Pivot 一致。
+- 所有图透明边干净。
+- `128 × 128` 缩略预览能看出朝向。
 
 ---
 
-## 9. Step 6：Unity 导入与 Sprite 规范化
+## 3. 第二大阶段：生产 Dodge State
 
-### 9.1 目的
+### 3.0 Dodge State 的定位
 
-把图像资产稳定导入 Unity，避免尺寸、pivot、alpha、压缩设置不一致。
+Dodge 是闪避 / 冲刺瞬间的视觉反馈。它和 Boost 不一样：
 
-### 9.2 推荐目录
+| 状态 | 玩家感受 | 视觉重点 |
+| --- | --- | --- |
+| `Dodge` | 瞬间闪开、短促、轻盈 | 残影、透明、方向拖尾 |
+| `Boost` | 持续推进、速度增强 | 尾焰、能量持续增强 |
 
-新生产的金丝雀号正式资产建议放在：
+Dodge 不应该是一套完整新飞船，而是：
+
+```text
+主飞船 Normal 图
++ Dodge Ghost 残影图
++ 短促高光/透明 Tween
++ 可选小型粒子
+```
+
+### 3.1 Dodge 必须产出的图
+
+| 编号 | 文件名 | 用途 | 必须做吗 |
+| --- | --- | --- | --- |
+| `2-A` | `spr_ship_canary_dodgeghost_dodge_albedo.png` | Dodge 静态残影 | 必须 |
+| `2-B` | `spr_ship_canary_dodgeghost_dodge_mask.png` | 控制残影透明/溶解 | 建议 |
+| `2-C` | `spr_ship_canary_highlight_dodge_albedo.png` | Dodge 瞬间高光 | 建议 |
+| `2-D` | `spr_vfx_canary_dodge_streak_01.png` | 小型速度线 | 可选 |
+
+### 3.2 2-A：`dodgeghost_dodge_albedo` 需求
+
+这是 Dodge 最核心的图。
+
+#### 它要表现什么
+
+- 飞船轮廓的残影。
+- 颜色偏淡青/蓝紫。
+- 透明感。
+- 比主飞船更虚、更轻。
+
+#### 它不要表现什么
+
+- 不要比主飞船更实。
+- 不要包含复杂金属细节。
+- 不要有尾焰持续效果。
+- 不要有完整背景拖尾。
+
+#### 制作方式
+
+1. 复制 `spr_ship_canary_solid_normal_albedo.png`。
+2. 降低细节：模糊或淡化金属纹理。
+3. 统一染成淡青蓝或淡紫蓝。
+4. Alpha 降低到约 35%-55%。
+5. 保留清晰轮廓，删除过细小结构。
+6. 导出为 `spr_ship_canary_dodgeghost_dodge_albedo.png`。
+
+#### 验收标准
+
+- 一眼能看出是飞船残影。
+- 不会被误认为当前实体船体。
+- 在深色背景上可见，在亮色背景上不刺眼。
+- 连续生成 3 个残影时画面不糊。
+
+### 3.3 2-B：`dodgeghost_dodge_mask` 需求
+
+Mask 用来控制残影从前到后逐渐消失。
+
+#### 它要表现什么
+
+- 白色区域：残影保留更久。
+- 黑色区域：残影更快消失。
+- 推荐鼻尖偏白，尾部偏灰黑，让残影向后散掉。
+
+#### 制作方式
+
+1. 复制 Dodge Ghost 轮廓。
+2. 转成灰度。
+3. 鼻尖和核心区域保持亮。
+4. 翼尖和尾部做灰黑渐变。
+5. 导出为 `spr_ship_canary_dodgeghost_dodge_mask.png`。
+
+#### 验收标准
+
+- 单独看是黑白/灰度图。
+- 没有彩色信息。
+- 用它做透明渐隐时，残影消失方向自然。
+
+### 3.4 2-C：`highlight_dodge_albedo` 需求
+
+Dodge 高光用于闪避开始的一瞬间。
+
+#### 它要表现什么
+
+- 鼻尖和翼缘的短促亮线。
+- 类似“瞬间折光”。
+- 只出现 0.05-0.15 秒。
+
+#### 制作方式
+
+1. 复制 `highlight_normal_albedo`。
+2. 提高亮度。
+3. 删除不必要的内部细节，只保留外缘和方向感。
+4. 颜色用淡青白。
+
+#### 验收标准
+
+- 单帧出现时玩家能感觉“闪了一下”。
+- 不会被误认为受击白闪。
+- 面积小于 HitFlash。
+
+### 3.5 Dodge Runtime 表现需求
+
+Dodge 不只是图，还需要播放方式。
+
+建议表现：
+
+```text
+Dodge start:
+  主船轻微透明 0.08s
+  生成 2-3 个 Dodge Ghost
+  Highlight 快速闪一下
+Dodge sustain:
+  Ghost 向相反方向淡出
+Dodge end:
+  主船恢复正常 alpha
+```
+
+### 3.6 Dodge 验收标准
+
+- 按下 Dodge 的瞬间，玩家能感觉“短促闪开”。
+- Dodge 和 Boost 一眼不同。
+- Dodge Ghost 不遮挡子弹和敌人。
+- 快速连续 Dodge 不残留残影 alpha / scale / color。
+- Debug 关闭后，正式 Runtime 仍由 `ShipDashVisuals` / `DashAfterImageSpawner` 驱动。
+
+---
+
+## 4. 第三大阶段：生产 Boost State
+
+### 4.0 Boost State 的定位
+
+Boost 是持续推进，不是短闪。
+
+玩家感受：
+
+```text
+飞船引擎真正启动，能量从核心流向尾部，速度持续上升。
+```
+
+### 4.1 Boost 必须产出的图
+
+| 编号 | 文件名 | 用途 | 必须做吗 |
+| --- | --- | --- | --- |
+| `3-A` | `spr_ship_canary_liquid_boost_albedo.png` | Boost 能量纹路底色 | 必须 |
+| `3-B` | `spr_ship_canary_liquid_boost_emission.png` | Boost 能量发光 | 必须 |
+| `3-C` | `spr_ship_canary_core_boost_emission.png` | Boost 核心增强 | 必须 |
+| `3-D` | `spr_ship_canary_back_boost_albedo.png` | Boost 喷口增强 | 建议 |
+| `3-E` | `tex_boost_trail_main_albedo.png` | 主尾迹贴图 | 已有可调 |
+| `3-F` | `tex_boost_trail_noise_mask.png` | 尾迹噪声/流动遮罩 | 建议 |
+
+### 4.2 Boost 图像需求
+
+#### `liquid_boost_albedo`
+
+- 基于 `liquid_normal_albedo` 修改。
+- 颜色更亮、更偏青蓝。
+- 纹路可以略微变粗。
+- 不要覆盖主体轮廓。
+
+#### `liquid_boost_emission`
+
+- 发光区域和 `liquid_boost_albedo` 对齐。
+- 比 Normal emission 明显更亮。
+- 保持能量从核心向尾部流动的方向感。
+
+#### `core_boost_emission`
+
+- 核心亮度明显增强。
+- 可以增加内圈或脉冲环。
+- 不要做成爆炸。
+
+#### `back_boost_albedo`
+
+- 喷口结构更亮或展开。
+- 可以加入小型蓝白热区。
+- 不画长尾焰，长尾焰交给 `BoostTrailRoot`。
+
+### 4.3 Boost 运行表现需求
+
+```text
+Boost start:
+  Core emission 0.12s 内冲高
+  Liquid emission 增强
+  BoostTrailRoot FlameCore burst
+  Bloom 短促增强
+Boost sustain:
+  Trail 保持
+  Liquid/Core 轻微 pulse
+Boost end:
+  Trail fade
+  Core/Liquid 回到 Normal
+```
+
+### 4.4 Boost 验收标准
+
+- Boost 和 Dodge 一眼不同：Boost 是持续推进，Dodge 是短残影。
+- 不看 UI 也能感到速度提高。
+- 关闭 Bloom 后仍能看出 Boost 状态。
+- 结束 Boost 后所有强度回到 Normal。
+
+---
+
+## 5. 第四大阶段：生产 Fire State
+
+### 5.0 Fire State 的定位
+
+Fire 是开火瞬间反馈，不应该替换整艘飞船。
+
+玩家感受：
+
+```text
+核心供能，武器吐出短促亮光，飞船有一点反冲感。
+```
+
+### 5.1 Fire 必须产出的图
+
+| 编号 | 文件名 | 用途 | 必须做吗 |
+| --- | --- | --- | --- |
+| `4-A` | `spr_ship_canary_core_fire_emission.png` | 开火时核心脉冲 | 必须 |
+| `4-B` | `spr_vfx_canary_muzzle_flash_01.png` | 枪口闪光 | 必须 |
+| `4-C` | `spr_vfx_canary_muzzle_flash_mask.png` | 枪口闪光遮罩 | 建议 |
+| `4-D` | `spr_vfx_canary_muzzle_spark_01.png` | 小火花 | 可选 |
+
+### 5.2 Fire 图像需求
+
+#### `core_fire_emission`
+
+- 基于 `core_normal_albedo` 或 `core_normal_emission`。
+- 亮度短促增强。
+- 可以加入向武器方向的小能量线。
+- 不要和 Weaving 的持续大光环混淆。
+
+#### `muzzle_flash_01`
+
+- 形状短、尖、亮。
+- 颜色可用淡蓝白或武器家族色。
+- 背景透明。
+- 中心亮，边缘透明。
+
+### 5.3 Fire 运行表现需求
+
+```text
+Weapon fired:
+  MuzzleFlash 播放 0.05-0.10s
+  Core emission pulse 0.08-0.15s
+  飞船轻微 recoil / squash
+  可选小火花
+```
+
+### 5.4 Fire 验收标准
+
+- 每次开火都有短促反馈。
+- 连射时不会把屏幕刷白。
+- Fire 不改变飞船主体轮廓。
+- Fire 和 Hit 不混淆。
+
+---
+
+## 6. 第五大阶段：生产 Hit State
+
+### 6.0 Hit State 的定位
+
+Hit 是受击反馈，要短、明确、危险。
+
+玩家感受：
+
+```text
+我被打中了，飞船受到了冲击，但还没有进入死亡状态。
+```
+
+### 6.1 Hit 必须产出的图
+
+| 编号 | 文件名 | 用途 | 必须做吗 |
+| --- | --- | --- | --- |
+| `5-A` | `spr_ship_canary_highlight_hit_mask.png` | 船体闪白遮罩 | 必须 |
+| `5-B` | `spr_vfx_canary_hit_spark_01.png` | 受击火花 1 | 必须 |
+| `5-C` | `spr_vfx_canary_hit_spark_02.png` | 受击火花 2 | 建议 |
+| `5-D` | `spr_ship_canary_core_lowhealth_emission.png` | 低血量核心警告 | 第二批 |
+
+### 6.2 Hit 图像需求
+
+#### `highlight_hit_mask`
+
+- 白色区域是受击闪白区域。
+- 优先覆盖 `Solid` 外缘、翼尖、核心附近。
+- 不要把整张图填满纯白。
+
+#### `hit_spark_01 / 02`
+
+- 小而亮。
+- 方向可以有尖刺感。
+- 颜色可用白、黄、淡蓝。
+- 单个火花不超过飞船长度的 25%。
+
+### 6.3 Hit 运行表现需求
+
+```text
+DamageTaken:
+  ShipHitVisuals 触发 0.06-0.12s 白闪
+  生成 3-8 个 HitSpark
+  Camera impulse / HitStop
+  i-frame 时可轻微闪烁
+```
+
+### 6.4 Hit 验收标准
+
+- 受击瞬间足够明确。
+- 不是持续红色警告，那属于 Overheat / LowHealth。
+- 连续受击不会残留白闪。
+- 火花使用对象池，回收时重置颜色、alpha、scale、particle emission。
+
+---
+
+## 7. 第六大阶段：生产 Weaving State
+
+### 7.0 Weaving State 的定位
+
+Weaving 是星图编织态，应该比 Boost 更神秘、更仪式化。
+
+玩家感受：
+
+```text
+飞船正在和星图结构连接，能量从核心向外展开，世界进入短暂的编织状态。
+```
+
+### 7.1 Weaving 必须产出的图
+
+| 编号 | 文件名 | 用途 | 必须做吗 |
+| --- | --- | --- | --- |
+| `6-A` | `spr_ship_canary_liquid_weaving_albedo.png` | 编织态能量纹路 | 必须 |
+| `6-B` | `spr_ship_canary_liquid_weaving_emission.png` | 编织态发光纹路 | 必须 |
+| `6-C` | `spr_ship_canary_core_weaving_emission.png` | 核心展开光 | 必须 |
+| `6-D` | `spr_ship_canary_aura_weaving_emission.png` | 外圈光环 | 必须 |
+| `6-E` | `tex_ship_canary_weaving_ring_mask.png` | 光环遮罩 | 建议 |
+| `6-F` | `tex_ship_canary_weaving_noise_mask.png` | 能量流动噪声 | 建议 |
+
+### 7.2 Weaving 图像需求
+
+#### `liquid_weaving_albedo / emission`
+
+- 基于 Normal Liquid 修改。
+- 颜色偏紫蓝，可以加入少量星图金。
+- 纹路更像符号、线路、星图轨迹。
+- 不要像 Boost 那样只强调尾部推进。
+
+#### `core_weaving_emission`
+
+- 核心像被打开。
+- 可以有圆环、星点、符号感。
+- 亮度高于 Normal，但不必像爆炸。
+
+#### `aura_weaving_emission`
+
+- 飞船外部的能量环。
+- 面积可以比飞船大，但透明度要低。
+- 不遮挡敌人和弹幕。
+
+### 7.3 Weaving 运行表现需求
+
+```text
+Weaving enter:
+  Aura 从 0 放大到目标大小
+  Core emission pulse
+  Liquid 切到 weaving 材质/贴图
+  轻微 postprocess pulse
+Weaving sustain:
+  Aura 慢速呼吸
+  Liquid UV / emission 轻微流动
+Weaving exit:
+  Aura 收束或淡出
+  Liquid/Core 回 Normal
+```
+
+### 7.4 Weaving 验收标准
+
+- Weaving 和 Boost 明显不同。
+- Weaving 有“星图连接”的感觉。
+- 光环不遮挡 gameplay。
+- 退出后没有后处理残留。
+
+---
+
+## 8. 第七大阶段：生产 Overheat State
+
+### 8.0 Overheat State 的定位
+
+Overheat 是热量危险提示，不是普通受击。
+
+玩家感受：
+
+```text
+飞船系统正在过载，如果继续输出会付出代价。
+```
+
+### 8.1 Overheat 必须产出的图
+
+| 编号 | 文件名 | 用途 | 必须做吗 |
+| --- | --- | --- | --- |
+| `7-A` | `spr_ship_canary_liquid_overheat_albedo.png` | 过热能量纹路 | 必须 |
+| `7-B` | `spr_ship_canary_liquid_overheat_emission.png` | 橙红过热发光 | 必须 |
+| `7-C` | `spr_ship_canary_core_overheat_emission.png` | 核心过载 | 必须 |
+| `7-D` | `tex_ship_canary_overheat_noise_mask.png` | 热扰动噪声 | 建议 |
+| `7-E` | `spr_vfx_canary_overheat_spark_01.png` | 过热火花 | 建议 |
+
+### 8.2 Overheat 图像需求
+
+- 颜色从蓝紫转为橙红。
+- 核心区域最危险。
+- 纹路可以不稳定、断裂、抖动感。
+- 不要做成 Hit 的白闪。
+- 不要让整艘船常驻纯红，避免视觉疲劳。
+
+### 8.3 Overheat 运行表现需求
+
+```text
+Heat rising:
+  Liquid 逐渐偏橙
+  Core pulse 频率提高
+Overheat start:
+  橙红 emission burst
+  火花出现
+  轻微 vignette / camera tension
+Overheat recover:
+  颜色从橙红回到蓝紫
+  火花停止
+```
+
+### 8.4 Overheat 验收标准
+
+- 不看 UI 也能感到危险正在升高。
+- Overheat 和 Hit 不混淆。
+- 恢复后颜色、发光、火花全部复位。
+- 不污染 authored Material / ScriptableObject。
+
+---
+
+## 9. 第八大阶段：Unity 接入
+
+### 9.1 目录放置
+
+主飞船资产建议：
 
 ```text
 Assets/_Art/Ship/Canary/
 ├── Source/
 │   ├── Concepts/
 │   ├── Layered/
-│   └── Exports/
+│   └── AI_Raw/
 ├── Sprites/
 │   ├── Solid/
 │   ├── Liquid/
 │   ├── Highlight/
 │   ├── Core/
 │   ├── Back/
+│   ├── DodgeGhost/
 │   └── Aura/
+├── Textures/
+│   ├── Masks/
+│   ├── Emission/
+│   └── Normal/
 ├── Materials/
-├── Shaders/
-└── Textures/
+└── Shaders/
 ```
 
-Boost / 通用 VFX 继续遵守现役路径：
+BoostTrail 仍遵守现役路径：
 
 ```text
 Assets/_Art/VFX/BoostTrail/
@@ -479,189 +921,97 @@ Assets/_Art/VFX/BoostTrail/
 └── Textures/
 ```
 
-### 9.3 Import Settings 建议
+### 9.2 导入检查清单
 
-| 设置 | 推荐值 |
+每张 Sprite 导入后检查：
+
+- Texture Type 是 `Sprite (2D and UI)`。
+- Sprite Mode 是 `Single`。
+- Pivot 是 `Center`。
+- 尺寸没有被 Unity 自动压缩糊掉。
+- Alpha 边缘干净。
+- 所有层叠合无偏移。
+
+### 9.3 接入现役节点
+
+| 资产 | 接入节点 |
 | --- | --- |
-| Texture Type | `Sprite (2D and UI)` |
-| Sprite Mode | `Single`，除非是 spritesheet |
-| Pixels Per Unit | 与当前飞船主链一致，不独立发明 |
-| Mesh Type | `Full Rect` 优先，若需要贴合轮廓再考虑 `Tight` |
-| Filter Mode | 非像素风使用 `Bilinear` |
-| Compression | 初期 `None` 或高质量；后期统一优化 |
-| Generate Mip Maps | 2D Sprite 通常关闭 |
-| Alpha Is Transparency | 开启 |
-| Pivot | 所有层一致 |
+| `solid_*` | `Ship_Sprite_Solid` |
+| `liquid_*` | `Ship_Sprite_Liquid` |
+| `highlight_*` | `Ship_Sprite_HL` |
+| `core_*` | `Ship_Sprite_Core` |
+| `back_*` | `Ship_Sprite_Back` |
+| `dodgeghost_*` | `Dodge_Sprite` / `DashAfterImageSpawner` |
+| `aura_weaving_*` | 新增前先确认是否作为 VFX Prefab，而不是改 `ShipVisual` 主层 |
 
-### 9.4 推荐生产方式
+### 9.4 接入约束
 
-- 用 Unity Editor 批量检查导入设置。
-- 若资产数量增加，写 Editor 工具统一设置，不手工逐个点。
-- 不手写 `.meta`，让 Unity 自动生成 GUID。
-- 若需要替换现役 Sprite，必须先确认 `AssetRegistry` 中 owner 与状态。
-
-### 9.5 验收标准
-
-- 所有 Sprite 在场景中叠合无偏移。
-- 不出现透明边脏色或黑边。
-- Pivot 统一。
-- Sorting 后叠层顺序正确。
-- 关闭材质 / Shader 特效后，基础 Sprite 仍可读。
+- 不在 Scene 实例上长期修 `ShipVisual`。
+- 不新增第二套飞船视觉根节点。
+- 不让 Runtime fallback 自动修资产。
+- 若要新增节点，先更新 `CanonicalSpec` / `AssetRegistry`。
+- Debug 工具只 preview，不接管正式链。
 
 ---
 
-## 10. Step 7：接入 `Ship.prefab` 多层视觉骨架
+## 10. 第九大阶段：Material / Shader 生产
 
-### 10.1 目的
+### 10.1 第一批 Material
 
-把生产好的 Sprite 接入现役 `Ship.prefab` 主链，而不是手工在场景里临时拼一个新飞船。
-
-### 10.2 现役权威
-
-| 对象 | 权威入口 |
-| --- | --- |
-| `Ship.prefab` 结构 | `ShipPrefabRebuilder` |
-| `BoostTrailRoot.prefab` 结构 | `BoostTrailPrefabCreator` |
-| scene-only Bloom 绑定 | `ShipBoostTrailSceneBinder` |
-| BoostTrail 材质贴图回填 | `MaterialTextureLinker` |
-| 只读审计 | `ShipVfxValidator` |
-
-### 10.3 需要产出
-
-- 新 Sprite 已分配到对应 `SpriteRenderer` 或 `ShipJuiceSettingsSO` 字段。
-- `Ship.prefab` 仍保持现役 `ShipVisual` 结构。
-- 若新增层，必须先决定它属于现役哪个节点，还是需要正式扩展 prefab 结构。
-- 若扩展结构，必须同步更新 `CanonicalSpec` / `AssetRegistry`。
-
-### 10.4 推荐生产方式
-
-- 不在 Scene 实例上长期覆盖 `ShipVisual` 子节点。
-- 不让 Runtime fallback 自动找 Sprite 或自动修 Prefab。
-- 若需要批量接入 Sprite，优先扩展 Editor 工具，且工具必须是显式 Apply。
-- 接入后运行 `ShipVfxValidator`。
-
-### 10.5 验收标准
-
-- `Ship.prefab` 中 `ShipView._boostTrailView` 指向 nested `BoostTrailRoot`。
-- `BoostTrailRoot.prefab` 内部结构未被 `ShipPrefabRebuilder` 越权改写。
-- `BoostTrailView._boostBloomVolume` 在 prefab 中保持空引用，只由 scene binder 绑定。
-- Debug 工具关闭时，正式 Runtime 链仍能工作。
-
----
-
-## 11. Step 8：建立 Material / Shader 基础库
-
-### 11.1 目的
-
-把状态差异从“重画图片”转成“少量 Shader + 多个 Material 参数变体”。
-
-### 11.2 推荐 Shader 分类
-
-第一批只做少量通用 Shader：
-
-| Shader | 用途 | 优先级 |
+| 编号 | Material 名 | 使用贴图 |
 | --- | --- | --- |
-| `ShipEnergyPulse` | Liquid / Core 能量脉冲 | 高 |
-| `ShipHighlightFlash` | 受击闪白 / 高光闪烁 | 高 |
-| `AdditiveGlow` | Aura / Muzzle / Engine glow | 高 |
-| `BoostTrailMain` | 主 Boost Trail | 已有现役基础 |
-| `BoostEnergyLayer` | Boost 能量噪声层 | 已有现役基础 |
-| `DissolveOrOverheat` | 过热 / 破损 / 死亡预备 | 中 |
-| `DistortionPulse` | Weaving / Overheat 空间扰动 | 中 |
+| `M-1` | `mat_ship_canary_solid_default` | `solid_normal_albedo`，可选 normal |
+| `M-2` | `mat_ship_canary_liquid_normal` | `liquid_normal_albedo + emission` |
+| `M-3` | `mat_ship_canary_liquid_boost` | `liquid_boost_albedo + emission` |
+| `M-4` | `mat_ship_canary_liquid_weaving` | `liquid_weaving_albedo + emission + noise` |
+| `M-5` | `mat_ship_canary_liquid_overheat` | `liquid_overheat_albedo + emission + noise` |
+| `M-6` | `mat_ship_canary_highlight_default` | `highlight_normal_albedo` |
+| `M-7` | `mat_ship_canary_highlight_hitflash` | `highlight_hit_mask` |
+| `M-8` | `mat_ship_canary_core_default` | `core_normal_albedo + emission` |
+| `M-9` | `mat_ship_canary_dodgeghost` | `dodgeghost_dodge_albedo + mask` |
+| `M-10` | `mat_ship_canary_weaving_aura` | `aura_weaving_emission + ring mask` |
 
-### 11.3 推荐 Material 变体
+### 10.2 第一批 Shader
 
-```text
-mat_ship_canary_solid_default
-mat_ship_canary_liquid_default
-mat_ship_canary_liquid_boost
-mat_ship_canary_liquid_weaving
-mat_ship_canary_liquid_overheat
-mat_ship_canary_highlight_default
-mat_ship_canary_highlight_hitflash
-mat_ship_canary_core_default
-mat_ship_canary_core_weaving
-mat_ship_canary_core_overheat
-mat_vfx_canary_muzzle_flash
-mat_vfx_canary_weaving_aura
-```
+第一轮只需要少量通用 Shader：
 
-### 11.4 Shader / Material 分工
+| Shader | 用途 |
+| --- | --- |
+| `ShipEnergyPulse` | Liquid/Core 发光脉冲 |
+| `ShipHighlightFlash` | HitFlash / DodgeFlash |
+| `AdditiveGlow` | Aura / Muzzle / Spark |
+| `BoostTrailMain` | 现役 BoostTrail |
+| `DissolveFade` | DodgeGhost / Death 预备 |
+
+### 10.3 材质与 Shader 分工
 
 ```text
-Shader   = 渲染算法
-Material = 参数资产
-Runtime  = 状态驱动
+Shader = 算法
+Material = 参数
+Sprite/Texture = 图像内容
+Runtime = 什么时候切换、什么时候 tween
 ```
 
-#### 放进 Shader 的内容
-
-- UV 流动。
-- 噪声采样。
-- Additive 混合。
-- 溶解算法。
-- 扭曲算法。
-- 边缘发光计算。
-
-#### 放进 Material 的内容
-
-- 颜色。
-- 亮度。
-- 透明度。
-- 主贴图。
-- 噪声贴图。
-- 流动速度。
-- 发光强度。
-- 扭曲强度。
-
-### 11.5 推荐生产方式
-
-- 初期优先 Shader Graph 或简单 HLSL，避免一次写复杂 Uber Shader。
-- Shader 参数命名统一使用英文，例如 `_TintColor`、`_Intensity`、`_PulseSpeed`、`_DistortionStrength`。
-- Runtime 单对象变化优先使用 Material 实例或 `MaterialPropertyBlock`，不要污染 shared material。
-- `MaterialTextureLinker` 只维护现役 BoostTrail 材质贴图，不把它扩成全项目兜底工具。
-
-### 11.6 验收标准
-
-- 不为每个状态写独立 Shader。
-- Material 变体能解释状态差异。
-- Runtime 不修改 authored Material 资产。
-- 关闭 Bloom 后，材质效果仍可读。
-- Shader 出错时不会让飞船主体完全不可见。
+运行时不要修改 authored Material。单对象变化使用 Material 实例或 `MaterialPropertyBlock`。
 
 ---
 
-## 12. Step 9：制作核心 VFX Prefab
+## 11. 第十大阶段：VFX Prefab 生产
 
-### 12.1 目的
+### 11.1 第一批 VFX Prefab
 
-把高频战斗反馈做成可复用、可池化、可复位的 VFX Prefab。
-
-### 12.2 第一批 VFX
-
-| VFX | 目的 | 推荐实现 | MVP |
+| 编号 | Prefab | 需要的图 | 对象池 |
 | --- | --- | --- | --- |
-| `EngineIdleVFX` | 默认推进器微光 | Sprite / Particle | 是 |
-| `BoostSustainVFX` | Boost 持续尾焰 | `BoostTrailRoot` 现役链 | 是 |
-| `BoostBurstVFX` | Boost 起步爆发 | FlameCore + Bloom burst | 是 |
-| `MuzzleFlashVFX` | 开火瞬间 | SpriteRenderer / ParticleSystem | 是 |
-| `HitSparkVFX` | 受击火花 | Pooled ParticleSystem | 是 |
-| `HitFlash` | 船体闪白 | `ShipHitVisuals` | 是 |
-| `WeavingAuraVFX` | 编织态能量环 | Sprite + Additive Material + Tween | 是 |
-| `OverheatWarningVFX` | 过热警告 | Spark + color pulse + vignette | 第二批 |
-| `DeathExplosionVFX` | 死亡爆炸 | Pooled particles + fragments | 第二批 |
+| `VFX-1` | `DodgeGhostVFX` | `dodgeghost_dodge_albedo + mask` | 是 |
+| `VFX-2` | `MuzzleFlashVFX` | `muzzle_flash_01` | 是 |
+| `VFX-3` | `HitSparkVFX` | `hit_spark_01/02` | 是 |
+| `VFX-4` | `WeavingAuraVFX` | `aura_weaving_emission` | 可池化 |
+| `VFX-5` | `OverheatSparkVFX` | `overheat_spark_01` | 是 |
+| `VFX-6` | `BoostTrailRoot` | 现役 BoostTrail 贴图 | 已有现役链 |
 
-### 12.3 推荐生产方式
+### 11.2 对象池复位清单
 
-- 高频 VFX 必须对象池化。
-- Sprite VFX 使用 spritesheet 或单张 additive sprite。
-- 粒子 VFX 使用独立 Prefab，不在战斗中 `Instantiate / Destroy`。
-- Trail VFX 回收时必须清空 Trail 状态。
-- 每个 VFX Prefab 必须有清楚 owner：Runtime、Prefab Creator、Debug Preview 不能混在一起。
-
-### 12.4 对象池复位清单
-
-每个池化 VFX 回收时至少重置：
+每个 VFX 回池时必须重置：
 
 1. 运行时字段。
 2. 事件订阅。
@@ -669,442 +1019,175 @@ Runtime  = 状态驱动
 4. Transform：position / rotation / scale。
 5. 视觉状态：color / alpha / material parameters / trail / particle emission。
 
-### 12.5 验收标准
-
-- 重复播放 20 次没有颜色、alpha、scale、trail 残留。
-- VFX 关闭后飞船主体仍然可读。
-- 高频 VFX 不在战斗中 `Instantiate / Destroy`。
-- 缺关键引用时有报错或 validator 抓到，不 silent no-op。
-
 ---
 
-## 13. Step 10：接入 Runtime 状态驱动
+## 12. 第十一大阶段：测试场景与验收
 
-### 13.1 目的
+### 12.1 必须建立的检查方式
 
-让飞船视觉由正式游戏状态驱动，而不是手动切图或 Debug 面板接管。
-
-### 13.2 当前 Runtime 主链
+即使没有正式测试场景，也要能做到：
 
 ```text
-ShipStateController / ShipBoost / ShipHealth / ShipMotor
-→ ShipView
-→ ShipBoostVisuals / ShipHitVisuals / ShipDashVisuals / ShipVisualJuice
-→ BoostTrailView / DashAfterImageSpawner
-→ SpriteRenderer / Material / Trail / Particle / Bloom
+一键显示 Normal
+一键显示 Dodge
+一键显示 Boost
+一键显示 Fire
+一键显示 Hit
+一键显示 Weaving
+一键显示 Overheat
+一键切换黑/白/深蓝背景
+一键关闭 Bloom
 ```
 
-### 13.3 状态到表现的推荐映射
+### 12.2 新手验收流程
 
-| 输入事件 / 状态 | Runtime owner | 视觉输出 |
-| --- | --- | --- |
-| `ShipStateController.OnStateChanged` | `ShipView` | 分发状态变化 |
-| Boost start / sustain / end | `ShipBoostVisuals` + `BoostTrailView` | Liquid swap、HDR tween、trail ramp、Bloom burst |
-| `ShipHealth.OnDamageTaken` | `ShipHitVisuals` | 白闪、i-frame flicker、低血量 core pulse |
-| `ShipMotor.OnSpeedChanged` | `ShipVisualJuice` | tilt、squash、stretch |
-| Dash start | `ShipDashVisuals` | ghost、afterimage、i-frame visual |
-| Weapon fire | 待正式接入 `CombatEvents.OnWeaponFired` | muzzle flash、core pulse、短促 recoil |
-| Weaving enter / exit | 待正式接入 Weaving 状态事件 | aura、energy pulse、postprocess pulse |
-| Overheat | 待正式接入 `HeatSystem` 事件 | overheat material、spark、vignette |
+每生产一张图，都按这个流程检查：
 
-### 13.4 需要产出
+1. 放到黑色背景上看。
+2. 放到白色背景上看。
+3. 缩小到 `128 × 128` 看。
+4. 和其他层叠起来看。
+5. 在 Unity 中看。
+6. 关闭 Bloom 看。
+7. 打开 Bloom 看。
+8. 快速切状态 10 次，看有没有残留。
 
-- 状态事件源列表。
-- 每个状态的 Runtime owner。
-- 每个 owner 只做一件事。
-- 若新增 Worker，更新 `CanonicalSpec` 与 `AssetRegistry`。
+### 12.3 状态最终验收表
 
-### 13.5 推荐生产方式
-
-- 新视觉状态优先扩展现有 Worker，不直接让业务系统改 SpriteRenderer。
-- `ShipHealth`、`HeatSystem`、`StarChartController` 只发事件或暴露状态，不直接操作视觉。
-- 视觉参数放入 SO 或 Material，不 hardcode 在 MonoBehaviour 中。
-- 不使用 `FindObjectOfType` / `GameObject.Find` 运行时查找。
-
-### 13.6 验收标准
-
-- Debug 关闭后，Play Mode 中状态变化能自动驱动画面。
-- 游戏逻辑系统不直接持有具体 VFX 子节点引用。
-- 缺引用时响亮失败。
-- Runtime 不修资产、不回写 SO、不污染 shared material。
-
----
-
-## 14. Step 11：加入 Animator / PrimeTween 过渡
-
-### 14.1 目的
-
-让状态变化有节奏，而不是硬切。
-
-### 14.2 分工原则
-
-| 类型 | 推荐实现 |
+| 状态 | 必须证明什么 |
 | --- | --- |
-| 循环 Sprite frame | Animator |
-| 爆炸序列 | Animator / ParticleSystem |
-| 短促闪白 | PrimeTween |
-| alpha 淡入淡出 | PrimeTween |
-| scale pulse | PrimeTween |
-| material intensity | PrimeTween / MaterialPropertyBlock |
-| Boost ramp | PrimeTween |
-| Aura breathing | PrimeTween 或 Shader 时间参数 |
+| `Normal` | 飞船主体清楚，朝向清楚 |
+| `Dodge` | 短促残影，不像 Boost |
+| `Boost` | 持续推进，不像 Dodge |
+| `Fire` | 开火短反馈，不改主体 |
+| `Hit` | 受击明确，不像 Overheat |
+| `Weaving` | 星图感、仪式感，和 Boost 不同 |
+| `Overheat` | 危险升温，不只是红色 UI |
 
-### 14.3 不推荐做法
+---
 
-不要把所有组合状态塞进 Animator Controller：
+## 13. 推荐执行顺序
+
+### Batch 1：只做主飞船 Normal
+
+产出：
 
 ```text
-Normal
-Boost
-BoostFire
-BoostHit
-BoostWeaving
-BoostWeavingHit
-OverheatBoostFire
-...
+spr_ship_canary_solid_normal_albedo.png
+spr_ship_canary_liquid_normal_albedo.png
+spr_ship_canary_highlight_normal_albedo.png
+spr_ship_canary_core_normal_albedo.png
+spr_ship_canary_back_normal_albedo.png
 ```
 
-这会导致状态机爆炸。
+完成标准：五层叠合可读，`Solid` 单独可读。
 
-### 14.4 推荐生产方式
+### Batch 2：做 Dodge
 
-- Animator 只负责真正的帧动画。
-- 状态进入 / 退出用 PrimeTween 做短过渡。
-- 所有 Tween 必须可取消、可复位，避免状态切换后残留。
-- 新代码优先 UniTask / PrimeTween，不新增 Coroutine。
-
-### 14.5 验收标准
-
-- Boost 进入 / 退出有 100-200ms 过渡。
-- HitFlash 短促明确，不拖泥带水。
-- Weaving Aura 展开与收束可感知。
-- Overheat 升温有渐进提示。
-- 快速连续切状态不会残留 alpha / scale / material 参数。
-
----
-
-## 15. Step 12：加入 Bloom / PostProcess / Camera Juice
-
-### 15.1 目的
-
-让飞船 VFX 融入整体画面，但不依赖 Bloom 掩盖基础资产问题。
-
-### 15.2 推荐顺序
+产出：
 
 ```text
-先验证 Sprite 可读
-再验证 Material / Shader
-再加 Bloom
-最后加 Camera / PostProcess pulse
+spr_ship_canary_dodgeghost_dodge_albedo.png
+spr_ship_canary_dodgeghost_dodge_mask.png
+spr_ship_canary_highlight_dodge_albedo.png
 ```
 
-### 15.3 推荐表现层
+完成标准：能在 Play Mode 中看到短促残影。
 
-| 状态 | Bloom | PostProcess | Camera |
-| --- | --- | --- | --- |
-| `Normal` | 低 | 默认 | 无 |
-| `Boost` | 短 burst + sustain glow | 轻微色彩增强 | 轻微 impulse |
-| `Fire` | muzzle flash 短亮 | 无或极轻 | 小 recoil shake |
-| `Hit` | 白闪辅助 | 轻微 vignette / chromatic | 短 shake + hitstop |
-| `Weaving` | 紫蓝 aura glow | 轻微 chromatic / color shift | 低频脉冲 |
-| `Overheat` | 橙红 pulse | vignette / heat tint | 紧张抖动 |
-| `Death` | 强 burst | 短冲击 | 明确 shake |
+### Batch 3：做 Boost
 
-### 15.4 需要产出
-
-- `BoostBloomVolumeProfile` 现役 profile 维护。
-- 状态 → 后处理参数表。
-- Camera impulse 强度表。
-- Bloom 开关前后截图对比。
-
-### 15.5 推荐生产方式
-
-- 不让每个 VFX 自己随便改全局 Volume。
-- PostProcess 应有统一 owner 或明确场景级控制器。
-- 先做状态视觉，再做全屏效果。
-- Bloom 强度必须服务可读性，不让主体轮廓糊掉。
-
-### 15.6 验收标准
-
-- Bloom 开启后主体轮廓仍清楚。
-- 不同状态的屏幕反馈层级不同。
-- 反馈不遮挡敌人攻击和弹幕。
-- PostProcess 不是永久污染，退出状态会恢复。
-
----
-
-## 16. Step 13：建立测试场景与调试面板
-
-### 16.1 目的
-
-让每次新 Sprite / Material / VFX 都能在 2 分钟内进 Play Mode 验证。
-
-### 16.2 推荐测试场景
+产出：
 
 ```text
-ShipVfxTestRoom
-├── NeutralBackground
-├── DarkBackground
-├── BrightBackground
-├── BulletReadabilityLayer
-├── EnemyDummy
-├── ProjectileDummy
-├── Ship Instance
-├── VFX Test Controls
-└── PostProcess Toggle
+spr_ship_canary_liquid_boost_albedo.png
+spr_ship_canary_liquid_boost_emission.png
+spr_ship_canary_core_boost_emission.png
+spr_ship_canary_back_boost_albedo.png
 ```
 
-### 16.3 推荐 Debug 能力
+完成标准：Boost 启停有持续推进感。
 
-| 功能 | 说明 |
-| --- | --- |
-| `Preview Normal` | 切回默认视觉 |
-| `Preview Boost` | 触发 Boost start / sustain / end |
-| `Preview Fire` | 播放开火反馈 |
-| `Preview Hit` | 播放受击反馈 |
-| `Preview Weaving` | 进入 / 退出编织态 |
-| `Preview Overheat` | 模拟升温与过热 |
-| `Solo Layer` | 单独查看 Solid / Liquid / HL / Core / Back |
-| `Toggle Bloom` | 开关 Bloom 对照 |
-| `Switch Background` | 测试不同背景可读性 |
+### Batch 4：做 Fire / Hit
 
-### 16.4 关键约束
-
-- Debug 工具默认关闭。
-- Debug 可以预览，但不得成为正式 Runtime owner。
-- Debug 不在 `Update / LateUpdate` 中持续覆盖正式状态，除非明确进入“调试接管模式”。
-- Debug 结束后必须能 reset preview。
-
-### 16.5 验收标准
-
-- 2 分钟内能验证一个新 Sprite / Material / VFX。
-- 所有核心状态可一键预览。
-- 可在暗 / 亮 / 中性背景下检查可读性。
-- Debug 关闭后正式链路仍独立成立。
-
----
-
-## 17. Step 14：资产注册、审计、文档固化
-
-### 17.1 目的
-
-防止 AI 生成资产、临时材质、实验 Shader 越积越乱。
-
-### 17.2 需要维护的表
-
-对于进入正式链路的资产，必须更新或补充：
-
-- `ShipVFX_AssetRegistry.md`：现役资产、owner、路径、状态。
-- `ShipVFX_CanonicalSpec.md`：如果新增节点、Worker、主链职责。
-- `Implement_rules.md`：如果出现新的长期规则或踩坑。
-- `ImplementationLog_YYYY-MM.md`：每次创建 / 修改 / 删除文件后记录。
-
-### 17.3 状态分类
-
-| 状态 | 含义 |
-| --- | --- |
-| `Live` | 现役 runtime / prefab / scene / tool 直接使用 |
-| `Dormant` | 文件存在但不在现役链路，未来可能清理 |
-| `Reference` | 参考 / 实验 / 上游逆向，不可当规范 |
-| `Legacy` | 已被新主链替代，仅保留历史查证 |
-
-### 17.4 推荐生产方式
-
-- AI 生成的临时图先放 `Source / Concepts`，不要直接进入正式路径。
-- 进入 `Sprites / Materials / Shaders` 的资产必须有用途和 owner。
-- 删除 dormant 资产前做 GUID + 文本双重引用审计。
-- 任何现役路径变更必须同步注册表。
-
-### 17.5 验收标准
-
-- 每个正式资产知道谁使用它。
-- 每个状态知道对应哪些 Sprite / Material / VFX。
-- 没有“这个材质到底谁在改”的模糊区域。
-- 新增同类 VFX 时不需要重新考古。
-
----
-
-## 18. Step 15：迭代扩展新状态 / 新皮肤 / 新飞船
-
-### 18.1 目的
-
-当第一轮 MVP 跑通后，扩展更多状态或新飞船时不要推翻主链。
-
-### 18.2 新状态扩展流程
+产出：
 
 ```text
-1. 写玩家感受
-2. 判断 Base / Overlay / Moment
-3. 决定 Sprite / Material / VFX / PostProcess 实现层
-4. 生产最少资产
-5. 接入现役 Runtime owner
-6. Play Mode 验证
-7. 更新 AssetRegistry / ImplementationLog
+spr_ship_canary_core_fire_emission.png
+spr_vfx_canary_muzzle_flash_01.png
+spr_ship_canary_highlight_hit_mask.png
+spr_vfx_canary_hit_spark_01.png
 ```
 
-### 18.3 新皮肤扩展流程
+完成标准：开火和受击都短促、清楚、不混淆。
+
+### Batch 5：做 Weaving
+
+产出：
 
 ```text
-1. 复用现有 ShipVisual 层级
-2. 新增 SpriteSet / MaterialSet
-3. 不新增第二套 Runtime 逻辑
-4. 用数据选择皮肤，而不是复制 Ship.prefab 主链
-5. 更新注册表
+spr_ship_canary_liquid_weaving_albedo.png
+spr_ship_canary_liquid_weaving_emission.png
+spr_ship_canary_core_weaving_emission.png
+spr_ship_canary_aura_weaving_emission.png
 ```
 
-### 18.4 新飞船扩展流程
+完成标准：编织态有星图连接感。
 
-新飞船可以有不同资源，但应尽量复用：
+### Batch 6：做 Overheat
 
-- `ShipView` 协调模型。
-- Worker 分工。
-- BoostTrail VFX 栈。
-- Material / Shader 基础库。
-- TestRoom / Debug 预览能力。
-
-只有当新飞船玩法状态确实不同，才新增 Worker 或 Runtime 入口。
-
-### 18.5 验收标准
-
-- 新状态不造成组合 Sprite 爆炸。
-- 新皮肤不复制第二套主链。
-- 新飞船复用已有调试与验证流程。
-- 新资产有明确 Live / Reference / Dormant 状态。
-
----
-
-## 19. 推荐 MVP 批次
-
-### Batch 0：视觉目标与状态表
-
-**产出**：视觉方向、状态矩阵、颜色规范、生产规则。  
-**生产方式**：文档 + mood board + 参考分析。  
-**完成标准**：知道第一批要画什么、不画什么、哪些靠 VFX。
-
-### Batch 1：Normal 分层 Sprite
-
-**产出**：Solid / Liquid / Highlight / Core / Back。  
-**生产方式**：AI 概念图 + 手工拆层 + Unity 导入。  
-**完成标准**：多层叠合可读，单独 Solid 可读。
-
-### Batch 2：Prefab 接入
-
-**产出**：Sprite 接入现役 `ShipVisual`。  
-**生产方式**：通过现役 Prefab 权威工具或明确手动配置，不做 scene 长期 override。  
-**完成标准**：`ShipVfxValidator` 通过，Debug 关闭后正常显示。
-
-### Batch 3：Boost MVP
-
-**产出**：Boost Liquid / Core / Back 变体，BoostTrail 材质贴图调优。  
-**生产方式**：复用 `BoostTrailRoot`，调 Material / Shader / Tween。  
-**完成标准**：按 Boost 时尾焰、能量、Bloom、速度感同步变化。
-
-### Batch 4：Hit / Fire MVP
-
-**产出**：HitFlash、HitSpark、MuzzleFlash、Core pulse。  
-**生产方式**：Particle / Sprite VFX + `ShipHitVisuals` + Combat event 接入。  
-**完成标准**：受击和开火反馈短促、清楚、不混淆。
-
-### Batch 5：Weaving MVP
-
-**产出**：Weaving Liquid / Core / Aura / Material / PostProcess pulse。  
-**生产方式**：Sprite Aura + Additive Material + Tween / Shader pulse。  
-**完成标准**：编织态与 Boost、Normal 明显不同。
-
-### Batch 6：Overheat MVP
-
-**产出**：Overheat 材质、火花、热量警告、vignette。  
-**生产方式**：HeatSystem 事件 → 视觉 Worker / PostProcess owner。  
-**完成标准**：不看 UI 也能感到危险升级。
-
-### Batch 7：测试场景与固化
-
-**产出**：ShipVfxTestRoom、Debug Preview、AssetRegistry 更新。  
-**生产方式**：Editor / Play Mode 验证工具。  
-**完成标准**：新资产 2 分钟内可验证，文档与注册表一致。
-
----
-
-## 20. 每一步的“可继续下一步”检查表
-
-| 步骤 | 可以继续的条件 |
-| --- | --- |
-| 视觉目标 | 玩家感受、色彩、禁止方向明确 |
-| 状态表 | 每个状态都有实现层，不存在组合爆炸 |
-| 分层结构 | 层职责清楚，符合现役 `ShipVisual` |
-| 概念图 | 选定 source of truth，朝向明确 |
-| Normal Sprite | 多层叠合无偏移，Solid 单独可读 |
-| 状态 Sprite | 状态差异清楚，不重画组合图 |
-| Unity 导入 | 尺寸 / pivot / alpha / import 设置统一 |
-| Prefab 接入 | 现役主链无漂移，Validator 可通过 |
-| Material / Shader | 参数变体清楚，不污染 shared asset |
-| VFX Prefab | 池化复位完整，不残留状态 |
-| Runtime 驱动 | 由事件驱动，不靠 Debug 接管 |
-| Tween / Animator | 快速切状态无残留 |
-| PostProcess | 增强表现但不破坏可读性 |
-| TestRoom | 2 分钟内可验证新效果 |
-| Registry | 资产 owner / path / status 明确 |
-
----
-
-## 21. 常见错误与防御
-
-### 21.1 错误：先写 Shader，再想状态
-
-**问题**：Shader 很酷，但不知道服务哪个玩家状态。  
-**防御**：先写状态矩阵，再决定 Shader 参数。
-
-### 21.2 错误：每个状态画整船
-
-**问题**：组合状态会爆炸。  
-**防御**：Base + Overlay + Moment 分层。
-
-### 21.3 错误：AI 每次生成不同角度
-
-**问题**：状态图无法叠合。  
-**防御**：先锁定 source of truth，再基于同一图拆层。
-
-### 21.4 错误：在 Scene 实例上修到能看
-
-**问题**：Prefab 正确但 Scene override 漂移，后续难排查。  
-**防御**：回到 Prefab authority 和 Scene Binder。
-
-### 21.5 错误：Debug 面板持续覆盖正式状态
-
-**问题**：调试时正常，关闭 Debug 后坏。  
-**防御**：Debug 默认关闭，只做 preview，不做 Runtime owner。
-
-### 21.6 错误：运行时改 shared material
-
-**问题**：污染所有实例或编辑器资产。  
-**防御**：使用实例 Material 或 `MaterialPropertyBlock`。
-
-### 21.7 错误：VFX 回池不重置 Trail / Color / Alpha
-
-**问题**：下一次播放带脏状态。  
-**防御**：严格执行对象池复位五项清单。
-
----
-
-## 22. 最推荐的近期执行顺序
-
-如果从现在开始推进，我建议按以下顺序：
+产出：
 
 ```text
-1. Batch 0：视觉目标与状态表
-2. Batch 1：Normal 分层 Sprite
-3. Batch 2：接入现役 ShipVisual
-4. Batch 3：Boost MVP
-5. Batch 4：Hit / Fire MVP
-6. Batch 5：Weaving MVP
-7. Batch 6：Overheat MVP
-8. Batch 7：测试场景与资产注册固化
+spr_ship_canary_liquid_overheat_albedo.png
+spr_ship_canary_liquid_overheat_emission.png
+spr_ship_canary_core_overheat_emission.png
+spr_vfx_canary_overheat_spark_01.png
 ```
 
-第一轮只追求一个目标：
+完成标准：不看 UI 也知道热量危险。
+
+### Batch 7：固化 Unity 接入和注册表
+
+产出：
 
 ```text
-金丝雀号从“能移动的一张图”升级为“能根据玩家状态变化的多层视觉系统”。
+Unity Import Settings 统一
+Ship.prefab 接入
+VFX Prefab 接入
+ShipVFX_AssetRegistry 更新
+ImplementationLog 更新
 ```
 
-不要一开始追求完整最终品质。先让它 work，再让它 right，最后让它 fast。
+完成标准：Debug 关闭后，正式 Runtime 链路仍能驱动所有状态。
+
+---
+
+## 14. 不要做的事
+
+- 不要一开始就追求最终品质。
+- 不要每个状态都重新画整艘船。
+- 不要让 AI 每次随机生成不同角度的飞船。
+- 不要把发光、尾焰、背景全部画死在主 Sprite 里。
+- 不要运行时修改 shared Material。
+- 不要新增 `Boost+Hit+Weaving+Overheat` 这种组合状态图。
+- 不要在 Scene 实例上长期修到“看起来能用”。
+- 不要让 Debug 面板成为正式 Runtime owner。
+
+---
+
+## 15. 一句话总结
+
+第一轮目标不是做出最终美术，而是做出一套人人都能继续扩展的飞船美术资产结构：
+
+```text
+Normal 主体分层
++ Dodge 残影
++ Boost 能量增强
++ Fire 短反馈
++ Hit 短反馈
++ Weaving 星图展开
++ Overheat 危险升温
++ Unity 可验证接入
+```
+
+只要这个闭环跑通，后续提升画质、加 Shader、调 Bloom、换皮肤，都会变得更快、更安全。
