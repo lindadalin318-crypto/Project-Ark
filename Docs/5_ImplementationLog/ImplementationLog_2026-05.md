@@ -1,6 +1,25 @@
 ---
 
+## HyperWind 切片 D' Plan 归档到 Complete — 2026-05-18 21:42
+
+- **移动文件**
+  - `Docs/0_Plan/ongoing/2026-05-16-hyperwind-slice-d-implementation-plan.md` → `Docs/0_Plan/complete/2026-05-16-hyperwind-slice-d-implementation-plan.md`
+- **修改文件**
+  - `Docs/0_Plan/ongoing/README.md`
+  - `Docs/0_Plan/complete/README.md`
+  - `Docs/0_Plan/Project_Plan.md`
+  - `Docs/0_Plan/complete/2026-05-16-hyperwind-slice-d-implementation-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：将 HyperWind 切片 D' · 气旋竞技场增强版实施计划从 `ongoing/` 归档到 `complete/`，并同步更新 ongoing 入口、complete 归档索引与 Project Plan 的已完成专项提示/文档导航；归档后的 plan 追加 Complete / archived 状态说明，并将内部现役路径引用改为 `complete/`。
+
+- **目的**：把已完成首轮 MVP 实现、自动烟测与人工验证的 HyperWind Slice D' 从“当前推进计划”正式转为“已完成专项”，避免后续误判为仍待执行任务。
+- **技术**：文档归档操作；未修改运行时代码。遵循 `complete/README.md` 规则，归档前同步 `Project_Plan.md`。
+
+---
+
 ## Ship Art / VFX 工作流文档创建 — 2026-05-18 17:01
+
 
 - **新建文件**
   - `Docs/3_WorkflowsAndRules/Ship/Ship_ArtVFX_Workflow.md`
