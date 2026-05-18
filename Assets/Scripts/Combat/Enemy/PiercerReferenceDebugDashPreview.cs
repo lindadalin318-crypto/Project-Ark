@@ -20,6 +20,11 @@ namespace ProjectArk.Combat.Enemy
         [SerializeField] private Vector3 _dashDirection = Vector3.right;
         [SerializeField] private bool _useLocalDirection = true;
 
+        [Header("Play Mode Readout")]
+        [SerializeField] private PiercerReferencePhase _currentPreviewPhase = PiercerReferencePhase.Idle;
+        [SerializeField] private Vector3 _currentPreviewOffset;
+        [SerializeField, TextArea(3, 6)] private string _playModeReadout = "Preview not running.";
+
         private readonly PiercerReferenceDashPreviewSampler _sampler = new PiercerReferenceDashPreviewSampler();
         private Vector3 _baseLocalPosition;
         private Vector3 _baseWorldPosition;
@@ -57,15 +62,18 @@ namespace ProjectArk.Combat.Enemy
             if (_visual == null || _previewTarget == null)
                 return;
 
+            PiercerReferencePhaseSnapshot snapshot = _visual.ResolveCurrentSnapshot();
+
             if (!_enablePreview)
             {
                 ResetPreviewPosition();
+                UpdateReadout(snapshot, Vector3.zero);
                 return;
             }
 
-            PiercerReferencePhaseSnapshot snapshot = _visual.ResolveCurrentSnapshot();
             Vector3 direction = _sampler.ResolveDirection(_dashDirection, transform.rotation, _useLocalDirection);
             Vector3 offset = _sampler.SampleOffset(snapshot, direction, _dashDistance);
+            UpdateReadout(snapshot, offset);
 
             if (_useLocalDirection)
                 _previewTarget.localPosition = _baseLocalPosition + offset;
@@ -97,6 +105,13 @@ namespace ProjectArk.Combat.Enemy
                 _previewTarget.localPosition = _baseLocalPosition;
             else
                 _previewTarget.position = _baseWorldPosition;
+        }
+
+        private void UpdateReadout(PiercerReferencePhaseSnapshot snapshot, Vector3 offset)
+        {
+            _currentPreviewPhase = snapshot.Phase;
+            _currentPreviewOffset = offset;
+            _playModeReadout = _sampler.FormatReadout(snapshot, offset, _enablePreview, _useLocalDirection);
         }
 
         private void ValidateReferences()

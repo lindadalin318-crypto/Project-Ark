@@ -400,5 +400,21 @@ namespace ProjectArk.Combat.Tests
             Assert.AreEqual(0f, direction.y, 0.001f);
             Assert.AreEqual(0f, direction.z, 0.001f);
         }
+
+        [Test]
+        public void FormatReadout_IncludesPhaseOffsetAndDirectionMode()
+        {
+            var sampler = new PiercerReferenceDashPreviewSampler();
+            var snapshot = new PiercerReferencePhaseSnapshot(PiercerReferencePhase.Dashing, 0.5f, 0.2f, 1.42f, 2.2f, "Piercer REF | Dashing");
+            Vector3 offset = new Vector3(1.25f, -0.5f, 0f);
+
+            string readout = sampler.FormatReadout(snapshot, offset, previewEnabled: true, useLocalDirection: false);
+
+            StringAssert.Contains("Preview: ON", readout);
+            StringAssert.Contains("Mode: World", readout);
+            StringAssert.Contains("Phase: Dashing", readout);
+            StringAssert.Contains("Progress: 50%", readout);
+            StringAssert.Contains("Offset: (1.25, -0.50, 0.00)", readout);
+        }
     }
 }

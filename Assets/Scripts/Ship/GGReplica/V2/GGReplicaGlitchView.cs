@@ -103,6 +103,7 @@ namespace ProjectArk.Ship
             bool healing = state == GGReplicaGlitchState.Heal;
             bool firing = state == GGReplicaGlitchState.FireAim;
             bool boostTailVisible = !boosting && HasLiveParticles(_boostParticles);
+            bool shapeTrailVisible = dodging || exitingDodge || _shapeTrailTimer > 0f;
 
             SetActive(_boostModuleRoot, boosting || boostInterrupted || _boostCutoffTimer > 0f || boostTailVisible);
             SetActive(_lqTrailsContainer, boosting || moving || HasTrailPositions(_lqTrailRenderers));
@@ -110,14 +111,13 @@ namespace ProjectArk.Ship
             SetActive(_fluxyGrabModuleRoot, grabbing || exitingGrab || _grabReleaseTimer > 0f);
             SetActive(_holdModuleRoot, grabbing);
             SetActive(_healModuleRoot, healing);
-            SetActive(_dodgeModuleRoot, dodging);
+            SetActive(_dodgeModuleRoot, shapeTrailVisible);
             SetActive(_fireAimModuleRoot, firing);
 
             SetTrailEmitting(_lqTrailRenderers, boosting || moving);
-            SetTrailEmitting(_shapeTrailRenderers, dodging);
+            ApplyShapeTrailVisuals(dodging, enteringDodge, exitingDodge);
             SetTrailEmitting(_darkTrailRenderers, false);
             SetBoostParticles(boosting);
-            SetParticles(_dodgeTrailParticles, dodging);
             SetParticles(_holdParticles, grabbing);
             SetParticles(_healParticles, healing);
             SetParticles(_fireAimParticles, firing);
@@ -788,6 +788,8 @@ namespace ProjectArk.Ship
         private float BoostIgniteDuration => _feelProfile != null ? _feelProfile.BoostIgniteDuration : 0.08f;
 
         private const float BoostCutoffAfterimageDuration = 0.1f;
+
+        private const float ShapeTrailFadeDuration = 0.12f;
 
         private float DodgeVisualDuration => _feelProfile != null ? _feelProfile.DodgeStateDuration : 0.225f;
 

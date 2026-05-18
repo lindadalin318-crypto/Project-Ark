@@ -1448,3 +1448,31 @@
 - **目的**：补齐 B 阶段 Play Mode 调参闭环中的方向语义，避免 Inspector 中 `_useLocalDirection=false` 时仍被 `TransformDirection` 旋转导致“世界方向”表现不符合字段含义。该阶段仍保持 ReferenceOnly 边界：不接碰撞、不造成伤害、不申请 EnemyDirector token。
 
 - **技术**：TDD Red-Green；先追加 `ResolveDirection_ReturnsLocalDirectionTransformedByOwner_WhenUseLocalDirectionIsEnabled` 与 `ResolveDirection_ReturnsWorldDirectionUnchanged_WhenUseLocalDirectionIsDisabled`，确认 focused 编译因缺少 `ResolveDirection` 失败，再实现最小纯函数并让 MonoBehaviour 调用。验证：`dotnet build ProjectArk.Combat.Tests.csproj -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 成功；`dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 成功（0 错误，仅既有 warning）；Unity Console error 读取返回 0 条；`manage_prefabs get_info` 确认 `Enemy_Piercer_REF_Minshoot.prefab` 根节点含 `PiercerReferenceDebugHarness` 与 `PiercerReferenceDebugDashPreview`。
+
+---
+
+## Piercer ReferenceOnly Debug Harness D 阶段 — 2026-05-18 11:39
+
+- **修改文件**
+  - `Assets/Scripts/Combat/Enemy/PiercerReferenceDashPreviewSampler.cs`
+  - `Assets/Scripts/Combat/Enemy/PiercerReferenceDebugDashPreview.cs`
+  - `Assets/Scripts/Combat/Tests/PiercerReferencePhaseResolverTests.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：为 `PiercerReferenceDashPreviewSampler` 新增 `FormatReadout`，把 ReferenceOnly dash preview 的 `Preview ON/OFF`、local/world 模式、当前 phase、phase progress 与 offset 格式化为稳定文本。`PiercerReferenceDebugDashPreview` 新增 Play Mode Inspector readout 字段：`_currentPreviewPhase`、`_currentPreviewOffset`、`_playModeReadout`，并在 `LateUpdate` 中随 snapshot/offset 实时刷新；关闭 preview 时会复位位置并显示零 offset。
+
+- **目的**：交付 D 阶段最小 Play Mode Feel Pass 验收辅助，让 Piercer prefab 拖入场景后，开发者能同时用肉眼观察 Telegraph → Dash → Recovery 的颜色/缩放/位移，并在 Inspector 中确认当前相位、方向模式和实际 offset，缩短 2 分钟内进 Play Mode 调参的闭环。该阶段仍保持 ReferenceOnly 边界：不接碰撞、不造成伤害、不申请 EnemyDirector token。
+
+- **技术**：TDD Red-Green；先追加 `FormatReadout_IncludesPhaseOffsetAndDirectionMode`，确认 focused 编译因缺少 `FormatReadout` 失败，再实现 `CultureInfo.InvariantCulture` 格式化，避免系统区域设置影响小数输出。验证：`dotnet build ProjectArk.Combat.Tests.csproj -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 成功（0 错误，仅既有 `TurretAttackState._hasFired` warning）。全方案 `dotnet build Project-Ark.slnx -p:GenerateFullPaths=true -nologo -clp:ErrorsOnly` 当前被既有 `Assets/Scripts/Ship/GGReplica/V2/GGReplicaGlitchView.cs` 中 `exitingDodge`、`_shapeTrailTimer`、`ApplyShapeTrailVisuals` 未定义错误阻断，错误不在本次 Piercer 修改范围内。
+
+---
+
+## Minishoot vs Galactic Glitch 美术模块对比文档 — 2026-05-18 12:36
+
+- **新增文件**
+  - `Docs/7_Reference/GameAnalysis/Minishoot_vs_GalacticGlitch_ArtModule_Comparison.md`
+- **修改文件**
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：新增一份横向参考分析文档，对比 `Minishoot` 与 `Galactic Glitch` 在美术模块上的实现差异，覆盖资源规模、飞船主体表现、场景环境、VFX、后处理、UI、动画体系、风险差异与 Project Ark 的混合落地路线。文档明确指出 `Minishoot` 更适合作为 Tilemap/Biome/量产场景管线参考，`Galactic Glitch` 更适合作为多层飞船状态、Shader、Trail、Boost/VFX 与状态化屏幕反馈参考。
+- **目的**：为 Project Ark 当前场景配置与验证阶段提供美术模块决策依据，避免把美术理解停留在单张 Sprite 层面，并帮助后续 `ShipSkinSO`、`PostProcessController`、`RoomVariantSO`、`AmbienceController`、Boost/Overheat/Weaving VFX 样板的优先级排序。
+- **技术**：基于既有 `Minishoot_Adventures_Structure_Analysis.md` 与 `GalacticGlitch_Structure_Analysis.md`，结合本轮对两个参考项目资源结构、脚本命名、Shader/Material/VFX 模块的调研结论，按美术管线维度整理为 Markdown 参考文档。本次仅新增文档，不修改运行时代码或 Unity 资产。

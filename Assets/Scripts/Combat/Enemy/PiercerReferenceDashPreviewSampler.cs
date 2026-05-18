@@ -1,3 +1,4 @@
+using System.Globalization;
 using UnityEngine;
 
 namespace ProjectArk.Combat.Enemy
@@ -31,6 +32,24 @@ namespace ProjectArk.Combat.Enemy
 
             Vector3 worldDirection = ownerRotation * safeDirection;
             return worldDirection.sqrMagnitude > 0.0001f ? worldDirection.normalized : Vector3.right;
+        }
+
+        public string FormatReadout(PiercerReferencePhaseSnapshot snapshot, Vector3 offset, bool previewEnabled, bool useLocalDirection)
+        {
+            string previewState = previewEnabled ? "ON" : "OFF";
+            string directionMode = useLocalDirection ? "Local" : "World";
+            float progressPercent = Clamp01(snapshot.PhaseProgress) * 100f;
+
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "Preview: {0}\nMode: {1}\nPhase: {2}\nProgress: {3:0}%\nOffset: ({4:0.00}, {5:0.00}, {6:0.00})",
+                previewState,
+                directionMode,
+                snapshot.Phase,
+                progressPercent,
+                offset.x,
+                offset.y,
+                offset.z);
         }
 
         private static float Clamp01(float value)

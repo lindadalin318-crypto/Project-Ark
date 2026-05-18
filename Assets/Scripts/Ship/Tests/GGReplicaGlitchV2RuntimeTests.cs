@@ -1187,6 +1187,60 @@ namespace ProjectArk.Ship.Tests
         }
 
         [Test]
+        public void View_DodgeShapeTrail_LingersAndRetriggersOriginalFadeWindow()
+        {
+            var root = new GameObject("GGReplicaGlitchV2ShapeTrailLingerRig");
+            var profile = ScriptableObject.CreateInstance<GGReplicaShipFeelProfileSO>();
+            try
+            {
+                var view = root.AddComponent<GGReplicaGlitchView>();
+                var dodgeRoot = new GameObject("DodgeModule");
+                dodgeRoot.transform.SetParent(root.transform, false);
+                var shapeTrail = new GameObject("shape_trail").AddComponent<TrailRenderer>();
+                shapeTrail.transform.SetParent(dodgeRoot.transform, false);
+                var outlineTrail = new GameObject("ShapeTrail_Dodge (old outline trail)").AddComponent<ParticleSystem>();
+                outlineTrail.transform.SetParent(dodgeRoot.transform, false);
+                var additiveTrail = new GameObject("AdditiveTrail_Dodge").AddComponent<ParticleSystem>();
+                additiveTrail.transform.SetParent(dodgeRoot.transform, false);
+                var outlineMain = outlineTrail.main;
+                outlineMain.startLifetime = 1f;
+                outlineMain.startSpeed = 0f;
+                var outlineEmission = outlineTrail.emission;
+                outlineEmission.rateOverTime = 80f;
+
+                SetPrivateField(view, "_feelProfile", profile);
+                SetPrivateField(view, "_dodgeModuleRoot", dodgeRoot);
+                SetPrivateField(view, "_shapeTrailRenderers", new[] { shapeTrail });
+                SetPrivateField(view, "_dodgeTrailParticles", new[] { outlineTrail, additiveTrail });
+
+                view.ApplyState(GGReplicaGlitchState.DodgeBurst);
+                outlineTrail.Simulate(0.1f, true, false, false);
+                float advancedTrailTime = outlineTrail.time;
+                Assert.That(advancedTrailTime, Is.GreaterThan(0.05f));
+
+                view.ApplyState(GGReplicaGlitchState.Idle);
+
+                Assert.That(shapeTrail.emitting, Is.True, "Original PlayerViewShapeTrailModule ends Dodge with a short fade window instead of hard-cutting shape_trail.");
+                Assert.That(outlineTrail.particleCount, Is.GreaterThan(0), "EndDodge should stop emission without clearing live outline particles.");
+
+                view.ApplyState(GGReplicaGlitchState.DodgeBurst, true);
+
+                Assert.That(shapeTrail.emitting, Is.True);
+                Assert.That(outlineTrail.time, Is.LessThan(advancedTrailTime * 0.5f), "Restarting Dodge during the fade window should restart the ShapeTrail particle clock.");
+
+                view.ApplyState(GGReplicaGlitchState.Idle);
+                InvokePrivate(view, "TickVisuals", 0.13f);
+
+                Assert.That(shapeTrail.emitting, Is.False, "ShapeTrail fade window should close after its short original-style linger.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(profile);
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
         public void View_DodgeShapeTrail_StartsOriginalOutlineAndAdditiveParticleTrails()
         {
             var root = new GameObject("GGReplicaGlitchV2DodgeShapeTrailRig");
@@ -1210,6 +1264,9 @@ namespace ProjectArk.Ship.Tests
 
                 view.ApplyState(GGReplicaGlitchState.Idle);
 
+                Assert.That(outlineTrail.isEmitting, Is.False);
+                Assert.That(additiveTrail.isEmitting, Is.False);
+                InvokePrivate(view, "TickVisuals", 0.13f);
                 Assert.That(outlineTrail.isPlaying, Is.False);
                 Assert.That(additiveTrail.isPlaying, Is.False);
             }
