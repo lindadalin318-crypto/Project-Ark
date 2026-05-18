@@ -1,6 +1,9 @@
 # HyperWind Slice D' Implementation Plan
 
-> **For agentic workers:** This is the active task-by-task plan for `HyperWind_MechanicsBrief.md` §10. Track progress with checkbox (`- [ ]` / `- [x]`) items. Every file modification must be logged in `Docs/5_ImplementationLog/ImplementationLog_2026-05.md` before completion.
+> **Status:** Complete / archived on 2026-05-18. The Slice D' MVP passed auto-smoke validation and user local Play Mode validation.
+>
+> **For agentic workers:** This was the task-by-task plan for `HyperWind_MechanicsBrief.md` §10. It is now archived in `complete/`; create a new plan for further HyperWind expansion instead of reopening this one.
+
 
 **Goal:** Build the first playable HyperWind MVP slice, **D' · Ground Cyclone Arena**, to validate both “wind feel” and “ground cyclone tactics” in a 5-10 minute combat room.
 
@@ -46,7 +49,8 @@
 
 - `Docs/1_GameDesign/HyperWind_MechanicsBrief.md`
 - `Docs/2_TechnicalDesign/HyperWind/HyperWind_ArchBrief.md`
-- `Docs/0_Plan/ongoing/2026-05-16-hyperwind-slice-d-implementation-plan.md`
+- `Docs/0_Plan/complete/2026-05-16-hyperwind-slice-d-implementation-plan.md`
+
 - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
 
 ### Current / planned runtime scripts
@@ -69,7 +73,8 @@
 
 **Files:**
 - Create: `Docs/2_TechnicalDesign/HyperWind/HyperWind_ArchBrief.md`
-- Create: `Docs/0_Plan/ongoing/2026-05-16-hyperwind-slice-d-implementation-plan.md`
+- Create: `Docs/0_Plan/complete/2026-05-16-hyperwind-slice-d-implementation-plan.md`（initially created under `ongoing/`, archived on 2026-05-18）
+
 - Modify: `Docs/0_Plan/ongoing/README.md`
 - Modify: `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
 

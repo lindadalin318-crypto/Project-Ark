@@ -61,7 +61,9 @@
 - `静态几何墙 Phase 2 authoring guards` 已完成，并归档到 `complete/2026-04-15-static-geometry-walls-phase2-implementation-plan.md`
 - `LevelRoomRuntimeChain_Hardening` 已完成，并归档到 `complete/LevelRoomRuntimeChain_Hardening.md`
 - `LevelArchitect_Workbench` 已完成，并归档到 `complete/LevelArchitect_Workbench.md`
+- `HyperWind 切片 D' · 气旋竞技场增强版` 已完成首轮 MVP 实现、自动烟测与人工验证，并归档到 `complete/2026-05-16-hyperwind-slice-d-implementation-plan.md`
 - `ShipVFX-PhaseB`、`Camera-Phase2`、`Level-Authoring-Standardization`、`Plan-Rollout-Phase2` 已在当前阶段视为完成或已吸收，不再保留为待启动候选
+
 
 ---
 
@@ -96,7 +98,8 @@
 - 已完成专项：[`./complete/2026-04-18-breakable-secret-wall-mvp-implementation-plan.md`](./complete/2026-04-18-breakable-secret-wall-mvp-implementation-plan.md)
 - 已完成专项：[`./complete/LevelRoomRuntimeChain_Hardening.md`](./complete/LevelRoomRuntimeChain_Hardening.md)
 - 已完成专项：[`./complete/LevelArchitect_Workbench.md`](./complete/LevelArchitect_Workbench.md)
-
+- 已完成专项：[`./complete/2026-05-16-hyperwind-slice-d-implementation-plan.md`](./complete/2026-05-16-hyperwind-slice-d-implementation-plan.md)
 - 已完成专项：[`./complete/ShipVFX_PhaseA.md`](./complete/ShipVFX_PhaseA.md)
+
 - 实现日志：[`../5_ImplementationLog/README.md`](../5_ImplementationLog/README.md)
 - 历史关卡方案：[`../8_Obsolete/Plan/LevelModule_Plan.md`](../8_Obsolete/Plan/LevelModule_Plan.md)
