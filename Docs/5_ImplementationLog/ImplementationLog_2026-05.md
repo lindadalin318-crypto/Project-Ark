@@ -1543,3 +1543,25 @@
 - **目的**：让金丝雀号美术生产计划不只停留在单张 Sprite 清单，而是吸收 `Galactic Glitch` 的多状态分层/Shader/VFX 管线经验与 `Minishoot` 的高可读轮廓、Dash/Lean 帧、Outline/材质参数经验，避免后续把参考资产脱离状态语境误用，并提前固化导入一致性和材质参数记录要求。
 
 - **技术**：文档级 workflow 修订；通过文件名与资源目录扫描反查两个参考项目中的 `Movement / Boost / Primary / Secondary / GrabGun / Healing`、`PlayerDash1-5`、`PlayerLeanLeft/Right`、`PlayerOutline`、`ShipPlayer`、`glow`、`ring`、`muzzle_flash`、`trail`、`noise`、`mask` 等资产信号，再映射为 Project Ark 的资产生产约束。本次不修改运行时代码、Prefab 或 Unity 资产。
+
+
+---
+
+## ShipArtVFX 参考资源文件夹同步 Minishoot + Galactic Glitch — 2026-05-18 23:18
+
+- **新建 / 修改文件**
+  - `Docs/7_Reference/ShipArtVFX_MinishootReference/README.md`
+  - `Docs/7_Reference/ShipArtVFX_MinishootReference/source_map_plan_sync_2026-05-18.csv`
+  - `Docs/7_Reference/ShipArtVFX_MinishootReference/Batch_0_Reference_Mapping/galactic_glitch_playerskin_state_map.csv`
+  - `Docs/7_Reference/ShipArtVFX_MinishootReference/Batch_0_Reference_Mapping/GalacticGlitch_PlayerSkinDefault/*.png`
+  - `Docs/7_Reference/ShipArtVFX_MinishootReference/Batch_1_Normal/Outline/*.png`
+  - `Docs/7_Reference/ShipArtVFX_MinishootReference/Batch_2_Dodge/Lean/*.png`
+  - `Docs/7_Reference/ShipArtVFX_MinishootReference/Batch_2_Dodge/Source/*.png`
+  - `Docs/7_Reference/ShipArtVFX_MinishootReference/Batch_7_Unity_Material_Shader/Materials/*.mat`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：根据 `Ship_ArtVFX_Workflow.md` 最新反查结论，同步更新 `ShipArtVFX_MinishootReference` 参考资料文件夹。补入 `Minishoot` 的 `SupershotPlayerOutline`、`PlayerDash3/5`、`PlayerLeanLeft/Right1-3`、`PlayerOutline.mat`、`ShipPlayer*.mat`、`PlayerTrail*.mat`、`ring (additive).mat` 等资源；新增 `Galactic Glitch` 的 `PlayerSkinDefault` 状态参考子目录与 CSV 映射表，覆盖 Normal、Boost、Primary、Secondary、GrabGun、Healing 的 solid/liquid/highlight 层参考。
+
+- **目的**：让参考资料文件夹与最新 Ship Art/VFX plan 对齐：补齐 `Outline` 独立层、Dodge lean / dash 短帧序列、材质参数矩阵参考、程序化 ring/trail/glow 参考，并把 `Galactic Glitch` 状态图的语境和误用警告放到同一处，避免后续把 `GrabGun_Base_9/8` 或 `Primary_4` 脱离原状态误用。
+
+- **技术**：使用脚本从两个解包项目复制参考资源到文档目录，不创建 Unity `.meta`，不修改运行时代码、Prefab、Scene 或正式 Unity 资产。新增 `README.md` 作为资料夹索引，新增 `source_map_plan_sync_2026-05-18.csv` 记录来源资产，新增 `galactic_glitch_playerskin_state_map.csv` 固化 `State -> layer -> source sprite -> copied file` 映射。
