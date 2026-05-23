@@ -1565,3 +1565,17 @@
 - **目的**：让参考资料文件夹与最新 Ship Art/VFX plan 对齐：补齐 `Outline` 独立层、Dodge lean / dash 短帧序列、材质参数矩阵参考、程序化 ring/trail/glow 参考，并把 `Galactic Glitch` 状态图的语境和误用警告放到同一处，避免后续把 `GrabGun_Base_9/8` 或 `Primary_4` 脱离原状态误用。
 
 - **技术**：使用脚本从两个解包项目复制参考资源到文档目录，不创建 Unity `.meta`，不修改运行时代码、Prefab、Scene 或正式 Unity 资产。新增 `README.md` 作为资料夹索引，新增 `source_map_plan_sync_2026-05-18.csv` 记录来源资产，新增 `galactic_glitch_playerskin_state_map.csv` 固化 `State -> layer -> source sprite -> copied file` 映射。
+
+---
+
+## Ship Art/VFX Reference Batch 1 Minishoot 资源校正 — 2026-05-19 00:35
+
+- **修改文件**
+  - `Docs/7_Reference/ShipArtVFX_MinishootReference/Batch_1_Normal/`
+  - `Docs/7_Reference/ShipArtVFX_MinishootReference/README.md`
+  - `Docs/7_Reference/ShipArtVFX_MinishootReference/source_map_plan_sync_2026-05-18.csv`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：根据 Batch 1 资源校对结果，删除误混入 Normal 批次的 `Weapon0.png`、`SupershotPlayer1.png`、`SupershotPlayerOutline.png`、`WreckShipWaterMask.png`、`LightPlayerWall.png` 等非基础玩家船资源；将 `Batch_1_Normal` 收口为 `Player.png`、`_Player.png`、`__PlayerFull.png`、`PlayerCrystal.png`、`ShipWhite.png` 对应的基础玩家船同源参考组，并同步更新 README 与 source map。
+- **目的**：避免将武器、Supershot 状态、残骸遮罩或场景光照图误当作 `Canary` Normal 状态分层参考，保证 Reference 包与 Ship Art/VFX 工作流中的状态语境一致。
+- **技术**：通过 SHA-256 内容哈希对照 `Minishoot/DevXUnity/Texture2D` 源文件确认来源；保留源图副本到 `Source/` 目录，生产命名图仅保留 Solid、Liquid、Core 与 Highlight mask 四类。
+- **技术**：通过 SHA-256 内容哈希对照  源文件确认来源；保留源图副本到  目录，生产命名图仅保留 Solid、Liquid、Core 与 Highlight mask 四类。

@@ -1,0 +1,340 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &1673885087169155057
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 444290742308820223, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 444290742308820223, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 444290742308820223, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 444290742308820223, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 444290742308820223, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 444290742308820223, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 444290742308820223, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 444290742308820223, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: -90
+      objectReference: {fileID: 0}
+    - target: {fileID: 444290742308820223, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 444290742308820223, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2008302741161487135, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.b
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2008302741161487135, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.g
+      value: 0.45477772
+      objectReference: {fileID: 0}
+    - target: {fileID: 2008302741161487135, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.r
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2435277016994804697, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.g
+      value: 0.5679183
+      objectReference: {fileID: 0}
+    - target: {fileID: 2435277016994804697, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.r
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5084340790544544480, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.g
+      value: 0.57188654
+      objectReference: {fileID: 0}
+    - target: {fileID: 5084340790544544480, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.r
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6047152988245102326, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.b
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6047152988245102326, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.g
+      value: 0.5398712
+      objectReference: {fileID: 0}
+    - target: {fileID: 6047152988245102326, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.r
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6047152988245102326, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: InitialModule.startColor.minColor.b
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6047152988245102326, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: InitialModule.startColor.minColor.g
+      value: 0.7920816
+      objectReference: {fileID: 0}
+    - target: {fileID: 6047152988245102326, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: InitialModule.startColor.minColor.r
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6097231005564266650, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: m_Name
+      value: EF_trail_boost09_glimmerslag_Blue Variant
+      objectReference: {fileID: 0}
+    - target: {fileID: 6115340145024656894, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.g
+      value: 0.6685343
+      objectReference: {fileID: 0}
+    - target: {fileID: 6115340145024656894, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.r
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6456035262974770375, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.g
+      value: 0.5234761
+      objectReference: {fileID: 0}
+    - target: {fileID: 6456035262974770375, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.r
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7136867100975455021, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: c529548d7185b7e4b89d38e9319de9f4, type: 2}
+    - target: {fileID: 8277965498315152302, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.g
+      value: 0.65766954
+      objectReference: {fileID: 0}
+    - target: {fileID: 8277965498315152302, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.r
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects:
+    - {fileID: 4555490178009360570, guid: c4923613d91c1d943acec1058d904fff, type: 3}
+    - {fileID: 9075844083371641267, guid: c4923613d91c1d943acec1058d904fff, type: 3}
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 7358694604663721384, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1349767338599280421}
+    - targetCorrespondingSourceObject: {fileID: 2879613880991896842, guid: c4923613d91c1d943acec1058d904fff,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3928100843728327095}
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: c4923613d91c1d943acec1058d904fff, type: 3}
+--- !u!4 &3516365794965773051 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2879613880991896842, guid: c4923613d91c1d943acec1058d904fff,
+    type: 3}
+  m_PrefabInstance: {fileID: 1673885087169155057}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &8153063848050033241 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 7358694604663721384, guid: c4923613d91c1d943acec1058d904fff,
+    type: 3}
+  m_PrefabInstance: {fileID: 1673885087169155057}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &2098916206200471502
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 8153063848050033241}
+    m_Modifications:
+    - target: {fileID: 1124649854350512363, guid: a46acb4d8059c374d999490cbfa58869,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1124649854350512363, guid: a46acb4d8059c374d999490cbfa58869,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1124649854350512363, guid: a46acb4d8059c374d999490cbfa58869,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1124649854350512363, guid: a46acb4d8059c374d999490cbfa58869,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1124649854350512363, guid: a46acb4d8059c374d999490cbfa58869,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1124649854350512363, guid: a46acb4d8059c374d999490cbfa58869,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1124649854350512363, guid: a46acb4d8059c374d999490cbfa58869,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1124649854350512363, guid: a46acb4d8059c374d999490cbfa58869,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1124649854350512363, guid: a46acb4d8059c374d999490cbfa58869,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1124649854350512363, guid: a46acb4d8059c374d999490cbfa58869,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2371702600710619042, guid: a46acb4d8059c374d999490cbfa58869,
+        type: 3}
+      propertyPath: m_Name
+      value: EF_trail_boost09_glimmerslag_single_Blue Variant
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: a46acb4d8059c374d999490cbfa58869, type: 3}
+--- !u!4 &1349767338599280421 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1124649854350512363, guid: a46acb4d8059c374d999490cbfa58869,
+    type: 3}
+  m_PrefabInstance: {fileID: 2098916206200471502}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &4114291090118869340
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 3516365794965773051}
+    m_Modifications:
+    - target: {fileID: 1124649854350512363, guid: a46acb4d8059c374d999490cbfa58869,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1124649854350512363, guid: a46acb4d8059c374d999490cbfa58869,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1124649854350512363, guid: a46acb4d8059c374d999490cbfa58869,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1124649854350512363, guid: a46acb4d8059c374d999490cbfa58869,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1124649854350512363, guid: a46acb4d8059c374d999490cbfa58869,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1124649854350512363, guid: a46acb4d8059c374d999490cbfa58869,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1124649854350512363, guid: a46acb4d8059c374d999490cbfa58869,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1124649854350512363, guid: a46acb4d8059c374d999490cbfa58869,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1124649854350512363, guid: a46acb4d8059c374d999490cbfa58869,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1124649854350512363, guid: a46acb4d8059c374d999490cbfa58869,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2371702600710619042, guid: a46acb4d8059c374d999490cbfa58869,
+        type: 3}
+      propertyPath: m_Name
+      value: EF_trail_boost09_glimmerslag_single_Blue Variant (1)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: a46acb4d8059c374d999490cbfa58869, type: 3}
+--- !u!4 &3928100843728327095 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1124649854350512363, guid: a46acb4d8059c374d999490cbfa58869,
+    type: 3}
+  m_PrefabInstance: {fileID: 4114291090118869340}
+  m_PrefabAsset: {fileID: 0}

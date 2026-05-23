@@ -1,6 +1,9 @@
 source project,source asset,reference folder path,status,note
-Minishoot,SupershotPlayerOutline.png,Batch_1_Normal/Outline/spr_ship_canary_outline_normal_outline.png,OK,Outline reference from Minishoot SupershotPlayerOutline
-Minishoot,SupershotPlayerOutline.png,Batch_1_Normal/Source/source_minishoot_supershot_player_outline.png,OK,Source outline reference
+Minishoot,Player.png,Batch_1_Normal/Solid/spr_ship_canary_solid_normal_albedo.png,OK,Normal player ship solid/base reference
+Minishoot,_Player.png,Batch_1_Normal/Liquid/spr_ship_canary_liquid_normal_albedo.png,OK,Normal player ship liquid/body variant reference
+Minishoot,PlayerCrystal.png,Batch_1_Normal/Core/spr_ship_canary_core_normal_albedo.png,OK,Normal player ship crystal/core reference
+Minishoot,ShipWhite.png,Batch_1_Normal/Highlight/spr_ship_canary_highlight_normal_mask.png,OK,Normal player ship white mask reference; not a full highlight layer
+Minishoot,__PlayerFull.png,Batch_1_Normal/Source/source_minishoot_player_full.png,OK,Source full player ship reference retained for comparison
 Minishoot,PlayerLeanLeft1.png,Batch_2_Dodge/Lean/spr_ship_canary_lean_left_dodge_albedo.png,OK,Lean-left reference for dodge/turn frame
 Minishoot,PlayerLeanRight1.png,Batch_2_Dodge/Lean/spr_ship_canary_lean_right_dodge_albedo.png,OK,Lean-right reference for dodge/turn frame
 Minishoot,PlayerDash3.png,Batch_2_Dodge/Source/source_player_dash_03.png,OK,Missing dash source frame added after plan update

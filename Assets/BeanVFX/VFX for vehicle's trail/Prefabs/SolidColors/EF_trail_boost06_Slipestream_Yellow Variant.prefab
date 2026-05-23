@@ -1,0 +1,305 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &2233304232738832556
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 5513528761547220014}
+    m_Modifications:
+    - target: {fileID: 527511679302410450, guid: 030bbe59a15f569498dddbc439ddf4ec,
+        type: 3}
+      propertyPath: m_Name
+      value: EF_trail_boost06_phase_single_Yellow Variant (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1927379014569547731, guid: 030bbe59a15f569498dddbc439ddf4ec,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1927379014569547731, guid: 030bbe59a15f569498dddbc439ddf4ec,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1927379014569547731, guid: 030bbe59a15f569498dddbc439ddf4ec,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1927379014569547731, guid: 030bbe59a15f569498dddbc439ddf4ec,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1927379014569547731, guid: 030bbe59a15f569498dddbc439ddf4ec,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1927379014569547731, guid: 030bbe59a15f569498dddbc439ddf4ec,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1927379014569547731, guid: 030bbe59a15f569498dddbc439ddf4ec,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1927379014569547731, guid: 030bbe59a15f569498dddbc439ddf4ec,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1927379014569547731, guid: 030bbe59a15f569498dddbc439ddf4ec,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1927379014569547731, guid: 030bbe59a15f569498dddbc439ddf4ec,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 030bbe59a15f569498dddbc439ddf4ec, type: 3}
+--- !u!4 &306569532123879295 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1927379014569547731, guid: 030bbe59a15f569498dddbc439ddf4ec,
+    type: 3}
+  m_PrefabInstance: {fileID: 2233304232738832556}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &3094425140386361828
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1645938406683825823, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.b
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1645938406683825823, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.g
+      value: 0.7866578
+      objectReference: {fileID: 0}
+    - target: {fileID: 2222120765836798243, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.a
+      value: 0.23921569
+      objectReference: {fileID: 0}
+    - target: {fileID: 2222120765836798243, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.b
+      value: 0.10829475
+      objectReference: {fileID: 0}
+    - target: {fileID: 2222120765836798243, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.g
+      value: 0.35206193
+      objectReference: {fileID: 0}
+    - target: {fileID: 2222120765836798243, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.r
+      value: 0.49056602
+      objectReference: {fileID: 0}
+    - target: {fileID: 4778683237262450502, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.b
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4778683237262450502, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.g
+      value: 0.8065821
+      objectReference: {fileID: 0}
+    - target: {fileID: 4778683237262450502, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.r
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4778683237262450502, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: InitialModule.startColor.minColor.b
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4778683237262450502, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: InitialModule.startColor.minColor.r
+      value: 0.8235245
+      objectReference: {fileID: 0}
+    - target: {fileID: 5513374807404922085, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: m_Name
+      value: EF_trail_boost06_Slipestream_Yellow Variant
+      objectReference: {fileID: 0}
+    - target: {fileID: 7253187528455247338, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7253187528455247338, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7253187528455247338, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7253187528455247338, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7253187528455247338, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7253187528455247338, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7253187528455247338, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7253187528455247338, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: -90
+      objectReference: {fileID: 0}
+    - target: {fileID: 7253187528455247338, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7253187528455247338, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7897660239714947804, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.b
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7897660239714947804, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      propertyPath: InitialModule.startColor.maxColor.g
+      value: 0.85407686
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects:
+    - {fileID: 1644303809139341175, guid: 39464ba3321c9f64e9bd4c428abe6b57, type: 3}
+    - {fileID: 3039540157122112200, guid: 39464ba3321c9f64e9bd4c428abe6b57, type: 3}
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 801917739426884177, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4891586726935677677}
+    - targetCorrespondingSourceObject: {fileID: 7382075402483635658, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 306569532123879295}
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 39464ba3321c9f64e9bd4c428abe6b57, type: 3}
+--- !u!4 &2436835157741394869 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 801917739426884177, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+    type: 3}
+  m_PrefabInstance: {fileID: 3094425140386361828}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &5513528761547220014 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 7382075402483635658, guid: 39464ba3321c9f64e9bd4c428abe6b57,
+    type: 3}
+  m_PrefabInstance: {fileID: 3094425140386361828}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &6439308774278798654
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 2436835157741394869}
+    m_Modifications:
+    - target: {fileID: 527511679302410450, guid: 030bbe59a15f569498dddbc439ddf4ec,
+        type: 3}
+      propertyPath: m_Name
+      value: EF_trail_boost06_phase_single_Yellow Variant
+      objectReference: {fileID: 0}
+    - target: {fileID: 1927379014569547731, guid: 030bbe59a15f569498dddbc439ddf4ec,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1927379014569547731, guid: 030bbe59a15f569498dddbc439ddf4ec,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1927379014569547731, guid: 030bbe59a15f569498dddbc439ddf4ec,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1927379014569547731, guid: 030bbe59a15f569498dddbc439ddf4ec,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1927379014569547731, guid: 030bbe59a15f569498dddbc439ddf4ec,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1927379014569547731, guid: 030bbe59a15f569498dddbc439ddf4ec,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1927379014569547731, guid: 030bbe59a15f569498dddbc439ddf4ec,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1927379014569547731, guid: 030bbe59a15f569498dddbc439ddf4ec,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1927379014569547731, guid: 030bbe59a15f569498dddbc439ddf4ec,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1927379014569547731, guid: 030bbe59a15f569498dddbc439ddf4ec,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 030bbe59a15f569498dddbc439ddf4ec, type: 3}
+--- !u!4 &4891586726935677677 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1927379014569547731, guid: 030bbe59a15f569498dddbc439ddf4ec,
+    type: 3}
+  m_PrefabInstance: {fileID: 6439308774278798654}
+  m_PrefabAsset: {fileID: 0}

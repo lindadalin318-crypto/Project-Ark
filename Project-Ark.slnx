@@ -1,4 +1,5 @@
 ﻿<Solution>
+  <Project Path="AmplifyShaderEditor.csproj" />
   <Project Path="ProjectArk.Level.csproj" />
   <Project Path="ProjectArk.Enemy.csproj" />
   <Project Path="ProjectArk.Core.csproj" />
@@ -16,4 +17,5 @@
   <Project Path="ProjectArk.Combat.Editor.csproj" />
   <Project Path="ProjectArk.Core.Tests.csproj" />
   <Project Path="ProjectArk.Ship.Tests.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
 </Solution>

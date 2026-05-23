@@ -32,14 +32,21 @@ Galactic Glitch = 多层飞船状态映射、状态误用警告、SpritePack 参
 - `source_map_plan_sync_2026-05-18.csv`
   - 记录本次同步过来的所有 Minishoot / Galactic Glitch 资源。
 
-### Batch 1：Normal / Outline
+### Batch 1：Normal 基础玩家船
 
-- `Batch_1_Normal/Outline/spr_ship_canary_outline_normal_outline.png`
-- `Batch_1_Normal/Source/source_minishoot_supershot_player_outline.png`
+- `Batch_1_Normal/Solid/spr_ship_canary_solid_normal_albedo.png`
+- `Batch_1_Normal/Liquid/spr_ship_canary_liquid_normal_albedo.png`
+- `Batch_1_Normal/Core/spr_ship_canary_core_normal_albedo.png`
+- `Batch_1_Normal/Highlight/spr_ship_canary_highlight_normal_mask.png`
+- `Batch_1_Normal/Source/source_minishoot_player.png`
+- `Batch_1_Normal/Source/source_minishoot_player_liquid.png`
+- `Batch_1_Normal/Source/source_minishoot_player_full.png`
+- `Batch_1_Normal/Source/source_minishoot_player_crystal.png`
+- `Batch_1_Normal/Source/source_minishoot_ship_white_mask.png`
 
-来源：`Minishoot` 的 `SupershotPlayerOutline.png`。
+来源：`Minishoot` 的 `Player.png`、`_Player.png`、`__PlayerFull.png`、`PlayerCrystal.png`、`ShipWhite.png`。
 
-用途：验证 `Outline` 是独立可读层，不等同于 `Highlight` 或 HitFlash。
+用途：保留基础玩家船同源组作为 `Canary` Normal 状态分层参考。已删除此前误混入的 `Weapon0.png`、`SupershotPlayer1.png`、`SupershotPlayerOutline.png`、`WreckShipWaterMask.png`、`LightPlayerWall.png` 等非基础玩家船资源。
 
 ### Batch 2：Dodge / Lean
 
