@@ -18,3 +18,5 @@
   - [`ProjectArk_Minishoot_RoomElements_Shortlist.md`](./GameAnalysis/ProjectArk_Minishoot_RoomElements_Shortlist.md) — 面向 `Project Ark` 的 `Minishoot` room elements 借鉴短名单
   - 新增：[`ProjectArk_Minishoot_WallElements_Summary.md`](./GameAnalysis/ProjectArk_Minishoot_WallElements_Summary.md) — 面向 `Project Ark` 的 `Minishoot` 墙元素可做项总表
 - [`TechNotes/`](./TechNotes/): 技术学习笔记、方法参考、实现摘录
+- [`ShipArtVFX_MinishootReference/`](./ShipArtVFX_MinishootReference/): Minishoot 飞船美术 / VFX 拆解，按 Batch 分批整理
+- [`QFX_Anatomy/`](./QFX_Anatomy/): QFX (Quirky Series · ProjectilesFX) 内部构造拆解，含 prefab→material→shader→texture 五层链路与复刻路径
