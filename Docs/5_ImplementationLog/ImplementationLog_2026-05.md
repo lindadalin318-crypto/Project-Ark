@@ -1579,3 +1579,57 @@
 - **目的**：避免将武器、Supershot 状态、残骸遮罩或场景光照图误当作 `Canary` Normal 状态分层参考，保证 Reference 包与 Ship Art/VFX 工作流中的状态语境一致。
 - **技术**：通过 SHA-256 内容哈希对照 `Minishoot/DevXUnity/Texture2D` 源文件确认来源；保留源图副本到 `Source/` 目录，生产命名图仅保留 Solid、Liquid、Core 与 Highlight mask 四类。
 - **技术**：通过 SHA-256 内容哈希对照  源文件确认来源；保留源图副本到  目录，生产命名图仅保留 Solid、Liquid、Core 与 Highlight mask 四类。
+
+---
+
+## FPSShooterTut 移除缺失 iTween 依赖 — 2026-05-23 23:47
+
+- **修改文件**
+  - 
+  - 
+
+- **内容**：移除第三方示例脚本  中唯一的  调用，保留投射物生成、刚体速度赋值与 muzzle 生成逻辑。
+
+- **目的**：解决  编译错误；该脚本来自导入的特效包示例，项目内没有导入 iTween，且全项目仅此一处引用，因此不引入额外第三方依赖，采用最小删除依赖的方式恢复编译。
+
+- **技术**：通过全项目搜索确认  仅在该文件出现；删除示例性 punch offset 调用，不改 Project Ark 正式战斗/Ship/VFX 主链。验证：  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  ProjectArk.Core -> /Users/dada/Documents/GitHub/Project-Ark/Temp/bin/Debug/ProjectArk.Core.dll
+  ProjectArk.Core.Audio -> /Users/dada/Documents/GitHub/Project-Ark/Temp/bin/Debug/ProjectArk.Core.Audio.dll
+  ProjectArk.Ship -> /Users/dada/Documents/GitHub/Project-Ark/Temp/bin/Debug/ProjectArk.Ship.dll
+  ProjectArk.Core.Tests -> /Users/dada/Documents/GitHub/Project-Ark/Temp/bin/Debug/ProjectArk.Core.Tests.dll
+  ProjectArk.Heat -> /Users/dada/Documents/GitHub/Project-Ark/Temp/bin/Debug/ProjectArk.Heat.dll
+  ProjectArk.Ship.Tests -> /Users/dada/Documents/GitHub/Project-Ark/Temp/bin/Debug/ProjectArk.Ship.Tests.dll
+  ProjectArk.Ship.Editor -> /Users/dada/Documents/GitHub/Project-Ark/Temp/bin/Debug/ProjectArk.Ship.Editor.dll
+  AmplifyShaderEditor -> /Users/dada/Documents/GitHub/Project-Ark/Temp/bin/Debug/AmplifyShaderEditor.dll
+  ProjectArk.Combat -> /Users/dada/Documents/GitHub/Project-Ark/Temp/bin/Debug/ProjectArk.Combat.dll
+  ProjectArk.Enemy -> /Users/dada/Documents/GitHub/Project-Ark/Temp/bin/Debug/ProjectArk.Enemy.dll
+  ProjectArk.Level -> /Users/dada/Documents/GitHub/Project-Ark/Temp/bin/Debug/ProjectArk.Level.dll
+  ProjectArk.Combat.Tests -> /Users/dada/Documents/GitHub/Project-Ark/Temp/bin/Debug/ProjectArk.Combat.Tests.dll
+  ProjectArk.UI -> /Users/dada/Documents/GitHub/Project-Ark/Temp/bin/Debug/ProjectArk.UI.dll
+  ProjectArk.SpaceLife -> /Users/dada/Documents/GitHub/Project-Ark/Temp/bin/Debug/ProjectArk.SpaceLife.dll
+  ProjectArk.Level.Editor -> /Users/dada/Documents/GitHub/Project-Ark/Temp/bin/Debug/ProjectArk.Level.Editor.dll
+  ProjectArk.SpaceLife.Tests -> /Users/dada/Documents/GitHub/Project-Ark/Temp/bin/Debug/ProjectArk.SpaceLife.Tests.dll
+  ProjectArk.SpaceLife.Editor -> /Users/dada/Documents/GitHub/Project-Ark/Temp/bin/Debug/ProjectArk.SpaceLife.Editor.dll
+  ProjectArk.Combat.Editor -> /Users/dada/Documents/GitHub/Project-Ark/Temp/bin/Debug/ProjectArk.Combat.Editor.dll
+  Assembly-CSharp -> /Users/dada/Documents/GitHub/Project-Ark/Temp/bin/Debug/Assembly-CSharp.dll
+
+已成功生成。
+    0 个警告
+    0 个错误
+
+已用时间 00:00:01.39 通过，所有项目生成成功。
+
+---
+
+## FPSShooterTut 移除缺失 iTween 依赖 — 2026-05-23 23:47
+
+- **修改文件**
+  - `Assets/GabrielAguiarProductions/Scripts/FPSShooterTut.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：移除第三方示例脚本 `FPSShooterTut` 中唯一的 `iTween.PunchPosition(...)` 调用，保留投射物生成、刚体速度赋值与 muzzle 生成逻辑。
+
+- **目的**：解决 `CS0103: The name iTween does not exist in the current context` 编译错误；该脚本来自导入的特效包示例，项目内没有导入 iTween，且全项目仅此一处引用，因此不引入额外第三方依赖，采用最小删除依赖的方式恢复编译。
+
+- **技术**：通过全项目搜索确认 `iTween` 仅在该文件出现；删除示例性 punch offset 调用，不改 Project Ark 正式战斗/Ship/VFX 主链。验证：`bash -lc "dotnet build Project-Ark.slnx"` 通过，所有项目生成成功。
