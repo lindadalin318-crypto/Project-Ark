@@ -1633,3 +1633,18 @@
 - **目的**：解决 `CS0103: The name iTween does not exist in the current context` 编译错误；该脚本来自导入的特效包示例，项目内没有导入 iTween，且全项目仅此一处引用，因此不引入额外第三方依赖，采用最小删除依赖的方式恢复编译。
 
 - **技术**：通过全项目搜索确认 `iTween` 仅在该文件出现；删除示例性 punch offset 调用，不改 Project Ark 正式战斗/Ship/VFX 主链。验证：`bash -lc "dotnet build Project-Ark.slnx"` 通过，所有项目生成成功。
+
+---
+
+## QFX Anomaly Projectile Only 原型生成工具 — 2026-05-25 15:24
+
+- **新建/修改文件**
+  - `Assets/Scripts/Combat/Editor/QfxProjectilePrototypeCreator.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：新增 `QfxProjectilePrototypeCreator` Editor 菜单工具，菜单路径为 `ProjectArk/Combat/VFX/QFX Prototype/Create Anomaly Projectile Only Prototype`。该工具会从 QFX 的 `VFX_Cyber_Projectile_Only.prefab` 和 `Cyber` 主题 13 张材质复制出隔离的 Anomaly projectile-only 原型资产，并将 prefab 内的 `ParticleSystemRenderer` 材质槽重绑定到复制后的 Anomaly 材质。
+
+- **目的**：用最小侵入方式试验 QFX authored projectile VFX 复刻路线，先验证“复制主题材质 + 改色 + 重绑定 prefab”的工作流，不接入正式 StarCore、Projectile Pool 或 Ship/VFX 主链。
+
+- **技术**：使用 `AssetDatabase.CopyAsset` 保留 Unity 自动 GUID/meta 生成流程；使用 `PrefabUtility.LoadPrefabContents` / `SaveAsPrefabAsset` 离线重写 prefab 内 Renderer 材质引用；通过 `_Color`、`_EmissionColor`、`_TintColor`、`_ColorAddSubDiff` 写入 Anomaly 紫红/绿异常色板。验证：`dotnet build Project-Ark.slnx` 通过，新增脚本无编译错误；项目仍有既有 warning。
+
