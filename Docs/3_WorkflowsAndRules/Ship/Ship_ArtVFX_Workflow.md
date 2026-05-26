@@ -44,24 +44,44 @@
 | `Outline` | 轮廓/描边层，不等于 Highlight | 保证深色背景和高 Bloom 场景下仍能读清船体边界 |
 | `Prefab` | Unity 中可复用的对象模板 | `Ship.prefab`、`BoostTrailRoot.prefab` |
 
-### 0.4 参考项目反查结论
+### 0.4 参考项目优先级：Minishoot 为主轴，Galactic Glitch 为附录
 
-本计划不是凭空设计，第一轮必须持续参考两个已解包项目：
+本计划最后一版的参考优先级如下：
 
-| 参考项目 | 主要参考价值 | 对本计划的约束 |
+```text
+主轴参考：Minishoot
+附录参考：Galactic Glitch
+```
+
+原因：本轮目标不是复刻一整套复杂状态 Sprite 表，而是先把金丝雀号做成一个**可读、可动、可验证、能快速迭代**的 2D top-down 飞船。Minishoot 的玩家飞船实现更适合作为第一轮资产生产主轴：它用很少的核心 Sprite，加上 `Outline`、`Shape`、Lean/Dash 动画帧、TrailRenderer、ParticleSystem、Tween、音效和后处理，做出了清晰的移动手感。
+
+已核对的 Minishoot 关键证据：
+
+| 类别 | Minishoot 资产 / 实现 | 对本计划的约束 |
 | --- | --- | --- |
-| `Galactic Glitch` | 多层玩家飞船状态、`Movement / Boost / Primary / Secondary / GrabGun / Healing` 状态 Sprite、飞船高光 Shader、muzzle flash、trail、noise、ring、mask、glow 材质 | 本项目必须保留“状态映射表”和“层级拆分”意识，不能把某个状态的贴图误拿去当通用 Normal 图；尤其不能把 GrabGun 类状态图泛化成普通飞船主体 |
-| `Minishoot` | 极简高可读轮廓、`PlayerDash1-5`、`PlayerLeanLeft/Right`、`ShipPlayer` / `ShipPlayerShape` / `PlayerOutline` 材质、程序化 glow/ring/particle 材质 | 本项目必须补上 `Outline`、方向倾斜帧、Dash 帧序列、SpriteAtlas/导入一致性，以及程序化 VFX 材质参数表 |
+| 主体 Sprite | `Player.png`、`__PlayerFull.png` | Normal 第一批应先做一张完整可读的主体图，而不是一开始拆成大量状态贴图 |
+| 轮廓 / 形状材质 | `ShipPlayer.mat`、`ShipPlayerShape.mat`、`PlayerOutline.mat`、`SupershotPlayerOutline.png` | `Outline` / `Shape` 是主轴资产，不是可有可无的附属层；可读性优先于细节层数 |
+| Dash 帧序列 | `PlayerDash1.png` - `PlayerDash5.png`、`PlayerDash.anim`、`PlayerDashHalf.anim` | Dodge/Dash 应优先准备短帧序列，而不是只做一张透明残影 |
+| Lean 帧序列 | `PlayerLeanLeft1-3.png`、`PlayerLeanRight1-3.png`、`PlayerLean*.anim` | 移动 polish 应有左右倾斜状态；飞船转向反馈可以靠短帧和动画解决 |
+| 附属视觉节点 | `EnergyBars`、`Weapons`、`SpiritDashTrail`、`SpiritDashParticles` | 能量条、武器点、尾迹、粒子应作为独立节点或 VFX，不要全部画死进主体图 |
+| 运行时表现 | `PlayerView.Dash()`、`PlayerView.MovePolish()` | 手感来自 Sprite 帧 + Transform/Tween + Trail/Particle + SFX 的组合，不来自堆更多静态状态图 |
+
+`Galactic Glitch` 仍有参考价值，但降级为 appendix / optional reference：
+
+| 参考项目 | 现在的定位 | 可以参考什么 | 不再作为主轴的原因 |
+| --- | --- | --- | --- |
+| `Minishoot` | **主轴** | 主体轮廓、Outline/Shape、Lean、Dash、Trail、粒子、少量帧动画 | 更符合本轮 MVP：少资产、高可读、快验证 |
+| `Galactic Glitch` | 附录 / 可选 | 多状态分层、PlayerSkin 状态映射、复杂 shader / material 参数 | 第一轮若照 GG 做，会过早进入多状态贴图表和复杂材质矩阵，拖慢可玩闭环 |
 
 由此补充 7 条硬约束：
 
-1. **状态映射先于资产复用**：引用参考项目图片时，必须先确认它属于哪个状态；状态不明的图只能放 `Reference`，不能直接进正式生产清单。
-2. **Outline 独立于 Highlight**：`Outline` 负责可读性，`Highlight` 负责闪光/亮面；两者不能合并成一张图。
-3. **Dodge 需要帧序列意识**：除了一张 Ghost，还要考虑 `dash_01-05` 或 lean left/right 这种方向变化帧，避免闪避只有“透明复制图”。
-4. **Boost / Fire / Hit / Weaving / Overheat 都需要材质参数**：不只产贴图，还要记录 emission、blend、pulse、scroll、noise、dissolve 等参数范围。
-5. **VFX 可以来自程序化材质**：ring、spark、glow、muzzle、trail 不一定都要手绘 Sprite；可以用小纹理 + Shader / Particle 参数组合。
-6. **导入一致性必须被验收**：同一状态的多层 Sprite 必须尺寸、Pivot、PPU、压缩、Atlas Tag 一致。
-7. **毁坏/死亡参考暂不进入主链**：`WreckShip`、Debris、broken ship 可以作为后续 Death/Crash 参考，但不进入本轮 Normal-Dodge-Boost-Fire-Hit-Weaving-Overheat MVP。
+1. **Minishoot 主轴先于 GG 分层**：第一轮资产准备以 `Player / Outline / Shape / Dash / Lean / Trail / Particle` 为核心，不再以 GG 的 `Solid / Liquid / Highlight` 多状态表作为主生产模型。
+2. **完整主体先于细分层**：先做一张完整、缩小后仍清楚的 `ship_canary_body_normal`；只有当 Unity 接入需要时，才拆出附加层。
+3. **Outline 是必需品**：`Outline` / `Shape` 负责 gameplay readability，优先级高于复杂高光、法线、Bloom。
+4. **Dash 必须有短帧序列意识**：参考 `PlayerDash1-5`，Dodge 第一轮至少准备 3-5 张 dash silhouette / smear 帧，不能只靠一张 ghost 拉伸。
+5. **Lean 是移动手感资产**：参考 `PlayerLeanLeft/Right1-3`，左右倾斜帧是飞船移动 polish 的核心资产，应进入 Batch 1/2，而不是后期可选项。
+6. **VFX 优先程序化组合**：Trail、SpiritDash、Spark、Muzzle、Aura 优先用小图 + ParticleSystem / TrailRenderer / 材质参数 / Tween 组合；不要把效果全部画进主 Sprite。
+7. **GG 只在 appendix 中提供警戒和增强项**：GG 的状态映射、复杂材质、GrabGun/Healing/Secondary 禁误用规则仍保留，但不决定本轮必须产出的资产。
 
 ---
 
@@ -213,423 +233,308 @@ tex_ship_canary_solid_normal_normal.png
 
 ---
 
-## 2. 第一大阶段：生产主飞船 Sprite
+## 2. 第一大阶段：生产 Minishoot 主轴的 Normal 飞船资产
 
 ### 2.0 本阶段目标
 
 本阶段只解决一个问题：
 
 ```text
-做出金丝雀号在 Normal 状态下的主飞船视觉，并拆成 Unity 可以组合的层。
+按 Minishoot 的飞船实现思路，做出金丝雀号在 Normal 状态下可读、可动、可接入 Unity 的核心资产组。
 ```
 
-不要在本阶段做 Boost、Hit、Weaving、Overheat。那些是后续状态变体。
+本阶段不追求 GG 式完整多状态分层，不做 Boost、Hit、Weaving、Overheat 的专用贴图。第一轮重点是：
+
+```text
+一张完整主体
++ 独立 Outline / Shape
++ 核心/能量小件
++ 左右 Lean 短帧
++ Dash 短帧的准备规范
+```
 
 ### 2.1 主飞船 Normal 的玩家感受
 
 玩家看到 Normal 状态时应该感到：
 
 ```text
-这是一艘脆弱但可靠的异星探测船，主体是破旧工业金属，内部有神秘星图能量核心。
+这是一艘脆弱但可靠的异星探测船，轮廓极清楚，运动时像 Minishoot 飞船一样轻、快、干净。
 ```
 
 关键词：
 
 - 小型。
-- 旧金属。
-- 明确鼻尖朝向。
-- 中央有能量核心。
+- 清楚轮廓。
+- 鼻尖方向明确。
+- 可在 128px 下读出朝向。
+- 主体细节克制，手感靠 lean / dash / trail / particle 增强。
 - 不像战斗机那么军用，也不像魔法飞盘。
 
-### 2.2 主飞船 Normal 必须产出的图
+### 2.2 如果只参考 Minishoot，本轮必须准备什么资产
 
-第一批必须产出 5 张：
+Minishoot 主轴下，第一轮必须准备的资产不是 GG 式 `Solid / Liquid / Highlight / Core / Back` 多状态分层表，而是下面这套更轻的 playable set：
 
-| 编号 | 文件名 | 用途 | 必须做吗 |
-| --- | --- | --- | --- |
-| `1-A` | `spr_ship_canary_solid_normal_albedo.png` | 主体轮廓与金属船壳 | 必须 |
-| `1-B` | `spr_ship_canary_liquid_normal_albedo.png` | 蓝紫能量纹路，不强发光 | 必须 |
-| `1-C` | `spr_ship_canary_highlight_normal_albedo.png` | 边缘高光、金属亮面 | 必须 |
-| `1-D` | `spr_ship_canary_core_normal_albedo.png` | 中央核心底色 | 必须 |
-| `1-E` | `spr_ship_canary_back_normal_albedo.png` | 尾部喷口、后层结构 | 建议 |
+| 编号 | 文件名 | 对应 Minishoot 参考 | 用途 | 必须做吗 |
+| --- | --- | --- | --- | --- |
+| `M-1` | `spr_ship_canary_body_normal_albedo.png` | `Player.png` / `__PlayerFull.png` | 完整主船体，Normal 状态默认 Sprite | 必须 |
+| `M-2` | `spr_ship_canary_shape_normal_mask.png` | `ShipPlayerShape.mat` | 船体形状 / 填充遮罩，用于材质染色、受击、溶解或描边辅助 | 必须 |
+| `M-3` | `spr_ship_canary_outline_normal_outline.png` | `PlayerOutline.mat` / `SupershotPlayerOutline.png` | 独立轮廓，保证深色背景、Bloom、弹幕中仍可读 | 必须 |
+| `M-4` | `spr_ship_canary_core_normal_albedo.png` | `PlayerCrystal.png` / energy focus | 小型核心或能量焦点 | 建议 |
+| `M-5` | `spr_ship_canary_energybar_left_normal_albedo.png` | `EnergyBars/EnergyBarLeft` | 左侧能量条 / 翼侧能量件 | 建议 |
+| `M-6` | `spr_ship_canary_energybar_right_normal_albedo.png` | `EnergyBars/EnergyBarRight` | 右侧能量条 / 翼侧能量件 | 建议 |
+| `M-7` | `spr_ship_canary_weapon_mount_normal_albedo.png` | `Weapons` | 武器挂点 / 枪口锚点，供 Fire VFX 对齐 | 建议 |
+| `M-8` | `spr_ship_canary_shadow_normal_albedo.png` | `SpriteShadow` / `Shadows` | 软阴影或残影底座，可用程序化替代 | 可选 |
 
-第二批可选产出：
+第一轮 Lean / Dash 准备：
 
-| 编号 | 文件名 | 用途 |
-| --- | --- | --- |
-| `1-F` | `tex_ship_canary_solid_normal_normal.png` | 船体凹凸感，可选 |
-| `1-G` | `spr_ship_canary_liquid_normal_emission.png` | Normal 状态能量发光 |
-| `1-H` | `spr_ship_canary_core_normal_emission.png` | 核心弱发光 |
-| `1-I` | `spr_ship_canary_highlight_normal_mask.png` | 后续闪白遮罩 |
-| `1-J` | `spr_ship_canary_outline_normal_outline.png` | 独立轮廓/描边，可选但强烈建议 |
+| 编号 | 文件名 | 对应 Minishoot 参考 | 用途 | 必须做吗 |
+| --- | --- | --- | --- | --- |
+| `L-1` | `spr_ship_canary_lean_left_01.png` | `PlayerLeanLeft1.png` | 轻微左倾 | 必须 |
+| `L-2` | `spr_ship_canary_lean_left_02.png` | `PlayerLeanLeft2.png` | 中度左倾 | 必须 |
+| `L-3` | `spr_ship_canary_lean_left_03.png` | `PlayerLeanLeft3.png` | 强左倾 | 建议 |
+| `L-4` | `spr_ship_canary_lean_right_01.png` | `PlayerLeanRight1.png` | 轻微右倾 | 必须 |
+| `L-5` | `spr_ship_canary_lean_right_02.png` | `PlayerLeanRight2.png` | 中度右倾 | 必须 |
+| `L-6` | `spr_ship_canary_lean_right_03.png` | `PlayerLeanRight3.png` | 强右倾 | 建议 |
+| `D-1` | `spr_ship_canary_dash_01.png` | `PlayerDash1.png` | Dash 起手帧 / smear 初段 | 必须 |
+| `D-2` | `spr_ship_canary_dash_02.png` | `PlayerDash2.png` | Dash 拉伸帧 | 必须 |
+| `D-3` | `spr_ship_canary_dash_03.png` | `PlayerDash3.png` | Dash 最强形变 | 必须 |
+| `D-4` | `spr_ship_canary_dash_04.png` | `PlayerDash4.png` | Dash 回收帧 | 建议 |
+| `D-5` | `spr_ship_canary_dash_05.png` | `PlayerDash5.png` | Dash 结束帧 | 建议 |
 
-### 2.3 1-A：`solid_normal_albedo` 需求
+第一轮程序化 VFX / 材质准备：
 
-这张图是飞船最重要的一张图。
+| 编号 | 资产 | 对应 Minishoot 参考 | 用途 | 必须做吗 |
+| --- | --- | --- | --- | --- |
+| `V-1` | `mat_ship_canary_body_default.mat` | `ShipPlayer.mat` | 主体材质 | 必须 |
+| `V-2` | `mat_ship_canary_shape.mat` | `ShipPlayerShape.mat` | Shape / mask 材质 | 必须 |
+| `V-3` | `mat_ship_canary_outline.mat` | `PlayerOutline.mat` | Outline 材质 | 必须 |
+| `V-4` | `mat_ship_canary_dash.mat` | Dash sprite material | Dash 帧 / 残影材质 | 必须 |
+| `V-5` | `prefab_ship_canary_trail_preview.prefab` | `SpiritDashTrail` | TrailRenderer 预览 prefab | 建议 |
+| `V-6` | `prefab_ship_canary_dash_particles.prefab` | `SpiritDashParticles` | Dash 粒子预览 prefab | 建议 |
+
+### 2.3 主体图：`body_normal_albedo` 需求
+
+这张图是 Minishoot 主轴下最重要的一张图。
 
 #### 它要表现什么
 
 - 飞船完整轮廓。
-- 金属船壳。
 - 鼻尖方向。
 - 左右结构。
-- 主要阴影。
+- 主体明暗。
+- 可承载 `Outline`、`Shape`、Lean、Dash 的统一基础形。
 
 #### 它不要表现什么
 
-- 不要画强发光。
-- 不要画尾焰。
-- 不要画受击闪白。
-- 不要把 Bloom 效果画死。
+- 不要画强 Bloom。
+- 不要画长尾焰。
+- 不要把 Dash smear 画进 Normal。
+- 不要把 Fire / Hit / Overheat 的状态效果画死。
 - 不要把背景星空画进去。
 
 #### 制作方式
 
 1. 用 AI 或手绘得到一张完整飞船概念图。
-2. 把能量线、发光、光环临时关掉或擦掉。
-3. 保留金属主体、轮廓、结构块。
-4. 清理透明边缘。
-5. 导出为 `spr_ship_canary_solid_normal_albedo.png`。
+2. 清理成简洁、清楚、低噪声的 top-down 主体。
+3. 优先保留轮廓和朝向，减少细碎装甲纹理。
+4. 确认缩小到 `128 × 128` 后仍能读清方向。
+5. 导出为 `spr_ship_canary_body_normal_albedo.png`。
 
 #### 验收标准
 
-- 缩小到 `128 × 128` 仍能看出飞船朝上。
-- 单独显示这张图时，飞船仍然成立。
+- 缩小到 `128 × 128` 仍能看出飞船朝向。
+- 单独显示这张图时，飞船成立。
 - 没有背景像素。
 - 没有强发光画死在主体上。
+- 后续复制修改成 Lean / Dash 帧时形体不崩。
 
-### 2.4 1-B：`liquid_normal_albedo` 需求
+### 2.4 Shape / Outline 需求
 
-`Liquid` 不是水，它代表“可被状态改变的能量纹路层”。
+Minishoot 的关键不是“画很多层”，而是用 shape / outline 保证任何运动状态都能读清。
 
-#### 它要表现什么
+#### `shape_normal_mask` 要表现什么
 
-- 船体内部或表面的星图能量纹路。
-- 默认状态的低亮度蓝紫色。
-- 可被 Boost / Weaving / Overheat 改色的区域。
+- 船体整体填充形状。
+- 可用于材质染色、受击闪白、溶解、低血量警告。
+- 应比主体更干净，少细节。
 
-#### 它不要表现什么
+#### `outline_normal_outline` 要表现什么
 
-- 不要覆盖整艘船。
-- 不要遮住 `Solid` 的轮廓。
-- 不要画太亮，Normal 状态应该克制。
+- 飞船外轮廓和关键负形。
+- 在深色背景、Bloom 强光、弹幕密集时仍能读清边界。
+- 可以被材质染成暗边或淡色描边。
 
-#### 制作方式
+#### 它们不要表现什么
 
-1. 复制完整飞船概念图。
-2. 只保留能量纹路和液态/星图线条。
-3. 删除金属船体主体。
-4. 把能量纹路调成低亮蓝紫。
-5. 导出透明 PNG。
-
-#### 验收标准
-
-- 单独看这张图时，只能看到能量纹路，不应该是一艘完整飞船。
-- 叠在 `Solid` 上时，能量纹路不遮挡飞船朝向。
-- 后续改成 Boost/Weaving/Overheat 颜色时有足够空间。
-
-### 2.5 1-C：`highlight_normal_albedo` 需求
-
-`Highlight` 用来增强金属边缘、受击闪白、视觉脉冲。
-
-#### 它要表现什么
-
-- 船体边缘高光。
-- 鼻尖、翼尖、金属凸起处的亮线。
-- 可以被 HitFlash 临时增强的区域。
-
-#### 它不要表现什么
-
-- 不要画成完整白色飞船。
-- 不要铺满大面积白色。
-- 不要包含能量核心的大块发光。
-
-#### 制作方式
-
-1. 在 `Solid` 上方新建图层。
-2. 用浅灰/淡青白画出少量边缘高光。
-3. 删除 `Solid` 本体，只保留高光线。
-4. 导出透明 PNG。
-
-#### 验收标准
-
-- 单独看像“高光线稿”，不是完整飞船。
-- 叠上去后飞船更清楚，但不刺眼。
-- 后续 HitFlash 可以把这层临时变白。
-
-### 2.6 1-D：`core_normal_albedo` 需求
-
-`Core` 是玩家判断状态的主要焦点之一。
-
-#### 它要表现什么
-
-- 中央星图核心。
-- 默认状态下的低亮能量点。
-- 后续 Fire / Weaving / Overheat 的状态锚点。
-
-#### 它不要表现什么
-
-- 不要比整艘船还大。
-- 不要做成 UI 图标。
-- 不要强到盖过主体轮廓。
-
-#### 制作方式
-
-1. 在飞船中心选择一个明确区域。
-2. 画核心外壳、内圈、能量点。
-3. 默认状态亮度控制在中低。
-4. 导出透明 PNG。
-
-#### 验收标准
-
-- 叠在飞船上后，玩家能知道“这里是核心”。
-- 不打开 Emission 时也能看见。
-- 不会抢走朝向信息。
-
-### 2.7 1-E：`back_normal_albedo` 需求
-
-`Back` 是 Boost 和尾焰的视觉锚点。
-
-#### 它要表现什么
-
-- 船尾结构。
-- 喷口底座。
-- 后层机械结构。
-
-#### 它不要表现什么
-
-- 不要画持续尾焰。
-- 不要画大面积粒子。
-- 不要和 `Solid` 重复太多。
-
-#### 制作方式
-
-1. 从完整飞船中提取尾部结构。
-2. 如果 `Solid` 已经包含完整尾部，可以只保留喷口和后层装饰。
-3. 导出透明 PNG。
-
-#### 验收标准
-
-- Boost Trail 能从这张图附近自然长出来。
-- 不打开 Boost 时也不突兀。
-- 不遮挡主体。
-
-### 2.8 1-F：`solid_normal_normal` 可选需求
-
-Normal Map 是可选项。第一轮如果没有把握，可以跳过。
-
-#### 它要表现什么
-
-- 船体金属凹凸。
-- 装甲板边缘。
-- 轻微体积感。
-
-#### 推荐工具
-
-- Photoshop Normal Map 插件。
-- Materialize。
-- Krita 法线贴图工具。
-- Unity 中临时用普通 Sprite Lit 材质测试。
-
-#### 验收标准
-
-- 法线不应该让飞船看起来像 3D 塑料玩具。
-- 光照方向变化时只产生轻微体积感。
-- 如果效果不好，宁可不用。
-
-### 2.9 1-G / 1-H：Normal Emission 需求
-
-Emission 是发光贴图。
-
-#### 它要表现什么
-
-- `Liquid` 的低亮能量发光。
-- `Core` 的低亮核心发光。
-
-#### 黑白规则
-
-```text
-黑色 = 不发光
-彩色 = 发光
-越亮 = 越强
-```
-
-#### 验收标准
-
-- Normal 状态不应该像 Boost。
-- 关闭 Bloom 后，图像仍然可读。
-- 开启 Bloom 后，核心和能量线有轻微呼吸感。
-
-### 2.10 1-J：`outline_normal_outline` 建议需求
-
-`Outline` 的作用是保证可读性，不是表现受击闪白，也不是金属高光。参考 `Minishoot` 的 `PlayerOutline` / `ShipPlayerShape` 与 `Galactic Glitch` 的 `CLG_PlayerShipHighlight`，第一轮建议保留独立轮廓层。
-
-#### 它要表现什么
-
-- 飞船外轮廓和关键内部负形。
-- 在深色背景、Bloom 强光、弹幕密集时仍能读清船体边界。
-- 可以被材质染成低亮暗边或淡色描边。
-
-#### 它不要表现什么
-
-- 不要承担 HitFlash。
-- 不要替代 `highlight_normal_albedo`。
+- 不要承担 Normal 的所有细节。
+- 不要替代 Dash 帧。
 - 不要画成厚重 UI 描边。
 
 #### 验收标准
 
-- 关闭 `Highlight` 后，飞船仍然有清晰边界。
-- 缩小到 `128 × 128` 时不会糊成黑团。
-- Bloom 打开时不被能量层完全吞掉。
+- 关闭主体材质调色后，`Outline` 仍能说明船体边界。
+- 关闭 `Outline` 后，`Shape` 仍能作为干净 mask 使用。
+- `Body + Shape + Outline` 三者叠合无偏移。
+- Bloom 打开时，`Outline` 不被能量层完全吞掉。
 
-### 2.11 本阶段完成标准
+### 2.5 Core / EnergyBars / Weapon Mount 需求
 
-只有满足以下条件，才进入 Dodge / Boost 状态生产：
+Minishoot 的 `PlayerDash.anim` 和 Lean 动画会操作 `EnergyBars`、`Weapons` 等附属节点。本项目不需要照抄节点名，但需要准备同类锚点。
 
-- `Solid` 单独可读。
-- `Solid + Liquid + Highlight + Core + Back` 叠合无偏移。
+#### Core
+
+- 小而明确。
+- 是 Boost / Fire / Weaving / Overheat 后续状态的焦点。
+- Normal 状态亮度克制。
+
+#### EnergyBars
+
+- 左右对称或近似对称。
+- 可在 Dash / Lean 中旋转、偏移、缩放。
+- 不要比主船体更抢眼。
+
+#### Weapon Mount
+
+- 标记开火点或武器挂点。
+- 用于对齐 muzzle flash。
+- 可以是一张小图，也可以只是 prefab 中的空节点。
+
+#### 验收标准
+
+- `Core / EnergyBars / Weapon Mount` 不依赖完整 GG 状态图也能工作。
+- Lean / Dash 时它们可以跟随或被独立 tween。
+- Fire VFX 能从 weapon mount 自然出现。
+
+### 2.6 Lean 帧需求
+
+Lean 是 Minishoot 飞船移动手感的关键资产。`PlayerView.MovePolish()` 会根据转向/strafe 强度播放 `LeanRight1-3` 或 `LeanLeft1-3`。
+
+#### 它要表现什么
+
+- 左右转向时的倾斜、压缩或翼侧重心变化。
+- 保持同一艘船，不重新设计。
+- 从轻微到强烈至少 2 档，推荐 3 档。
+
+#### 制作方式
+
+1. 复制 `body_normal_albedo`。
+2. 保持画布、Pivot、整体中心不变。
+3. 对船体做轻微左右倾斜、压缩、翼侧偏移或高光变化。
+4. 导出 `lean_left_01-03` / `lean_right_01-03`。
+
+#### 验收标准
+
+- 连续切换 Normal → Lean1 → Lean2 → Lean3 不跳位。
+- 左右帧不是简单镜像也可以，但朝向必须一致。
+- 快速输入左右时不会闪成不同飞船。
+- 128px 下能感觉到转向，但不会遮挡 gameplay。
+
+### 2.7 Dash 帧需求
+
+Dash 应参考 `PlayerDash1-5`：短、快、形变明确，配合粒子/Trail，而不是只生成一张 ghost。
+
+#### 它要表现什么
+
+- Dash 起手压缩。
+- 中段拉伸 / smear。
+- 结束回收。
+- 可以带一点淡色能量边，但不画持续 Boost 尾焰。
+
+#### 制作方式
+
+1. 复制 `body_normal_albedo`。
+2. 制作 3-5 张短帧：起手、拉伸、最强形变、回收、结束。
+3. 所有帧画布、Pivot、主体中心一致。
+4. 可额外准备 `dash_shape_mask`，用于残影或 dissolve。
+
+#### 验收标准
+
+- 0.15-0.35 秒内播放完整 Dash 仍能读清方向。
+- Dash 和 Boost 一眼不同：Dash 是短形变，Boost 是持续推进。
+- 连续 Dash 不残留 alpha / scale / color。
+- Dash 粒子与 Trail 是辅助，不是主体可读性的唯一来源。
+
+### 2.8 本阶段完成标准
+
+只有满足以下条件，才进入 Boost / Fire / Hit / Weaving / Overheat 状态生产：
+
+- `Body` 单独可读。
+- `Body + Shape + Outline + Core` 叠合无偏移。
+- Lean 左右至少各 2 档可播放。
+- Dash 至少 3 帧可播放。
 - 所有图尺寸一致。
 - 所有图 Pivot 一致。
 - 所有图透明边干净。
 - `128 × 128` 缩略预览能看出朝向。
+- 在 Unity 中可以用 Animator / Sprite swap / tween 快速切 `Idle / Lean / Dash`。
 
 ---
 
-## 3. 第二大阶段：生产 Dodge State
+## 3. 第二大阶段：生产 Dodge / Dash State
 
-### 3.0 Dodge State 的定位
+### 3.0 Dodge / Dash State 的定位
 
-Dodge 是闪避 / 冲刺瞬间的视觉反馈。它和 Boost 不一样：
+在 Minishoot 主轴下，Dodge 的核心不是一张透明 ghost，而是一套短促的 Dash 帧 + 运行时 squash / trail / particle / audio。
 
 | 状态 | 玩家感受 | 视觉重点 |
 | --- | --- | --- |
-| `Dodge` | 瞬间闪开、短促、轻盈 | 残影、透明、方向拖尾 |
-| `Boost` | 持续推进、速度增强 | 尾焰、能量持续增强 |
+| `Dodge / Dash` | 瞬间闪开、短促、轻盈 | `dash_01-05` 帧序列、短残影、TrailRenderer、粒子 |
+| `Boost` | 持续推进、速度增强 | 持续尾迹、核心/喷口持续增强 |
 
-Dodge 不应该是一套完整新飞船，而是：
+### 3.1 Dodge / Dash 必须产出的图
 
-```text
-主飞船 Normal 图
-+ Dodge Ghost 残影图
-+ 短促高光/透明 Tween
-+ 可选小型粒子
-```
-
-### 3.1 Dodge 必须产出的图
+如果 Batch 1 已经完成 `D-1` 到 `D-5`，本阶段只需要补齐材质、mask 和运行时预览。
 
 | 编号 | 文件名 | 用途 | 必须做吗 |
 | --- | --- | --- | --- |
-| `2-A` | `spr_ship_canary_dodgeghost_dodge_albedo.png` | Dodge 静态残影 | 必须 |
-| `2-B` | `spr_ship_canary_dodgeghost_dodge_mask.png` | 控制残影透明/溶解 | 建议 |
-| `2-C` | `spr_ship_canary_highlight_dodge_albedo.png` | Dodge 瞬间高光 | 建议 |
-| `2-D` | `spr_vfx_canary_dodge_streak_01.png` | 小型速度线 | 可选 |
-| `2-E` | `spr_ship_canary_lean_left_dodge_albedo.png` | 左向闪避/转向倾斜帧 | 可选但建议 |
-| `2-F` | `spr_ship_canary_lean_right_dodge_albedo.png` | 右向闪避/转向倾斜帧 | 可选但建议 |
+| `2-A` | `spr_ship_canary_dash_01.png` | Dash 起手帧 | 必须 |
+| `2-B` | `spr_ship_canary_dash_02.png` | Dash 拉伸帧 | 必须 |
+| `2-C` | `spr_ship_canary_dash_03.png` | Dash 最强形变帧 | 必须 |
+| `2-D` | `spr_ship_canary_dash_04.png` | Dash 回收帧 | 建议 |
+| `2-E` | `spr_ship_canary_dash_05.png` | Dash 结束帧 | 建议 |
+| `2-F` | `spr_ship_canary_dash_shape_mask.png` | Dash 残影 / dissolve mask | 建议 |
+| `2-G` | `spr_vfx_canary_dash_streak_01.png` | 小型速度线 | 可选 |
 
-### 3.2 2-A：`dodgeghost_dodge_albedo` 需求
-
-这是 Dodge 最核心的图。
+### 3.2 Dash 帧制作要求
 
 #### 它要表现什么
 
-- 飞船轮廓的残影。
-- 颜色偏淡青/蓝紫。
-- 透明感。
-- 比主飞船更虚、更轻。
+- 起手压缩。
+- 中段拉伸。
+- 最高速 smear。
+- 结束回收。
+- 飞船仍然是同一艘金丝雀号。
 
 #### 它不要表现什么
 
 - 不要比主飞船更实。
-- 不要包含复杂金属细节。
-- 不要有尾焰持续效果。
-- 不要有完整背景拖尾。
+- 不要做成长尾焰。
+- 不要做成持续 Boost。
+- 不要完全依赖半透明 ghost 表达闪避。
 
-#### 制作方式
+### 3.3 Dodge Runtime 表现需求
 
-1. 复制 `spr_ship_canary_solid_normal_albedo.png`。
-2. 降低细节：模糊或淡化金属纹理。
-3. 统一染成淡青蓝或淡紫蓝。
-4. Alpha 降低到约 35%-55%。
-5. 保留清晰轮廓，删除过细小结构。
-6. 导出为 `spr_ship_canary_dodgeghost_dodge_albedo.png`。
-
-#### 验收标准
-
-- 一眼能看出是飞船残影。
-- 不会被误认为当前实体船体。
-- 在深色背景上可见，在亮色背景上不刺眼。
-- 连续生成 3 个残影时画面不糊。
-
-### 3.3 2-B：`dodgeghost_dodge_mask` 需求
-
-Mask 用来控制残影从前到后逐渐消失。
-
-#### 它要表现什么
-
-- 白色区域：残影保留更久。
-- 黑色区域：残影更快消失。
-- 推荐鼻尖偏白，尾部偏灰黑，让残影向后散掉。
-
-#### 制作方式
-
-1. 复制 Dodge Ghost 轮廓。
-2. 转成灰度。
-3. 鼻尖和核心区域保持亮。
-4. 翼尖和尾部做灰黑渐变。
-5. 导出为 `spr_ship_canary_dodgeghost_dodge_mask.png`。
-
-#### 验收标准
-
-- 单独看是黑白/灰度图。
-- 没有彩色信息。
-- 用它做透明渐隐时，残影消失方向自然。
-
-### 3.4 2-C：`highlight_dodge_albedo` 需求
-
-Dodge 高光用于闪避开始的一瞬间。
-
-#### 它要表现什么
-
-- 鼻尖和翼缘的短促亮线。
-- 类似“瞬间折光”。
-- 只出现 0.05-0.15 秒。
-
-#### 制作方式
-
-1. 复制 `highlight_normal_albedo`。
-2. 提高亮度。
-3. 删除不必要的内部细节，只保留外缘和方向感。
-4. 颜色用淡青白。
-
-#### 验收标准
-
-- 单帧出现时玩家能感觉“闪了一下”。
-- 不会被误认为受击白闪。
-- 面积小于 HitFlash。
-
-### 3.5 Dodge Runtime 表现需求
-
-Dodge 不只是图，还需要播放方式。参考 `Minishoot` 的 `PlayerDash1-5` 与 `PlayerLeanLeft/Right`，如果后续手感需要更强方向性，优先补短帧序列，而不是把一张 Ghost 拉伸到所有方向。
-
-建议表现：
+参考 Minishoot `PlayerView.Dash()`：
 
 ```text
 Dodge start:
-  主船轻微透明 0.08s
-  生成 2-3 个 Dodge Ghost
-  Highlight 快速闪一下
-Dodge sustain:
-  Ghost 向相反方向淡出
-Dodge end:
-  主船恢复正常 alpha
+  播放 dash_01 → dash_03 短帧
+  主船 / shadow 做 0.1-0.3s squash 或 scale pulse
+  TrailRenderer 开启短时间 emitting
+  Dash particles 播放一次
+Dodge recover:
+  播放 dash_04 → dash_05 或直接回 Idle
+  Trail / particles 停止或自然淡出
+  Transform / color / alpha 全部复位
 ```
 
-### 3.6 Dodge 验收标准
+### 3.4 Dodge 验收标准
 
 - 按下 Dodge 的瞬间，玩家能感觉“短促闪开”。
 - Dodge 和 Boost 一眼不同。
-- Dodge Ghost 不遮挡子弹和敌人。
-- 快速连续 Dodge 不残留残影 alpha / scale / color。
+- Dash 帧播放时不跳位。
+- Dash Ghost / Trail 不遮挡子弹和敌人。
+- 快速连续 Dodge 不残留 alpha / scale / color。
 - Debug 关闭后，正式 Runtime 仍由 `ShipDashVisuals` / `DashAfterImageSpawner` 驱动。
 
 ---
@@ -947,7 +852,7 @@ Overheat recover:
 
 ### 9.1 目录放置
 
-主飞船资产建议：
+Minishoot 主轴下，主飞船资产建议：
 
 ```text
 Assets/_Art/Ship/Canary/
@@ -956,17 +861,18 @@ Assets/_Art/Ship/Canary/
 │   ├── Layered/
 │   └── AI_Raw/
 ├── Sprites/
-│   ├── Solid/
-│   ├── Liquid/
-│   ├── Highlight/
+│   ├── Body/
+│   ├── Shape/
+│   ├── Outline/
 │   ├── Core/
-│   ├── Back/
-│   ├── DodgeGhost/
-│   └── Aura/
+│   ├── EnergyBars/
+│   ├── WeaponMount/
+│   ├── Lean/
+│   └── Dash/
 ├── Textures/
 │   ├── Masks/
 │   ├── Emission/
-│   └── Normal/
+│   └── Noise/
 ├── Materials/
 └── Shaders/
 ```
@@ -987,48 +893,48 @@ Assets/_Art/VFX/BoostTrail/
 - Texture Type 是 `Sprite (2D and UI)`。
 - Sprite Mode 是 `Single`。
 - Pivot 是 `Center`。
-- 尺寸没有被 Unity 自动压缩糊掉。
+- Lean / Dash / Body 的尺寸、PPU、Pivot 完全一致。
 - Alpha 边缘干净。
-- 所有层叠合无偏移。
+- `Body + Shape + Outline + Core` 叠合无偏移。
+- Dash 帧 0.15-0.35 秒播放时不跳位。
 
 ### 9.3 接入现役节点
 
-| 资产 | 接入节点 |
+| 资产 | 接入节点 / 运行时用途 |
 | --- | --- |
-| `solid_*` | `Ship_Sprite_Solid` |
-| `liquid_*` | `Ship_Sprite_Liquid` |
-| `highlight_*` | `Ship_Sprite_HL` |
-| `core_*` | `Ship_Sprite_Core` |
-| `back_*` | `Ship_Sprite_Back` |
-| `dodgeghost_*` | `Dodge_Sprite` / `DashAfterImageSpawner` |
-| `aura_weaving_*` | 新增前先确认是否作为 VFX Prefab，而不是改 `ShipVisual` 主层 |
+| `body_normal` | `Ship_Sprite_Solid` 或 Canary 预览 prefab 的主 SpriteRenderer |
+| `shape_mask` | 作为材质 mask / 独立 Shape Renderer，先在预览 prefab 验证 |
+| `outline` | 独立 Outline Renderer；若要进现役 `Ship.prefab`，先更新 `CanonicalSpec` / `AssetRegistry` |
+| `core` | `Ship_Sprite_Core` 或独立核心节点 |
+| `energybar_left/right` | 独立子节点，供 Lean / Dash 动画或 tween 操作 |
+| `weapon_mount` | 空节点或小 Sprite，用于对齐 Fire / Muzzle VFX |
+| `lean_left/right_*` | Animator Sprite swap 或 `ShipVisualJuice` 风格运行时切换 |
+| `dash_01-05` | `ShipDashVisuals` / Dash 预览 Animator / afterimage source |
 
 ### 9.4 接入约束
 
 - 不在 Scene 实例上长期修 `ShipVisual`。
-- 不新增第二套飞船视觉根节点。
+- 不新增第二套正式飞船视觉根节点；若需要验证，先做 `Reference` / preview prefab。
 - 不让 Runtime fallback 自动修资产。
-- 若要新增节点，先更新 `CanonicalSpec` / `AssetRegistry`。
+- 若要新增 `Outline`、`Shape`、`EnergyBars`、`WeaponMount` 等节点进入正式主链，先更新 `CanonicalSpec` / `AssetRegistry`。
 - Debug 工具只 preview，不接管正式链。
 
 ---
 
 ## 10. 第九大阶段：Material / Shader 生产
 
-### 10.1 第一批 Material
+### 10.1 第一批 Material（Minishoot 主轴）
 
-| 编号 | Material 名 | 使用贴图 |
-| --- | --- | --- |
-| `M-1` | `mat_ship_canary_solid_default` | `solid_normal_albedo`，可选 normal |
-| `M-2` | `mat_ship_canary_liquid_normal` | `liquid_normal_albedo + emission` |
-| `M-3` | `mat_ship_canary_liquid_boost` | `liquid_boost_albedo + emission` |
-| `M-4` | `mat_ship_canary_liquid_weaving` | `liquid_weaving_albedo + emission + noise` |
-| `M-5` | `mat_ship_canary_liquid_overheat` | `liquid_overheat_albedo + emission + noise` |
-| `M-6` | `mat_ship_canary_highlight_default` | `highlight_normal_albedo` |
-| `M-7` | `mat_ship_canary_highlight_hitflash` | `highlight_hit_mask` |
-| `M-8` | `mat_ship_canary_core_default` | `core_normal_albedo + emission` |
-| `M-9` | `mat_ship_canary_dodgeghost` | `dodgeghost_dodge_albedo + mask` |
-| `M-10` | `mat_ship_canary_weaving_aura` | `aura_weaving_emission + ring mask` |
+| 编号 | Material 名 | 使用贴图 / Renderer | 对应 Minishoot 参考 |
+| --- | --- | --- | --- |
+| `M-1` | `mat_ship_canary_body_default` | `body_normal_albedo` | `ShipPlayer.mat` |
+| `M-2` | `mat_ship_canary_shape` | `shape_normal_mask` | `ShipPlayerShape.mat` |
+| `M-3` | `mat_ship_canary_outline` | `outline_normal_outline` | `PlayerOutline.mat` |
+| `M-4` | `mat_ship_canary_core_default` | `core_normal_albedo` | `PlayerCrystal` / energy focus |
+| `M-5` | `mat_ship_canary_dash` | `dash_01-05 + dash_shape_mask` | `PlayerDash` frames |
+| `M-6` | `mat_ship_canary_trail` | TrailRenderer material | `SpiritDashTrail` |
+| `M-7` | `mat_vfx_canary_dash_particles` | Dash particle sprite / small texture | `SpiritDashParticles` |
+| `M-8` | `mat_vfx_canary_muzzle_flash` | `muzzle_flash_01` | Minishoot-style short feedback |
 
 ### 10.2 第一批 Shader
 
@@ -1036,11 +942,12 @@ Assets/_Art/VFX/BoostTrail/
 
 | Shader | 用途 |
 | --- | --- |
-| `ShipEnergyPulse` | Liquid/Core 发光脉冲 |
-| `ShipHighlightFlash` | HitFlash / DodgeFlash |
-| `AdditiveGlow` | Aura / Muzzle / Spark |
+| `ShipBodyDefault` | 主体 Sprite，可先用 URP 2D Lit / Sprite Unlit 替代 |
+| `ShipShapeMask` | Shape / mask 染色、受击、溶解预备 |
+| `ShipOutline` | Outline 层，保证可读性 |
+| `AdditiveGlow` | Dash particles / Muzzle / Spark / Aura |
+| `DissolveFade` | Dash ghost / Teleport / Death 预备 |
 | `BoostTrailMain` | 现役 BoostTrail |
-| `DissolveFade` | DodgeGhost / Death 预备 |
 
 ### 10.3 材质与 Shader 分工
 
@@ -1055,15 +962,15 @@ Runtime = 什么时候切换、什么时候 tween
 
 ### 10.4 材质参数矩阵
 
-参考两个解包项目中大量 `glow`、`ring`、`muzzle_flash`、`trail`、`noise`、`outline` 材质，本项目不能只记录“用了哪张图”，还要记录每个状态的材质参数。第一轮至少维护下表：
+Minishoot 主轴下，第一轮参数矩阵应围绕可读性和运动反馈，而不是复杂状态贴图表：
 
 | 状态 / 材质 | 必填参数 | 说明 |
 | --- | --- | --- |
-| `mat_ship_canary_liquid_normal` | `emissionIntensity`、`pulseSpeed` | Normal 必须克制，避免看起来像 Boost |
-| `mat_ship_canary_liquid_boost` | `emissionIntensity`、`scrollSpeed`、`noiseStrength` | 表现持续推进和能量流动 |
-| `mat_ship_canary_dodgeghost` | `alpha`、`dissolveAmount`、`fadeDuration` | Dodge 残影必须短、轻、可回收复位 |
-| `mat_ship_canary_weaving_aura` | `ringScale`、`pulseSpeed`、`blendMode` | Aura 不能遮挡 gameplay |
-| `mat_ship_canary_liquid_overheat` | `heatTint`、`pulseSpeed`、`noiseStrength` | 过热要危险但不能常驻纯红 |
+| `mat_ship_canary_body_default` | `tint`、`brightness` | Normal 主体克制、清楚 |
+| `mat_ship_canary_shape` | `shapeTint`、`hitFlashAmount`、`dissolveAmount` | Shape 是运行时效果的主要 mask |
+| `mat_ship_canary_outline` | `outlineColor`、`outlineAlpha`、`outlineWidth` | Outline 保证 gameplay readability |
+| `mat_ship_canary_dash` | `alpha`、`stretchTint`、`fadeDuration` | Dash 必须短、轻、可复位 |
+| `mat_ship_canary_trail` | `trailColor`、`lifetime`、`widthCurve` | Trail 是 Dash/Boost 辅助，不替代主体帧 |
 | `mat_vfx_canary_muzzle_flash` | `lifetime`、`additiveIntensity`、`colorFamily` | 连射时不能刷白屏幕 |
 
 这些参数后续应进入 `ShipVFX_AssetRegistry` 或专门的 VFX tuning 表。Runtime 只通过 `MaterialPropertyBlock` 或实例材质写运行时值，不写回 shared Material。
@@ -1154,59 +1061,69 @@ Runtime = 什么时候切换、什么时候 tween
 
 ## 13. 推荐执行顺序
 
-### Batch 0：参考项目反查与资产映射
+### Batch 0：Minishoot 飞船实现反查与资产映射
 
 产出：
 
 ```text
-Galactic Glitch 状态映射核对
-Minishoot Dash / Lean / Outline / Material 参考核对
-Reference-only 素材归档
-禁止误用清单
+Minishoot Player / __PlayerFull 主体参考核对
+ShipPlayer / ShipPlayerShape / PlayerOutline 材质参考核对
+PlayerDash1-5 / PlayerDash.anim 参考核对
+PlayerLeanLeft/Right1-3 / Lean 动画参考核对
+SpiritDashTrail / SpiritDashParticles / EnergyBars / Weapons 节点参考核对
+Galactic Glitch 附录参考归档
 ```
 
-完成标准：每张参考图都知道来自哪个项目、哪个状态、用于什么目的；状态不明的图不得进入正式生产目录。
+完成标准：每个 Minishoot 飞船资产都知道它承担的是主体、outline、shape、lean、dash、trail、particle 还是附属节点；GG 资产只进入 appendix，不决定本轮主生产清单。
 
-### Batch 1：只做主飞船 Normal
+### Batch 1：只做 Minishoot 主轴 Normal + Lean + Dash 基础资产
 
 产出：
 
 ```text
-spr_ship_canary_solid_normal_albedo.png
-spr_ship_canary_liquid_normal_albedo.png
-spr_ship_canary_highlight_normal_albedo.png
-spr_ship_canary_core_normal_albedo.png
-spr_ship_canary_back_normal_albedo.png
+spr_ship_canary_body_normal_albedo.png
+spr_ship_canary_shape_normal_mask.png
 spr_ship_canary_outline_normal_outline.png
+spr_ship_canary_core_normal_albedo.png
+spr_ship_canary_energybar_left_normal_albedo.png
+spr_ship_canary_energybar_right_normal_albedo.png
+spr_ship_canary_lean_left_01.png
+spr_ship_canary_lean_left_02.png
+spr_ship_canary_lean_right_01.png
+spr_ship_canary_lean_right_02.png
+spr_ship_canary_dash_01.png
+spr_ship_canary_dash_02.png
+spr_ship_canary_dash_03.png
 ```
 
-完成标准：五层叠合可读，`Solid` 单独可读；如果加入 `Outline`，关闭 `Highlight` 后仍能读清轮廓。
+完成标准：主体单独可读；`Body + Shape + Outline + Core` 叠合无偏移；Lean 左右至少各 2 档；Dash 至少 3 帧；128px 能读清朝向。
 
-### Batch 2：做 Dodge
+### Batch 2：做 Dodge / Dash 可玩闭环
 
 产出：
 
 ```text
-spr_ship_canary_dodgeghost_dodge_albedo.png
-spr_ship_canary_dodgeghost_dodge_mask.png
-spr_ship_canary_highlight_dodge_albedo.png
-spr_ship_canary_lean_left_dodge_albedo.png
-spr_ship_canary_lean_right_dodge_albedo.png
+spr_ship_canary_dash_04.png
+spr_ship_canary_dash_05.png
+spr_ship_canary_dash_shape_mask.png
+mat_ship_canary_dash.mat
+prefab_ship_canary_trail_preview.prefab
+prefab_ship_canary_dash_particles.prefab
 ```
 
-完成标准：能在 Play Mode 中看到短促残影；需要方向性时，优先用 lean / dash 短帧序列补充，而不是拉伸单张 Ghost。
+完成标准：能在 Play Mode 中看到短促 Dash 帧 + trail / particles；连续触发不残留 alpha、scale、color。
+
 ### Batch 3：做 Boost
 
 产出：
 
 ```text
-spr_ship_canary_liquid_boost_albedo.png
-spr_ship_canary_liquid_boost_emission.png
 spr_ship_canary_core_boost_emission.png
-spr_ship_canary_back_boost_albedo.png
+spr_ship_canary_energybar_boost_emission.png
+spr_ship_canary_engine_boost_albedo.png
 ```
 
-完成标准：Boost 启停有持续推进感。
+完成标准：Boost 启停有持续推进感；仍以现役 `BoostTrailRoot` 为主要尾迹，不把长尾焰画死进主 Sprite。
 
 ### Batch 4：做 Fire / Hit
 
@@ -1215,37 +1132,37 @@ spr_ship_canary_back_boost_albedo.png
 ```text
 spr_ship_canary_core_fire_emission.png
 spr_vfx_canary_muzzle_flash_01.png
-spr_ship_canary_highlight_hit_mask.png
+spr_ship_canary_shape_hit_mask.png
 spr_vfx_canary_hit_spark_01.png
 ```
 
-完成标准：开火和受击都短促、清楚、不混淆。
+完成标准：开火和受击都短促、清楚、不混淆；Fire 从 `weapon_mount` 对齐生成。
 
 ### Batch 5：做 Weaving
 
 产出：
 
 ```text
-spr_ship_canary_liquid_weaving_albedo.png
-spr_ship_canary_liquid_weaving_emission.png
 spr_ship_canary_core_weaving_emission.png
 spr_ship_canary_aura_weaving_emission.png
+tex_ship_canary_weaving_ring_mask.png
+tex_ship_canary_weaving_noise_mask.png
 ```
 
-完成标准：编织态有星图连接感。
+完成标准：编织态有星图连接感；优先用 aura / ring / noise 程序化组合，不重画整艘船。
 
 ### Batch 6：做 Overheat
 
 产出：
 
 ```text
-spr_ship_canary_liquid_overheat_albedo.png
-spr_ship_canary_liquid_overheat_emission.png
 spr_ship_canary_core_overheat_emission.png
+spr_ship_canary_shape_overheat_mask.png
+tex_ship_canary_overheat_noise_mask.png
 spr_vfx_canary_overheat_spark_01.png
 ```
 
-完成标准：不看 UI 也知道热量危险。
+完成标准：不看 UI 也知道热量危险；恢复后颜色、发光、火花全部复位。
 
 ### Batch 7：固化 Unity 接入和注册表
 
@@ -1253,7 +1170,8 @@ spr_vfx_canary_overheat_spark_01.png
 
 ```text
 Unity Import Settings 统一
-Ship.prefab 接入
+Canary preview prefab 或 Ship.prefab 接入方案
+Animator / Sprite swap / tween 验证
 VFX Prefab 接入
 ShipVFX_AssetRegistry 更新
 ImplementationLog 更新
@@ -1261,7 +1179,7 @@ Material 参数矩阵更新
 SpriteAtlas / Import Preset 检查
 ```
 
-完成标准：Debug 关闭后，正式 Runtime 链路仍能驱动所有状态；导入设置、材质参数、AssetRegistry 三者一致。
+完成标准：Debug 关闭后，正式 Runtime 链路仍能驱动 Idle / Lean / Dash / Boost / Fire / Hit / Weaving / Overheat；导入设置、材质参数、AssetRegistry 三者一致。
 
 ---
 
@@ -1275,19 +1193,48 @@ SpriteAtlas / Import Preset 检查
 - 不要新增 `Boost+Hit+Weaving+Overheat` 这种组合状态图。
 - 不要在 Scene 实例上长期修到“看起来能用”。
 - 不要让 Debug 面板成为正式 Runtime owner。
-- 不要把 `Galactic Glitch` 的某个状态图脱离原状态语境直接复用，尤其不要把 GrabGun / Healing / Secondary 当成 Normal。
-- 不要把 `Minishoot` 的极简单层表现误解成“本项目也只需要一张 Player 图”；它的价值更多在轮廓、Dash 帧、Outline 和材质参数。
+- 不要把 `Galactic Glitch` 的某个状态图脱离原状态语境直接复用；GG 现在只属于 appendix / optional reference，尤其不要把 GrabGun / Healing / Secondary 当成 Normal。
+- 不要把 `Minishoot` 的极简单层表现误解成“本项目只需要一张 Player 图”；它的主轴价值在 `Body + Shape + Outline + Lean + Dash + Trail/Particle` 的组合。
 - 不要把 `WreckShip`、Debris、broken ship 参考提前混入本轮主飞船状态；死亡/毁坏是后续独立批次。
 
 ---
 
-## 15. 一句话总结
+## 15. Appendix：Galactic Glitch 只作为可选增强参考
 
-第一轮目标不是做出最终美术，而是做出一套人人都能继续扩展的飞船美术资产结构：
+### 15.1 Appendix 定位
+
+`Galactic Glitch` 不再作为本 workflow 的主生产模型。它只用于：
+
+- 校验复杂状态图不要误用。
+- 后续需要更复杂材质 / shader / 多状态换皮时做参考。
+- 对照 PlayerSkin 状态映射，避免把某个状态专属图当成通用 Normal。
+
+### 15.2 可选参考项
+
+| GG 项 | 可借鉴内容 | 本轮处理方式 |
+| --- | --- | --- |
+| `Movement / Boost / Primary / Secondary / GrabGun / Healing` 状态表 | 多状态视觉切换思路 | 只作为后续扩展参考，不进入 Batch 1 必做清单 |
+| `CLG_PlayerShipHighlight` / 高光材质 | 高光、脉冲、颜色参数 | 可借鉴参数，不照搬资产结构 |
+| muzzle flash / ring / trail / noise | 程序化 VFX 纹理与材质组合 | 可用于 Fire / Weaving / Boost 的增强项 |
+| PlayerSkinDefault 映射 | 防误用状态图 | 作为 Appendix 警戒表保留 |
+
+### 15.3 禁误用规则
+
+- GG 的 `GrabGun_Base_9/8` 只属于 GrabGun 状态，不得用于 Normal / Boost / Primary。
+- GG 的 `Healing`、`Secondary`、`Primary` 贴图不得脱离原状态语境直接复用。
+- 状态不明的 GG 图只能放 `Reference`，不能进入正式 Canary 生产目录。
+- 如果某个 GG 参考会迫使我们提前建立完整多状态 Sprite 表，默认推迟到 Minishoot 主轴闭环之后。
+
+---
+
+## 16. 一句话总结
+
+第一轮目标不是做出最终美术，而是按 Minishoot 主轴做出一套人人都能继续扩展的飞船美术资产结构：
 
 ```text
-Normal 主体分层
-+ Dodge 残影
+Minishoot 主轴 Body / Shape / Outline
++ Lean / Dash 短帧
++ Dodge 残影与 Trail/Particle
 + Boost 能量增强
 + Fire 短反馈
 + Hit 短反馈

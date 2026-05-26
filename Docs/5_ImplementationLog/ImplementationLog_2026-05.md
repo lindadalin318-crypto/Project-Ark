@@ -1648,3 +1648,80 @@
 
 - **技术**：使用 `AssetDatabase.CopyAsset` 保留 Unity 自动 GUID/meta 生成流程；使用 `PrefabUtility.LoadPrefabContents` / `SaveAsPrefabAsset` 离线重写 prefab 内 Renderer 材质引用；通过 `_Color`、`_EmissionColor`、`_TintColor`、`_ColorAddSubDiff` 写入 Anomaly 紫红/绿异常色板。验证：`dotnet build Project-Ark.slnx` 通过，新增脚本无编译错误；项目仍有既有 warning。
 
+
+
+---
+
+## Ship Art/VFX Workflow Minishoot 主轴重写 — 2026-05-25 22:40
+
+- **新建/修改文件**
+  - `Docs/3_WorkflowsAndRules/Ship/Ship_ArtVFX_Workflow.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：将金丝雀号飞船美术 workflow 的参考优先级调整为 `Minishoot` 主轴、`Galactic Glitch` 附录。重写参考项目优先级、Normal 主体资产、Dodge/Dash、Unity 接入、Material/Shader、推荐 Batch 顺序与 GG appendix，明确第一轮需要准备 `Body / Shape / Outline / Core / EnergyBars / WeaponMount / Lean / Dash / Trail / Particle` 这套 Minishoot 风格 playable set，而不是 GG 式多状态分层表。
+
+- **目的**：让飞船美术生产回到“少资产、高可读、快验证”的垂直切片路径，优先复刻 Minishoot 的简洁飞船实现方式：完整主体、独立 outline/shape、左右 Lean 帧、Dash 短帧、TrailRenderer/ParticleSystem/Tween 组合。GG 保留为后续复杂状态图、材质和禁误用参考，避免拖慢本轮 Normal/Dash 可玩闭环。
+
+- **技术**：基于 `Minishoot/DevXUnity/Sprite`、`Minishoot/DevXUnity/Texture2D`、`Minishoot/ExportedProject/Assets/AnimationClip` 与 `PlayerView.cs` 的实证核对，按 Markdown 标题边界替换 workflow 章节；保留现役 `Ship/VFX` 接入约束，要求新增正式节点前同步 `CanonicalSpec` / `AssetRegistry`，并维持 Runtime 不写 shared Material、Debug 不接管正式链路的规则。
+
+
+---
+
+## Canary Ship Complete Art/VFX Ongoing Plan — 2026-05-25 22:51
+
+- **新建/修改文件**
+  - 
+  - 
+
+- **内容**：根据  新建金丝雀号完整飞船制作 ongoing plan。计划把 Minishoot 主轴 workflow 拆成 29 个可执行任务，覆盖资产文件夹准备、Minishoot reference board、Normal playable set、Lean、Dash、Unity 导入、Preview Prefab、Boost、Fire、Hit、Weaving、Overheat、Material/Shader、Ship/VFX 正式接入、最终验证与对象池复位检查。
+
+- **目的**：将飞船美术 workflow 从“制作规则文档”落成“可以逐项推进的 ongoing 执行计划”，明确每一步要制作哪些素材、素材路径、验收标准、MVP 边界与最终完成条件，目标是最终完成整个金丝雀号飞船美术与 VFX 制作闭环。
+
+- **技术**：采用 Minishoot 风格  playable set 作为主生产模型，将  保留为 appendix / optional reference；计划中显式约束正式接入必须遵守 、 与 ，避免 scene override、debug 接管、shared Material runtime mutation 和 GG 式多状态表过早膨胀。
+
+
+---
+
+## Canary Ship Asset Folder Preparation — 2026-05-25 23:09
+
+- **新建/修改文件**
+  - `Assets/_Art/Ship/Canary/Source/Concepts/`
+  - `Assets/_Art/Ship/Canary/Source/Layered/`
+  - `Assets/_Art/Ship/Canary/Source/AI_Raw/`
+  - `Assets/_Art/Ship/Canary/Sprites/Body/`
+  - `Assets/_Art/Ship/Canary/Sprites/Shape/`
+  - `Assets/_Art/Ship/Canary/Sprites/Outline/`
+  - `Assets/_Art/Ship/Canary/Sprites/Core/`
+  - `Assets/_Art/Ship/Canary/Sprites/EnergyBars/`
+  - `Assets/_Art/Ship/Canary/Sprites/WeaponMount/`
+  - `Assets/_Art/Ship/Canary/Sprites/Lean/`
+  - `Assets/_Art/Ship/Canary/Sprites/Dash/`
+  - `Assets/_Art/Ship/Canary/Textures/Masks/`
+  - `Assets/_Art/Ship/Canary/Textures/Emission/`
+  - `Assets/_Art/Ship/Canary/Textures/Noise/`
+  - `Assets/_Art/Ship/Canary/Materials/`
+  - `Assets/_Art/Ship/Canary/Shaders/`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：执行金丝雀号完整飞船制作计划的 Task 1，创建 `Assets/_Art/Ship/Canary/` 下的 Source、Sprites、Textures、Materials、Shaders 资产目录，并更新 ongoing plan 中 Task 1 的状态。目录创建已完成；Unity Editor / AssetDatabase 导入验证保留为待确认步骤。
+
+- **目的**：为 Minishoot-style 飞船制作主轴建立稳定资产管线，后续可按 `Body / Shape / Outline / Core / EnergyBars / WeaponMount / Lean / Dash` 的顺序放入正式素材，避免素材散落或提前污染现役 `Ship/VFX` 主链。
+
+- **技术**：使用文件系统创建目录，不手写 `.meta`，遵守 Unity GUID 由 Editor 自动生成的规则；通过 `find` 检查当前目录下未出现手写 `.meta` 文件；计划文档只标记已完成的磁盘目录创建，并明确 Unity import verification 仍需后续刷新验证。
+
+
+---
+
+## Canary Ship Minishoot Reference Board — 2026-05-25 23:19
+
+- **新建/修改文件**
+  - `Assets/_Art/Ship/Canary/Source/Concepts/canary_minishoot_reference_board.png`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：执行 Batch 0 / Task 2，定位 Minishoot 飞船参考资产，生成金丝雀号参考板 PNG，并在 ongoing plan 中补充 `__PlayerFull`、`SupershotPlayerOutline`、Lean、Dash、EnergyBars、Weapons、SpiritDashTrail / SpiritDashParticles 到 Project Ark 目标素材的映射表。
+
+- **目的**：在正式制作金丝雀号素材前锁定 Minishoot 主参考，明确 Batch 1 优先制作 `Body / Shape / Outline / Lean / Dash`，并把 GG-style full state sheet、死亡残骸、复杂 shader parity、最终 Bloom 调参排除出 Batch 1。
+
+- **技术**：使用文件系统与脚本引用检索确认 `Sprite`、`Texture2D`、`Material`、`AnimationClip`、`PlayerView.cs` 中的参考来源；用轻量 PNG 生成脚本制作可读参考板；不创建或手写 `.meta`。
