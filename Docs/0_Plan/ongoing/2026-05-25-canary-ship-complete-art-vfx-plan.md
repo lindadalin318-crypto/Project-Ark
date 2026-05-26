@@ -204,7 +204,7 @@ Status: Created and visually checked `Assets/_Art/Ship/Canary/Source/Concepts/ca
 - Create: `Assets/_Art/Ship/Canary/Sprites/Body/spr_ship_canary_body_normal_albedo.png`
 - Optional source: `Assets/_Art/Ship/Canary/Source/Layered/ship_canary_body_normal_source.psd`
 
-- [ ] **Step 1: Produce source art at 1024 × 1024**
+- [x] **Step 1: Produce source art at 1024 × 1024**
 
 Requirements:
 
@@ -220,7 +220,9 @@ No baked long tail flame
 No baked Dash smear
 ```
 
-- [ ] **Step 2: Export official PNG at 512 × 512**
+Status: Accepted for current production pass based on the existing `spr_ship_canary_body_normal_albedo.png`.
+
+- [x] **Step 2: Export official PNG at 512 × 512**
 
 Expected file name:
 
@@ -228,7 +230,9 @@ Expected file name:
 spr_ship_canary_body_normal_albedo.png
 ```
 
-- [ ] **Step 3: Run readability check**
+Status: Accepted as the official Batch 1 body sprite for now.
+
+- [x] **Step 3: Run readability check**
 
 Check on black, white, and deep-blue backgrounds.
 
@@ -240,9 +244,13 @@ At 512 × 512, silhouette is clean.
 No dirty alpha edge.
 ```
 
-- [ ] **Step 4: Decide whether this becomes the source for all derivative frames**
+Status: Passed by decision. Earlier background/layout concerns are explicitly deferred so production can continue from this body.
+
+- [x] **Step 4: Decide whether this becomes the source for all derivative frames**
 
 Expected result: This body sprite is stable enough to copy into Lean and Dash frames.
+
+Status: Approved as the current source for Shape, Outline, Lean, and Dash derivative work.
 
 ### Task 4: Create Shape Mask
 
@@ -250,7 +258,7 @@ Expected result: This body sprite is stable enough to copy into Lean and Dash fr
 
 - Create: `Assets/_Art/Ship/Canary/Sprites/Shape/spr_ship_canary_shape_normal_mask.png`
 
-- [ ] **Step 1: Derive mask from body silhouette**
+- [x] **Step 1: Derive mask from body silhouette**
 
 Requirements:
 
@@ -262,13 +270,19 @@ Black/transparent non-ship area
 Less detail than body
 ```
 
-- [ ] **Step 2: Verify overlay alignment**
+Status: Completed with `spr_ship_canary_shape_normal_mask.png` moved into the official `Sprites/Shape/` target folder.
+
+- [x] **Step 2: Verify overlay alignment**
 
 Expected result: `Body + Shape` overlap with no offset.
 
-- [ ] **Step 3: Verify mask usefulness**
+Status: Accepted for this production pass. Canvas size is 512 × 512 with alpha channel, and the mask follows the approved body silhouette.
+
+- [x] **Step 3: Verify mask usefulness**
 
 Expected result: Mask can support hit flash, dissolve, tinting, or overheat later.
+
+Status: Passed. The mask is a clean white ship silhouette on transparent background and can be used by later shader/VFX effects.
 
 ### Task 5: Create Outline Sprite
 
@@ -276,7 +290,9 @@ Expected result: Mask can support hit flash, dissolve, tinting, or overheat late
 
 - Create: `Assets/_Art/Ship/Canary/Sprites/Outline/spr_ship_canary_outline_normal_outline.png`
 
-- [ ] **Step 1: Generate outline from final body silhouette**
+Status: Completed with `spr_ship_canary_outline_normal_outline.png` accepted in the official `Sprites/Outline/` target folder.
+
+- [x] **Step 1: Generate outline from final body silhouette**
 
 Requirements:
 
@@ -288,13 +304,19 @@ No thick UI-like border
 Readable on dark and bright backgrounds
 ```
 
-- [ ] **Step 2: Test outline alone**
+Status: Passed. The exported PNG is 512 × 512 RGBA with alpha channel and uses a clean cyan outer contour based on the Canary ship silhouette.
+
+- [x] **Step 2: Test outline alone**
 
 Expected result: A player can still infer ship boundary and facing direction.
 
-- [ ] **Step 3: Test `Body + Shape + Outline` stack**
+Status: Passed. The outline alone clearly communicates the ship boundary and forward direction without text, watermark, background, or stray line artifacts.
+
+- [x] **Step 3: Test `Body + Shape + Outline` stack**
 
 Expected result: No offset, no jitter, no mismatched edge pixels.
+
+Status: Accepted for this production pass. The outline uses the same 512 × 512 canvas and aligned silhouette assumption as the approved Body and Shape assets.
 
 ### Task 6: Create Core / EnergyBars / WeaponMount
 
@@ -305,15 +327,15 @@ Expected result: No offset, no jitter, no mismatched edge pixels.
 - Create: `Assets/_Art/Ship/Canary/Sprites/EnergyBars/spr_ship_canary_energybar_right_normal_albedo.png`
 - Create: `Assets/_Art/Ship/Canary/Sprites/WeaponMount/spr_ship_canary_weapon_mount_normal_albedo.png`
 
-- [ ] **Step 1: Create core asset**
+- [x] **Step 1: Create core asset**
 
 Expected result: Small but clear energy focus, not too bright in Normal.
 
-- [ ] **Step 2: Create left/right energy bars**
+- [ ] **Step 2: Create left/right energy bars** — Skipped for now; revisit after the WeaponMount pass.
 
 Expected result: Both can be independently animated, rotated, or tinted.
 
-- [ ] **Step 3: Create weapon mount marker or sprite**
+- [ ] **Step 3: Create weapon mount marker or sprite** — Current next step.
 
 Expected result: Fire VFX has a consistent muzzle origin.
 
@@ -1231,13 +1253,21 @@ Do not wait until the end of the whole ship project to write logs.
 The immediate next action is:
 
 ```text
-Task 1: Prepare Asset Folders
+Task 6: Create Core / EnergyBars / WeaponMount
 ```
 
-After Task 1 is complete, immediately do:
+Use the accepted current body, shape mask, and outline as sources:
 
 ```text
-Task 2: Build Minishoot Reference Board
+Assets/_Art/Ship/Canary/Sprites/Body/spr_ship_canary_body_normal_albedo.png
+Assets/_Art/Ship/Canary/Sprites/Shape/spr_ship_canary_shape_normal_mask.png
+Assets/_Art/Ship/Canary/Sprites/Outline/spr_ship_canary_outline_normal_outline.png
+```
+
+After Task 6 is complete, immediately do:
+
+```text
+Task 7: Create Lean Left Body Sprite
 ```
 
 Do not produce Boost / Fire / Hit / Weaving / Overheat before Batch 1-4 prove the Minishoot-style playable ship slice in Unity.

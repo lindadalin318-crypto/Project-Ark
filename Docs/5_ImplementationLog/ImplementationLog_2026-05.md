@@ -1,5 +1,51 @@
 ---
 
+## Canary Core 完成与 EnergyBars 延后标记 — 2026-05-26 16:40
+
+- **修改文件**
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：将 Batch 1 / Task 6 的 `Create core asset` 标记为完成；将 `Create left/right energy bars` 标记为本轮暂时跳过并延后到 WeaponMount 之后；同步把 `Create weapon mount marker or sprite` 标注为当前下一步。
+- **目的**：接受当前 `spr_ship_canary_core_normal_albedo.png` 作为 Core 正常层成果，同时避免 EnergyBars 阻塞 Batch 1 的功能接口推进，先进入炮口 / 武器挂载点参考层制作。
+- **技术**：仅更新计划文档状态与实现日志；未移动或创建 PNG 资产，未修改 Unity 运行链路、Prefab、Scene、Material、Shader 或 `.meta` 文件。
+
+---
+
+## Canary Outline Sprite 通过判定与 Task 5 关闭 — 2026-05-26 14:55
+
+- **修改文件**
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：验收 `Assets/_Art/Ship/Canary/Sprites/Outline/spr_ship_canary_outline_normal_outline.png`，确认其为 512 × 512 RGBA PNG 且带 Alpha 通道，视觉内容为干净的青色飞船外轮廓，无上一版的文字、水印或杂线残留。将 Batch 1 / Task 5 `Create Outline Sprite` 的三个步骤标记为完成，并把 `Current Next Action` 推进为 Task 6 `Create Core / EnergyBars / WeaponMount`。
+- **目的**：关闭 Normal playable set 的 Outline 资产生产任务，让后续 Core、EnergyBars、WeaponMount 与 Lean 派生资产可以基于稳定的 Body / Shape / Outline 三层继续制作。
+- **技术**：使用图像预览与 `sips` / `file` 命令完成格式验证；仅更新文档状态，未修改 Unity 运行链路、Prefab、Scene、Material、Shader 或 `.meta` 文件。
+
+---
+
+## Canary Shape Mask 移动与 Task 4 关闭 — 2026-05-26 14:07
+
+- **移动文件**
+  - `Assets/_Art/Ship/Canary/Sprites/Body/spr_ship_canary_shape_normal_mask.png` → `Assets/_Art/Ship/Canary/Sprites/Shape/spr_ship_canary_shape_normal_mask.png`
+- **修改文件**
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：将 `spr_ship_canary_shape_normal_mask.png` 从 `Sprites/Body/` 移动到计划指定的 `Sprites/Shape/` 目录，并将 Batch 1 / Task 4 `Create Shape Mask` 的三个步骤标记为完成。同步把 `Current Next Action` 推进为 Task 5 `Create Outline Sprite`，并记录 Task 6 为后续 Lean 左右帧制作。
+- **目的**：关闭 Shape Mask 生产任务，让当前金丝雀号 body 与 mask 成为后续 Outline、Lean、Dash 派生资产的稳定输入。
+- **技术**：文件路径整理与文档状态更新；未创建 `.meta` 文件，交由 Unity AssetDatabase 自动生成/维护；未修改 Unity 运行链路、Prefab、Scene、Material 或 Shader。
+
+---
+
+## Canary Ship Body Sprite 通过判定与计划推进 — 2026-05-26 11:46
+
+- **修改文件**
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：将 Batch 1 / Task 3 `spr_ship_canary_body_normal_albedo.png` 的四个步骤标记为通过，并记录该 body sprite 作为当前 Shape、Outline、Lean、Dash 派生工作的来源。同步把 `Current Next Action` 从过期的 Task 1 / Task 2 推进为 Task 4 `Create Shape Mask`。
+- **目的**：接受当前主身体 Sprite 作为本轮生产基准，避免继续卡在背景/布局返修上，让 Batch 1 能进入 Shape Mask 与 Outline 制作。
+- **技术**：文档状态更新；未修改 Unity 运行链路、Prefab、Scene、Material 或 `.meta` 文件。
+
+---
+
 ## Ship Art / VFX Minishoot 参考素材库整理 — 2026-05-18 22:10
 
 - **新建文件 / 文件夹**
