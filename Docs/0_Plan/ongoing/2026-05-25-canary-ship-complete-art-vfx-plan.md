@@ -335,9 +335,11 @@ Expected result: Small but clear energy focus, not too bright in Normal.
 
 Expected result: Both can be independently animated, rotated, or tinted.
 
-- [ ] **Step 3: Create weapon mount marker or sprite** — Current next step.
+- [x] **Step 3: Create weapon mount marker or sprite**
 
 Expected result: Fire VFX has a consistent muzzle origin.
+
+Status: Accepted `Assets/_Art/Ship/Canary/Sprites/WeaponMount/spr_ship_canary_weapon_mount_normal_albedo.png` as the Normal weapon mount / muzzle marker layer. File check confirms `512 x 512`, RGBA PNG, Alpha channel present, and workflow naming is correct.
 
 - [ ] **Step 4: Verify stack**
 
@@ -359,157 +361,161 @@ all align without visual drift.
 
 ---
 
-## 5. Batch 2 — Lean Frames
+## 5. Batch 2 — Lean Frames — Deferred
 
 **Goal:** Add Minishoot-style left/right movement polish without redesigning the ship.
 
-### Task 7: Create Lean Left Frames
+**Status:** Deferred. Multiple Lean generation attempts failed to preserve the Canary ship identity / axis rotation requirement, so Lean is no longer allowed to block the playable slice. Revisit this after Dash and Unity preview validation, preferably with a controlled manual deformation, skeletal/mesh warp, or image-edit workflow instead of free generation.
+
+### Task 7: Create Lean Left Frames — Deferred
 
 **Files:**
 
-- Create: `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_left_01.png`
-- Create: `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_left_02.png`
-- Create: `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_left_03.png`
+- Deferred: `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_left_01.png`
+- Deferred: `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_left_02.png`
+- Deferred: `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_left_03.png`
 
-- [ ] **Step 1: Duplicate body source**
+- [ ] **Step 1: Duplicate body source** — Deferred.
 
 Expected result: Same canvas, center, pivot, and scale as body.
 
-- [ ] **Step 2: Create light left lean**
+- [ ] **Step 2: Create light left lean** — Deferred.
 
 Expected result: `lean_left_01` shows subtle left turn / weight shift.
 
-- [ ] **Step 3: Create medium left lean**
+- [ ] **Step 3: Create medium left lean** — Deferred.
 
 Expected result: `lean_left_02` is visibly stronger but still the same ship.
 
-- [ ] **Step 4: Create strong left lean**
+- [ ] **Step 4: Create strong left lean** — Deferred.
 
 Expected result: `lean_left_03` is optional but preferred for full polish.
 
-### Task 8: Create Lean Right Frames
+### Task 8: Create Lean Right Frames — Deferred
 
 **Files:**
 
-- Create: `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_right_01.png`
-- Create: `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_right_02.png`
-- Create: `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_right_03.png`
+- Deferred: `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_right_01.png`
+- Deferred: `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_right_02.png`
+- Deferred: `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_right_03.png`
 
-- [ ] **Step 1: Duplicate body source**
+- [ ] **Step 1: Duplicate body source** — Deferred.
 
 Expected result: Same canvas, center, pivot, and scale as body.
 
-- [ ] **Step 2: Create light right lean**
+- [ ] **Step 2: Create light right lean** — Deferred.
 
 Expected result: `lean_right_01` shows subtle right turn / weight shift.
 
-- [ ] **Step 3: Create medium right lean**
+- [ ] **Step 3: Create medium right lean** — Deferred.
 
 Expected result: `lean_right_02` is visibly stronger but still the same ship.
 
-- [ ] **Step 4: Create strong right lean**
+- [ ] **Step 4: Create strong right lean** — Deferred.
 
 Expected result: `lean_right_03` is optional but preferred for full polish.
 
-### Task 9: Validate Lean Sequence
+### Task 9: Validate Lean Sequence — Deferred
 
 **Files:**
 
-- Use files from Tasks 3, 7, and 8.
+- Use files from Tasks 3, 7, and 8 after Lean is reopened.
 
-- [ ] **Step 1: Flip through Idle → LeanLeft1 → LeanLeft2 → LeanLeft3**
-
-Expected result: No jump, no scale change, no new silhouette identity.
-
-- [ ] **Step 2: Flip through Idle → LeanRight1 → LeanRight2 → LeanRight3**
+- [ ] **Step 1: Flip through Idle → LeanLeft1 → LeanLeft2 → LeanLeft3** — Deferred.
 
 Expected result: No jump, no scale change, no new silhouette identity.
 
-- [ ] **Step 3: Rapidly alternate left and right**
+- [ ] **Step 2: Flip through Idle → LeanRight1 → LeanRight2 → LeanRight3** — Deferred.
+
+Expected result: No jump, no scale change, no new silhouette identity.
+
+- [ ] **Step 3: Rapidly alternate left and right** — Deferred.
 
 Expected result: Direction feedback is readable but not noisy.
 
 ### Batch 2 Completion Gate
 
-- [ ] At least 2 left lean frames exist.
-- [ ] At least 2 right lean frames exist.
-- [ ] 3 frames per side exist or are explicitly deferred.
-- [ ] All Lean frames align with Body.
-- [ ] Lean works at 128px.
+- [ ] At least 2 left lean frames exist. — Deferred.
+- [ ] At least 2 right lean frames exist. — Deferred.
+- [x] 3 frames per side exist or are explicitly deferred.
+- [ ] All Lean frames align with Body. — Deferred.
+- [ ] Lean works at 128px. — Deferred.
 
 ---
 
-## 6. Batch 3 — Dash / Dodge Frames And Preview VFX
+## 6. Batch 3 — Dash / Dodge Frames And Preview VFX — Deferred
 
 **Goal:** Create Minishoot-style short Dash frames that read as instant dodge, not sustained Boost.
 
-### Task 10: Create Dash Frames
+**Status:** Deferred. Dash / Dodge generation is no longer allowed to block the playable preview path. Revisit after the current Normal-state Canary stack has been imported and validated in Unity.
+
+### Task 10: Create Dash Frames — Deferred
 
 **Files:**
 
-- Create: `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_01.png`
-- Create: `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_02.png`
-- Create: `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_03.png`
-- Create: `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_04.png`
-- Create: `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_05.png`
-- Create: `Assets/_Art/Ship/Canary/Textures/Masks/spr_ship_canary_dash_shape_mask.png`
+- Deferred: `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_01.png`
+- Deferred: `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_02.png`
+- Deferred: `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_03.png`
+- Deferred: `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_04.png`
+- Deferred: `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_05.png`
+- Deferred: `Assets/_Art/Ship/Canary/Textures/Masks/spr_ship_canary_dash_shape_mask.png`
 
-- [ ] **Step 1: Create dash_01 start compression**
+- [ ] **Step 1: Create dash_01 start compression** — Deferred.
 
 Expected result: First frame feels like start of instant movement.
 
-- [ ] **Step 2: Create dash_02 stretch**
+- [ ] **Step 2: Create dash_02 stretch** — Deferred.
 
 Expected result: Ship elongates or smears but remains recognizable.
 
-- [ ] **Step 3: Create dash_03 strongest shape**
+- [ ] **Step 3: Create dash_03 strongest shape** — Deferred.
 
 Expected result: Strongest motion frame, still readable at 128px.
 
-- [ ] **Step 4: Create dash_04 recovery**
+- [ ] **Step 4: Create dash_04 recovery** — Deferred.
 
 Expected result: Shape moves back toward normal.
 
-- [ ] **Step 5: Create dash_05 end frame**
+- [ ] **Step 5: Create dash_05 end frame** — Deferred.
 
 Expected result: Clean return bridge to idle.
 
-- [ ] **Step 6: Create dash shape mask**
+- [ ] **Step 6: Create dash shape mask** — Deferred.
 
 Expected result: Can drive ghost fade, dissolve, or afterimage material.
 
-### Task 11: Create Dash Materials And Preview VFX
+### Task 11: Create Dash Materials And Preview VFX — Deferred
 
 **Files:**
 
-- Create in Unity: `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_dash.mat`
-- Create in Unity: `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_trail.mat`
-- Create prefab: `Assets/_Prefabs/VFX/Ship/prefab_ship_canary_trail_preview.prefab`
-- Create prefab: `Assets/_Prefabs/VFX/Ship/prefab_ship_canary_dash_particles.prefab`
+- Deferred in Unity: `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_dash.mat`
+- Deferred in Unity: `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_trail.mat`
+- Deferred prefab: `Assets/_Prefabs/VFX/Ship/prefab_ship_canary_trail_preview.prefab`
+- Deferred prefab: `Assets/_Prefabs/VFX/Ship/prefab_ship_canary_dash_particles.prefab`
 
-- [ ] **Step 1: Create dash material**
+- [ ] **Step 1: Create dash material** — Deferred.
 
 Expected result: Supports short fade / tint without editing shared runtime material during play.
 
-- [ ] **Step 2: Create trail preview prefab**
+- [ ] **Step 2: Create trail preview prefab** — Deferred.
 
 Expected result: Trail can be enabled briefly for Dash.
 
-- [ ] **Step 3: Create dash particle preview prefab**
+- [ ] **Step 3: Create dash particle preview prefab** — Deferred.
 
 Expected result: One-shot particles support the dash start or end.
 
-- [ ] **Step 4: Verify reset behavior**
+- [ ] **Step 4: Verify reset behavior** — Deferred.
 
 Expected result: Trail and particles can be reset cleanly when preview stops.
 
 ### Batch 3 Completion Gate
 
-- [ ] Dash has at least 3 approved frames.
-- [ ] Dash has 5 frames or a written deferral note.
-- [ ] Dash reads differently from Boost.
-- [ ] Dash can play in 0.15-0.35 seconds without jump.
-- [ ] Trail and particle previews do not replace sprite readability.
+- [ ] Dash has at least 3 approved frames. — Deferred.
+- [x] Dash has 5 frames or a written deferral note.
+- [ ] Dash reads differently from Boost. — Deferred.
+- [ ] Dash can play in 0.15-0.35 seconds without jump. — Deferred.
+- [ ] Trail and particle previews do not replace sprite readability. — Deferred.
 
 ---
 
@@ -523,7 +529,7 @@ Expected result: Trail and particles can be reset cleanly when preview stops.
 
 - Modify import settings for all files under `Assets/_Art/Ship/Canary/Sprites/`
 
-- [ ] **Step 1: Set Texture Type**
+- [x] **Step 1: Set Texture Type**
 
 Expected value:
 
@@ -531,7 +537,7 @@ Expected value:
 Sprite (2D and UI)
 ```
 
-- [ ] **Step 2: Set Sprite Mode**
+- [x] **Step 2: Set Sprite Mode**
 
 Expected value:
 
@@ -539,7 +545,7 @@ Expected value:
 Single
 ```
 
-- [ ] **Step 3: Set Pivot**
+- [x] **Step 3: Set Pivot**
 
 Expected value:
 
@@ -547,13 +553,17 @@ Expected value:
 Center
 ```
 
-- [ ] **Step 4: Set PPU**
+- [x] **Step 4: Set PPU**
 
 Expected result: Same as current `Ship.prefab` ship sprite chain.
 
-- [ ] **Step 5: Disable mip maps for sprites**
+Status: Completed with `PPU = 320`, matching the current formal `Ship.prefab` ship sprite chain.
+
+- [x] **Step 5: Disable mip maps for sprites**
 
 Expected result: No unwanted blur or mip artifacts.
+
+Status: Completed for the five currently available Normal-state Canary sprite assets.
 
 ### Task 13: Create Canary Preview Prefab
 
@@ -561,7 +571,7 @@ Expected result: No unwanted blur or mip artifacts.
 
 - Create prefab: `Assets/_Prefabs/Ship/CanaryShipVisualPreview.prefab`
 
-- [ ] **Step 1: Create root GameObject**
+- [x] **Step 1: Create root GameObject**
 
 Expected hierarchy:
 
@@ -578,11 +588,13 @@ CanaryShipVisualPreview
 └── DashParticlesPreview
 ```
 
-- [ ] **Step 2: Assign SpriteRenderers**
+- [x] **Step 2: Assign SpriteRenderers**
 
 Expected result: Each visual layer has its own SpriteRenderer and sorting order.
 
-- [ ] **Step 3: Assign materials**
+Status: Completed. `EnergyBar_L`, `EnergyBar_R`, `DashTrailPreview`, and `DashParticlesPreview` are placeholder nodes until their deferred source art is available.
+
+- [x] **Step 3: Assign materials**
 
 Expected materials:
 
@@ -594,9 +606,13 @@ mat_ship_canary_dash
 mat_ship_canary_trail
 ```
 
-- [ ] **Step 4: Verify black/white/deep-blue background readability**
+Status: Completed with preview materials under `Assets/_Art/Ship/Canary/Materials/`.
+
+- [ ] **Step 4: Verify black/white/deep-blue background readability** — Blocked.
 
 Expected result: Outline keeps the ship readable in all three backgrounds.
+
+Blocked reason: Alpha inspection shows `spr_ship_canary_body_normal_albedo.png`, `spr_ship_canary_outline_normal_outline.png`, `spr_ship_canary_core_normal_albedo.png`, and `spr_ship_canary_weapon_mount_normal_albedo.png` are currently full-frame opaque (`alpha255 = 262144`), so the preview renders as a white square instead of a transparent ship layer. `spr_ship_canary_shape_normal_mask.png` has a usable alpha channel and is not the source of this white-box issue.
 
 ### Task 14: Create Preview Animation Clips
 
@@ -1134,11 +1150,11 @@ Task 3  - Body
 Task 4  - Shape
 Task 5  - Outline
 Task 6  - Core / EnergyBars / WeaponMount
-Task 7  - Lean Left
-Task 8  - Lean Right
-Task 9  - Lean validation
-Task 10 - Dash frames
-Task 11 - Dash materials and preview VFX
+Task 7  - Lean Left (deferred)
+Task 8  - Lean Right (deferred)
+Task 9  - Lean validation (deferred)
+Task 10 - Dash frames (deferred)
+Task 11 - Dash materials and preview VFX (deferred)
 Task 12 - Import settings
 Task 13 - Preview prefab
 Task 14 - Preview animations
@@ -1253,21 +1269,23 @@ Do not wait until the end of the whole ship project to write logs.
 The immediate next action is:
 
 ```text
-Task 6: Create Core / EnergyBars / WeaponMount
+Task 12: Import Settings Pass
 ```
 
-Use the accepted current body, shape mask, and outline as sources:
+Use the accepted current Normal-state Canary stack as the first Unity preview source set:
 
 ```text
 Assets/_Art/Ship/Canary/Sprites/Body/spr_ship_canary_body_normal_albedo.png
 Assets/_Art/Ship/Canary/Sprites/Shape/spr_ship_canary_shape_normal_mask.png
 Assets/_Art/Ship/Canary/Sprites/Outline/spr_ship_canary_outline_normal_outline.png
+Assets/_Art/Ship/Canary/Sprites/Core/spr_ship_canary_core_normal_albedo.png
+Assets/_Art/Ship/Canary/Sprites/WeaponMount/spr_ship_canary_weapon_mount_normal_albedo.png
 ```
 
-After Task 6 is complete, immediately do:
+Lean and Dash frames are explicitly deferred and must not block Normal-stack Unity preview validation. After Task 12, continue to:
 
 ```text
-Task 7: Create Lean Left Body Sprite
+Task 13: Create Canary Preview Prefab
 ```
 
-Do not produce Boost / Fire / Hit / Weaving / Overheat before Batch 1-4 prove the Minishoot-style playable ship slice in Unity.
+Do not produce Boost / Fire / Hit / Weaving / Overheat before the current Normal stack is imported, previewed, and validated in Unity.

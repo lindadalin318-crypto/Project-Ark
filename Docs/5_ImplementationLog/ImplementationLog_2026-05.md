@@ -1,5 +1,60 @@
 ---
 
+## Canary Import Settings 与 Preview Prefab 创建 — 2026-05-27 15:45
+
+- **新建/修改文件**
+  - `Assets/_Prefabs/Ship/CanaryShipVisualPreview.prefab`
+  - `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_body_default.mat`
+  - `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_shape.mat`
+  - `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_outline.mat`
+  - `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_dash.mat`
+  - `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_trail.mat`
+  - `Assets/_Art/Ship/Canary/Sprites/Body/spr_ship_canary_body_normal_albedo.png`
+  - `Assets/_Art/Ship/Canary/Sprites/Shape/spr_ship_canary_shape_normal_mask.png`
+  - `Assets/_Art/Ship/Canary/Sprites/Outline/spr_ship_canary_outline_normal_outline.png`
+  - `Assets/_Art/Ship/Canary/Sprites/Core/spr_ship_canary_core_normal_albedo.png`
+  - `Assets/_Art/Ship/Canary/Sprites/WeaponMount/spr_ship_canary_weapon_mount_normal_albedo.png`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：通过 Unity AssetDatabase 将当前 5 张 Normal-state Canary Sprite 统一为 `Sprite (2D and UI)`、`Single`、中心 pivot、`PPU = 320`、关闭 mipmap；创建 `CanaryShipVisualPreview.prefab`，包含 Body / Shape / Outline / Core / EnergyBar_L / EnergyBar_R / WeaponMount / DashTrailPreview / DashParticlesPreview 层级和独立 SpriteRenderer 排序；创建计划要求的 5 个 Canary preview material。可读性验证阶段发现 Body / Outline / Core / WeaponMount 源 PNG 目前为整张全不透明，导致背景被白块覆盖，因此将 Task 13 Step 4 标记为 blocked。
+- **目的**：把已完成的 Normal-state 美术层安全接入 Unity 预览链，先在独立 Preview Prefab 中验证导入参数、层级、材质和排序，不触碰正式 `Ship.prefab` / ShipVFX authority 主链。
+- **技术**：使用 Unity MCP 执行 Editor 侧 AssetDatabase / TextureImporter / PrefabUtility 操作；用正式 `Ship.prefab` 现役 SpriteRenderer 读取 `PPU = 320` 作为导入基准；通过临时 `CanaryPreviewReadabilityCheck` 场景对象和截图进行三背景可读性检查，并用像素 alpha 统计定位透明通道阻塞原因。
+
+---
+
+## Canary Dash 延后与 Unity Import 推进 — 2026-05-27 15:36
+
+- **修改文件**
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：将 Batch 3 `Dash / Dodge Frames And Preview VFX`、Task 10 `Dash frames`、Task 11 `Dash materials and preview VFX` 标记为 deferred；在执行顺序摘要中同步标注 Dash 相关任务延后；将 `Current Next Action` 从 Task 10 推进为 Task 12 `Import Settings Pass`，并将 Task 13 `Create Canary Preview Prefab` 标为后续动作。
+- **目的**：避免 Dash 图生成继续阻塞当前 Normal-state Canary stack 的 Unity 导入与预览验证，先确认 Body / Shape / Outline / Core / WeaponMount 可以在 Unity 中正确显示与对齐。
+- **技术**：仅更新计划文档状态与月度实现日志；未创建、移动或修改 PNG 资产，未修改 Unity 运行链路、Prefab、Scene、Material、Shader 或 `.meta` 文件。
+
+---
+
+## Canary Lean 延后与 Dash 下一步推进 — 2026-05-27 00:35
+
+- **修改文件**
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：将 Batch 2 `Lean Frames`、Task 7 `Lean Left`、Task 8 `Lean Right`、Task 9 `Lean validation` 标记为 deferred；在执行顺序摘要中同步标注 Lean 相关任务延后；将 `Current Next Action` 从 Lean 路径推进为 Task 10 `Create Dash Frames`，并将 Task 11 `Create Dash Materials And Preview VFX` 标为后续动作。
+- **目的**：避免 Lean 图生成失败继续阻塞可玩切片推进，先进入 Dash / Dodge 帧与 Unity preview 验证，保持美术管线可继续迭代。
+- **技术**：仅更新计划文档状态与月度实现日志；未创建、移动或修改 PNG 资产，未修改 Unity 运行链路、Prefab、Scene、Material、Shader 或 `.meta` 文件。
+
+---
+
+## Canary WeaponMount 验收通过与计划修正 — 2026-05-26 23:59
+
+- **修改文件**
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：复核 `Assets/_Art/Ship/Canary/Sprites/WeaponMount/spr_ship_canary_weapon_mount_normal_albedo.png`，确认当前文件名正确，格式为 `512 x 512` RGBA PNG 且包含 Alpha 通道；接受其作为 Normal weapon mount / muzzle marker 层，并将 Batch 1 / Task 6 Step 3 标记为完成。
+- **目的**：修正上一轮基于透明像素预览造成的误判，让后续 Fire VFX 炮口对齐和 stack 验证可以基于已通过的 WeaponMount 层继续推进。
+- **技术**：使用目录检查、系统 PNG 文件信息与 Alpha 支持检查完成复核；仅更新计划文档状态，未修改 Unity 运行链路、Prefab、Scene、Material、Shader 或 `.meta` 文件。
+
+---
+
 ## Canary Core 完成与 EnergyBars 延后标记 — 2026-05-26 16:40
 
 - **修改文件**
