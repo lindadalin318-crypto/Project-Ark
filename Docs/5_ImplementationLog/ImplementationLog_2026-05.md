@@ -1,5 +1,39 @@
 ---
 
+## Canary Engine / Rear Boost Preview 竖向喷流调优 — 2026-05-28 21:46
+
+- **新建/修改文件**
+  - `Assets/_Art/Ship/Canary/Textures/Emission/spr_ship_canary_engine_boost_jet_preview.png`
+  - `Assets/_Art/Ship/Canary/Textures/Emission/spr_ship_canary_engine_boost_jet_preview.png.meta`
+  - `Assets/_Art/Ship/Canary/Animations/Canary_BoostPreview.anim`
+  - `Assets/_Prefabs/Ship/CanaryShipVisualPreview.prefab`
+  - `Assets/Screenshots/canary_engine_boost_preview_v2_t050_rendered.png`
+  - `Assets/Screenshots/canary_engine_boost_preview_v2_t050_rendered.png.meta`
+  - `Assets/Screenshots/canary_engine_boost_preview_v3_t050_rendered.png`
+  - `Assets/Screenshots/canary_engine_boost_preview_v3_t050_rendered.png.meta`
+  - `Assets/Screenshots/canary_engine_boost_preview_v3_isolated_t050_rendered.png`
+  - `Assets/Screenshots/canary_engine_boost_preview_v3_isolated_t050_rendered.png.meta`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：根据验收反馈将 Engine / Rear Boost preview 的主读感从横向 glow 调整为沿船体纵轴向后的竖向推进。新增 `spr_ship_canary_engine_boost_jet_preview.png` 竖向青色喷流 Sprite；在 `CanaryShipVisualPreview.prefab` 中保留原 `EngineBoostPreview` 作为低透明度横向底光，同时新增中央弱尾流 `EngineBoostJetPreview` 与左右双引擎主喷流 `EngineBoostJet_L` / `EngineBoostJet_R`。`Canary_BoostPreview.anim` 现在驱动左右双喷流进行 1 秒循环的 scale / alpha 呼吸，横向底光仅做辅助氛围。
+- **目的**：让玩家从俯视角更直观地读到“船尾引擎正在持续向后输出推进力”，避免上一版横向 glow 被误读为地面照明或装饰光带，同时继续保持与 Dash 爆发、残影、长拖尾的语义区分。
+- **技术**：使用 Unity Editor `Texture2D` 程序化生成透明 PNG 并导入为 Sprite；通过 `PrefabUtility.LoadPrefabContents` 修改独立 preview prefab；通过 `AnimationUtility.SetEditorCurve` 更新 `EngineBoostPreview`、`EngineBoostJetPreview`、`EngineBoostJet_L`、`EngineBoostJet_R` 的 Transform scale 与 SpriteRenderer color / alpha 曲线。验证阶段使用 `AnimationClip.SampleAnimation` 采样 0 / 0.5 / 1 秒，并用隔离坐标相机 `Camera.Render` 输出无场景干扰截图 `canary_engine_boost_preview_v3_isolated_t050_rendered.png`。未修改正式 `Ship.prefab`、`BoostTrailRoot.prefab`、scene-only BoostTrail 绑定或 Ship/VFX authority 主链。
+
+---
+
+## Canary Engine / Rear Boost Preview MCP 验收 — 2026-05-28 21:37
+
+- **新建/修改文件**
+  - `Assets/Screenshots/canary_engine_boost_preview_t075.png`
+  - `Assets/Screenshots/canary_engine_boost_preview_t075.png.meta`
+  - `Assets/Screenshots/canary_engine_boost_preview_t075_rendered.png`
+  - `Assets/Screenshots/canary_engine_boost_preview_t075_rendered.png.meta`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：在 Unity MCP 恢复后，对 `Canary_BoostPreview.anim` 做 Editor 侧采样与截图验收。采样确认 clip 长度为 1 秒且 `loopTime = true`；`EngineBoostPreview` 使用 `spr_ship_canary_engine_boost_preview`，`sortingOrder = -1`；关键帧变化为 scale `0.82/0.38 → 0.98/0.43 → 0.82/0.38`，alpha `0.48 → 0.66 → 0.48`，Core 同步保持 `1.08 → 1.14 → 1.08` 的呼吸。生成 Scene View 截图后发现选择 / Gizmo 会造成白灰视觉干扰，因此额外生成无 Gizmo 的相机渲染截图 `canary_engine_boost_preview_t075_rendered.png` 作为真实视觉参考。
+- **目的**：用 MCP 闭环验证最新 Engine / Rear Boost preview 的实际表现变化，确认船尾青色 glow 是持续推进读感而非 Dash 爆发，并区分 Scene View 工具可视化干扰与真实游戏渲染。
+- **技术**：使用 Unity Editor `AnimationClip.SampleAnimation` 临时实例化 `CanaryShipVisualPreview.prefab` 采样 0 / 0.25 / 0.5 / 0.75 / 1 秒；使用 `Camera.Render` + `RenderTexture` 输出无 Gizmo PNG；验证后清理临时 GameObject 与 Camera。未修改正式 `Ship.prefab`、`BoostTrailRoot.prefab`、scene-only BoostTrail 绑定或 Ship/VFX authority 主链。
+
+---
+
 ## Canary Engine / Rear Boost Preview 创建 — 2026-05-28 14:54
 
 - **新建/修改文件**
