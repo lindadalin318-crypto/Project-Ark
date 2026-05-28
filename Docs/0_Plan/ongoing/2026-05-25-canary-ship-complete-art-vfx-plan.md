@@ -608,11 +608,11 @@ mat_ship_canary_trail
 
 Status: Completed with preview materials under `Assets/_Art/Ship/Canary/Materials/`.
 
-- [ ] **Step 4: Verify black/white/deep-blue background readability** — Blocked.
+- [x] **Step 4: Verify black/white/deep-blue background readability**
 
 Expected result: Outline keeps the ship readable in all three backgrounds.
 
-Blocked reason: Alpha inspection shows `spr_ship_canary_body_normal_albedo.png`, `spr_ship_canary_outline_normal_outline.png`, `spr_ship_canary_core_normal_albedo.png`, and `spr_ship_canary_weapon_mount_normal_albedo.png` are currently full-frame opaque (`alpha255 = 262144`), so the preview renders as a white square instead of a transparent ship layer. `spr_ship_canary_shape_normal_mask.png` has a usable alpha channel and is not the source of this white-box issue.
+Status: Completed after transparent-background re-export of the Normal-state Body / Outline / Core / WeaponMount source PNGs. Unity alpha inspection confirms the white-box issue is gone, and screenshot validation passed on black, white, and deep-blue backgrounds.
 
 ### Task 14: Create Preview Animation Clips
 
@@ -623,7 +623,7 @@ Blocked reason: Alpha inspection shows `spr_ship_canary_body_normal_albedo.png`,
 - Create animation clip: `Assets/_Art/Ship/Canary/Animations/Canary_LeanRight.anim`
 - Create animation clip: `Assets/_Art/Ship/Canary/Animations/Canary_Dash.anim`
 
-- [ ] **Step 1: Create animation folder if needed**
+- [x] **Step 1: Create animation folder if needed**
 
 Expected folder:
 
@@ -631,28 +631,40 @@ Expected folder:
 Assets/_Art/Ship/Canary/Animations/
 ```
 
-- [ ] **Step 2: Create Idle clip**
+Status: Completed.
+
+- [x] **Step 2: Create Idle clip**
 
 Expected result: Stable base body, optional subtle energy/core pulse.
 
-- [ ] **Step 3: Create LeanLeft clip**
+Status: Completed. `Canary_Idle.anim` is a looped preview-only clip with a subtle `Core` pulse and a micro `WeaponMount` pulse. Validation sampling confirmed the loop returns to the initial state.
+
+- [ ] **Step 3: Create LeanLeft clip** — Deferred.
 
 Expected result: Sprite swaps or child transforms show left movement polish.
 
-- [ ] **Step 4: Create LeanRight clip**
+Deferred reason: Lean source frames were intentionally postponed after generation attempts failed.
+
+- [ ] **Step 4: Create LeanRight clip** — Deferred.
 
 Expected result: Sprite swaps or child transforms show right movement polish.
 
-- [ ] **Step 5: Create Dash clip**
+Deferred reason: Lean source frames were intentionally postponed after generation attempts failed.
+
+- [ ] **Step 5: Create Dash clip** — Deferred.
 
 Expected result: `dash_01 → dash_05` plays in 0.15-0.35 seconds.
 
+Deferred reason: Dash source frames were intentionally postponed to keep the current Normal-state preview pipeline moving.
+
 ### Batch 4 Completion Gate
 
-- [ ] Preview prefab exists and is separate from formal `Ship.prefab`.
-- [ ] All sprites import with consistent PPU and pivot.
+- [x] Preview prefab exists and is separate from formal `Ship.prefab`.
+- [x] All sprites import with consistent PPU and pivot.
 - [ ] Idle / Lean / Dash preview works.
-- [ ] No formal Ship/VFX authority chain has been changed yet.
+- [x] No formal Ship/VFX authority chain has been changed yet.
+
+Status: Preview prefab and sprite import/readability validation are complete. Idle / Lean / Dash preview remains pending because Lean and Dash source frames were intentionally deferred earlier.
 
 ---
 
@@ -668,18 +680,38 @@ Expected result: `dash_01 → dash_05` plays in 0.15-0.35 seconds.
 - Create: `Assets/_Art/Ship/Canary/Textures/Emission/spr_ship_canary_energybar_boost_emission.png`
 - Create: `Assets/_Art/Ship/Canary/Sprites/Body/spr_ship_canary_engine_boost_albedo.png`
 - Optional create: `Assets/_Art/Ship/Canary/Textures/Masks/tex_boost_trail_noise_mask.png`
+- Preview-only created: `Assets/_Art/Ship/Canary/Animations/Canary_BoostPreview.anim`
+- Preview-only created: `Assets/_Art/Ship/Canary/Animations/Canary_BoostPreview.controller`
+- Preview-only created: `Assets/_Art/Ship/Canary/Textures/Emission/spr_ship_canary_engine_boost_preview.png`
+- Preview-only modified: `Assets/_Prefabs/Ship/CanaryShipVisualPreview.prefab`
 
-- [ ] **Step 1: Create core boost emission**
+- [x] **Step 1A: Create Core Boost preview animation**
 
 Expected result: Core visibly powers up but does not look like explosion.
 
-- [ ] **Step 2: Create energybar boost emission**
+Status: Completed as a preview-only stable propulsion pass. `Canary_BoostPreview.anim` loops over 1 second and only animates the `Core` child: scale moves from `1.08` to `1.14` and back, while SpriteRenderer color / alpha pulse stays subtle (`alpha 0.96 → 1.0 → 0.96`). `Canary_BoostPreview.controller` is assigned to the independent `CanaryShipVisualPreview.prefab` root `Animator` for quick Play Mode inspection. No formal `Ship.prefab`, `BoostTrailRoot.prefab`, scene-only BoostTrail binding, or Ship/VFX authority chain was changed.
+
+- [ ] **Step 1B: Create core boost emission texture** — Deferred.
+
+Expected result: A real `spr_ship_canary_core_boost_emission.png` texture exists if the preview direction is accepted.
+
+Deferred reason: Keep Batch 5A in preview-only mode until the full Core + Rear propulsion read is accepted.
+
+- [ ] **Step 2: Create energybar boost emission** — Deferred.
 
 Expected result: EnergyBars become stronger and support sustained movement.
 
-- [ ] **Step 3: Create engine boost albedo**
+Deferred reason: EnergyBar source/boost assets were previously skipped, so this pass intentionally avoids creating a forced EnergyBar layer.
 
-Expected result: Rear engine/nozzle area reads as active.
+- [x] **Step 3A: Create Engine / Rear Boost preview**
+
+Expected result: Rear engine/nozzle area reads as active without looking like Dash.
+
+Status: Completed as a preview-only rear propulsion pass. `CanaryShipVisualPreview.prefab` now has an `EngineBoostPreview` child using `spr_ship_canary_engine_boost_preview.png`, positioned behind the ship as a small cyan glow. `Canary_BoostPreview.anim` now animates `EngineBoostPreview` scale and alpha over the same 1-second loop as the Core pulse. No formal `Ship.prefab`, `BoostTrailRoot.prefab`, scene-only BoostTrail binding, or Ship/VFX authority chain was changed.
+
+- [ ] **Step 3B: Create engine boost albedo** — Deferred.
+
+Expected result: Rear engine/nozzle area reads as active using a production body/albedo asset if the preview direction is accepted.
 
 - [ ] **Step 4: Verify against Dash**
 

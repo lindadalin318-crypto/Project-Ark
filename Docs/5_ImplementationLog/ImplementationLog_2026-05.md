@@ -1,5 +1,61 @@
 ---
 
+## Canary Engine / Rear Boost Preview 创建 — 2026-05-28 14:54
+
+- **新建/修改文件**
+  - `Assets/_Art/Ship/Canary/Textures/Emission/spr_ship_canary_engine_boost_preview.png`
+  - `Assets/_Art/Ship/Canary/Textures/Emission/spr_ship_canary_engine_boost_preview.png.meta`
+  - `Assets/_Art/Ship/Canary/Animations/Canary_BoostPreview.anim`
+  - `Assets/_Prefabs/Ship/CanaryShipVisualPreview.prefab`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：跳过本轮 EnergyBar Boost，改为完成 preview-only 的 Engine / Rear Boost pass。新增 `spr_ship_canary_engine_boost_preview.png` 小型青色后方推进 glow，并在 `CanaryShipVisualPreview.prefab` 下新增 `EngineBoostPreview` 子节点；扩展 `Canary_BoostPreview.anim`，让 `EngineBoostPreview` 与 Core 同步进行 1 秒循环的轻量 scale / alpha 呼吸。计划文档同步将 EnergyBar boost emission 与 production engine albedo 标记为 Deferred，并记录本次 preview-only 完成状态。
+- **目的**：在 EnergyBar 相关源资产先前已跳过的前提下，继续验证 Boost 的“持续推进”读感：Core 表达能量源启动，Rear glow 表达推进输出，同时避免误用 DashTrail / DashParticles 造成 Dash 语义混淆。
+- **技术**：使用 Unity Editor `Texture2D` 生成透明 PNG 并通过 `TextureImporter` 导入为 Sprite；使用 `PrefabUtility.LoadPrefabContents` 安全写入独立 `CanaryShipVisualPreview.prefab`；使用 `AnimationUtility.SetEditorCurve` 添加 `EngineBoostPreview` 的 Transform scale 与 SpriteRenderer color / alpha 曲线。验证阶段确认 prefab 层级新增节点、动画 YAML 包含 `EngineBoostPreview` 曲线，Unity Console 无本次编译错误；正式 `Ship.prefab`、`BoostTrailRoot.prefab` 与 scene-only BoostTrail 绑定未修改。
+
+---
+
+## Canary Core Boost Preview 创建 — 2026-05-28 12:52
+
+- **新建/修改文件**
+  - `Assets/_Art/Ship/Canary/Animations/Canary_BoostPreview.anim`
+  - `Assets/_Art/Ship/Canary/Animations/Canary_BoostPreview.controller`
+  - `Assets/_Prefabs/Ship/CanaryShipVisualPreview.prefab`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：按 Batch 5A 的“稳定推进型”方向创建 preview-only Core Boost 动画与独立 Animator Controller，并将 `CanaryShipVisualPreview.prefab` 根节点挂载 `Animator` 指向 `Canary_BoostPreview.controller`。动画为 1 秒循环，仅驱动 `Core` 子节点：scale 在 `1.08 → 1.14 → 1.08` 之间稳定呼吸，SpriteRenderer color / alpha 做轻量供能脉冲，避免闪白、爆炸感或 Dash 式瞬间残影。更新计划文档，将 Task 15 拆分为已完成的 preview 动画 Step 1A 与后续真实 emission texture Step 1B。
+- **目的**：在不触碰正式 `Ship.prefab`、`BoostTrailRoot.prefab`、scene-only BoostTrail 绑定或 Ship/VFX authority 主链的前提下，先验证 Canary Boost 的核心视觉方向是否成立，为后续 EnergyBar / Engine Boost / 正式链路决策提供最小可验收切片。
+- **技术**：使用 Unity Editor `AssetDatabase` / `AnimationUtility.SetEditorCurve` 创建 AnimationClip 曲线，使用 `AnimatorController.CreateAnimatorControllerAtPath` 创建 preview controller，并通过 `PrefabUtility.LoadPrefabContents` 安全写入独立 preview prefab。验证阶段采样 0 秒、0.5 秒、1 秒曲线闭环，并确认正式 `Ship.prefab` 与 `BoostTrailRoot.prefab` 未变更。
+
+---
+
+## Canary Idle Preview Clip 创建 — 2026-05-28 11:22
+
+- **新建/修改文件**
+  - `Assets/_Art/Ship/Canary/Animations/Canary_Idle.anim`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：创建 `Assets/_Art/Ship/Canary/Animations/` 目录和 `Canary_Idle.anim` 预览动画；Idle clip 设置为循环动画，仅对 `Core` 做轻微缩放 / alpha 呼吸，对 `WeaponMount` 做极弱缩放脉冲，保持 Body / Shape / Outline 稳定。通过临时 `CanaryIdleClipValidation` 实例采样验证 0 秒、0.5 秒、1 秒曲线闭环，并截图确认预览显示正常。将 Task 14 Step 1 / Step 2 标记为完成，LeanLeft / LeanRight / Dash clip 继续因源帧延后保持 deferred。
+- **目的**：在 Lean / Dash 资产暂缓的情况下，先让 Canary Normal-state 视觉栈拥有一个可验证的 Idle 预览动画，继续推进 Unity 侧预览管线而不阻塞在生成失败的动作帧上。
+- **技术**：使用 Unity Editor `AssetDatabase` 创建 AnimationClip 资产，通过 `AnimationUtility.SetEditorCurve` 写入 Transform scale 与 SpriteRenderer alpha 曲线；验证阶段仅实例化独立 `CanaryShipVisualPreview.prefab` 临时对象，未修改正式 `Ship.prefab` 或 Ship/VFX authority 主链。
+
+---
+
+## Canary Normal Sprite 透明通道复验通过 — 2026-05-27 16:08
+
+- **修改文件**
+  - `Assets/_Art/Ship/Canary/Sprites/Body/spr_ship_canary_body_normal_albedo.png`
+  - `Assets/_Art/Ship/Canary/Sprites/Outline/spr_ship_canary_outline_normal_outline.png`
+  - `Assets/_Art/Ship/Canary/Sprites/Core/spr_ship_canary_core_normal_albedo.png`
+  - `Assets/_Art/Ship/Canary/Sprites/WeaponMount/spr_ship_canary_weapon_mount_normal_albedo.png`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容**：刷新 Unity 资源并重新检查 5 张 Canary Normal-state Sprite 的导入与 alpha 分布，确认 Body / Outline / Core / WeaponMount 的白底全不透明问题已修复；重新生成临时三背景可读性检查对象并截图验证，黑、白、深蓝背景下均不再出现白色方块，船体和轮廓可读。将 Task 13 Step 4 从 blocked 更新为完成，并更新 Batch 4 completion gate 中已完成的导入、Prefab 与未触碰正式链路状态。
+- **目的**：关闭 `CanaryShipVisualPreview.prefab` 的可读性阻塞，让当前 Normal-state 飞船视觉栈可以继续进入后续动画 / Boost / Fire 等预览任务，同时保持正式 `Ship.prefab` 主链不受影响。
+- **技术**：通过 Unity MCP 执行 AssetDatabase 强制刷新、TextureImporter 设置复核、Texture2D alpha 像素统计，以及临时 `CanaryPreviewReadabilityCheck` + `CanaryPreviewReadabilityCamera` 三背景截图验证；验证完成后清理临时场景对象。
+
+---
+
 ## Canary Import Settings 与 Preview Prefab 创建 — 2026-05-27 15:45
 
 - **新建/修改文件**
