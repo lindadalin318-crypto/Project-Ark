@@ -32,10 +32,16 @@ namespace ProjectArk.Ship.Editor
         // ── Paths ──────────────────────────────────────────────────────
         private const string PREFAB_PATH = "Assets/_Prefabs/Ship/Ship.prefab";
         private const string BOOST_TRAIL_PREFAB_PATH = "Assets/_Prefabs/VFX/BoostTrailRoot.prefab";
-        private const string GLOW_MATERIAL_PATH = "Assets/_Art/Ship/Glitch/ShipGlowMaterial.mat";
-        private const string SHIP_LIQUID_NORMAL_SPRITE_PATH = "Assets/_Art/Ship/Glitch/Movement_3.png";
-        private const string SHIP_SOLID_SPRITE_PATH = "Assets/_Art/Ship/Glitch/Movement_10.png";
-        private const string SHIP_HIGHLIGHT_SPRITE_PATH = "Assets/_Art/Ship/Glitch/Movement_21.png";
+        private const string CANARY_BODY_MATERIAL_PATH = "Assets/_Art/Ship/Canary/Materials/mat_ship_canary_body_default.mat";
+        private const string CANARY_SHAPE_MATERIAL_PATH = "Assets/_Art/Ship/Canary/Materials/mat_ship_canary_shape.mat";
+        private const string CANARY_OUTLINE_MATERIAL_PATH = "Assets/_Art/Ship/Canary/Materials/mat_ship_canary_outline.mat";
+        private const string HIT_SPARK_MATERIAL_PATH = "Assets/_Art/Ship/Canary/Materials/mat_ship_canary_trail.mat";
+        private const string CANARY_SHAPE_SPRITE_PATH = "Assets/_Art/Ship/Canary/Sprites/Shape/spr_ship_canary_shape_normal_mask.png";
+        private const string CANARY_HIT_MASK_SPRITE_PATH = "Assets/_Art/Ship/Canary/Textures/Masks/spr_ship_canary_shape_hit_mask.png";
+        private const string CANARY_BODY_SPRITE_PATH = "Assets/_Art/Ship/Canary/Sprites/Body/spr_ship_canary_body_normal_albedo.png";
+        private const string CANARY_OUTLINE_SPRITE_PATH = "Assets/_Art/Ship/Canary/Sprites/Outline/spr_ship_canary_outline_normal_outline.png";
+        private const string CANARY_CORE_SPRITE_PATH = "Assets/_Art/Ship/Canary/Sprites/Core/spr_ship_canary_core_normal_albedo.png";
+        private const string CANARY_WEAPON_MOUNT_SPRITE_PATH = "Assets/_Art/Ship/Canary/Sprites/WeaponMount/spr_ship_canary_weapon_mount_normal_albedo.png";
         private const string SHIP_JUICE_SETTINGS_PATH = "Assets/_Data/Ship/DefaultShipJuiceSettings.asset";
         private const string SHIP_STATS_PATH = "Assets/_Data/Ship/DefaultShipStats.asset";
         private const string INPUT_ACTIONS_PATH = "Assets/Input/ShipActions.inputactions";
@@ -44,34 +50,46 @@ namespace ProjectArk.Ship.Editor
         // ── Node names ─────────────────────────────────────────────────
         private const string VISUAL_CHILD_NAME = "ShipVisual";
 
-        // Sprite layers
+        // Sprite layers. Field wiring keeps legacy role names, while physical nodes use Canary art semantics.
         private const string SPRITE_BACK_NAME = "Ship_Sprite_Back";
-        private const string SPRITE_LIQUID_NAME = "Ship_Sprite_Liquid";
-        private const string SPRITE_HL_NAME = "Ship_Sprite_HL";
-        private const string SPRITE_SOLID_NAME = "Ship_Sprite_Solid";
+        private const string SPRITE_LIQUID_NAME = "Ship_Sprite_Shape";
+        private const string SPRITE_HL_NAME = "Ship_Sprite_Outline";
+        private const string SPRITE_SOLID_NAME = "Ship_Sprite_Body";
         private const string SPRITE_CORE_NAME = "Ship_Sprite_Core";
+        private const string SPRITE_WEAPON_MOUNT_NAME = "Ship_Sprite_WeaponMount";
         private const string DODGE_SPRITE_NAME = "Dodge_Sprite";
         private const string BOOST_TRAIL_ROOT_NAME = "BoostTrailRoot";
+        private const string HIT_SPARK_NAME = "Ship_HitSpark";
+        private const string HIT_MASK_FLASH_NAME = "Ship_HitMaskFlash";
 
-        // Sprite asset aliases (physical names remain frozen during MVP)
-        private const string SHIP_LIQUID_NORMAL_SPRITE_NAME = "Movement_3";
-        private const string SHIP_SOLID_SPRITE_NAME = "Movement_10";
-        private const string SHIP_HIGHLIGHT_SPRITE_NAME = "Movement_21";
+        // Sprite asset aliases
+        private const string CANARY_SHAPE_SPRITE_NAME = "spr_ship_canary_shape_normal_mask";
+        private const string CANARY_HIT_MASK_SPRITE_NAME = "spr_ship_canary_shape_hit_mask";
+        private const string CANARY_BODY_SPRITE_NAME = "spr_ship_canary_body_normal_albedo";
+        private const string CANARY_OUTLINE_SPRITE_NAME = "spr_ship_canary_outline_normal_outline";
+        private const string CANARY_CORE_SPRITE_NAME = "spr_ship_canary_core_normal_albedo";
+        private const string CANARY_WEAPON_MOUNT_SPRITE_NAME = "spr_ship_canary_weapon_mount_normal_albedo";
 
-        // Dodge sprite
-        private const string DODGE_SPRITE_TEXTURE_NAME = "player_test_fire";
-        private const string DODGE_SPRITE_DEST_PATH = "Assets/_Art/Ship/Glitch/Reference/player_test_fire.png";
+        // Dodge ghost uses the current Canary body as a temporary readable silhouette until Batch 3 dash frames land.
+        private const string DODGE_SPRITE_TEXTURE_NAME = CANARY_BODY_SPRITE_NAME;
+        private const string DODGE_SPRITE_DEST_PATH = CANARY_BODY_SPRITE_PATH;
 
         // All managed node names under ShipVisual (for force-delete)
         private static readonly string[] MANAGED_VISUAL_CHILDREN =
         {
             SPRITE_BACK_NAME,
+            "Ship_Sprite_Liquid",
+            "Ship_Sprite_HL",
+            "Ship_Sprite_Solid",
             SPRITE_LIQUID_NAME,
             SPRITE_HL_NAME,
             SPRITE_SOLID_NAME,
             SPRITE_CORE_NAME,
+            SPRITE_WEAPON_MOUNT_NAME,
             DODGE_SPRITE_NAME,
-            BOOST_TRAIL_ROOT_NAME
+            BOOST_TRAIL_ROOT_NAME,
+            HIT_SPARK_NAME,
+            HIT_MASK_FLASH_NAME
         };
 
         // ══════════════════════════════════════════════════════════════
@@ -79,7 +97,11 @@ namespace ProjectArk.Ship.Editor
         // ══════════════════════════════════════════════════════════════
 
         [MenuItem("ProjectArk/Ship/Authority/Rebuild Ship Prefab")]
-        public static void RebuildSpriteLayers() => Run(forceRebuild: false);
+        public static void RebuildSpriteLayers() => Run(forceRebuild: false, showDialog: true);
+
+        public static void RebuildSpriteLayersSilently() => Run(forceRebuild: false, showDialog: false);
+
+        public static void ForceRebuildSpriteLayersSilently() => Run(forceRebuild: true, showDialog: false);
 
         [MenuItem("ProjectArk/Ship/Authority/FORCE Rebuild Ship Prefab")]
         public static void ForceRebuildSpriteLayers()
@@ -90,7 +112,7 @@ namespace ProjectArk.Ship.Editor
                 "Yes, Force Rebuild", "Cancel");
             if (confirmed)
             {
-                Run(forceRebuild: true);
+                Run(forceRebuild: true, showDialog: true);
             }
         }
 
@@ -98,7 +120,7 @@ namespace ProjectArk.Ship.Editor
         // Core
         // ══════════════════════════════════════════════════════════════
 
-        private static void Run(bool forceRebuild)
+        private static void Run(bool forceRebuild, bool showDialog)
         {
             var log = new List<string>();
             var todo = new List<string>();
@@ -126,6 +148,10 @@ namespace ProjectArk.Ship.Editor
                 {
                     ForceDeleteManagedNodes(root, log);
                     ForceDeleteManagedComponents(root, log);
+                }
+                else
+                {
+                    DeleteLegacyVisualNodes(root, log);
                 }
 
                 // ══════════════════════════════════════════════════════════
@@ -168,56 +194,108 @@ namespace ProjectArk.Ship.Editor
                     log.Add($"✓ Found visual parent: {visualTf.name}");
                 }
 
-                var glowMat = AssetDatabase.LoadAssetAtPath<Material>(GLOW_MATERIAL_PATH);
-                if (glowMat == null)
+                var bodyMat = AssetDatabase.LoadAssetAtPath<Material>(CANARY_BODY_MATERIAL_PATH);
+                var shapeMat = AssetDatabase.LoadAssetAtPath<Material>(CANARY_SHAPE_MATERIAL_PATH);
+                var outlineMat = AssetDatabase.LoadAssetAtPath<Material>(CANARY_OUTLINE_MATERIAL_PATH);
+
+                if (bodyMat == null) todo.Add($"Canary body material missing at {CANARY_BODY_MATERIAL_PATH}");
+                if (shapeMat == null) todo.Add($"Canary shape material missing at {CANARY_SHAPE_MATERIAL_PATH}");
+                if (outlineMat == null) todo.Add($"Canary outline material missing at {CANARY_OUTLINE_MATERIAL_PATH}");
+
+                EnsureSpriteImportSettings(CANARY_HIT_MASK_SPRITE_PATH, log);
+
+                Sprite bodySprite = LoadSpriteAtPath(CANARY_BODY_SPRITE_PATH);
+                Sprite shapeSprite = LoadSpriteAtPath(CANARY_SHAPE_SPRITE_PATH);
+                Sprite hitMaskSprite = LoadSpriteAtPath(CANARY_HIT_MASK_SPRITE_PATH);
+                Sprite outlineSprite = LoadSpriteAtPath(CANARY_OUTLINE_SPRITE_PATH);
+                Sprite coreSprite = LoadSpriteAtPath(CANARY_CORE_SPRITE_PATH);
+                Sprite weaponMountSprite = LoadSpriteAtPath(CANARY_WEAPON_MOUNT_SPRITE_PATH);
+                if (bodySprite == null)
                 {
-                    glowMat = ShipGlowMaterialCreator.CreateOrGet();
-                    if (glowMat != null)
-                    {
-                        log.Add("✓ ShipGlowMaterial auto-created");
-                    }
-                    else
-                    {
-                        todo.Add($"ShipGlowMaterial not found at {GLOW_MATERIAL_PATH} — recreate the material asset via ShipGlowMaterialCreator before rebuilding again");
-                    }
+                    todo.Add($"{CANARY_BODY_SPRITE_NAME} sprite not found — import {CANARY_BODY_SPRITE_PATH} first");
+                }
+                if (shapeSprite == null)
+                {
+                    todo.Add($"{CANARY_SHAPE_SPRITE_NAME} sprite not found — import {CANARY_SHAPE_SPRITE_PATH} first");
+                }
+                if (hitMaskSprite == null)
+                {
+                    todo.Add($"{CANARY_HIT_MASK_SPRITE_NAME} sprite not found — import {CANARY_HIT_MASK_SPRITE_PATH} first");
+                }
+                if (outlineSprite == null)
+                {
+                    todo.Add($"{CANARY_OUTLINE_SPRITE_NAME} sprite not found — import {CANARY_OUTLINE_SPRITE_PATH} first");
+                }
+                if (coreSprite == null)
+                {
+                    todo.Add($"{CANARY_CORE_SPRITE_NAME} sprite not found — import {CANARY_CORE_SPRITE_PATH} first");
+                }
+                if (weaponMountSprite == null)
+                {
+                    todo.Add($"{CANARY_WEAPON_MOUNT_SPRITE_NAME} sprite not found — import {CANARY_WEAPON_MOUNT_SPRITE_PATH} first");
                 }
 
-                Sprite solidSprite = LoadSpriteAtPath(SHIP_SOLID_SPRITE_PATH);
-                Sprite liquidSprite = LoadSpriteAtPath(SHIP_LIQUID_NORMAL_SPRITE_PATH);
-                Sprite hlSprite = LoadSpriteAtPath(SHIP_HIGHLIGHT_SPRITE_PATH);
-                if (solidSprite == null)
+                var back = EnsureSpriteLayer(visualTf, SPRITE_BACK_NAME, -3, null, bodyMat, log);
+                var liquid = EnsureSpriteLayer(visualTf, SPRITE_LIQUID_NAME, 1, shapeSprite, shapeMat, log);
+                var solid = EnsureSpriteLayer(visualTf, SPRITE_SOLID_NAME, 0, bodySprite, bodyMat, log);
+                var hl = EnsureSpriteLayer(visualTf, SPRITE_HL_NAME, 2, outlineSprite, outlineMat, log);
+                var core = EnsureSpriteLayer(visualTf, SPRITE_CORE_NAME, 3, coreSprite, bodyMat, log);
+                var weaponMount = EnsureSpriteLayer(visualTf, SPRITE_WEAPON_MOUNT_NAME, 6, weaponMountSprite, bodyMat, log);
+                var hitMask = EnsureSpriteLayer(visualTf, HIT_MASK_FLASH_NAME, 7, hitMaskSprite, bodyMat, log);
+
+                if (back != null)
                 {
-                    todo.Add($"{SHIP_SOLID_SPRITE_NAME} sprite not found — import {SHIP_SOLID_SPRITE_PATH} first");
-                }
-                if (liquidSprite == null)
-                {
-                    todo.Add($"{SHIP_LIQUID_NORMAL_SPRITE_NAME} sprite not found — import {SHIP_LIQUID_NORMAL_SPRITE_PATH} first");
-                }
-                if (hlSprite == null)
-                {
-                    todo.Add($"{SHIP_HIGHLIGHT_SPRITE_NAME} sprite not found — import {SHIP_HIGHLIGHT_SPRITE_PATH} first");
+                    var backColor = back.color;
+                    backColor.a = 0f;
+                    back.color = backColor;
+                    log.Add("✓ Ship_Sprite_Back alpha = 0 (thruster pulse transform holder)");
                 }
 
-                var back = EnsureSpriteLayer(visualTf, SPRITE_BACK_NAME, -3, null, null, log);
-                var liquid = EnsureSpriteLayer(visualTf, SPRITE_LIQUID_NAME, -2, liquidSprite, glowMat, log);
-                var hl = EnsureSpriteLayer(visualTf, SPRITE_HL_NAME, -1, hlSprite, null, log);
-                var solid = EnsureSpriteLayer(visualTf, SPRITE_SOLID_NAME, 0, solidSprite, null, log);
-                var core = EnsureSpriteLayer(visualTf, SPRITE_CORE_NAME, 1, null, null, log);
+                if (liquid != null)
+                {
+                    liquid.enabled = false;
+                    log.Add("✓ Ship_Sprite_Shape disabled (reserved mask layer)");
+                }
 
                 if (hl != null)
                 {
                     var highlightColor = hl.color;
-                    highlightColor.a = 0.5f;
+                    highlightColor.a = 1f;
                     hl.color = highlightColor;
-                    log.Add("✓ Ship_Sprite_HL alpha = 0.5");
+                    log.Add("✓ Ship_Sprite_Outline alpha = 1");
+                }
+
+                if (core != null)
+                {
+                    var coreColor = core.color;
+                    coreColor.a = 1f;
+                    core.color = coreColor;
+                    log.Add("✓ Ship_Sprite_Core alpha = 1");
+                }
+
+                if (weaponMount != null)
+                {
+                    var weaponMountColor = weaponMount.color;
+                    weaponMountColor.a = 1f;
+                    weaponMount.color = weaponMountColor;
+                    log.Add("✓ Ship_Sprite_WeaponMount alpha = 1");
+                }
+
+                if (hitMask != null)
+                {
+                    hitMask.color = new Color(1f, 1f, 1f, 0f);
+                    hitMask.enabled = false;
+                    log.Add("✓ Ship_HitMaskFlash hidden by default");
                 }
 
                 Sprite dodgeSprite = LoadSpriteAtPath(DODGE_SPRITE_DEST_PATH);
                 var dodgeSr = EnsureDodgeSpriteChild(visualTf, DODGE_SPRITE_NAME, dodgeSprite, log);
                 if (dodgeSprite == null)
                 {
-                    todo.Add($"Dodge_Sprite: '{DODGE_SPRITE_TEXTURE_NAME}' not found — import player_test_fire.png then re-run");
+                    todo.Add($"Dodge_Sprite: '{DODGE_SPRITE_TEXTURE_NAME}' not found — import {DODGE_SPRITE_DEST_PATH} first, then re-run");
                 }
+
+                var hitSparkParticles = EnsureHitSparkParticles(visualTf, log);
 
                 var boostTrailView = EnsureBoostTrailRoot(visualTf, log, todo);
 
@@ -252,8 +330,18 @@ namespace ProjectArk.Ship.Editor
                 WireField(hitVisualsSO, "_hlRenderer", hl, log, "ShipHitVisuals._hlRenderer");
                 WireField(hitVisualsSO, "_solidRenderer", solid, log, "ShipHitVisuals._solidRenderer");
                 WireField(hitVisualsSO, "_coreRenderer", core, log, "ShipHitVisuals._coreRenderer");
+                WireField(hitVisualsSO, "_hitSparkParticles", hitSparkParticles, log, "ShipHitVisuals._hitSparkParticles");
+                WireField(hitVisualsSO, "_hitMaskRenderer", hitMask, log, "ShipHitVisuals._hitMaskRenderer");
                 WireJuiceSettings(hitVisualsSO, "_juiceSettings", log, "ShipHitVisuals._juiceSettings", todo);
                 hitVisualsSO.ApplyModifiedProperties();
+
+                // ── ShipFireVisuals ──
+                var fireVisuals = EnsureComponent<ShipFireVisuals>(root, log, "ShipFireVisuals");
+                var fireVisualsSO = new SerializedObject(fireVisuals);
+                WireField(fireVisualsSO, "_weaponMountRenderer", weaponMount, log, "ShipFireVisuals._weaponMountRenderer");
+                WireField(fireVisualsSO, "_coreRenderer", core, log, "ShipFireVisuals._coreRenderer");
+                WireJuiceSettings(fireVisualsSO, "_juiceSettings", log, "ShipFireVisuals._juiceSettings", todo);
+                fireVisualsSO.ApplyModifiedProperties();
 
                 // ── ShipDashVisuals ──
                 var dashVisuals = EnsureComponent<ShipDashVisuals>(root, log, "ShipDashVisuals");
@@ -311,9 +399,11 @@ namespace ProjectArk.Ship.Editor
                 WireField(shipViewSO, "_hlRenderer", hl, log, "ShipView._hlRenderer");
                 WireField(shipViewSO, "_solidRenderer", solid, log, "ShipView._solidRenderer");
                 WireField(shipViewSO, "_coreRenderer", core, log, "ShipView._coreRenderer");
+                WireField(shipViewSO, "_weaponMountRenderer", weaponMount, log, "ShipView._weaponMountRenderer");
                 WireField(shipViewSO, "_boostVisuals", boostVisuals, log, "ShipView._boostVisuals");
                 WireField(shipViewSO, "_hitVisuals", hitVisuals, log, "ShipView._hitVisuals");
                 WireField(shipViewSO, "_dashVisuals", dashVisuals, log, "ShipView._dashVisuals");
+                WireField(shipViewSO, "_fireVisuals", fireVisuals, log, "ShipView._fireVisuals");
                 WireField(shipViewSO, "_juiceVisuals", juiceVisuals, log, "ShipView._juiceVisuals");
                 WireField(shipViewSO, "_afterImageSpawner", afterImageSpawner, log, "ShipView._afterImageSpawner");
                 WireJuiceSettings(shipViewSO, "_juiceSettings", log, "ShipView._juiceSettings", todo);
@@ -340,10 +430,13 @@ namespace ProjectArk.Ship.Editor
             }
 
             Debug.Log("[ShipPrefabRebuilder] Done.\n" + summary);
-            EditorUtility.DisplayDialog(
-                forceRebuild ? "Ship Prefab Force-Rebuilt" : "Ship Prefab Rebuilt",
-                summary.ToString(),
-                "OK");
+            if (showDialog)
+            {
+                EditorUtility.DisplayDialog(
+                    forceRebuild ? "Ship Prefab Force-Rebuilt" : "Ship Prefab Rebuilt",
+                    summary.ToString(),
+                    "OK");
+            }
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -367,6 +460,31 @@ namespace ProjectArk.Ship.Editor
                     log.Add($"✗ Deleted '{name}' (force rebuild)");
                 }
             }
+        }
+
+        private static void DeleteLegacyVisualNodes(GameObject root, List<string> log)
+        {
+            var visualTf = root.transform.Find(VISUAL_CHILD_NAME);
+            if (visualTf == null)
+            {
+                return;
+            }
+
+            DeleteChildIfPresent(visualTf, "Ship_Sprite_Liquid", log, "legacy Glitch liquid layer");
+            DeleteChildIfPresent(visualTf, "Ship_Sprite_HL", log, "legacy Glitch highlight layer");
+            DeleteChildIfPresent(visualTf, "Ship_Sprite_Solid", log, "legacy Glitch solid layer");
+        }
+
+        private static void DeleteChildIfPresent(Transform parent, string childName, List<string> log, string reason)
+        {
+            var child = parent.Find(childName);
+            if (child == null)
+            {
+                return;
+            }
+
+            Object.DestroyImmediate(child.gameObject);
+            log.Add($"✗ Deleted '{childName}' ({reason})");
         }
 
         private static void ForceDeleteManagedComponents(GameObject root, List<string> log)
@@ -516,6 +634,100 @@ namespace ProjectArk.Ship.Editor
             sr.color = color;
             go.SetActive(false);
             return sr;
+        }
+
+        private static ParticleSystem EnsureHitSparkParticles(Transform visualTf, List<string> log)
+        {
+            var child = visualTf.Find(HIT_SPARK_NAME);
+            if (child == null)
+            {
+                var go = new GameObject(HIT_SPARK_NAME);
+                go.transform.SetParent(visualTf, false);
+                child = go.transform;
+                log.Add($"✓ Created {HIT_SPARK_NAME}");
+            }
+            else
+            {
+                log.Add($"✓ Found {HIT_SPARK_NAME}");
+            }
+
+            child.localPosition = Vector3.zero;
+            child.localRotation = Quaternion.identity;
+            child.localScale = Vector3.one;
+
+            var particles = child.GetComponent<ParticleSystem>();
+            if (particles == null)
+            {
+                particles = child.gameObject.AddComponent<ParticleSystem>();
+                log.Add($"✓ Added ParticleSystem to {HIT_SPARK_NAME}");
+            }
+
+            var main = particles.main;
+            main.playOnAwake = false;
+            main.loop = false;
+            main.duration = 0.08f;
+            main.startLifetime = 0.08f;
+            main.startSpeed = 0.7f;
+            main.startSize = 0.08f;
+            main.startColor = new Color(1f, 0.92f, 0.38f, 0.95f);
+            main.maxParticles = 8;
+            main.simulationSpace = ParticleSystemSimulationSpace.Local;
+
+            var emission = particles.emission;
+            emission.enabled = true;
+            emission.rateOverTime = 0f;
+            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, 5) });
+
+            var shape = particles.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Circle;
+            shape.radius = 0.08f;
+            shape.arc = 360f;
+
+            var colorOverLifetime = particles.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            Gradient gradient = new Gradient();
+            gradient.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(new Color(1f, 0.92f, 0.38f), 0f),
+                    new GradientColorKey(new Color(1f, 1f, 1f), 1f)
+                },
+                new[]
+                {
+                    new GradientAlphaKey(0.95f, 0f),
+                    new GradientAlphaKey(0f, 1f)
+                });
+            colorOverLifetime.color = gradient;
+
+            var renderer = particles.GetComponent<ParticleSystemRenderer>();
+            renderer.sortingOrder = 8;
+            renderer.alignment = ParticleSystemRenderSpace.View;
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            renderer.sharedMaterial = EnsureHitSparkMaterial(log);
+
+            particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            log.Add($"✓ Configured {HIT_SPARK_NAME} pooled local hit spark");
+            return particles;
+        }
+
+        private static Material EnsureHitSparkMaterial(List<string> log)
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(HIT_SPARK_MATERIAL_PATH);
+            if (material == null)
+            {
+                Debug.LogError($"[ShipPrefabRebuilder] Missing Hit Spark material at {HIT_SPARK_MATERIAL_PATH}.");
+                return null;
+            }
+
+            if (material.shader == null || !material.shader.isSupported)
+            {
+                Debug.LogError($"[ShipPrefabRebuilder] Hit Spark material '{material.name}' has an unsupported shader.");
+                return null;
+            }
+
+            log.Add($"✓ Hit Spark material wired: {HIT_SPARK_MATERIAL_PATH}");
+            return material;
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -703,6 +915,31 @@ namespace ProjectArk.Ship.Editor
 
             log.Add("✓ BoostTrailView available on nested BoostTrailRoot");
             return boostTrailView;
+        }
+
+        private static void EnsureSpriteImportSettings(string assetPath, List<string> log)
+        {
+            var importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+            if (importer == null) return;
+
+            bool changed = false;
+            if (importer.textureType != TextureImporterType.Sprite)
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                changed = true;
+            }
+
+            if (importer.spriteImportMode != SpriteImportMode.Single)
+            {
+                importer.spriteImportMode = SpriteImportMode.Single;
+                changed = true;
+            }
+
+            if (changed)
+            {
+                importer.SaveAndReimport();
+                log.Add($"✓ Imported {assetPath} as Sprite");
+            }
         }
 
         private static Sprite LoadSpriteAtPath(string assetPath)

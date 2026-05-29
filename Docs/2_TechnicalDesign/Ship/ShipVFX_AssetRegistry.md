@@ -19,17 +19,18 @@
 | Canonical Name | Physical Name | Type | Status | Current Path | Owner | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | `ShipViewController` | `ShipView` | Runtime Script | Live | `Assets/Scripts/Ship/VFX/ShipView.cs` | Runtime | Coordinator：5 层 sprite 基线颜色、事件路由到 Workers（订阅 OnStateChanged + OnDamageTaken + OnSpeedChanged） |
-| `ShipBoostVisualsWorker` | `ShipBoostVisuals` | Runtime Script | Live | `Assets/Scripts/Ship/VFX/ShipBoostVisuals.cs` | Runtime | Worker：Boost Liquid sprite swap + sortOrder 提升 + HDR 颜色 tween / HL·Core alpha ramp / 推进器脉冲 / TrailView 启停 |
+| `ShipBoostVisualsWorker` | `ShipBoostVisuals` | Runtime Script | Live | `Assets/Scripts/Ship/VFX/ShipBoostVisuals.cs` | Runtime | Worker：Canary Shape/Outline/Core alpha/color 支持 + 推进器脉冲 / TrailView 启停；当前正式配置关闭旧 Boost sprite swap |
 | `ShipHitVisualsWorker` | `ShipHitVisuals` | Runtime Script | Live | `Assets/Scripts/Ship/VFX/ShipHitVisuals.cs` | Runtime | Worker：受击白闪 + i-frame 闪烁 + 低血量脉冲 |
 | `ShipDashVisualsWorker` | `ShipDashVisuals` | Runtime Script | Live | `Assets/Scripts/Ship/VFX/ShipDashVisuals.cs` | Runtime | Worker：冲刺 i-frame 闪烁 + Dodge_Sprite ghost + DashAfterImageSpawner 委托 |
-| `BoostTrailController` | `BoostTrailView` | Runtime Script | Live | `Assets/Scripts/Ship/VFX/BoostTrailView.cs` | Runtime | Boost 尾迹主控 |
+| `ShipFireVisualsWorker` | `ShipFireVisuals` | Runtime Script | Live | `Assets/Scripts/Ship/VFX/ShipFireVisuals.cs` | Runtime | Worker：Fire MVP；由 `ShipView` 路由 `CombatEvents.OnPlayerProjectileFired`，短促点亮 WeaponMount/Core，不自行订阅事件 |
+| `BoostTrailController` | `BoostTrailView` | Runtime Script | Live | `Assets/Scripts/Ship/VFX/BoostTrailView.cs` | Runtime | Boost 尾迹主控；正式 Boost sustained read 由 nested `AresBoostTrail` 粒子承担 |
 | `ShipVisualJuiceWorker` | `ShipVisualJuice` | Runtime Script | Live | `Assets/Scripts/Ship/VFX/ShipVisualJuice.cs` | Runtime | Worker：tilt / squash / stretch；由 ShipView 注入引用 + 路由 OnSpeedChanged / OnDashStarted |
 | `DashAfterImageSpawnerWorker` | `DashAfterImageSpawner` | Runtime Script | Live | `Assets/Scripts/Ship/VFX/DashAfterImageSpawner.cs` | Runtime | 二级 Worker：Dash 连续残影；由 ShipDashVisuals.TriggerSpawn() 驱动，不自行订阅事件 |
 | `DashAfterImageRuntime` | `DashAfterImage` | Runtime Script | Live | `Assets/Scripts/Ship/VFX/DashAfterImage.cs` | Runtime | 残影实例组件 |
 | `ShipBoostStateController` | `ShipBoost` | Runtime Script | Live | `Assets/Scripts/Ship/Movement/ShipBoost.cs` | Runtime | 提供 Boost 事件，不直接渲染 |
 | `ShipStateMachineController` | `ShipStateController` | Runtime Script | Live | `Assets/Scripts/Ship/ShipStateController.cs` | Runtime | 统一状态事件入口 |
 | `ShipStateEnum` | `ShipShipState` | Data Type | Live | `Assets/Scripts/Ship/Data/ShipShipState.cs` | Data | 物理名冻结，语义名统一为 Ship State Enum |
-| `ShipJuiceSettings` | `ShipJuiceSettingsSO` | ScriptableObject Type | Live | `Assets/Scripts/Ship/Data/ShipJuiceSettingsSO.cs` | Data | 视觉参数数据源；含 Boost Liquid 三件套（_boostLiquidSprite / _boostLiquidSortOverride+Order / _boostLiquidColor HDR） |
+| `ShipJuiceSettings` | `ShipJuiceSettingsSO` | ScriptableObject Type | Live | `Assets/Scripts/Ship/Data/ShipJuiceSettingsSO.cs` | Data | 视觉参数数据源；当前正式 Canary 配置中 `_boostLiquidSprite` 为空、`_boostLiquidSortOverride=false`，避免 Boost 状态切回旧 GG sprite |
 
 ## 3. Editor Tools
 
@@ -50,12 +51,22 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | `ShipPrefab` | `Ship.prefab` | Prefab | Live | `Assets/_Prefabs/Ship/Ship.prefab` | `ShipPrefabRebuilder` | 飞船主体 prefab |
 | `BoostTrailRootPrefab` | `BoostTrailRoot.prefab` | Prefab | Live | `Assets/_Prefabs/VFX/BoostTrailRoot.prefab` | `BoostTrailPrefabCreator` | 独立生成后由 `ShipPrefabRebuilder` 集成 |
+| `QFZAresProjectileOnlySource` | `VFX_Ares_Projectile_Only.prefab` | Prefab Source | Reference Source | `Assets/QFX/ProjectilesFX/VFX_Prefabs/Projectiles/VFX_Ares_Projectile_Only.prefab` | QFX Source / `BoostTrailPrefabCreator` consumer | Canary Boost sustained trail source; consumed by `BoostTrailPrefabCreator`, not a parallel runtime owner |
+| `BoostTrailAresSustainNode` | `AresBoostTrail` | Prefab Node | Live | `Assets/_Prefabs/VFX/BoostTrailRoot.prefab` | `BoostTrailPrefabCreator` / `BoostTrailView` | Adapted QFZ Ares sustained particles; serialized into `BoostTrailView._aresSustainParticles` for Boost start/end/reset |
 | `DashAfterImagePrefab` | `DashAfterImage.prefab` | Prefab | Live | `Assets/_Prefabs/Ship/DashAfterImage.prefab` | Runtime / Prefab | Dash 残影 prefab |
 | `ShipVisualRoot` | `ShipVisual` | Prefab Node | Live | `Assets/_Prefabs/Ship/Ship.prefab` | `ShipPrefabRebuilder` | `VisualChild` 是 legacy alias |
 | `ShipVisualRootLegacyAlias` | `VisualChild` | Prefab Node Alias | Legacy | `Assets/_Prefabs/Ship/Ship.prefab` | Legacy | 仅作兼容查找，不再作为规范名 |
-| `ShipDashGhostNode` | `Dodge_Sprite` | Prefab Node | Live | `Assets/_Prefabs/Ship/Ship.prefab` | `ShipPrefabRebuilder` | Dash 静态 ghost |
-| `ShipHighlightSpriteNode` | `Ship_Sprite_HL` | Prefab Node | Live | `Assets/_Prefabs/Ship/Ship.prefab` | `ShipPrefabRebuilder` | 物理名冻结；由 `ShipView._hlRenderer` 持有序列化引用；若要改名需同步 `ShipPrefabRebuilder` 并走 Editor 复验 |
-| `LeftFlameTrailNode` | `FlameTrail_B` | Prefab Node | Live | `Assets/_Prefabs/VFX/BoostTrailRoot.prefab` | `BoostTrailPrefabCreator` | 物理名冻结；由 `BoostTrailView._flameTrailB` 持有序列化引用；若要改名需同步 `BoostTrailPrefabCreator` 并走 Editor 复验 |
+| `ShipCanaryBodyNode` | `Ship_Sprite_Body` | Prefab Node | Live | `Assets/_Prefabs/Ship/Ship.prefab` | `ShipPrefabRebuilder` | 正式主船体层；由 `ShipView._solidRenderer` 消费 |
+| `ShipCanaryShapeNode` | `Ship_Sprite_Shape` | Prefab Node | Live | `Assets/_Prefabs/Ship/Ship.prefab` | `ShipPrefabRebuilder` | Canary Shape/mask 预留层；由 `ShipView._liquidRenderer` 消费，当前 renderer disabled 以避免未完成 mask 参与画面 |
+| `ShipCanaryOutlineNode` | `Ship_Sprite_Outline` | Prefab Node | Live | `Assets/_Prefabs/Ship/Ship.prefab` | `ShipPrefabRebuilder` | 正式轮廓/readability 层；由 `ShipView._hlRenderer` 消费 |
+| `ShipCanaryCoreNode` | `Ship_Sprite_Core` | Prefab Node | Live | `Assets/_Prefabs/Ship/Ship.prefab` | `ShipPrefabRebuilder` | 正式 core / energy focus 层；由 `ShipView._coreRenderer` 消费 |
+| `ShipCanaryWeaponMountNode` | `Ship_Sprite_WeaponMount` | Prefab Node | Live | `Assets/_Prefabs/Ship/Ship.prefab` | `ShipPrefabRebuilder` | 正式 weapon mount / muzzle marker 层；当前为静态视觉层 |
+| `ShipHitMaskFlashNode` | `Ship_HitMaskFlash` | Prefab Node | Live | `Assets/_Prefabs/Ship/Ship.prefab` | `ShipPrefabRebuilder` | 正式受击 overlay mask；默认 disabled/alpha 0，由 `ShipHitVisuals._hitMaskRenderer` 在正伤害时短促显示 |
+| `ShipDashGhostNode` | `Dodge_Sprite` | Prefab Node | Live | `Assets/_Prefabs/Ship/Ship.prefab` | `ShipPrefabRebuilder` | Dash 静态 ghost；暂用 Canary body silhouette，直到 Batch 3 Dash frames 解除 deferred |
+| `ShipLegacyLiquidNode` | `Ship_Sprite_Liquid` | Prefab Node | Legacy Removed | `Assets/_Prefabs/Ship/Ship.prefab` | Legacy | 已从正式 prefab force rebuild 清理；禁止重新作为 live 节点引入 |
+| `ShipLegacyHighlightNode` | `Ship_Sprite_HL` | Prefab Node | Legacy Removed | `Assets/_Prefabs/Ship/Ship.prefab` | Legacy | 已从正式 prefab force rebuild 清理；由 `Ship_Sprite_Outline` 取代 |
+| `ShipLegacySolidNode` | `Ship_Sprite_Solid` | Prefab Node | Legacy Removed | `Assets/_Prefabs/Ship/Ship.prefab` | Legacy | 已从正式 prefab force rebuild 清理；由 `Ship_Sprite_Body` 取代 |
+| `LeftFlameTrailNode` | `FlameTrail_B` | Prefab Node | Legacy Removed | `Assets/_Prefabs/VFX/BoostTrailRoot.prefab` | Legacy | 旧 Boost 粒子层；已由 `AresBoostTrail` 取代，禁止重新作为 live 节点引入 |
 | `BoostTrailNestedBinding` | `_boostTrailView` | Serialized Reference | Live | `Assets/_Prefabs/Ship/Ship.prefab` | `ShipPrefabRebuilder` | 应指向 nested `BoostTrailRoot` |
 | `BoostTrailBloomSceneObject` | `BoostTrailBloomVolume` | Scene Object | Live | `Assets/Scenes/SampleScene.unity` | `ShipBoostTrailSceneBinder` | 仅场景级存在 |
 | `BoostTrailBloomProfile` | `BoostBloomVolumeProfile.asset` | Asset | Live | `Assets/Settings/BoostBloomVolumeProfile.asset` | Scene / Settings | 给 scene volume 使用 |
@@ -64,38 +75,47 @@
 
 | Canonical Name | Physical Name | Type | Status | Current Path | Owner | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| `ShipSharedGlowMaterial` | `ShipGlowMaterial.mat` | Material | Live | `Assets/_Art/Ship/Glitch/ShipGlowMaterial.mat` | `ShipGlowMaterialCreator` | 飞船 glow / Halo 共享材质 |
-| `BoostTrailMainMaterial` | `mat_trail_main.mat` | Material | Live | `Assets/_Art/VFX/BoostTrail/Materials/mat_trail_main.mat` | `MaterialTextureLinker` | 主拖尾材质，固定 `_UseLegacySlots=0` |
-| `BoostEnergyLayer2Material` | `mat_boost_energy_layer2.mat` | Material | Live | `Assets/_Art/VFX/BoostTrail/Materials/mat_boost_energy_layer2.mat` | `MaterialTextureLinker` | 对应 Layer2 shader |
-| `BoostEnergyLayer3Material` | `mat_boost_energy_layer3.mat` | Material | Live | `Assets/_Art/VFX/BoostTrail/Materials/mat_boost_energy_layer3.mat` | `MaterialTextureLinker` | 对应 Layer3 shader |
-| `BoostFlameTrailMaterial` | `mat_flame_trail.mat` | Material | Live | `Assets/_Art/VFX/BoostTrail/Materials/mat_flame_trail.mat` | `MaterialTextureLinker` | 火焰粒子材质 |
-| `BoostEmberTrailMaterial` | `mat_ember_trail.mat` | Material | Live | `Assets/_Art/VFX/BoostTrail/Materials/mat_ember_trail.mat` | `MaterialTextureLinker` | 余烬拖尾材质 |
-| `BoostEmberSparksMaterial` | `mat_ember_sparks.mat` | Material | Live | `Assets/_Art/VFX/BoostTrail/Materials/mat_ember_sparks.mat` | `MaterialTextureLinker` | 余烬火花材质 |
-| `BoostTrailMainShader` | `TrailMainEffect.shader` | Shader | Live | `Assets/_Art/VFX/BoostTrail/Shaders/TrailMainEffect.shader` | Shader | 仍保留 legacy branch 代码，但材质链已收口 |
-| `BoostEnergyLayer2Shader` | `BoostEnergyLayer2.shader` | Shader | Live | `Assets/_Art/VFX/BoostTrail/Shaders/BoostEnergyLayer2.shader` | Shader | Layer2 能量层 |
-| `BoostEnergyLayer3Shader` | `BoostEnergyLayer3.shader` | Shader | Live | `Assets/_Art/VFX/BoostTrail/Shaders/BoostEnergyLayer3.shader` | Shader | Layer3 能量层 |
+| `ShipCanaryBodyMaterial` | `mat_ship_canary_body_default.mat` | Material | Live | `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_body_default.mat` | `ShipPrefabRebuilder` | 正式 Canary body/core/weapon mount 基础材质 |
+| `ShipCanaryShapeMaterial` | `mat_ship_canary_shape.mat` | Material | Live | `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_shape.mat` | `ShipPrefabRebuilder` | 正式 Canary shape/mask 层材质；当前 mask renderer disabled |
+| `ShipCanaryOutlineMaterial` | `mat_ship_canary_outline.mat` | Material | Live | `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_outline.mat` | `ShipPrefabRebuilder` | 正式 Canary outline/readability 材质 |
+| `ShipSharedGlowMaterial` | `ShipGlowMaterial.mat` | Material | Legacy Reference | `Assets/_Art/Ship/Glitch/ShipGlowMaterial.mat` | `ShipGlowMaterialCreator` | 旧 GG liquid/glow 辅助材质；不再由正式 `ShipPrefabRebuilder` 写入 Ship.prefab |
+| `BoostTrailMainMaterial` | `mat_trail_main.mat` | Material | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Materials/mat_trail_main.mat` | Reference | 旧 Boost 主拖尾材质；Ares-only 正式链路不再使用 |
+| `BoostEnergyLayer2Material` | `mat_boost_energy_layer2.mat` | Material | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Materials/mat_boost_energy_layer2.mat` | Reference | 旧 Boost Layer2 材质；Ares-only 正式链路不再使用 |
+| `BoostEnergyLayer3Material` | `mat_boost_energy_layer3.mat` | Material | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Materials/mat_boost_energy_layer3.mat` | Reference | 旧 Boost Layer3 材质；Ares-only 正式链路不再使用 |
+| `BoostFlameTrailMaterial` | `mat_flame_trail.mat` | Material | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Materials/mat_flame_trail.mat` | Reference | 旧火焰粒子材质；Ares-only 正式链路不再使用 |
+| `BoostEmberTrailMaterial` | `mat_ember_trail.mat` | Material | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Materials/mat_ember_trail.mat` | Reference | 旧余烬拖尾材质；Ares-only 正式链路不再使用 |
+| `BoostEmberSparksMaterial` | `mat_ember_sparks.mat` | Material | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Materials/mat_ember_sparks.mat` | Reference | 旧余烬火花材质；Ares-only 正式链路不再使用 |
+| `BoostTrailMainShader` | `TrailMainEffect.shader` | Shader | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Shaders/TrailMainEffect.shader` | Reference | 旧 Boost shader；保留仅供历史排查 |
+| `BoostEnergyLayer2Shader` | `BoostEnergyLayer2.shader` | Shader | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Shaders/BoostEnergyLayer2.shader` | Reference | 旧 Layer2 shader；Ares-only 正式链路不再使用 |
+| `BoostEnergyLayer3Shader` | `BoostEnergyLayer3.shader` | Shader | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Shaders/BoostEnergyLayer3.shader` | Reference | 旧 Layer3 shader；Ares-only 正式链路不再使用 |
 
 ## 6. Textures and Sprites
 
 | Canonical Name | Physical Name | Type | Status | Current Path | Owner | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| `ShipLiquidBoostSprite` | `Boost_16.png` | Sprite | Live | `Assets/_Art/Ship/Glitch/Boost_16.png` | `ShipBoostVisuals` / `ShipJuiceSettingsSO` | Boost 液态层；由 SO `_boostLiquidSprite` 持有引用，运行时由 ShipBoostVisuals 做 sprite swap |
-| `ShipLiquidNormalSprite` | `Movement_3.png` | Sprite | Live | `Assets/_Art/Ship/Glitch/Movement_3.png` | `ShipView` / `ShipPrefabRebuilder` | Normal 液态层 |
-| `ShipSolidNormalSprite` | `Movement_10.png` | Sprite | Live | `Assets/_Art/Ship/Glitch/Movement_10.png` | `ShipPrefabRebuilder` | 实色层 |
-| `ShipHighlightNormalSprite` | `Movement_21.png` | Sprite | Live | `Assets/_Art/Ship/Glitch/Movement_21.png` | `ShipPrefabRebuilder` | 高亮层 |
+| `ShipCanaryBodySprite` | `spr_ship_canary_body_normal_albedo.png` | Sprite | Live | `Assets/_Art/Ship/Canary/Sprites/Body/spr_ship_canary_body_normal_albedo.png` | `ShipPrefabRebuilder` | 正式主船体层；也暂作 Dash ghost silhouette 来源 |
+| `ShipCanaryShapeSprite` | `spr_ship_canary_shape_normal_mask.png` | Sprite | Live | `Assets/_Art/Ship/Canary/Sprites/Shape/spr_ship_canary_shape_normal_mask.png` | `ShipPrefabRebuilder` | 正式 Shape/mask 预留层；当前 renderer disabled，后续供 hit/dissolve/overheat 等效果使用 |
+| `ShipCanaryHitMaskSprite` | `spr_ship_canary_shape_hit_mask.png` | Sprite | Live | `Assets/_Art/Ship/Canary/Textures/Masks/spr_ship_canary_shape_hit_mask.png` | `ShipPrefabRebuilder` | 正式受击 overlay mask；外轮廓 + 中轴/core 高亮，透明背景，运行时由 `ShipHitVisuals` 短促淡出 |
+| `ShipCanaryOutlineSprite` | `spr_ship_canary_outline_normal_outline.png` | Sprite | Live | `Assets/_Art/Ship/Canary/Sprites/Outline/spr_ship_canary_outline_normal_outline.png` | `ShipPrefabRebuilder` | 正式 outline/readability 层 |
+| `ShipCanaryCoreSprite` | `spr_ship_canary_core_normal_albedo.png` | Sprite | Live | `Assets/_Art/Ship/Canary/Sprites/Core/spr_ship_canary_core_normal_albedo.png` | `ShipPrefabRebuilder` | 正式 core / energy focus 层 |
+| `ShipCanaryWeaponMountSprite` | `spr_ship_canary_weapon_mount_normal_albedo.png` | Sprite | Live | `Assets/_Art/Ship/Canary/Sprites/WeaponMount/spr_ship_canary_weapon_mount_normal_albedo.png` | `ShipPrefabRebuilder` | 正式 weapon mount / muzzle marker 层 |
+| `ShipLiquidBoostSprite` | `Boost_16.png` | Sprite | Legacy Reference | `Assets/_Art/Ship/Glitch/Boost_16.png` | Reference | 旧 GG Boost 液态层；`DefaultShipJuiceSettings._boostLiquidSprite` 已清空，正式链路不再使用 |
+| `ShipLiquidNormalSprite` | `Movement_3.png` | Sprite | Legacy Reference | `Assets/_Art/Ship/Glitch/Movement_3.png` | Reference | 旧 GG Normal 液态层；不再由正式 `ShipPrefabRebuilder` 写入 Ship.prefab |
+| `ShipSolidNormalSprite` | `Movement_10.png` | Sprite | Legacy Reference | `Assets/_Art/Ship/Glitch/Movement_10.png` | Reference | 旧 GG 实色层；不再由正式 `ShipPrefabRebuilder` 写入 Ship.prefab |
+| `ShipHighlightNormalSprite` | `Movement_21.png` | Sprite | Legacy Reference | `Assets/_Art/Ship/Glitch/Movement_21.png` | Reference | 旧 GG 高亮层；不再由正式 `ShipPrefabRebuilder` 写入 Ship.prefab |
 | `ShipPrimaryBaseSprite` | `Primary.png` | Sprite | Reference | `Assets/_Art/Ship/Glitch/Primary.png` | Reference | 上游参考，不是当前主链 |
 | `ShipPrimaryVariant4Sprite` | `Primary_4.png` | Sprite | Reference | `Assets/_Art/Ship/Glitch/Primary_4.png` | Reference | 结构分析参考 |
 | `ShipPrimaryVariant6Sprite` | `Primary_6.png` | Sprite | Reference | `Assets/_Art/Ship/Glitch/Primary_6.png` | Reference | 结构分析参考 |
-| `ShipDashGhostSource` | `Reference/player_test_fire.png` | Sprite | Live | `Assets/_Art/Ship/Glitch/Reference/player_test_fire.png` | `ShipPrefabRebuilder` | Dash ghost 来源 |
-| `BoostTrailMainTexture` | `vfx_boost_techno_flame.png` | Texture | Live | `Assets/_Art/VFX/BoostTrail/Textures/vfx_boost_techno_flame.png` | `MaterialTextureLinker` | 主拖尾 / 火焰粒子 |
-| `BoostEmberTrailTexture` | `vfx_ember_trail.png` | Texture | Live | `Assets/_Art/VFX/BoostTrail/Textures/vfx_ember_trail.png` | `MaterialTextureLinker` | 余烬拖尾 |
-| `BoostEmberSparksTexture` | `vfx_ember_sparks.png` | Texture | Live | `Assets/_Art/VFX/BoostTrail/Textures/vfx_ember_sparks.png` | `MaterialTextureLinker` | 余烬火花 |
-| `BoostNoiseMainTexture` | `boost_noise_main.png` | Texture | Live | `Assets/_Art/VFX/BoostTrail/Textures/boost_noise_main.png` | `MaterialTextureLinker` | Layer2 Tex0 |
-| `BoostNoiseDistortTexture` | `boost_noise_distort.png` | Texture | Live | `Assets/_Art/VFX/BoostTrail/Textures/boost_noise_distort.png` | `MaterialTextureLinker` | Layer2 Tex1 |
-| `BoostNoiseLayer3Texture` | `boost_noise_layer3.png` | Texture | Live | `Assets/_Art/VFX/BoostTrail/Textures/boost_noise_layer3.png` | `MaterialTextureLinker` | Layer2 Tex2 |
-| `BoostNoiseLayer4Texture` | `boost_noise_layer4.png` | Texture | Live | `Assets/_Art/VFX/BoostTrail/Textures/boost_noise_layer4.png` | `MaterialTextureLinker` | Layer2 Tex3 |
-| `BoostEnergyNoiseTexture` | `boost_energy_noise_a.png` | Texture | Live | `Assets/_Art/VFX/BoostTrail/Textures/boost_energy_noise_a.png` | `MaterialTextureLinker` | Layer3 Tex0 |
-| `BoostEnergyMainTexture` | `boost_energy_main.png` | Texture | Live | `Assets/_Art/VFX/BoostTrail/Textures/boost_energy_main.png` | `MaterialTextureLinker` | Layer3 Tex1 |
+| `ShipDashGhostSource` | `spr_ship_canary_body_normal_albedo.png` | Sprite | Live | `Assets/_Art/Ship/Canary/Sprites/Body/spr_ship_canary_body_normal_albedo.png` | `ShipPrefabRebuilder` | Dash ghost 临时来源；Batch 3 Dash frames 落地后应替换为正式 dash/smear sprite |
+| `BoostTrailMainTexture` | `vfx_boost_techno_flame.png` | Texture | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Textures/vfx_boost_techno_flame.png` | Reference | 旧 Boost 主拖尾 / 火焰粒子贴图；Ares-only 正式链路不再使用 |
+| `BoostEmberTrailTexture` | `vfx_ember_trail.png` | Texture | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Textures/vfx_ember_trail.png` | Reference | 旧余烬拖尾贴图；Ares-only 正式链路不再使用 |
+| `BoostEmberSparksTexture` | `vfx_ember_sparks.png` | Texture | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Textures/vfx_ember_sparks.png` | Reference | 旧余烬火花贴图；Ares-only 正式链路不再使用 |
+| `BoostNoiseMainTexture` | `boost_noise_main.png` | Texture | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Textures/boost_noise_main.png` | Reference | 旧 Layer2 Tex0；Ares-only 正式链路不再使用 |
+| `BoostNoiseDistortTexture` | `boost_noise_distort.png` | Texture | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Textures/boost_noise_distort.png` | Reference | 旧 Layer2 Tex1；Ares-only 正式链路不再使用 |
+| `BoostNoiseLayer3Texture` | `boost_noise_layer3.png` | Texture | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Textures/boost_noise_layer3.png` | Reference | 旧 Layer2 Tex2；Ares-only 正式链路不再使用 |
+| `BoostNoiseLayer4Texture` | `boost_noise_layer4.png` | Texture | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Textures/boost_noise_layer4.png` | Reference | 旧 Layer2 Tex3；Ares-only 正式链路不再使用 |
+| `BoostEnergyNoiseTexture` | `boost_energy_noise_a.png` | Texture | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Textures/boost_energy_noise_a.png` | Reference | 旧 Layer3 Tex0；Ares-only 正式链路不再使用 |
+| `BoostEnergyMainTexture` | `boost_energy_main.png` | Texture | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Textures/boost_energy_main.png` | Reference | 旧 Layer3 Tex1；Ares-only 正式链路不再使用 |
 | `BoostActivationHaloPrimary` | `vfx_ring_glow_uneven.png` | Texture | Dormant | `Assets/_Art/VFX/BoostTrail/Textures/vfx_ring_glow_uneven.png` | — | Halo 已取消（2026-03-22），纹理降级为 Dormant，待 Batch 4 清理 |
 | `BoostActivationHaloFallback` | `vfx_magnetic_rings.png` | Texture | Dormant | `Assets/_Art/VFX/BoostTrail/Textures/vfx_magnetic_rings.png` | — | Halo 已取消（2026-03-22），纹理降级为 Dormant，待 Batch 4 清理 |
 
@@ -150,9 +170,8 @@
 
 ### 持续关注项
 
-1. `FlameTrail_B` 当前结论为 **需 Editor 配合**：`BoostTrailView._flameTrailB` 通过序列化引用消费，且 `BoostTrailPrefabCreator` 仍硬编码该节点名。
-2. `Ship_Sprite_HL` 当前结论为 **需 Editor 配合**：`ShipView._hlRenderer` 通过序列化引用消费，且 `ShipPrefabRebuilder` 仍硬编码该节点名。
-3. `ShipShipState` 当前结论为 **不可改（当前批）**：它是 runtime 数据类型，改名收益低于 API / 序列化 / 编译风险。
-4. `Ship_Sprite_HL` 当前 live prefab 使用的是共享默认材质链，不应误判为必须与 `ShipGlowMaterial.mat` 一起迁移。
-5. 首批 low-risk dormant 资源已完成引用审计并进入清退：`mat_ui_boost_flash`、`UIBoostFlash`、`boost_activation_halo`、`boost_field_*`、`ship_*_gg`。
-6. 后续若继续清理 dormant 资源，必须继续保持 GUID + 文本双重引用审计。
+1. `ShipShipState` 当前结论为 **不可改（当前批）**：它是 runtime 数据类型，改名收益低于 API / 序列化 / 编译风险。
+2. `ShipView._hlRenderer` 当前指向 Canary `Ship_Sprite_Outline`，字段名仅为兼容性语义名；不得据此恢复旧 `Ship_Sprite_HL` 节点。
+3. `FlameTrail_B` / `MainTrail` / `Ember*` / `BoostEnergyLayer*` 已从正式 Boost 链路清退；后续 validator 若发现这些节点重新出现在 `BoostTrailRoot.prefab`，应视为 legacy residue。
+4. 首批 low-risk dormant 资源已完成引用审计并进入清退：`mat_ui_boost_flash`、`UIBoostFlash`、`boost_activation_halo`、`boost_field_*`、`ship_*_gg`。
+5. 后续若继续清理 dormant / legacy reference 资源，必须继续保持 GUID + 文本双重引用审计。

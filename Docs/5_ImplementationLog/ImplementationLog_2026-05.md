@@ -1,5 +1,166 @@
 ---
 
+## 清理 Ship 场景旧 Glitch Sprite 覆盖层 — 2026-05-29 00:54
+
+- **新建/修改/删除文件**
+  - `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs`
+  - `Assets/_Prefabs/Ship/Ship.prefab`
+  - `Assets/Scenes/SampleScene.unity`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：排查用户截图中新版 Canary 船体上方仍有紫色旧 sprite 覆盖的问题。根因不是 `player_test_fire`，而是 `Ship.prefab` 与当前 `SampleScene` 实例中仍残留旧 Glitch 三层：`Ship_Sprite_Liquid -> Movement_3.png`、`Ship_Sprite_HL -> Movement_21.png`、`Ship_Sprite_Solid -> Movement_10.png`。已让 `ShipPrefabRebuilder` 在普通 rebuild 时也显式删除这三个 legacy visual nodes，并执行 authority rebuild 清理 `Ship.prefab`；随后清理/刷新当前场景实例中的对应 scene override。
+
+- **目的**：彻底移除旧紫色 GG/Glitch 船体覆盖层，保证正式 Ship/VFX 主链只显示 Canary/Ares 现役资产，不再依赖旧 sprite，也不通过 runtime hide/fallback 掩盖问题。
+
+- **技术**：使用 Unity probe 先列出 `Ship.prefab` 与当前场景 `SpriteRenderer` 的 sprite path / sorting order / active 状态，建立 RED：`Movement_3/10/21` 仍参与渲染。修复后运行 `ShipPrefabRebuilder.RebuildSpriteLayersSilently()`，并验证：`Ship.prefab` 与场景实例均无 `Movement_3/10/21` renderer；当前场景中没有任何 `SpriteRenderer` 使用 `Assets/_Art/Ship/Glitch/` 或 `Assets/_Art/Ship/GGReplica/` 飞船旧资源；`dotnet build Project-Ark.slnx --no-restore` 成功（仅既有 warning）；Scene View 截图确认主船体不再有紫色旧层覆盖。Console 仍有既有 SampleScene UI Missing Script 错误，与本次 Ship/VFX 修复无关。
+
+---
+
+## 删除旧紫色 Fire Test Sprite 残留 — 2026-05-29 00:21
+
+- **新建/修改/删除文件**
+  - `Assets/Scripts/Ship/Editor/GGReplica/GGReplicaAssetImporter.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/GGReplicaPlayerSkinAssetBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/GGReplicaPlayerSkinAssetBuilderTests.cs`
+  - `Assets/Scripts/Ship/Editor/GGReplica/V2/GGReplicaGlitchV2PrefabBuilder.cs`
+  - `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs`
+  - `Assets/_Data/Ship/GGReplicaPlayerSkin.asset`
+  - `Assets/_Data/Ship/GGReplicaShipVisualProfile.asset`
+  - `Assets/_Prefabs/Ship/Ship_GGReplica.prefab`
+  - `Assets/_Prefabs/Ship/Ship_GGReplicaV2.prefab`
+  - `Assets/_Art/Ship/Glitch/Reference/player_test_fire.png`（删除）
+  - `Assets/_Art/Ship/GGReplica/Sprites/player_test_fire.png`（删除）
+  - `Docs/2_TechnicalDesign/Ship/ShipVFX_CanonicalSpec.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：删除旧紫色 `player_test_fire` sprite 的两份项目内副本，并清掉它在 GGReplica importer、PlayerSkin builder、V2 prefab builder、测试、数据资产与 legacy prefab 中的所有导入/构建/序列化残留。`ShipPrefabRebuilder` 中旧的 `import player_test_fire.png` 提示已改为当前 Canary Body silhouette 路径提示。`ShipVFX_CanonicalSpec` 不再把 `Reference/player_test_fire.png` 记录为 Dash ghost 来源。
+
+- **目的**：修正 Fire MVP 后旧紫色 sprite 仍可被工具或序列化残留带回正式/调试链路的问题。该资产属于旧参考资产，不应作为 Canary Fire、WeaponMount 或 Dash 的现役来源；本次处理选择直接删除和清空引用，而不是替换成另一条兼容 fallback。
+
+- **技术**：按 root-cause 清理而非视觉补丁处理：先用 grep 验证 `player_test_fire` / `229513161421663746` / 两个旧 GUID 的 RED 状态，再移除 importer entry、builder hardcode、serialized references 与文档口径。验证：`Assets` 下已无旧 sprite 名称、fileID 或 GUID 残留；`dotnet build Project-Ark.slnx --no-restore` 成功（仅既有 warning）；Unity probe 确认 `Ship.prefab` 中 `Ship_Sprite_WeaponMount` 指向 Canary WeaponMount，`Dodge_Sprite` 指向 Canary Body silhouette，`Ship_Sprite_Core` 指向 Canary Core；Unity Console 当前无 error。
+
+---
+
+## Ship/VFX 文档同步与 Fire MVP 接入 — 2026-05-28 23:47
+
+- **新建/修改文件**
+  - `Assets/Scripts/Ship/VFX/ShipFireVisuals.cs`
+  - `Assets/Scripts/Ship/VFX/ShipView.cs`
+  - `Assets/Scripts/Ship/Data/ShipJuiceSettingsSO.cs`
+  - `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs`
+  - `Assets/Scripts/Ship/Tests/ShipFireVisualsTests.cs`
+  - `Assets/_Prefabs/Ship/Ship.prefab`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/2_TechnicalDesign/Ship/ShipVFX_CanonicalSpec.md`
+  - `Docs/2_TechnicalDesign/Ship/ShipVFX_AssetRegistry.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：先将 Ship/VFX 规范与注册表同步为当前真实 Ares-only Boost 链路，移除旧 `MainTrail` / `FlameTrail_*` / `FlameCore` / `Ember*` / `BoostEnergyLayer*` 的 live 口径，并把旧 Boost 材质、shader、纹理降级为 `Legacy Reference`。随后接入 Fire MVP：新增 `ShipFireVisuals` Worker，由 `ShipView` 订阅 `CombatEvents.OnPlayerProjectileFired` 后统一路由，短促点亮 `Ship_Sprite_WeaponMount` 与 `Ship_Sprite_Core`，并在 `ResetState()` 中恢复颜色和 scale。`ShipJuiceSettingsSO` 新增 Fire 颜色、scale、attack/release 参数；`ShipPrefabRebuilder` 负责 ensure/wire `ShipFireVisuals`、`ShipView._fireVisuals` 与 `ShipView._weaponMountRenderer`。
+
+- **目的**：在进入 Batch 6 Fire/Hit 前先清除 Boost 文档认知污染，并交付一个最小可玩的 Fire 反馈切片：开火时短、亮、清楚，不抢 Boost 视觉语言，不改变船体 Body 身份，且仍保持 `ShipView` 作为唯一 runtime 路由入口。
+
+- **技术**：沿用 Ship/VFX Worker 模式与 authority builder 接线；Fire 参数保持数据驱动，避免把手感数值硬编码在 prefab 或 scene override 中。验证：`dotnet build Project-Ark.slnx --no-restore` 成功（仅既有 warning）；执行 `ShipPrefabRebuilder.RebuildSpriteLayersSilently()` 后，Unity probe 确认 `Ship.prefab` 上 `ShipFireVisuals` 存在，`ShipFireVisuals._weaponMountRenderer` / `_coreRenderer` / `_juiceSettings` 与 `ShipView._fireVisuals` / `_weaponMountRenderer` 均已接线；运行时 probe 返回 `PASS ShipFireVisuals OnWeaponFired/ResetState runtime check`。Unity Test Runner 当前对 `ProjectArk.Ship.Tests` 返回 `total=0`，未将其作为有效通过证据。Console 中仍有 3 条已定位的无关 Missing Script：`SampleScene.unity` 的 `SpaceLifeCanvas/DialogueUI`、`GiftUI`、`NPCInteractionUI`。
+
+---
+
+## Boost Trail 旧特效完全删除 — 2026-05-28 23:28
+
+- **新建/修改文件**
+  - `Assets/Scripts/Ship/Editor/BoostTrailPrefabCreator.cs`
+  - `Assets/Scripts/Ship/VFX/BoostTrailView.cs`
+  - `Assets/Scripts/Ship/VFX/BoostTrailDebugManager.cs`
+  - `Assets/Scripts/Ship/Editor/BoostTrailDebugManagerEditor.cs`
+  - `Assets/Scripts/Ship/Data/ShipJuiceSettingsSO.cs`
+  - `Assets/Scripts/Ship/Editor/ShipVfxValidator.cs`
+  - `Assets/_Prefabs/VFX/BoostTrailRoot.prefab`
+  - `Assets/_Prefabs/Ship/Ship.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：彻底移除正式 Boost 链路里的旧版可见特效层：`MainTrail`、`FlameTrail_R`、`FlameTrail_B`、`FlameCore`、`EmberTrail`、`EmberSparks`、`BoostEnergyLayer2`、`BoostEnergyLayer3`。`BoostTrailPrefabCreator` 现在只生成 `AresBoostTrail`；`BoostTrailView` 只负责 Ares sustained particles 与 Bloom burst；`BoostTrailDebugManager` / 自定义 Inspector 只保留 Ares 与 Bloom 的预览开关；`ShipJuiceSettingsSO` 删除旧 flame/ember/energy/trail 参数；`ShipVfxValidator` 改为禁止旧 Boost 子节点并要求 `AresBoostTrail` + `_aresSustainParticles` 有效，同时同步 Canary 船体节点命名。
+
+- **目的**：解决玩家仍能看到旧 Boost trail / flame / ember / energy layer 残留的问题，让正式玩家船 Boost 表现完全走 QFZ Ares 改造链路，避免旧视觉层继续参与运行时表现或被 builder 重建回来。
+
+- **技术**：按 Ship/VFX authority 规则从唯一 prefab builder、runtime controller、debug preview、validator 四层同时清理旧链路；重新执行 `BoostTrailPrefabCreator.CreateOrRebuildBoostTrailRootPrefab(false)` 与 `ShipPrefabRebuilder.ForceRebuildSpriteLayersSilently()`。验证：`dotnet build Project-Ark.slnx` 成功（仅既有 warning）；Unity 结构探针显示 `BoostTrailRoot.prefab` 与 `Ship.prefab` 内嵌 `BoostTrailRoot` 均为 `PASS childCount=1 aresParticles=7`；`Assets/_Prefabs` grep 不再包含旧 Boost 节点/字段名；Console 清空后无 error/warning。
+
+---
+
+## Ares Boost Trail 持续发射修复 — 2026-05-28 23:17
+
+- **新建/修改文件**
+  - `Assets/Scripts/Ship/Editor/BoostTrailPrefabCreator.cs`
+  - `Assets/_Prefabs/VFX/BoostTrailRoot.prefab`
+  - `Assets/_Prefabs/Ship/Ship.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：修复 `AresBoostTrail` 已被嵌入但 Boost 时几乎不可见的问题。根因是 QFZ `VFX_Ares_Projectile_Only.prefab` 的 sustained layers 原本依赖 `rateOverDistance`，上次适配为 local Boost trail 时把 `rateOverDistance` 清零，却没有补 `rateOverTime`，导致正式 `Ship.prefab` 中 7 个 Ares 粒子层发射率全为 0，仅剩极弱的一次性 burst。现在 `BoostTrailPrefabCreator` 会按粒子层名写入非零 `rateOverTime`，放大 `AresBoostTrail` 到 0.68，并提高 sorting order，让 Ares 粒子成为 Boost sustained read 的可见层。
+
+- **目的**：让正式玩家船在 Boost 时真正看到 `VFX_Ares_Projectile` 改造后的持续拖尾，而不是继续主要显示旧版 Boost trail / flame 效果。
+
+- **技术**：通过 Unity 诊断正式 `Ship.prefab` 中 `BoostTrailView._aresSustainParticles`，确认数组有 7 个引用但 `rateTime=0.00`；修复 builder 后重新执行 `BoostTrailPrefabCreator.CreateOrRebuildBoostTrailRootPrefab(false)` 与 `ShipPrefabRebuilder.ForceRebuildSpriteLayersSilently()`。验证结果：正式 `Ship.prefab` 中 Ares 粒子层 `rateTime` 分别为 8/14/26/16/28/10/10，`OnBoostStart()` runtime probe 显示 7 个粒子层均 `isPlaying=True` 且 `isEmitting=True`；`dotnet build Project-Ark.slnx` 成功（仅既有 warning）；Unity Console 清空后无 error/warning。
+
+---
+
+## Canary 正式 Ship.prefab 迁移 — 2026-05-28 22:52
+
+- **新建/修改文件**
+  - `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs`
+  - `Assets/Scripts/Ship/Editor/BoostTrailPrefabCreator.cs`
+  - `Assets/_Prefabs/Ship/Ship.prefab`
+  - `Assets/_Prefabs/VFX/BoostTrailRoot.prefab`
+  - `Assets/_Data/Ship/DefaultShipJuiceSettings.asset`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/2_TechnicalDesign/Ship/ShipVFX_AssetRegistry.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：将正式 `Assets/_Prefabs/Ship/Ship.prefab` 从旧 GG `Movement_*` 三层视觉迁移到 Canary Normal playable set。`ShipPrefabRebuilder` 改为通过唯一 prefab authority 生成 `Ship_Sprite_Body`、`Ship_Sprite_Shape`、`Ship_Sprite_Outline`、`Ship_Sprite_Core`、`Ship_Sprite_WeaponMount`、`Dodge_Sprite` 与 nested `BoostTrailRoot`；新增无弹窗 rebuild / force rebuild 入口，方便自动化清理旧 managed 节点。`DefaultShipJuiceSettings` 清空旧 `_boostLiquidSprite`，关闭 Boost sprite swap，并把 outline/core 基础 alpha 调整为正式 Canary 可读状态。`BoostTrailPrefabCreator` 的 Boost energy overlay 改用 Canary body/outline sprite，避免继续引用旧 `Boost_16` / `Movement_3`。
+
+- **目的**：让玩家继续操控原正式 `Ship.prefab` 路径，但看到的是 Canary 船体与 QFZ Ares Boost 拖尾，而不是 preview-only ship 或旧 GG 船体。保持 `Ship.prefab` 由 `ShipPrefabRebuilder` 管理、`BoostTrailRoot.prefab` 由 `BoostTrailPrefabCreator` 管理，不引入 scene patch、第二可操控 prefab 或 Debug 主链。
+
+- **技术**：通过 Unity Editor 内执行 `BoostTrailPrefabCreator.CreateOrRebuildBoostTrailRootPrefab(false)` 与 `ShipPrefabRebuilder.ForceRebuildSpriteLayersSilently()` 落地 prefab，避免手写 Unity YAML / fileID。验证包括：`dotnet build Project-Ark.slnx` 成功（仅既有 obsolete / 第三方 warning）；Unity Console 清空后无 error/warning；`manage_prefabs get_hierarchy` 确认正式 `Ship.prefab` 只剩 Canary sprite 层 + nested `BoostTrailRoot/AresBoostTrail`；文本 grep 确认正式 prefab 不再包含 `Ship_Sprite_Liquid`、`Ship_Sprite_HL`、`Ship_Sprite_Solid`，`DefaultShipJuiceSettings.asset` 不再引用旧 `Boost_16` GUID。
+
+---
+
+## Canary Boost 接入 QFZ Ares 拖尾 — 2026-05-28 22:14
+
+- **新建/修改文件**
+  - `Assets/Scripts/Ship/VFX/BoostTrailView.cs`
+  - `Assets/Scripts/Ship/Editor/BoostTrailPrefabCreator.cs`
+  - `Assets/Scripts/Ship/Tests/BoostTrailViewTests.cs`
+  - `Assets/_Prefabs/VFX/BoostTrailRoot.prefab`
+  - `Assets/_Prefabs/Ship/CanaryShipVisualPreview.prefab`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/2_TechnicalDesign/Ship/ShipVFX_AssetRegistry.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **删除文件**
+  - `Assets/_Art/Ship/Canary/Animations/Canary_BoostPreview.anim`
+  - `Assets/_Art/Ship/Canary/Animations/Canary_BoostPreview.controller`
+  - `Assets/_Art/Ship/Canary/Textures/Emission/spr_ship_canary_engine_boost_preview.png`
+  - `Assets/_Art/Ship/Canary/Textures/Emission/spr_ship_canary_engine_boost_jet_preview.png`
+  - Canary Boost preview 相关截图资产
+
+- **内容**：删除 Canary 临时 Boost preview 资产并清理 `CanaryShipVisualPreview.prefab` 中的 preview 节点 / Animator；将 QFZ `VFX_Ares_Projectile_Only.prefab` 通过唯一 prefab authority `BoostTrailPrefabCreator` 接入 `BoostTrailRoot.prefab`，生成 `AresBoostTrail` 子树并序列化到 `BoostTrailView._aresSustainParticles`。`BoostTrailView` 增加 Ares sustained 粒子数组入口，在 Boost start / end / reset 中统一启停与清理，避免对象池回收后粒子残留。
+
+- **目的**：把 Boost 最终拖尾从临时 preview 方案收口到正式 Ship/VFX 链路：直接复用成熟的 QFZ Ares 拖尾语言，同时不新增第二条 BoostTrail authority、不做 scene-only patch、不让 Debug 工具接管正式运行链。
+
+- **技术**：采用 TDD 最小增量，新增 `BoostTrailViewTests.ResetState_StopsAndClearsAresSustainParticles` 锁定防御性复位；`BoostTrailPrefabCreator` 在重建 prefab 时加载 `Assets/QFX/ProjectilesFX/VFX_Prefabs/Projectiles/VFX_Ares_Projectile_Only.prefab`，实例化为 `AresBoostTrail` 并仅调整 offset、rotation、scale、lifetime、speed、size、emission 与 sorting。已通过 `validate_script`、`dotnet build Project-Ark.slnx`、Editor 直接断言 `ResetState()` 后 Ares 粒子 `isPlaying=False, particleCount=0`，并确认 `BoostTrailRoot.prefab` 中 `_aresSustainParticles` 数组包含 7 个粒子系统引用。
+
+---
+
+## Canary Boost 复用 VFX_Ares_Projectile 计划修订 — 2026-05-28 22:08
+
+- **新建/修改文件**
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：修订 Canary Ship 完整 Art/VFX plan 的 Batch 5 Boost 目标：将 `VFX_Ares_Projectile` 从“可能的视觉参考”明确升级为 Boost 最终拖尾的直接复用来源。Task 15 文件清单改为优先定位 / 复用 QFZ `VFX_Ares_Projectile`，仅在需要补充船体读感时才创建额外 Core / EnergyBar / Engine 资产；Task 16 改为先确认现有 `BoostTrailRoot` authority，再检查并小改适配 `VFX_Ares_Projectile`。Completion Gate 与 Risk Register 同步补充“不得引入第二条 BoostTrail authority”和“避免 projectile 被误读为武器发射”的约束。
+
+- **目的**：让后续 Boost 方向与真实目标一致：直接拿成熟的 QFZ projectile 拖尾作为基础，减少重复造轮子，同时把它收口到现有 Ship/VFX authority 链内，避免产生新的并行 VFX 主链或 scene-only 临时方案。
+
+- **技术**：文档层面更新 plan 约束，明确源资产、适配范围、registry 更新要求和风险治理项；不修改 Unity 资产、Prefab、Scene、Runtime 脚本或正式 `BoostTrailRoot.prefab`。
+
+---
+
 ## Canary Engine / Rear Boost Preview 竖向喷流调优 — 2026-05-28 21:46
 
 - **新建/修改文件**
@@ -1916,3 +2077,65 @@
 - **目的**：在正式制作金丝雀号素材前锁定 Minishoot 主参考，明确 Batch 1 优先制作 `Body / Shape / Outline / Lean / Dash`，并把 GG-style full state sheet、死亡残骸、复杂 shader parity、最终 Bloom 调参排除出 Batch 1。
 
 - **技术**：使用文件系统与脚本引用检索确认 `Sprite`、`Texture2D`、`Material`、`AnimationClip`、`PlayerView.cs` 中的参考来源；用轻量 PNG 生成脚本制作可读参考板；不创建或手写 `.meta`。
+
+
+## Ship Hit MVP — 2026-05-29 01:37
+
+- **新建/修改文件：**
+  - `Assets/Scripts/Ship/VFX/ShipHitVisuals.cs`
+  - `Assets/Scripts/Ship/Data/ShipJuiceSettingsSO.cs`
+  - `Assets/Scripts/Ship/Tests/ShipHitVisualsTests.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容：**
+  - 为 `ShipHitVisuals` 增加正伤害专用短促 scale punch，使受击瞬间在 Canary `Body / Outline / Core` 层上更可读。
+  - `damage <= 0` 的 `OnDamageTaken` 事件只刷新低血量脉冲判断，不再触发白闪或 i-frame 闪烁，避免治疗/读档 HP 刷新误表现为受击。
+  - 在 `ShipJuiceSettingsSO` 中新增 `HitImpactScalePeak`、`HitImpactAttackDuration`、`HitImpactReleaseDuration` 数据驱动参数。
+  - 新增 `ShipHitVisualsTests` 覆盖非正伤害事件不应改变渲染颜色的边界。
+- **目的：**
+  - 在 Fire MVP 验收后补齐基础战斗反馈链路中的 Hit MVP，提升受击手感与可读性，同时避免 UI/HUD 复用血量事件造成误闪。
+- **技术：**
+  - 继续保持 `ShipView -> ShipHitVisuals` 单一运行时入口，不新增 prefab 节点、旧 sprite 或 legacy fallback。
+  - 使用 PrimeTween `Sequence` + `Tween.Scale` 做短促视觉 punch，并在 `ResetState()` 中防御性停止 tween、恢复 scale/color。
+  - 通过 `dotnet build Project-Ark.slnx`、Unity `validate_script` 和一次性 Editor smoke test 验证编译与关键行为。
+
+
+## Ship Hit Spark MVP — 2026-05-29 09:46
+
+- **新建/修改文件：**
+  - `Assets/Scripts/Ship/VFX/ShipHitVisuals.cs`
+  - `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs`
+  - `Assets/Scripts/Ship/Tests/ShipHitVisualsTests.cs`
+  - `Assets/_Prefabs/Ship/Ship.prefab`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容：**
+  - 为 `ShipHitVisuals` 增加 prefab 内预分配的 `_hitSparkParticles` 引用，正伤害时播放短促局部 spark，`ResetState()` 停止并清空粒子。
+  - `ShipPrefabRebuilder` 新增受控子节点 `Ship_HitSpark` 的创建、粒子参数配置和 `ShipHitVisuals._hitSparkParticles` 接线，避免运行时生成对象或手工 scene override。
+  - 为 `ShipHitVisualsTests` 增加 Hit Spark 播放和复位行为测试。
+  - 更新 Canary Ship Art/VFX 计划中 Task 18 的 hit spark 与 pooled reset 状态。
+- **目的：**
+  - 在已验证的 Fire / Hit scale punch 基础上补齐受击局部火花读感，使 Hit 更短促、可读且不混淆 Overheat。
+- **技术：**
+  - 继续保持 `ShipView -> ShipHitVisuals` 单一运行时入口，不引入旧 sprite、不新增 legacy fallback。
+  - 使用 prefab-owned preallocated `ParticleSystem` 承担局部 spark，战斗中只 `Play/Stop/Clear`，符合防御性复位与无 Instantiate/Destroy 约束。
+  - 通过 `dotnet build Project-Ark.slnx`、Unity `validate_script`、Editor smoke test、`Ship.prefab` 层级与序列化引用检查完成验证。
+
+
+## Ship Hit Spark 紫色材质修复 — 2026-05-29 09:58
+
+- **新建/修改文件：**
+  - `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs`
+  - `Assets/Scripts/Ship/Editor/ShipPrefabHitSparkTests.cs`
+  - `Assets/_Prefabs/Ship/Ship.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容：**
+  - 确认 `Ship_HitSpark` 的 `ParticleSystemRenderer.m_Materials` 原本为空引用，导致 Unity/URP 粒子渲染落入紫色错误/默认材质表现。
+  - `ShipPrefabRebuilder` 现在会为 `Ship_HitSpark` 显式复用现有 `mat_ship_canary_trail.mat`，并在材质缺失或 Shader 不支持时输出错误，不再静默生成紫色粒子。
+  - 直接修复 `Ship.prefab` 中 `Ship_HitSpark` 的 renderer 材质引用，从 `{fileID: 0}` 改为已有 Canary Trail 材质引用。
+  - 新增 `ShipPrefabHitSparkTests`，回归检查 `Ship.prefab` 中 Hit Spark renderer 必须拥有显式、受支持、非错误 Shader 材质。
+- **目的：**
+  - 修复玩家受击 spark 已出现但呈紫色的问题，保证 Hit Spark MVP 的颜色读感为金黄/白亮火花，而不是 Unity magenta 错误材质。
+- **技术：**
+  - 保持 `ShipPrefabRebuilder` 作为 `Ship.prefab` 结构和核心引用唯一权威。
+  - 复用已有 Ship/Canary 受控材质资产，避免新增半成品材质和手造 `.meta`。
+  - 已通过 `dotnet build Project-Ark.slnx` 验证 C# 编译；已通过 prefab YAML 检查确认 Hit Spark renderer 材质引用不再为空。Unity MCP 当前持续超时，需在 Editor 恢复后运行新增 EditMode 测试或人工 Play Mode 视觉验收。

@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 0941e78ab748e4916a48f1553be47169
+guid: 15d0c7b2ff130479ba064e849b560849
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -7380176199125889413
-    second: canary_engine_boost_preview_v3_t050_rendered_0
+      213: 2343030390681546092
+    second: spr_ship_canary_shape_hit_mask_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -100,13 +100,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: canary_engine_boost_preview_v3_t050_rendered_0
+      name: spr_ship_canary_shape_hit_mask_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 960
-        height: 960
+        x: 82
+        y: 91
+        width: 348
+        height: 367
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -115,8 +115,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: b7e0f4749d8549990800000000000000
-      internalID: -7380176199125889413
+      spriteID: c6da486f9bd148020800000000000000
+      internalID: 2343030390681546092
       vertices: []
       indices: 
       edges: []
@@ -135,7 +135,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      canary_engine_boost_preview_v3_t050_rendered_0: -7380176199125889413
+      spr_ship_canary_shape_hit_mask_0: 2343030390681546092
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

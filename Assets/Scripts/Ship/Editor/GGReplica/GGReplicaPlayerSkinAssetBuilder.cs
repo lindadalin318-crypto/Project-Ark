@@ -130,7 +130,7 @@ namespace ProjectArk.Ship.Editor
                 Reactor = LoadSprite(spriteRoot, "reactor.png", required: true),
                 Eye = LoadSprite(spriteRoot, "reactor.png", required: true),
                 ViewSilhouette = LoadSprite(spriteRoot, "scheme3_tp.png", required: true),
-                Dodge = LoadSprite(spriteRoot, "player_test_fire.png", required: true),
+                Dodge = null,
                 DodgeHalf = LoadSprite(spriteRoot, "SHIP_PLAYER_DODGE_HALF.png", required: true)
             };
 
@@ -140,7 +140,6 @@ namespace ProjectArk.Ship.Editor
                    fixedSprites.Reactor != null &&
                    fixedSprites.Eye != null &&
                    fixedSprites.ViewSilhouette != null &&
-                   fixedSprites.Dodge != null &&
                    fixedSprites.DodgeHalf != null;
         }
 

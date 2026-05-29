@@ -1,3 +1,4 @@
+using ProjectArk.Core;
 using UnityEngine;
 
 namespace ProjectArk.Ship
@@ -40,6 +41,9 @@ namespace ProjectArk.Ship
         [Tooltip("Core/cockpit layer (SortOrder 1). Placeholder — no sprite required.")]
         [SerializeField] private SpriteRenderer _coreRenderer;
 
+        [Tooltip("Weapon mount / muzzle marker layer (SortOrder 6).")]
+        [SerializeField] private SpriteRenderer _weaponMountRenderer;
+
         // ══════════════════════════════════════════════════════════════
         // Serialized References — VFX Workers
         // ══════════════════════════════════════════════════════════════
@@ -48,6 +52,7 @@ namespace ProjectArk.Ship
         [SerializeField] private ShipBoostVisuals _boostVisuals;
         [SerializeField] private ShipHitVisuals _hitVisuals;
         [SerializeField] private ShipDashVisuals _dashVisuals;
+        [SerializeField] private ShipFireVisuals _fireVisuals;
         [SerializeField] private ShipVisualJuice _juiceVisuals;
         [SerializeField] private DashAfterImageSpawner _afterImageSpawner;
 
@@ -60,6 +65,9 @@ namespace ProjectArk.Ship
 
         [Tooltip("Master switch for all dash visuals (i-frame flicker, dodge ghost, after-images).")]
         [SerializeField] private bool _enableDashVFX = true;
+
+        [Tooltip("Master switch for all fire visuals (weapon mount flash, core pulse).")]
+        [SerializeField] private bool _enableFireVFX = true;
 
         [Tooltip("Master switch for all juice visuals (movement tilt, squash/stretch).")]
         [SerializeField] private bool _enableJuiceVFX = true;
@@ -83,6 +91,7 @@ namespace ProjectArk.Ship
         private Color _solidBaseColor;
         private Color _hlBaseColor;
         private Color _coreBaseColor;
+        private Color _weaponMountBaseColor;
 
         // ══════════════════════════════════════════════════════════════
         // Lifecycle
@@ -121,6 +130,8 @@ namespace ProjectArk.Ship
             // Route speed changes for juice (squash/stretch)
             if (_motor != null)
                 _motor.OnSpeedChanged += HandleSpeedChanged;
+
+            CombatEvents.OnPlayerProjectileFired += HandlePlayerProjectileFired;
         }
 
         private void OnDisable()
@@ -133,6 +144,8 @@ namespace ProjectArk.Ship
 
             if (_motor != null)
                 _motor.OnSpeedChanged -= HandleSpeedChanged;
+
+            CombatEvents.OnPlayerProjectileFired -= HandlePlayerProjectileFired;
 
             ResetVFX();
         }
@@ -150,6 +163,7 @@ namespace ProjectArk.Ship
             if (_boostVisuals != null) _boostVisuals.ResetState();
             if (_hitVisuals != null) _hitVisuals.ResetState();
             if (_dashVisuals != null) _dashVisuals.ResetState();
+            if (_fireVisuals != null) _fireVisuals.ResetState();
             if (_juiceVisuals != null) _juiceVisuals.ResetState();
             // Note: _afterImageSpawner.CancelSpawning() is already called
             // by _dashVisuals.ResetState() via second-level delegation.
@@ -188,6 +202,9 @@ namespace ProjectArk.Ship
                 _coreRenderer.color = c;
                 _coreBaseColor = c;
             }
+
+            if (_weaponMountRenderer != null)
+                _weaponMountBaseColor = _weaponMountRenderer.color;
         }
 
         private void InitializeWorkers()
@@ -200,6 +217,9 @@ namespace ProjectArk.Ship
 
             if (_dashVisuals != null)
                 _dashVisuals.Initialize(_solidBaseColor, _hlBaseColor, _coreBaseColor);
+
+            if (_fireVisuals != null)
+                _fireVisuals.Initialize(_weaponMountBaseColor, _coreBaseColor);
 
             if (_juiceVisuals != null)
                 _juiceVisuals.Initialize(_motor, _dash, _boost, _aiming);
@@ -245,6 +265,12 @@ namespace ProjectArk.Ship
         {
             if (_enableHitVFX && _hitVisuals != null)
                 _hitVisuals.OnDamageTaken(damage, currentHP);
+        }
+
+        private void HandlePlayerProjectileFired(Vector2 spawnPosition, Vector2 fireDirection)
+        {
+            if (_enableFireVFX && _fireVisuals != null)
+                _fireVisuals.OnWeaponFired(spawnPosition, fireDirection);
         }
     }
 }

@@ -44,7 +44,6 @@ namespace ProjectArk.Ship.Editor
             new CopyEntry("DevXUnity/Sprite/Primary_d4.png", "Sprites/Primary_4.png", DefaultShipPPU, new Vector2(0.5f, 0.5f)),
             new CopyEntry("DevXUnity/Sprite/Primary.png", "Sprites/Primary.png", DefaultShipPPU, new Vector2(0.5f, 0.5f)),
             new CopyEntry("DevXUnity/Sprite/Primary_d6.png", "Sprites/Primary_6.png", DefaultShipPPU, new Vector2(0.5f, 0.5f)),
-            new CopyEntry("DevXUnity/Sprite/player_test_fire.png", "Sprites/player_test_fire.png", 707, new Vector2(0.5f, 0.3282f)),
             new CopyEntry("DevXUnity/Sprite/GrabGun_back_d3.png", "Sprites/GrabGun_Back_3.png", DefaultShipPPU, new Vector2(0.5f, 0.5f)),
             new CopyEntry("DevXUnity/Sprite/reactor.png", "Sprites/reactor.png", DefaultShipPPU, new Vector2(0.5f, 0.5f)),
             new CopyEntry("DevXUnity/Sprite/Secondary_d8.png", "Sprites/Secondary_8.png", DefaultShipPPU, new Vector2(0.5f, 0.5f)),

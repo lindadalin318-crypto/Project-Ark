@@ -239,6 +239,45 @@ namespace ProjectArk.Ship
         [Range(0f, 1f)]
         [SerializeField] private float _hitIFrameDimAlpha = 0.25f;
 
+        [Tooltip("Peak local scale applied to readable ship layers on actual damage hit.")]
+        [Min(1f)]
+        [SerializeField] private float _hitImpactScalePeak = 1.08f;
+
+        [Tooltip("How long the hit impact scale stays at peak before releasing.")]
+        [Min(0.005f)]
+        [SerializeField] private float _hitImpactAttackDuration = 0.025f;
+
+        [Tooltip("How long readable ship layers take to return to normal scale after hit impact.")]
+        [Min(0.005f)]
+        [SerializeField] private float _hitImpactReleaseDuration = 0.08f;
+
+        // ══════════════════════════════════════════════════════════════
+        // Fire Feedback — short muzzle/core flash
+        // ══════════════════════════════════════════════════════════════
+
+        [Header("Fire Feedback")]
+        [Tooltip("Color applied to the weapon mount layer on weapon fire.")]
+        [SerializeField] private Color _fireWeaponMountFlashColor = new Color(0.4f, 1.4f, 1.8f, 1f);
+
+        [Tooltip("Color applied to the core layer on weapon fire.")]
+        [SerializeField] private Color _fireCorePulseColor = new Color(0.5f, 1.6f, 2.2f, 1f);
+
+        [Tooltip("Peak local scale for the weapon mount fire flash.")]
+        [Min(1f)]
+        [SerializeField] private float _fireWeaponMountScalePeak = 1.14f;
+
+        [Tooltip("Peak local scale for the core fire pulse.")]
+        [Min(1f)]
+        [SerializeField] private float _fireCoreScalePeak = 1.08f;
+
+        [Tooltip("How long the fire flash stays at peak before restoring color.")]
+        [Min(0.005f)]
+        [SerializeField] private float _fireFlashAttackDuration = 0.025f;
+
+        [Tooltip("Delay after color restore before scale returns to normal.")]
+        [Min(0.005f)]
+        [SerializeField] private float _fireFlashReleaseDuration = 0.08f;
+
         // HL
         public float HLBaseAlpha => _hlBaseAlpha;
         public float HLBoostAlpha => _hlBoostAlpha;
@@ -261,90 +300,21 @@ namespace ProjectArk.Ship
         public float HitIFrameDuration => _hitIFrameDuration;
         public float HitIFrameBlinkInterval => _hitIFrameBlinkInterval;
         public float HitIFrameDimAlpha => _hitIFrameDimAlpha;
+        public float HitImpactScalePeak => _hitImpactScalePeak;
+        public float HitImpactAttackDuration => _hitImpactAttackDuration;
+        public float HitImpactReleaseDuration => _hitImpactReleaseDuration;
+
+        // Fire Feedback
+        public Color FireWeaponMountFlashColor => _fireWeaponMountFlashColor;
+        public Color FireCorePulseColor => _fireCorePulseColor;
+        public float FireWeaponMountScalePeak => _fireWeaponMountScalePeak;
+        public float FireCoreScalePeak => _fireCoreScalePeak;
+        public float FireFlashAttackDuration => _fireFlashAttackDuration;
+        public float FireFlashReleaseDuration => _fireFlashReleaseDuration;
 
         // ══════════════════════════════════════════════════════════════
-        // Boost Trail — Sustain Layer Blending
+        // Boost Trail — Ares Chain Bloom
         // ══════════════════════════════════════════════════════════════
-
-        [Header("Boost Trail — Startup Sequencing")]
-        [Tooltip("Delay before sustained flame trails start, giving the startup burst a short head start.")]
-        [Min(0f)]
-        [SerializeField] private float _boostSustainFlameStartDelay = 0.045f;
-
-        [Tooltip("Delay before EmberTrail joins, so startup layers read before sustained embers take over.")]
-        [Min(0f)]
-        [SerializeField] private float _boostEmberTrailStartDelay = 0.07f;
-
-        [Tooltip("Delay before EmberSparks fires, so FlameCore remains the first readable ignition cue.")]
-        [Min(0f)]
-        [SerializeField] private float _boostEmberSparksBurstDelay = 0.018f;
-
-        [Header("Boost Trail — FlameTrail Sustain")]
-        [Tooltip("Master BoostIntensity threshold after which FlameTrail begins blending in.")]
-        [Range(0f, 1f)]
-        [SerializeField] private float _flameTrailBlendInThreshold = 0.18f;
-
-        [Tooltip("Maximum share of the master BoostIntensity granted to FlameTrail once sustain is fully established.")]
-        [Range(0f, 1f)]
-        [SerializeField] private float _flameTrailMaxIntensity = 0.78f;
-
-        [Header("Boost Trail — EmberTrail Sustain")]
-        [Tooltip("Master BoostIntensity threshold after which EmberTrail is allowed to join.")]
-        [Range(0f, 1f)]
-        [SerializeField] private float _emberTrailBlendInThreshold = 0.42f;
-
-        [Tooltip("Maximum share of the master BoostIntensity granted to EmberTrail once sustain is fully established.")]
-        [Range(0f, 1f)]
-        [SerializeField] private float _emberTrailMaxIntensity = 0.32f;
-
-        [Header("Boost Trail — EnergyLayer2 Sustain")]
-        [Tooltip("Master BoostIntensity threshold after which EnergyLayer2 begins blending in.")]
-        [Range(0f, 1f)]
-        [SerializeField] private float _energyLayer2BlendInThreshold = 0.16f;
-
-        [Tooltip("Maximum share of the master BoostIntensity granted to EnergyLayer2.")]
-        [Range(0f, 1f)]
-        [SerializeField] private float _energyLayer2MaxIntensity = 0.62f;
-
-        [Header("Boost Trail — EnergyLayer3 Sustain")]
-        [Tooltip("Master BoostIntensity threshold after which EnergyLayer3 is allowed to appear.")]
-        [Range(0f, 1f)]
-        [SerializeField] private float _energyLayer3BlendInThreshold = 0.38f;
-
-        [Tooltip("Maximum share of the master BoostIntensity granted to EnergyLayer3.")]
-        [Range(0f, 1f)]
-        [SerializeField] private float _energyLayer3MaxIntensity = 0.34f;
-
-        [Header("Boost Trail — Particle Sustain Curve")]
-        [Tooltip("Minimum startSizeMultiplier at zero sustain intensity.")]
-        [Min(0f)]
-        [SerializeField] private float _sustainParticleMinSize = 0.25f;
-
-        [Tooltip("Minimum startSpeedMultiplier at zero sustain intensity.")]
-        [Min(0f)]
-        [SerializeField] private float _sustainParticleMinSpeed = 0.45f;
-
-        [Tooltip("Master intensity below this threshold causes sustained particles to auto-stop (eliminates idle 'playing but empty' overhead).")]
-        [Range(0f, 0.1f)]
-        [SerializeField] private float _sustainParticleStopThreshold = 0.005f;
-
-        [Header("Boost Trail — Intensity Animation")]
-        [Tooltip("Duration for _BoostIntensity 0→1 on Boost start.")]
-        [Min(0.01f)]
-        [SerializeField] private float _boostIntensityRampUpDuration = 0.22f;
-
-        [Tooltip("Duration for _BoostIntensity 1→0 on Boost end.")]
-        [Min(0.01f)]
-        [SerializeField] private float _boostIntensityRampDownDuration = 0.42f;
-
-        [Header("Boost Trail — TrailRenderer")]
-        [Tooltip("Trail fade time in seconds (how long trail persists after stop).")]
-        [Min(0f)]
-        [SerializeField] private float _boostTrailTime = 2.2f;
-
-        [Tooltip("Trail width multiplier.")]
-        [Min(0f)]
-        [SerializeField] private float _boostTrailWidthMultiplier = 2.75f;
 
         [Header("Boost Trail — Bloom Burst")]
         [Tooltip("Peak Bloom Intensity during Boost activation.")]
@@ -368,40 +338,6 @@ namespace ProjectArk.Ship
         [SerializeField] private float _bloomReleaseDuration = 0.22f;
 
         // ── Boost Trail Getters ─────────────────────────────────────
-        // Startup Sequencing
-        public float BoostSustainFlameStartDelay => _boostSustainFlameStartDelay;
-        public float BoostEmberTrailStartDelay => _boostEmberTrailStartDelay;
-        public float BoostEmberSparksBurstDelay => _boostEmberSparksBurstDelay;
-
-        // FlameTrail Sustain
-        public float FlameTrailBlendInThreshold => _flameTrailBlendInThreshold;
-        public float FlameTrailMaxIntensity => _flameTrailMaxIntensity;
-
-        // EmberTrail Sustain
-        public float EmberTrailBlendInThreshold => _emberTrailBlendInThreshold;
-        public float EmberTrailMaxIntensity => _emberTrailMaxIntensity;
-
-        // EnergyLayer2 Sustain
-        public float EnergyLayer2BlendInThreshold => _energyLayer2BlendInThreshold;
-        public float EnergyLayer2MaxIntensity => _energyLayer2MaxIntensity;
-
-        // EnergyLayer3 Sustain
-        public float EnergyLayer3BlendInThreshold => _energyLayer3BlendInThreshold;
-        public float EnergyLayer3MaxIntensity => _energyLayer3MaxIntensity;
-
-        // Particle Sustain Curve
-        public float SustainParticleMinSize => _sustainParticleMinSize;
-        public float SustainParticleMinSpeed => _sustainParticleMinSpeed;
-        public float SustainParticleStopThreshold => _sustainParticleStopThreshold;
-
-        // Intensity Animation
-        public float BoostIntensityRampUpDuration => _boostIntensityRampUpDuration;
-        public float BoostIntensityRampDownDuration => _boostIntensityRampDownDuration;
-
-        // TrailRenderer
-        public float BoostTrailTime => _boostTrailTime;
-        public float BoostTrailWidthMultiplier => _boostTrailWidthMultiplier;
-
         // Bloom Burst
         public float BloomBurstIntensity => _bloomBurstIntensity;
         public float BloomPeakWeight => _bloomPeakWeight;

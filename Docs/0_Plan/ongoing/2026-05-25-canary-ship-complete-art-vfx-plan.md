@@ -670,20 +670,25 @@ Status: Preview prefab and sprite import/readability validation are complete. Id
 
 ## 8. Batch 5 — Boost Assets
 
-**Goal:** Add sustained propulsion visuals without confusing them with Dash.
+**Goal:** Use QFZ `VFX_Ares_Projectile` directly as the Canary Boost trail source, with only small ship-propulsion adaptation changes, while keeping Dash readable as a short burst.
+
+**Design decision:** `VFX_Ares_Projectile` is no longer just a visual reference. It should be treated as the preferred source asset / prefab candidate for the final Boost trail. The adaptation pass should preserve its recognizable trailing language and only adjust direction, attachment offset, scale/length, color/intensity, lifetime, emission, sorting, and reset behavior as needed for ship boost readability.
 
 ### Task 15: Create Boost Assets
 
 **Files:**
 
-- Create: `Assets/_Art/Ship/Canary/Textures/Emission/spr_ship_canary_core_boost_emission.png`
-- Create: `Assets/_Art/Ship/Canary/Textures/Emission/spr_ship_canary_energybar_boost_emission.png`
-- Create: `Assets/_Art/Ship/Canary/Sprites/Body/spr_ship_canary_engine_boost_albedo.png`
-- Optional create: `Assets/_Art/Ship/Canary/Textures/Masks/tex_boost_trail_noise_mask.png`
-- Preview-only created: `Assets/_Art/Ship/Canary/Animations/Canary_BoostPreview.anim`
-- Preview-only created: `Assets/_Art/Ship/Canary/Animations/Canary_BoostPreview.controller`
-- Preview-only created: `Assets/_Art/Ship/Canary/Textures/Emission/spr_ship_canary_engine_boost_preview.png`
-- Preview-only modified: `Assets/_Prefabs/Ship/CanaryShipVisualPreview.prefab`
+- Source / reuse target: QFZ `VFX_Ares_Projectile`
+- Existing prefab authority to adapt through: `Assets/_Prefabs/VFX/BoostTrailRoot.prefab`
+- Create only if still needed for ship-body support: `Assets/_Art/Ship/Canary/Textures/Emission/spr_ship_canary_core_boost_emission.png`
+- Deferred / likely unnecessary if `VFX_Ares_Projectile` carries the Boost read: `Assets/_Art/Ship/Canary/Textures/Emission/spr_ship_canary_energybar_boost_emission.png`
+- Deferred / likely unnecessary if trail attachment reads clearly: `Assets/_Art/Ship/Canary/Sprites/Body/spr_ship_canary_engine_boost_albedo.png`
+- Optional create only for adaptation masks: `Assets/_Art/Ship/Canary/Textures/Masks/tex_boost_trail_noise_mask.png`
+- Preview-only deleted: `Assets/_Art/Ship/Canary/Animations/Canary_BoostPreview.anim`
+- Preview-only deleted: `Assets/_Art/Ship/Canary/Animations/Canary_BoostPreview.controller`
+- Preview-only deleted: `Assets/_Art/Ship/Canary/Textures/Emission/spr_ship_canary_engine_boost_preview.png`
+- Preview-only deleted: `Assets/_Art/Ship/Canary/Textures/Emission/spr_ship_canary_engine_boost_jet_preview.png`
+- Preview-only cleaned: `Assets/_Prefabs/Ship/CanaryShipVisualPreview.prefab`
 
 - [x] **Step 1A: Create Core Boost preview animation**
 
@@ -715,7 +720,7 @@ Expected result: Rear engine/nozzle area reads as active using a production body
 
 - [ ] **Step 4: Verify against Dash**
 
-Expected result: Boost reads as sustained propulsion; Dash reads as short flash movement.
+Expected result: Boost reads as sustained propulsion using the adapted `VFX_Ares_Projectile` trail language; Dash remains a short flash / smear movement and does not inherit the long projectile trail read.
 
 ### Task 16: Connect Boost To Existing BoostTrail Authority
 
@@ -723,26 +728,40 @@ Expected result: Boost reads as sustained propulsion; Dash reads as short flash 
 
 - Read before modifying: `Docs/2_TechnicalDesign/Ship/ShipVFX_CanonicalSpec.md`
 - Read before modifying: `Docs/2_TechnicalDesign/Ship/ShipVFX_AssetRegistry.md`
+- Source / reuse target: QFZ `VFX_Ares_Projectile`
 - Existing prefab authority: `Assets/_Prefabs/VFX/BoostTrailRoot.prefab`
 
-- [ ] **Step 1: Confirm existing BoostTrail owner**
+- [x] **Step 1: Confirm existing BoostTrail owner**
 
-Expected result: No new second BoostTrail authority is introduced.
+Expected result: No new second BoostTrail authority is introduced; `VFX_Ares_Projectile` is routed through the existing BoostTrail authority instead of becoming a parallel runtime trail owner.
 
-- [ ] **Step 2: Decide whether Canary boost assets stay preview-only or enter live chain**
+Status: Completed. `ShipVFX_CanonicalSpec.md` and `ShipVFX_AssetRegistry.md` confirm `BoostTrailRoot.prefab` remains owned by `BoostTrailPrefabCreator`, live runtime control remains `ShipBoostVisuals` → `BoostTrailView`, and scene-only binding remains limited to `BoostTrailBloomVolume` through `ShipBoostTrailSceneBinder`.
 
-Expected result: Decision is recorded in this plan and in `ShipVFX_AssetRegistry.md` if live.
+- [x] **Step 2: Locate and inspect QFZ `VFX_Ares_Projectile`**
 
-- [ ] **Step 3: If live, update registry before or with prefab integration**
+Expected result: Its prefab hierarchy, renderer / particle / trail components, materials, sorting, scale, orientation, lifetime, emission, and reset requirements are known before adaptation.
 
-Expected result: Asset owner, path, status, and runtime consumer are explicit.
+Status: Completed. Located `Assets/QFX/ProjectilesFX/VFX_Prefabs/Projectiles/VFX_Ares_Projectile_Only.prefab` and `Assets/QFX/ProjectilesFX/VFX_Prefabs/Projectiles_Full/VFX_Ares_Projectile.prefab`. The `Only` prefab has 7 ParticleSystem layers (`root`, `Trail`, `Sparks_Along`, `Stars_Along`, `Glow_Along`, and two `Smoke_Along` nodes) and is the selected sustained Boost source; the `Full` prefab also contains projectile `Glow` and `Impact` layers and is not used for ship Boost integration.
+
+- [x] **Step 3: Adapt `VFX_Ares_Projectile` for ship Boost**
+
+Expected result: Only small changes are made: attach point / offset, direction, scale / length, color / intensity, lifetime, emission rate, sorting layer/order, and object-pool reset behavior. Avoid rebuilding the effect from scratch.
+
+Status: Completed as the first live-chain adaptation. `BoostTrailPrefabCreator` now instantiates `VFX_Ares_Projectile_Only.prefab` as `AresBoostTrail` under `BoostTrailRoot.prefab`, applies a ship-boost offset / rotation / scale and conservative particle lifetime, speed, size, emission, and sorting reductions. `BoostTrailView` owns the adapted particles through `_aresSustainParticles`, starts them on Boost, stops them on Boost end, and clears them in `ResetState()`.
+
+- [x] **Step 4: Update registry before or with prefab integration**
+
+Expected result: Asset owner, source path, adapted path, status, runtime consumer, and reset responsibilities are explicit in `ShipVFX_AssetRegistry.md` if the adapted effect enters the live chain.
+
+Status: Completed. `ShipVFX_AssetRegistry.md` records the QFZ source prefab and the live adapted `AresBoostTrail` node inside `BoostTrailRoot.prefab`.
 
 ### Batch 5 Completion Gate
 
-- [ ] Boost assets exist.
+- [x] QFZ `VFX_Ares_Projectile` has been located and inspected.
+- [x] Boost uses an adapted `VFX_Ares_Projectile` trail, not a newly invented parallel Boost trail.
 - [ ] Boost is distinct from Dash.
-- [ ] Existing `BoostTrailRoot` remains the formal trail authority unless registry says otherwise.
-- [ ] No scene-only patch is used as permanent Boost solution.
+- [x] Existing `BoostTrailRoot` remains the formal trail authority unless registry says otherwise.
+- [x] No scene-only patch is used as permanent Boost solution.
 
 ---
 
@@ -759,17 +778,23 @@ Expected result: Asset owner, path, status, and runtime consumer are explicit.
 - Optional create: `Assets/_Art/VFX/Ship/spr_vfx_canary_muzzle_flash_mask.png`
 - Optional create: `Assets/_Art/VFX/Ship/spr_vfx_canary_muzzle_spark_01.png`
 
-- [ ] **Step 1: Create core fire emission**
+- [x] **Step 1: Create core fire emission**
 
 Expected result: Short pulse energy, not sustained weaving aura.
 
-- [ ] **Step 2: Create muzzle flash**
+Status: Completed as Fire MVP runtime feedback. `ShipFireVisuals` pulses `Ship_Sprite_Core` with data-driven color/scale from `ShipJuiceSettingsSO`, then defensively restores color and scale via `ResetState()`.
+
+- [x] **Step 2: Create muzzle flash**
 
 Expected result: Flash is short, bright, transparent background, readable but not screen-filling.
 
-- [ ] **Step 3: Verify weapon mount alignment**
+Status: Completed as Fire MVP sprite-layer flash rather than a separate texture asset. `ShipFireVisuals` short-flashes `Ship_Sprite_WeaponMount` on `CombatEvents.OnPlayerProjectileFired`; separate muzzle flash sprite remains optional for a later polish pass.
+
+- [x] **Step 3: Verify weapon mount alignment**
 
 Expected result: Muzzle flash emerges from `WeaponMount` location.
+
+Status: Completed. `ShipPrefabRebuilder` wires `ShipFireVisuals._weaponMountRenderer` and `ShipView._weaponMountRenderer` to `Ship_Sprite_WeaponMount` in `Assets/_Prefabs/Ship/Ship.prefab`; Unity validation confirms both serialized references are assigned.
 
 ### Task 18: Create Hit Assets
 
@@ -779,27 +804,33 @@ Expected result: Muzzle flash emerges from `WeaponMount` location.
 - Create: `Assets/_Art/VFX/Ship/spr_vfx_canary_hit_spark_01.png`
 - Optional create: `Assets/_Art/VFX/Ship/spr_vfx_canary_hit_spark_02.png`
 
-- [ ] **Step 1: Create hit mask**
+- [x] **Step 1: Create hit mask**
 
 Expected result: Flash affects important edges and core area, not full flat white rectangle.
 
-- [ ] **Step 2: Create hit spark 01**
+Status: Implemented as MVP hybrid overlay. `Assets/_Art/Ship/Canary/Textures/Masks/spr_ship_canary_shape_hit_mask.png` provides a transparent white mask focused on the outer silhouette and central/core area. `ShipPrefabRebuilder` creates `Ship_HitMaskFlash`, imports the PNG as Sprite, hides it by default, and wires it to `ShipHitVisuals._hitMaskRenderer`; `ShipHitVisuals` shows it only on positive damage and fades it out using the existing hit flash timing.
+
+- [x] **Step 2: Create hit spark 01**
 
 Expected result: Small, bright, sharp, not bigger than 25% of ship length.
+
+Status: Completed as Hit Spark MVP. `ShipPrefabRebuilder` now creates a preallocated `Ship_HitSpark` `ParticleSystem` child under `ShipVisual` and wires it to `ShipHitVisuals._hitSparkParticles`; `ShipHitVisuals` plays it only for positive damage.
 
 - [ ] **Step 3: Create optional hit spark 02**
 
 Expected result: Gives particle variation without adding noise.
 
-- [ ] **Step 4: Verify pooled VFX reset requirements**
+- [x] **Step 4: Verify pooled VFX reset requirements**
 
 Expected result: Any runtime VFX using sparks resets color, alpha, scale, emission, and lifetime state.
+
+Status: Passed for MVP. Hit Spark is not instantiated during combat; it is a prefab-owned preallocated local particle system. `ResetState()` stops and clears it via `StopEmittingAndClear`, and Unity smoke validation confirmed positive damage plays the spark while reset leaves no active particles.
 
 ### Batch 6 Completion Gate
 
 - [ ] Fire is short and does not alter body identity.
-- [ ] Hit is short and does not look like Overheat.
-- [ ] VFX assets are compatible with object pooling.
+- [x] Hit is short and does not look like Overheat.
+- [x] VFX assets are compatible with object pooling.
 - [ ] Muzzle flash aligns with WeaponMount.
 
 ---
@@ -981,32 +1012,40 @@ Expected result: Runtime changes use material instances or `MaterialPropertyBloc
 - `Docs/2_TechnicalDesign/Ship/ShipVFX_AssetRegistry.md`
 - `Docs/3_WorkflowsAndRules/Implement_rules.md`
 
-- [ ] **Step 1: Identify live runtime owner for each visual state**
+- [x] **Step 1: Identify live runtime owner for each visual state**
 
 Expected table:
 
 ```text
-Idle -> owner
-Lean -> owner
-Dash -> owner
-Boost -> owner
-Fire -> owner
-Hit -> owner
-Weaving -> owner
-Overheat -> owner
+Idle -> ShipView + ShipPrefabRebuilder-generated Canary sprite layers
+Lean -> deferred / not live yet
+Dash -> ShipDashVisuals + DashAfterImageSpawner; Dodge_Sprite temporarily uses Canary body silhouette until Dash frames land
+Boost -> ShipBoostVisuals -> BoostTrailView -> nested BoostTrailRoot/AresBoostTrail
+Fire -> deferred / not live yet
+Hit -> ShipHitVisuals using current Canary Body/Outline/Core renderers
+Weaving -> deferred / not live yet
+Overheat -> deferred / not live yet
 ```
 
-- [ ] **Step 2: Identify prefab owner**
+Status: Completed for the current live-slice integration. Only Normal/Boost/Dash/Hit-compatible baseline wiring entered the formal chain; Lean/Fire/Weaving/Overheat remain deferred.
+
+- [x] **Step 2: Identify prefab owner**
 
 Expected result: `Ship.prefab` structure changes only happen through the approved authority path.
 
-- [ ] **Step 3: Identify scene-only references**
+Status: Completed. `Ship.prefab` was updated only through `ShipPrefabRebuilder`; no scene instance patch or manual YAML fileID edit was used.
+
+- [x] **Step 3: Identify scene-only references**
 
 Expected result: Any scene-only reference has a binder or manual step; no runtime fallback secretly repairs it.
 
-- [ ] **Step 4: Decide preview-only vs live integration**
+Status: Completed. The existing scene-only Bloom binding remains owned by `ShipBoostTrailSceneBinder`; this integration did not add a new scene-only reference.
+
+- [x] **Step 4: Decide preview-only vs live integration**
 
 Expected result: Decision recorded in this plan before editing the formal prefab.
+
+Status: Decision updated during implementation: the Normal-state Canary playable set is now live in the formal `Assets/_Prefabs/Ship/Ship.prefab` path, while `CanaryShipVisualPreview.prefab` remains preview-only/reference.
 
 ### Task 25: Update Asset Registry If Live
 
@@ -1014,17 +1053,23 @@ Expected result: Decision recorded in this plan before editing the formal prefab
 
 - Modify: `Docs/2_TechnicalDesign/Ship/ShipVFX_AssetRegistry.md`
 
-- [ ] **Step 1: Add new asset paths**
+- [x] **Step 1: Add new asset paths**
 
 Expected result: Every formal sprite, material, prefab, and VFX asset has a registry entry.
 
-- [ ] **Step 2: Add owner and status**
+Status: Completed. Registry now lists the live Canary Body / Shape / Outline / Core / WeaponMount sprite paths and the Canary ship materials.
+
+- [x] **Step 2: Add owner and status**
 
 Expected result: Each entry states whether it is preview, live, optional, or deprecated.
 
-- [ ] **Step 3: Add runtime consumer**
+Status: Completed. Canary nodes/assets are marked Live under `ShipPrefabRebuilder`; old GG `Movement_*` and `Boost_16` sprite entries are downgraded to Legacy Reference for the live Ship path.
+
+- [x] **Step 3: Add runtime consumer**
 
 Expected result: Each live asset states which script/prefab consumes it.
+
+Status: Completed. Registry documents `ShipView` renderer-field consumption and BoostTrail/Ares ownership.
 
 ### Task 26: Integrate Into Ship Prefab Or Keep Preview Prefab
 
@@ -1033,13 +1078,17 @@ Expected result: Each live asset states which script/prefab consumes it.
 - Preferred preview prefab: `Assets/_Prefabs/Ship/CanaryShipVisualPreview.prefab`
 - Live prefab only if approved by registry/spec: `Assets/_Prefabs/Ship/Ship.prefab`
 
-- [ ] **Step 1: If preview-only, do not modify `Ship.prefab`**
+- [x] **Step 1: If preview-only, do not modify `Ship.prefab`**
 
 Expected result: Preview prefab proves visuals without touching live chain.
 
-- [ ] **Step 2: If live, update through official prefab authority**
+Status: Superseded by live integration decision. The preview prefab remains separate/reference, but the accepted Normal-state Canary stack is now integrated into the formal prefab path.
+
+- [x] **Step 2: If live, update through official prefab authority**
 
 Expected result: No manual scene instance patch becomes permanent.
+
+Status: Completed. `ShipPrefabRebuilder` now builds the formal `Ship.prefab` with `Ship_Sprite_Body`, `Ship_Sprite_Shape`, `Ship_Sprite_Outline`, `Ship_Sprite_Core`, `Ship_Sprite_WeaponMount`, `Dodge_Sprite`, and nested `BoostTrailRoot`. A silent force rebuild cleaned old `Ship_Sprite_Liquid`, `Ship_Sprite_HL`, and `Ship_Sprite_Solid` nodes from the formal prefab.
 
 - [ ] **Step 3: Run visual state checks**
 
@@ -1055,6 +1104,8 @@ Hit works
 Weaving works
 Overheat works
 ```
+
+Status: Partially ready for Play Mode validation. Prefab hierarchy and Console checks passed; player-facing visual checks still need to be run in Play Mode. Lean / Fire / Weaving / Overheat remain deferred and should not be judged as complete in this pass.
 
 ### Batch 10 Completion Gate
 
@@ -1262,7 +1313,8 @@ Do not start these until the full completion gate passes:
 | GG reference becomes main path again | Batch 1 turns into state sheet production | Keep GG only in appendix; use Minishoot checklist |
 | Scene override drift | Prefab looks right but scene differs | Do not patch scene instance as permanent solution |
 | Debug tool becomes owner | Works only with debug enabled | Validate with debug off |
-| Dash and Boost look same | Player cannot read state | Dash = short smear frames; Boost = sustained propulsion/trail |
+| Dash and Boost look same | Player cannot read state | Dash = short smear frames; Boost = sustained adapted `VFX_Ares_Projectile` trail |
+| `VFX_Ares_Projectile` reads as weapon projectile instead of propulsion | Boost feels like the ship is firing backward rather than accelerating | Keep only its trail language; adapt attachment, direction, scale/length, lifetime, emission, and intensity for ship boost |
 | Overheat and Hit look same | Damage/heat feedback confused | Hit = white/short; Overheat = orange-red/rising/recovering |
 | Runtime material pollution | Play Mode changes persist | Use MaterialPropertyBlock or instances only |
 | Pool state leakage | VFX gets brighter/larger over time | Reset all transform/visual/particle/trail fields on return |

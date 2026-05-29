@@ -30,6 +30,14 @@ namespace ProjectArk.Ship
         [Header("Settings")]
         [SerializeField] private ShipJuiceSettingsSO _juiceSettings;
 
+        [Header("Hit Spark")]
+        [Tooltip("Preallocated local hit spark particles. Created and wired by ShipPrefabRebuilder; never instantiated during combat.")]
+        [SerializeField] private ParticleSystem _hitSparkParticles;
+
+        [Header("Hit Mask")]
+        [Tooltip("Short white overlay mask focused on the ship outline and core. Created and wired by ShipPrefabRebuilder.")]
+        [SerializeField] private SpriteRenderer _hitMaskRenderer;
+
         [Header("Enable Toggles")]
         [Tooltip("Master switch — when OFF, all hit visuals are silently skipped.")]
         [SerializeField] private bool _enableAll = true;
@@ -37,11 +45,17 @@ namespace ProjectArk.Ship
         [Tooltip("Multi-layer white flash on damage.")]
         [SerializeField] private bool _enableHitFlash = true;
 
+        [Tooltip("Dedicated outline/core hit mask overlay on damage.")]
+        [SerializeField] private bool _enableHitMask = true;
+
         [Tooltip("Post-hit i-frame blink (all layers dim/bright cycle).")]
         [SerializeField] private bool _enableIFrameBlink = true;
 
         [Tooltip("Core layer low-HP red warning pulse.")]
         [SerializeField] private bool _enableLowHPPulse = true;
+
+        [Tooltip("Short local spark on actual damage.")]
+        [SerializeField] private bool _enableHitSpark = true;
 
         // ══════════════════════════════════════════════════════════════
         // Runtime State
@@ -55,6 +69,12 @@ namespace ProjectArk.Ship
         // Low-HP pulse
         private Sequence _coreLowHPPulse;
         private bool _isLowHPPulsing;
+
+        // Hit impact scale punch
+        private Sequence _hitImpactSequence;
+
+        // Hit mask overlay fade
+        private Tween _hitMaskTween;
 
         // Hit flash + hit i-frame cancellation
         private CancellationTokenSource _hitFlashCts;
@@ -103,7 +123,25 @@ namespace ProjectArk.Ship
         {
             if (!_enableAll || _juiceSettings == null) return;
 
-            // 1. Multi-layer hit flash
+            if (damage <= 0f)
+            {
+                if (_enableLowHPPulse)
+                    EvaluateCoreLowHPPulse();
+                return;
+            }
+
+            // 1. Short readable impact punch on actual damage
+            RunHitImpactPunch();
+
+            // 2. Local short spark on actual damage
+            if (_enableHitSpark)
+                PlayHitSpark();
+
+            // 3. Dedicated outline/core mask overlay
+            if (_enableHitMask)
+                PlayHitMaskOverlay();
+
+            // 4. Multi-layer hit flash
             if (_enableHitFlash)
             {
                 CancelHitFlash();
@@ -111,7 +149,7 @@ namespace ProjectArk.Ship
                 RunHitFlashAsync(_hitFlashCts.Token).Forget();
             }
 
-            // 2. Multi-layer post-hit i-frame blink
+            // 5. Multi-layer post-hit i-frame blink
             if (_enableIFrameBlink)
             {
                 float iFrameDuration = _juiceSettings.HitIFrameDuration > 0f
@@ -136,6 +174,12 @@ namespace ProjectArk.Ship
             CancelHitFlash();
             CancelHitIFrame();
 
+            _hitImpactSequence.Stop();
+            RestoreHitImpactScales();
+
+            StopHitSpark();
+            HideHitMaskOverlay();
+
             _coreLowHPPulse.Stop();
             _isLowHPPulsing = false;
 
@@ -143,6 +187,116 @@ namespace ProjectArk.Ship
             if (_solidRenderer != null) _solidRenderer.color = _solidBaseColor;
             if (_hlRenderer != null) _hlRenderer.color = _hlBaseColor;
             if (_coreRenderer != null) _coreRenderer.color = _coreBaseColor;
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // Hit Impact Punch
+        // ══════════════════════════════════════════════════════════════
+
+        private void RunHitImpactPunch()
+        {
+            if (_juiceSettings == null) return;
+            if (_solidRenderer == null && _hlRenderer == null && _coreRenderer == null) return;
+
+            _hitImpactSequence.Stop();
+
+            float scalePeak = _juiceSettings.HitImpactScalePeak;
+            float attackDuration = _juiceSettings.HitImpactAttackDuration;
+            float releaseDuration = _juiceSettings.HitImpactReleaseDuration;
+            Vector3 peakScale = Vector3.one * scalePeak;
+
+            SetHitImpactScale(peakScale);
+
+            _hitImpactSequence = Sequence.Create()
+                .ChainDelay(attackDuration);
+
+            bool hasScaleTween = false;
+            AddHitImpactReleaseTween(_solidRenderer, releaseDuration, ref hasScaleTween);
+            AddHitImpactReleaseTween(_hlRenderer, releaseDuration, ref hasScaleTween);
+            AddHitImpactReleaseTween(_coreRenderer, releaseDuration, ref hasScaleTween);
+        }
+
+        private void AddHitImpactReleaseTween(SpriteRenderer renderer, float duration, ref bool hasScaleTween)
+        {
+            if (renderer == null) return;
+
+            Tween tween = Tween.Scale(renderer.transform, endValue: Vector3.one, duration: duration, ease: Ease.OutQuad);
+            if (!hasScaleTween)
+            {
+                _hitImpactSequence = _hitImpactSequence.Chain(tween);
+                hasScaleTween = true;
+            }
+            else
+            {
+                _hitImpactSequence = _hitImpactSequence.Group(tween);
+            }
+        }
+
+        private void SetHitImpactScale(Vector3 scale)
+        {
+            if (_solidRenderer != null) _solidRenderer.transform.localScale = scale;
+            if (_hlRenderer != null) _hlRenderer.transform.localScale = scale;
+            if (_coreRenderer != null) _coreRenderer.transform.localScale = scale;
+        }
+
+        private void RestoreHitImpactScales()
+        {
+            if (_solidRenderer != null) _solidRenderer.transform.localScale = Vector3.one;
+            if (_hlRenderer != null) _hlRenderer.transform.localScale = Vector3.one;
+            if (_coreRenderer != null) _coreRenderer.transform.localScale = Vector3.one;
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // Hit Spark
+        // ══════════════════════════════════════════════════════════════
+
+        private void PlayHitSpark()
+        {
+            if (_hitSparkParticles == null) return;
+
+            _hitSparkParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            _hitSparkParticles.Play(true);
+        }
+
+        private void StopHitSpark()
+        {
+            if (_hitSparkParticles == null) return;
+
+            _hitSparkParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            _hitSparkParticles.Clear(true);
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // Hit Mask Overlay
+        // ══════════════════════════════════════════════════════════════
+
+        private void PlayHitMaskOverlay()
+        {
+            if (_hitMaskRenderer == null || _juiceSettings == null) return;
+
+            _hitMaskTween.Stop();
+
+            Color maskColor = _juiceSettings.HitFlashColor;
+            maskColor.a = Mathf.Max(maskColor.a, 0.85f);
+
+            _hitMaskRenderer.enabled = true;
+            _hitMaskRenderer.color = maskColor;
+
+            float duration = Mathf.Max(0.01f, _juiceSettings.HitFlashDuration);
+            _hitMaskTween = Tween.Alpha(_hitMaskRenderer, endValue: 0f, duration: duration, ease: Ease.OutQuad)
+                .OnComplete(HideHitMaskOverlay);
+        }
+
+        private void HideHitMaskOverlay()
+        {
+            _hitMaskTween.Stop();
+
+            if (_hitMaskRenderer == null) return;
+
+            var color = _hitMaskRenderer.color;
+            color.a = 0f;
+            _hitMaskRenderer.color = color;
+            _hitMaskRenderer.enabled = false;
         }
 
         // ══════════════════════════════════════════════════════════════

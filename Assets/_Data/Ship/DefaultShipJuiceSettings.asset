@@ -20,10 +20,10 @@ MonoBehaviour:
   _afterImageFadeDuration: 0.15
   _afterImageAlpha: 0.4
   _afterImageColor: {r: 0.67, g: 0, b: 1, a: 1}
-  _boostLiquidSprite: {fileID: 21300000, guid: 66ede2a1e65d06a4eb7dc24092131cd3, type: 3}
-  _boostLiquidSortOverride: 1
+  _boostLiquidSprite: {fileID: 0}
+  _boostLiquidSortOverride: 0
   _boostLiquidSortOrder: 1
-  _boostLiquidColor: {r: 3, g: 4, b: 5, a: 1}
+  _boostLiquidColor: {r: 1, g: 1, b: 1, a: 0}
   _boostLiquidRampUpDuration: 0.12
   _boostLiquidRampDownDuration: 0.3
   _iFrameFlashAlpha: 0.3
@@ -33,12 +33,12 @@ MonoBehaviour:
   _boostBackPulsePeriod: 0.3
   _boostBackPulseScale: 1.1
   _boostBackRestoreDuration: 0.1
-  _hlBaseAlpha: 0.5
-  _hlBoostAlpha: 0.85
+  _hlBaseAlpha: 1
+  _hlBoostAlpha: 1
   _hlBoostRampUpDuration: 0.12
   _hlBoostRampDownDuration: 0.25
-  _coreBaseAlpha: 0.3
-  _coreBoostAlpha: 0.9
+  _coreBaseAlpha: 1
+  _coreBoostAlpha: 1
   _coreBoostRampUpDuration: 0.15
   _coreBoostRampDownDuration: 0.3
   _coreLowHPThreshold: 0.3

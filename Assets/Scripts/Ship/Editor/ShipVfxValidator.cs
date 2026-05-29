@@ -61,15 +61,16 @@ namespace ProjectArk.Ship.Editor
         private static readonly string[] ShipVisualRequiredChildren =
         {
             "Ship_Sprite_Back",
-            "Ship_Sprite_Liquid",
-            "Ship_Sprite_HL",
-            "Ship_Sprite_Solid",
+            "Ship_Sprite_Shape",
+            "Ship_Sprite_Outline",
+            "Ship_Sprite_Body",
             "Ship_Sprite_Core",
+            "Ship_Sprite_WeaponMount",
             "Dodge_Sprite",
             BoostTrailRootName
         };
 
-        private static readonly string[] BoostTrailRequiredChildren =
+        private static readonly string[] LegacyBoostTrailForbiddenChildren =
         {
             "MainTrail",
             "FlameTrail_R",
@@ -207,16 +208,16 @@ namespace ProjectArk.Ship.Editor
             }
 
             var backRenderer = GetComponentOnDirectChild<SpriteRenderer>(shipVisual, "Ship_Sprite_Back");
-            var liquidRenderer = GetComponentOnDirectChild<SpriteRenderer>(shipVisual, "Ship_Sprite_Liquid");
-            var hlRenderer = GetComponentOnDirectChild<SpriteRenderer>(shipVisual, "Ship_Sprite_HL");
-            var solidRenderer = GetComponentOnDirectChild<SpriteRenderer>(shipVisual, "Ship_Sprite_Solid");
+            var liquidRenderer = GetComponentOnDirectChild<SpriteRenderer>(shipVisual, "Ship_Sprite_Shape");
+            var hlRenderer = GetComponentOnDirectChild<SpriteRenderer>(shipVisual, "Ship_Sprite_Outline");
+            var solidRenderer = GetComponentOnDirectChild<SpriteRenderer>(shipVisual, "Ship_Sprite_Body");
             var coreRenderer = GetComponentOnDirectChild<SpriteRenderer>(shipVisual, "Ship_Sprite_Core");
 
             var serializedShipView = new SerializedObject(shipView);
             ValidateObjectReference(serializedShipView, "_backRenderer", backRenderer, "Ship Prefab", "`ShipView._backRenderer` 未正确指向 `Ship_Sprite_Back`。", shipPrefabAsset);
-            ValidateObjectReference(serializedShipView, "_liquidRenderer", liquidRenderer, "Ship Prefab", "`ShipView._liquidRenderer` 未正确指向 `Ship_Sprite_Liquid`。", shipPrefabAsset);
-            ValidateObjectReference(serializedShipView, "_hlRenderer", hlRenderer, "Ship Prefab", "`ShipView._hlRenderer` 未正确指向 `Ship_Sprite_HL`。", shipPrefabAsset);
-            ValidateObjectReference(serializedShipView, "_solidRenderer", solidRenderer, "Ship Prefab", "`ShipView._solidRenderer` 未正确指向 `Ship_Sprite_Solid`。", shipPrefabAsset);
+            ValidateObjectReference(serializedShipView, "_liquidRenderer", liquidRenderer, "Ship Prefab", "`ShipView._liquidRenderer` 未正确指向 `Ship_Sprite_Shape`。", shipPrefabAsset);
+            ValidateObjectReference(serializedShipView, "_hlRenderer", hlRenderer, "Ship Prefab", "`ShipView._hlRenderer` 未正确指向 `Ship_Sprite_Outline`。", shipPrefabAsset);
+            ValidateObjectReference(serializedShipView, "_solidRenderer", solidRenderer, "Ship Prefab", "`ShipView._solidRenderer` 未正确指向 `Ship_Sprite_Body`。", shipPrefabAsset);
             ValidateObjectReference(serializedShipView, "_coreRenderer", coreRenderer, "Ship Prefab", "`ShipView._coreRenderer` 未正确指向 `Ship_Sprite_Core`。", shipPrefabAsset);
 
             // Validate Worker component references
@@ -239,8 +240,8 @@ namespace ProjectArk.Ship.Editor
             if (boostVisuals != null)
             {
                 var boostSO = new SerializedObject(boostVisuals);
-                ValidateObjectReference(boostSO, "_liquidRenderer", liquidRenderer, "Ship Prefab", "`ShipBoostVisuals._liquidRenderer` 未正确指向 `Ship_Sprite_Liquid`。", shipPrefabAsset);
-                ValidateObjectReference(boostSO, "_hlRenderer", hlRenderer, "Ship Prefab", "`ShipBoostVisuals._hlRenderer` 未正确指向 `Ship_Sprite_HL`。", shipPrefabAsset);
+                ValidateObjectReference(boostSO, "_liquidRenderer", liquidRenderer, "Ship Prefab", "`ShipBoostVisuals._liquidRenderer` 未正确指向 `Ship_Sprite_Shape`。", shipPrefabAsset);
+                ValidateObjectReference(boostSO, "_hlRenderer", hlRenderer, "Ship Prefab", "`ShipBoostVisuals._hlRenderer` 未正确指向 `Ship_Sprite_Outline`。", shipPrefabAsset);
                 ValidateObjectReference(boostSO, "_coreRenderer", coreRenderer, "Ship Prefab", "`ShipBoostVisuals._coreRenderer` 未正确指向 `Ship_Sprite_Core`。", shipPrefabAsset);
                 var boostTrailView = GetComponentOnDirectChild<BoostTrailView>(shipVisual, BoostTrailRootName);
                 ValidateObjectReference(boostSO, "_boostTrailView", boostTrailView, "Ship Prefab", "`ShipBoostVisuals._boostTrailView` 未正确指向嵌套的 `BoostTrailRoot`。", shipPrefabAsset);
@@ -250,17 +251,17 @@ namespace ProjectArk.Ship.Editor
             {
                 var hitSO = new SerializedObject(hitVisuals);
                 ValidateObjectReference(hitSO, "_backRenderer", backRenderer, "Ship Prefab", "`ShipHitVisuals._backRenderer` 未正确指向 `Ship_Sprite_Back`。", shipPrefabAsset);
-                ValidateObjectReference(hitSO, "_liquidRenderer", liquidRenderer, "Ship Prefab", "`ShipHitVisuals._liquidRenderer` 未正确指向 `Ship_Sprite_Liquid`。", shipPrefabAsset);
-                ValidateObjectReference(hitSO, "_hlRenderer", hlRenderer, "Ship Prefab", "`ShipHitVisuals._hlRenderer` 未正确指向 `Ship_Sprite_HL`。", shipPrefabAsset);
-                ValidateObjectReference(hitSO, "_solidRenderer", solidRenderer, "Ship Prefab", "`ShipHitVisuals._solidRenderer` 未正确指向 `Ship_Sprite_Solid`。", shipPrefabAsset);
+                ValidateObjectReference(hitSO, "_liquidRenderer", liquidRenderer, "Ship Prefab", "`ShipHitVisuals._liquidRenderer` 未正确指向 `Ship_Sprite_Shape`。", shipPrefabAsset);
+                ValidateObjectReference(hitSO, "_hlRenderer", hlRenderer, "Ship Prefab", "`ShipHitVisuals._hlRenderer` 未正确指向 `Ship_Sprite_Outline`。", shipPrefabAsset);
+                ValidateObjectReference(hitSO, "_solidRenderer", solidRenderer, "Ship Prefab", "`ShipHitVisuals._solidRenderer` 未正确指向 `Ship_Sprite_Body`。", shipPrefabAsset);
                 ValidateObjectReference(hitSO, "_coreRenderer", coreRenderer, "Ship Prefab", "`ShipHitVisuals._coreRenderer` 未正确指向 `Ship_Sprite_Core`。", shipPrefabAsset);
             }
 
             if (dashVisuals != null)
             {
                 var dashSO = new SerializedObject(dashVisuals);
-                ValidateObjectReference(dashSO, "_solidRenderer", solidRenderer, "Ship Prefab", "`ShipDashVisuals._solidRenderer` 未正确指向 `Ship_Sprite_Solid`。", shipPrefabAsset);
-                ValidateObjectReference(dashSO, "_hlRenderer", hlRenderer, "Ship Prefab", "`ShipDashVisuals._hlRenderer` 未正确指向 `Ship_Sprite_HL`。", shipPrefabAsset);
+                ValidateObjectReference(dashSO, "_solidRenderer", solidRenderer, "Ship Prefab", "`ShipDashVisuals._solidRenderer` 未正确指向 `Ship_Sprite_Body`。", shipPrefabAsset);
+                ValidateObjectReference(dashSO, "_hlRenderer", hlRenderer, "Ship Prefab", "`ShipDashVisuals._hlRenderer` 未正确指向 `Ship_Sprite_Outline`。", shipPrefabAsset);
                 ValidateObjectReference(dashSO, "_coreRenderer", coreRenderer, "Ship Prefab", "`ShipDashVisuals._coreRenderer` 未正确指向 `Ship_Sprite_Core`。", shipPrefabAsset);
                 var dodgeRenderer = GetComponentOnDirectChild<SpriteRenderer>(shipVisual, "Dodge_Sprite");
                 ValidateObjectReference(dashSO, "_dodgeSprite", dodgeRenderer, "Ship Prefab", "`ShipDashVisuals._dodgeSprite` 未正确指向 `Dodge_Sprite`。", shipPrefabAsset);
@@ -297,29 +298,30 @@ namespace ProjectArk.Ship.Editor
                     AddResult(Severity.Error, "BoostTrail Prefab", "`BoostTrailRoot.prefab` 根节点缺少 `BoostTrailDebugManager`。", boostTrailPrefabAsset);
                 }
 
-                foreach (string childName in BoostTrailRequiredChildren)
+                foreach (string childName in LegacyBoostTrailForbiddenChildren)
                 {
-                    ValidateDirectChildExistsExactlyOnce(prefabRoot.transform, childName, "BoostTrail Prefab", boostTrailPrefabAsset);
+                    if (prefabRoot.transform.Find(childName) != null)
+                    {
+                        AddResult(Severity.Error, "BoostTrail Prefab", $"`BoostTrailRoot.prefab` 仍包含旧 Boost VFX 节点 `{childName}`。Ares-only 链路要求删除该节点。", boostTrailPrefabAsset);
+                    }
                 }
 
-                var mainTrail = GetComponentOnDirectChild<TrailRenderer>(prefabRoot.transform, "MainTrail");
-                var flameTrailR = GetComponentOnDirectChild<ParticleSystem>(prefabRoot.transform, "FlameTrail_R");
-                var flameTrailB = GetComponentOnDirectChild<ParticleSystem>(prefabRoot.transform, "FlameTrail_B");
-                var flameCore = GetComponentOnDirectChild<ParticleSystem>(prefabRoot.transform, "FlameCore");
-                var emberTrail = GetComponentOnDirectChild<ParticleSystem>(prefabRoot.transform, "EmberTrail");
-                var emberSparks = GetComponentOnDirectChild<ParticleSystem>(prefabRoot.transform, "EmberSparks");
-                var energyLayer2 = GetComponentOnDirectChild<SpriteRenderer>(prefabRoot.transform, "BoostEnergyLayer2");
-                var energyLayer3 = GetComponentOnDirectChild<SpriteRenderer>(prefabRoot.transform, "BoostEnergyLayer3");
+                Transform aresBoostTrail = prefabRoot.transform.Find("AresBoostTrail");
+                if (aresBoostTrail == null)
+                {
+                    AddResult(Severity.Error, "BoostTrail Prefab", "`BoostTrailRoot.prefab` 缺少现役 `AresBoostTrail` 子节点。", boostTrailPrefabAsset);
+                }
 
                 var serializedBoostTrailView = new SerializedObject(boostTrailView);
-                ValidateObjectReference(serializedBoostTrailView, "_mainTrail", mainTrail, "BoostTrail Prefab", "`BoostTrailView._mainTrail` 未正确指向 `MainTrail`。", boostTrailPrefabAsset);
-                ValidateObjectReference(serializedBoostTrailView, "_flameTrailR", flameTrailR, "BoostTrail Prefab", "`BoostTrailView._flameTrailR` 未正确指向 `FlameTrail_R`。", boostTrailPrefabAsset);
-                ValidateObjectReference(serializedBoostTrailView, "_flameTrailB", flameTrailB, "BoostTrail Prefab", "`BoostTrailView._flameTrailB` 未正确指向 `FlameTrail_B`。", boostTrailPrefabAsset);
-                ValidateObjectReference(serializedBoostTrailView, "_flameCore", flameCore, "BoostTrail Prefab", "`BoostTrailView._flameCore` 未正确指向 `FlameCore`。", boostTrailPrefabAsset);
-                ValidateObjectReference(serializedBoostTrailView, "_emberTrail", emberTrail, "BoostTrail Prefab", "`BoostTrailView._emberTrail` 未正确指向 `EmberTrail`。", boostTrailPrefabAsset);
-                ValidateObjectReference(serializedBoostTrailView, "_emberSparks", emberSparks, "BoostTrail Prefab", "`BoostTrailView._emberSparks` 未正确指向 `EmberSparks`。", boostTrailPrefabAsset);
-                ValidateObjectReference(serializedBoostTrailView, "_energyLayer2", energyLayer2, "BoostTrail Prefab", "`BoostTrailView._energyLayer2` 未正确指向 `BoostEnergyLayer2`。", boostTrailPrefabAsset);
-                ValidateObjectReference(serializedBoostTrailView, "_energyLayer3", energyLayer3, "BoostTrail Prefab", "`BoostTrailView._energyLayer3` 未正确指向 `BoostEnergyLayer3`。", boostTrailPrefabAsset);
+                var aresSustainParticlesProperty = serializedBoostTrailView.FindProperty("_aresSustainParticles");
+                if (aresSustainParticlesProperty == null)
+                {
+                    AddResult(Severity.Error, "BoostTrail Prefab", "`BoostTrailView._aresSustainParticles` 序列化字段不存在。", boostTrailPrefabAsset);
+                }
+                else if (aresSustainParticlesProperty.arraySize == 0)
+                {
+                    AddResult(Severity.Error, "BoostTrail Prefab", "`BoostTrailView._aresSustainParticles` 为空，Boost 将没有 Ares 持续拖尾。运行 Rebuild BoostTrailRoot Prefab 修复。", boostTrailPrefabAsset);
+                }
 
                 // Validate _juiceSettings SO reference (data-driven parameters)
                 var juiceSettingsProperty = serializedBoostTrailView.FindProperty("_juiceSettings");

@@ -24,18 +24,12 @@ namespace ProjectArk.Ship.Editor
             SerializedProperty debugModeProp = serializedObject.FindProperty("_debugMode");
             SerializedProperty previewIntensityProp = serializedObject.FindProperty("_previewIntensity");
             SerializedProperty soloLayerProp = serializedObject.FindProperty("_soloLayer");
-            SerializedProperty showMainTrailProp = serializedObject.FindProperty("_showMainTrail");
-            SerializedProperty showFlameTrailProp = serializedObject.FindProperty("_showFlameTrail");
-            SerializedProperty showFlameCoreProp = serializedObject.FindProperty("_showFlameCore");
-            SerializedProperty showEmberTrailProp = serializedObject.FindProperty("_showEmberTrail");
-            SerializedProperty showEmberSparksProp = serializedObject.FindProperty("_showEmberSparks");
-            SerializedProperty showEnergyLayer2Prop = serializedObject.FindProperty("_showEnergyLayer2");
-            SerializedProperty showEnergyLayer3Prop = serializedObject.FindProperty("_showEnergyLayer3");
+            SerializedProperty showAresTrailProp = serializedObject.FindProperty("_showAresTrail");
             SerializedProperty showBloomProp = serializedObject.FindProperty("_showBloom");
 
             EditorGUILayout.HelpBox(
-                "用途：在 Play Mode 下隔离 `MainTrail / FlameTrail / EmberTrail / EnergyLayer2 / EnergyLayer3 / Bloom`。\n" +
-                "该面板现在只做显式预览，不再自动代理到 runtime，也不会被动接管 live chain。",
+                "用途：在 Play Mode 下隔离 `AresBoostTrail / Bloom`。\n" +
+                "该面板只做显式预览，不会自动代理到 runtime，也不会被动接管 live chain。",
                 MessageType.Info);
 
             if (Application.isPlaying && !isLiveSceneObject)
@@ -80,13 +74,7 @@ namespace ProjectArk.Ship.Editor
                 {
                     EditorGUILayout.Space(4f);
                     EditorGUILayout.LabelField("Layer Visibility", EditorStyles.boldLabel);
-                    EditorGUILayout.PropertyField(showMainTrailProp);
-                    EditorGUILayout.PropertyField(showFlameTrailProp);
-                    EditorGUILayout.PropertyField(showFlameCoreProp);
-                    EditorGUILayout.PropertyField(showEmberTrailProp);
-                    EditorGUILayout.PropertyField(showEmberSparksProp);
-                    EditorGUILayout.PropertyField(showEnergyLayer2Prop);
-                    EditorGUILayout.PropertyField(showEnergyLayer3Prop);
+                    EditorGUILayout.PropertyField(showAresTrailProp);
                     EditorGUILayout.PropertyField(showBloomProp);
                 }
             }
@@ -109,15 +97,15 @@ namespace ProjectArk.Ship.Editor
             else if (!inspectorDebugEnabled)
             {
                 EditorGUILayout.HelpBox(
-                    "如果你只改了 `Show Main Trail` 之类的勾选，但没打开 `Enable Inspector Debug`，只有显式预览按钮会驱动当前链路。",
+                    "如果你只改了 `Show Ares Trail` 之类的勾选，但没打开 `Enable Inspector Debug`，只有显式预览按钮会驱动当前链路。",
                     MessageType.Warning);
             }
             else
             {
                 EditorGUILayout.HelpBox(
                     forceSustainPreview
-                        ? "当前是 ForceSustainPreview：适合静态检查持续层。若要看真实起手 / 退场 / burst 节奏，请切到 ObserveRuntime。"
-                        : "当前是 ObserveRuntime：适合看真实 Boost 起手 / 退场 / burst 节奏，同时保留 Inspector 分层遮罩。",
+                        ? "当前是 ForceSustainPreview：适合静态检查 Ares 持续层。若要看真实起手 / 退场节奏，请切到 ObserveRuntime。"
+                        : "当前是 ObserveRuntime：适合看真实 Boost 起手 / 退场节奏，同时保留 Inspector 分层遮罩。",
                     MessageType.None);
             }
 
@@ -140,30 +128,9 @@ namespace ProjectArk.Ship.Editor
                     if (GUILayout.Button("Preview Boost End"))
                         inspectedTarget.PreviewBoostEnd();
 
-                    if (GUILayout.Button("Preview FlameCore Burst"))
-                        inspectedTarget.PreviewFlameCoreBurst();
-
-                    if (GUILayout.Button("Preview EmberSparks Burst"))
-                        inspectedTarget.PreviewEmberSparksBurst();
-
                     if (GUILayout.Button("Preview Bloom Burst"))
                         inspectedTarget.PreviewBloomBurst();
                 }
-
-                EditorGUILayout.Space(4f);
-                EditorGUILayout.LabelField("Sustain Layer Preview", EditorStyles.miniLabel);
-
-                EditorGUILayout.BeginHorizontal();
-                if (GUILayout.Button("FlameTrail_R"))
-                    inspectedTarget.PreviewFlameTrailR();
-                if (GUILayout.Button("FlameTrail_B"))
-                    inspectedTarget.PreviewFlameTrailB();
-                if (GUILayout.Button("Both"))
-                    inspectedTarget.PreviewFlameTrailBoth();
-                EditorGUILayout.EndHorizontal();
-
-                if (GUILayout.Button("Preview EmberTrail Sustain"))
-                    inspectedTarget.PreviewEmberTrailSustain();
             }
         }
 

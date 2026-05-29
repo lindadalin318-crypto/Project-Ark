@@ -44,7 +44,7 @@ namespace ProjectArk.Ship.Editor
             AssertSpritePath(skin.ReactorSprite, "reactor.png");
             AssertSpritePath(skin.EyeSprite, "reactor.png");
             AssertSpritePath(skin.ViewSilhouetteSprite, "scheme3_tp.png");
-            AssertSpritePath(skin.DodgeSprite, "player_test_fire.png");
+            Assert.That(skin.DodgeSprite, Is.Null, "Old fire test sprite must not be assigned as a Dodge sprite.");
             AssertSpritePath(skin.DodgeHalfSprite, "SHIP_PLAYER_DODGE_HALF.png");
             Assert.That(skin.ShipHighlightColor, Is.EqualTo(FromHtml("#8B17FF")));
             Assert.That(skin.TransitionColor, Is.EqualTo(FromHtml("#AB00FF")));

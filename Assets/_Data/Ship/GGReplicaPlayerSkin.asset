@@ -85,7 +85,7 @@ MonoBehaviour:
   _reactorSprite: {fileID: 21300000, guid: 5a1b6d5ec2ab5429196be27566d198e0, type: 3}
   _eyeSprite: {fileID: 21300000, guid: 5a1b6d5ec2ab5429196be27566d198e0, type: 3}
   _viewSilhouetteSprite: {fileID: 21300000, guid: f062b97727628492f89dfa48dc2498ec, type: 3}
-  _dodgeSprite: {fileID: 21300000, guid: a55e5dd39807c45a5ba6980aef5269c4, type: 3}
+  _dodgeSprite: {fileID: 0}
   _dodgeHalfSprite: {fileID: 21300000, guid: 58b5549c5ed4741a2ad873d3dc3d812e, type: 3}
   _shipHighlightColor: {r: 0.54509807, g: 0.09019608, b: 1, a: 1}
   _transitionColor: {r: 0.67058825, g: 0, b: 1, a: 1}

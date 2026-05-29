@@ -18,7 +18,6 @@ namespace ProjectArk.Ship.Editor
         private const string MovementHighlightPath = "Assets/_Art/Ship/GGReplica/Sprites/Movement_21.png";
         private const string BackPath = "Assets/_Art/Ship/GGReplica/Sprites/GrabGun_Back_3.png";
         private const string ReactorPath = "Assets/_Art/Ship/GGReplica/Sprites/reactor.png";
-        private const string DodgeGhostPath = "Assets/_Art/Ship/GGReplica/Sprites/player_test_fire.png";
         private const string SchemePath = "Assets/_Art/Ship/GGReplica/Sprites/scheme3_tp.png";
 
         [MenuItem("ProjectArk/Ship/GG Replica/V2/Build Glitch V2 Prefab")]
@@ -59,8 +58,6 @@ namespace ProjectArk.Ship.Editor
                 var highlight = CreateSpriteLayer(bodyLayers, "Ship_Sprite_HL", MovementHighlightPath, 2, LoadMaterial(GGReplicaMaterialAssetBuilder.PlayerShipHlMaterialPath));
                 var back = CreateSpriteLayer(bodyLayers, "Ship_Sprite_Back", BackPath, -1, null);
                 var core = CreateSpriteLayer(bodyLayers, "Ship_Sprite_Core", ReactorPath, 3, null);
-                var dodgeGhost = CreateSpriteLayer(bodyLayers, "Dodge_Sprite", DodgeGhostPath, 4, LoadMaterial(GGReplicaMaterialAssetBuilder.PlayerShipHlMaterialPath));
-                dodgeGhost.enabled = false;
                 var viewSilhouette = CreateSpriteLayer(bodyLayers, "View", SchemePath, -10, LoadMaterial(GGReplicaMaterialAssetBuilder.TeleportSchemeMaterialPath));
                 viewSilhouette.color = Color.black;
 
@@ -97,8 +94,6 @@ namespace ProjectArk.Ship.Editor
                 dodgeHalf.enabled = false;
                 var additiveCoreDodge = CreateSpriteLayer(dodgeModule, "AdditiveCore_Dodge", ReactorPath, 11, LoadMaterial(GGReplicaMaterialAssetBuilder.DodgeParticlesMaterialPath));
                 additiveCoreDodge.enabled = false;
-                var oldOutlineDodge = CreateSpriteLayer(dodgeModule, "Dodge_Sprite (used for old outline trail)", DodgeGhostPath, 9, LoadMaterial(GGReplicaMaterialAssetBuilder.PlayerShipHlMaterialPath));
-                oldOutlineDodge.enabled = false;
                 var firePrimary = CreateSpriteLayer(fireAimModule, "MainAttackState", "Assets/_Art/Ship/GGReplica/Sprites/Primary_4.png", 8, LoadMaterial(GGReplicaMaterialAssetBuilder.PlayerShipHlMaterialPath));
                 var fireGlow = CreateSpriteLayer(fireAimModule, "MainAttackFireState", "Assets/_Art/Ship/GGReplica/Sprites/Primary_6.png", 9, LoadMaterial(GGReplicaMaterialAssetBuilder.PlayerShipHlMaterialPath));
                 var fireHitboxHint = CreateSpriteLayer(fireAimModule, "MainAttackStateHitbox", "Assets/_Art/Ship/GGReplica/Sprites/Primary.png", 7, LoadMaterial(GGReplicaMaterialAssetBuilder.TeleportSchemeMaterialPath));
@@ -193,7 +188,7 @@ namespace ProjectArk.Ship.Editor
                 SetSerializedArray(view, "_healRenderers", new Object[] { healShell, healDot });
                 SetSerializedArray(view, "_fireAimRenderers", new Object[] { firePrimary, fireGlow, fireHitboxHint });
                 SetSerialized(view, "_coreRenderer", core);
-                SetSerialized(view, "_dodgeGhostRenderer", oldOutlineDodge);
+                SetSerialized(view, "_dodgeGhostRenderer", null);
                 SetSerialized(view, "_fluxyTrailRenderer", fluxyTrail);
                 SetSerialized(view, "_dodgeHalfRenderer", dodgeHalf);
                 SetSerialized(view, "_dodgeAdditiveCoreRenderer", additiveCoreDodge);
