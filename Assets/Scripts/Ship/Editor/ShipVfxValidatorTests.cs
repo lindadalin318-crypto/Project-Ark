@@ -10,6 +10,7 @@ namespace ProjectArk.Ship.Editor
     [TestFixture]
     public class ShipVfxValidatorTests
     {
+        private const string ShipPrefabPath = "Assets/_Prefabs/Ship/Ship.prefab";
         private const string BoostTrailPrefabPath = "Assets/_Prefabs/VFX/BoostTrailRoot.prefab";
         private const string SampleScenePath = "Assets/Scenes/SampleScene.unity";
 
@@ -21,6 +22,29 @@ namespace ProjectArk.Ship.Editor
             var results = ShipVfxValidator.RunAudit(showDialog: false, logToConsole: false);
 
             Assert.That(results.Any(result => result.Severity == ShipVfxValidator.Severity.Error), Is.False);
+        }
+
+        [Test]
+        public void ShipPrefabRebuilderRunAudit_ReportsMissingShipBodyWithoutRebuildingIt()
+        {
+            try
+            {
+                ResetAuthorityState();
+                DeleteShipPrefabVisualChild("Ship_Sprite_Body");
+
+                var results = ShipPrefabRebuilder.RunAudit(logToConsole: false);
+
+                Assert.That(
+                    results.Any(result =>
+                        result.Severity == ShipPrefabRebuilder.Severity.Error &&
+                        result.Message.Contains("Ship_Sprite_Body")),
+                    Is.True);
+                Assert.That(ShipPrefabHasVisualChild("Ship_Sprite_Body"), Is.False, "Audit must be read-only and must not rebuild missing Ship.prefab visual children.");
+            }
+            finally
+            {
+                ResetAuthorityState();
+            }
         }
 
         [Test]
@@ -102,6 +126,40 @@ namespace ProjectArk.Ship.Editor
         }
 
         [Test]
+        public void RunAudit_IncludesMaterialTextureLinkerAuthorityErrorsWithoutRepairingIt()
+        {
+            const string materialPath = "Assets/_Art/VFX/BoostTrail/Materials/mat_flame_trail.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+            Assert.That(material, Is.Not.Null, "Test setup failed: missing mat_flame_trail material.");
+
+            var originalTexture = material.GetTexture("_BaseMap");
+
+            try
+            {
+                ResetAuthorityState();
+                material.SetTexture("_BaseMap", null);
+                EditorUtility.SetDirty(material);
+                AssetDatabase.SaveAssets();
+
+                var results = ShipVfxValidator.RunAudit(showDialog: false, logToConsole: false);
+
+                Assert.That(
+                    results.Any(result =>
+                        result.Severity == ShipVfxValidator.Severity.Error &&
+                        result.Scope == "Authority Audit/MaterialTextureLinker" &&
+                        result.Message.Contains("mat_flame_trail._BaseMap")),
+                    Is.True);
+                Assert.That(material.GetTexture("_BaseMap"), Is.Null, "Aggregated audit must remain read-only and must not repair the broken texture binding.");
+            }
+            finally
+            {
+                material.SetTexture("_BaseMap", originalTexture);
+                EditorUtility.SetDirty(material);
+                AssetDatabase.SaveAssets();
+            }
+        }
+
+        [Test]
         public void BoostTrailPrefabCreatorRunAudit_ReportsMissingAresTrailWithoutRebuildingIt()
         {
             try
@@ -171,10 +229,45 @@ namespace ProjectArk.Ship.Editor
             }
         }
 
+        private static void DeleteShipPrefabVisualChild(string childName)
+        {
+            var root = PrefabUtility.LoadPrefabContents(ShipPrefabPath);
+            try
+            {
+                Assert.That(root, Is.Not.Null, "Test setup failed: missing Ship prefab.");
+                var shipVisual = root.transform.Find("ShipVisual");
+                Assert.That(shipVisual, Is.Not.Null, "Test setup failed: missing ShipVisual before deletion.");
+                var child = shipVisual.Find(childName);
+                Assert.That(child, Is.Not.Null, $"Test setup failed: missing {childName} before deletion.");
+                Object.DestroyImmediate(child.gameObject);
+                PrefabUtility.SaveAsPrefabAsset(root, ShipPrefabPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
+        private static bool ShipPrefabHasVisualChild(string childName)
+        {
+            var root = PrefabUtility.LoadPrefabContents(ShipPrefabPath);
+            try
+            {
+                Assert.That(root, Is.Not.Null, "Test setup failed: missing Ship prefab.");
+                var shipVisual = root.transform.Find("ShipVisual");
+                return shipVisual != null && shipVisual.Find(childName) != null;
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
         private static void ResetAuthorityState()
         {
             EnsureSampleSceneLoaded();
             BoostTrailPrefabCreator.CreateOrRebuildBoostTrailRootPrefab(showDialog: false);
+            ShipPrefabRebuilder.ForceRebuildSpriteLayersSilently();
             ShipBoostTrailSceneBinder.SetupBoostTrailSceneReferences();
             EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
         }

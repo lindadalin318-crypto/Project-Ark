@@ -92,9 +92,77 @@ namespace ProjectArk.Ship.Editor
             HIT_MASK_FLASH_NAME
         };
 
+        public enum Severity
+        {
+            Info,
+            Warning,
+            Error
+        }
+
+        public sealed class AuditResult
+        {
+            public AuditResult(Severity severity, string message)
+            {
+                Severity = severity;
+                Message = message;
+            }
+
+            public Severity Severity { get; }
+            public string Message { get; }
+        }
+
         // ══════════════════════════════════════════════════════════════
         // Menu Items
         // ══════════════════════════════════════════════════════════════
+
+        [MenuItem("ProjectArk/Ship/Authority/Audit Ship Prefab")]
+        public static void RunAuditMenu()
+        {
+            RunAudit(logToConsole: true);
+        }
+
+        public static IReadOnlyList<AuditResult> RunAudit(bool logToConsole = true)
+        {
+            var results = new List<AuditResult>();
+            var prefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(PREFAB_PATH);
+            if (prefabAsset == null)
+            {
+                results.Add(new AuditResult(Severity.Error, $"Missing Ship prefab: {PREFAB_PATH}"));
+                LogAuditResults(results, logToConsole);
+                return results;
+            }
+
+            GameObject root = null;
+            try
+            {
+                root = PrefabUtility.LoadPrefabContents(PREFAB_PATH);
+                if (root == null)
+                {
+                    results.Add(new AuditResult(Severity.Error, $"Failed to load Ship prefab contents: {PREFAB_PATH}"));
+                    return results;
+                }
+
+                AuditRootComponents(root, results);
+                AuditShipVisualHierarchy(root, results);
+                AuditSerializedReferences(root, results);
+
+                if (!results.Exists(result => result.Severity == Severity.Error))
+                {
+                    results.Add(new AuditResult(Severity.Info, "Ship.prefab authority chain is valid."));
+                }
+            }
+            finally
+            {
+                if (root != null)
+                {
+                    PrefabUtility.UnloadPrefabContents(root);
+                }
+
+                LogAuditResults(results, logToConsole);
+            }
+
+            return results;
+        }
 
         [MenuItem("ProjectArk/Ship/Authority/Rebuild Ship Prefab")]
         public static void RebuildSpriteLayers() => Run(forceRebuild: false, showDialog: true);
@@ -113,6 +181,193 @@ namespace ProjectArk.Ship.Editor
             if (confirmed)
             {
                 Run(forceRebuild: true, showDialog: true);
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // Audit
+        // ══════════════════════════════════════════════════════════════
+
+        private static void AuditRootComponents(GameObject root, List<AuditResult> results)
+        {
+            AuditComponent<Rigidbody2D>(root, results, "Rigidbody2D");
+            AuditComponent<CircleCollider2D>(root, results, "CircleCollider2D");
+            AuditComponent<InputHandler>(root, results, "InputHandler");
+            AuditComponent<ShipMotor>(root, results, "ShipMotor");
+            AuditComponent<ShipAiming>(root, results, "ShipAiming");
+            AuditComponent<ShipStateController>(root, results, "ShipStateController");
+            AuditComponent<ShipHealth>(root, results, "ShipHealth");
+            AuditComponent<ShipDash>(root, results, "ShipDash");
+            AuditComponent<ShipBoost>(root, results, "ShipBoost");
+            AuditComponent<ShipBoostVisuals>(root, results, "ShipBoostVisuals");
+            AuditComponent<ShipHitVisuals>(root, results, "ShipHitVisuals");
+            AuditComponent<ShipDashVisuals>(root, results, "ShipDashVisuals");
+            AuditComponent<ShipFireVisuals>(root, results, "ShipFireVisuals");
+            AuditComponent<ShipVisualJuice>(root, results, "ShipVisualJuice");
+            AuditComponent<DashAfterImageSpawner>(root, results, "DashAfterImageSpawner");
+            AuditComponent<ShipView>(root, results, "ShipView");
+        }
+
+        private static void AuditShipVisualHierarchy(GameObject root, List<AuditResult> results)
+        {
+            var visualTf = root.transform.Find(VISUAL_CHILD_NAME);
+            if (visualTf == null)
+            {
+                results.Add(new AuditResult(Severity.Error, $"Missing {VISUAL_CHILD_NAME} under Ship.prefab root."));
+                return;
+            }
+
+            AuditRequiredChild(visualTf, SPRITE_BACK_NAME, results);
+            AuditRequiredChild(visualTf, SPRITE_LIQUID_NAME, results);
+            AuditRequiredChild(visualTf, SPRITE_HL_NAME, results);
+            AuditRequiredChild(visualTf, SPRITE_SOLID_NAME, results);
+            AuditRequiredChild(visualTf, SPRITE_CORE_NAME, results);
+            AuditRequiredChild(visualTf, SPRITE_WEAPON_MOUNT_NAME, results);
+            AuditRequiredChild(visualTf, HIT_MASK_FLASH_NAME, results);
+            AuditRequiredChild(visualTf, DODGE_SPRITE_NAME, results);
+            AuditRequiredChild(visualTf, BOOST_TRAIL_ROOT_NAME, results);
+
+            AuditForbiddenChild(visualTf, "Ship_Sprite_Liquid", results);
+            AuditForbiddenChild(visualTf, "Ship_Sprite_HL", results);
+            AuditForbiddenChild(visualTf, "Ship_Sprite_Solid", results);
+
+            AuditSpriteRendererState(visualTf, SPRITE_LIQUID_NAME, renderer => !renderer.enabled, "Ship_Sprite_Shape must be disabled by default.", results);
+            AuditSpriteRendererState(visualTf, HIT_MASK_FLASH_NAME, renderer => !renderer.enabled, "Ship_HitMaskFlash must be disabled by default.", results);
+            AuditSpriteRendererState(visualTf, HIT_MASK_FLASH_NAME, renderer => Mathf.Approximately(renderer.color.a, 0f), "Ship_HitMaskFlash alpha must be 0 by default.", results);
+        }
+
+        private static void AuditSerializedReferences(GameObject root, List<AuditResult> results)
+        {
+            var visualTf = root.transform.Find(VISUAL_CHILD_NAME);
+            if (visualTf == null)
+            {
+                return;
+            }
+
+            var back = FindRenderer(visualTf, SPRITE_BACK_NAME);
+            var liquid = FindRenderer(visualTf, SPRITE_LIQUID_NAME);
+            var solid = FindRenderer(visualTf, SPRITE_SOLID_NAME);
+            var hl = FindRenderer(visualTf, SPRITE_HL_NAME);
+            var core = FindRenderer(visualTf, SPRITE_CORE_NAME);
+            var weaponMount = FindRenderer(visualTf, SPRITE_WEAPON_MOUNT_NAME);
+            var hitMask = FindRenderer(visualTf, HIT_MASK_FLASH_NAME);
+            var dodge = FindRenderer(visualTf, DODGE_SPRITE_NAME);
+            var boostTrail = visualTf.Find(BOOST_TRAIL_ROOT_NAME)?.GetComponent<BoostTrailView>();
+
+            var shipView = root.GetComponent<ShipView>();
+            var boostVisuals = root.GetComponent<ShipBoostVisuals>();
+            var hitVisuals = root.GetComponent<ShipHitVisuals>();
+            var dashVisuals = root.GetComponent<ShipDashVisuals>();
+            var fireVisuals = root.GetComponent<ShipFireVisuals>();
+            var juiceVisuals = root.GetComponent<ShipVisualJuice>();
+            var afterImageSpawner = root.GetComponent<DashAfterImageSpawner>();
+
+            AuditReference(shipView, "_backRenderer", back, "ShipView._backRenderer", results);
+            AuditReference(shipView, "_liquidRenderer", liquid, "ShipView._liquidRenderer", results);
+            AuditReference(shipView, "_solidRenderer", solid, "ShipView._solidRenderer", results);
+            AuditReference(shipView, "_hlRenderer", hl, "ShipView._hlRenderer", results);
+            AuditReference(shipView, "_coreRenderer", core, "ShipView._coreRenderer", results);
+            AuditReference(shipView, "_weaponMountRenderer", weaponMount, "ShipView._weaponMountRenderer", results);
+            AuditReference(shipView, "_boostVisuals", boostVisuals, "ShipView._boostVisuals", results);
+            AuditReference(shipView, "_hitVisuals", hitVisuals, "ShipView._hitVisuals", results);
+            AuditReference(shipView, "_dashVisuals", dashVisuals, "ShipView._dashVisuals", results);
+            AuditReference(shipView, "_fireVisuals", fireVisuals, "ShipView._fireVisuals", results);
+            AuditReference(shipView, "_juiceVisuals", juiceVisuals, "ShipView._juiceVisuals", results);
+            AuditReference(shipView, "_afterImageSpawner", afterImageSpawner, "ShipView._afterImageSpawner", results);
+
+            AuditReference(boostVisuals, "_liquidRenderer", liquid, "ShipBoostVisuals._liquidRenderer", results);
+            AuditReference(boostVisuals, "_hlRenderer", hl, "ShipBoostVisuals._hlRenderer", results);
+            AuditReference(boostVisuals, "_coreRenderer", core, "ShipBoostVisuals._coreRenderer", results);
+            AuditReference(boostVisuals, "_boostTrailView", boostTrail, "ShipBoostVisuals._boostTrailView", results);
+            AuditReference(hitVisuals, "_hitMaskRenderer", hitMask, "ShipHitVisuals._hitMaskRenderer", results);
+            AuditReference(dashVisuals, "_dodgeSprite", dodge, "ShipDashVisuals._dodgeSprite", results);
+            AuditReference(dashVisuals, "_afterImageSpawner", afterImageSpawner, "ShipDashVisuals._afterImageSpawner", results);
+            AuditReference(fireVisuals, "_weaponMountRenderer", weaponMount, "ShipFireVisuals._weaponMountRenderer", results);
+            AuditReference(juiceVisuals, "_visualChild", visualTf, "ShipVisualJuice._visualChild", results);
+            AuditReference(afterImageSpawner, "_shipSpriteRenderer", solid, "DashAfterImageSpawner._shipSpriteRenderer", results);
+        }
+
+        private static void AuditComponent<T>(GameObject root, List<AuditResult> results, string label) where T : Component
+        {
+            if (root.GetComponent<T>() == null)
+            {
+                results.Add(new AuditResult(Severity.Error, $"Missing root component: {label}."));
+            }
+        }
+
+        private static void AuditRequiredChild(Transform parent, string childName, List<AuditResult> results)
+        {
+            if (parent.Find(childName) == null)
+            {
+                results.Add(new AuditResult(Severity.Error, $"Missing ShipVisual child: {childName}."));
+            }
+        }
+
+        private static void AuditForbiddenChild(Transform parent, string childName, List<AuditResult> results)
+        {
+            if (parent.Find(childName) != null)
+            {
+                results.Add(new AuditResult(Severity.Error, $"Legacy ShipVisual child must not return: {childName}."));
+            }
+        }
+
+        private static void AuditSpriteRendererState(Transform parent, string childName, System.Func<SpriteRenderer, bool> isValid, string message, List<AuditResult> results)
+        {
+            var renderer = FindRenderer(parent, childName);
+            if (renderer != null && !isValid(renderer))
+            {
+                results.Add(new AuditResult(Severity.Error, message));
+            }
+        }
+
+        private static SpriteRenderer FindRenderer(Transform parent, string childName)
+        {
+            return parent.Find(childName)?.GetComponent<SpriteRenderer>();
+        }
+
+        private static void AuditReference(Component component, string propertyPath, Object expected, string label, List<AuditResult> results)
+        {
+            if (component == null || expected == null)
+            {
+                return;
+            }
+
+            var so = new SerializedObject(component);
+            var prop = so.FindProperty(propertyPath);
+            if (prop == null)
+            {
+                results.Add(new AuditResult(Severity.Error, $"Missing serialized property: {label}."));
+                return;
+            }
+
+            if (prop.objectReferenceValue != expected)
+            {
+                results.Add(new AuditResult(Severity.Error, $"Broken serialized reference: {label}."));
+            }
+        }
+
+        private static void LogAuditResults(List<AuditResult> results, bool logToConsole)
+        {
+            if (!logToConsole)
+            {
+                return;
+            }
+
+            foreach (var result in results)
+            {
+                var message = $"[ShipPrefabRebuilder][Audit][{result.Severity}] {result.Message}";
+                if (result.Severity == Severity.Error)
+                {
+                    Debug.LogError(message);
+                }
+                else if (result.Severity == Severity.Warning)
+                {
+                    Debug.LogWarning(message);
+                }
+                else
+                {
+                    Debug.Log(message);
+                }
             }
         }
 

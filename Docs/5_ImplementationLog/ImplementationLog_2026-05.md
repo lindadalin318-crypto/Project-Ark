@@ -1,5 +1,35 @@
 ---
 
+## Ship/VFX ShipVfxValidator Authority Audit 聚合 — 2026-05-31 22:28
+
+- **新建/修改文件**
+  - `Assets/Scripts/Ship/Editor/ShipVfxValidator.cs`
+  - `Assets/Scripts/Ship/Editor/ShipVfxValidatorTests.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：为 `ShipVfxValidator.RunAudit(showDialog, logToConsole)` 增加只读 authority audit 聚合步骤，统一调用 `ShipPrefabRebuilder.RunAudit(false)`、`BoostTrailPrefabCreator.RunAudit(false)`、`ShipBoostTrailSceneBinder.RunAudit(false)` 与 `MaterialTextureLinker.RunAudit(false)`，并将下游 `Info` / `Warning` / `Error` 映射为 `ShipVfxValidator.ValidationResult`。新增回归测试覆盖“破坏 `mat_flame_trail._BaseMap` 后，总 Validator 能以 `Authority Audit/MaterialTextureLinker` scope 报告错误，同时不修复材质贴图”的只读聚合契约。
+
+- **目的**：继续 Ship/VFX Phase A authority cleanup，把前面 A2-A5 分散的单点 Audit 收口到一个总控入口，确保 prefab、scene-only Bloom、材质贴图与 Ship prefab 结构漂移都能通过 `ShipVfxValidator` 一次性显式暴露，而不是要求开发者记住多个菜单顺序。
+
+- **技术**：按 TDD 思路先新增 `RunAudit_IncludesMaterialTextureLinkerAuthorityErrorsWithoutRepairingIt` 失败测试，再实现最小泛型 `AppendAuthorityAuditResults` 和四个 `ConvertSeverity` 映射方法。聚合步骤只调用下游 `RunAudit(logToConsole: false)`，不调用任何 `CreateOrRebuild`、`ForceRebuild`、`Setup`、`Link`、`SetDirty` 或 `SaveAssets` 写入入口。验证：`dotnet build Project-Ark.slnx` 通过（仅保留第三方示例脚本既有 2 个 warning）。本轮 Unity MCP 的 `run_tests`、`execute_code` 与 `read_console` 多次出现会话未就绪或无明细返回，因此未声称 Unity EditMode 测试已完成。
+
+---
+
+## Ship/VFX ShipPrefabRebuilder Audit-only 模式 — 2026-05-31 22:12
+
+- **新建/修改文件**
+  - `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs`
+  - `Assets/Scripts/Ship/Editor/ShipVfxValidatorTests.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：为 `ShipPrefabRebuilder` 增加只读 `RunAudit(logToConsole)` 入口和菜单项 `ProjectArk/Ship/Authority/Audit Ship Prefab`。Audit 会检查 `Ship.prefab` 根组件、`ShipVisual` 现役子节点、旧 `Ship_Sprite_Liquid` / `Ship_Sprite_HL` / `Ship_Sprite_Solid` 回流、关键默认显隐状态，以及 `ShipView`、`ShipBoostVisuals`、`ShipHitVisuals`、`ShipDashVisuals`、`ShipFireVisuals`、`ShipVisualJuice`、`DashAfterImageSpawner` 的核心序列化引用。新增 EditMode 回归测试覆盖“删除 `Ship_Sprite_Body` 后 Audit 报错但不自动重建 prefab 子节点”的只读行为。
+
+- **目的**：继续 Ship/VFX Phase A authority cleanup，把 `Ship.prefab` 唯一权威工具从单一 Apply/Rebuild 菜单推进到 Audit / Apply 分离，确保正式飞船 prefab 的结构漂移、legacy 节点回流或核心 worker 引用缺失时能被显式发现，而不是依赖重建菜单或运行时 fallback 暗中修复。
+
+- **技术**：按 TDD 执行，先新增失败测试并在 Unity Editor 内确认 RED 条件为缺少 `ShipPrefabRebuilder.RunAudit(bool)`；再实现最小 `Severity`、`AuditResult`、`RunAudit` 与 prefab contents 只读检查 helper。`RunAudit` 只使用 `AssetDatabase.LoadAssetAtPath`、`PrefabUtility.LoadPrefabContents`、`SerializedObject` 读取状态，不调用 `SaveAsPrefabAsset`、`SetDirty`、`SaveAssets` 或 `Refresh`。验证：`dotnet build Project-Ark.slnx --no-restore` 通过（仅保留第三方示例脚本既有 2 个 warning）；Unity Editor 直接执行目标测试方法 `ShipPrefabRebuilderRunAudit_ReportsMissingShipBodyWithoutRebuildingIt` passed；直接执行当前权威状态 `ShipPrefabRebuilder.RunAudit(false)` 返回 0 error；Unity Console error 复查未发现项目脚本错误。Unity MCP Test Runner job 本轮两次初始化超时，未进入具体测试用例，因此未把该 job 作为业务测试失败处理。
+
+---
+
 ## Ship/VFX BoostTrailPrefabCreator Audit-only 模式 — 2026-05-31 20:59
 
 - **新建/修改文件**

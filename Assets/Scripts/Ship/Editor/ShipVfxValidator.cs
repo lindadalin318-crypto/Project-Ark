@@ -112,6 +112,7 @@ namespace ProjectArk.Ship.Editor
             ValidateBoostTrailPrefab(boostTrailPrefabAsset);
             ValidateSceneBloomBinding(boostBloomProfile);
             ValidateStaticAuthorityResidue();
+            ValidateAuthorityAuditChain();
 
             if (logToConsole)
             {
@@ -692,6 +693,108 @@ namespace ProjectArk.Ship.Editor
                 "Code Audit",
                 "仓库中仍保留 `BoostTrailDebugManagerEditor.cs`，需继续确认它是否仍有保留必要性。"
             );
+        }
+
+        private static void ValidateAuthorityAuditChain()
+        {
+            AppendAuthorityAuditResults(
+                "ShipPrefabRebuilder",
+                ShipPrefabRebuilder.RunAudit(logToConsole: false),
+                result => ConvertSeverity(result.Severity),
+                result => result.Message);
+
+            AppendAuthorityAuditResults(
+                "BoostTrailPrefabCreator",
+                BoostTrailPrefabCreator.RunAudit(logToConsole: false),
+                result => ConvertSeverity(result.Severity),
+                result => result.Message);
+
+            AppendAuthorityAuditResults(
+                "ShipBoostTrailSceneBinder",
+                ShipBoostTrailSceneBinder.RunAudit(logToConsole: false),
+                result => ConvertSeverity(result.Severity),
+                result => result.Message);
+
+            AppendAuthorityAuditResults(
+                "MaterialTextureLinker",
+                MaterialTextureLinker.RunAudit(logToConsole: false),
+                result => ConvertSeverity(result.Severity),
+                result => result.Message);
+        }
+
+        private static void AppendAuthorityAuditResults<TAuditResult>(
+            string auditName,
+            IReadOnlyList<TAuditResult> results,
+            Func<TAuditResult, Severity> severitySelector,
+            Func<TAuditResult, string> messageSelector)
+        {
+            if (results == null)
+            {
+                AddResult(Severity.Error, $"Authority Audit/{auditName}", $"`{auditName}` 未返回 Audit 结果。", null);
+                return;
+            }
+
+            for (int i = 0; i < results.Count; i++)
+            {
+                TAuditResult result = results[i];
+                AddResult(
+                    severitySelector(result),
+                    $"Authority Audit/{auditName}",
+                    messageSelector(result),
+                    null);
+            }
+        }
+
+        private static Severity ConvertSeverity(ShipPrefabRebuilder.Severity severity)
+        {
+            switch (severity)
+            {
+                case ShipPrefabRebuilder.Severity.Error:
+                    return Severity.Error;
+                case ShipPrefabRebuilder.Severity.Warning:
+                    return Severity.Warning;
+                default:
+                    return Severity.Info;
+            }
+        }
+
+        private static Severity ConvertSeverity(BoostTrailPrefabCreator.Severity severity)
+        {
+            switch (severity)
+            {
+                case BoostTrailPrefabCreator.Severity.Error:
+                    return Severity.Error;
+                case BoostTrailPrefabCreator.Severity.Warning:
+                    return Severity.Warning;
+                default:
+                    return Severity.Info;
+            }
+        }
+
+        private static Severity ConvertSeverity(ShipBoostTrailSceneBinder.Severity severity)
+        {
+            switch (severity)
+            {
+                case ShipBoostTrailSceneBinder.Severity.Error:
+                    return Severity.Error;
+                case ShipBoostTrailSceneBinder.Severity.Warning:
+                    return Severity.Warning;
+                default:
+                    return Severity.Info;
+            }
+        }
+
+        private static Severity ConvertSeverity(MaterialTextureLinker.Severity severity)
+        {
+            switch (severity)
+            {
+                case MaterialTextureLinker.Severity.Error:
+                    return Severity.Error;
+                case MaterialTextureLinker.Severity.Warning:
+                    return Severity.Warning;
+                default:
+                    return Severity.Info;
+            }
         }
 
         private static void ValidateCodePattern(CodePatternCheck check)

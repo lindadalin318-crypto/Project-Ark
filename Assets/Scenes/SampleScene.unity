@@ -42963,6 +42963,10 @@ PrefabInstance:
       propertyPath: _visualChild
       value: 
       objectReference: {fileID: 5801937892724603172}
+    - target: {fileID: 6330725002020864950, guid: c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0, type: 3}
+      propertyPath: _boostBloomVolume
+      value: 
+      objectReference: {fileID: 1262837272}
     - target: {fileID: 6503548334105523763, guid: c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0, type: 3}
       propertyPath: m_Enabled
       value: 1
