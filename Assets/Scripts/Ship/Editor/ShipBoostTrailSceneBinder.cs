@@ -22,6 +22,68 @@ namespace ProjectArk.Ship.Editor
         private const string BoostBloomVolumeName = "BoostTrailBloomVolume";
         private const string BoostBloomProfilePath = "Assets/Settings/BoostBloomVolumeProfile.asset";
 
+        public enum Severity
+        {
+            Info,
+            Warning,
+            Error
+        }
+
+        public sealed class AuditResult
+        {
+            public AuditResult(Severity severity, string message)
+            {
+                Severity = severity;
+                Message = message;
+            }
+
+            public Severity Severity { get; }
+            public string Message { get; }
+        }
+
+        [MenuItem("ProjectArk/Ship/VFX/Authority/Audit BoostTrail Scene Bloom References")]
+        public static void RunAuditMenu()
+        {
+            RunAudit(logToConsole: true);
+        }
+
+        public static IReadOnlyList<AuditResult> RunAudit(bool logToConsole = true)
+        {
+            var results = new List<AuditResult>();
+            var volumeType = ResolveVolumeType();
+            if (volumeType == null)
+            {
+                results.Add(new AuditResult(Severity.Error, "Volume type not found: UnityEngine.Rendering.Volume"));
+                LogAuditResults(results, logToConsole);
+                return results;
+            }
+
+            var bloomVolume = FindBoostBloomVolume(volumeType);
+            if (bloomVolume == null)
+            {
+                results.Add(new AuditResult(Severity.Error, $"Missing scene-only {BoostBloomVolumeName} with UnityEngine.Rendering.Volume."));
+            }
+            else
+            {
+                AuditBloomVolume(bloomVolume, results);
+            }
+
+            var views = UnityEngine.Object.FindObjectsByType<BoostTrailView>(FindObjectsInactive.Include);
+            if (views.Length == 0)
+            {
+                results.Add(new AuditResult(Severity.Error, "Scene contains no BoostTrailView. Ensure the Ship prefab already includes BoostTrailRoot first."));
+            }
+
+            foreach (var view in views)
+                AuditBoostTrailView(view, bloomVolume, results);
+
+            if (!HasIssues(results))
+                results.Add(new AuditResult(Severity.Info, "BoostTrail scene-only Bloom references are valid."));
+
+            LogAuditResults(results, logToConsole);
+            return results;
+        }
+
         [MenuItem("ProjectArk/Ship/VFX/Authority/Bind BoostTrail Scene Bloom References")]
         public static void SetupBoostTrailSceneReferences()
         {
@@ -175,6 +237,108 @@ namespace ProjectArk.Ship.Editor
             }
 
             return null;
+        }
+
+        private static Component FindBoostBloomVolume(Type volumeType)
+        {
+            if (volumeType == null)
+                return null;
+
+            var components = UnityEngine.Object.FindObjectsByType<Component>(FindObjectsInactive.Include);
+            for (int i = 0; i < components.Length; i++)
+            {
+                var candidate = components[i];
+                if (candidate != null && candidate.GetType() == volumeType && candidate.gameObject.name == BoostBloomVolumeName)
+                    return candidate;
+            }
+
+            return null;
+        }
+
+        private static void AuditBloomVolume(Component bloomVolume, List<AuditResult> results)
+        {
+            var serializedVolume = new SerializedObject(bloomVolume);
+            var isGlobalProp = serializedVolume.FindProperty("m_IsGlobal");
+            if (isGlobalProp != null && !isGlobalProp.boolValue)
+                results.Add(new AuditResult(Severity.Error, $"{BoostBloomVolumeName}.m_IsGlobal must be true."));
+
+            var priorityProp = serializedVolume.FindProperty("priority");
+            if (priorityProp != null && !Mathf.Approximately(priorityProp.floatValue, 100f))
+                results.Add(new AuditResult(Severity.Error, $"{BoostBloomVolumeName}.priority must be 100."));
+
+            var weightProp = serializedVolume.FindProperty("weight");
+            if (weightProp != null && !Mathf.Approximately(weightProp.floatValue, 0f))
+                results.Add(new AuditResult(Severity.Error, $"{BoostBloomVolumeName}.weight must be 0 at edit-time baseline."));
+
+            var blendDistanceProp = serializedVolume.FindProperty("blendDistance");
+            if (blendDistanceProp != null && !Mathf.Approximately(blendDistanceProp.floatValue, 0f))
+                results.Add(new AuditResult(Severity.Error, $"{BoostBloomVolumeName}.blendDistance must be 0."));
+
+            var expectedProfile = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(BoostBloomProfilePath);
+            if (expectedProfile == null)
+            {
+                results.Add(new AuditResult(Severity.Error, $"Boost bloom profile missing: {BoostBloomProfilePath}"));
+                return;
+            }
+
+            var profileProp = serializedVolume.FindProperty("sharedProfile");
+            if (profileProp != null && profileProp.objectReferenceValue != expectedProfile)
+                results.Add(new AuditResult(Severity.Error, $"{BoostBloomVolumeName}.sharedProfile must reference {BoostBloomProfilePath}."));
+        }
+
+        private static void AuditBoostTrailView(Component view, Component bloomVolume, List<AuditResult> results)
+        {
+            if (view == null)
+                return;
+
+            var so = new SerializedObject(view);
+            var bloomProp = so.FindProperty("_boostBloomVolume");
+            if (bloomProp == null)
+            {
+                results.Add(new AuditResult(Severity.Error, $"{view.name} is missing serialized field _boostBloomVolume."));
+                return;
+            }
+
+            if (bloomVolume == null)
+            {
+                if (bloomProp.objectReferenceValue != null)
+                    results.Add(new AuditResult(Severity.Error, $"{view.name}._boostBloomVolume points to a scene object, but {BoostBloomVolumeName} is missing."));
+
+                return;
+            }
+
+            if (bloomProp.objectReferenceValue != bloomVolume)
+                results.Add(new AuditResult(Severity.Error, $"{view.name}._boostBloomVolume must point to scene-only {BoostBloomVolumeName}."));
+        }
+
+        private static bool HasIssues(IReadOnlyList<AuditResult> results)
+        {
+            for (int i = 0; i < results.Count; i++)
+            {
+                if (results[i].Severity == Severity.Error || results[i].Severity == Severity.Warning)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static void LogAuditResults(IReadOnlyList<AuditResult> results, bool logToConsole)
+        {
+            if (!logToConsole)
+                return;
+
+            Debug.Log("[ShipBoostTrailSceneBinder] Audit completed.\n" + BuildAuditSummary(results));
+        }
+
+        private static string BuildAuditSummary(IReadOnlyList<AuditResult> results)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("── BOOST TRAIL SCENE AUDIT ──");
+
+            foreach (var result in results)
+                sb.AppendLine($"[{result.Severity}] {result.Message}");
+
+            return sb.ToString();
         }
 
         private static bool WireObjectReference(

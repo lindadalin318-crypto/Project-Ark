@@ -1,5 +1,20 @@
 ---
 
+## Ship/VFX SceneBinder Audit-only 模式 — 2026-05-31 18:04
+
+- **新建/修改文件**
+  - `Assets/Scripts/Ship/Editor/ShipBoostTrailSceneBinder.cs`
+  - `Assets/Scripts/Ship/Editor/ShipVfxValidatorTests.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：为 `ShipBoostTrailSceneBinder` 增加只读 `RunAudit(logToConsole)` 入口和菜单项 `ProjectArk/Ship/VFX/Authority/Audit BoostTrail Scene Bloom References`。Audit 会检查 `BoostTrailBloomVolume` 场景对象、`UnityEngine.Rendering.Volume` 配置、`BoostBloomVolumeProfile.asset` 绑定，以及场景中 `BoostTrailView._boostBloomVolume` 是否指向 scene-only Bloom authority。新增 EditMode 回归测试覆盖“删除 `BoostTrailBloomVolume` 后 Audit 报错但不创建对象”的只读行为。
+
+- **目的**：继续 Ship/VFX Phase A authority cleanup，把 scene-only Bloom 绑定从单一 Apply 菜单推进到 Audit / Apply 分离，避免未来排查时必须先写场景才能发现漂移，同时防止关键引用缺失退化为 silent no-op。
+
+- **技术**：按 TDD 执行，先新增失败测试并确认 Unity Console 编译错误指向缺少 `ShipBoostTrailSceneBinder.RunAudit` / `Severity`，再实现最小 `Severity`、`AuditResult`、`RunAudit` 与只读序列化检查逻辑。`RunAudit` 不调用 `Undo`、`SetDirty`、`MarkSceneDirty` 或 `SaveScene`，只读取 scene/component/serialized properties 并输出结果。验证：`validate_script` 对 `ShipBoostTrailSceneBinder.cs` 返回 0 errors / 0 warnings；`dotnet build Project-Ark.slnx` 通过（仅保留第三方示例脚本既有 2 个 warning）；Unity `TestResults.xml` 确认 `SceneBinderRunAudit_ReportsMissingBloomVolumeWithoutCreatingIt` 1/1 passed。Unity MCP job 状态汇报曾出现初始化超时，但结果文件和 Console 输出确认测试实际执行并通过。
+
+---
+
 ## Canary Ship Batch 11 Pool/Reset 验证 — 2026-05-31 17:00
 
 - **新建/修改文件**
@@ -2761,3 +2776,17 @@
 - **目的**：让金丝雀号过热状态能通过船体视觉读出“危险 / 热压上升”，不只依赖 HUD；同时保持本轮为资产层增量，不运行时修改 authored material 或 ScriptableObject。
 
 - **技术**：使用 Unity Editor 内部 `Texture2D` 程序化写入 512 × 512 RGBA PNG，不手写 `.meta`；核心与 spark 导入为 Sprite Single，PPU 320，Center pivot，alpha transparency，Clamp，Bilinear，无 mipmap；noise 导入为 Default Texture，用于未来 shader 热浪采样。Unity 导入验证确认四个资产均为 512 × 512，Console 最终复查为 0 error / 0 warning。
+
+
+## Ship/VFX Authority Audit Phase A 增量 — 2026-05-31 17:32
+
+- **新建/修改文件：**
+  - `Assets/Scripts/Ship/Editor/ShipVfxValidatorTests.cs`
+  - `Assets/Scripts/Ship/Editor/ShipVfxValidatorTests.cs.meta`
+  - `Assets/Scripts/Ship/Editor/ShipVfxValidator.cs`
+  - `Assets/Scenes/SampleScene.unity`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容：** 为 `ShipVfxValidator` 新增 EditMode 回归测试，覆盖当前 authority chain 无错误，以及旧 `BoostActivationHalo` 节点回流时必须被审计为错误；扩展 validator 的 legacy BoostTrail forbidden child 列表；为 `RunAudit` 增加 `logToConsole` 可选参数；修正 `SampleScene.unity` 中 `BoostTrailBloomVolume.weight` 基线为 `0`。
+- **目的：** 推进 Ship/VFX Phase A 的 Audit-first 收口，让 authority / legacy residue / scene-only baseline 可回归验证，避免旧 Boost Activation Halo 静默回流到正式 Ares-only Boost 链路。
+- **技术：** Unity EditMode NUnit 测试；使用 `PrefabUtility.LoadPrefabContents` 注入临时 legacy 节点验证审计规则；测试 cleanup 通过 `BoostTrailPrefabCreator` + `ShipBoostTrailSceneBinder` 恢复权威状态；`ShipVfxValidator` 保持只读审计，新增参数只控制日志输出。
+- **验证：** `dotnet build Project-Ark.slnx` 通过；Unity EditMode `ProjectArk.Ship.Editor.ShipVfxValidatorTests`：2/2 passed。

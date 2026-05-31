@@ -79,7 +79,8 @@ namespace ProjectArk.Ship.Editor
             "EmberTrail",
             "EmberSparks",
             "BoostEnergyLayer2",
-            "BoostEnergyLayer3"
+            "BoostEnergyLayer3",
+            "BoostActivationHalo"
         };
 
         private static readonly HashSet<string> AllowedBoostTrailViewSceneOverrides = new HashSet<string>
@@ -98,7 +99,7 @@ namespace ProjectArk.Ship.Editor
             RunAudit(showDialog: false);
         }
 
-        public static IReadOnlyList<ValidationResult> RunAudit(bool showDialog = false)
+        public static IReadOnlyList<ValidationResult> RunAudit(bool showDialog = false, bool logToConsole = true)
         {
             _lastResults.Clear();
 
@@ -112,7 +113,10 @@ namespace ProjectArk.Ship.Editor
             ValidateSceneBloomBinding(boostBloomProfile);
             ValidateStaticAuthorityResidue();
 
-            LogResultsToConsole();
+            if (logToConsole)
+            {
+                LogResultsToConsole();
+            }
 
             if (showDialog)
             {

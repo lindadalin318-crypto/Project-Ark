@@ -5909,7 +5909,7 @@ MonoBehaviour:
   m_IsGlobal: 1
   priority: 0
   blendDistance: 0
-  weight: 1
+  weight: 0
   sharedProfile: {fileID: 11400000, guid: d4e5f6a7b8c90123d4e5f6a7b8c90123, type: 2}
 --- !u!1 &300667694
 GameObject:
@@ -33709,6 +33709,55 @@ MonoBehaviour:
   _iconImage: {fileID: 1415424137}
   _button: {fileID: 1696998352}
   _placeholderLabel: {fileID: 805966619}
+--- !u!1 &1710984704
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1710984706}
+  - component: {fileID: 1710984705}
+  m_Layer: 0
+  m_Name: BoostTrailBloomVolume
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1710984705
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1710984704}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.Volume
+  m_IsGlobal: 1
+  priority: 100
+  blendDistance: 0
+  weight: 0
+  sharedProfile: {fileID: 11400000, guid: 9271875ad89be654e8dc3a02a6c799ac, type: 2}
+--- !u!4 &1710984706
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1710984704}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!213 &1712202784
 Sprite:
   m_ObjectHideFlags: 0
@@ -36832,55 +36881,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1861838220}
   m_CullTransparentMesh: 1
---- !u!1 &1871453693
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1871453695}
-  - component: {fileID: 1871453694}
-  m_Layer: 0
-  m_Name: BoostTrailBloomVolume
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1871453694
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1871453693}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.Volume
-  m_IsGlobal: 1
-  priority: 100
-  blendDistance: 0
-  weight: 0
-  sharedProfile: {fileID: 11400000, guid: 9271875ad89be654e8dc3a02a6c799ac, type: 2}
---- !u!4 &1871453695
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1871453693}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1877690959
 GameObject:
   m_ObjectHideFlags: 0
@@ -42858,15 +42858,15 @@ PrefabInstance:
     - target: {fileID: 523528515842614515, guid: c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0, type: 3}
       propertyPath: _boostBloomVolume
       value: 
-      objectReference: {fileID: 1871453694}
+      objectReference: {fileID: 0}
     - target: {fileID: 525041430557681708, guid: c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0, type: 3}
       propertyPath: _boostBloomVolume
       value: 
-      objectReference: {fileID: 1871453694}
+      objectReference: {fileID: 0}
     - target: {fileID: 643150857732467765, guid: c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0, type: 3}
       propertyPath: _boostBloomVolume
       value: 
-      objectReference: {fileID: 1871453694}
+      objectReference: {fileID: 0}
     - target: {fileID: 813421940633100059, guid: c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0, type: 3}
       propertyPath: m_Color.b
       value: 0.3
@@ -42882,19 +42882,19 @@ PrefabInstance:
     - target: {fileID: 1371028207881219372, guid: c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0, type: 3}
       propertyPath: _boostBloomVolume
       value: 
-      objectReference: {fileID: 1871453694}
+      objectReference: {fileID: 0}
     - target: {fileID: 1866619832695690946, guid: c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0, type: 3}
       propertyPath: _boostBloomVolume
       value: 
-      objectReference: {fileID: 1871453694}
+      objectReference: {fileID: 0}
     - target: {fileID: 2368434003656437950, guid: c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0, type: 3}
       propertyPath: _boostBloomVolume
       value: 
-      objectReference: {fileID: 1871453694}
+      objectReference: {fileID: 0}
     - target: {fileID: 2565023467549049809, guid: c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0, type: 3}
       propertyPath: _boostBloomVolume
       value: 
-      objectReference: {fileID: 1871453694}
+      objectReference: {fileID: 0}
     - target: {fileID: 2761402928340349956, guid: c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0, type: 3}
       propertyPath: _stats
       value: 
@@ -42910,7 +42910,7 @@ PrefabInstance:
     - target: {fileID: 2993321317124987931, guid: c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0, type: 3}
       propertyPath: _boostBloomVolume
       value: 
-      objectReference: {fileID: 1871453694}
+      objectReference: {fileID: 1710984705}
     - target: {fileID: 3072573738050324013, guid: c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0, type: 3}
       propertyPath: m_Enabled
       value: 0
@@ -42930,7 +42930,7 @@ PrefabInstance:
     - target: {fileID: 3216707320541969769, guid: c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0, type: 3}
       propertyPath: _boostBloomVolume
       value: 
-      objectReference: {fileID: 1871453694}
+      objectReference: {fileID: 0}
     - target: {fileID: 3439706829752887684, guid: c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0, type: 3}
       propertyPath: m_Mass
       value: 1
@@ -42954,11 +42954,11 @@ PrefabInstance:
     - target: {fileID: 3837098244894580725, guid: c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0, type: 3}
       propertyPath: _boostBloomVolume
       value: 
-      objectReference: {fileID: 1871453694}
+      objectReference: {fileID: 0}
     - target: {fileID: 5476596440275502812, guid: c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0, type: 3}
       propertyPath: _boostBloomVolume
       value: 
-      objectReference: {fileID: 1871453694}
+      objectReference: {fileID: 0}
     - target: {fileID: 5550689604721920931, guid: c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0, type: 3}
       propertyPath: _visualChild
       value: 
@@ -43040,8 +43040,8 @@ SceneRoots:
   - {fileID: 957167121}
   - {fileID: 98532516}
   - {fileID: 20883718}
-  - {fileID: 1871453695}
   - {fileID: 413451008}
   - {fileID: 1950440152}
   - {fileID: 962982277}
   - {fileID: 1189071969}
+  - {fileID: 1710984706}
