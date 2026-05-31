@@ -35,7 +35,7 @@ namespace ProjectArk.Combat.Editor
         [MenuItem(DeleteMenuPath)]
         public static void DeletePreviewRigs()
         {
-            var rigs = Object.FindObjectsByType<EchoWaveProceduralPreviewRig>(FindObjectsSortMode.None);
+            var rigs = Object.FindObjectsByType<EchoWaveProceduralPreviewRig>(FindObjectsInactive.Include);
             int deletedCount = 0;
 
             for (int i = 0; i < rigs.Length; i++)
@@ -75,7 +75,7 @@ namespace ProjectArk.Combat.Editor
                 return mainCamera;
             }
 
-            Camera[] cameras = Object.FindObjectsByType<Camera>(FindObjectsSortMode.None);
+            Camera[] cameras = Object.FindObjectsByType<Camera>(FindObjectsInactive.Exclude);
             for (int i = 0; i < cameras.Length; i++)
             {
                 if (cameras[i] != null && cameras[i].enabled)

@@ -176,7 +176,14 @@ namespace ProjectArk.Combat.HyperWind
                 return;
             }
 
-            int count = Physics2D.OverlapCircleNonAlloc(transform.position, _influenceRadius, _overlapBuffer, _captureLayers);
+            var captureFilter = new ContactFilter2D
+            {
+                useLayerMask = true,
+                useTriggers = true
+            };
+            captureFilter.SetLayerMask(_captureLayers);
+
+            int count = Physics2D.OverlapCircle(transform.position, _influenceRadius, captureFilter, _overlapBuffer);
             for (int i = 0; i < count; i++)
             {
                 TryCapture(_overlapBuffer[i]);

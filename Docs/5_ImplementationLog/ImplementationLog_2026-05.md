@@ -1,5 +1,226 @@
 ---
 
+## Canary Ship Batch 11 Pool/Reset 验证 — 2026-05-31 17:00
+
+- **新建/修改文件**
+  - `Assets/Scripts/Ship/VFX/ShipVisualValidationView.cs`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：完成 Batch 11 / Task 29 的 pool/reset 验证，并修复验证视图暴露出的两个防御性复位问题。Dash / Fire / Hit / Weaving / Overheat 各连续触发 10 次后均能回到 clean Normal；Play Mode 中对验证实例执行 SetActive false/true 后也能回到 clean Normal。计划中已勾选 `Pool/reset checks pass`，并在 Console 中按 `Ship` 过滤确认没有 Ship visual missing reference 相关 error/warning，Batch 11 Completion Gate 已全部完成。
+
+- **目的**：关闭 Canary ship complete gameplay visual asset 的最终复位门槛，确保高风险视觉状态不会在重复触发、对象禁用重启或 Play Mode 退出后留下 sprite、颜色、alpha、scale、图层显隐残留。
+
+- **技术**：按系统化调试先复现失败，再定位到 `Overheat -> Normal` 后 `Core` sprite 仍停留在 `spr_ship_canary_core_overheat_emission`。在 `ShipVisualValidationView` 中缓存默认 Core sprite，并在 `ResetVisuals()` 恢复；随后发现禁用/重启不会重新执行 `Awake()`，新增 `OnEnable()` 调用初始状态恢复，同时让默认 sprite 缓存只初始化一次，避免把脏 sprite 缓存成默认值。验证使用 Unity 临时代码比对 SpriteRenderer sprite/enabled/color/transform 签名，并检查该验证控制器没有 Material / ScriptableObject / AssetDatabase 写入路径。
+
+## 场景 Warning 清理：TMP CardIcon 缺字降级 — 2026-05-31 10:15
+
+- **新建/修改文件**
+  - `Assets/Scenes/SampleScene.unity`
+  - `Assets/Scripts/UI/ItemDetailView.cs`
+  - `Assets/Scripts/UI/Editor/UICanvasBuilder.cs`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：修复 Play Mode 中 TextMeshPro 对 `CardIcon` 的 fallback glyph warning。根因是 `CardIcon` 和 `ItemDetailView/TypeLabel` 使用 `U+25C8`（`◈`），默认 `LiberationSans SDF` 不包含该字形，运行时被替换为方框。将当前场景序列化文本、`ItemDetailView` 运行时类型标签、`UICanvasBuilder` 未来重建 UI 的默认文本统一改为 ASCII `>` / `>  CORE` 形式，避免依赖新增 TMP 字体资产。
+
+- **目的**：用最小风险方式清理 UI Console 噪音，不引入新字体资源、不扩大 TMP fallback 链，也不改变星图装备逻辑。该修复只调整装饰性文本标记，保留类型颜色和布局结构。
+
+- **技术**：先读取 Unity Console 确认 warning 来源为 `CardIcon`，再通过运行时代码采样定位对象路径与实际文本。修改源码和 `SampleScene.unity` 后执行 `dotnet build Project-Ark.slnx`，构建成功。随后同步 Unity Editor 当前打开场景内存状态并保存，清空 Console，强制 `TMP_Text.ForceMeshUpdate()` 与 `Canvas.ForceUpdateCanvases()`；复查 warning 列表为 0，确认 `U+25C8` / `CardIcon` fallback warning 不再出现。
+
+---
+
+## 场景 Warning 清理：Projectile_Matter TrailRenderer 固化 — 2026-05-31 10:07
+
+- **新建/修改文件**
+  - `Assets/_Data/StarChart/Prefabs/Projectile_Matter.prefab`
+  - `Assets/Scripts/Combat/Editor/Batch5AssetCreator.cs`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：修复 Play Mode 中 `[Projectile] 'Projectile_Matter(Clone)' has no TrailRenderer` 的运行时 fallback warning。将 `Projectile_Matter.prefab` 补齐预配置 `TrailRenderer`，参数与原 `Projectile.Awake()` fallback 保持一致：`time = 0.15`、头部宽度 `0.085`、白色渐隐、`minVertexDistance = 0.1`、`LineAlignment.TransformZ`，并复用 `SpriteRenderer.sharedMaterial`。同步更新 legacy `Batch5AssetCreator.CreateProjectilePrefab()`，使未来重新生成 `Projectile_Matter` 时不会再次缺少 `TrailRenderer`。
+
+- **目的**：把 projectile trail 从运行时自动补组件转回 authored prefab 状态，减少 Console 噪音并避免对象池预热阶段动态添加组件。这个修复不改变射击数值、不改 `Projectile` runtime 发射逻辑，也不引入新的 fallback path。
+
+- **技术**：先用 Unity 代码验证红灯状态：`Projectile_Matter.prefab` 缺 `TrailRenderer`；再通过 `PrefabUtility.LoadPrefabContents()` / `SaveAsPrefabAsset()` 对 prefab 做安全写入。修复后执行静态检查确认 prefab 上 `TrailRenderer` 存在且参数正确；`dotnet build Project-Ark.slnx` 编译通过。清空 Console 后进入 Play Mode，`StarChartController` 初始化对象池时不再出现 `Projectile_Matter(Clone)` / `TrailRenderer` fallback warning；运行时采样确认 20 个 `Projectile_Matter` 池化实例全部带 `TrailRenderer`。
+
+---
+
+## Canary Ship/VFX Plan 状态收口 — 2026-05-31 10:00
+
+- **新建/修改文件**
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：同步 Canary Ship/VFX ongoing plan 中已过期的状态项：将 Batch 4 的 `Canary_Dash.anim` 从 deferred 改为已完成，并记录 0.25 秒 Dash burst 回到 Idle / Normal body 的验证结论；将 Batch 5 的 Boost-vs-Dash gate 改为已完成，明确 Dash 是短压缩 / smear burst，Boost 是 `BoostTrailRoot/AresBoostTrail` 的持续推进读感；将末尾 Unity 在线 Play Mode / Console 复查从“待完成”更新为已完成，记录三类目标 warning 已消失。
+
+- **目的**：让 plan 当前状态与已经完成的 Unity / Play Mode 验证证据一致，避免后续继续围绕已关闭的 Dash、Boost-vs-Dash、场景三类 warning 进行重复工作，并把下一步收束到真正剩余的非阻断 warning cleanup。
+
+- **技术**：只修改计划文档，不改 runtime、prefab、scene 或资产主链。基于既有实现日志与 Unity 在线复查记录做文档状态收口，保留 Ship/VFX authority 约束：不把 preview Animator 升级为正式 runtime owner，不引入 Dash additive trail / particle 作为当前 MVP blocker。
+
+---
+
+## 场景 Warning 配置清理：Ambience / Room 起始配置 — 2026-05-31 09:22
+
+- **新建/修改文件**
+  - `Assets/Scenes/SampleScene.unity`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：完成一轮非阻断场景 warning cleanup。将 `AmbienceController._postProcessVolume` 绑定到场景现有 `Global Volume` 组件；将 `RoomManager._startingRoom` 绑定到 `DebugRoom` 的 `Room` 组件；将 `DebugRoom` 与 `TargetRoom` 上会被 `Room.Awake()` 读取并自动修复的第二个 `BoxCollider2D` 序列化为 trigger，避免每次进入 Play Mode 都输出 room trigger auto-fix warning。额外核对剩余 `m_IsTrigger: 0` collider，确认它们属于 Tilemap / Composite 物理碰撞链，不属于 `Room` 触发器。
+
+- **目的**：把 Play Mode 中已确认的场景配置 warning 从运行时自动修复转为 authored scene 状态，减少 Console 噪音，让后续可玩性验证更聚焦在真正的 gameplay / VFX 问题上。
+
+- **技术**：先根据 `AmbienceController`、`Room`、`RoomManager` 的生命周期和 warning 文案追踪根因，再在 `SampleScene.unity` 中做精确 YAML 修改：`RoomManager._startingRoom -> 413451006`，`AmbienceController._postProcessVolume -> 300000003`，`DebugRoom` collider `413451007` 与 `TargetRoom` collider `1950440151` 的 `m_IsTrigger` 改为 `1`。执行 `dotnet build Project-Ark.slnx` 通过。Unity MCP 会话在最终在线复查前终止，因此仍需在 Unity Editor 恢复后刷新场景并进 Play Mode 复查 Console。
+
+---
+
+## Canary Ship Play Mode 手感验证 — 2026-05-31 00:59
+
+- **新建/修改文件**
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：完成一轮正式 Play Mode feel validation。通过正式 runtime 入口验证 `Normal / Lean / Dash / Boost / Hit` 链路：`Normal` baseline 清洁；`Boost` 通过 `ShipStateController.ToStateForce(Boost)` 启动 7 个 `AresBoostTrail` 粒子并在回到 `Normal` 后归零；`Dash` 切换到 `spr_ship_canary_dash_01`、隐藏 outline、启用 `Dodge_Sprite`，回到 `Normal` 后恢复 `spr_ship_canary_body_normal_albedo`；`Lean` 横向采样确认右/左分别使用 `spr_ship_canary_lean_right_03` / `spr_ship_canary_lean_left_03` 并隐藏 outline；`Hit` 通过 `ShipHealth.TakeDamage()` 启用 `Ship_HitMaskFlash`，`ShipView.ResetVFX()` 后恢复 disabled / alpha 0。
+
+- **目的**：关闭当前 Ship/VFX MVP 的现场手感验证门槛，确认正式 `Ship.prefab` runtime worker 主链已经能表达 Normal、Lean、Dash、Boost、Hit 的核心可读性，不需要用 Dash additive trail / particle polish 阻塞当前批次。
+
+- **技术**：验证只通过现役 runtime owner 执行，不修改代码或 prefab：状态切换走 `ShipStateController`，受击走 `ShipHealth`，视觉恢复走 `ShipView.ResetVFX()`。执行 `ProjectArk/Ship/VFX/Audit/Run Ship VFX Audit` 后，`ShipVfxValidator` 返回 `0 errors, 0 warnings, 3 info`。验证中一次 MCP 临时脚本调用 `Physics2D.Simulate` 触发非项目代码错误，已清空 Console 并重跑 audit，最终 Console 仅保留 validator info。
+
+---
+
+## Canary Lean / Dash 正式运行时 Sprite 动画接入 — 2026-05-30 14:13
+
+- **新建/修改文件**
+  - `Assets/Scripts/Ship/Data/ShipJuiceSettingsSO.cs`
+  - `Assets/Scripts/Ship/VFX/ShipVisualJuice.cs`
+  - `Assets/Scripts/Ship/VFX/ShipDashVisuals.cs`
+  - `Assets/Scripts/Ship/VFX/ShipView.cs`
+  - `Assets/Scripts/Ship/Tests/ShipVisualJuiceTests.cs`
+  - `Assets/_Data/Ship/DefaultShipJuiceSettings.asset`
+  - `Assets/_Prefabs/Ship/Ship.prefab`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：修复正式飞船行驶中看不到 Canary `Lean` / `Dash` 逐帧动画的问题。根因是 `Canary_LeanLeft.anim`、`Canary_LeanRight.anim`、`Canary_Dash.anim` 只接入了 `CanaryShipVisualPreview.prefab` 的预览 Animator，正式 `Ship.prefab` 运行链只执行程序化 tilt、i-frame flicker、Dodge ghost 和 after-image，没有任何 runtime 字段引用 Canary Lean/Dash sprite 帧。本次将 `Normal / Lean Left / Lean Right / Dash` body sprite 帧作为 `ShipJuiceSettingsSO` 数据配置接入，`ShipVisualJuice` 根据横向移动分量切换 Lean sprite，`ShipDashVisuals` 在进入 Dash 时播放 5 帧 one-shot Dash sprite burst，Dash 结束时恢复 normal 并由 `ShipView` 刷新当前 Lean/Normal 姿态。
+
+- **目的**：让玩家在正式飞船驾驶中实际看到 Lean 和 Dash 的 sprite 姿态变化，而不是只能在预览 prefab / Animator 中验证。实现保持现役 `Ship/VFX` worker 主链，不把预览 Animator 升级为正式 runtime owner，避免新增双轨主链或 debug 接管正式链。
+
+- **技术**：沿用 `ShipView` → worker 的事件路由：`ShipView.InitializeWorkers()` 将正式 `_solidRenderer` 注入 `ShipVisualJuice`；Dash 仍由 `ShipStateController.OnStateChanged(Dash)` 路由到 `ShipDashVisuals.OnDashStarted()`。Dash sprite 播放使用 `UniTask.Delay` + `CancellationTokenSource`，对象池 / VFX 复位路径中会取消并恢复 normal sprite。`DefaultShipJuiceSettings.asset` 直接引用已存在的 Canary sprite GUID，未手写新 `.meta`。验证：`dotnet build Project-Ark.slnx` 成功，Unity Console 未出现本轮新增 error；当前仍有既有弃用 / 未使用 warning。
+
+---
+
+## Canary Dash Play Mode 预览播放验证 — 2026-05-30 13:30
+
+- **新建/修改文件**
+  - `Assets/_Prefabs/Ship/CanaryShipVisualPreview.prefab`
+  - `Assets/_Art/Ship/Canary/Animations/CanaryShipVisualPreview.controller`
+  - `Assets/Screenshots/canary_dash_runtime_128_contact_sheet.png`
+  - `Assets/Screenshots/canary_dash_runtime_128_contact_sheet.png.meta`
+  - `Assets/Screenshots/canary_dash_animator_runtime_128_contact_sheet.png`
+  - `Assets/Screenshots/canary_dash_animator_runtime_128_contact_sheet.png.meta`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：修复 `CanaryShipVisualPreview.prefab` 的播放入口：给 prefab 根节点添加 `Animator`，绑定 `CanaryShipVisualPreview.controller`，关闭 root motion，并设置 Always Animate。为 `Canary_Dash` 状态补充 exit-time transition，0.25 秒播放完后自动回到 `Canary_Idle`。随后进入 Play Mode，用运行时 `Animator.Play("Canary_Dash")` + `Animator.Update()` 采样验证：0.00 / 0.05 / 0.10 / 0.15 / 0.20 秒依次为 `spr_ship_canary_dash_01` 至 `spr_ship_canary_dash_05`，0.25 秒回到 `spr_ship_canary_body_normal_albedo` / `Canary_Idle`。
+
+- **目的**：关闭 `Task 15B` 的运行时预览验证门槛，确认真实 Dash preview playback 不会变成长 Boost 读感，也没有因为缺 Animator 导致 clip 只停留在静态资产层。当前结论是 Dash 读作 0.25 秒短压缩 / smear burst；Boost 仍读作 `BoostTrailRoot/AresBoostTrail` 的持续推进，二者在预览层已区分。
+
+- **技术**：使用 `PrefabUtility.LoadPrefabContents` 安全修改 prefab 资产，用 `AnimatorController` API 写入 Dash→Idle transition。Play Mode 验证不修改正式 `Ship.prefab` 或 `BoostTrailRoot.prefab`，只实例化 `CanaryShipVisualPreview.prefab` 临时对象并销毁。Console 复查未发现本轮新增错误；现有 warning 仍为既有 Missing Script、`BoostTrailView` scene-only Bloom 引用、Room/ServiceLocator/Minimap/Ambience 等配置类 warning。
+
+---
+
+## Canary Boost / Dash 资产级低分辨率对照 — 2026-05-30 13:13
+
+- **新建/修改文件**
+  - `Assets/Screenshots/canary_dash_128_contact_sheet.png`
+  - `Assets/Screenshots/canary_dash_128_contact_sheet.png.meta`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：生成 Dash 5 帧 128px contact sheet，并与现有 `Assets/Screenshots/boost-trail-playmode-check-final.png` 以及 `Assets/_Prefabs/VFX/BoostTrailRoot.prefab` 的 `BoostTrailRoot/AresBoostTrail` 结构做资产级对照。结论：Dash 静态帧在 128px 下读作短压缩 / smear burst；Boost 仍由 `BoostTrailView` 驱动的 7 组 sustain particles / AresBoostTrail 形成持续推进语言，二者在资产级低分辨率读感上不重叠。
+
+- **目的**：关闭 `Task 15B` 的静态资产级 Boost / Dash 区分风险，避免 Dash 误继承 Boost 的长拖尾语言。下一步只剩运行时播放确认：检查 `Canary_Dash.anim` 的 0.25 秒播放是否有跳帧、残留 alpha / scale、或意外长 trail 读感。
+
+- **技术**：先尝试用本地 Python/PIL 生成接触表，但环境缺少 PIL；随后改用 Unity Editor `Texture2D` 直接读取原始 PNG 字节生成 contact sheet，避免 TextureImporter 缓存或裁剪数据干扰。MCP 读取 `BoostTrailRoot.prefab` 层级曾超时，改为直接读取 prefab YAML 验证 `BoostTrailView`、`AresBoostTrail` nested prefab 与 sustain particle 引用。未修改正式 `Ship.prefab`、`BoostTrailRoot.prefab`、Runtime 脚本或 Ship/VFX authority 主链。
+
+---
+
+## Canary Dash 官方命名与 Preview Clip 接入 — 2026-05-30 13:13
+
+- **新建/修改文件**
+  - `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_01.png`
+  - `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_01.png.meta`
+  - `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_02.png`
+  - `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_02.png.meta`
+  - `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_03.png`
+  - `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_03.png.meta`
+  - `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_04.png`
+  - `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_04.png.meta`
+  - `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_05.png`
+  - `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_05.png.meta`
+  - `Assets/_Art/Ship/Canary/Animations/Canary_Dash.anim`
+  - `Assets/_Art/Ship/Canary/Animations/Canary_Dash.anim.meta`
+  - `Assets/_Art/Ship/Canary/Animations/CanaryShipVisualPreview.controller`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：将 Dash 源帧从临时 `dash1.png` 至 `dash5.png` 连同各自 `.meta` 重命名为官方 `spr_ship_canary_dash_01.png` 至 `spr_ship_canary_dash_05.png`，保留原 GUID。通过 Unity TextureImporter 将 5 张 Dash sprite 统一为 Sprite Single、PPU 320、center pivot、no mip maps、Point filter、Default platform uncompressed。新增 `Canary_Dash.anim`，用 5 张官方 Dash sprite 绑定预览 prefab 的 `Body` SpriteRenderer，采样率 20，时长 0.25 秒，非循环；并在 `CanaryShipVisualPreview.controller` 中接入 `Canary_Dash` 状态。
+
+- **目的**：完成 `Task 15B` 前置的真实 Dash sprite 接入，使 Boost / Dash 读感对照不再停留在合同级假设。Dash 现在可以以 0.25 秒短爆发 clip 参与后续低分辨率可读性验证。
+
+- **技术**：使用文件系统移动同时迁移 `.meta`，避免 Unity 重新生成 GUID；随后通过 Unity MCP 刷新 AssetDatabase 并用 Editor Importer API 批量设置 TextureImporter。用 `AnimationUtility.SetObjectReferenceCurve` 创建 SpriteRenderer `m_Sprite` 曲线，并通过 AnimatorController API 新增 / 更新 `Canary_Dash` 状态。Console 复查未发现由本次 Dash 资源和动画新增引入的新错误；当前 Console 中仍存在若干既有 warning（Missing script、BoostTrailView scene-only Bloom 引用、Room/ServiceLocator 等）。
+
+---
+
+## Canary Dash Sprite 源帧同步 — 2026-05-30 12:57
+
+- **新建/修改文件**
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：同步 Dash sprite 已补齐的信息。计划中的 Batch 3 从整体 `Deferred` 改为 `Asset Frames Ready, Unity Validation Pending`，记录当前源帧已存在于 `Assets/_Art/Ship/Canary/Sprites/Dash/dash1.png` 至 `dash5.png`，同时保留官方工作流目标名 `spr_ship_canary_dash_01-05.png`。`Current Next Action` 中的 `Task 15B` 改为使用真实 Dash 源帧与现役 `BoostTrailRoot/AresBoostTrail` 做 Boost / Dash 读感对照。
+
+- **目的**：避免继续把 Dash 当作纯合同级 deferred 项处理。下一步应先做 Dash 命名 / import settings / 短 clip 验证，再判断是否需要额外 Dash trail 或 particle 支撑；Boost 必须保持持续推进读感，Dash 必须保持短爆发 / smear 读感。
+
+- **技术**：仅同步计划与日志，不修改 Unity 资产、Prefab、Scene、Runtime 脚本或 Ship/VFX authority 主链。通过文件系统确认 `Dash/` 目录下已有 5 张源图；当前不直接重命名或改 `.meta`，避免在未确认用户期望命名迁移方式前破坏 Unity 资产 GUID / 引用。
+
+---
+
+## Canary Boost 下一步指针推进 — 2026-05-30 12:54
+
+- **新建/修改文件**
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：修正 Canary Ship 完整 Art/VFX plan 的 `Current Next Action`。将过期的 `Task 15A: Boost source audit + adaptation target confirmation` 推进为 `Task 15B: Boost vs Dash distinction validation`，并在上下文中明确 `Task 15A / Task 16` 已完成：QFZ `VFX_Ares_Projectile` 已审计、`VFX_Ares_Projectile_Only.prefab` 已通过 `BoostTrailPrefabCreator` 接入 `BoostTrailRoot.prefab`，剩余 Batch 5 gate 是 Boost 与未来 Dash 读感区分。
+
+- **目的**：避免后续执行继续卡在已完成的 Boost source audit 上，把计划焦点收口到玩家可读性风险：Boost 必须保持持续推进读感，Dash 仍应是短爆发 / smear，不应继承长拖尾语言。
+
+- **技术**：仅做文档计划推进，不修改 Unity 资产、Prefab、Scene、Runtime 脚本或 Ship/VFX authority 主链。下一步验证应优先使用现役 `BoostTrailRoot/AresBoostTrail` 链路作为 Boost 样本，并以 Dash 合同级视觉约束完成低分辨率可读性对比。
+
+---
+
+## Canary 受击 Hit Mask Overlay 接入 — 2026-05-29 15:54
+
+- **新建/修改文件**
+  - `Assets/_Art/Ship/Canary/Textures/Masks/spr_ship_canary_shape_hit_mask.png`
+  - `Assets/_Art/Ship/Canary/Textures/Masks/spr_ship_canary_shape_hit_mask.png.meta`
+  - `Assets/Scripts/Ship/VFX/ShipHitVisuals.cs`
+  - `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs`
+  - `Assets/Scripts/Ship/Tests/ShipHitVisualsTests.cs`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/2_TechnicalDesign/Ship/ShipVFX_CanonicalSpec.md`
+  - `Docs/2_TechnicalDesign/Ship/ShipVFX_AssetRegistry.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：完成 Task 18 Hit Mask MVP。新增 `spr_ship_canary_shape_hit_mask.png` 作为透明白色 overlay mask，视觉范围聚焦船体外轮廓与中轴/core 区域，避免整船白色矩形闪烁。`ShipHitVisuals` 新增 `_hitMaskRenderer` 与 `_enableHitMask`，正伤害时短促显示并淡出 mask，`ResetState()` 会停止补间并隐藏 overlay。`ShipPrefabRebuilder` 作为 `Ship.prefab` 唯一权威，新增 `Ship_HitMaskFlash` 节点、导入 PNG 为 Sprite、默认禁用/alpha 0，并将其接线到 `ShipHitVisuals._hitMaskRenderer`。测试文件补充正伤害显示 Hit Mask overlay 的用例。
+
+- **目的**：把受击反馈从“整船白闪 + Hit Spark”推进到更可读的外轮廓/core 混合遮罩，强化被击中的瞬时读感，同时保持 Canary 船体身份识别度，不新增 shader、不新增 runtime fallback、不让 debug 或 scene override 成为第二真相源。
+
+- **技术**：沿用 Ship/VFX Worker 模式与 `ShipPrefabRebuilder` authority builder。Mask 资产为程序化生成的 512×512 RGBA PNG，Unity `.meta` 由 Editor/AssetDatabase 自动生成；运行时用 PrimeTween 对 `SpriteRenderer` alpha 做短促淡出，并在防御性复位中清理 tween/alpha/enabled 状态。验证：`dotnet build Project-Ark.slnx` 成功，`ProjectArk.Ship`、`ProjectArk.Ship.Editor`、`ProjectArk.Ship.Tests` 均编译通过；输出仅包含项目既有 warning。`dotnet test Project-Ark.slnx --filter FullyQualifiedName~ShipHitVisualsTests` 仅触发 Unity 测试程序集构建，未作为 Unity Test Runner 通过证据。当前 shell 环境未找到 Unity 可执行文件，无法自动执行 `ShipPrefabRebuilder.RebuildSpriteLayersSilently()`；`Ship.prefab` 尚未写入 `Ship_HitMaskFlash`，需要在 Unity Editor 中执行 `ProjectArk/Ship/Authority/Rebuild Ship Prefab` 后再做 Play Mode 受击视觉确认。
+
+---
+
 ## 清理 Ship 场景旧 Glitch Sprite 覆盖层 — 2026-05-29 00:54
 
 - **新建/修改/删除文件**
@@ -2139,3 +2360,404 @@
   - 保持 `ShipPrefabRebuilder` 作为 `Ship.prefab` 结构和核心引用唯一权威。
   - 复用已有 Ship/Canary 受控材质资产，避免新增半成品材质和手造 `.meta`。
   - 已通过 `dotnet build Project-Ark.slnx` 验证 C# 编译；已通过 prefab YAML 检查确认 Hit Spark renderer 材质引用不再为空。Unity MCP 当前持续超时，需在 Editor 恢复后运行新增 EditMode 测试或人工 Play Mode 视觉验收。
+
+
+## Canary Ship Art/VFX 下一步指针修正 — 2026-05-29 16:16
+
+- **新建/修改文件：**
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容：**
+  - 将 Task 18 Hit Mask overlay 继续按 MVP 完成入账，同时记录当前白色受击 mask 视觉偏突兀，后续需要做更柔和、方向性更强的 Hit feedback 返工。
+  - 确认计划正文中 `Task 12: Import Settings Pass` 与 `Task 13: Create Canary Preview Prefab` 已完成，修正末尾 `Current Next Action`，不再指向已完成的 Task 12。
+  - 将下一步推进目标更新为 `Task 14: Create Preview Animation Clips — Lean/Dash return pass`。
+- **目的：**
+  - 避免后续迭代被过期的 Current Next Action 带回已完成任务，同时保留 Hit Mask 视觉返工风险，保证当前可玩闭环继续推进。
+- **技术：**
+  - 仅更新计划与日志文档，不改 Runtime / Prefab / Scene 链路。
+  - 继续遵守 `Ship.prefab` authority：下一步 Lean/Dash preview 不应破坏正式 `Ship.prefab` 主链。
+
+
+## Canary Lean 源帧补齐状态同步 — 2026-05-29 22:32
+
+- **新建/修改文件：**
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容：**
+  - 确认 `Assets/_Art/Ship/Canary/Sprites/Lean/` 下已存在 `PlayerLeanLeft1.png`、`PlayerLeanLeft2.png`、`PlayerLeanLeft3.png`、`PlayerLeanRight1.png`、`PlayerLeanRight2.png`、`PlayerLeanRight3.png`。
+  - 使用本地尺寸检查确认六张 Lean PNG 均为 `512 × 512`，与当前 Normal body canvas 一致。
+  - 将计划中的 Batch 2 从 Deferred 更新为 Reopened / Source Frames Supplied，并将 Task 7 / Task 8 的左右 Lean 源帧创建步骤标记为已补齐。
+  - 将 Task 14 的 LeanLeft / LeanRight clip 状态改为 Ready for hookup；Dash 保持 Deferred / MVP contract needed。
+  - 将 Current Next Action 更新为 `Task 14A: Lean import/name pass + Lean preview clips`。
+- **目的：**
+  - 让计划反映用户已补齐 Lean 资产的当前事实，避免后续继续把 Lean 当作缺失阻塞项。
+  - 把剩余工作收敛到官方命名/导入设置/Unity 预览动画验证，而不是重新生产 Lean 图。
+- **技术：**
+  - 仅更新计划与日志文档，不改 Runtime / Prefab / Scene 链路。
+  - 通过 `sips -g pixelWidth -g pixelHeight` 对比 Normal body 与 Lean 源帧尺寸，确认基础 canvas 对齐。
+  - 保留 workflow 命名风险：当前 supplied source 仍是 `PlayerLeanLeft/Right*.png`，下一步需要转为 `spr_ship_canary_lean_left/right_01-03.png` 或在计划中明确采用该命名。
+
+
+## Canary Lean 官方命名迁移 — 2026-05-29 22:38
+
+- **新建/修改文件：**
+  - `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_left_01.png`
+  - `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_left_02.png`
+  - `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_left_03.png`
+  - `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_right_01.png`
+  - `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_right_02.png`
+  - `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_right_03.png`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容：**
+  - 将 Lean 左右各三张源帧从 `PlayerLeanLeft/Right*.png` 命名迁移为正式 workflow 命名 `spr_ship_canary_lean_left/right_01-03.png`。
+  - 迁移后再次确认六张 Lean PNG 均存在且保持 `512 × 512`。
+  - 更新计划中的 Batch 2、Task 14 和 Current Next Action：官方命名已完成，下一步改为 Unity import validation + Lean preview clips。
+  - 保留参考映射表中的 `PlayerLeanLeft/Right1-3` 原参考名，仅作为 reference asset mapping，不再作为当前执行路径。
+- **目的：**
+  - 消除 Lean 资产命名与项目 workflow 不一致的问题，使后续 Unity 导入设置、AnimationClip 和预览 Prefab 可以引用稳定的正式路径。
+  - 避免后续任务继续指向已不存在的 `PlayerLean*` 源文件名。
+- **技术：**
+  - 使用文件移动完成 PNG 重命名；未发现现有 `.png.meta`，因此没有手造 Unity `.meta` 或 GUID。
+  - 使用 `find` 和 `sips -g pixelWidth -g pixelHeight` 验证目标文件存在与尺寸一致。
+  - 仅更新计划/日志和 art asset 文件名，不改 Runtime / Prefab / Scene 主链。
+
+
+## Canary Lean 导入验证与预览动画 — 2026-05-30 10:57
+
+- **新建/修改文件：**
+  - `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_left_01.png.meta`
+  - `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_left_02.png.meta`
+  - `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_left_03.png.meta`
+  - `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_right_01.png.meta`
+  - `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_right_02.png.meta`
+  - `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_right_03.png.meta`
+  - `Assets/_Art/Ship/Canary/Animations/Canary_LeanLeft.anim`
+  - `Assets/_Art/Ship/Canary/Animations/Canary_LeanLeft.anim.meta`
+  - `Assets/_Art/Ship/Canary/Animations/Canary_LeanRight.anim`
+  - `Assets/_Art/Ship/Canary/Animations/Canary_LeanRight.anim.meta`
+  - `Assets/_Art/Ship/Canary/Animations/CanaryShipVisualPreview.controller`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容：**
+  - 通过 Unity 资产导入器将六张 Lean PNG 对齐 Normal stack 的 Sprite 设置：`Sprite`、`Single`、`PPU 320`、`Center pivot`、`MipMap off`、`Point filter`、`Uncompressed`。
+  - 新建 `Canary_LeanLeft.anim` 与 `Canary_LeanRight.anim`，只绑定 `Body/SpriteRenderer.m_Sprite`，分别播放 `01 → 02 → 03 → 02`，12 FPS，约 `0.333s`，loop 用于预览检查。
+  - 将 `CanaryShipVisualPreview.controller` 接入 `Canary_LeanLeft` 和 `Canary_LeanRight` 状态，方便 Animator 中直接选择预览。
+  - 更新计划：Task 14 LeanLeft / LeanRight clip 标记完成，Current Next Action 推进为 `Task 14B: Lean Play Mode visual validation`。
+- **目的：**
+  - 完成 Lean 资产从图片补齐到 Unity 可预览动画资产的闭环，让下一步可以专注于 Play Mode 视觉验收：无跳位、无缩放突变、无 alpha 残留、128px 可读。
+  - 保持 Lean 预览链独立于正式 `Ship.prefab` / ShipVFX authority 主链，避免预览资产污染正式运行链。
+- **技术：**
+  - 使用 Unity Editor `TextureImporter` 设置导入参数，`.meta` 由 Unity 自动生成/维护，没有手造 GUID。
+  - 使用 `AnimationUtility.SetObjectReferenceCurve` 创建 Sprite swap 曲线，并用 `AnimatorController` 状态承载预览入口。
+  - 通过 Unity Editor 查询验证六张 Lean Sprite 的 importer 参数、Sprite rect、clip 绑定路径和 keyframe 内容；Console 仅显示既有项目 warning，未发现本次导入/动画创建引入的新错误。
+  - 未修改正式 `Assets/_Prefabs/Ship/Ship.prefab`、`Assets/_Prefabs/VFX/BoostTrailRoot.prefab` 或 scene-only Boost/VFX 接线。
+
+
+## Canary Lean 预览验收与下一步推进 — 2026-05-30 12:31
+
+- **新建/修改文件：**
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+- **内容：**
+  - 完成 `Task 14B` 的 Lean 预览验收记录：LeanLeft / LeanRight clip 审计确认只绑定 `Body/SpriteRenderer.m_Sprite`，没有 transform / color 曲线。
+  - 记录自动采样结论：Lean 动画资产本身不会引入位置漂移、缩放跳变或 alpha 残留；`AnimationClip.SampleAnimation` 对 ObjectReference Sprite 曲线不作为视觉换帧证据，因此以 `AnimationUtility` 曲线审计作为 Sprite swap 的正式验证依据。
+  - 使用 128px 缩略图对 Normal、LeanLeft 中段、LeanRight 中段进行读图检查，确认 Lean 轮廓、机头方向和左右翼关系保持可读，且仍读作同一艘 Canary。
+  - 更新计划中的 Batch 4 Completion Gate：Idle + Lean 已完成当前验收，Dash 继续保持 deferred。
+  - 将 Current Next Action 推进为 `Task 15A: Boost source audit + adaptation target confirmation`。
+- **目的：**
+  - 把 Lean 从“资产已接入”推进到“当前可验收”，避免继续阻塞 Batch 5 Boost 工作。
+  - 保留 Dash 与 Hit Mask 的后续返工/定义空间，不让它们阻塞 Boost 源资产审计。
+- **技术：**
+  - 使用 Unity Editor `AnimationUtility.GetObjectReferenceCurveBindings` / `GetCurveBindings` 审计 AnimationClip 曲线，确认 Lean clip 只有 Sprite ObjectReference 曲线，无 transform / color 副作用曲线。
+  - 使用临时 128px 缩略图进行视觉读图检查；验证产物不进入正式 `Assets/` 资产链。
+  - 未修改 Runtime、Prefab、Scene 或 Ship/VFX authority 主链。
+
+## 2026-05-30 14:52 — Canary Lean/Dash Highlight MVP 修复
+
+- **修改文件：**
+  - `Assets/Scripts/Ship/VFX/ShipView.cs`
+  - `Assets/Scripts/Ship/VFX/ShipVisualJuice.cs`
+  - `Assets/Scripts/Ship/VFX/ShipDashVisuals.cs`
+- **内容：**
+  - `ShipView` 将 `_hlRenderer` 注入 `ShipVisualJuice`，保持 `ShipView` 只做 Coordinator。
+  - `ShipVisualJuice` 在 lean body sprite 非 normal 时将 normal highlight/outline alpha 压到 0，回到 normal body sprite 时恢复基线 alpha。
+  - `ShipDashVisuals` 在 dash body sprite burst 与 i-frame flicker 期间隐藏 highlight/outline，Dash 结束或 Reset 时恢复。
+- **目的：**
+  - 修复 Canary 在 lean / 转弯 / dash 姿态下仍叠加 normal highlight，导致姿态错位和视觉脏乱的问题。
+  - 先交付 MVP：隐藏错误 normal highlight，不新增 per-state highlight sprite 数据链。
+- **技术：**
+  - 沿用现役 `Ship/VFX` Worker owner：lean 归 `ShipVisualJuice`，dash 归 `ShipDashVisuals`，不改 Prefab 结构、不新增 fallback / legacy path。
+  - 使用 alpha restore 方式保留现有 renderer、材质与排序，不引入第二套高光链路。
+- **验证：**
+  - `dotnet build Project-Ark.slnx` 通过；仅存在项目既有 warning。
+  - `ShipView.cs` / `ShipDashVisuals.cs` Unity `validate_script` 无错误。
+  - `ShipVisualJuice.cs` Unity `validate_script` 无错误，仅返回一个泛化 GC warning。
+  - Unity Console error 过滤读取为 0 条。
+
+
+## Canary Hit Mask Softness / Directionality Polish — 2026-05-30 15:10
+
+- **新建/修改文件：**
+  - `Assets/_Art/Ship/Canary/Textures/Masks/spr_ship_canary_shape_hit_mask.png`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容：**
+  - 同路径重写 `spr_ship_canary_shape_hit_mask.png`，保留原 GUID / import 链路，不新增 `.meta` 或第二套 Hit Mask 资产。
+  - 将原先偏完整的白色受击覆盖改为更低 alpha 的边缘、核心与斜向裂纹反馈；Unity 生成统计为约 25.3% 非透明覆盖、最大 alpha 184、非零平均 alpha 约 50.4。
+  - 更新 Canary Ship Art/VFX 计划：Batch 6 状态改为 Hit Mask overlay + softness polish 已完成，下一步移动到 Ship/VFX authority audit 队列。
+
+- **目的：**
+  - 修复当前受击 mask 视觉偏突兀、容易整船刷白的问题，让 Hit feedback 更短、更柔和、更有方向感，并避免破坏飞船身份。
+
+- **技术：**
+  - 使用现有 `spr_ship_canary_shape_normal_mask.png` 作为轮廓源，在 Unity Editor 内通过 `Texture2D` 生成低 alpha 边缘 / 核心 / 裂纹分布并重写 PNG。
+  - 继续沿用现役 `ShipHitVisuals._hitMaskRenderer` runtime owner 与 `ShipPrefabRebuilder` prefab 接线，不新增 runtime fallback、scene override 或 debug 接管路径。
+
+
+## Ship VFX BoostTrail Scene Binding Authority Audit — 2026-05-30 15:33
+
+- **新建/修改文件：**
+  - `Assets/Scenes/SampleScene.unity`
+  - `Assets/Scripts/Ship/Editor/ShipBoostTrailSceneBinder.cs`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容：**
+  - 定位 `BoostTrailView._boostBloomVolume` 运行时报空的根因：当前 `SampleScene.unity` live 实例 `Ship/ShipVisual/BoostTrailRoot` 的 scene-only `_boostBloomVolume` 引用漂移为空。
+  - 通过唯一权威入口 `ShipBoostTrailSceneBinder.SetupBoostTrailSceneReferences()` 重新绑定 `BoostTrailBloomVolume`，并保存 `SampleScene.unity`。
+  - 将 `ShipBoostTrailSceneBinder` 的 `Volume` 类型解析从 assembly-qualified `Type.GetType` 收口为 `TypeCache` FullName lookup，清理 authority audit 中的脆弱字符串解析 warning，同时保持离线 `dotnet build` 兼容。
+  - 更新 Canary Ship Art/VFX plan 末尾 Current Next Action，记录 BoostTrail scene-only Bloom authority path 已审计并修复。
+
+- **目的：**
+  - 让 Boost bloom burst 的 scene-only 引用回到明确的 authority 链路，避免运行时 Boost 时因 `_boostBloomVolume` 为空而报错或失去 bloom 反馈。
+  - 不新增 runtime fallback，不让 debug 或 prefab builder 越权接管 scene-only 绑定。
+
+- **技术：**
+  - 使用 `ShipVfxValidator.RunAudit()` 复现并确认唯一 error 为 `Scene BoostTrailView: _boostBloomVolume 为空`。
+  - 使用既有 `ShipBoostTrailSceneBinder` 作为 Apply 入口完成绑定；runtime `BoostTrailView` 继续只消费序列化引用并在缺失时显式报错。
+  - 使用 `TypeCache.GetTypesDerivedFrom<Component>()` 按 `UnityEngine.Rendering.Volume` FullName 解析 Volume 类型，保持 Editor binder 的 scene-only 职责不变。
+
+
+## Scene Console Authority Cleanup — 2026-05-30 16:27
+
+- **新建/修改文件：**
+  - `Assets/Scenes/SampleScene.unity`
+  - `Assets/Scripts/SpaceLife/Editor/SpaceLifeSetupWindow.cs`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容：**
+  - 定位并清理 `SampleScene.unity` 中 3 个 Missing Script 残留：`SpaceLifeCanvas/DialogueUI`、`SpaceLifeCanvas/GiftUI`、`SpaceLifeCanvas/NPCInteractionUI`。这些对象是 Presenter 迁移后的空壳，无子节点且无入站引用。
+  - 删除旧的空 `SpaceLifeCanvas/MinimapUI` shell，并重建完整 `MinimapUI` 场景层级：`MinimapPanel`、`CurrentRoomIcon`、`CurrentRoomText`、`RoomButtonsContainer`。
+  - 补齐 `MinimapUI` 的 `_minimapPanel`、`_currentRoomText`、`_currentRoomIcon`、`_roomButtonsContainer`、`_roomButtonPrefab` 引用。
+  - 将 `SpaceLifeSetupWindow` 的共享 OptionButton prefab 路径从旧 `Assets/_Prefabs/SpaceLife/UI/OptionButton_Prefab.prefab` 同步到现役 `Assets/_Prefabs/UI/SpaceLife/OptionButton.prefab`。
+  - 更新 Canary Ship Art/VFX plan 末尾 Current Next Action，记录 Missing Script 与 MinimapUI assignment 已完成。
+
+- **目的：**
+  - 消除场景配置阶段的 Missing Script 噪声，避免 Console 中的旧 UI owner 残留掩盖真正的 Ship/VFX 问题。
+  - 让 `MinimapUI` 不再因 `_minimapPanel` 或 `_roomButtonPrefab` 为空而 silent no-op。
+  - 避免旧 setup wizard 后续再次生成空引用。
+
+- **技术：**
+  - 使用 Unity Editor live scene scan 验证 missing component、入站引用和序列化字段状态。
+  - 通过 Unity Editor API 删除无引用旧空壳并保存场景，避免手写 `.unity` fileID。
+  - 沿用 `CanvasGroup` 控制 uGUI 显隐的规则，保持 UI GameObject active，不使用 `SetActive(false)` 作为面板显隐方案。
+
+
+## ServiceLocator Optional Missing 噪音治理 — 2026-05-31 10:24
+
+- **新建/修改文件：**
+  - `Assets/Scripts/SpaceLife/Dialogue/SpaceLifeDialogueCoordinator.cs`
+  - `Assets/Scripts/SpaceLife/Interactable.cs`
+  - `Assets/Scripts/SpaceLife/SpaceLifeRoom.cs`
+  - `Assets/Scripts/SpaceLife/SpaceLifeDoor.cs`
+  - `Assets/Scripts/SpaceLife/PlayerController2D.cs`
+  - `Assets/Scripts/SpaceLife/SpaceLifeManager.cs`
+  - `Assets/Scripts/SpaceLife/SpaceLifeInputHandler.cs`
+  - `Assets/Scripts/SpaceLife/MinimapUI.cs`
+  - `Assets/Scripts/UI/UIManager.cs`
+  - `Assets/Scripts/Combat/StarChart/StarChartController.cs`
+  - `Assets/Scripts/Level/Room/RoomManager.cs`
+  - `Assets/Scripts/Level/Room/DestroyableObject.cs`
+  - `Assets/Scripts/Level/Room/ArenaController.cs`
+  - `Assets/Scripts/Level/Room/DoorTransitionController.cs`
+  - `Assets/Scripts/Level/Checkpoint/CheckpointManager.cs`
+  - `Assets/Scripts/Level/Checkpoint/Checkpoint.cs`
+  - `Assets/Scripts/Level/GameFlow/GameFlowManager.cs`
+  - `Assets/Scripts/Level/SaveBridge.cs`
+  - `Assets/Scripts/Level/Map/MapPanel.cs`
+  - `Assets/Scripts/Level/Map/MinimapHUD.cs`
+  - `Assets/Scripts/Level/Progression/WorldProgressManager.cs`
+  - `Assets/Scripts/Level/Progression/Lock.cs`
+  - `Assets/Scripts/Level/Pickup/HealthPickup.cs`
+  - `Assets/Scripts/Level/Pickup/HeatPickup.cs`
+  - `Assets/Scripts/Level/DynamicWorld/WorldEventTrigger.cs`
+  - `Assets/Scripts/Level/DynamicWorld/BiomeTrigger.cs`
+  - `Assets/Scripts/Level/DynamicWorld/AmbienceController.cs`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容：**
+  - 将 optional / lazy / fallback 语义的服务解析从 `ServiceLocator.Get<T>()` 改为 `ServiceLocator.TryGet<T>()`，避免缺失可选服务时先产生统一 missing-registration warning。
+  - 覆盖 `PlayerController2D`、`WorldProgressManager`、`SaveBridge`、`MinimapManager`、`ShipHealth`、`HeatSystem`、`AudioManager` 等本批次目标服务。
+  - 保留真正关键依赖的显式 `Debug.LogError` / `Debug.LogWarning`，让缺配置问题继续由业务调用点清晰报出，而不是被 `ServiceLocator` 泛化 warning 淹没。
+  - 更新 Canary Ship Art/VFX 计划尾部，记录 `scene-warning-batch-3` 的 ServiceLocator optional missing 噪音治理结果。
+
+- **目的：**
+  - 清理 Unity Console 中可选服务缺失造成的噪音，避免这些非阻断 warning 遮蔽真正需要修复的场景配置问题。
+  - 区分“必须存在的 manager 缺失”和“允许缺失的模块集成点”，让场景验证阶段的 Console 信号更可信。
+
+- **技术：**
+  - 使用 `ServiceLocator.TryGet<T>()` 承载 optional / lazy / fallback dependency 查询。
+  - 保持 required dependency 的 loud failure 策略：业务层显式错误仍保留，未新增 runtime fallback 或 scene override。
+  - 使用 grep 复查目标服务集合，确保不再存在 `ServiceLocator.Get<T>()` 残留。
+
+- **验证：**
+  - `dotnet build Project-Ark.slnx` 通过；仅存在项目既有 warning。
+  - 目标服务集合 grep 复查：`ServiceLocator.Get<(SaveBridge|ShipHealth|AudioManager|MinimapManager|WorldProgressManager|PlayerController2D|HeatSystem)>` 无结果。
+  - Unity Console 复查未出现 `ServiceLocator Get: ... NOT FOUND` 目标噪音；剩余为既有编译 warning 与一次 MCP transport warning。
+
+
+## Project Code Warning Cleanup Final Pass — 2026-05-31 10:36
+
+- **新建/修改文件：**
+  - `Assets/Scripts/UI/Inventory/DragGhostView.cs`
+  - `Assets/Scripts/UI/Inventory/ItemOverlayView.cs`
+  - `Assets/Scripts/Combat/Editor/HyperWindArenaSceneConfigurator.cs`
+  - `Assets/Scripts/Combat/Editor/EchoWaveProceduralPreviewMenu.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容：**
+  - 完成 UI tween 字段初始化/使用路径清理，消除 `DragGhostView` 与 `ItemOverlayView` 的未赋值字段 warning。
+  - 完成 Combat Editor 工具的 Unity 6 object-search obsolete API 替换，消除项目内 Editor warning。
+  - 复核 `GiftUIPresenter` 与 `SpaceLifeDoor` 所在 `ProjectArk.SpaceLife` 程序集当前无剩余项目内 warning。
+
+- **验证：**
+  - `dotnet build /Users/dada/Documents/GitHub/Project-Ark/Project-Ark.slnx` 成功。项目内程序集通过；剩余 2 条 warning 均来自第三方资源目录 `Assets/Hovl Studio` 与 `Assets/QFX`，本轮不修改。
+  - Unity Console error/warning 复查为 0 条。
+
+- **目的：**
+  - 将本轮 scene warning cleanup 后续扩展到项目内编译 warning，确保 Console 与项目代码 warning 信号恢复干净，第三方资源 warning 与项目代码 warning 明确分离。
+
+
+## Canary Ship Batch 7 Weaving 资产 MVP — 2026-05-31 11:01
+
+- **新建/修改文件**
+  - `Assets/_Art/Ship/Canary/Textures/Emission/spr_ship_canary_core_weaving_emission.png`
+  - `Assets/_Art/Ship/Canary/Textures/Emission/spr_ship_canary_aura_weaving_emission.png`
+  - `Assets/_Art/Ship/Canary/Textures/Masks/tex_ship_canary_weaving_ring_mask.png`
+  - `Assets/_Art/Ship/Canary/Textures/Noise/tex_ship_canary_weaving_noise_mask.png`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+
+- **内容**：完成 Batch 7 / Task 19 的四张 Weaving MVP 视觉资产：核心编织发光、星图仪式光环、环形连接 mask、能量流噪声 mask；并在计划文件中标记 Task 19 已完成，将下一步推进到 Task 20 Weaving preview。
+
+- **目的**：为金丝雀号编织态提供与 Boost 明确区分的 StarChart connection / ritual aura 视觉素材，同时保持本轮为资产层增量，不改正式 `Ship.prefab` authority 链。
+
+- **技术**：使用 Python 标准库生成 512 × 512 RGBA PNG，不手写 `.meta`；通过 Unity AssetDatabase 刷新后统一导入为 Sprite Single、PPU 320、Center pivot、alpha transparency、Clamp、Bilinear、无 mipmap；Console 清理后复查为 0 error / 0 warning。
+
+## Canary Ship Batch 9 Required Materials — 2026-05-31 14:22
+
+- **新建/修改文件**
+  - `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_body_default.mat`
+  - `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_shape.mat`
+  - `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_outline.mat`
+  - `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_core_default.mat`
+  - `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_dash.mat`
+  - `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_trail.mat`
+  - `Assets/_Art/Ship/Canary/Materials/mat_vfx_canary_dash_particles.mat`
+  - `Assets/_Art/Ship/Canary/Materials/mat_vfx_canary_muzzle_flash.mat`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：完成 Batch 9 / Task 22 的首批金丝雀号材质集合。保留并配置已有的 body / shape / outline / dash / trail 材质，补齐缺失的 core default / dash particles / muzzle flash 材质，并在计划文件中标记 Task 22 已完成，将下一步推进到 Task 23 Runtime Material Parameter Rules。
+
+- **目的**：为后续 ship/VFX preview 和正式集成提供稳定材质基线；body 保持保守亮度、outline 保持轮廓对比，dash / trail / particle / muzzle flash 维持高可读但不过曝的 cyan / amber 视觉家族。本轮只创建和配置资产，不把材质接入正式 `Ship.prefab` 运行链，也不定义运行时参数 owner。
+
+- **技术**：通过 Unity Editor `AssetDatabase` 创建/配置 `.mat`，统一使用 `Universal Render Pipeline/2D/Sprite-Lit-Default`，缺失时可回退到 `Sprites/Default`；设置 `_Color` / `_RendererColor` 基础 tint、透明度和 renderQueue 3000。Unity 验证确认 8 个材质均存在且 shader/color/queue 正确，Console 最终复查为 0 error / 0 warning。
+
+## Canary Ship Batch 9 Runtime Material Parameter Rules — 2026-05-31 15:08
+
+- **新建/修改文件**
+  - `Docs/2_TechnicalDesign/Ship/ShipVFX_AssetRegistry.md`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：完成 Batch 9 / Task 23 的材质运行时参数规则。`ShipVFX_AssetRegistry.md` 现在补齐 Canary core / dash / trail / dash particles / muzzle flash 材质映射，并新增 `Material Runtime Parameter Rules`，列出 body / shape / outline / dash / trail / muzzle 的必需参数、参数 owner、runtime writer 与 mutation policy。计划文件中 Task 23 三步和 Batch 9 Completion Gate 已全部标记完成，并将下一步推进到 Task 24 Authority Review Before Integration。
+
+- **目的**：在正式集成前先明确材质参数契约，避免后续 Worker 硬编码随机数、直接修改 shared `.mat`、或重新引入 GG-style state sheet 作为第二真相源。MVP 阶段由 registry 承载契约，已有 ship juice / fire / dash / hit 调参继续归 `ShipJuiceSettingsSO`，未来多材质 VFX 调参再迁移到 `Assets/_Data/Ship/` 下的专用 tuning asset。
+
+- **技术**：文档层定义运行时数据隔离规则：Runtime 只能通过 renderer color、材质实例、`MaterialPropertyBlock` 或 component-level values 改变表现；`MaterialTextureLinker` 只维护材质/贴图链接，不成为 runtime 参数 owner；所有 Canary 材质保持 authored baseline，不在 Play Mode 写回资产。
+
+## Canary Ship Batch 10 Live Slice Visual Checks — 2026-05-31 16:19
+
+- **新建/修改文件**
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：完成 Batch 10 / Task 26 Step 3 的 live-slice 视觉状态检查，并在计划中标记 Task 26 Step 3 与 Batch 10 Completion Gate 完成。当前下一步推进到 Task 27 Build Validation View。
+
+- **目的**：在进入最终验证视图前，确认正式 `Ship.prefab` 集成路径中的 Normal / Dash / Boost / Hit 可由 live `Ship` 实例触发和复位，同时保持 Lean / Fire / Weaving / Overheat 的 deferred 边界，不把尚未正式接入的状态误判为完成。
+
+- **技术**：通过 Unity Play Mode 临时代码只读检查 `Ship` 场景实例：确认 Idle Body / Outline / Core 可见，Shape 与 HitMask 默认 disabled，Dash / Boost / Hit Worker 存在且公开入口可 trigger/reset，`BoostTrailRoot` 下存在 7 个 ParticleSystem；退出 Play Mode 后 Console 复查为 0 warning / 0 error。本轮未修改 prefab、scene、材质或运行时代码，也未新增 fallback / legacy path / debug owner。
+
+## Canary Ship Batch 11 Validation View — 2026-05-31 16:25
+
+- **新建/修改文件**
+  - `Assets/Scripts/Ship/VFX/ShipVisualValidationView.cs`
+  - `Assets/_Prefabs/Ship/CanaryShipVisualValidation.prefab`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：完成 Batch 11 / Task 27 的验证视图建设。新增 preview-only `ShipVisualValidationView`，提供 Normal / Lean Left / Lean Right / Dash / Boost / Fire / Hit / Weaving / Overheat 九状态切换、Black / White / DeepBlue 背景切换，以及 Bloom Volume on/off 开关；基于 `CanaryShipVisualPreview.prefab` 创建 `CanaryShipVisualValidation.prefab`，并将当前下一步推进到 Task 28 Run Final State Matrix。
+
+- **目的**：给最终状态矩阵提供一个稳定、可快速切换、可截图的 ship visual validation 入口，让 Batch 11 能验证“完整 gameplay asset”的可读性，而不是继续靠分散 prefab / 临时代码观察。
+
+- **技术**：验证控制器只读/切换 preview prefab 内 SpriteRenderer、背景 SpriteRenderer 与本 prefab 内 `ValidationBloomVolume`，不写 `Ship.prefab`、不新增 live scene dependency、不接管 `ShipView` / `ShipPrefabRebuilder` / runtime Worker owner。Unity 侧验证已覆盖九状态调用、三背景颜色和 Bloom enable/disable；`dotnet build Project-Ark.slnx` 通过。
+
+## Canary Ship Batch 11 Final State Matrix — 2026-05-31 16:38
+
+- **新建/修改文件**
+  - `Assets/Screenshots/task28_validation_overheat_camera_clean.png`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：完成 Batch 11 / Task 28 的最终状态矩阵验证。Normal / Lean Left / Lean Right / Dash / Boost / Fire / Hit / Weaving / Overheat 均通过 `ShipVisualValidationView` 控制器级矩阵检查；Black / White / DeepBlue 背景与 Bloom on/off 组合通过；计划当前下一步推进到 Task 29 Pool And Reset Verification。
+
+- **目的**：验证 Canary ship complete art/VFX 作为 gameplay asset 的核心可读性：Normal 方向清晰、Lean 不抖、Dash 与 Boost 区分、Fire 不洗屏、Hit 无白闪残留、Weaving 不挡 gameplay、Overheat 危险明确且可回 Normal。
+
+- **技术**：使用 Unity 临时代码加载 `CanaryShipVisualValidation.prefab` 并逐状态检查 SpriteRenderer sprite、enabled、color 和 reset 后残留；发现 Scene View / 默认 Camera 截图混入 `CanaryShipVisualPreview`、`Enemy_ChargeRusher_REF_Minshoot` 与其他场景内容后，按系统化调试定位为场景中已有参考对象 / Camera 捕获路径干扰，而非 validation prefab 重复层；最终使用 layer 30 隔离的临时 Camera + 临时 Global Light 2D 捕获 `task28_validation_overheat_layer_isolated_lit.png` 作为 DeepBlue + Overheat 可视证据。临时场景对象已清理，正式 `Ship` 已恢复。
+
+
+## Canary Ship Batch 7 Weaving Preview — 2026-05-31 11:35
+
+- **新建/修改文件**
+  - `Assets/_Prefabs/Ship/CanaryShipVisualPreview.prefab`
+  - `Assets/Screenshots/canary_weaving_preview_isolated_bloom_off.png`
+  - `Assets/Screenshots/canary_weaving_preview_isolated_bloom_on.png`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：完成 Batch 7 / Task 20 的 Weaving preview。给 `CanaryShipVisualPreview.prefab` 增加 `WeavingAuraPreview` 与 `WeavingCorePreview` 两个可独立启停的 preview-only SpriteRenderer 子节点，并完成 Bloom off / Bloom on 隔离渲染验证。
+
+- **目的**：验证 Weaving 视觉语言是否能和 Boost 区分，并确认 StarChart connection / ritual aura 感在无 Bloom 与有 Bloom 情况下都可读，同时不接管正式 `Ship.prefab` 运行链。
+
+- **技术**：使用 prefab headless edit 写入 preview 子节点；Weaving aura 使用内置 `Sprites-Default` 材质并放在船体后方，core connection 放在船体上方；使用临时相机、临时 layer 与临时 VolumeProfile 渲染隔离截图，渲染后销毁临时对象，不留下 postprocess/material residue；Unity Console 最终复查为 0 error / 0 warning。
+
+
+## Canary Ship Batch 8 Overheat Assets — 2026-05-31 12:04
+
+- **新建/修改文件**
+  - `Assets/_Art/Ship/Canary/Textures/Emission/spr_ship_canary_core_overheat_emission.png`
+  - `Assets/_Art/Ship/Canary/Textures/Masks/spr_ship_canary_shape_overheat_mask.png`
+  - `Assets/_Art/Ship/Canary/Textures/Noise/tex_ship_canary_overheat_noise_mask.png`
+  - `Assets/_Art/VFX/Ship/spr_vfx_canary_overheat_spark_01.png`
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：完成 Batch 8 / Task 21 的四张 Overheat MVP 视觉资产：核心过热发光、船体热压 mask、热浪噪声 mask、过热警示 spark；并在计划文件中标记 Task 21 已完成，将下一步推进到 Task 22 Material and Shader pass。
+
+- **目的**：让金丝雀号过热状态能通过船体视觉读出“危险 / 热压上升”，不只依赖 HUD；同时保持本轮为资产层增量，不运行时修改 authored material 或 ScriptableObject。
+
+- **技术**：使用 Unity Editor 内部 `Texture2D` 程序化写入 512 × 512 RGBA PNG，不手写 `.meta`；核心与 spark 导入为 Sprite Single，PPU 320，Center pivot，alpha transparency，Clamp，Bilinear，无 mipmap；noise 导入为 Default Texture，用于未来 shader 热浪采样。Unity 导入验证确认四个资产均为 512 × 512，Console 最终复查为 0 error / 0 warning。

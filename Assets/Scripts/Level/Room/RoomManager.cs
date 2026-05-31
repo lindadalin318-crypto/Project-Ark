@@ -183,7 +183,7 @@ namespace ProjectArk.Level
             // ── Map tracking (first visit) ──
             if (isFirstVisit)
             {
-                var minimap = ServiceLocator.Get<MinimapManager>();
+                var minimap = ServiceLocator.TryGet<MinimapManager>();
                 minimap?.MarkVisited(room.RoomID);
             }
 
@@ -196,7 +196,7 @@ namespace ProjectArk.Level
 
             // ── Director cleanup ──
             // Clear attack tokens to prevent stale references from the previous room
-            var director = ServiceLocator.Get<EnemyDirector>();
+            var director = ServiceLocator.TryGet<EnemyDirector>();
             if (director != null)
             {
                 director.ReturnAllTokens();

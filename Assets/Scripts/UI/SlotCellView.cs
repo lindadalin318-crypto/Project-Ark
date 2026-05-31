@@ -78,6 +78,9 @@ namespace ProjectArk.UI
         /// <summary> True when this cell is displaying an item (not empty/spanned). </summary>
         public bool IsOccupied => DisplayedItem != null;
 
+        /// <summary> True when this cell is visually covered by an overlay item. </summary>
+        public bool IsOverlayCell => _isOverlayCell;
+
         /// <summary>
         /// Injected by TrackView on init. Returns true if there is space for the given item
         /// in this cell's layer. Used for SAIL/SAT types that don't use SlotLayer.

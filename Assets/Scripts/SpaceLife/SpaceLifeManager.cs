@@ -55,8 +55,8 @@ namespace ProjectArk.SpaceLife
         {
             Debug.Log("[SpaceLifeManager] Start called");
 
-            _audioManager = ServiceLocator.Get<AudioManager>();
-            _transitionUI = ServiceLocator.Get<TransitionUI>();
+            _audioManager = ServiceLocator.TryGet<AudioManager>();
+            _transitionUI = ServiceLocator.TryGet<TransitionUI>();
 
             if (_spaceLifeCamera != null)
             {
@@ -70,7 +70,7 @@ namespace ProjectArk.SpaceLife
 
             if (_spaceLifeInputHandler == null)
             {
-                _spaceLifeInputHandler = ServiceLocator.Get<SpaceLifeInputHandler>();
+                _spaceLifeInputHandler = ServiceLocator.TryGet<SpaceLifeInputHandler>();
                 if (_spaceLifeInputHandler == null)
                 {
                     Debug.LogError("[SpaceLifeManager] CRITICAL: SpaceLifeInputHandler not found via ServiceLocator or Inspector. Ensure it is registered.");
@@ -96,7 +96,7 @@ namespace ProjectArk.SpaceLife
                 }
             }
 
-            _shipInputHandler = ServiceLocator.Get<InputHandler>();
+            _shipInputHandler = ServiceLocator.TryGet<InputHandler>();
             if (_shipInputHandler == null)
             {
                 Debug.LogError("[SpaceLifeManager] CRITICAL: InputHandler not found via ServiceLocator. Ensure Ship Prefab is in scene and registers InputHandler.");

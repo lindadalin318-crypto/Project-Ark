@@ -62,7 +62,7 @@ namespace ProjectArk.SpaceLife
             // Defensive: hide Player2D if not in SpaceLife mode.
             // Prevents Player2D from being visible during ship operation
             // (e.g. if pooled instance was pre-warmed or left in scene).
-            var manager = ServiceLocator.Get<SpaceLifeManager>();
+            var manager = ServiceLocator.TryGet<SpaceLifeManager>();
             if (manager != null && !manager.IsInSpaceLifeMode)
             {
                 gameObject.SetActive(false);

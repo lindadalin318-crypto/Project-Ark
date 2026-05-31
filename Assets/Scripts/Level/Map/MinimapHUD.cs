@@ -53,7 +53,7 @@ namespace ProjectArk.Level
 
         private void Start()
         {
-            _minimapManager = ServiceLocator.Get<MinimapManager>();
+            _minimapManager = ServiceLocator.TryGet<MinimapManager>();
 
             if (_minimapManager != null)
             {

@@ -222,7 +222,7 @@ namespace ProjectArk.Ship
                 _fireVisuals.Initialize(_weaponMountBaseColor, _coreBaseColor);
 
             if (_juiceVisuals != null)
-                _juiceVisuals.Initialize(_motor, _dash, _boost, _aiming);
+                _juiceVisuals.Initialize(_motor, _dash, _boost, _aiming, _solidRenderer, _hlRenderer);
 
             if (_afterImageSpawner != null)
                 _afterImageSpawner.Initialize(_dash);
@@ -250,7 +250,11 @@ namespace ProjectArk.Ship
                     if (prevState == ShipShipState.Boost && _enableBoostVFX && _boostVisuals != null)
                         _boostVisuals.OnBoostEnded();
                     else if (prevState == ShipShipState.Dash && _enableDashVFX && _dashVisuals != null)
+                    {
                         _dashVisuals.OnDashEnded();
+                        if (_enableJuiceVFX && _juiceVisuals != null)
+                            _juiceVisuals.RefreshLeanSprite();
+                    }
                     break;
             }
         }

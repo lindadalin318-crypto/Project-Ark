@@ -33,6 +33,9 @@ namespace ProjectArk.Ship
         [Tooltip("Squash/stretch on speed change.")]
         [SerializeField] private bool _enableSquashStretch = true;
 
+        [Tooltip("Runtime body sprite swap for left/right lean readability.")]
+        [SerializeField] private bool _enableLeanSpriteSwap = true;
+
         // ══════════════════════════════════════════════════════════════
         // Cached Components (injected by ShipView via Initialize)
         // ══════════════════════════════════════════════════════════════
@@ -41,6 +44,10 @@ namespace ProjectArk.Ship
         private ShipDash _dash;
         private ShipBoost _boost;
         private ShipAiming _aiming;
+        private SpriteRenderer _bodyRenderer;
+        private SpriteRenderer _highlightRenderer;
+        private Sprite _normalBodySprite;
+        private Color _highlightBaseColor;
 
         // ══════════════════════════════════════════════════════════════
         // State
@@ -70,6 +77,28 @@ namespace ProjectArk.Ship
             {
                 Debug.LogError("[ShipVisualJuice] No visual child assigned. Juice effects will not work.", this);
             }
+        }
+
+        /// <summary>
+        /// Called by ShipView after Awake to inject component references and the body renderer used for runtime sprite readability.
+        /// </summary>
+        public void Initialize(ShipMotor motor, ShipDash dash, ShipBoost boost, ShipAiming aiming, SpriteRenderer bodyRenderer)
+        {
+            Initialize(motor, dash, boost, aiming, bodyRenderer, null);
+        }
+
+        /// <summary>
+        /// Called by ShipView after Awake to inject component references and ship renderers used for runtime sprite readability.
+        /// </summary>
+        public void Initialize(ShipMotor motor, ShipDash dash, ShipBoost boost, ShipAiming aiming, SpriteRenderer bodyRenderer, SpriteRenderer highlightRenderer)
+        {
+            Initialize(motor, dash, boost, aiming);
+            _bodyRenderer = bodyRenderer;
+            _highlightRenderer = highlightRenderer;
+            _highlightBaseColor = _highlightRenderer != null ? _highlightRenderer.color : Color.white;
+            _normalBodySprite = _juiceSettings != null && _juiceSettings.NormalBodySprite != null
+                ? _juiceSettings.NormalBodySprite
+                : _bodyRenderer != null ? _bodyRenderer.sprite : null;
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -152,6 +181,18 @@ namespace ProjectArk.Ship
         }
 
         /// <summary>
+        /// Re-applies the movement lean sprite after another worker temporarily owns the body sprite.
+        /// </summary>
+        public void RefreshLeanSprite()
+        {
+            if (!_initialized || !_enableAll || !_enableLeanSpriteSwap) return;
+            if (_bodyRenderer == null || _juiceSettings == null || _motor == null) return;
+            if (_dash != null && _dash.IsDashing) return;
+
+            ApplyLeanSprite();
+        }
+
+        /// <summary>
         /// Resets all juice state to defaults.
         /// Called by ShipView.ResetVFX() for object pool return.
         /// </summary>
@@ -168,6 +209,11 @@ namespace ProjectArk.Ship
                 _visualChild.localRotation = Quaternion.identity;
                 _visualChild.localScale = Vector3.one;
             }
+
+            if (_bodyRenderer != null && _normalBodySprite != null)
+                _bodyRenderer.sprite = _normalBodySprite;
+
+            SetHighlightVisible(true);
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -180,6 +226,9 @@ namespace ProjectArk.Ship
 
             if (velocity.sqrMagnitude < 0.01f)
             {
+                if (_enableLeanSpriteSwap && (_dash == null || !_dash.IsDashing))
+                    ApplyBodySprite(_normalBodySprite);
+
                 // Smoothly return to neutral
                 _currentTiltAngle = Mathf.Lerp(_currentTiltAngle, 0f, _juiceSettings.TiltSmoothSpeed * Time.deltaTime);
                 _visualChild.localRotation = Quaternion.Euler(0f, 0f, _currentTiltAngle);
@@ -193,11 +242,78 @@ namespace ProjectArk.Ship
             // Dot product: positive = moving right, negative = moving left
             float lateralComponent = Vector2.Dot(velocity.normalized, rightDir);
 
+            if (_enableLeanSpriteSwap && _bodyRenderer != null && (_dash == null || !_dash.IsDashing))
+                ApplyLeanSprite(lateralComponent);
+
             // Map to tilt angle (moving right → tilt left, i.e., negative angle for visual leaning)
             float targetTilt = -lateralComponent * _juiceSettings.MoveTiltMaxAngle;
 
             _currentTiltAngle = Mathf.Lerp(_currentTiltAngle, targetTilt, _juiceSettings.TiltSmoothSpeed * Time.deltaTime);
             _visualChild.localRotation = Quaternion.Euler(0f, 0f, _currentTiltAngle);
+        }
+
+        private void ApplyLeanSprite()
+        {
+            if (_motor == null) return;
+
+            Vector2 velocity = _motor.CurrentVelocity;
+            if (velocity.sqrMagnitude < 0.01f)
+            {
+                ApplyBodySprite(_normalBodySprite);
+                return;
+            }
+
+            Vector2 facingDir = _aiming != null ? _aiming.FacingDirection : (Vector2)transform.up;
+            Vector2 rightDir = new Vector2(facingDir.y, -facingDir.x);
+            float lateralComponent = Vector2.Dot(velocity.normalized, rightDir);
+            ApplyLeanSprite(lateralComponent);
+        }
+
+        private void ApplyLeanSprite(float lateralComponent)
+        {
+            Sprite target = SelectLeanSprite(
+                _normalBodySprite,
+                _juiceSettings.LeanLeftSprites,
+                _juiceSettings.LeanRightSprites,
+                lateralComponent,
+                _juiceSettings.LeanSpriteDeadZone);
+
+            ApplyBodySprite(target);
+        }
+
+        private void ApplyBodySprite(Sprite sprite)
+        {
+            if (_bodyRenderer == null || sprite == null) return;
+
+            SetHighlightVisible(sprite == _normalBodySprite);
+
+            if (_bodyRenderer.sprite == sprite) return;
+
+            _bodyRenderer.sprite = sprite;
+        }
+
+        private void SetHighlightVisible(bool visible)
+        {
+            if (_highlightRenderer == null) return;
+
+            Color c = _highlightBaseColor;
+            c.a = visible ? _highlightBaseColor.a : 0f;
+            _highlightRenderer.color = c;
+        }
+
+        private static Sprite SelectLeanSprite(Sprite normalSprite, Sprite[] leftSprites, Sprite[] rightSprites, float lateralComponent, float deadZone)
+        {
+            float abs = Mathf.Abs(lateralComponent);
+            if (abs <= deadZone)
+                return normalSprite;
+
+            Sprite[] frames = lateralComponent < 0f ? leftSprites : rightSprites;
+            if (frames == null || frames.Length == 0)
+                return normalSprite;
+
+            float t = Mathf.InverseLerp(deadZone, 1f, abs);
+            int index = Mathf.Clamp(Mathf.CeilToInt(t * frames.Length) - 1, 0, frames.Length - 1);
+            return frames[index] != null ? frames[index] : normalSprite;
         }
     }
 }

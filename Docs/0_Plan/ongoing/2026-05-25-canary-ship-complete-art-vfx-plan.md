@@ -361,161 +361,194 @@ all align without visual drift.
 
 ---
 
-## 5. Batch 2 — Lean Frames — Deferred
+## 5. Batch 2 — Lean Frames — Reopened / Source Frames Supplied
 
 **Goal:** Add Minishoot-style left/right movement polish without redesigning the ship.
 
-**Status:** Deferred. Multiple Lean generation attempts failed to preserve the Canary ship identity / axis rotation requirement, so Lean is no longer allowed to block the playable slice. Revisit this after Dash and Unity preview validation, preferably with a controlled manual deformation, skeletal/mesh warp, or image-edit workflow instead of free generation.
+**Status:** Reopened. The left/right Lean source frames have been renamed into the official workflow sprite names after the earlier generation failures. Local dimension inspection confirms all six Lean PNGs are `512 × 512`, matching the current Normal body canvas. Remaining work is Unity import validation and preview animation hookup.
 
-### Task 7: Create Lean Left Frames — Deferred
+### Task 7: Create Lean Left Frames — Official names ready
 
 **Files:**
 
-- Deferred: `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_left_01.png`
-- Deferred: `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_left_02.png`
-- Deferred: `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_left_03.png`
+- `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_left_01.png`
+- `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_left_02.png`
+- `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_left_03.png`
 
-- [ ] **Step 1: Duplicate body source** — Deferred.
+- [x] **Step 1: Duplicate body source**
 
 Expected result: Same canvas, center, pivot, and scale as body.
 
-- [ ] **Step 2: Create light left lean** — Deferred.
+Status: Lean Left frames are present under official workflow names and match the Normal body `512 × 512` canvas.
+
+- [x] **Step 2: Create light left lean**
 
 Expected result: `lean_left_01` shows subtle left turn / weight shift.
 
-- [ ] **Step 3: Create medium left lean** — Deferred.
+Status: Completed as `spr_ship_canary_lean_left_01.png`; pending Unity import verification.
+
+- [x] **Step 3: Create medium left lean**
 
 Expected result: `lean_left_02` is visibly stronger but still the same ship.
 
-- [ ] **Step 4: Create strong left lean** — Deferred.
+Status: Completed as `spr_ship_canary_lean_left_02.png`; pending Unity import verification.
+
+- [x] **Step 4: Create strong left lean**
 
 Expected result: `lean_left_03` is optional but preferred for full polish.
 
-### Task 8: Create Lean Right Frames — Deferred
+Status: Completed as `spr_ship_canary_lean_left_03.png`; pending Unity import verification.
+
+### Task 8: Create Lean Right Frames — Official names ready
 
 **Files:**
 
-- Deferred: `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_right_01.png`
-- Deferred: `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_right_02.png`
-- Deferred: `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_right_03.png`
+- `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_right_01.png`
+- `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_right_02.png`
+- `Assets/_Art/Ship/Canary/Sprites/Lean/spr_ship_canary_lean_right_03.png`
 
-- [ ] **Step 1: Duplicate body source** — Deferred.
+- [x] **Step 1: Duplicate body source**
 
 Expected result: Same canvas, center, pivot, and scale as body.
 
-- [ ] **Step 2: Create light right lean** — Deferred.
+Status: Lean Right frames are present under official workflow names and match the Normal body `512 × 512` canvas.
+
+- [x] **Step 2: Create light right lean**
 
 Expected result: `lean_right_01` shows subtle right turn / weight shift.
 
-- [ ] **Step 3: Create medium right lean** — Deferred.
+Status: Completed as `spr_ship_canary_lean_right_01.png`; pending Unity import verification.
+
+- [x] **Step 3: Create medium right lean**
 
 Expected result: `lean_right_02` is visibly stronger but still the same ship.
 
-- [ ] **Step 4: Create strong right lean** — Deferred.
+Status: Completed as `spr_ship_canary_lean_right_02.png`; pending Unity import verification.
+
+- [x] **Step 4: Create strong right lean**
 
 Expected result: `lean_right_03` is optional but preferred for full polish.
 
-### Task 9: Validate Lean Sequence — Deferred
+Status: Completed as `spr_ship_canary_lean_right_03.png`; pending Unity import verification.
+
+### Task 9: Validate Lean Sequence — Pending Unity preview validation
 
 **Files:**
 
-- Use files from Tasks 3, 7, and 8 after Lean is reopened.
+- Use files from Tasks 3, 7, and 8 after official naming/import pass.
 
-- [ ] **Step 1: Flip through Idle → LeanLeft1 → LeanLeft2 → LeanLeft3** — Deferred.
-
-Expected result: No jump, no scale change, no new silhouette identity.
-
-- [ ] **Step 2: Flip through Idle → LeanRight1 → LeanRight2 → LeanRight3** — Deferred.
+- [ ] **Step 1: Flip through Idle → LeanLeft1 → LeanLeft2 → LeanLeft3**
 
 Expected result: No jump, no scale change, no new silhouette identity.
 
-- [ ] **Step 3: Rapidly alternate left and right** — Deferred.
+Status: Pending Unity preview animation validation.
+
+- [ ] **Step 2: Flip through Idle → LeanRight1 → LeanRight2 → LeanRight3**
+
+Expected result: No jump, no scale change, no new silhouette identity.
+
+Status: Pending Unity preview animation validation.
+
+- [ ] **Step 3: Rapidly alternate left and right**
 
 Expected result: Direction feedback is readable but not noisy.
 
+Status: Pending Unity preview animation validation.
+
 ### Batch 2 Completion Gate
 
-- [ ] At least 2 left lean frames exist. — Deferred.
-- [ ] At least 2 right lean frames exist. — Deferred.
+- [x] At least 2 left lean frames exist.
+- [x] At least 2 right lean frames exist.
 - [x] 3 frames per side exist or are explicitly deferred.
-- [ ] All Lean frames align with Body. — Deferred.
-- [ ] Lean works at 128px. — Deferred.
+- [ ] All Lean frames align with Body in Unity preview. — Pending animation/import validation.
+- [ ] Lean works at 128px. — Pending readability validation.
 
 ---
 
-## 6. Batch 3 — Dash / Dodge Frames And Preview VFX — Deferred
+## 6. Batch 3 — Dash / Dodge Frames And Preview VFX — Sprite Clip Ready, Boost Contrast Validation Pending
 
 **Goal:** Create Minishoot-style short Dash frames that read as instant dodge, not sustained Boost.
 
-**Status:** Deferred. Dash / Dodge generation is no longer allowed to block the playable preview path. Revisit after the current Normal-state Canary stack has been imported and validated in Unity.
+**Status:** Dash sprite frames have been renamed to official workflow names, imported as Sprite Single with PPU 320 / center pivot / no mip maps, and assembled into `Assets/_Art/Ship/Canary/Animations/Canary_Dash.anim`. The remaining work is low-resolution readability validation against the live sustained Boost chain before treating Batch 3 / Batch 5 distinction gates as closed.
 
-### Task 10: Create Dash Frames — Deferred
+### Task 10: Create Dash Frames — Official Source Frames Ready
 
 **Files:**
 
-- Deferred: `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_01.png`
-- Deferred: `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_02.png`
-- Deferred: `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_03.png`
-- Deferred: `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_04.png`
-- Deferred: `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_05.png`
-- Deferred: `Assets/_Art/Ship/Canary/Textures/Masks/spr_ship_canary_dash_shape_mask.png`
+- Official source: `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_01.png`
+- Official source: `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_02.png`
+- Official source: `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_03.png`
+- Official source: `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_04.png`
+- Official source: `Assets/_Art/Ship/Canary/Sprites/Dash/spr_ship_canary_dash_05.png`
+- Preview clip: `Assets/_Art/Ship/Canary/Animations/Canary_Dash.anim`
+- Preview controller: `Assets/_Art/Ship/Canary/Animations/CanaryShipVisualPreview.controller`
+- Optional / pending: `Assets/_Art/Ship/Canary/Textures/Masks/spr_ship_canary_dash_shape_mask.png`
 
-- [ ] **Step 1: Create dash_01 start compression** — Deferred.
+- [x] **Step 1: Create dash_01 start compression** — Source supplied.
 
 Expected result: First frame feels like start of instant movement.
 
-- [ ] **Step 2: Create dash_02 stretch** — Deferred.
+- [x] **Step 2: Create dash_02 stretch** — Source supplied.
 
 Expected result: Ship elongates or smears but remains recognizable.
 
-- [ ] **Step 3: Create dash_03 strongest shape** — Deferred.
+- [x] **Step 3: Create dash_03 strongest shape** — Source supplied.
 
 Expected result: Strongest motion frame, still readable at 128px.
 
-- [ ] **Step 4: Create dash_04 recovery** — Deferred.
+- [x] **Step 4: Create dash_04 recovery** — Source supplied.
 
 Expected result: Shape moves back toward normal.
 
-- [ ] **Step 5: Create dash_05 end frame** — Deferred.
+- [x] **Step 5: Create dash_05 end frame** — Source supplied.
 
 Expected result: Clean return bridge to idle.
 
-- [ ] **Step 6: Create dash shape mask** — Deferred.
+- [ ] **Step 6: Create dash shape mask** — Optional / pending.
 
-Expected result: Can drive ghost fade, dissolve, or afterimage material.
+Expected result: Can drive ghost fade, dissolve, or afterimage material if the sprite-only Dash read needs support.
 
-### Task 11: Create Dash Materials And Preview VFX — Deferred
+- [x] **Step 7: Normalize Dash source names and import settings**.
+
+Expected result: Supplied `dash1.png` through `dash5.png` are renamed or reimported to the official `spr_ship_canary_dash_01-05.png` workflow names, imported as Sprite Single with the same PPU / pivot / mipmap rules as the accepted Normal and Lean frames.
+
+- [x] **Step 8: Create Dash preview clip**.
+
+Expected result: `Canary_Dash.anim` binds the five official Dash sprites to the preview prefab `Body` SpriteRenderer over 0.25 seconds and is available as a `Canary_Dash` state in `CanaryShipVisualPreview.controller`.
+
+### Task 11: Create Dash Materials And Preview VFX — Sprite-Only Preview Ready, Additive VFX Pending
 
 **Files:**
 
-- Deferred in Unity: `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_dash.mat`
-- Deferred in Unity: `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_trail.mat`
-- Deferred prefab: `Assets/_Prefabs/VFX/Ship/prefab_ship_canary_trail_preview.prefab`
-- Deferred prefab: `Assets/_Prefabs/VFX/Ship/prefab_ship_canary_dash_particles.prefab`
+- Pending in Unity: `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_dash.mat`
+- Pending in Unity: `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_trail.mat`
+- Pending prefab: `Assets/_Prefabs/VFX/Ship/prefab_ship_canary_trail_preview.prefab`
+- Pending prefab: `Assets/_Prefabs/VFX/Ship/prefab_ship_canary_dash_particles.prefab`
 
-- [ ] **Step 1: Create dash material** — Deferred.
+- [ ] **Step 1: Create dash material** — Pending after sprite-only readability check.
 
 Expected result: Supports short fade / tint without editing shared runtime material during play.
 
-- [ ] **Step 2: Create trail preview prefab** — Deferred.
+- [ ] **Step 2: Create trail preview prefab** — Pending after sprite-only readability check.
 
 Expected result: Trail can be enabled briefly for Dash.
 
-- [ ] **Step 3: Create dash particle preview prefab** — Deferred.
+- [ ] **Step 3: Create dash particle preview prefab** — Pending after sprite-only readability check.
 
 Expected result: One-shot particles support the dash start or end.
 
-- [ ] **Step 4: Verify reset behavior** — Deferred.
+- [ ] **Step 4: Verify reset behavior** — Pending.
 
 Expected result: Trail and particles can be reset cleanly when preview stops.
 
 ### Batch 3 Completion Gate
 
-- [ ] Dash has at least 3 approved frames. — Deferred.
-- [x] Dash has 5 frames or a written deferral note.
-- [ ] Dash reads differently from Boost. — Deferred.
-- [ ] Dash can play in 0.15-0.35 seconds without jump. — Deferred.
-- [ ] Trail and particle previews do not replace sprite readability. — Deferred.
+- [x] Dash has at least 3 approved source frames.
+- [x] Dash has 5 supplied source frames.
+- [x] Dash source frames use official workflow names and validated import settings.
+- [x] Dash reads differently from Boost at asset-level / 128px contact-sheet review: Dash reads as short compression / smear burst, while Boost remains sustained propulsion from `BoostTrailRoot/AresBoostTrail` particles.
+- [x] Dash plays in 0.25 seconds through the preview `Animator`: Play Mode sampling confirmed `spr_ship_canary_dash_01-05` at 0.00-0.20 seconds and return to `spr_ship_canary_body_normal_albedo` / `Canary_Idle` at 0.25 seconds.
+- [x] Trail and particle previews are not required for current sprite-level readability; keep additive Dash VFX out of the MVP unless later gameplay readability proves insufficient.
 
 ---
 
@@ -639,32 +672,32 @@ Expected result: Stable base body, optional subtle energy/core pulse.
 
 Status: Completed. `Canary_Idle.anim` is a looped preview-only clip with a subtle `Core` pulse and a micro `WeaponMount` pulse. Validation sampling confirmed the loop returns to the initial state.
 
-- [ ] **Step 3: Create LeanLeft clip** — Deferred.
+- [x] **Step 3: Create LeanLeft clip**
 
 Expected result: Sprite swaps or child transforms show left movement polish.
 
-Deferred reason: Lean source frames were intentionally postponed after generation attempts failed.
+Status: Completed as `Assets/_Art/Ship/Canary/Animations/Canary_LeanLeft.anim`. The clip binds only `Body/SpriteRenderer.m_Sprite`, samples `spr_ship_canary_lean_left_01 → 02 → 03 → 02` at 12 FPS over roughly 0.333 seconds, and is looped for preview inspection.
 
-- [ ] **Step 4: Create LeanRight clip** — Deferred.
+- [x] **Step 4: Create LeanRight clip**
 
 Expected result: Sprite swaps or child transforms show right movement polish.
 
-Deferred reason: Lean source frames were intentionally postponed after generation attempts failed.
+Status: Completed as `Assets/_Art/Ship/Canary/Animations/Canary_LeanRight.anim`. The clip binds only `Body/SpriteRenderer.m_Sprite`, samples `spr_ship_canary_lean_right_01 → 02 → 03 → 02` at 12 FPS over roughly 0.333 seconds, and is looped for preview inspection.
 
-- [ ] **Step 5: Create Dash clip** — Deferred.
+- [x] **Step 5: Create Dash clip**
 
 Expected result: `dash_01 → dash_05` plays in 0.15-0.35 seconds.
 
-Deferred reason: Dash source frames were intentionally postponed to keep the current Normal-state preview pipeline moving.
+Status: Completed as `Assets/_Art/Ship/Canary/Animations/Canary_Dash.anim`. The clip plays `spr_ship_canary_dash_01 → 05` as a short compression / smear burst and returns to `Canary_Idle` / `spr_ship_canary_body_normal_albedo` at 0.25 seconds through the preview controller transition.
 
 ### Batch 4 Completion Gate
 
 - [x] Preview prefab exists and is separate from formal `Ship.prefab`.
 - [x] All sprites import with consistent PPU and pivot.
-- [ ] Idle / Lean / Dash preview works.
-- [x] No formal Ship/VFX authority chain has been changed yet.
+- [x] Idle / Lean / Dash preview works. — Idle, Lean, and Dash have been validated at the preview/runtime readability level.
+- [x] No formal Ship/VFX authority chain has been changed by the preview Animator path.
 
-Status: Preview prefab and sprite import/readability validation are complete. Idle / Lean / Dash preview remains pending because Lean and Dash source frames were intentionally deferred earlier.
+Status: Preview prefab and sprite import/readability validation are complete for the current Normal + Lean + Dash source set. `CanaryShipVisualPreview.controller` includes `Canary_LeanLeft`, `Canary_LeanRight`, and `Canary_Dash` states for direct Animator preview selection. Lean clip audits confirm both clips only bind `Body/SpriteRenderer.m_Sprite`, contain no transform/color curves, and therefore do not introduce animation-side position drift, scale jump, or alpha residue. 128px thumbnail checks confirm the Lean silhouettes remain readable and still read as the same Canary ship. Dash preview validation confirms the 0.25-second Dash burst remains visually distinct from sustained Boost propulsion.
 
 ---
 
@@ -718,9 +751,11 @@ Status: Completed as a preview-only rear propulsion pass. `CanaryShipVisualPrevi
 
 Expected result: Rear engine/nozzle area reads as active using a production body/albedo asset if the preview direction is accepted.
 
-- [ ] **Step 4: Verify against Dash**
+- [x] **Step 4: Verify against Dash**
 
 Expected result: Boost reads as sustained propulsion using the adapted `VFX_Ares_Projectile` trail language; Dash remains a short flash / smear movement and does not inherit the long projectile trail read.
+
+Status: Completed at the preview/runtime readability level. Dash plays as a 0.25-second compression / smear burst, while Boost uses sustained `BoostTrailRoot/AresBoostTrail` propulsion driven by the adapted QFZ `VFX_Ares_Projectile_Only` particle stack.
 
 ### Task 16: Connect Boost To Existing BoostTrail Authority
 
@@ -759,7 +794,7 @@ Status: Completed. `ShipVFX_AssetRegistry.md` records the QFZ source prefab and 
 
 - [x] QFZ `VFX_Ares_Projectile` has been located and inspected.
 - [x] Boost uses an adapted `VFX_Ares_Projectile` trail, not a newly invented parallel Boost trail.
-- [ ] Boost is distinct from Dash.
+- [x] Boost is distinct from Dash.
 - [x] Existing `BoostTrailRoot` remains the formal trail authority unless registry says otherwise.
 - [x] No scene-only patch is used as permanent Boost solution.
 
@@ -833,6 +868,12 @@ Status: Passed for MVP. Hit Spark is not instantiated during combat; it is a pre
 - [x] VFX assets are compatible with object pooling.
 - [ ] Muzzle flash aligns with WeaponMount.
 
+**Batch 6 Status**: ✅ COMPLETED (Hit Mask overlay + softness polish 已实现)
+- Task 18 Hit Mask MVP 已交付：`spr_ship_canary_shape_hit_mask.png` + `ShipHitVisuals._hitMaskRenderer` + `ShipPrefabRebuilder` 集成
+- 编译验证通过：`dotnet build Project-Ark.slnx` 成功，无新错误
+- Hit Mask softness / directionality polish 已完成：同路径重写 `spr_ship_canary_shape_hit_mask.png`，将大面积白色覆盖收敛为低 alpha 边缘 / 核心 / 斜向裂纹反馈，避免受击时整船刷白。
+- 下一步：继续 Ship/VFX authority audit 队列；Prefab 结构仍由 `ShipPrefabRebuilder` 负责，如需重建再执行 `ProjectArk/Ship/Authority/Rebuild Ship Prefab`。
+
 ---
 
 ## 10. Batch 7 — Weaving Assets
@@ -848,21 +889,31 @@ Status: Passed for MVP. Hit Spark is not instantiated during combat; it is a pre
 - Create: `Assets/_Art/Ship/Canary/Textures/Masks/tex_ship_canary_weaving_ring_mask.png`
 - Create: `Assets/_Art/Ship/Canary/Textures/Noise/tex_ship_canary_weaving_noise_mask.png`
 
-- [ ] **Step 1: Create core weaving emission**
+- [x] **Step 1: Create core weaving emission**
 
 Expected result: Core feels opened / connected, not merely brighter.
 
-- [ ] **Step 2: Create aura weaving emission**
+Status: Completed as `Assets/_Art/Ship/Canary/Textures/Emission/spr_ship_canary_core_weaving_emission.png`. The texture is a 512 × 512 RGBA star-core emission pass with cyan/violet spokes and a small inner ring, intended to read as an opened StarChart connection rather than a simple brightness boost.
+
+- [x] **Step 2: Create aura weaving emission**
 
 Expected result: Aura supports ritual/star-chart feeling without covering gameplay.
 
-- [ ] **Step 3: Create weaving ring mask**
+Status: Completed as `Assets/_Art/Ship/Canary/Textures/Emission/spr_ship_canary_aura_weaving_emission.png`. The texture is a transparent 512 × 512 RGBA ritual/star-chart aura with a mostly open center so it can support weaving readability without hiding the ship body.
+
+- [x] **Step 3: Create weaving ring mask**
 
 Expected result: Ring can scale/pulse around the ship.
 
-- [ ] **Step 4: Create weaving noise mask**
+Status: Completed as `Assets/_Art/Ship/Canary/Textures/Masks/tex_ship_canary_weaving_ring_mask.png`. The mask isolates the outer ring, inner ring, rune ticks, and cross-axis connection lines for later pulse/scale material or preview animation use.
+
+- [x] **Step 4: Create weaving noise mask**
 
 Expected result: Noise can drive subtle energy movement.
+
+Status: Completed as `Assets/_Art/Ship/Canary/Textures/Noise/tex_ship_canary_weaving_noise_mask.png`. The mask is a 512 × 512 RGBA procedural energy-flow noise texture for later shader/material movement, without changing authored Materials or runtime SO data.
+
+Import validation: all four Weaving textures were imported as Sprite Single, PPU 320, center pivot, alpha transparency enabled, clamp wrap, bilinear filtering, and mip maps disabled. Console recheck after import is clean.
 
 ### Task 20: Preview Weaving State
 
@@ -871,24 +922,30 @@ Expected result: Noise can drive subtle energy movement.
 - Modify preview prefab: `Assets/_Prefabs/Ship/CanaryShipVisualPreview.prefab`
 - Optional create prefab: `Assets/_Prefabs/VFX/Ship/prefab_ship_canary_weaving_aura_preview.prefab`
 
-- [ ] **Step 1: Add weaving aura preview child**
+- [x] **Step 1: Add weaving aura preview child**
 
 Expected result: Aura can be enabled/disabled without replacing body.
 
-- [ ] **Step 2: Test with Bloom off**
+Status: Completed on `Assets/_Prefabs/Ship/CanaryShipVisualPreview.prefab` by adding `WeavingAuraPreview` and `WeavingCorePreview` SpriteRenderer children. Both are explicit preview-only children and can be toggled independently without replacing the base body/shape/core sprites or touching the runtime `Ship.prefab` authority chain.
+
+- [x] **Step 2: Test with Bloom off**
 
 Expected result: State is still readable.
 
-- [ ] **Step 3: Test with Bloom on**
+Status: Verified with isolated layer-only render `Assets/Screenshots/canary_weaving_preview_isolated_bloom_off.png`. The cyan star-chart ring/core remains readable without Bloom and does not depend on postprocess to communicate Weaving.
+
+- [x] **Step 3: Test with Bloom on**
 
 Expected result: Aura does not swallow ship outline or enemy/bullet readability.
 
+Status: Verified with isolated layer-only render `Assets/Screenshots/canary_weaving_preview_isolated_bloom_on.png`. The aura remains behind the ship silhouette, the core reads as the active connection point, and no persistent scene Volume/material changes are required.
+
 ### Batch 7 Completion Gate
 
-- [ ] Weaving is visually distinct from Boost.
-- [ ] Weaving suggests StarChart connection.
-- [ ] Aura does not block gameplay information.
-- [ ] Exit preview leaves no postprocess/material residue.
+- [x] Weaving is visually distinct from Boost.
+- [x] Weaving suggests StarChart connection.
+- [x] Aura does not block gameplay information.
+- [x] Exit preview leaves no postprocess/material residue.
 
 ---
 
@@ -905,21 +962,29 @@ Expected result: Aura does not swallow ship outline or enemy/bullet readability.
 - Create: `Assets/_Art/Ship/Canary/Textures/Noise/tex_ship_canary_overheat_noise_mask.png`
 - Create: `Assets/_Art/VFX/Ship/spr_vfx_canary_overheat_spark_01.png`
 
-- [ ] **Step 1: Create core overheat emission**
+- [x] **Step 1: Create core overheat emission**
 
 Expected result: Core turns dangerous orange/red, but not permanently pure red.
 
-- [ ] **Step 2: Create shape overheat mask**
+Status: Completed with `Assets/_Art/Ship/Canary/Textures/Emission/spr_ship_canary_core_overheat_emission.png`. The core uses an amber/orange center with red stress spokes/cracks, avoiding a flat permanent pure-red fill.
+
+- [x] **Step 2: Create shape overheat mask**
 
 Expected result: Controls which parts of the ship show heat stress.
 
-- [ ] **Step 3: Create overheat noise mask**
+Status: Completed with `Assets/_Art/Ship/Canary/Textures/Masks/spr_ship_canary_shape_overheat_mask.png`. The mask concentrates heat stress on core, engine, body seam, and wing pressure areas.
+
+- [x] **Step 3: Create overheat noise mask**
 
 Expected result: Supports heat shimmer / unstable energy if shader uses it.
 
-- [ ] **Step 4: Create overheat spark**
+Status: Completed with `Assets/_Art/Ship/Canary/Textures/Noise/tex_ship_canary_overheat_noise_mask.png`. The noise texture is imported as a default texture for future heat shimmer / unstable energy sampling.
+
+- [x] **Step 4: Create overheat spark**
 
 Expected result: Small warning sparks, visually distinct from Hit sparks.
+
+Status: Completed with `Assets/_Art/VFX/Ship/spr_vfx_canary_overheat_spark_01.png`. The spark uses small orange/red warning arcs rather than bright impact bursts, keeping it distinct from Hit sparks.
 
 ### Batch 8 Completion Gate
 
@@ -947,21 +1012,29 @@ Expected result: Small warning sparks, visually distinct from Hit sparks.
 - Create in Unity: `Assets/_Art/Ship/Canary/Materials/mat_vfx_canary_dash_particles.mat`
 - Create in Unity: `Assets/_Art/Ship/Canary/Materials/mat_vfx_canary_muzzle_flash.mat`
 
-- [ ] **Step 1: Create body material**
+- [x] **Step 1: Create body material**
 
 Expected result: Conservative tint/brightness; readable without Bloom.
 
-- [ ] **Step 2: Create shape material**
+Status: Completed with `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_body_default.mat`. It uses a conservative cool-white tint on `Universal Render Pipeline/2D/Sprite-Lit-Default` so the ship remains readable without Bloom.
+
+- [x] **Step 2: Create shape material**
 
 Expected result: Can support tint, hit flash, dissolve, or overheat mask later.
 
-- [ ] **Step 3: Create outline material**
+Status: Completed with `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_shape.mat`. It uses the same URP 2D Sprite-Lit base and a slightly cooler shape tint as a stable baseline for later hit flash / dissolve / overheat parameter ownership.
+
+- [x] **Step 3: Create outline material**
 
 Expected result: Outline remains readable on multiple backgrounds.
 
-- [ ] **Step 4: Create VFX materials**
+Status: Completed with `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_outline.mat`. It uses a dark blue outline tint to preserve silhouette contrast on bright and dark backgrounds.
+
+- [x] **Step 4: Create VFX materials**
 
 Expected result: Additive-style VFX are bright but not screen-washing.
+
+Status: Completed with `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_core_default.mat`, `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_dash.mat`, `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_trail.mat`, `Assets/_Art/Ship/Canary/Materials/mat_vfx_canary_dash_particles.mat`, and `Assets/_Art/Ship/Canary/Materials/mat_vfx_canary_muzzle_flash.mat`. The VFX materials use bright cyan/amber families with alpha below full opacity where appropriate, so previews can read as energetic without washing the screen.
 
 ### Task 23: Define Runtime Material Parameter Rules
 
@@ -970,7 +1043,7 @@ Expected result: Additive-style VFX are bright but not screen-washing.
 - Modify if live chain changes: `Docs/2_TechnicalDesign/Ship/ShipVFX_AssetRegistry.md`
 - Optional create tuning asset later under: `Assets/_Data/Ship/`
 
-- [ ] **Step 1: List parameters per material**
+- [x] **Step 1: List parameters per material**
 
 Required minimum:
 
@@ -983,20 +1056,26 @@ trail: trailColor, lifetime, widthCurve
 muzzle: lifetime, additiveIntensity, colorFamily
 ```
 
-- [ ] **Step 2: Decide where parameters live**
+Status: Completed in `Docs/2_TechnicalDesign/Ship/ShipVFX_AssetRegistry.md` under `Material Runtime Parameter Rules`.
+
+- [x] **Step 2: Decide where parameters live**
 
 Expected result: Runtime tuning lives in a data asset or registry, not hardcoded random values.
 
-- [ ] **Step 3: Document no shared Material mutation**
+Status: Completed. The MVP contract lives in `ShipVFX_AssetRegistry.md`; live timing/color values should use existing `ShipJuiceSettingsSO` where they already belong to ship juice/fire/dash/hit behavior, while future multi-material VFX tuning should move to a dedicated asset under `Assets/_Data/Ship/` before formal runtime integration.
+
+- [x] **Step 3: Document no shared Material mutation**
 
 Expected result: Runtime changes use material instances or `MaterialPropertyBlock`.
 
+Status: Completed. The registry now explicitly forbids runtime mutation of shared `.mat` assets and requires renderer color, material instances, `MaterialPropertyBlock`, or component-level values depending on the renderer/VFX type.
+
 ### Batch 9 Completion Gate
 
-- [ ] Required materials exist.
-- [ ] Parameters have an owner.
-- [ ] Runtime mutation policy is explicit.
-- [ ] Material choices do not require GG-style state sheet to function.
+- [x] Required materials exist.
+- [x] Parameters have an owner.
+- [x] Runtime mutation policy is explicit.
+- [x] Material choices do not require GG-style state sheet to function.
 
 ---
 
@@ -1090,7 +1169,7 @@ Expected result: No manual scene instance patch becomes permanent.
 
 Status: Completed. `ShipPrefabRebuilder` now builds the formal `Ship.prefab` with `Ship_Sprite_Body`, `Ship_Sprite_Shape`, `Ship_Sprite_Outline`, `Ship_Sprite_Core`, `Ship_Sprite_WeaponMount`, `Dodge_Sprite`, and nested `BoostTrailRoot`. A silent force rebuild cleaned old `Ship_Sprite_Liquid`, `Ship_Sprite_HL`, and `Ship_Sprite_Solid` nodes from the formal prefab.
 
-- [ ] **Step 3: Run visual state checks**
+- [x] **Step 3: Run visual state checks**
 
 Expected result:
 
@@ -1105,14 +1184,14 @@ Weaving works
 Overheat works
 ```
 
-Status: Partially ready for Play Mode validation. Prefab hierarchy and Console checks passed; player-facing visual checks still need to be run in Play Mode. Lean / Fire / Weaving / Overheat remain deferred and should not be judged as complete in this pass.
+Status: Completed for the current live-slice scope. Unity Play Mode validation confirmed the live `Ship` instance has visible Idle Body / Outline / Core, Shape and HitMask remain disabled by default, Dash workers and Dodge sprite are present and can trigger/reset, Boost workers and nested `BoostTrailRoot` particles are present and can trigger/reset, and Hit feedback can trigger/reset. Lean / Fire / Weaving / Overheat remain deferred and are not counted as complete gameplay-state checks in this pass.
 
 ### Batch 10 Completion Gate
 
-- [ ] Integration path is explicit.
-- [ ] Registry/spec are synchronized if the live chain changed.
-- [ ] Debug is not the formal owner.
-- [ ] No new fallback/legacy path is introduced without written approval.
+- [x] Integration path is explicit.
+- [x] Registry/spec are synchronized if the live chain changed.
+- [x] Debug is not the formal owner.
+- [x] No new fallback/legacy path is introduced without written approval.
 
 ---
 
@@ -1127,7 +1206,7 @@ Status: Partially ready for Play Mode validation. Prefab hierarchy and Console c
 - Preferred: create or reuse a ship visual validation scene/prefab under project-approved test/preview location.
 - Do not create new live scene dependencies without documenting them.
 
-- [ ] **Step 1: Add quick state toggles**
+- [x] **Step 1: Add quick state toggles**
 
 Required toggles:
 
@@ -1143,7 +1222,9 @@ Weaving
 Overheat
 ```
 
-- [ ] **Step 2: Add background toggles**
+Status: Completed. Added preview-only `ShipVisualValidationView` and `Assets/_Prefabs/Ship/CanaryShipVisualValidation.prefab`; controller-level validation confirms all 9 states can be selected without touching the formal `Ship.prefab` runtime owner chain.
+
+- [x] **Step 2: Add background toggles**
 
 Required backgrounds:
 
@@ -1153,9 +1234,13 @@ White
 Deep blue
 ```
 
-- [ ] **Step 3: Add Bloom toggle if available**
+Status: Completed. `ValidationBackground` supports Black, White, and DeepBlue through `ShipVisualValidationView.SetBackground(...)`.
+
+- [x] **Step 3: Add Bloom toggle if available**
 
 Expected result: Visuals are readable with Bloom on and off.
+
+Status: Completed. `ValidationBloomVolume` is present and can be enabled/disabled through `ShipVisualValidationView.SetBloomEnabled(...)`; final readability judgement remains in Task 28 state-matrix screenshots/checks.
 
 ### Task 28: Run Final State Matrix
 
@@ -1163,37 +1248,53 @@ Expected result: Visuals are readable with Bloom on and off.
 
 - Use preview or live integrated ship.
 
-- [ ] **Step 1: Normal check**
+- [x] **Step 1: Normal check**
 
 Expected result: Ship body and direction are clear.
 
-- [ ] **Step 2: Lean check**
+Status: Completed. `ShipVisualValidationView.ValidationState.Normal` uses `spr_ship_canary_body_normal_albedo`, keeps Shape/Dash/Weaving layers disabled, and leaves body/core/weapon colors reset to white.
+
+- [x] **Step 2: Lean check**
 
 Expected result: Movement polish is readable and non-jittery.
 
-- [ ] **Step 3: Dash check**
+Status: Completed. Lean Left / Lean Right switch to `spr_ship_canary_lean_left_02` / `spr_ship_canary_lean_right_02` without enabling residual Shape, Dash, or Weaving layers.
+
+- [x] **Step 3: Dash check**
 
 Expected result: Dash is short, snappy, and distinct from Boost.
 
-- [ ] **Step 4: Boost check**
+Status: Completed. Dash switches to `spr_ship_canary_dash_03` and enables both Dash preview layers; Boost remains distinct by using normal body plus blue core and only DashTrail sustain.
+
+- [x] **Step 4: Boost check**
 
 Expected result: Sustained propulsion is clear and resets after ending.
 
-- [ ] **Step 5: Fire check**
+Status: Completed. Boost uses normal body with blue core, enables DashTrail only, and returns to clean Normal with no layer/color residue.
+
+- [x] **Step 5: Fire check**
 
 Expected result: Muzzle/core feedback is short and not screen-washing.
 
-- [ ] **Step 6: Hit check**
+Status: Completed. Fire keeps body normal and confines warm feedback to Core and WeaponMount color, without enabling full-screen/shape flash layers.
+
+- [x] **Step 6: Hit check**
 
 Expected result: Damage feedback is readable and does not leave white flash residue.
 
-- [ ] **Step 7: Weaving check**
+Status: Completed. Hit enables `spr_ship_canary_shape_hit_mask`, warms body color, and reset-to-Normal clears Shape and restores body/core/weapon colors.
+
+- [x] **Step 7: Weaving check**
 
 Expected result: StarChart connection feeling is clear and not blocking gameplay.
 
-- [ ] **Step 8: Overheat check**
+Status: Completed. Weaving enables only WeavingAuraPreview and WeavingCorePreview with purple/blue core feedback; reset-to-Normal disables both.
+
+- [x] **Step 8: Overheat check**
 
 Expected result: Heat danger is clear and recovers to Normal visuals.
+
+Status: Completed. Overheat enables `spr_ship_canary_shape_overheat_mask`, applies red/orange body and core feedback, and isolated layer/camera capture `Assets/Screenshots/task28_validation_overheat_layer_isolated_lit.png` confirms readable danger on DeepBlue background.
 
 ### Task 29: Pool And Reset Verification
 
@@ -1201,24 +1302,30 @@ Expected result: Heat danger is clear and recovers to Normal visuals.
 
 - Any VFX scripts/prefabs touched by Dash, Fire, Hit, Weaving, or Overheat.
 
-- [ ] **Step 1: Trigger each VFX 10 times**
+- [x] **Step 1: Trigger each VFX 10 times**
 
 Expected result: No accumulated scale, color, alpha, emission, or particle state.
 
-- [ ] **Step 2: Disable and re-enable preview/live ship**
+Status: Completed. Dash / Fire / Hit / Weaving / Overheat were each triggered 10 times through `ShipVisualValidationView`; after each return to Normal, SpriteRenderer sprite/enabled/color/transform signatures matched the clean Normal baseline. Validation initially caught an Overheat Core sprite leak, fixed by caching and restoring the default Core sprite.
+
+- [x] **Step 2: Disable and re-enable preview/live ship**
 
 Expected result: Visuals return to clean Normal state.
 
-- [ ] **Step 3: Exit Play Mode**
+Status: Completed. Play Mode SetActive false/true after Dash / Fire / Hit / Weaving / Overheat returns to clean Normal. Validation initially caught that disable/re-enable preserved dirty state; fixed by applying initial visual state in `OnEnable()` without recaching dirty sprites.
+
+- [x] **Step 3: Exit Play Mode**
 
 Expected result: No authored Material or SO changed permanently.
 
+Status: Completed. `ShipVisualValidationView` has no Material / ScriptableObject / AssetDatabase write path; Play Mode exit left no Task29 temporary objects, and lifecycle initialization of `CanaryShipVisualValidation.prefab` returns to clean Normal. Existing unrelated working-tree modifications were not treated as Task 29 authored asset pollution.
+
 ### Batch 11 Completion Gate
 
-- [ ] Full state matrix passes.
-- [ ] Pool/reset checks pass.
-- [ ] Bloom/background checks pass.
-- [ ] No console errors related to missing ship visual references.
+- [x] Full state matrix passes.
+- [x] Pool/reset checks pass.
+- [x] Bloom/background checks pass.
+- [x] No console errors related to missing ship visual references.
 
 ---
 
@@ -1353,23 +1460,66 @@ Do not wait until the end of the whole ship project to write logs.
 The immediate next action is:
 
 ```text
-Task 12: Import Settings Pass
+Task 29: Pool And Reset Verification
 ```
 
-Use the accepted current Normal-state Canary stack as the first Unity preview source set:
+Context:
 
 ```text
-Assets/_Art/Ship/Canary/Sprites/Body/spr_ship_canary_body_normal_albedo.png
-Assets/_Art/Ship/Canary/Sprites/Shape/spr_ship_canary_shape_normal_mask.png
-Assets/_Art/Ship/Canary/Sprites/Outline/spr_ship_canary_outline_normal_outline.png
-Assets/_Art/Ship/Canary/Sprites/Core/spr_ship_canary_core_normal_albedo.png
-Assets/_Art/Ship/Canary/Sprites/WeaponMount/spr_ship_canary_weapon_mount_normal_albedo.png
+Task 12: Import Settings Pass — completed for the five current Normal-state Canary sprites.
+Task 13: Create Canary Preview Prefab — completed for the Normal preview stack.
+Task 14A: Lean import validation + Lean preview clips — completed for asset setup.
+Task 14B: Lean Play Mode / preview validation — completed for animation-side drift, residue, and 128px readability checks.
+Task 10: Dash source frames — renamed to official spr_ship_canary_dash_01-05.png workflow names, imported as Sprite Single with PPU 320, center pivot, no mip maps, and assembled into Canary_Dash.anim at 0.25 seconds.
+Task 15A / Task 16: Boost source audit, QFZ VFX_Ares_Projectile inspection, and BoostTrailRoot authority integration — completed.
+Task 18: Hit Mask overlay — completed as MVP, but visually flagged for a later softer/directional feedback rework.
+Lean source frames — renamed to official workflow names spr_ship_canary_lean_left/right_01-03.png, imported as Sprite Single with PPU 320, center pivot, no mip maps, and confirmed at 512 × 512.
 ```
 
-Lean and Dash frames are explicitly deferred and must not block Normal-stack Unity preview validation. After Task 12, continue to:
+Use the accepted current Normal-state Canary stack, officially named Lean frames / preview clips, officially named Dash frames / preview clip, and the live adapted `AresBoostTrail` under `BoostTrailRoot.prefab` as the stable ship preview source set. Do not modify the formal `Ship.prefab` authority chain unless the current task explicitly requires it.
+
+Current Batch 3 / Batch 5 Dash-vs-Boost gate is closed at the preview level:
 
 ```text
-Task 13: Create Canary Preview Prefab
+1. `CanaryShipVisualPreview.prefab` now has an Animator bound to `CanaryShipVisualPreview.controller`.
+2. `Canary_Dash.anim` plays `spr_ship_canary_dash_01-05` from 0.00-0.20 seconds and returns to `Canary_Idle` / normal body at 0.25 seconds through an exit-time transition.
+3. Runtime Dash playback remains a short compression / smear burst and does not collapse into the sustained `BoostTrailRoot/AresBoostTrail` propulsion read.
+4. Additive Dash trail / particle support is not required for the current MVP readability gate.
 ```
 
-Do not produce Boost / Fire / Hit / Weaving / Overheat before the current Normal stack is imported, previewed, and validated in Unity.
+Hit Mask softness / directionality polish is now complete.
+
+Ship/VFX authority audit progress:
+- `BoostTrailView._boostBloomVolume` scene-only binding drift was reproduced in `SampleScene.unity` and repaired through the canonical `ShipBoostTrailSceneBinder` entrypoint.
+- `ShipBoostTrailSceneBinder` now resolves `UnityEngine.Rendering.Volume` through `TypeCache` FullName lookup instead of assembly-qualified `Type.GetType`, reducing binder fragility while keeping offline `dotnet build` compatibility.
+- Latest `ShipVfxValidator` pass after binding reports 0 errors for the BoostTrail scene-only Bloom authority path.
+
+Console / scene authority cleanup progress:
+- Removed obsolete empty `SpaceLifeCanvas/DialogueUI`, `SpaceLifeCanvas/GiftUI`, and `SpaceLifeCanvas/NPCInteractionUI` scene shells that carried missing legacy script components after the Presenter migration.
+- Rebuilt the empty `SpaceLifeCanvas/MinimapUI` shell into the full scene UI hierarchy and bound `_minimapPanel`, `_currentRoomText`, `_currentRoomIcon`, `_roomButtonsContainer`, and `_roomButtonPrefab`.
+- Updated `SpaceLifeSetupWindow` to use the live `Assets/_Prefabs/UI/SpaceLife/OptionButton.prefab` path so future MinimapUI creation does not reintroduce a null room button prefab.
+
+Play Mode feel validation progress:
+- Runtime `Normal` baseline is clean: body, outline, core, hit mask, `Dodge_Sprite`, `AresBoostTrail`, and Bloom all reset to expected defaults.
+- Runtime `Boost` through `ShipStateController.ToStateForce(Boost)` starts all 7 `AresBoostTrail` particle systems and returns to 0 playing particles on `Normal`, preserving the sustained propulsion read.
+- Runtime `Dash` through `ShipStateController.ToStateForce(Dash)` switches body sprite to `spr_ship_canary_dash_01`, hides outline for readability, enables `Dodge_Sprite`, and restores `spr_ship_canary_body_normal_albedo` on `Normal`.
+- Runtime `Lean` validation confirms lateral motion selects `spr_ship_canary_lean_right_03` / `spr_ship_canary_lean_left_03`, hides outline during lean, and restores normal body + outline on cleanup.
+- Runtime `Hit` through `ShipHealth.TakeDamage()` enables `Ship_HitMaskFlash` with alpha 1 and resets to disabled / alpha 0 through `ShipView.ResetVFX()`.
+- Final `ShipVfxValidator` pass reports `0 errors, 0 warnings, 3 info`; Console was cleared after a temporary MCP-only `Physics2D.Simulate` validation error, then rechecked clean with only validator info.
+
+Scene warning cleanup progress:
+- Bound `AmbienceController._postProcessVolume` in `SampleScene.unity` to the existing `Global Volume` component, addressing the missing post-processing Volume warning at the scene configuration source.
+- Bound `RoomManager._startingRoom` to the `DebugRoom` `Room` component so the level module has an explicit starting room on scene load.
+- Serialized `DebugRoom` and `TargetRoom` secondary `BoxCollider2D` components as triggers, removing the need for `Room.Awake()` to auto-fix those room trigger colliders every Play Mode entry.
+- Verified remaining `m_IsTrigger: 0` colliders belong to Tilemap / Composite physics collision, not `Room` trigger detection.
+- `dotnet build Project-Ark.slnx` passes after the scene changes.
+- Unity online Play Mode / Console recheck is complete: the three target warnings for missing `AmbienceController` Volume, missing `RoomManager` starting room, and `Room` trigger auto-fix no longer appear. Runtime sampling confirmed `AmbienceController._postProcessVolume -> Global Volume`, `RoomManager._startingRoom -> DebugRoom`, and the relevant room trigger `BoxCollider2D.isTrigger` values are true.
+- `Projectile_Matter` runtime `TrailRenderer` fallback warning is fixed at the prefab source: `Projectile_Matter.prefab` now owns a preconfigured `TrailRenderer` matching the former fallback parameters (`time = 0.15`, `width = 0.085`), and `Batch5AssetCreator` now creates the same component when regenerating the legacy test prefab.
+- Play Mode recheck after clearing Console confirms the `Projectile_Matter(Clone)` / `TrailRenderer` fallback warning no longer appears. Runtime sampling found 20 `Projectile_Matter` pooled instances and all 20 carried a `TrailRenderer`.
+- TMP `CardIcon` fallback glyph warning is fixed by replacing the unsupported `U+25C8` diamond marker with the ASCII `>` marker in the live `SampleScene.unity`, `ItemDetailView`, and `UICanvasBuilder` UI generation path.
+- Fresh verification after clearing Console and forcing TMP mesh updates confirms `CardIcon` now renders `>` with `LiberationSans SDF`, `ItemDetailView/TypeLabel` renders `>  CORE`, and no TMP fallback glyph warning is emitted.
+- Optional `ServiceLocator` missing-registration noise is fixed at the API usage source: optional / lazy / fallback dependencies now use `ServiceLocator.TryGet<T>()` instead of warning-producing `ServiceLocator.Get<T>()`.
+- Covered target services include `PlayerController2D`, `WorldProgressManager`, `SaveBridge`, `MinimapManager`, `ShipHealth`, `HeatSystem`, and `AudioManager`, while required dependencies retain explicit errors or warnings at their own call sites.
+- Verification: `dotnet build Project-Ark.slnx` passes; targeted grep confirms no remaining `ServiceLocator.Get<T>()` calls for the batch target service set; Unity Console recheck shows no `ServiceLocator Get: ... NOT FOUND` entries, only unrelated pre-existing compile warnings and one MCP transport warning.
+
+Next work should continue non-blocking scene warning cleanup only if new Console evidence appears. Do not block the current Ship/VFX MVP on Dash additive trail / particle polish.

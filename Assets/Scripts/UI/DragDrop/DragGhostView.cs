@@ -44,7 +44,6 @@ namespace ProjectArk.UI
         private CanvasGroup _canvasGroup;
         private Canvas _parentCanvas;
         private Tween _scaleTween;
-        private Tween _borderColorTween;
 
         // CanvasGroup wrappers for label visibility (CLAUDE.md 第11条：禁止 SetActive)
         private CanvasGroup _replaceHintCg;
@@ -243,7 +242,6 @@ namespace ProjectArk.UI
             // is shown exclusively on the Track grid cells (DragHighlightLayer), not on the ghost.
             if (_borderImage != null)
             {
-                _borderColorTween.Stop();
                 _borderImage.color = Color.clear;
             }
 

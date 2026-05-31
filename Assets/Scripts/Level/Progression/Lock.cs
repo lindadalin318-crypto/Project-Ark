@@ -62,14 +62,14 @@ namespace ProjectArk.Level
 
         private void OnEnable()
         {
-            var inputHandler = ServiceLocator.Get<InputHandler>();
+            var inputHandler = ServiceLocator.TryGet<InputHandler>();
             if (inputHandler != null)
                 inputHandler.OnInteractPerformed += HandleInteract;
         }
 
         private void OnDisable()
         {
-            var inputHandler = ServiceLocator.Get<InputHandler>();
+            var inputHandler = ServiceLocator.TryGet<InputHandler>();
             if (inputHandler != null)
                 inputHandler.OnInteractPerformed -= HandleInteract;
         }
@@ -134,7 +134,7 @@ namespace ProjectArk.Level
                 _targetDoor.SetState(DoorState.Open);
 
             // Audio feedback
-            var audio = ServiceLocator.Get<AudioManager>();
+            var audio = ServiceLocator.TryGet<AudioManager>();
             if (audio != null && _unlockSFX != null)
                 audio.PlaySFX2D(_unlockSFX);
 
@@ -149,7 +149,7 @@ namespace ProjectArk.Level
         private void OnLockFailed()
         {
             // Audio feedback
-            var audio = ServiceLocator.Get<AudioManager>();
+            var audio = ServiceLocator.TryGet<AudioManager>();
             if (audio != null && _lockedSFX != null)
                 audio.PlaySFX2D(_lockedSFX);
 

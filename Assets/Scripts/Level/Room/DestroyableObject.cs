@@ -112,7 +112,7 @@ namespace ProjectArk.Level
             // Check if already destroyed from persistent state
             if (!string.IsNullOrEmpty(_ownerRoomID))
             {
-                var registry = ServiceLocator.Get<RoomFlagRegistry>();
+                var registry = ServiceLocator.TryGet<RoomFlagRegistry>();
                 if (registry != null && registry.GetFlag(_ownerRoomID, _resolvedFlagKey))
                 {
                     // Already destroyed in a previous visit — apply destroyed visual immediately.
@@ -132,7 +132,7 @@ namespace ProjectArk.Level
             // Persist destruction via RoomFlagRegistry
             if (!string.IsNullOrEmpty(_ownerRoomID))
             {
-                var registry = ServiceLocator.Get<RoomFlagRegistry>();
+                var registry = ServiceLocator.TryGet<RoomFlagRegistry>();
                 if (registry != null)
                 {
                     registry.SetFlag(_ownerRoomID, _resolvedFlagKey, true);
@@ -165,7 +165,7 @@ namespace ProjectArk.Level
                 // SFX
                 if (_destroySFX != null)
                 {
-                    var audio = ServiceLocator.Get<Core.Audio.AudioManager>();
+                    var audio = ServiceLocator.TryGet<Core.Audio.AudioManager>();
                     if (audio != null)
                     {
                         audio.PlaySFX2D(_destroySFX);

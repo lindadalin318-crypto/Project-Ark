@@ -49,8 +49,8 @@ namespace ProjectArk.SpaceLife.Editor
         private const string SpaceLifeCanvasName = "SpaceLifeCanvas";
         private const string SpaceLifeSceneRootName = "SpaceLifeScene";
         private const string PlayerPrefabPath = "Assets/_Prefabs/SpaceLife/Player2D_Prefab.prefab";
-        private const string UIPrefabsFolder = "Assets/_Prefabs/SpaceLife/UI";
-        private const string OptionButtonPrefabPath = UIPrefabsFolder + "/OptionButton_Prefab.prefab";
+        private const string UIPrefabsFolder = "Assets/_Prefabs/UI/SpaceLife";
+        private const string OptionButtonPrefabPath = UIPrefabsFolder + "/OptionButton.prefab";
 
         internal SetupPhase _selectedPhase = SetupPhase.AllPhases;
         private Vector2 _scrollPosition;

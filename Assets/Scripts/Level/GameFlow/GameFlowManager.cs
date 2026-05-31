@@ -55,14 +55,14 @@ namespace ProjectArk.Level
         private void Start()
         {
             // Load saved progress on scene start (distributes to all subsystems)
-            var saveBridge = ServiceLocator.Get<SaveBridge>();
+            var saveBridge = ServiceLocator.TryGet<SaveBridge>();
             if (saveBridge != null)
             {
                 saveBridge.LoadAll();
             }
 
             // Subscribe to player death
-            var health = ServiceLocator.Get<ShipHealth>();
+            var health = ServiceLocator.TryGet<ShipHealth>();
             if (health != null)
             {
                 health.OnDeath += HandlePlayerDeath;
@@ -77,7 +77,7 @@ namespace ProjectArk.Level
         {
             CancelRespawn();
 
-            var health = ServiceLocator.Get<ShipHealth>();
+            var health = ServiceLocator.TryGet<ShipHealth>();
             if (health != null)
                 health.OnDeath -= HandlePlayerDeath;
 
@@ -107,12 +107,12 @@ namespace ProjectArk.Level
             try
             {
                 // ── 1. Disable player input ──
-                var inputHandler = ServiceLocator.Get<InputHandler>();
+                var inputHandler = ServiceLocator.TryGet<InputHandler>();
                 if (inputHandler != null)
                     inputHandler.enabled = false;
 
                 // ── 2. Death SFX ──
-                var audio = ServiceLocator.Get<AudioManager>();
+                var audio = ServiceLocator.TryGet<AudioManager>();
                 if (audio != null && _deathSFX != null)
                     audio.PlaySFX2D(_deathSFX);
 
@@ -133,8 +133,8 @@ namespace ProjectArk.Level
                 await UniTask.Delay(_deathHoldMs, cancellationToken: token);
 
                 // ── 5. Get respawn position ──
-                var checkpointManager = ServiceLocator.Get<CheckpointManager>();
-                var roomManager = ServiceLocator.Get<RoomManager>();
+                var checkpointManager = ServiceLocator.TryGet<CheckpointManager>();
+                var roomManager = ServiceLocator.TryGet<RoomManager>();
 
                 Vector3 respawnPos = Vector3.zero;
                 Room checkpointRoom = null;
@@ -171,10 +171,10 @@ namespace ProjectArk.Level
                 }
 
                 // ── 8. Reset player state ──
-                var health = ServiceLocator.Get<ShipHealth>();
+                var health = ServiceLocator.TryGet<ShipHealth>();
                 if (health != null) health.ResetHealth();
 
-                var heat = ServiceLocator.Get<HeatSystem>();
+                var heat = ServiceLocator.TryGet<HeatSystem>();
                 if (heat != null) heat.ResetHeat();
 
                 // ── 9. Reset current room enemies ──
@@ -204,7 +204,7 @@ namespace ProjectArk.Level
                     inputHandler.enabled = true;
 
                 // ── 13. Save ──
-                var saveBridgeRef = ServiceLocator.Get<SaveBridge>();
+                var saveBridgeRef = ServiceLocator.TryGet<SaveBridge>();
                 if (saveBridgeRef != null)
                 {
                     saveBridgeRef.SaveAll();
@@ -227,7 +227,7 @@ namespace ProjectArk.Level
                     fadeControllerCancel.FadeImage.raycastTarget = false;
                 }
 
-                var inputHandler = ServiceLocator.Get<InputHandler>();
+                var inputHandler = ServiceLocator.TryGet<InputHandler>();
                 if (inputHandler != null)
                     inputHandler.enabled = true;
             }

@@ -393,7 +393,7 @@ namespace ProjectArk.Combat
 
         private void InitializeAllPools()
         {
-            if (ServiceLocator.Get<PoolManager>() == null && PoolManager.Instance == null)
+            if (ServiceLocator.TryGet<PoolManager>() == null && PoolManager.Instance == null)
             {
                 Debug.LogError("[StarChartController] PoolManager not found. Weapons disabled.");
                 enabled = false;

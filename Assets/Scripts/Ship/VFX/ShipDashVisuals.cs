@@ -60,6 +60,11 @@ namespace ProjectArk.Ship
         // i-frame flicker
         private CancellationTokenSource _iFrameCts;
 
+        // Dash body sprite burst
+        private CancellationTokenSource _dashSpriteCts;
+        private Sprite _normalBodySprite;
+        private bool _hideHighlightDuringDash;
+
         // Dodge ghost fade
         private Tween _dodgeFadeTween;
 
@@ -75,6 +80,10 @@ namespace ProjectArk.Ship
             _solidBaseColor = solidBase;
             _hlBaseColor = hlBase;
             _coreBaseColor = coreBase;
+            _normalBodySprite = _juiceSettings != null && _juiceSettings.NormalBodySprite != null
+                ? _juiceSettings.NormalBodySprite
+                : _solidRenderer != null ? _solidRenderer.sprite : null;
+            SetHighlightVisible(true);
 
             // Cache Dodge_Sprite parent for re-attachment
             if (_dodgeSprite != null)
@@ -110,6 +119,10 @@ namespace ProjectArk.Ship
         {
             if (!_enableAll || _juiceSettings == null) return;
 
+            _hideHighlightDuringDash = true;
+            SetHighlightVisible(false);
+            PlayDashBodySprites();
+
             // 1. i-frame flicker on Solid + HL + Core layers
             if (_enableIFrameFlicker)
             {
@@ -129,22 +142,29 @@ namespace ProjectArk.Ship
 
         public void OnDashEnded()
         {
+            CancelDashBodySprites(restoreNormal: true);
+
             // Stop i-frame flicker and restore all affected layers
             CancelIFrameFlicker();
             if (_solidRenderer != null) _solidRenderer.color = _solidBaseColor;
             if (_hlRenderer != null) _hlRenderer.color = _hlBaseColor;
             if (_coreRenderer != null) _coreRenderer.color = _coreBaseColor;
+            _hideHighlightDuringDash = false;
+            SetHighlightVisible(true);
         }
 
         public void ResetState()
         {
             CancelIFrameFlicker();
+            CancelDashBodySprites(restoreNormal: true);
 
             _dodgeFadeTween.Stop();
 
             if (_solidRenderer != null) _solidRenderer.color = _solidBaseColor;
             if (_hlRenderer != null) _hlRenderer.color = _hlBaseColor;
             if (_coreRenderer != null) _coreRenderer.color = _coreBaseColor;
+            _hideHighlightDuringDash = false;
+            SetHighlightVisible(true);
 
             ResetDodgeSprite();
 
@@ -227,7 +247,7 @@ namespace ProjectArk.Ship
                 if (_hlRenderer != null)
                 {
                     Color c = _hlBaseColor;
-                    c.a = bright ? _hlBaseColor.a : dimAlpha * _hlBaseColor.a;
+                    c.a = _hideHighlightDuringDash ? 0f : (bright ? _hlBaseColor.a : dimAlpha * _hlBaseColor.a);
                     _hlRenderer.color = c;
                 }
 
@@ -251,6 +271,58 @@ namespace ProjectArk.Ship
             _iFrameCts.Cancel();
             _iFrameCts.Dispose();
             _iFrameCts = null;
+        }
+
+        private void PlayDashBodySprites()
+        {
+            if (_solidRenderer == null || _juiceSettings == null) return;
+
+            Sprite[] frames = _juiceSettings.DashSprites;
+            if (frames == null || frames.Length == 0) return;
+
+            CancelDashBodySprites(restoreNormal: false);
+            _dashSpriteCts = new CancellationTokenSource();
+            PlayDashBodySpritesAsync(frames, _dashSpriteCts.Token).Forget();
+        }
+
+        private async UniTaskVoid PlayDashBodySpritesAsync(Sprite[] frames, CancellationToken ct)
+        {
+            int frameDurationMs = Mathf.Max(1, Mathf.RoundToInt(_juiceSettings.DashSpriteFrameDuration * 1000f));
+
+            for (int i = 0; i < frames.Length; i++)
+            {
+                if (ct.IsCancellationRequested) break;
+
+                if (frames[i] != null && _solidRenderer != null)
+                    _solidRenderer.sprite = frames[i];
+
+                if (i < frames.Length - 1)
+                {
+                    await UniTask.Delay(frameDurationMs, cancellationToken: ct).SuppressCancellationThrow();
+                }
+            }
+        }
+
+        private void CancelDashBodySprites(bool restoreNormal)
+        {
+            if (_dashSpriteCts != null)
+            {
+                _dashSpriteCts.Cancel();
+                _dashSpriteCts.Dispose();
+                _dashSpriteCts = null;
+            }
+
+            if (restoreNormal && _solidRenderer != null && _normalBodySprite != null)
+                _solidRenderer.sprite = _normalBodySprite;
+        }
+
+        private void SetHighlightVisible(bool visible)
+        {
+            if (_hlRenderer == null) return;
+
+            Color c = _hlBaseColor;
+            c.a = visible ? _hlBaseColor.a : 0f;
+            _hlRenderer.color = c;
         }
     }
 }

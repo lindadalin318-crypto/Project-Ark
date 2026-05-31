@@ -63,7 +63,7 @@ namespace ProjectArk.Level
             LevelEvents.OnWorldStageChanged += HandleWorldStageChanged;
 
             // Check current stage immediately (in case we loaded into a later stage)
-            var progressManager = ServiceLocator.Get<WorldProgressManager>();
+            var progressManager = ServiceLocator.TryGet<WorldProgressManager>();
             if (progressManager != null)
             {
                 EvaluateTrigger(progressManager.CurrentWorldStage);
@@ -122,7 +122,7 @@ namespace ProjectArk.Level
         private void SaveTriggeredState()
         {
             // 使用 SaveBridge 集中保存（它会收集所有子系统的数据）
-            var saveBridge = ServiceLocator.Get<SaveBridge>();
+            var saveBridge = ServiceLocator.TryGet<SaveBridge>();
             if (saveBridge != null)
             {
                 saveBridge.SaveAll();

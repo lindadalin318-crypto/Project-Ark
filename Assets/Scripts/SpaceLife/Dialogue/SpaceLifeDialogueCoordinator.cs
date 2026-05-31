@@ -444,7 +444,7 @@ namespace ProjectArk.SpaceLife.Dialogue
             _serviceRouter ??= ServiceLocator.Get<DialogueServiceRouter>();
             _spaceLifeManager ??= ServiceLocator.Get<SpaceLifeManager>();
             _relationshipManager ??= ServiceLocator.Get<RelationshipManager>();
-            _worldProgressManager ??= ServiceLocator.Get<WorldProgressManager>();
+            _worldProgressManager ??= ServiceLocator.TryGet<WorldProgressManager>();
         }
 
         private void OnDestroy()

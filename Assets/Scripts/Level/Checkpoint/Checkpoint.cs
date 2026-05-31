@@ -80,7 +80,7 @@ namespace ProjectArk.Level
         private void OnEnable()
         {
             // Try to subscribe immediately; InputHandler may not be registered yet on first enable
-            _inputHandler = ServiceLocator.Get<InputHandler>();
+            _inputHandler = ServiceLocator.TryGet<InputHandler>();
             if (_inputHandler != null)
                 _inputHandler.OnInteractPerformed += HandleInteract;
         }
@@ -90,7 +90,7 @@ namespace ProjectArk.Level
             // Fallback: if OnEnable ran before InputHandler registered, subscribe now
             if (_inputHandler == null)
             {
-                _inputHandler = ServiceLocator.Get<InputHandler>();
+                _inputHandler = ServiceLocator.TryGet<InputHandler>();
                 if (_inputHandler != null)
                     _inputHandler.OnInteractPerformed += HandleInteract;
             }
@@ -142,18 +142,18 @@ namespace ProjectArk.Level
             // ── Restore resources ──
             if (_data.RestoreHP)
             {
-                var health = ServiceLocator.Get<ShipHealth>();
+                var health = ServiceLocator.TryGet<ShipHealth>();
                 if (health != null) health.ResetHealth();
             }
 
             if (_data.RestoreHeat)
             {
-                var heat = ServiceLocator.Get<HeatSystem>();
+                var heat = ServiceLocator.TryGet<HeatSystem>();
                 if (heat != null) heat.ResetHeat();
             }
 
             // ── Notify CheckpointManager ──
-            var manager = ServiceLocator.Get<CheckpointManager>();
+            var manager = ServiceLocator.TryGet<CheckpointManager>();
             if (manager != null)
             {
                 manager.ActivateCheckpoint(this);
@@ -166,7 +166,7 @@ namespace ProjectArk.Level
             // ── Audio feedback ──
             if (_data.ActivationSFX != null)
             {
-                var audio = ServiceLocator.Get<AudioManager>();
+                var audio = ServiceLocator.TryGet<AudioManager>();
                 if (audio != null)
                     audio.PlaySFX2D(_data.ActivationSFX);
             }

@@ -76,7 +76,7 @@ namespace ProjectArk.Level
         private void CollectProgressData(PlayerSaveData data)
         {
             // MinimapManager → visited rooms
-            var minimap = ServiceLocator.Get<MinimapManager>();
+            var minimap = ServiceLocator.TryGet<MinimapManager>();
             if (minimap != null)
             {
                 data.Progress.VisitedRoomIDs.Clear();
@@ -94,7 +94,7 @@ namespace ProjectArk.Level
             }
 
             // WorldProgressManager → defeated bosses + world stage
-            var worldProgress = ServiceLocator.Get<WorldProgressManager>();
+            var worldProgress = ServiceLocator.TryGet<WorldProgressManager>();
             if (worldProgress != null)
             {
                 data.Progress.DefeatedBossIDs.Clear();
@@ -131,7 +131,7 @@ namespace ProjectArk.Level
         private void CollectPlayerState(PlayerSaveData data)
         {
             // ShipHealth → HP
-            var shipHealth = ServiceLocator.Get<ShipHealth>();
+            var shipHealth = ServiceLocator.TryGet<ShipHealth>();
             if (shipHealth != null)
             {
                 data.PlayerState.CurrentHP = shipHealth.CurrentHP;
@@ -139,7 +139,7 @@ namespace ProjectArk.Level
             }
 
             // CheckpointManager → checkpoint + position
-            var checkpoint = ServiceLocator.Get<CheckpointManager>();
+            var checkpoint = ServiceLocator.TryGet<CheckpointManager>();
             if (checkpoint != null && checkpoint.ActiveCheckpoint != null &&
                 checkpoint.ActiveCheckpoint.Data != null)
             {
@@ -154,7 +154,7 @@ namespace ProjectArk.Level
         private void DistributeProgressData(PlayerSaveData data)
         {
             // MinimapManager → visited rooms
-            var minimap = ServiceLocator.Get<MinimapManager>();
+            var minimap = ServiceLocator.TryGet<MinimapManager>();
             if (minimap != null && data.Progress.VisitedRoomIDs != null)
             {
                 minimap.ImportVisitedRooms(data.Progress.VisitedRoomIDs);
@@ -194,7 +194,7 @@ namespace ProjectArk.Level
         private void DistributePlayerState(PlayerSaveData data)
         {
             // ShipHealth → restore HP to saved value
-            var shipHealth = ServiceLocator.Get<ShipHealth>();
+            var shipHealth = ServiceLocator.TryGet<ShipHealth>();
             if (shipHealth != null)
             {
                 shipHealth.SetHP(data.PlayerState.CurrentHP);

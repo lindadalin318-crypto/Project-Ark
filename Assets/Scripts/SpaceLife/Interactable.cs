@@ -1,4 +1,3 @@
-
 using System.Collections.Generic;
 using ProjectArk.Core;
 using UnityEngine;
@@ -69,7 +68,7 @@ namespace ProjectArk.SpaceLife
         {
             // Try to cache eagerly; if Player2D has not spawned yet
             // (e.g. before entering SpaceLife mode), we will retry lazily in Update.
-            _cachedPlayer = ServiceLocator.Get<PlayerController2D>();
+            _cachedPlayer = ServiceLocator.TryGet<PlayerController2D>();
         }
 
         private void Update()
@@ -89,7 +88,7 @@ namespace ProjectArk.SpaceLife
             // until we get a valid reference.
             if (_cachedPlayer == null)
             {
-                _cachedPlayer = ServiceLocator.Get<PlayerController2D>();
+                _cachedPlayer = ServiceLocator.TryGet<PlayerController2D>();
                 if (_cachedPlayer == null)
                 {
                     _isInRange = false;
@@ -202,4 +201,3 @@ namespace ProjectArk.SpaceLife
         }
     }
 }
-

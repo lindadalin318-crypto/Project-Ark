@@ -40,7 +40,6 @@ namespace ProjectArk.UI
 
         // PrimeTween handles
         private Tween _hoverScaleTween;
-        private Tween _borderGlowTween;
 
         // Drag source state
         private bool _isDragSource;
@@ -303,7 +302,6 @@ namespace ProjectArk.UI
         private void OnDestroy()
         {
             _hoverScaleTween.Stop();
-            _borderGlowTween.Stop();
         }
     }
 }

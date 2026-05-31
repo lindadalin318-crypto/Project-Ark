@@ -78,6 +78,11 @@
 | `ShipCanaryBodyMaterial` | `mat_ship_canary_body_default.mat` | Material | Live | `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_body_default.mat` | `ShipPrefabRebuilder` | 正式 Canary body/core/weapon mount 基础材质 |
 | `ShipCanaryShapeMaterial` | `mat_ship_canary_shape.mat` | Material | Live | `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_shape.mat` | `ShipPrefabRebuilder` | 正式 Canary shape/mask 层材质；当前 mask renderer disabled |
 | `ShipCanaryOutlineMaterial` | `mat_ship_canary_outline.mat` | Material | Live | `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_outline.mat` | `ShipPrefabRebuilder` | 正式 Canary outline/readability 材质 |
+| `ShipCanaryCoreMaterial` | `mat_ship_canary_core_default.mat` | Material | Live | `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_core_default.mat` | `ShipPrefabRebuilder` | 正式 Canary core / energy focus 基础材质；当前参数值由 registry 定义契约，后续可迁移到 `ShipJuiceSettingsSO` 或专用 tuning asset |
+| `ShipCanaryDashMaterial` | `mat_ship_canary_dash.mat` | Material | Live | `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_dash.mat` | `ShipDashVisuals` / `DashAfterImageSpawner` | Dash 静态 ghost / stretch tint 基线材质；运行时只允许通过 renderer 实例或 `MaterialPropertyBlock` 改写参数 |
+| `ShipCanaryTrailMaterial` | `mat_ship_canary_trail.mat` | Material | Live | `Assets/_Art/Ship/Canary/Materials/mat_ship_canary_trail.mat` | `DashAfterImageSpawner` / future trail worker | Canary trail 基线材质；`lifetime` 与 `widthCurve` 属于运行时 VFX worker/tuning 参数，不写回 shared material |
+| `CanaryDashParticlesMaterial` | `mat_vfx_canary_dash_particles.mat` | Material | Live Candidate | `Assets/_Art/Ship/Canary/Materials/mat_vfx_canary_dash_particles.mat` | future Dash VFX worker | Dash particle preview / future integration 材质；当前不接入正式 `Ship.prefab` 主链 |
+| `CanaryMuzzleFlashMaterial` | `mat_vfx_canary_muzzle_flash.mat` | Material | Live Candidate | `Assets/_Art/Ship/Canary/Materials/mat_vfx_canary_muzzle_flash.mat` | `ShipFireVisuals` / future muzzle VFX worker | Muzzle flash preview / future integration 材质；当前 Fire MVP 仍由 WeaponMount/Core 点亮承担，不生成新 projectile VFX |
 | `ShipSharedGlowMaterial` | `ShipGlowMaterial.mat` | Material | Legacy Reference | `Assets/_Art/Ship/Glitch/ShipGlowMaterial.mat` | `ShipGlowMaterialCreator` | 旧 GG liquid/glow 辅助材质；不再由正式 `ShipPrefabRebuilder` 写入 Ship.prefab |
 | `BoostTrailMainMaterial` | `mat_trail_main.mat` | Material | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Materials/mat_trail_main.mat` | Reference | 旧 Boost 主拖尾材质；Ares-only 正式链路不再使用 |
 | `BoostEnergyLayer2Material` | `mat_boost_energy_layer2.mat` | Material | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Materials/mat_boost_energy_layer2.mat` | Reference | 旧 Boost Layer2 材质；Ares-only 正式链路不再使用 |
@@ -88,6 +93,25 @@
 | `BoostTrailMainShader` | `TrailMainEffect.shader` | Shader | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Shaders/TrailMainEffect.shader` | Reference | 旧 Boost shader；保留仅供历史排查 |
 | `BoostEnergyLayer2Shader` | `BoostEnergyLayer2.shader` | Shader | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Shaders/BoostEnergyLayer2.shader` | Reference | 旧 Layer2 shader；Ares-only 正式链路不再使用 |
 | `BoostEnergyLayer3Shader` | `BoostEnergyLayer3.shader` | Shader | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Shaders/BoostEnergyLayer3.shader` | Reference | 旧 Layer3 shader；Ares-only 正式链路不再使用 |
+
+### 5.1 Material Runtime Parameter Rules
+
+| Material Group | Required Parameters | Parameter Owner | Runtime Writer | Mutation Policy |
+| --- | --- | --- | --- | --- |
+| `body` | `tint`, `brightness` | `ShipJuiceSettingsSO` for live tuning; this registry defines the contract until fields are formalized | `ShipView` baseline capture + `ShipBoostVisuals` / `ShipHitVisuals` / `ShipDashVisuals` as state workers | Do not edit shared `mat_ship_canary_body_default.mat` at runtime. Use renderer color, renderer material instance, or `MaterialPropertyBlock` when shader properties are added. |
+| `shape` | `shapeTint`, `hitFlashAmount`, `dissolveAmount` | Future `Assets/_Data/Ship/` material tuning asset or expanded `ShipJuiceSettingsSO`; registry owns the MVP contract | `ShipHitVisuals` for hit flash; future Overheat / dissolve worker when integrated | Shape renderer may stay disabled until an owning worker enables it. Runtime values must be per-renderer, never written back to `mat_ship_canary_shape.mat`. |
+| `outline` | `outlineColor`, `outlineAlpha`, `outlineWidth` | `ShipJuiceSettingsSO` for live outline color/alpha; `outlineWidth` remains registry-defined until custom shader support exists | `ShipView` baseline + `ShipBoostVisuals` / `ShipHitVisuals` / `ShipDashVisuals` | Renderer color/alpha or `MaterialPropertyBlock` only. No shared material mutation and no legacy `Ship_Sprite_HL` resurrection. |
+| `dash` | `alpha`, `stretchTint`, `fadeDuration` | Existing dash/juice settings for timing; registry owns material contract until a dedicated data asset is created | `ShipDashVisuals` and `DashAfterImageSpawner` | Use pooled afterimage instances and per-renderer values. Do not store dash fade state in the material asset. |
+| `trail` | `trailColor`, `lifetime`, `widthCurve` | Future trail tuning under `Assets/_Data/Ship/`; current registry records required contract only | `DashAfterImageSpawner` / future trail worker | `lifetime` and `widthCurve` are component/tuning values, not material asset edits. Runtime trail color must be per-renderer / per-particle-system. |
+| `muzzle` | `lifetime`, `additiveIntensity`, `colorFamily` | `ShipJuiceSettingsSO` Fire settings for MVP timing/color family; future muzzle VFX tuning asset if a pooled muzzle VFX prefab is added | `ShipFireVisuals` / future pooled muzzle VFX worker | Fire VFX must be pooled if instantiated at runtime. Material asset remains authored baseline; intensity/color changes use instances or `MaterialPropertyBlock`. |
+
+Rules:
+
+1. `ShipVFX_AssetRegistry.md` owns the MVP material parameter contract; authored baseline colors remain in `.mat` files.
+2. Live gameplay tuning should live in `ShipJuiceSettingsSO` when it already belongs to existing ship juice/fire/dash/hit behavior; new multi-material VFX tuning should move to a dedicated asset under `Assets/_Data/Ship/` before formal runtime integration.
+3. Runtime code must not mutate shared `Material` assets. Use renderer color, material instances, `MaterialPropertyBlock`, or component-level values depending on the target renderer/VFX type.
+4. `MaterialTextureLinker` may maintain texture/material asset links but must not become a runtime parameter owner.
+5. These Canary materials do not require GG-style state sheet switching; they are stable baselines consumed by the Canary sprite/worker chain.
 
 ## 6. Textures and Sprites
 

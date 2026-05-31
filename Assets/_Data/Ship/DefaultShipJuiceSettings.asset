@@ -16,6 +16,23 @@ MonoBehaviour:
   _tiltSmoothSpeed: 10
   _squashStretchIntensity: 0.15
   _squashStretchDuration: 0.1
+  _normalBodySprite: {fileID: 21300000, guid: 322b6f66f387c404583143a22addb27b, type: 3}
+  _leanLeftSprites:
+  - {fileID: 21300000, guid: 09727d96e51be427eb891c47c98529dc, type: 3}
+  - {fileID: 21300000, guid: 7d022da8995d440dca3dcf0d3991ed53, type: 3}
+  - {fileID: 21300000, guid: e19321147bef845af9526562d0e32fdd, type: 3}
+  _leanRightSprites:
+  - {fileID: 21300000, guid: 72d507c7d36c545a2a92742be24cb3e4, type: 3}
+  - {fileID: 21300000, guid: 2f3b09fed60354ff189dce207dea2e36, type: 3}
+  - {fileID: 21300000, guid: df2a183294bb74985b195688e4a7880d, type: 3}
+  _leanSpriteDeadZone: 0.15
+  _dashSprites:
+  - {fileID: 21300000, guid: 17b82f477f4e048c9bbaa3fd8a2c6b55, type: 3}
+  - {fileID: 21300000, guid: b5bff54586bb34274bf83836bfa64fc7, type: 3}
+  - {fileID: 21300000, guid: 13e609e0392124cb0a469cea82bcc506, type: 3}
+  - {fileID: 21300000, guid: 661c50ae99d1f49bcaf0eb28ec122fb1, type: 3}
+  - {fileID: 21300000, guid: cfe0541fdd2854c8abb404f6f532eaa1, type: 3}
+  _dashSpriteFrameDuration: 0.05
   _dashAfterImageCount: 3
   _afterImageFadeDuration: 0.15
   _afterImageAlpha: 0.4

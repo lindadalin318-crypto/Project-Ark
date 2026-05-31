@@ -34,8 +34,8 @@ namespace ProjectArk.SpaceLife
 
         private void Start()
         {
-            _roomManager = ServiceLocator.Get<SpaceLifeRoomManager>();
-            _spaceLifeManager = ServiceLocator.Get<SpaceLifeManager>();
+            _roomManager = ServiceLocator.TryGet<SpaceLifeRoomManager>();
+            _spaceLifeManager = ServiceLocator.TryGet<SpaceLifeManager>();
 
             if (_roomManager != null)
             {

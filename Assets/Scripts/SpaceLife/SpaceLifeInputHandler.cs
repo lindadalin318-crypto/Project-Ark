@@ -62,7 +62,7 @@ namespace ProjectArk.SpaceLife
 
         private void Start()
         {
-            _spaceLifeManager = ServiceLocator.Get<SpaceLifeManager>();
+            _spaceLifeManager = ServiceLocator.TryGet<SpaceLifeManager>();
             Debug.Log($"[SpaceLifeInputHandler] SpaceLifeManager from ServiceLocator: {_spaceLifeManager != null}");
         }
 

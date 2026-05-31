@@ -206,7 +206,7 @@ namespace ProjectArk.Level
             Vector3 spawnPos = transform.position + _rewardOffset;
 
             // Use PoolManager to avoid Instantiate in combat (architecture principle #4)
-            var poolManager = ServiceLocator.Get<PoolManager>();
+            var poolManager = ServiceLocator.TryGet<PoolManager>();
             if (poolManager != null)
             {
                 var pool = poolManager.GetPool(_rewardPrefab);
@@ -252,7 +252,7 @@ namespace ProjectArk.Level
         private void PlaySFX(AudioClip clip)
         {
             if (clip == null) return;
-            var audio = ServiceLocator.Get<AudioManager>();
+            var audio = ServiceLocator.TryGet<AudioManager>();
             if (audio != null)
             {
                 audio.PlaySFX2D(clip);

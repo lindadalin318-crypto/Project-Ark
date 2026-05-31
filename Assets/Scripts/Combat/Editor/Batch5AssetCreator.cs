@@ -74,6 +74,9 @@ namespace ProjectArk.Combat.Editor
             var sr = go.AddComponent<SpriteRenderer>();
             sr.color = new Color(1f, 0.9f, 0.3f); // Yellowish bullet
 
+            var trail = go.AddComponent<TrailRenderer>();
+            ConfigureProjectileTrail(trail, sr);
+
             // PoolReference + Projectile
             go.AddComponent<Core.PoolReference>();
             go.AddComponent<Projectile>();
@@ -82,6 +85,36 @@ namespace ProjectArk.Combat.Editor
             Object.DestroyImmediate(go);
             Debug.Log($"  Created prefab: {path}");
             return prefab;
+        }
+
+        private static void ConfigureProjectileTrail(TrailRenderer trail, SpriteRenderer sr)
+        {
+            trail.time = 0.15f;
+            trail.minVertexDistance = 0.1f;
+            trail.autodestruct = false;
+            trail.emitting = true;
+            trail.numCornerVertices = 0;
+            trail.numCapVertices = 0;
+            trail.alignment = LineAlignment.TransformZ;
+            trail.textureMode = LineTextureMode.Stretch;
+            trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            trail.receiveShadows = false;
+            trail.generateLightingData = false;
+            trail.widthMultiplier = 1f;
+            trail.widthCurve = new AnimationCurve(
+                new Keyframe(0f, 0.085f),
+                new Keyframe(1f, 0f));
+
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0f, 1f) });
+            trail.colorGradient = gradient;
+
+            if (sr != null && sr.sharedMaterial != null)
+            {
+                trail.sharedMaterial = sr.sharedMaterial;
+            }
         }
 
         private static GameObject CreateLaserBeamPrefab()

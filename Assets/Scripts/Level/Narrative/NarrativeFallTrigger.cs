@@ -102,6 +102,7 @@ namespace ProjectArk.Level
             // ── Placeholder implementation: just log and teleport ──
             Debug.Log($"[NarrativeFallTrigger] PLACEHOLDER — Fall sequence triggered on {gameObject.name}. " +
                       $"Target: {(_targetRoom != null ? _targetRoom.RoomID : "null")}. " +
+                      $"CameraScroll: duration={_cameraScrollDuration:0.##}s, distance={_cameraScrollDistance:0.##}. " +
                       "Full cinematic implementation pending.");
 
             // Minimal functionality: teleport player to target (no cinematic)

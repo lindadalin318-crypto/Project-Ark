@@ -232,7 +232,7 @@ namespace ProjectArk.Level
         {
             if (phase == null || phase.PhaseBGM == null) return;
 
-            var audio = ServiceLocator.Get<AudioManager>();
+            var audio = ServiceLocator.TryGet<AudioManager>();
             if (audio != null)
             {
                 audio.PlayMusic(phase.PhaseBGM, _bgmCrossfadeDuration);
@@ -241,7 +241,7 @@ namespace ProjectArk.Level
 
         private void TransitionLowPass(WorldPhaseSO phase)
         {
-            var audio = ServiceLocator.Get<AudioManager>();
+            var audio = ServiceLocator.TryGet<AudioManager>();
             if (audio == null) return;
 
             if (phase != null && phase.ApplyLowPassFilter)

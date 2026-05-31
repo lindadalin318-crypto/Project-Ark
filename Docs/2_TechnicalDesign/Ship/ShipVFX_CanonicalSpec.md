@@ -67,7 +67,8 @@ Runtime 主驱动关系：
 
 - `ShipView` (Coordinator)：轻量协调器，持有 Canary sprite 引用（Body/Shape/Outline/Core/WeaponMount 的 runtime 映射），捕获基线颜色，订阅 `ShipStateController.OnStateChanged` + `ShipHealth.OnDamageTaken` + `ShipMotor.OnSpeedChanged` 事件，路由到对应 Worker。自身不包含任何 VFX 实现逻辑。
   - `ShipBoostVisuals` (Worker)：Boost 状态视觉——Canary Shape/Outline/Core alpha/color 支持、推进器脉冲、`BoostTrailView` 启停委托；正式配置禁用旧 GG Liquid sprite swap。
-  - `ShipHitVisuals` (Worker)：受击反馈——Canary 可见层同步白闪、正伤害时短促显示 `Ship_HitMaskFlash` 外轮廓/core overlay、受击后 i-frame 闪烁、Core 低血量警告脉冲  - `ShipDashVisuals` (Worker)：冲刺反馈——Body/Outline/Core i-frame 闪烁、Dodge_Sprite 静态残影（分离→淡出→回挂）、`DashAfterImageSpawner` 启停委托（二级 Worker）
+  - `ShipHitVisuals` (Worker)：受击反馈——Canary 可见层同步白闪、正伤害时短促显示 `Ship_HitMaskFlash` 外轮廓/core overlay、受击后 i-frame 闪烁、Core 低血量警告脉冲
+  - `ShipDashVisuals` (Worker)：冲刺反馈——Body/Outline/Core i-frame 闪烁、Dodge_Sprite 静态残影（分离→淡出→回挂）、`DashAfterImageSpawner` 启停委托（二级 Worker）
   - `ShipFireVisuals` (Worker)：开火反馈——通过 `CombatEvents.OnPlayerProjectileFired` 由 `ShipView` 路由，短促点亮 `Ship_Sprite_WeaponMount` 与 `Ship_Sprite_Core`，不订阅事件、不生成投射物、不改变 Body 身份
   - `ShipVisualJuice` (Worker)：船体 juice——移动倾斜（tilt）、急加速/减速形变（squash/stretch）；由 ShipView 注入组件引用，通过 `OnSpeedChanged()` / `OnDashStarted()` 被动接收信号
   - `DashAfterImageSpawner` (二级 Worker)：Dash 连续残影（对象池化）；由 `ShipDashVisuals` 通过 `TriggerSpawn()` 驱动，不自行订阅事件

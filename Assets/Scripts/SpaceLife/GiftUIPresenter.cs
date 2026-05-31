@@ -279,7 +279,7 @@ namespace ProjectArk.SpaceLife
             // a hot path, a dedicated NPCRegistry can be introduced without changing the
             // IGiftPresenter contract.
 #if UNITY_2023_1_OR_NEWER
-            NPCController[] npcs = FindObjectsByType<NPCController>(FindObjectsSortMode.None);
+            NPCController[] npcs = FindObjectsByType<NPCController>();
 #else
             NPCController[] npcs = FindObjectsOfType<NPCController>();
 #endif

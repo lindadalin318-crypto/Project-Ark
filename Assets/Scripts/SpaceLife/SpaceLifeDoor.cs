@@ -36,7 +36,7 @@ namespace ProjectArk.SpaceLife
 
         private void Start()
         {
-            _roomManager = ServiceLocator.Get<SpaceLifeRoomManager>();
+            _roomManager = ServiceLocator.TryGet<SpaceLifeRoomManager>();
             SetupInteractable();
         }
 
@@ -56,7 +56,7 @@ namespace ProjectArk.SpaceLife
 
         public void UseDoor()
         {
-            PlayerController2D player = ServiceLocator.Get<PlayerController2D>();
+            PlayerController2D player = ServiceLocator.TryGet<PlayerController2D>();
             if (player == null) return;
 
             if (_targetPosition != null)
@@ -69,7 +69,10 @@ namespace ProjectArk.SpaceLife
                 _roomManager.SetCurrentRoom(_targetRoom);
             }
 
-            ToggleOpen();
+            if (_autoOpen)
+            {
+                SetOpen(true);
+            }
         }
 
         public void ToggleOpen()

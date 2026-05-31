@@ -1,6 +1,6 @@
 #if UNITY_EDITOR
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -21,7 +21,6 @@ namespace ProjectArk.Ship.Editor
     {
         private const string BoostBloomVolumeName = "BoostTrailBloomVolume";
         private const string BoostBloomProfilePath = "Assets/Settings/BoostBloomVolumeProfile.asset";
-        private const string VolumeTypeName = "UnityEngine.Rendering.Volume, Unity.RenderPipelines.Core.Runtime";
 
         [MenuItem("ProjectArk/Ship/VFX/Authority/Bind BoostTrail Scene Bloom References")]
         public static void SetupBoostTrailSceneReferences()
@@ -31,7 +30,7 @@ namespace ProjectArk.Ship.Editor
 
             var bloomVolume = FindOrCreateBoostBloomVolume(log, todo);
 
-            var views = UnityEngine.Object.FindObjectsByType<BoostTrailView>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var views = UnityEngine.Object.FindObjectsByType<BoostTrailView>(FindObjectsInactive.Include);
             if (views.Length == 0)
             {
                 todo.Add("Scene contains no BoostTrailView. Ensure the Ship prefab already includes BoostTrailRoot first.");
@@ -59,12 +58,12 @@ namespace ProjectArk.Ship.Editor
             var volumeType = ResolveVolumeType();
             if (volumeType == null)
             {
-                todo.Add($"Volume type not found via VolumeProfile assembly: {VolumeTypeName}");
+                todo.Add("Volume type not found: UnityEngine.Rendering.Volume");
                 return null;
             }
 
             Component volume = null;
-            var components = UnityEngine.Object.FindObjectsByType<Component>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var components = UnityEngine.Object.FindObjectsByType<Component>(FindObjectsInactive.Include);
             for (int i = 0; i < components.Length; i++)
             {
                 var candidate = components[i];
@@ -165,11 +164,6 @@ namespace ProjectArk.Ship.Editor
 
         private static Type ResolveVolumeType()
         {
-            // First try: exact Assembly-Qualified Name lookup (fastest)
-            var type = Type.GetType(VolumeTypeName);
-            if (type != null) return type;
-
-            // Fallback: search by FullName only (without assembly qualifier)
             const string volumeFullName = "UnityEngine.Rendering.Volume";
             var componentTypes = TypeCache.GetTypesDerivedFrom<Component>();
             for (int i = 0; i < componentTypes.Count; i++)

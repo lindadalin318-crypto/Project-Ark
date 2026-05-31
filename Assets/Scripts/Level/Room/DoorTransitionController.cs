@@ -158,7 +158,7 @@ namespace ProjectArk.Level
                 var ceremony = door.Ceremony;
                 float fadeDuration = GetFadeDuration(ceremony);
 
-                var inputHandler = ServiceLocator.Get<InputHandler>();
+                var inputHandler = ServiceLocator.TryGet<InputHandler>();
                 if (inputHandler != null)
                 {
                     inputHandler.enabled = false;
@@ -192,7 +192,7 @@ namespace ProjectArk.Level
                 }
 
                 // ── 切换房间 ──
-                var roomManager = ServiceLocator.Get<RoomManager>();
+                var roomManager = ServiceLocator.TryGet<RoomManager>();
                 if (roomManager != null && targetRoom != null)
                 {
                     roomManager.EnterRoom(targetRoom);
@@ -218,7 +218,7 @@ namespace ProjectArk.Level
             {
                 ResetFadeOverlay();
 
-                var inputHandler = ServiceLocator.Get<InputHandler>();
+                var inputHandler = ServiceLocator.TryGet<InputHandler>();
                 if (inputHandler != null)
                 {
                     inputHandler.enabled = true;
@@ -248,7 +248,7 @@ namespace ProjectArk.Level
 
         private async UniTask PlayLayerTransitionEffects(Door door, Room targetRoom, CancellationToken token)
         {
-            var roomManager = ServiceLocator.Get<RoomManager>();
+            var roomManager = ServiceLocator.TryGet<RoomManager>();
             int currentFloor = roomManager?.CurrentFloor ?? 0;
             int targetFloor = targetRoom?.Data?.FloorLevel ?? 0;
             bool descending = targetFloor < currentFloor;
@@ -261,7 +261,7 @@ namespace ProjectArk.Level
                 _layerTransitionParticles.Play();
             }
 
-            var audio = ServiceLocator.Get<AudioManager>();
+            var audio = ServiceLocator.TryGet<AudioManager>();
             if (audio != null && _layerTransitionSFX != null)
             {
                 audio.PlaySFX2D(_layerTransitionSFX);
@@ -299,7 +299,7 @@ namespace ProjectArk.Level
             }
 
             // Boss-specific SFX (fallback to layer SFX if not assigned)
-            var audio = ServiceLocator.Get<AudioManager>();
+            var audio = ServiceLocator.TryGet<AudioManager>();
             var sfx = _bossTransitionSFX != null ? _bossTransitionSFX : _layerTransitionSFX;
             if (audio != null && sfx != null)
             {
@@ -345,7 +345,7 @@ namespace ProjectArk.Level
             }
 
             // Heavy-specific SFX (fallback chain)
-            var audio = ServiceLocator.Get<AudioManager>();
+            var audio = ServiceLocator.TryGet<AudioManager>();
             var sfx = _heavyTransitionSFX != null ? _heavyTransitionSFX
                     : _bossTransitionSFX != null ? _bossTransitionSFX
                     : _layerTransitionSFX;
@@ -413,7 +413,7 @@ namespace ProjectArk.Level
                 return;
             }
 
-            var audio = ServiceLocator.Get<AudioManager>();
+            var audio = ServiceLocator.TryGet<AudioManager>();
             if (audio != null)
             {
                 audio.PlayMusic(targetRoom.Data.AmbientMusic, _bgmCrossfadeDuration);

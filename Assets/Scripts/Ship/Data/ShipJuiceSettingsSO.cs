@@ -37,6 +37,31 @@ namespace ProjectArk.Ship
         [SerializeField] private float _squashStretchDuration = 0.1f;
 
         // ══════════════════════════════════════════════════════════════
+        // Runtime Body Sprite Animation
+        // ══════════════════════════════════════════════════════════════
+
+        [Header("Runtime Body Sprite Animation")]
+        [Tooltip("Normal body sprite restored when no lean or dash body frame is active. Null = use the renderer's startup sprite.")]
+        [SerializeField] private Sprite _normalBodySprite;
+
+        [Tooltip("Left lean body sprites from subtle to strong. Used by runtime movement readability, not the preview Animator.")]
+        [SerializeField] private Sprite[] _leanLeftSprites = new Sprite[0];
+
+        [Tooltip("Right lean body sprites from subtle to strong. Used by runtime movement readability, not the preview Animator.")]
+        [SerializeField] private Sprite[] _leanRightSprites = new Sprite[0];
+
+        [Tooltip("Minimum lateral movement component before body sprite lean is shown.")]
+        [Range(0f, 1f)]
+        [SerializeField] private float _leanSpriteDeadZone = 0.15f;
+
+        [Tooltip("Dash body sprites played as a one-shot burst when entering Dash.")]
+        [SerializeField] private Sprite[] _dashSprites = new Sprite[0];
+
+        [Tooltip("Time between dash body sprite frames.")]
+        [Min(0.01f)]
+        [SerializeField] private float _dashSpriteFrameDuration = 0.05f;
+
+        // ══════════════════════════════════════════════════════════════
         // Dash After-Image
         // ══════════════════════════════════════════════════════════════
 
@@ -132,6 +157,14 @@ namespace ProjectArk.Ship
         // Squash & Stretch
         public float SquashStretchIntensity => _squashStretchIntensity;
         public float SquashStretchDuration => _squashStretchDuration;
+
+        // Runtime Body Sprite Animation
+        public Sprite NormalBodySprite => _normalBodySprite;
+        public Sprite[] LeanLeftSprites => _leanLeftSprites;
+        public Sprite[] LeanRightSprites => _leanRightSprites;
+        public float LeanSpriteDeadZone => _leanSpriteDeadZone;
+        public Sprite[] DashSprites => _dashSprites;
+        public float DashSpriteFrameDuration => _dashSpriteFrameDuration;
 
         // After-Image
         public int DashAfterImageCount => _dashAfterImageCount;

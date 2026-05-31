@@ -97,15 +97,15 @@ namespace ProjectArk.UI
         private void Start()
         {
             // 查找游戏系统（通过 ServiceLocator）
-            var controller = ServiceLocator.Get<StarChartController>();
-            var heatSystem = ServiceLocator.Get<HeatSystem>();
+            var controller = ServiceLocator.TryGet<StarChartController>();
+            var heatSystem = ServiceLocator.TryGet<HeatSystem>();
 
             // 绑定热量条
             if (_heatBarHUD != null)
                 _heatBarHUD.Bind(heatSystem);
 
             // 绑定血条
-            var shipHealth = ServiceLocator.Get<ShipHealth>();
+            var shipHealth = ServiceLocator.TryGet<ShipHealth>();
             if (_healthBarHUD != null)
                 _healthBarHUD.Bind(shipHealth);
 

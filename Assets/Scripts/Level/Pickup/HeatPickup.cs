@@ -11,7 +11,7 @@ namespace ProjectArk.Level
     {
         protected override void OnPickedUp(GameObject player)
         {
-            var heat = ServiceLocator.Get<HeatSystem>();
+            var heat = ServiceLocator.TryGet<HeatSystem>();
             if (heat != null)
             {
                 heat.ResetHeat();

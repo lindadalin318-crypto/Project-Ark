@@ -91,7 +91,7 @@ namespace ProjectArk.Level
 
         private void Start()
         {
-            _minimapManager = ServiceLocator.Get<MinimapManager>();
+            _minimapManager = ServiceLocator.TryGet<MinimapManager>();
 
             if (_minimapManager != null)
             {
@@ -155,7 +155,7 @@ namespace ProjectArk.Level
         public void Open()
         {
             if (_minimapManager == null)
-                _minimapManager = ServiceLocator.Get<MinimapManager>();
+                _minimapManager = ServiceLocator.TryGet<MinimapManager>();
 
             _isOpen = true;
             gameObject.SetActive(true);

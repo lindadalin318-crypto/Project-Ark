@@ -96,7 +96,7 @@ namespace ProjectArk.UI.Editor
                 Debug.Log("[UICanvasBuilder] DoorTransitionController already exists, skipping");
 
             // ── Step 6.5: CameraDirector on CinemachineCamera ─────
-            var gameplayVcam = Object.FindFirstObjectByType<CinemachineCamera>();
+            var gameplayVcam = Object.FindAnyObjectByType<CinemachineCamera>();
             if (gameplayVcam != null)
             {
                 var cameraDirector = gameplayVcam.GetComponent<CameraDirector>();
@@ -189,7 +189,7 @@ namespace ProjectArk.UI.Editor
             }
 
             // Strategy 2: Find a ScreenSpaceOverlay Canvas with sortingOrder=10
-            var canvases = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var canvases = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include);
             foreach (var c in canvases)
             {
                 if (c.renderMode == RenderMode.ScreenSpaceOverlay && c.sortingOrder == 10)
@@ -379,7 +379,7 @@ namespace ProjectArk.UI.Editor
             cardBgImg.color = StarChartTheme.BgTrack;
             cardBgImg.raycastTarget = false;
 
-            // LoadoutCard header (◈ icon + name + subtitle)
+            // LoadoutCard header (ASCII icon + name + subtitle)
             // HTML: lc-header ~28px / LoadoutCard ~317px ≈ 8.8%
             var cardHeader = CreateUIObject("CardHeader", loadoutCardGo.transform);
             SetAnchors(cardHeader, new Vector2(0f, 0.91f), new Vector2(1f, 1f));
@@ -588,10 +588,10 @@ namespace ProjectArk.UI.Editor
             var nameLE = detailName.AddComponent<LayoutElement>();
             nameLE.preferredHeight = 30;
 
-            // Type label (e.g. "◈  CORE" colored by type)
+            // Type label (e.g. ">  CORE" colored by type)
             var detailTypeLabel = CreateUIObject("TypeLabel", detailLayout.transform);
             var detailTypeLabelTmp = detailTypeLabel.AddComponent<TextMeshProUGUI>();
-            detailTypeLabelTmp.text = "◈  CORE";
+            detailTypeLabelTmp.text = ">  CORE";
             detailTypeLabelTmp.fontSize = 13;
             detailTypeLabelTmp.fontStyle = FontStyles.Bold;
             detailTypeLabelTmp.color = StarChartTheme.CoreColor;
@@ -927,7 +927,7 @@ namespace ProjectArk.UI.Editor
                 WireField(weavingTransition, "_mainCamera", mainCam);
             }
 
-            var gameplayVcam = Object.FindFirstObjectByType<CinemachineCamera>();
+            var gameplayVcam = Object.FindAnyObjectByType<CinemachineCamera>();
             if (gameplayVcam != null)
             {
                 WireField(weavingTransition, "_gameplayVirtualCamera", gameplayVcam);
@@ -963,11 +963,11 @@ namespace ProjectArk.UI.Editor
             var doorTransition = fadeGo.AddComponent<DoorTransitionController>();
             WireField(doorTransition, "_fadeImage", fadeImg);
 
-            var gameplayVcam = Object.FindFirstObjectByType<CinemachineCamera>();
+            var gameplayVcam = Object.FindAnyObjectByType<CinemachineCamera>();
             if (gameplayVcam != null)
                 WireField(doorTransition, "_fallbackVirtualCamera", gameplayVcam);
 
-            var gameFlowManager = Object.FindFirstObjectByType<GameFlowManager>();
+            var gameFlowManager = Object.FindAnyObjectByType<GameFlowManager>();
             if (gameFlowManager != null)
                 WireField(gameFlowManager, "_fadeImage", fadeImg);
 
@@ -1473,7 +1473,7 @@ namespace ProjectArk.UI.Editor
         }
 
         /// <summary>
-        /// Build the LoadoutCard header: ◈ icon + Loadout name + "LOADOUT #N" subtitle.
+        /// Build the LoadoutCard header: ASCII icon + Loadout name + "LOADOUT #N" subtitle.
         /// </summary>
         private static void BuildLoadoutCardHeader(Transform parent)
         {
@@ -1484,10 +1484,10 @@ namespace ProjectArk.UI.Editor
             hlg.childForceExpandWidth = false;
             hlg.childForceExpandHeight = true;
 
-            // ◈ icon
+            // ASCII icon avoids TMP fallback warnings with the default LiberationSans SDF asset.
             var iconGo = CreateUIObject("CardIcon", parent);
             var iconTmp = iconGo.AddComponent<TextMeshProUGUI>();
-            iconTmp.text = "◈";
+            iconTmp.text = ">";
             iconTmp.fontSize = 16;
             iconTmp.color = StarChartTheme.Cyan;
             iconTmp.raycastTarget = false;

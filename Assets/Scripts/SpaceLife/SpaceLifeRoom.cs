@@ -40,7 +40,7 @@ namespace ProjectArk.SpaceLife
 
         private void OnEnable()
         {
-            _roomManager = ServiceLocator.Get<SpaceLifeRoomManager>();
+            _roomManager = ServiceLocator.TryGet<SpaceLifeRoomManager>();
             if (_roomManager != null)
             {
                 _roomManager.RegisterRoom(this);
@@ -49,7 +49,7 @@ namespace ProjectArk.SpaceLife
 
         private void Start()
         {
-            _cachedPlayer = ServiceLocator.Get<PlayerController2D>();
+            _cachedPlayer = ServiceLocator.TryGet<PlayerController2D>();
         }
 
         private void OnDisable()

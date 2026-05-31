@@ -85,7 +85,7 @@ namespace ProjectArk.Level
         {
             // Obtain the global post-processing volume through AmbienceController (ServiceLocator),
             // avoiding the forbidden FindAnyObjectByType pattern.
-            var ambience = ServiceLocator.Get<AmbienceController>();
+            var ambience = ServiceLocator.TryGet<AmbienceController>();
             if (ambience != null)
             {
                 _postProcessVolume = ambience.PostProcessVolume;
@@ -202,7 +202,7 @@ namespace ProjectArk.Level
 
         private void ApplyAudio()
         {
-            var audio = ServiceLocator.Get<AudioManager>();
+            var audio = ServiceLocator.TryGet<AudioManager>();
             if (audio == null) return;
 
             // BGM crossfade
@@ -289,7 +289,7 @@ namespace ProjectArk.Level
 
         private void RevertAudio()
         {
-            var audio = ServiceLocator.Get<AudioManager>();
+            var audio = ServiceLocator.TryGet<AudioManager>();
             if (audio == null) return;
 
             // Remove low-pass filter

@@ -61,10 +61,10 @@ namespace ProjectArk.UI
             {
                 _typeLabel.text = item.ItemType switch
                 {
-                    StarChartItemType.Core      => "◈  CORE",
-                    StarChartItemType.Prism     => "◈  PRISM",
-                    StarChartItemType.LightSail => "◈  SAIL",
-                    StarChartItemType.Satellite => "◈  SAT",
+                    StarChartItemType.Core      => ">  CORE",
+                    StarChartItemType.Prism     => ">  PRISM",
+                    StarChartItemType.LightSail => ">  SAIL",
+                    StarChartItemType.Satellite => ">  SAT",
                     _                           => item.ItemType.ToString().ToUpper()
                 };
                 _typeLabel.color = StarChartTheme.GetTypeColor(item.ItemType);

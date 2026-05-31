@@ -169,7 +169,7 @@ namespace ProjectArk.Level
         private void SaveProgress()
         {
             // Delegate to SaveBridge for centralized save (collects all subsystems)
-            var saveBridge = ServiceLocator.Get<SaveBridge>();
+            var saveBridge = ServiceLocator.TryGet<SaveBridge>();
             if (saveBridge != null)
             {
                 saveBridge.SaveAll();

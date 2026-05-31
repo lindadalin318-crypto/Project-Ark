@@ -220,8 +220,6 @@ namespace ProjectArk.UI
             frontCg.alpha = 1f;
             backCg.alpha  = 1f;
 
-            float half = DrumFlipDuration * 0.5f;
-
             // Front flips out, back flips in simultaneously
             _drumSequence = Sequence.Create(useUnscaledTime: true)
                 .Group(Tween.LocalEulerAngles(_drumFront.rectTransform,

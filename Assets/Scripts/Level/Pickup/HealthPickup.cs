@@ -15,7 +15,7 @@ namespace ProjectArk.Level
 
         protected override void OnPickedUp(GameObject player)
         {
-            var health = ServiceLocator.Get<ShipHealth>();
+            var health = ServiceLocator.TryGet<ShipHealth>();
             if (health != null)
             {
                 health.Heal(_healAmount);

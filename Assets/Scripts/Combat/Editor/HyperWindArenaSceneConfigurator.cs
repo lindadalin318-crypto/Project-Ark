@@ -48,7 +48,7 @@ namespace ProjectArk.Combat.Editor
 
         private static void EnsurePoolManager()
         {
-            PoolManager existing = Object.FindFirstObjectByType<PoolManager>();
+            PoolManager existing = Object.FindAnyObjectByType<PoolManager>(FindObjectsInactive.Exclude);
             if (existing != null)
             {
                 return;
