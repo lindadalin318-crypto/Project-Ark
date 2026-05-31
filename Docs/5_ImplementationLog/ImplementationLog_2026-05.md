@@ -1,5 +1,35 @@
 ---
 
+## Ship/VFX BoostTrailPrefabCreator Audit-only 模式 — 2026-05-31 20:59
+
+- **新建/修改文件**
+  - `Assets/Scripts/Ship/Editor/BoostTrailPrefabCreator.cs`
+  - `Assets/Scripts/Ship/Editor/ShipVfxValidatorTests.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：为 `BoostTrailPrefabCreator` 增加只读 `RunAudit(logToConsole)` 入口和菜单项 `ProjectArk/Ship/VFX/Authority/Audit BoostTrailRoot Prefab`。Audit 会检查 `BoostTrailRoot.prefab` 是否存在、根节点命名、`BoostTrailView` / `BoostTrailDebugManager` 组件、`BoostTrailView._juiceSettings`、prefab 内 `_boostBloomVolume` 必须保持空引用、`_aresSustainParticles` 数组、`AresBoostTrail` 粒子层，以及旧 `MainTrail` / `FlameTrail_*` / `BoostEnergyLayer*` / `BoostActivationHalo` 等 legacy 节点不得回流。新增 EditMode 回归测试覆盖“删除 `AresBoostTrail` 后 Audit 报错但不自动重建 prefab 子节点”的只读行为。
+
+- **目的**：继续 Ship/VFX Phase A authority cleanup，把 `BoostTrailRoot.prefab` 结构权威工具从单一 Apply/Rebuild 菜单推进到 Audit / Apply 分离，确保 prefab 结构漂移、legacy 节点回流或核心序列化引用缺失时能被显式审计，而不是依赖重建菜单或运行时 fallback 暗中修复。
+
+- **技术**：按 TDD 执行，先新增失败测试并用 `dotnet build Project-Ark.slnx` 确认 RED 失败原因为缺少 `BoostTrailPrefabCreator.RunAudit` / `Severity`，再实现最小 `Severity`、`AuditResult`、`RunAudit` 和 prefab contents 只读检查 helper。`RunAudit` 只使用 `AssetDatabase.LoadAssetAtPath` 与 `PrefabUtility.LoadPrefabContents` 读取状态，不调用 `SaveAsPrefabAsset`、`SetDirty`、`SaveAssets` 或 `Refresh`。验证：`dotnet build Project-Ark.slnx` 通过（仅保留第三方示例脚本既有 2 个 warning）；Unity EditMode 目标测试 `BoostTrailPrefabCreatorRunAudit_ReportsMissingAresTrailWithoutRebuildingIt` 1/1 passed；整类 `ShipVfxValidatorTests` 5/5 passed；Unity Console error 复查未发现项目脚本错误。
+
+---
+
+## Ship/VFX MaterialTextureLinker Audit-only 模式 — 2026-05-31 19:29
+
+- **新建/修改文件**
+  - `Assets/Scripts/Ship/Editor/MaterialTextureLinker.cs`
+  - `Assets/Scripts/Ship/Editor/ShipVfxValidatorTests.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：为 `MaterialTextureLinker` 增加只读 `RunAudit(logToConsole)` 入口和菜单项 `ProjectArk/Ship/VFX/Authority/Audit Active BoostTrail Material Textures`。Audit 会检查当前工具声明的 BoostTrail 材质是否存在、指定 shader 是否匹配、各 texture slot 是否指向 `Assets/_Art/VFX/BoostTrail/Textures` 下的精确路径资源，并额外检查 `mat_trail_main._UseLegacySlots` 是否保持 0。新增 EditMode 回归测试覆盖“破坏 `mat_flame_trail._BaseMap` 后 Audit 报错但不自动修复”的只读行为。
+
+- **目的**：继续 Ship/VFX Phase A authority cleanup，把现役材质贴图回填工具从单一 Apply 菜单推进到 Audit / Apply 分离，避免材质或贴图漂移只能通过写入型菜单发现，同时满足关键依赖缺失必须可审计、不可 silent no-op 的模块规则。
+
+- **技术**：按 TDD 执行，先新增失败测试并用 `dotnet build Project-Ark.slnx` 确认 RED 失败原因为缺少 `MaterialTextureLinker.RunAudit` / `Severity`，再实现最小 `Severity`、`AuditResult`、`RunAudit` 和只读检查 helper。`RunAudit` 不调用 `SetDirty`、`SaveAssets` 或 `Refresh`，只读取 `Material`、`Shader`、`Texture2D` 与 shader property 状态并输出结构化结果。验证：`dotnet build Project-Ark.slnx` 通过（仅保留第三方示例脚本既有 2 个 warning）；Unity `TestResults.xml` 确认 `MaterialTextureLinkerRunAudit_ReportsBrokenTextureBindingWithoutRepairingIt` passed；Unity Console error 复查为 0。Unity MCP test job 状态未及时释放，整类测试未重复启动。
+
+---
+
 ## Ship/VFX SceneBinder Audit-only 模式 — 2026-05-31 18:04
 
 - **新建/修改文件**

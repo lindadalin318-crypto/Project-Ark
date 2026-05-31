@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Text;
 using UnityEditor;
 using UnityEngine;
 
@@ -19,6 +21,66 @@ namespace ProjectArk.Ship.Editor
         private const string PREFAB_PATH = "Assets/_Prefabs/VFX/BoostTrailRoot.prefab";
         private const string SHIP_JUICE_SETTINGS_PATH = "Assets/_Data/Ship/DefaultShipJuiceSettings.asset";
         private const string AresProjectileOnlyPrefabPath = "Assets/QFX/ProjectilesFX/VFX_Prefabs/Projectiles/VFX_Ares_Projectile_Only.prefab";
+
+        public enum Severity
+        {
+            Info,
+            Warning,
+            Error
+        }
+
+        public sealed class AuditResult
+        {
+            public AuditResult(Severity severity, string message)
+            {
+                Severity = severity;
+                Message = message;
+            }
+
+            public Severity Severity { get; }
+            public string Message { get; }
+        }
+
+        [MenuItem("ProjectArk/Ship/VFX/Authority/Audit BoostTrailRoot Prefab")]
+        public static void RunAuditMenu()
+        {
+            RunAudit(logToConsole: true);
+        }
+
+        public static IReadOnlyList<AuditResult> RunAudit(bool logToConsole = true)
+        {
+            var results = new List<AuditResult>();
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PREFAB_PATH);
+            if (prefab == null)
+            {
+                results.Add(new AuditResult(Severity.Error, $"Missing BoostTrailRoot prefab: {PREFAB_PATH}"));
+                LogAuditResults(results, logToConsole);
+                return results;
+            }
+
+            var root = PrefabUtility.LoadPrefabContents(PREFAB_PATH);
+            try
+            {
+                if (root == null)
+                {
+                    results.Add(new AuditResult(Severity.Error, $"Failed to load BoostTrailRoot prefab contents: {PREFAB_PATH}"));
+                    return results;
+                }
+
+                AuditRoot(root, results);
+            }
+            finally
+            {
+                if (root != null)
+                    PrefabUtility.UnloadPrefabContents(root);
+            }
+
+            if (!HasIssues(results))
+                results.Add(new AuditResult(Severity.Info, "BoostTrailRoot prefab authority chain is valid."));
+
+            LogAuditResults(results, logToConsole);
+            return results;
+        }
 
         [MenuItem("ProjectArk/Ship/VFX/Authority/Rebuild BoostTrailRoot Prefab")]
         public static void CreateBoostTrailRootPrefab()
@@ -105,6 +167,185 @@ namespace ProjectArk.Ship.Editor
 
             Debug.LogError("[BoostTrailPrefabCreator] Failed to save prefab!");
             return null;
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // Audit Helpers
+        // ══════════════════════════════════════════════════════════════
+
+        private static void AuditRoot(GameObject root, List<AuditResult> results)
+        {
+            if (root.name != "BoostTrailRoot")
+                results.Add(new AuditResult(Severity.Error, $"BoostTrailRoot prefab root name must be BoostTrailRoot, but was {root.name}."));
+
+            var boostTrailView = root.GetComponent<BoostTrailView>();
+            if (boostTrailView == null)
+                results.Add(new AuditResult(Severity.Error, "BoostTrailRoot is missing BoostTrailView."));
+            else
+                AuditBoostTrailView(boostTrailView, results);
+
+            var debugManager = root.GetComponent<BoostTrailDebugManager>();
+            if (debugManager == null)
+                results.Add(new AuditResult(Severity.Error, "BoostTrailRoot is missing BoostTrailDebugManager."));
+            else
+                AuditDebugManager(debugManager, boostTrailView, results);
+
+            AuditAresBoostTrail(root.transform, results);
+            AuditLegacyRemovedChildren(root.transform, results);
+        }
+
+        private static void AuditBoostTrailView(BoostTrailView boostTrailView, List<AuditResult> results)
+        {
+            var so = new SerializedObject(boostTrailView);
+            AuditRequiredObjectReference(so, "_juiceSettings", SHIP_JUICE_SETTINGS_PATH, results, "BoostTrailView._juiceSettings");
+
+            var bloomProp = so.FindProperty("_boostBloomVolume");
+            if (bloomProp != null && bloomProp.objectReferenceValue != null)
+                results.Add(new AuditResult(Severity.Error, "BoostTrailView._boostBloomVolume must remain null in BoostTrailRoot.prefab; scene-only binding is owned by ShipBoostTrailSceneBinder."));
+
+            var particlesProp = so.FindProperty("_aresSustainParticles");
+            if (particlesProp == null)
+            {
+                results.Add(new AuditResult(Severity.Error, "BoostTrailView is missing serialized field _aresSustainParticles."));
+                return;
+            }
+
+            if (!particlesProp.isArray || particlesProp.arraySize == 0)
+            {
+                results.Add(new AuditResult(Severity.Error, "BoostTrailView._aresSustainParticles must contain the adapted Ares sustain particle systems."));
+                return;
+            }
+
+            for (int i = 0; i < particlesProp.arraySize; i++)
+            {
+                var element = particlesProp.GetArrayElementAtIndex(i);
+                if (element.objectReferenceValue == null)
+                    results.Add(new AuditResult(Severity.Error, $"BoostTrailView._aresSustainParticles[{i}] is null."));
+            }
+        }
+
+        private static void AuditDebugManager(BoostTrailDebugManager debugManager, BoostTrailView boostTrailView, List<AuditResult> results)
+        {
+            var so = new SerializedObject(debugManager);
+            var viewProp = so.FindProperty("_boostTrailView");
+            if (viewProp == null)
+            {
+                results.Add(new AuditResult(Severity.Error, "BoostTrailDebugManager is missing serialized field _boostTrailView."));
+            }
+            else if (viewProp.objectReferenceValue != boostTrailView)
+            {
+                results.Add(new AuditResult(Severity.Error, "BoostTrailDebugManager._boostTrailView must reference the local BoostTrailView."));
+            }
+
+            var enableProp = so.FindProperty("_enableInspectorDebug");
+            if (enableProp != null && enableProp.boolValue)
+                results.Add(new AuditResult(Severity.Error, "BoostTrailDebugManager._enableInspectorDebug must be false in prefab baseline."));
+
+            var modeProp = so.FindProperty("_debugMode");
+            if (modeProp != null && modeProp.enumValueIndex != (int)BoostTrailDebugManager.DebugMode.ObserveRuntime)
+                results.Add(new AuditResult(Severity.Error, "BoostTrailDebugManager._debugMode must default to ObserveRuntime."));
+        }
+
+        private static void AuditAresBoostTrail(Transform root, List<AuditResult> results)
+        {
+            var ares = root.Find("AresBoostTrail");
+            if (ares == null)
+            {
+                results.Add(new AuditResult(Severity.Error, "BoostTrailRoot is missing AresBoostTrail."));
+                return;
+            }
+
+            var particles = ares.GetComponentsInChildren<ParticleSystem>(includeInactive: true);
+            if (particles == null || particles.Length == 0)
+            {
+                results.Add(new AuditResult(Severity.Error, "AresBoostTrail must contain at least one ParticleSystem."));
+                return;
+            }
+
+            foreach (var particleSystem in particles)
+            {
+                if (particleSystem == null)
+                    continue;
+
+                var main = particleSystem.main;
+                if (main.playOnAwake)
+                    results.Add(new AuditResult(Severity.Error, $"AresBoostTrail particle {particleSystem.name}.main.playOnAwake must be false."));
+
+                if (!main.loop)
+                    results.Add(new AuditResult(Severity.Error, $"AresBoostTrail particle {particleSystem.name}.main.loop must be true."));
+            }
+        }
+
+        private static void AuditLegacyRemovedChildren(Transform root, List<AuditResult> results)
+        {
+            string[] forbiddenChildren =
+            {
+                "MainTrail",
+                "FlameTrail_R",
+                "FlameTrail_B",
+                "FlameCore",
+                "EmberTrail",
+                "EmberSparks",
+                "BoostEnergyLayer2",
+                "BoostEnergyLayer3",
+                "BoostActivationHalo"
+            };
+
+            foreach (var childName in forbiddenChildren)
+            {
+                if (root.Find(childName) != null)
+                    results.Add(new AuditResult(Severity.Error, $"Legacy removed BoostTrail child must not return: {childName}."));
+            }
+        }
+
+        private static void AuditRequiredObjectReference(SerializedObject so, string propertyPath, string expectedAssetPath, List<AuditResult> results, string label)
+        {
+            var prop = so.FindProperty(propertyPath);
+            if (prop == null)
+            {
+                results.Add(new AuditResult(Severity.Error, $"Missing serialized field: {label}."));
+                return;
+            }
+
+            var expected = AssetDatabase.LoadAssetAtPath<Object>(expectedAssetPath);
+            if (expected == null)
+            {
+                results.Add(new AuditResult(Severity.Error, $"Missing expected asset for {label}: {expectedAssetPath}"));
+                return;
+            }
+
+            if (prop.objectReferenceValue != expected)
+                results.Add(new AuditResult(Severity.Error, $"{label} must reference {expectedAssetPath}."));
+        }
+
+        private static bool HasIssues(IReadOnlyList<AuditResult> results)
+        {
+            for (int i = 0; i < results.Count; i++)
+            {
+                if (results[i].Severity == Severity.Error || results[i].Severity == Severity.Warning)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static void LogAuditResults(IReadOnlyList<AuditResult> results, bool logToConsole)
+        {
+            if (!logToConsole)
+                return;
+
+            Debug.Log("[BoostTrailPrefabCreator] Audit completed.\n" + BuildAuditSummary(results));
+        }
+
+        private static string BuildAuditSummary(IReadOnlyList<AuditResult> results)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("── BOOST TRAIL PREFAB AUDIT ──");
+
+            foreach (var result in results)
+                sb.AppendLine($"[{result.Severity}] {result.Message}");
+
+            return sb.ToString();
         }
 
         // ══════════════════════════════════════════════════════════════
