@@ -85,8 +85,7 @@ namespace ProjectArk.Ship.Editor
 
         private static readonly HashSet<string> AllowedBoostTrailViewSceneOverrides = new HashSet<string>
         {
-            "_boostBloomVolume",
-            "_juiceSettings"    // SO reference — wired in prefab, scene override tolerated
+            "_boostBloomVolume"
         };
 
         private static readonly List<ValidationResult> _lastResults = new List<ValidationResult>();
@@ -715,8 +714,8 @@ namespace ProjectArk.Ship.Editor
                 result => ConvertSeverity(result.Severity),
                 result => result.Message);
 
-            AppendAuthorityAuditResults(
-                "MaterialTextureLinker",
+            AppendAuditResults(
+                "Legacy Audit/MaterialTextureLinker",
                 MaterialTextureLinker.RunAudit(logToConsole: false),
                 result => ConvertSeverity(result.Severity),
                 result => result.Message);
@@ -728,9 +727,22 @@ namespace ProjectArk.Ship.Editor
             Func<TAuditResult, Severity> severitySelector,
             Func<TAuditResult, string> messageSelector)
         {
+            AppendAuditResults(
+                $"Authority Audit/{auditName}",
+                results,
+                severitySelector,
+                messageSelector);
+        }
+
+        private static void AppendAuditResults<TAuditResult>(
+            string scope,
+            IReadOnlyList<TAuditResult> results,
+            Func<TAuditResult, Severity> severitySelector,
+            Func<TAuditResult, string> messageSelector)
+        {
             if (results == null)
             {
-                AddResult(Severity.Error, $"Authority Audit/{auditName}", $"`{auditName}` 未返回 Audit 结果。", null);
+                AddResult(Severity.Error, scope, $"`{scope}` 未返回 Audit 结果。", null);
                 return;
             }
 
@@ -739,7 +751,7 @@ namespace ProjectArk.Ship.Editor
                 TAuditResult result = results[i];
                 AddResult(
                     severitySelector(result),
-                    $"Authority Audit/{auditName}",
+                    scope,
                     messageSelector(result),
                     null);
             }

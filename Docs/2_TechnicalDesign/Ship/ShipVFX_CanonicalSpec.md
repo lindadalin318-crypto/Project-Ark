@@ -223,7 +223,7 @@ MVP 阶段统一采用**双层命名**：
 | `ShipPrefabRebuilder` | `Ship.prefab` 唯一权威；负责根节点物理组件（Rigidbody2D / CircleCollider2D）、全部运行时脚本组件（InputHandler / ShipMotor / ShipAiming / ShipStateController / ShipHealth / ShipDash / ShipBoost）、ShipStatsSO + InputActionAsset + DashAfterImage prefab 接线、多层 sprite 层级、`BoostTrailRoot` 嵌套集成、`ShipView` (Coordinator) + Workers + 二级 Worker 组件创建与序列化引用接线 | 不负责场景级 Bloom Volume；不负责 WeavingStateTransition 跨程序集场景接线 |
 | `BoostTrailPrefabCreator` | `BoostTrailRoot.prefab` 结构权威；负责子节点、粒子、能量层与 `BoostTrailDebugManager` 的生成与接线 | 不负责 `Ship.prefab` 集成；不负责 scene-only 引用 |
 | `BoostTrailDebugManager` | Play Mode 分层调试权威；负责 Boost stack 的 solo layer、遮罩隔离、sustain preview 与 burst preview | 不负责正式状态驱动；默认必须保持 dormant |
-| `MaterialTextureLinker` | 现役材质与纹理精确路径回填；禁止 legacy 材质链回流 | 不负责 prefab / scene |
+| `MaterialTextureLinker` | Legacy BoostTrail 材质引用只读审计；旧 Apply 菜单已禁用，保留材质仅供历史排查 / 回归测试 | 不负责 prefab / scene；不负责现役 Ares-only 主链材质回填 |
 | `ShipBoostTrailSceneBinder` | Scene-only 绑定权威；负责 `BoostTrailBloomVolume` 与 `BoostTrailView._boostBloomVolume` | 不负责 prefab 结构 |
 | `CopyGGTextures.ps1` | 参考资源导入工具；只复制当前仍保留的上游纹理，不再导入已清退的 dormant 资源 | 不定义现役命名；不定义主链资产状态 |
 
@@ -274,7 +274,7 @@ MVP 阶段统一采用**双层命名**：
 2. `Ship.prefab` 中 `ShipHitVisuals._hitMaskRenderer` 仍正确指向 `ShipVisual/Ship_HitMaskFlash`，且该 renderer 默认 `enabled=false` / alpha 0
 3. `BoostTrailRoot.prefab` 中 `_boostBloomVolume` 仍保持 prefab 为空引用
 4. `SampleScene.unity` 中 `BoostTrailBloomVolume` 仍能被 binder 正确接线
-5. `MaterialTextureLinker` 仅从精确目录回填现役贴图
+5. `MaterialTextureLinker` 只读审计 retained legacy material references，不再执行现役贴图回填
 6. 现役文档与注册表口径一致，不再把 GG 参考文档当作当前规范
 
 ## 10. 与其他文档的关系

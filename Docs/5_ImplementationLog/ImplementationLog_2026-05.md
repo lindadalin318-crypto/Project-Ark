@@ -1,5 +1,22 @@
 ---
 
+## Ship/VFX Phase A 收尾审计与 Scene Override 白名单修正 — 2026-05-31 22:48
+
+- **新建/修改文件**
+  - `Assets/Scripts/Ship/Editor/ShipVfxValidator.cs`
+  - `Assets/Scripts/Ship/Editor/ShipVfxValidatorTests.cs`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-05.md`
+
+- **内容**：执行 Phase A authority 收尾审计，对照 `ShipVFX_CanonicalSpec.md`、`ShipVFX_AssetRegistry.md` 与 `Implement_rules.md` 核对 Editor 工具职责、Runtime/Debug 链路、Audit/Apply 边界和 legacy/fallback residue。审计发现 `ShipVfxValidator` 的 scene override 白名单同时允许 `_boostBloomVolume` 与 `_juiceSettings`，但规则与错误文案只允许 scene-only Bloom 引用；本轮移除 `_juiceSettings` 白名单，并新增 `RunAudit_ReportsIllegalSceneOverrideForBoostTrailJuiceSettings` 回归测试，确保 `BoostTrailView._juiceSettings` scene override 会被总 Audit 报告为 `Scene Override` error。
+
+- **目的**：补齐 Phase A “override 白名单化”收尾标准，避免数据驱动的 `ShipJuiceSettingsSO` 引用被场景实例长期漂移而绕过 prefab/builder authority。保持 `BoostTrailView._boostBloomVolume` 作为唯一允许的 scene-only override，其余 runtime tuning/data 引用必须跟随 prefab 或由对应 authority 工具维护。
+
+- **技术**：按 TDD 增加最小回归测试，测试中先通过 `ResetAuthorityState()` 建立权威场景，再人为将场景 `BoostTrailView._juiceSettings` 置空，断言 `ShipVfxValidator.RunAudit(false, false)` 返回包含 `_juiceSettings` 的 `Scene Override` error，最后复位权威状态。实现侧仅收紧 `AllowedBoostTrailViewSceneOverrides` 为 `_boostBloomVolume`。验证：`dotnet build Project-Ark.slnx` fresh build 通过，仅保留第三方示例脚本既有 2 个 warning；Unity batchmode EditMode 目标测试因当前已有 Unity Editor 打开同一项目而被 Unity 拒绝启动（`Multiple Unity instances cannot open the same project`），未作为业务测试失败处理，需在关闭当前 Editor 或使用当前 Editor Test Runner 时补跑。
+
+- **验证补记（2026-06-01 00:27）**：继续 A7 验证闭环。`git diff` 确认变更仅包含 `ShipVfxValidator` 白名单收紧、`ShipVfxValidatorTests` 回归测试与本日志；`dotnet build Project-Ark.slnx` fresh build 成功，输出 19 个程序集成功且无 warning/error。Unity Console 当前仅有 `MCP-FOR-UNITY` WebSocket / stale test job warning，无项目编译 error。通过当前已打开的 Unity Editor 执行目标 EditMode 测试 `ProjectArk.Ship.Editor.ShipVfxValidatorTests.RunAudit_ReportsIllegalSceneOverrideForBoostTrailJuiceSettings`，测试任务 `total=1 passed=1 failed=0 skipped=0`，验证 `_juiceSettings` scene override 会被总 Audit 报告为非法 override。
+
+---
+
 ## Ship/VFX ShipVfxValidator Authority Audit 聚合 — 2026-05-31 22:28
 
 - **新建/修改文件**
@@ -12,6 +29,8 @@
 - **目的**：继续 Ship/VFX Phase A authority cleanup，把前面 A2-A5 分散的单点 Audit 收口到一个总控入口，确保 prefab、scene-only Bloom、材质贴图与 Ship prefab 结构漂移都能通过 `ShipVfxValidator` 一次性显式暴露，而不是要求开发者记住多个菜单顺序。
 
 - **技术**：按 TDD 思路先新增 `RunAudit_IncludesMaterialTextureLinkerAuthorityErrorsWithoutRepairingIt` 失败测试，再实现最小泛型 `AppendAuthorityAuditResults` 和四个 `ConvertSeverity` 映射方法。聚合步骤只调用下游 `RunAudit(logToConsole: false)`，不调用任何 `CreateOrRebuild`、`ForceRebuild`、`Setup`、`Link`、`SetDirty` 或 `SaveAssets` 写入入口。验证：`dotnet build Project-Ark.slnx` 通过（仅保留第三方示例脚本既有 2 个 warning）。本轮 Unity MCP 的 `run_tests`、`execute_code` 与 `read_console` 多次出现会话未就绪或无明细返回，因此未声称 Unity EditMode 测试已完成。
+
+- **验证补记（2026-05-31 22:44）**：补跑 A6 验证闭环。`dotnet build Project-Ark.slnx` fresh build 通过；Unity Console 无项目 error，仅有 `MCP-FOR-UNITY` WebSocket transport warning 与 `BoostTrailPrefabCreator` 既有手动接线提示。Unity Test Runner 目标测试 `RunAudit_IncludesMaterialTextureLinkerAuthorityErrorsWithoutRepairingIt` 通过，`TestResults.xml` 显示 `total=1 passed=1 failed=0`。整类 Test Runner 启动后 MCP job 状态同步卡住，但通过 Unity Editor `execute_code` 直接实例化 `ShipVfxValidatorTests` 并逐个调用 7 个测试方法，历史记录返回 `PASS_DIRECT_INVOCATION passed=7 total=7`。
 
 ---
 

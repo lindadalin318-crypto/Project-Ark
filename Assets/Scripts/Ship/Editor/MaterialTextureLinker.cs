@@ -6,14 +6,14 @@ using UnityEngine;
 namespace ProjectArk.Ship.Editor
 {
     /// <summary>
-    /// Authority tool that assigns the active Ship / BoostTrail textures to the live material chain.
+    /// Legacy reference audit tool for the retired Ship / BoostTrail material chain.
     ///
     /// Authority owned by this tool:
-    ///   • Current active material set only
-    ///   • Exact-path-first texture assignment inside Assets/_Art/VFX/BoostTrail/Textures
-    ///   • TrailMainEffect / BoostEnergyLayer2 / BoostEnergyLayer3 shader enforcement
+    ///   • Read-only audit of retained legacy reference materials
+    ///   • Exact-path-first texture checks inside Assets/_Art/VFX/BoostTrail/Textures
+    ///   • TrailMainEffect / BoostEnergyLayer2 / BoostEnergyLayer3 shader drift detection
     ///
-    /// This tool does not restore dormant or legacy material chains.
+    /// This tool no longer applies or restores legacy material chains.
     /// </summary>
     public static class MaterialTextureLinker
     {
@@ -40,6 +40,12 @@ namespace ProjectArk.Ship.Editor
 
             public Severity Severity { get; }
             public string Message { get; }
+        }
+
+        [MenuItem("ProjectArk/Ship/VFX/Authority/Audit Active BoostTrail Material Textures", true)]
+        public static bool RunAuditMenuValidate()
+        {
+            return false;
         }
 
         [MenuItem("ProjectArk/Ship/VFX/Authority/Audit Active BoostTrail Material Textures")]
@@ -71,10 +77,22 @@ namespace ProjectArk.Ship.Editor
             AuditTrailMainLegacySlots(trailMain, results);
 
             if (results.Count == 0)
-                results.Add(new AuditResult(Severity.Info, "Active BoostTrail material texture links are valid."));
+                results.Add(new AuditResult(Severity.Info, "Legacy BoostTrail material reference links are valid."));
 
             LogAuditResults(results, logToConsole);
             return results;
+        }
+
+        [MenuItem("ProjectArk/Ship/VFX/Legacy/Audit Legacy BoostTrail Material References")]
+        public static void RunLegacyAuditMenu()
+        {
+            RunAudit(logToConsole: true);
+        }
+
+        [MenuItem("ProjectArk/Ship/VFX/Authority/Link Active BoostTrail Material Textures", true)]
+        public static bool LinkAllMaterialTexturesMenuValidate()
+        {
+            return false;
         }
 
         [MenuItem("ProjectArk/Ship/VFX/Authority/Link Active BoostTrail Material Textures")]
@@ -84,6 +102,16 @@ namespace ProjectArk.Ship.Editor
         }
 
         public static void LinkAllMaterialTextures(bool showDialog)
+        {
+            string summary = "Legacy BoostTrail material apply is disabled. Use ProjectArk/Ship/VFX/Legacy/Audit Legacy BoostTrail Material References to report drift without repairing retained reference assets.";
+
+            if (showDialog)
+                EditorUtility.DisplayDialog("Legacy Material Apply Disabled", summary, "OK");
+
+            Debug.Log($"[MaterialTextureLinker] {summary}");
+        }
+
+        private static void LinkLegacyMaterialTexturesForMigrationOnly(bool showDialog)
         {
             int successCount = 0;
             int failCount = 0;

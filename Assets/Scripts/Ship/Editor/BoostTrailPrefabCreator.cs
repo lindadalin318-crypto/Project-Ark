@@ -154,10 +154,10 @@ namespace ProjectArk.Ship.Editor
                     Debug.Log(
                         "[BoostTrailPrefabCreator] Prefab saved to:\n" + PREFAB_PATH + "\n\n" +
                         "Required follow-up:\n" +
-                        "1. Run 'ProjectArk > Ship > VFX > Authority > Link Active BoostTrail Material Textures'.\n" +
-                        "2. Run 'ProjectArk > Ship > Authority > Rebuild Ship Prefab' to integrate BoostTrailRoot into Ship.prefab.\n" +
-                        "3. Verify ShipView sprite references.\n" +
-                        "4. Verify scene wiring for _boostBloomVolume.");
+                        "1. Run 'ProjectArk > Ship > Authority > Rebuild Ship Prefab' to integrate BoostTrailRoot into Ship.prefab.\n" +
+                        "2. Verify ShipView sprite references.\n" +
+                        "3. Verify scene wiring for _boostBloomVolume.\n" +
+                        "4. Optional: run 'ProjectArk > Ship > VFX > Legacy > Audit Legacy BoostTrail Material References' for retained legacy material drift only.");
                 }
 
                 Selection.activeObject = prefab;

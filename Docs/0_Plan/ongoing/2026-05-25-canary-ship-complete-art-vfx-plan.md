@@ -863,14 +863,16 @@ Status: Passed for MVP. Hit Spark is not instantiated during combat; it is a pre
 
 ### Batch 6 Completion Gate
 
-- [ ] Fire is short and does not alter body identity.
+- [x] Fire is short and does not alter body identity.
 - [x] Hit is short and does not look like Overheat.
 - [x] VFX assets are compatible with object pooling.
-- [ ] Muzzle flash aligns with WeaponMount.
+- [x] Muzzle flash aligns with WeaponMount.
 
 **Batch 6 Status**: ✅ COMPLETED (Hit Mask overlay + softness polish 已实现)
 - Task 18 Hit Mask MVP 已交付：`spr_ship_canary_shape_hit_mask.png` + `ShipHitVisuals._hitMaskRenderer` + `ShipPrefabRebuilder` 集成
-- 编译验证通过：`dotnet build Project-Ark.slnx` 成功，无新错误
+- Fire gate 复核完成：`ShipFireVisuals` 只短闪 `Ship_Sprite_WeaponMount` 与 `Ship_Sprite_Core`，并在 `ResetState()` 中恢复颜色 / scale，不替换船体身份。
+- Muzzle alignment gate 复核完成：`ShipPrefabRebuilder` / audit 将 `ShipFireVisuals._weaponMountRenderer` 与 `ShipView._weaponMountRenderer` 统一接到 `Ship_Sprite_WeaponMount`；`ShipFireVisualsTests` 覆盖 WeaponMount/Core 触发与复位。
+- 编译验证通过：`dotnet build Project-Ark.slnx` 成功，无新错误；Unity Console 未见 error 级编译 / 导入错误。
 - Hit Mask softness / directionality polish 已完成：同路径重写 `spr_ship_canary_shape_hit_mask.png`，将大面积白色覆盖收敛为低 alpha 边缘 / 核心 / 斜向裂纹反馈，避免受击时整船刷白。
 - 下一步：继续 Ship/VFX authority audit 队列；Prefab 结构仍由 `ShipPrefabRebuilder` 负责，如需重建再执行 `ProjectArk/Ship/Authority/Rebuild Ship Prefab`。
 
@@ -1460,7 +1462,7 @@ Do not wait until the end of the whole ship project to write logs.
 The immediate next action is:
 
 ```text
-Task 29: Pool And Reset Verification
+No blocking Ship/VFX MVP task is currently queued from this plan.
 ```
 
 Context:
@@ -1470,14 +1472,14 @@ Task 12: Import Settings Pass — completed for the five current Normal-state Ca
 Task 13: Create Canary Preview Prefab — completed for the Normal preview stack.
 Task 14A: Lean import validation + Lean preview clips — completed for asset setup.
 Task 14B: Lean Play Mode / preview validation — completed for animation-side drift, residue, and 128px readability checks.
-Task 10: Dash source frames — renamed to official spr_ship_canary_dash_01-05.png workflow names, imported as Sprite Single with PPU 320, center pivot, no mip maps, and assembled into Canary_Dash.anim at 0.25 seconds.
+Task 10: Dash source frames — renamed to official workflow names spr_ship_canary_dash_01-05.png, imported as Sprite Single with PPU 320, center pivot, no mip maps, and assembled into Canary_Dash.anim at 0.25 seconds.
 Task 15A / Task 16: Boost source audit, QFZ VFX_Ares_Projectile inspection, and BoostTrailRoot authority integration — completed.
-Task 18: Hit Mask overlay — completed as MVP, but visually flagged for a later softer/directional feedback rework.
+Task 18: Hit Mask overlay — completed as MVP, and later softness / directionality polish is complete.
+Task 29: Pool And Reset Verification — completed; pool/reset checks pass and no longer block the Ship/VFX MVP.
 Lean source frames — renamed to official workflow names spr_ship_canary_lean_left/right_01-03.png, imported as Sprite Single with PPU 320, center pivot, no mip maps, and confirmed at 512 × 512.
 ```
 
-Use the accepted current Normal-state Canary stack, officially named Lean frames / preview clips, officially named Dash frames / preview clip, and the live adapted `AresBoostTrail` under `BoostTrailRoot.prefab` as the stable ship preview source set. Do not modify the formal `Ship.prefab` authority chain unless the current task explicitly requires it.
-
+Use the accepted current Normal-state Canary stack, officially named Lean frames / preview clips, officially named Dash frames / preview clip, and the live adapted `AresBoostTrail` under `BoostTrailRoot.prefab` as the stable ship preview source set. Do not modify the formal `Ship.prefab` authority chain unless a future task explicitly requires it.
 Current Batch 3 / Batch 5 Dash-vs-Boost gate is closed at the preview level:
 
 ```text

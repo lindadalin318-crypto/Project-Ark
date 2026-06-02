@@ -24,6 +24,20 @@
       "dependencies": {},
       "url": "https://registry.npmjs.org"
     },
+    "com.shadercrew.the-toon-shader.3d": {
+      "version": "file:com.shadercrew.the-toon-shader.3d",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.shadercrew.the-toon-shader.core": "1.4.1"
+      }
+    },
+    "com.shadercrew.the-toon-shader.core": {
+      "version": "file:com.shadercrew.the-toon-shader.core",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
     "com.unity.2d.animation": {
       "version": "14.0.4",
       "depth": 0,

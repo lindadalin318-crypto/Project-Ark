@@ -279,7 +279,7 @@
 | Prefab 结构     | `Ship.prefab` 的结构、根节点组件、关键节点、内部核心序列化引用                                        | `ShipPrefabRebuilder`                                               | Runtime fallback、Debug 工具、手工 scene 修补代替 prefab 修正        | 含物理组件、运行时脚本组件、ShipStatsSO/InputActions/DashAfterImage 接线   |
 | Prefab 结构     | `BoostTrailRoot.prefab` 的结构、子节点、内部核心序列化引用                                     | `BoostTrailPrefabCreator`                                           | `ShipPrefabRebuilder` 直接改写内部结构、Runtime fallback、Debug 工具 | `ShipPrefabRebuilder` 只负责把 nested prefab 集成进 `Ship.prefab` |
 | Scene-only 接线 | `BoostTrailBloomVolume` → `BoostTrailView._boostBloomVolume` 这类 scene-only 绑定 | `ShipBoostTrailSceneBinder`                                         | Runtime 自动补线、Debug 工具、Prefab builder 越权写 scene           | 这类引用允许存在于 scene，但必须有唯一绑定入口                                 |
-| 现役材质贴图回填      | 现役 `BoostTrail` 材质与贴图映射                                                       | `MaterialTextureLinker`                                             | Prefab builder 顺手写材质、Runtime 模糊查找贴图、Debug 工具临时写回         | 仅允许维护现役材质映射，不做全项目兜底搜索                                      |
+| Legacy 材质引用审计      | retained legacy `BoostTrail` 材质与贴图映射检查                                                       | `MaterialTextureLinker.RunAudit`                                             | Prefab builder 顺手写材质、Runtime 模糊查找贴图、Debug 工具临时写回、旧 Authority Apply 菜单         | B3 起只允许只读审计；不再是现役 Apply 权威，不维护 Ares-only 正式主链材质回填                                      |
 | Runtime 表现    | Boost 启停、持续层强度、burst 时序、sprite 切换                                             | `ShipView` / `BoostTrailView` / `ShipEngineVFX` / `ShipVisualJuice` | Editor 工具在 Play Mode 接管、Debug 持续 override、scene 数据修行为    | Runtime 只消费已准备好的引用，不负责修资产                                  |
 | Debug 预览      | Play Mode 观察、Solo Layer、Force Sustain Preview                                 | `BoostTrailDebugManager`                                            | 作为正式链路 owner、默认常开、隐式写回 prefab / scene / runtime 默认值      | 只允许 preview，不得成为主驱动                                        |
 
@@ -295,10 +295,10 @@
   - 执行后会输出“改了什么 / 没改什么 / 缺了什么”
   - 不允许在 `OnValidate`、`Awake`、`OnEnable`、Play Mode 启动流程中隐式写回资产或 scene
 - 现阶段收口要求：
-  - `ShipPrefabRebuilder`：允许 `Apply`，后续补 `Audit`
-  - `BoostTrailPrefabCreator`：允许 `Apply`，后续补 `Audit`
-  - `ShipBoostTrailSceneBinder`：允许 `Apply`，后续补 `Audit`
-  - `MaterialTextureLinker`：允许 `Apply`，后续补 `Audit`
+  - `ShipPrefabRebuilder`：允许 `Apply`，已补 `Audit`
+  - `BoostTrailPrefabCreator`：允许 `Apply`，已补 `Audit`
+  - `ShipBoostTrailSceneBinder`：允许 `Apply`，已补 `Audit`
+  - `MaterialTextureLinker`：B3 起只允许 `Audit`，旧 `Apply` 菜单禁用且公开入口 no-op；若未来恢复材质写回，必须先确认新的 live material owner
   - `BoostTrailDebugManager`：只允许 `Preview`，不允许 `Apply`
 
 ### 3.15 Scene Override 白名单（当前批）

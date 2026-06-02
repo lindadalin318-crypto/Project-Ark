@@ -31,6 +31,7 @@
 | `ShipStateMachineController` | `ShipStateController` | Runtime Script | Live | `Assets/Scripts/Ship/ShipStateController.cs` | Runtime | 统一状态事件入口 |
 | `ShipStateEnum` | `ShipShipState` | Data Type | Live | `Assets/Scripts/Ship/Data/ShipShipState.cs` | Data | 物理名冻结，语义名统一为 Ship State Enum |
 | `ShipJuiceSettings` | `ShipJuiceSettingsSO` | ScriptableObject Type | Live | `Assets/Scripts/Ship/Data/ShipJuiceSettingsSO.cs` | Data | 视觉参数数据源；当前正式 Canary 配置中 `_boostLiquidSprite` 为空、`_boostLiquidSortOverride=false`，避免 Boost 状态切回旧 GG sprite |
+| `ShipVisualValidationController` | `ShipVisualValidationView` | Runtime Script | Reference / Preview-only | `Assets/Scripts/Ship/VFX/ShipVisualValidationView.cs` | Validation Prefab | 仅服务 `CanaryShipVisualValidation.prefab` 的九状态视觉矩阵验证；不得接管正式 `Ship.prefab` runtime owner 链 |
 
 ## 3. Editor Tools
 
@@ -38,7 +39,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | `ShipPrefabAuthority` | `ShipPrefabRebuilder` | Editor Tool | Live | `Assets/Scripts/Ship/Editor/ShipPrefabRebuilder.cs` | Editor | `Ship.prefab` 唯一权威：根节点物理/脚本组件 ensure + ShipStatsSO/InputActions/DashAfterImage prefab 接线 + Coordinator/Worker/二级Worker 接线 + 多层 sprite + BoostTrailRoot 集成 |
 | `BoostTrailPrefabAuthority` | `BoostTrailPrefabCreator` | Editor Tool | Live | `Assets/Scripts/Ship/Editor/BoostTrailPrefabCreator.cs` | Editor | 仅负责 `BoostTrailRoot.prefab` |
-| `BoostTrailMaterialLinker` | `MaterialTextureLinker` | Editor Tool | Live | `Assets/Scripts/Ship/Editor/MaterialTextureLinker.cs` | Editor | 只维护现役材质映射 |
+| `BoostTrailMaterialLinker` | `MaterialTextureLinker` | Editor Tool | Legacy Audit | `Assets/Scripts/Ship/Editor/MaterialTextureLinker.cs` | Editor / Reference | B3 已从现役 Apply 范围降级：只读审计 retained legacy BoostTrail 材质，旧 Authority Apply 菜单禁用；不再维护 Ares-only 正式主链材质回填 |
 | `BoostTrailSceneBinder` | `ShipBoostTrailSceneBinder` | Editor Tool | Live | `Assets/Scripts/Ship/Editor/ShipBoostTrailSceneBinder.cs` | Editor | scene-only 引用绑定 |
 | `ShipGlowMaterialCreator` | `ShipGlowMaterialCreator` | Editor Tool | Live | `Assets/Scripts/Ship/Editor/ShipGlowMaterialCreator.cs` | Editor | 共享 glow 材质辅助生成 |
 | `ShipVfxAuditTool` | `ShipVfxValidator` | Editor Tool | Live | `Assets/Scripts/Ship/Editor/ShipVfxValidator.cs` | Editor | 只读审计：Prefab 接线 + Scene Bloom + Override 白名单 + 代码残留防回退检测 |
@@ -54,6 +55,7 @@
 | `QFZAresProjectileOnlySource` | `VFX_Ares_Projectile_Only.prefab` | Prefab Source | Reference Source | `Assets/QFX/ProjectilesFX/VFX_Prefabs/Projectiles/VFX_Ares_Projectile_Only.prefab` | QFX Source / `BoostTrailPrefabCreator` consumer | Canary Boost sustained trail source; consumed by `BoostTrailPrefabCreator`, not a parallel runtime owner |
 | `BoostTrailAresSustainNode` | `AresBoostTrail` | Prefab Node | Live | `Assets/_Prefabs/VFX/BoostTrailRoot.prefab` | `BoostTrailPrefabCreator` / `BoostTrailView` | Adapted QFZ Ares sustained particles; serialized into `BoostTrailView._aresSustainParticles` for Boost start/end/reset |
 | `DashAfterImagePrefab` | `DashAfterImage.prefab` | Prefab | Live | `Assets/_Prefabs/Ship/DashAfterImage.prefab` | Runtime / Prefab | Dash 残影 prefab |
+| `CanaryShipVisualValidationPrefab` | `CanaryShipVisualValidation.prefab` | Prefab | Reference / Preview-only | `Assets/_Prefabs/Ship/CanaryShipVisualValidation.prefab` | `ShipVisualValidationView` | Canary 视觉矩阵验证专用 prefab；B1 审计确认通过脚本 GUID 挂载 `ShipVisualValidationView`，不属于正式 `Ship.prefab` 主链 |
 | `ShipVisualRoot` | `ShipVisual` | Prefab Node | Live | `Assets/_Prefabs/Ship/Ship.prefab` | `ShipPrefabRebuilder` | `VisualChild` 是 legacy alias |
 | `ShipVisualRootLegacyAlias` | `VisualChild` | Prefab Node Alias | Legacy | `Assets/_Prefabs/Ship/Ship.prefab` | Legacy | 仅作兼容查找，不再作为规范名 |
 | `ShipCanaryBodyNode` | `Ship_Sprite_Body` | Prefab Node | Live | `Assets/_Prefabs/Ship/Ship.prefab` | `ShipPrefabRebuilder` | 正式主船体层；由 `ShipView._solidRenderer` 消费 |
@@ -84,12 +86,12 @@
 | `CanaryDashParticlesMaterial` | `mat_vfx_canary_dash_particles.mat` | Material | Live Candidate | `Assets/_Art/Ship/Canary/Materials/mat_vfx_canary_dash_particles.mat` | future Dash VFX worker | Dash particle preview / future integration 材质；当前不接入正式 `Ship.prefab` 主链 |
 | `CanaryMuzzleFlashMaterial` | `mat_vfx_canary_muzzle_flash.mat` | Material | Live Candidate | `Assets/_Art/Ship/Canary/Materials/mat_vfx_canary_muzzle_flash.mat` | `ShipFireVisuals` / future muzzle VFX worker | Muzzle flash preview / future integration 材质；当前 Fire MVP 仍由 WeaponMount/Core 点亮承担，不生成新 projectile VFX |
 | `ShipSharedGlowMaterial` | `ShipGlowMaterial.mat` | Material | Legacy Reference | `Assets/_Art/Ship/Glitch/ShipGlowMaterial.mat` | `ShipGlowMaterialCreator` | 旧 GG liquid/glow 辅助材质；不再由正式 `ShipPrefabRebuilder` 写入 Ship.prefab |
-| `BoostTrailMainMaterial` | `mat_trail_main.mat` | Material | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Materials/mat_trail_main.mat` | Reference | 旧 Boost 主拖尾材质；Ares-only 正式链路不再使用 |
-| `BoostEnergyLayer2Material` | `mat_boost_energy_layer2.mat` | Material | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Materials/mat_boost_energy_layer2.mat` | Reference | 旧 Boost Layer2 材质；Ares-only 正式链路不再使用 |
-| `BoostEnergyLayer3Material` | `mat_boost_energy_layer3.mat` | Material | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Materials/mat_boost_energy_layer3.mat` | Reference | 旧 Boost Layer3 材质；Ares-only 正式链路不再使用 |
-| `BoostFlameTrailMaterial` | `mat_flame_trail.mat` | Material | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Materials/mat_flame_trail.mat` | Reference | 旧火焰粒子材质；Ares-only 正式链路不再使用 |
-| `BoostEmberTrailMaterial` | `mat_ember_trail.mat` | Material | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Materials/mat_ember_trail.mat` | Reference | 旧余烬拖尾材质；Ares-only 正式链路不再使用 |
-| `BoostEmberSparksMaterial` | `mat_ember_sparks.mat` | Material | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Materials/mat_ember_sparks.mat` | Reference | 旧余烬火花材质；Ares-only 正式链路不再使用 |
+| `BoostTrailMainMaterial` | `mat_trail_main.mat` | Material | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Materials/mat_trail_main.mat` | `MaterialTextureLinker` legacy audit / Reference | 旧 Boost 主拖尾材质；Ares-only 正式链路不再使用；B3 确认无 prefab / scene / runtime GUID 活引用，保留仅供历史排查与回归审计，不能通过 Apply 自动修复 |
+| `BoostEnergyLayer2Material` | `mat_boost_energy_layer2.mat` | Material | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Materials/mat_boost_energy_layer2.mat` | `MaterialTextureLinker` legacy audit / Reference | 旧 Boost Layer2 材质；Ares-only 正式链路不再使用；B3 已从 Apply 写回范围降级为只读审计 |
+| `BoostEnergyLayer3Material` | `mat_boost_energy_layer3.mat` | Material | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Materials/mat_boost_energy_layer3.mat` | `MaterialTextureLinker` legacy audit / Reference | 旧 Boost Layer3 材质；Ares-only 正式链路不再使用；B3 已从 Apply 写回范围降级为只读审计 |
+| `BoostFlameTrailMaterial` | `mat_flame_trail.mat` | Material | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Materials/mat_flame_trail.mat` | `MaterialTextureLinker` legacy audit / Reference | 旧火焰粒子材质；Ares-only 正式链路不再使用；B3 继续作为 `MaterialTextureLinker` / `ShipVfxValidatorTests` 只读审计回归样本 |
+| `BoostEmberTrailMaterial` | `mat_ember_trail.mat` | Material | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Materials/mat_ember_trail.mat` | `MaterialTextureLinker` legacy audit / Reference | 旧余烬拖尾材质；Ares-only 正式链路不再使用；B3 已从 Apply 写回范围降级为只读审计 |
+| `BoostEmberSparksMaterial` | `mat_ember_sparks.mat` | Material | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Materials/mat_ember_sparks.mat` | `MaterialTextureLinker` legacy audit / Reference | 旧余烬火花材质；Ares-only 正式链路不再使用；B3 已从 Apply 写回范围降级为只读审计 |
 | `BoostTrailMainShader` | `TrailMainEffect.shader` | Shader | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Shaders/TrailMainEffect.shader` | Reference | 旧 Boost shader；保留仅供历史排查 |
 | `BoostEnergyLayer2Shader` | `BoostEnergyLayer2.shader` | Shader | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Shaders/BoostEnergyLayer2.shader` | Reference | 旧 Layer2 shader；Ares-only 正式链路不再使用 |
 | `BoostEnergyLayer3Shader` | `BoostEnergyLayer3.shader` | Shader | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Shaders/BoostEnergyLayer3.shader` | Reference | 旧 Layer3 shader；Ares-only 正式链路不再使用 |
@@ -140,8 +142,8 @@ Rules:
 | `BoostNoiseLayer4Texture` | `boost_noise_layer4.png` | Texture | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Textures/boost_noise_layer4.png` | Reference | 旧 Layer2 Tex3；Ares-only 正式链路不再使用 |
 | `BoostEnergyNoiseTexture` | `boost_energy_noise_a.png` | Texture | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Textures/boost_energy_noise_a.png` | Reference | 旧 Layer3 Tex0；Ares-only 正式链路不再使用 |
 | `BoostEnergyMainTexture` | `boost_energy_main.png` | Texture | Legacy Reference | `Assets/_Art/VFX/BoostTrail/Textures/boost_energy_main.png` | Reference | 旧 Layer3 Tex1；Ares-only 正式链路不再使用 |
-| `BoostActivationHaloPrimary` | `vfx_ring_glow_uneven.png` | Texture | Dormant | `Assets/_Art/VFX/BoostTrail/Textures/vfx_ring_glow_uneven.png` | — | Halo 已取消（2026-03-22），纹理降级为 Dormant，待 Batch 4 清理 |
-| `BoostActivationHaloFallback` | `vfx_magnetic_rings.png` | Texture | Dormant | `Assets/_Art/VFX/BoostTrail/Textures/vfx_magnetic_rings.png` | — | Halo 已取消（2026-03-22），纹理降级为 Dormant，待 Batch 4 清理 |
+| `BoostActivationHaloPrimary` | `vfx_ring_glow_uneven.png` | Texture | Removed | `Assets/_Art/VFX/BoostTrail/Textures/vfx_ring_glow_uneven.png` | B2 cleanup | Halo 已取消（2026-03-22）；B2 删除前复核确认 GUID 只存在于自身 meta、文件名只存在于文档/历史日志与自身 meta，已通过 Unity 资产系统删除 `.png` 与 `.meta` |
+| `BoostActivationHaloFallback` | `vfx_magnetic_rings.png` | Texture | Removed | `Assets/_Art/VFX/BoostTrail/Textures/vfx_magnetic_rings.png` | B2 cleanup | Halo 已取消（2026-03-22）；B2 删除前复核确认 GUID 只存在于自身 meta、文件名只存在于文档/历史日志与自身 meta，已通过 Unity 资产系统删除 `.png` 与 `.meta` |
 
 ## 7. Documentation and References
 
@@ -186,7 +188,7 @@ Rules:
 
 五条治理验收标准全部满足：
 
-1. ✅ **唯一权威**：每类引用只有一个权威来源（`ShipPrefabRebuilder` / `BoostTrailPrefabCreator` / `ShipBoostTrailSceneBinder` / `MaterialTextureLinker` 各司其职，无交叉写入）
+1. ✅ **唯一权威**：每类 live 引用只有一个权威来源（`ShipPrefabRebuilder` / `BoostTrailPrefabCreator` / `ShipBoostTrailSceneBinder` 各司其职，无交叉写入）；`MaterialTextureLinker` 已于 B3 降级为 legacy reference audit，不再属于 live Apply 权威
 2. ✅ **无双轨主链**：所有 `FindAssets` / `FindSpriteExactOrByName` / `VisualChild` legacy / `DODGE_SPRITE_SRC_PATH` 已清理，全面改为精确路径
 3. ✅ **Debug 不接管主链**：`BoostTrailDebugManager` 无 `Awake/OnValidate/Reset/LateUpdate/AutoAssignReferences`，纯预览组件；`ShipBoostDebugMenu.cs` 已删除
 4. ✅ **Override 白名单化**：`ShipVfxValidator` 定义了 scene override 白名单，仅允许 `_boostBloomVolume`
@@ -199,3 +201,6 @@ Rules:
 3. `FlameTrail_B` / `MainTrail` / `Ember*` / `BoostEnergyLayer*` 已从正式 Boost 链路清退；后续 validator 若发现这些节点重新出现在 `BoostTrailRoot.prefab`，应视为 legacy residue。
 4. 首批 low-risk dormant 资源已完成引用审计并进入清退：`mat_ui_boost_flash`、`UIBoostFlash`、`boost_activation_halo`、`boost_field_*`、`ship_*_gg`。
 5. 后续若继续清理 dormant / legacy reference 资源，必须继续保持 GUID + 文本双重引用审计。
+6. B1 审计结论（2026-06-01）：`CanaryShipVisualValidation.prefab` / `ShipVisualValidationView` 是 preview-only 验证支线，应登记为 `Reference / Preview-only`，不得误判为正式 runtime owner；旧 Boost 材质虽不在正式 Ares-only 主链中，但仍被 `MaterialTextureLinker` 与回归测试维护，不能直接删除。
+7. B2 清退结论（2026-06-01）：`vfx_ring_glow_uneven.png` 与 `vfx_magnetic_rings.png` 已完成删除前复核并通过 Unity 资产系统删除，`.png` 与 `.meta` 均已移除；如未来需要恢复 Halo 方向，必须作为新需求重新导入资产，不得假设旧 GUID 仍存在。
+8. B3 降级结论（2026-06-01）：旧 BoostTrail 6 个材质 GUID 只出现在自身 `.meta`，无 prefab / scene / runtime 活引用；`MaterialTextureLinker` 的旧 Apply 菜单已禁用，公开 Apply 入口变为 no-op 提示，保留 `RunAudit()` 作为 `Legacy Audit/MaterialTextureLinker` 只读审计入口。

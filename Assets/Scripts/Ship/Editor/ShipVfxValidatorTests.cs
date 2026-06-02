@@ -94,6 +94,37 @@ namespace ProjectArk.Ship.Editor
         }
 
         [Test]
+        public void RunAudit_ReportsIllegalSceneOverrideForBoostTrailJuiceSettings()
+        {
+            try
+            {
+                ResetAuthorityState();
+                var boostTrailView = Object.FindAnyObjectByType<BoostTrailView>(FindObjectsInactive.Include);
+                Assert.That(boostTrailView, Is.Not.Null, "Test setup failed: missing scene BoostTrailView.");
+
+                var serializedView = new SerializedObject(boostTrailView);
+                var juiceSettings = serializedView.FindProperty("_juiceSettings");
+                Assert.That(juiceSettings, Is.Not.Null, "Test setup failed: missing BoostTrailView._juiceSettings.");
+                juiceSettings.objectReferenceValue = null;
+                serializedView.ApplyModifiedProperties();
+
+                var results = ShipVfxValidator.RunAudit(showDialog: false, logToConsole: false);
+
+                Assert.That(
+                    results.Any(result =>
+                        result.Severity == ShipVfxValidator.Severity.Error &&
+                        result.Scope == "Scene Override" &&
+                        result.Message.Contains("_juiceSettings")),
+                    Is.True,
+                    "Only scene-only Bloom wiring should be whitelisted; BoostTrailView._juiceSettings scene overrides must be reported.");
+            }
+            finally
+            {
+                ResetAuthorityState();
+            }
+        }
+
+        [Test]
         public void MaterialTextureLinkerRunAudit_ReportsBrokenTextureBindingWithoutRepairingIt()
         {
             const string materialPath = "Assets/_Art/VFX/BoostTrail/Materials/mat_flame_trail.mat";
@@ -126,7 +157,34 @@ namespace ProjectArk.Ship.Editor
         }
 
         [Test]
-        public void RunAudit_IncludesMaterialTextureLinkerAuthorityErrorsWithoutRepairingIt()
+        public void MaterialTextureLinkerApply_DoesNotRepairLegacyReferenceMaterialBindings()
+        {
+            const string materialPath = "Assets/_Art/VFX/BoostTrail/Materials/mat_flame_trail.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+            Assert.That(material, Is.Not.Null, "Test setup failed: missing mat_flame_trail material.");
+
+            var originalTexture = material.GetTexture("_BaseMap");
+
+            try
+            {
+                material.SetTexture("_BaseMap", null);
+                EditorUtility.SetDirty(material);
+                AssetDatabase.SaveAssets();
+
+                MaterialTextureLinker.LinkAllMaterialTextures(showDialog: false);
+
+                Assert.That(material.GetTexture("_BaseMap"), Is.Null, "Legacy reference material apply must be disabled; use audit to report drift instead of repairing it.");
+            }
+            finally
+            {
+                material.SetTexture("_BaseMap", originalTexture);
+                EditorUtility.SetDirty(material);
+                AssetDatabase.SaveAssets();
+            }
+        }
+
+        [Test]
+        public void RunAudit_IncludesMaterialTextureLinkerLegacyAuditErrorsWithoutRepairingIt()
         {
             const string materialPath = "Assets/_Art/VFX/BoostTrail/Materials/mat_flame_trail.mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
@@ -146,7 +204,7 @@ namespace ProjectArk.Ship.Editor
                 Assert.That(
                     results.Any(result =>
                         result.Severity == ShipVfxValidator.Severity.Error &&
-                        result.Scope == "Authority Audit/MaterialTextureLinker" &&
+                        result.Scope == "Legacy Audit/MaterialTextureLinker" &&
                         result.Message.Contains("mat_flame_trail._BaseMap")),
                     Is.True);
                 Assert.That(material.GetTexture("_BaseMap"), Is.Null, "Aggregated audit must remain read-only and must not repair the broken texture binding.");
