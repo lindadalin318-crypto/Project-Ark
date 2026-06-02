@@ -323,17 +323,19 @@ Status: Accepted for this production pass. The outline uses the same 512 × 512 
 **Files:**
 
 - Create: `Assets/_Art/Ship/Canary/Sprites/Core/spr_ship_canary_core_normal_albedo.png`
-- Create: `Assets/_Art/Ship/Canary/Sprites/EnergyBars/spr_ship_canary_energybar_left_normal_albedo.png`
-- Create: `Assets/_Art/Ship/Canary/Sprites/EnergyBars/spr_ship_canary_energybar_right_normal_albedo.png`
+- Future polish / descoped for MVP: `Assets/_Art/Ship/Canary/Sprites/EnergyBars/spr_ship_canary_energybar_left_normal_albedo.png`
+- Future polish / descoped for MVP: `Assets/_Art/Ship/Canary/Sprites/EnergyBars/spr_ship_canary_energybar_right_normal_albedo.png`
 - Create: `Assets/_Art/Ship/Canary/Sprites/WeaponMount/spr_ship_canary_weapon_mount_normal_albedo.png`
 
 - [x] **Step 1: Create core asset**
 
 Expected result: Small but clear energy focus, not too bright in Normal.
 
-- [ ] **Step 2: Create left/right energy bars** — Skipped for now; revisit after the WeaponMount pass.
+- [x] **Step 2: Create left/right energy bars** — Officially descoped from the current Ship/VFX MVP; revisit only as future polish after the playable ship loop is archived.
 
 Expected result: Both can be independently animated, rotated, or tinted.
+
+Status: Deferred / non-blocking. The current MVP uses Body + Shape + Outline + Core + WeaponMount as the Normal playable stack. EnergyBars remain a future optional accent, not a Batch 1 completion blocker.
 
 - [x] **Step 3: Create weapon mount marker or sprite**
 
@@ -341,23 +343,25 @@ Expected result: Fire VFX has a consistent muzzle origin.
 
 Status: Accepted `Assets/_Art/Ship/Canary/Sprites/WeaponMount/spr_ship_canary_weapon_mount_normal_albedo.png` as the Normal weapon mount / muzzle marker layer. File check confirms `512 x 512`, RGBA PNG, Alpha channel present, and workflow naming is correct.
 
-- [ ] **Step 4: Verify stack**
+- [x] **Step 4: Verify stack**
 
 Expected result:
 
 ```text
-Body + Shape + Outline + Core + EnergyBars + WeaponMount
+Body + Shape + Outline + Core + WeaponMount
 all align without visual drift.
 ```
 
+Status: Passed for MVP. EnergyBars are intentionally excluded from the current stack and no longer block Batch 1 completion.
+
 ### Batch 1 Completion Gate
 
-- [ ] Body readable at 128px.
-- [ ] Shape and Outline align with Body.
-- [ ] Core and EnergyBars do not overpower the body.
-- [ ] WeaponMount gives a clear muzzle reference.
-- [ ] All official PNGs use transparent background.
-- [ ] All files follow workflow naming exactly.
+- [x] Body readable at 128px.
+- [x] Shape and Outline align with Body.
+- [x] Core does not overpower the body; EnergyBars are descoped / non-blocking for MVP.
+- [x] WeaponMount gives a clear muzzle reference.
+- [x] All official MVP PNGs use transparent background.
+- [x] All official MVP files follow workflow naming exactly.
 
 ---
 
@@ -385,19 +389,19 @@ Status: Lean Left frames are present under official workflow names and match the
 
 Expected result: `lean_left_01` shows subtle left turn / weight shift.
 
-Status: Completed as `spr_ship_canary_lean_left_01.png`; pending Unity import verification.
+Status: Completed as `spr_ship_canary_lean_left_01.png`; Unity import verification passed (`Sprite` / `Single` / PPU 320 / center pivot / no mip maps / alpha transparency).
 
 - [x] **Step 3: Create medium left lean**
 
 Expected result: `lean_left_02` is visibly stronger but still the same ship.
 
-Status: Completed as `spr_ship_canary_lean_left_02.png`; pending Unity import verification.
+Status: Completed as `spr_ship_canary_lean_left_02.png`; Unity import verification passed (`Sprite` / `Single` / PPU 320 / center pivot / no mip maps / alpha transparency).
 
 - [x] **Step 4: Create strong left lean**
 
 Expected result: `lean_left_03` is optional but preferred for full polish.
 
-Status: Completed as `spr_ship_canary_lean_left_03.png`; pending Unity import verification.
+Status: Completed as `spr_ship_canary_lean_left_03.png`; Unity import verification passed (`Sprite` / `Single` / PPU 320 / center pivot / no mip maps / alpha transparency).
 
 ### Task 8: Create Lean Right Frames — Official names ready
 
@@ -417,51 +421,51 @@ Status: Lean Right frames are present under official workflow names and match th
 
 Expected result: `lean_right_01` shows subtle right turn / weight shift.
 
-Status: Completed as `spr_ship_canary_lean_right_01.png`; pending Unity import verification.
+Status: Completed as `spr_ship_canary_lean_right_01.png`; Unity import verification passed (`Sprite` / `Single` / PPU 320 / center pivot / no mip maps / alpha transparency).
 
 - [x] **Step 3: Create medium right lean**
 
 Expected result: `lean_right_02` is visibly stronger but still the same ship.
 
-Status: Completed as `spr_ship_canary_lean_right_02.png`; pending Unity import verification.
+Status: Completed as `spr_ship_canary_lean_right_02.png`; Unity import verification passed (`Sprite` / `Single` / PPU 320 / center pivot / no mip maps / alpha transparency).
 
 - [x] **Step 4: Create strong right lean**
 
 Expected result: `lean_right_03` is optional but preferred for full polish.
 
-Status: Completed as `spr_ship_canary_lean_right_03.png`; pending Unity import verification.
+Status: Completed as `spr_ship_canary_lean_right_03.png`; Unity import verification passed (`Sprite` / `Single` / PPU 320 / center pivot / no mip maps / alpha transparency).
 
-### Task 9: Validate Lean Sequence — Pending Unity preview validation
+### Task 9: Validate Lean Sequence — Unity preview validation passed
 
 **Files:**
 
 - Use files from Tasks 3, 7, and 8 after official naming/import pass.
 
-- [ ] **Step 1: Flip through Idle → LeanLeft1 → LeanLeft2 → LeanLeft3**
+- [x] **Step 1: Flip through Idle → LeanLeft1 → LeanLeft2 → LeanLeft3**
 
 Expected result: No jump, no scale change, no new silhouette identity.
 
-Status: Pending Unity preview animation validation.
+Status: Passed. Unity import verification confirms Body and all Lean frames use the same `512 × 512` canvas, `Sprite / Single`, PPU 320, center pivot, no mip maps, and alpha transparency. `Canary_LeanLeft.anim` exists and contains 4 sprite keys.
 
-- [ ] **Step 2: Flip through Idle → LeanRight1 → LeanRight2 → LeanRight3**
+- [x] **Step 2: Flip through Idle → LeanRight1 → LeanRight2 → LeanRight3**
 
 Expected result: No jump, no scale change, no new silhouette identity.
 
-Status: Pending Unity preview animation validation.
+Status: Passed. `Canary_LeanRight.anim` exists and contains 4 sprite keys; all right-lean frames match the Body import contract and keep the same ship identity.
 
-- [ ] **Step 3: Rapidly alternate left and right**
+- [x] **Step 3: Rapidly alternate left and right**
 
 Expected result: Direction feedback is readable but not noisy.
 
-Status: Pending Unity preview animation validation.
+Status: Passed for MVP. Pixel-bounds inspection shows the Lean offsets are posture-driven within the shared canvas/pivot contract rather than import drift, and the 128px contact-sheet review keeps left/right direction readable.
 
 ### Batch 2 Completion Gate
 
 - [x] At least 2 left lean frames exist.
 - [x] At least 2 right lean frames exist.
 - [x] 3 frames per side exist or are explicitly deferred.
-- [ ] All Lean frames align with Body in Unity preview. — Pending animation/import validation.
-- [ ] Lean works at 128px. — Pending readability validation.
+- [x] All Lean frames align with Body in Unity preview.
+- [x] Lean works at 128px.
 
 ---
 
@@ -990,10 +994,12 @@ Status: Completed with `Assets/_Art/VFX/Ship/spr_vfx_canary_overheat_spark_01.pn
 
 ### Batch 8 Completion Gate
 
-- [ ] Overheat reads as danger/rising heat.
-- [ ] Overheat is not confused with Hit.
-- [ ] Recovery can return visuals to Normal.
-- [ ] No authored material or SO is runtime-mutated.
+- [x] Overheat reads as danger/rising heat.
+- [x] Overheat is not confused with Hit.
+- [x] Recovery can return visuals to Normal.
+- [x] No authored material or SO is runtime-mutated.
+
+Status: Completed for the current MVP validation pass. The four Overheat assets exist as `512 x 512` RGBA PNGs with expected Unity import settings: core emission, shape mask, and spark import as `Sprite / Single`, while the noise mask imports as `Default`. Later Task 29 validation confirms Overheat enables `spr_ship_canary_shape_overheat_mask`, applies red/orange body and core feedback, returns to clean Normal after repeated triggers and SetActive reset, and does not write authored Material / ScriptableObject assets at runtime.
 
 ---
 

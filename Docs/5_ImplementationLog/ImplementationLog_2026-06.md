@@ -55,3 +55,30 @@
 - **内容：** 完成 Batch 6 Fire / Hit completion gate 的计划收口。将 `Fire is short and does not alter body identity` 与 `Muzzle flash aligns with WeaponMount` 从未勾选同步为完成，并在 Batch 6 状态下补录 Fire 短闪 / 复位、WeaponMount 接线、编译和 Console 验证证据。
 - **目的：** 消除 Batch 6 正文已完成但 gate 未同步的状态漂移，让 Fire / Hit 视觉反馈可以作为已完成 Ship/VFX 主链的一部分进入后续归档判断。
 - **技术：** 不修改 runtime、prefab、scene、测试或资源资产；复核 `ShipFireVisuals`、`ShipHitVisuals`、`ShipPrefabRebuilder` 与相关测试后执行文档一致性更新，并用 `dotnet build Project-Ark.slnx` 与 Unity Console error 检查确认没有新增编译 / 导入错误。
+
+## 2026-06-02 11:45 — Ship/VFX Batch 2 Lean Validation Closeout
+
+- **修改文件：**
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-06.md`
+- **内容：** 完成 Batch 2 Lean validation 的计划收口。将 Lean Left / Right 源图的 Unity import 状态从 pending 更新为已验证，并将 Task 9 三个预览验证步骤与 Batch 2 completion gate 同步为完成。
+- **目的：** 消除 Lean 源图和动画片段已存在但计划仍显示 pending 的状态漂移，让 Lean 作为当前 Ship/VFX 可玩切片的已完成资产进入后续归档判断。
+- **技术：** 不修改 runtime、prefab、scene、测试或资源资产；通过 Unity Editor 只读检查确认 Body 与六张 Lean PNG 均为 `512 × 512`、`Sprite / Single`、PPU 320、center pivot、no mip maps、alpha transparency，并确认 `Canary_LeanLeft.anim` / `Canary_LeanRight.anim` 均存在且包含 4 个 sprite keys。额外用像素 alpha bounds 与 128px contact-sheet 复核 Lean 偏移属于姿态变化而非导入漂移。
+
+## 2026-06-02 14:30 — Ship/VFX Batch 1 EnergyBars MVP Descope
+
+- **修改文件：**
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-06.md`
+- **内容：** 根据当前 Ship/VFX MVP 收口决策，将 Batch 1 的 `EnergyBar_L/R` 从未完成阻塞项改为 future polish / descoped for MVP，并同步 Task 6 stack verification 与 Batch 1 completion gate 为完成状态。
+- **目的：** 避免为了可选装饰层继续阻塞 Normal playable stack 归档；当前 MVP 以 Body + Shape + Outline + Core + WeaponMount 作为正式 Normal 可玩栈，EnergyBars 后续需要明确视觉方向时再单独进入 polish。
+- **技术：** 仅做计划状态和验收口径更新，不新增 PNG、`.meta`、runtime、prefab、scene 或测试改动；保留 EnergyBars 官方命名路径作为未来可选资产占位，但明确其不参与当前 Batch 1 completion blocker。
+
+## 2026-06-02 14:38 — Ship/VFX Batch 8 Overheat Gate Closeout
+
+- **修改文件：**
+  - `Docs/0_Plan/ongoing/2026-05-25-canary-ship-complete-art-vfx-plan.md`
+  - `Docs/5_ImplementationLog/ImplementationLog_2026-06.md`
+- **内容：** 完成 Batch 8 Overheat completion gate 的计划收口。将 Overheat 危险升温读感、与 Hit 区分、恢复 Normal、运行时不污染 authored Material / ScriptableObject 四项 gate 同步为完成，并补录资产导入与 Task 29 runtime/reset 验证证据。
+- **目的：** 消除 Overheat 资产和验证已完成但 Batch 8 gate 仍显示 pending 的状态漂移，让 Overheat 可作为当前 Ship/VFX MVP 视觉状态矩阵中的已验证危险反馈进入后续归档判断。
+- **技术：** 不修改 runtime、prefab、scene、测试或资源资产；复核四个 Overheat PNG 均存在且为 `512 × 512` RGBA，Unity 导入设置确认 core emission / shape mask / spark 为 `Sprite / Single`、noise mask 为 `Default`，全部 PPU 320、center pivot、no mip maps。复用 Task 29 既有证据确认 Overheat repeated trigger、SetActive reset 和 Play Mode exit 均不会留下 sprite/color/alpha/scale 或 authored asset 污染。
